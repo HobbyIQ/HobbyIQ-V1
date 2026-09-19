@@ -73,23 +73,26 @@ export type TwinVerdict =
 
 /**
  * A parked copy is not a competing address FOR THIS RULE, so `decideTwinAddress`
- * treats it as though it were not resident anywhere. This is narrower than "out
- * of every pool" -- see F6 (2026-09-19 review finding on the R66/R67/R70 PR).
+ * treats it as though it were not resident anywhere -- see F6 (2026-09-19
+ * review finding on the R66/R67/R70 PR).
  *
  * Both markers count. `flaggedWrong` is the dedup lane's (#1942);
  * `identityUnverified` is the write guard's (CF-ONE-WRITE-PATH-FOR-SOLD-COMPS).
- * CONFIRMED (per `insertSetTitleReader.test.ts`'s own pool-exclusion-gap
- * pins, and see that test file's header for the full citation):
- * `identityUnverified` does NOT exclude a row from `exactPoolReader.ts`'s
- * `readExactPoolRows` (the query behind every published FMV,
- * `unifiedPricing.service.ts`) or from `soldCompsGradeReader.ts`'s
- * `readSoldCompsForGrade` -- neither filters it in its WHERE clause. A row
- * parked with `identityUnverified` is therefore NOT out of every pool today;
- * it is out of the narrower set this file and `soldCompsStore.service.ts`'s
- * catalog-auto-seed guard actually check. A separate PR closes that FMV-pool
- * gap (excluding `identityUnverified` rows from both readers); until it
- * ships, "parked" means "invisible to THIS rule and to catalog auto-seed",
- * not "invisible to FMV".
+ * UPDATED (#2330, same day): a parked row IS now excluded from FMV/trend/
+ * index/recent-sales too, not just from this rule. #2330 added the
+ * `(NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified != true)`
+ * (or `= false`, same predicate) clause to the WHERE of all six readers:
+ * `exactPoolReader.ts`'s `readExactPoolRows` (the query behind every
+ * published FMV, `unifiedPricing.service.ts`), `soldCompsGradeReader.ts`'s
+ * `readSoldCompsForGrade` (the observed grade curve), `hobbyIqFmv.service.ts`'s
+ * `queryPool` (the other independent FMV pool engine), `soldCompsStore.service.ts`'s
+ * `readCompsByCardId` (GET /api/compiq/cards/:cardId/recent-sales),
+ * `marketMoversSnapshot.service.ts`'s raw-scan path (Market Movers), and
+ * `marketIndex.service.ts`'s `fetchSales` (the published per-sport index).
+ * A row parked with `identityUnverified` is therefore out of every pool this
+ * file and #2330 together cover -- "parked" now means "invisible to THIS
+ * rule AND to FMV/trend/index/recent-sales/catalog auto-seed", not the
+ * narrower claim this comment made before #2330 shipped.
  */
 export function isParked(row: TwinCandidate | null | undefined): boolean {
   return row?.flaggedWrong === true || row?.identityUnverified === true;

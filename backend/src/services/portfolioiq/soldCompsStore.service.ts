@@ -60,6 +60,12 @@ import { createHash } from "crypto";
 // Type-only: erased at compile time, so this adds no runtime edge back to
 // ebayAutoHolding (which imports THIS module dynamically).
 import type { SalePriceBasis } from "./ebayAutoHolding.service.js";
+// Type-only, same reason: the two confirm helpers themselves are still
+// loaded dynamically below (insertSetChecklistConfirm.ts pulls in
+// persistVendorSalesToPool.service.js's narrow-breaker exports, and this
+// module is itself dynamically imported from other call sites), so only the
+// TYPE crosses statically.
+import type { ConfirmVerdict } from "./insertSetChecklistConfirm.js";
 import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 // CF-COMPOSITE-EMIT (Drew, 2026-07-30). Compute the 6-axis composite
@@ -1389,13 +1395,19 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
             // on the title match alone. Bounded, cached, fail-open catalog
             // read shared with persistVendorSalesToPool's narrow breaker; see
             // insertSetChecklistConfirm.ts's header for the full reasoning.
-            let confirmed = false;
+            // FIX B: the predicate is a TRI-STATE. "confirmed" re-keys,
+            // "refuted" parks (unchanged from before), "unknown" (cap hit /
+            // timeout / breaker open / no container / error) leaves the sale
+            // completely untouched -- no re-key, no park -- because since
+            // #2330 a park now removes a comp from every FMV pool, and a
+            // read failure must never make that call.
+            let verdict: ConfirmVerdict = "unknown";
             try {
               const { insertReKeyConfirmedByChecklist } = await import("./insertSetChecklistConfirm.js");
               const { getCatalogContainerForRead } = await import("../catalog/catalogMatcher.service.js");
               const { narrowQuery, narrowBreakerIsOpen, recordNarrowSkip, NARROW_QUERY_TIMEOUT_MS } =
                 await import("./persistVendorSalesToPool.service.js");
-              confirmed = await insertReKeyConfirmedByChecklist(
+              verdict = await insertReKeyConfirmedByChecklist(
                 {
                   sport: insertSport, year: input.cardYear, insertSetKey: only.registeredKey,
                   cardNumber: insertPreCardNumber, playerName: input.playerName,
@@ -1409,10 +1421,11 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
                 },
               );
             } catch {
-              // Fail open onto "unconfirmed" -- never a re-key on a blip.
-              confirmed = false;
+              // No answer obtained -- FIX B: untouched, never a re-key, never
+              // a park on a blip.
+              verdict = "unknown";
             }
-            if (confirmed) {
+            if (verdict === "confirmed") {
               // R67: the insert is its own product, CONFIRMED by its own
               // checklist. Rewriting setName here means deriveHobbyIqSlug
               // (next) and doc.setName (below) both mint the insert's own
@@ -1421,7 +1434,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
               insertPreStepSetName = only.registeredKey;
               insertReKeyConfirmed = true;
               insertReKeySetKey = only.registeredKey;
-            } else {
+            } else if (verdict === "refuted") {
               // F3+F5: named, registered, but NOT confirmed against the
               // insert's own checklist at this card's number/player -- a
               // title match alone (seller boilerplate, an incidental mention)
@@ -1434,20 +1447,24 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
                   + `card number/player -- parked, not re-keyed on a title match alone`,
               };
             }
+            // verdict === "unknown": leave the sale entirely untouched --
+            // no setName rewrite, no park. The confirm helper already
+            // incremented insertConfirmUnknown and logged once per reason.
           } else {
             // F4 (review finding): an UNREGISTERED root is often an ordinary
             // English word appearing incidentally in a base-card title
             // ("fireworks", "prime", "dominance") -- park only if the BASE
-            // checklist does NOT already confirm this sale as a base card.
-            // When it does, the word is incidental and the sale is real,
-            // ordinary base-card coverage; leave it untouched.
-            let baseConfirmed = false;
+            // checklist REFUTES this sale as a base card. When it CONFIRMS,
+            // the word is incidental and the sale is real, ordinary
+            // base-card coverage; leave it untouched. FIX B: "unknown" also
+            // leaves it untouched (no park on a read failure).
+            let baseVerdict: ConfirmVerdict = "unknown";
             try {
               const { baseCardConfirmedBySale } = await import("./insertSetChecklistConfirm.js");
               const { getCatalogContainerForRead } = await import("../catalog/catalogMatcher.service.js");
               const { narrowQuery, narrowBreakerIsOpen, recordNarrowSkip, NARROW_QUERY_TIMEOUT_MS } =
                 await import("./persistVendorSalesToPool.service.js");
-              baseConfirmed = await baseCardConfirmedBySale(
+              baseVerdict = await baseCardConfirmedBySale(
                 {
                   sport: insertSport, year: input.cardYear, baseSetKey: insertSetKey,
                   cardNumber: insertPreCardNumber, playerName: input.playerName,
@@ -1461,9 +1478,9 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
                 },
               );
             } catch {
-              baseConfirmed = false;
+              baseVerdict = "unknown";
             }
-            if (baseConfirmed) {
+            if (baseVerdict === "confirmed") {
               console.log(JSON.stringify({
                 event: "sold_comp_insert_word_but_base_confirmed",
                 source: "soldCompsStore.recordSoldComp",
@@ -1472,7 +1489,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
                 setKey: insertSetKey,
                 detail: "unregistered insert root named incidentally in a title the base checklist confirms -- left untouched",
               }));
-            } else {
+            } else if (baseVerdict === "refuted") {
               // R70: named, nothing registers it, and the base checklist
               // does not confirm this as an ordinary base sale either. Park,
               // keep, count -- the parked list is the registration queue.
@@ -1482,6 +1499,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
                   + `product key -- parked, not pooled on the base card`,
               };
             }
+            // baseVerdict === "unknown": leave untouched, no park.
           }
         }
       }

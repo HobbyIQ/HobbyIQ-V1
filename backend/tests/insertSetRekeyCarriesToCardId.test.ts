@@ -189,8 +189,17 @@ describe("F1 -- a RAW VENDOR cardId is never touched by the re-key carry", () =>
   });
 });
 
-describe("F1 -- no catalog access fails open to park, never to a guessed re-key", () => {
-  it("when card_catalog cannot be reached (a query throws, the same shape a Cosmos blip or the shared breaker being open produces), the title match is left unconfirmed and the sale parks rather than re-keying on the title alone", async () => {
+describe("F1 -- no catalog access fails open to UNTOUCHED (FIX B), never to a park or a guessed re-key", () => {
+  it("when card_catalog cannot be reached (a query throws, the same shape a Cosmos blip or the shared breaker being open produces), the confirmation answers UNKNOWN and the sale is left COMPLETELY untouched -- no re-key, no park", async () => {
+    // FIX B (third review, 2026-09-19): before this fix, a query throw was
+    // folded into the same boolean `false` as an ACTIVE refutation, so this
+    // sale used to park as insert-named-unconfirmed. Since #2330, a parked
+    // row is excluded from every FMV pool -- so a stalled catalog READ must
+    // never be allowed to remove a real comp from pricing. UNKNOWN now
+    // means "leave the sale exactly as the title/vendor fields would have
+    // produced it with no insert re-key attempted at all": untouched
+    // cardId, untouched hobbyiqCardId (still the base product), no park.
+    //
     // Simulates a catalog blip via a throwing query rather than an absent
     // connection string: catalogMatcher.service.ts caches its Cosmos client
     // at module scope for the life of the process, so once a prior test in
@@ -206,7 +215,11 @@ describe("F1 -- no catalog access fails open to park, never to a guessed re-key"
     expect(res.written).toBe(true);
     const [doc] = rows();
     expect(doc.cardId).toBe(baseCardId);
-    expect(doc.identityUnverified).toBe(true);
-    expect(doc.identityUnverifiedReason).toBe("insert-named-unconfirmed");
+    // UNTOUCHED: no park, no re-key -- the insert word is neither confirmed
+    // nor refuted, it is simply unanswered, and the sale prices as the base
+    // product it already was.
+    expect(doc.identityUnverified).toBeUndefined();
+    expect(doc.identityUnverifiedReason).toBeUndefined();
+    expect(doc.hobbyiqCardId).not.toContain("donruss-optic-downtown");
   });
 });

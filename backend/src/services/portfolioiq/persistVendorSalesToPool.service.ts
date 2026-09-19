@@ -38,6 +38,10 @@ import { qualifiedSetKeyFromTitle } from "../catalog/productQualifiers.js";
 import { parseGradeFromTitle } from "./gradeParser.js";
 import { judgeCardNumber, logCardNumberVerdict, isTcgVertical } from "./cardNumberIntegrity.js";
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
+// Type-only: insertSetChecklistConfirm.ts's two exports are loaded
+// dynamically below (that module in turn pulls in this one's own
+// narrow-breaker exports, so a static value import here would be circular).
+import type { ConfirmVerdict } from "./insertSetChecklistConfirm.js";
 
 // CF-CHECKLIST-NARROWER (Drew, 2026-08-02). When parseListingIdentity
 // can't extract a cardNumber but we have (player, year, set) triple,
@@ -933,6 +937,16 @@ export interface VendorPersistResult {
    *  number/player -- the root is an incidental English word (e.g.
    *  "fireworks", "prime"), not evidence of an insert. Left untouched. */
   insertWordButBaseConfirmed?: number;
+  /** FIX B (third review, 2026-09-19): the insert-rekey or base-confirm
+   *  checklist read returned UNKNOWN (result-cap hit, timeout, open breaker,
+   *  no container, or a query error) -- no answer was obtained, so the sale
+   *  was left completely untouched: no re-key, no park. Counted separately
+   *  from `insertSetParkedUnconfirmed`/`insertSetParkedNoKey` because this
+   *  bucket is a stalled READ, not a checklist verdict -- since #2330 a park
+   *  removes the row from every FMV pool, so a read failure must never be
+   *  allowed to cause one. Mirrors `insertSetChecklistConfirm.ts`'s own
+   *  process-lifetime `insertConfirmUnknown` counter/log-once-per-reason. */
+  insertSetConfirmUnknown?: number;
   /** CF-THE-TITLE-OUTRANKS-THE-VENDOR-PLAYER: the vendor attributed the sale to
    *  a DIFFERENT person than the title names. Neither is adopted; the row is
    *  skipped as UNDERIVABLE rather than keyed to a card it may not be. */
@@ -1692,10 +1706,15 @@ export async function persistVendorSalesToPool(
           // checklist rows confirm this sale's card number (or, absent one,
           // its player). Bounded/cached/fail-open, shared narrow breaker --
           // see insertSetChecklistConfirm.ts.
-          let confirmed = false;
+          // FIX B: tri-state. "confirmed" re-keys, "refuted" parks
+          // (unchanged), "unknown" (cap hit / timeout / breaker open / no
+          // container / error) leaves the sale COMPLETELY untouched -- since
+          // #2330 a park removes a comp from every FMV pool, so a read
+          // failure must never be allowed to make that call.
+          let verdict: ConfirmVerdict = "unknown";
           try {
             const { insertReKeyConfirmedByChecklist } = await import("./insertSetChecklistConfirm.js");
-            confirmed = await insertReKeyConfirmedByChecklist(
+            verdict = await insertReKeyConfirmedByChecklist(
               {
                 sport, year: cardYear, insertSetKey: only.registeredKey,
                 cardNumber: parsed.cardNumber, playerName,
@@ -1709,12 +1728,12 @@ export async function persistVendorSalesToPool(
               },
             );
           } catch {
-            confirmed = false;
+            verdict = "unknown";
           }
-          if (confirmed) {
+          if (verdict === "confirmed") {
             setKey = only.registeredKey;
             result.insertSetReKeyed = (result.insertSetReKeyed ?? 0) + 1;
-          } else {
+          } else if (verdict === "refuted") {
             insertParkPending = {
               reason: "insert-named-unconfirmed",
               detail: `title names insert "${only.root}" of ${setKey} (registered as `
@@ -1722,17 +1741,22 @@ export async function persistVendorSalesToPool(
                 + `card number/player -- parked, not re-keyed on a title match alone`,
             };
             result.insertSetParkedUnconfirmed = (result.insertSetParkedUnconfirmed ?? 0) + 1;
+          } else {
+            // unknown: no re-key, no park -- the confirm helper already
+            // incremented insertConfirmUnknown and logged once per reason.
+            result.insertSetConfirmUnknown = (result.insertSetConfirmUnknown ?? 0) + 1;
           }
         } else {
           // F4 (review finding): an unregistered root is often an ordinary
           // English word appearing incidentally in a base-card title. Park
-          // only if the BASE checklist does not already confirm this sale as
-          // a base card -- when it does, the word is incidental and the sale
-          // is ordinary base coverage, left untouched.
-          let baseConfirmed = false;
+          // only if the BASE checklist REFUTES this sale as a base card --
+          // when it CONFIRMS, the word is incidental and the sale is
+          // ordinary base coverage, left untouched. FIX B: "unknown" also
+          // leaves it untouched (no park on a read failure).
+          let baseVerdict: ConfirmVerdict = "unknown";
           try {
             const { baseCardConfirmedBySale } = await import("./insertSetChecklistConfirm.js");
-            baseConfirmed = await baseCardConfirmedBySale(
+            baseVerdict = await baseCardConfirmedBySale(
               {
                 sport, year: cardYear, baseSetKey: insertPreRewriteBaseSetKey,
                 cardNumber: parsed.cardNumber, playerName,
@@ -1746,17 +1770,20 @@ export async function persistVendorSalesToPool(
               },
             );
           } catch {
-            baseConfirmed = false;
+            baseVerdict = "unknown";
           }
-          if (baseConfirmed) {
+          if (baseVerdict === "confirmed") {
             result.insertWordButBaseConfirmed = (result.insertWordButBaseConfirmed ?? 0) + 1;
-          } else {
+          } else if (baseVerdict === "refuted") {
             insertParkPending = {
               reason: "insert-named-no-key",
               detail: `title names insert "${only.root}" of ${setKey}, which has no registered `
                 + `product key -- parked, not pooled on the base card`,
             };
             result.insertSetParkedNoKey = (result.insertSetParkedNoKey ?? 0) + 1;
+          } else {
+            // unknown: leave untouched, no park.
+            result.insertSetConfirmUnknown = (result.insertSetConfirmUnknown ?? 0) + 1;
           }
         }
       }

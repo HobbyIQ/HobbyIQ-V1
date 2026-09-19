@@ -130,4 +130,15 @@ describe("F4 -- an unregistered insert root that is an ordinary word in a checkl
     expect(doc.identityUnverified).toBe(true);
     expect(doc.identityUnverifiedReason).toBe("insert-named-no-key");
   });
+
+  it("FIX B: is left UNTOUCHED (no park) when the base-confirm read answers UNKNOWN (a query throw) -- a stalled read must never park a real base sale", async () => {
+    catalogQuery.mockImplementation(() => ({
+      fetchAll: async () => { throw new Error("simulated catalog blip"); },
+    }));
+    const res = await recordSoldComp(sale);
+    expect(res.written).toBe(true);
+    const [doc] = rows();
+    expect(doc.identityUnverified).toBeUndefined();
+    expect(doc.identityUnverifiedReason).toBeUndefined();
+  });
 });

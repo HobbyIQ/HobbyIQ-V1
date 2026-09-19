@@ -66,12 +66,14 @@ describe("Downtown seller-boilerplate ×3 -- named, but never confirmed, never r
 
     // The confirmation gate is what must refuse: no checklist row for THIS
     // card exists (fixture returns nothing at all here, the common real
-    // case for boilerplate with zero connection to an actual card).
-    const confirmed = await insertReKeyConfirmedByChecklist(
+    // case for boilerplate with zero connection to an actual card). The
+    // query DOES answer (zero rows), so this is REFUTED, not UNKNOWN -- the
+    // caller is free to park it.
+    const verdict = await insertReKeyConfirmedByChecklist(
       { sport: "football", year: 2024, insertSetKey: matches[0].registeredKey!, cardNumber: "150", playerName: "Some Player" },
       { container: NO_CHECKLIST_ROWS },
     );
-    expect(confirmed).toBe(false);
+    expect(verdict).toBe("refuted");
   });
 });
 
