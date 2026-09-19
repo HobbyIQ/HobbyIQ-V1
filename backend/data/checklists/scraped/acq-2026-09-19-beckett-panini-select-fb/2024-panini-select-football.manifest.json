@@ -1,0 +1,265 @@
+{
+  "scrapedAt": "2026-09-19T22:53:07.368Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/07/2024-Panini-Select-Football-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "football",
+  "year": 2024,
+  "setName": "2024 Panini Select Football",
+  "productKey": "2024-panini-select",
+  "setKey": "panini-select",
+  "rowCount": 18886,
+  "parallelColumnAuthoritative": true,
+  "heldRows": {
+    "rows": 18886,
+    "reason": "convertBeckettChecklistXlsx.cjs's explicitAnchor bypass (see CF-BECKETT-EXPLICIT-ANCHOR-IS-NOT-A-BLANK-CHEQUE in the script) still misfires on this workbook: a Memorabilia-sheet section whose OWN name contains a FINISH_WORD token ('Prizm') clears looksLikeFinishName and is tested for a numeric-only fold onto the Base/Concourse explicitAnchor, bypassing extendsName -- with no roster check in that pass. Four already-registered named insert products fold onto Base>Base Concourse as fabricated parallel names purely because their own numbering (1-25/1-42) is a 100% subset of Concourse's 1-100 range, even though their rosters DISAGREE with Concourse card-for-card (measured: Base Concourse #1 = Tory Taylor; the four sections' own #1 = Caleb Williams / Adonai Mitchell / Caleb Williams / Kurt Warner -- verified via rosterFoldAgainst, which correctly reports disagree>0 for this pairing, proving the roster-fold pass is NOT the one firing here): insert-draft-selections-memorabilia-prizm (25 rows, -> registered panini-select-draft-selections-memorabilia), insert-jumbo-rookie-swatch-prizm (42 rows, -> registered panini-select-jumbo-rookie-swatch), insert-rookie-swatches-prizm (25 rows, -> registered panini-select-rookie-swatches), insert-sparks-prizm (58 rows, -> registered panini-select-sparks). 150 of 18,886 rows (0.8%) land under category=base with a fabricated parallel string instead of their own registered insert-set key. Every other row in this file (18,736) is unaffected -- base anchors, autograph sections (isAuto true/false populated on every row, no blanks), and every other insert/parallel fold were spot-checked clean. Held whole-file rather than partially, because the ingester's manifest gate only supports an all-or-nothing hold and 'absent beats wrong' for the 150 known-bad rows outweighs shipping the 18,736 good ones early. Unhold once the converter's explicitAnchor+FINISH_WORD bypass gets a roster check (or an equivalent fix) and the four sections re-emit under their own registered category with a blank parallel."
+  },
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Concourse",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Base Premier Level",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Base Club Level",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Base Suite Level",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Base Field Level",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Hall Selections",
+      "category": "auto-hall-selections",
+      "cards": 4,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Jumbo Rookie Signature Swatches Prizm",
+      "category": "auto-jumbo-rookie-signature-swatches-prizm",
+      "cards": 45,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Jumbo Signature Swatches Prizm",
+      "category": "auto-jumbo-signature-swatches-prizm",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Prime Selections Prizm Signatures",
+      "category": "auto-prime-selections-prizm-signatures",
+      "cards": 76,
+      "role": "parallel",
+      "anchor": "Autographs>Signatures Prizm",
+      "rung": "Prime Selection"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Signature Memorabilia Prizm",
+      "category": "auto-rookie-signature-memorabilia-prizm",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Signature Memorabilia Gold Wave Prizm",
+      "category": "auto-rookie-signature-memorabilia-gold-wave-prizm",
+      "cards": 39,
+      "role": "parallel",
+      "anchor": "Autographs>Rookie Signature Memorabilia Prizm",
+      "rung": "Gold Wave"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Signature Memorabilia Red Wave Prizm",
+      "category": "auto-rookie-signature-memorabilia-red-wave-prizm",
+      "cards": 160,
+      "role": "parallel",
+      "anchor": "Autographs>Rookie Signature Memorabilia Prizm",
+      "rung": "Red Wave"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Signatures Prizm",
+      "category": "auto-rookie-signatures-prizm",
+      "cards": 41,
+      "role": "parallel",
+      "anchor": "Autographs>Signatures Prizm",
+      "rung": "Rookie"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Select Signatures Prizm",
+      "category": "auto-select-signatures-prizm",
+      "cards": 730,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Signatures Prizm",
+      "category": "auto-signatures-prizm",
+      "cards": 58,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Spectra HOF Signatures Prizm",
+      "category": "auto-spectra-hof-signatures-prizm",
+      "cards": 75,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Draft Selections Memorabilia Prizm",
+      "category": "insert-draft-selections-memorabilia-prizm",
+      "cards": 25,
+      "role": "parallel",
+      "anchor": "Base>Base Concourse",
+      "rung": "Draft Selections Memorabilia Prizm"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Jumbo Rookie Swatch Prizm",
+      "category": "insert-jumbo-rookie-swatch-prizm",
+      "cards": 42,
+      "role": "parallel",
+      "anchor": "Base>Base Concourse",
+      "rung": "Jumbo Rookie Swatch Prizm"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Multiverse",
+      "category": "insert-multiverse",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Rookie Swatches Prizm",
+      "category": "insert-rookie-swatches-prizm",
+      "cards": 25,
+      "role": "parallel",
+      "anchor": "Base>Base Concourse",
+      "rung": "Rookie Swatches Prizm"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Sparks Prizm",
+      "category": "insert-sparks-prizm",
+      "cards": 58,
+      "role": "parallel",
+      "anchor": "Base>Base Concourse",
+      "rung": "Sparks Prizm"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Alter Ego",
+      "category": "insert-alter-ego",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Color Wheel",
+      "category": "insert-color-wheel",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Neon Icons",
+      "category": "insert-neon-icons",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Phenomenon",
+      "category": "insert-phenomenon",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Score Select Throwback",
+      "category": "insert-score-select-throwback",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Select Future",
+      "category": "insert-select-future",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Select Numbers",
+      "category": "insert-select-numbers",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Snapshots",
+      "category": "insert-snapshots",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Starcade",
+      "category": "insert-starcade",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Watercolors",
+      "category": "insert-watercolors",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "XRC Redemptions",
+      "section": "2025 XRC Prizm",
+      "category": "insert-2025-xrc-prizm",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "XRC Redemptions",
+      "section": "2025 XRC Mystery Autograph Prizm",
+      "category": "auto-2025-xrc-mystery-autograph-prizm",
+      "cards": 5,
+      "role": "own-cards"
+    }
+  ]
+}

@@ -9,5 +9,9 @@
   "provenance": "checklistinsider.com 2024 Panini Illusions Football -- staged to C:/tmp/ci/csv2 by the acquisition sweep, read 2026-09-18. 10,871 rows, 212 distinct parallel spellings, 8,223 rows carrying a print run.",
   "sourceUrl": "https://www.checklistinsider.com/2024-panini-illusions-football",
   "rowCount": 10871,
-  "parallelColumnAuthoritative": true
+  "parallelColumnAuthoritative": true,
+  "heldRows": {
+    "rows": 10871,
+    "reason": "isAuto column blank on every row; superseded by the Beckett package (source beckett-s3-2026-09-19, https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/01/2024-Panini-Illusions-Football-Checklist.xlsx). NOTE: as of 2026-09-19 no replacement Beckett package for this product has been committed either -- convertBeckettChecklistXlsx.cjs mis-files this workbook's own 100 plain base cards (#1-100, 'Base Set' section) under auto-first-impressions-autographed-memorabilia-101-142 with isAuto=true, because the Base sheet lists 'Base Set' immediately followed by a second header + its own parallels ladder before any card row closes the first section, so the single section-tracker variable is overwritten before the #1-100 cards are read (same class of defect CF-BECKETT-BASE-SHEET-IS-NOT-ONE-SECTION fixed for Zenith, a new instance of it). This file stays the best data on hand for panini-illusions despite the blank isAuto column; hold it rather than ingest it wrong in either direction until the converter is fixed and a clean Beckett package lands."
+  }
 }

@@ -9,5 +9,9 @@
   "provenance": "checklistinsider.com 2024 Panini Select Football -- staged to C:/tmp/ci/csv2 by the acquisition sweep, read 2026-09-18. 27,324 rows across the Concourse/Club Level/Suite Level/Premier Level/Field Level tiers and 33 named insert sets.",
   "sourceUrl": "https://www.checklistinsider.com/2024-panini-select-football",
   "rowCount": 27324,
-  "parallelColumnAuthoritative": true
+  "parallelColumnAuthoritative": true,
+  "heldRows": {
+    "rows": 27324,
+    "reason": "isAuto column blank on every row; superseded by the Beckett package (source beckett-s3-2026-09-19, https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/07/2024-Panini-Select-Football-Checklist.xlsx, directory acq-2026-09-19-beckett-panini-select-fb). NOTE: the Beckett replacement is ALSO held for now (its own manifest's heldRows explains why -- a converter fold defect misfiles 150 of its 18,886 rows), so panini-select has no ready-to-ingest package as of 2026-09-19. Held here anyway rather than left ingestable, because a blank isAuto column is strictly worse (it would mint every autograph row as :no-auto, the wrong-identity failure mode this whole acquisition exists to fix) than having no package at all."
+  }
 }
