@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-09-19T09:05:47.886Z",
+  "scrapedAt": "2026-09-19T10:22:11.457Z",
   "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/01/2026-Topps-Series-1-Baseball-Checklist.xlsx",
   "source": "beckett-s3-2026-09-19",
   "sport": "baseball",
@@ -7,20 +7,25 @@
   "setName": "2026 Topps Series 1 Baseball",
   "productKey": "2026-topps",
   "setKey": "topps",
-  "rowCount": 2943,
+  "rowCount": 2903,
   "parallelColumnAuthoritative": true,
   "readyToIngest": false,
-  "stagedNote": "STAGED ONLY, not ingested. Dry-plan via lib/insert-set-key.cjs planFile() now PASSES (separate=[], foldRungs={}) after the R67 roster fix below. The repo already carries a disjoint 3-rung ladder file for this same product at backend/data/checklists/scraped/acq-2026-09-15-ladders/2026-topps-baseball-ladder.csv (checklistinsider source, Sandglitter Gold/75 Years of Topps/Base Confetti) -- this Beckett file's 7 originally-stated parallel rungs (Golden Mirror/Golden Mirror Legend/Vintage Stock/True Photo/Player Number/Team Color Border/1952 Topps Rookie Variation) do not overlap it at all; combined they are 10 distinct rungs, zero collisions between the two sources.",
+  "readyToIngestNote": "Documentation only -- ingest-checklist-csv-to-catalog.cjs (the real ingest lane) and ingest-scraped-checklist.cjs do NOT read this field at all; neither script checks any manifest key named readyToIngest, or refuses on it being false. The actual gate against an accidental ingest is that this directory sits under backend/data/checklists/scraped/ where a human/workflow chooses which directories to point DIR at -- this flag is a note to a human reviewer, not a machine-enforced hold.",
+  "stagedNote": "STAGED, not ingested. The real ingest lane's own planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run read-only against this directory) now PASSES: 2,903 batch rows, 2,903 distinct ids, 0 collisions, 0 duplicatesFolded. Category totals: base 1,542 / insert-* 712 / auto-* 649. The repo already carries a disjoint 3-rung ladder file for this same product at backend/data/checklists/scraped/acq-2026-09-15-ladders/2026-topps-baseball-ladder.csv (checklistinsider source, Sandglitter Gold/75 Years of Topps/Base Confetti) -- this Beckett file's 7 stated parallel rungs (Golden Mirror/Golden Mirror Legend/Vintage Stock/True Photo/Player Number/Team Color Border/1952 Topps Rookie Variation) do not overlap it at all.",
+  "leagueLeadersFold": {
+    "rule": "Beckett lists a multi-player card (this product's League Leaders-style subset) as several CONSECUTIVE rows under the SAME card number, one per player, never one row with the roster already joined. convertBeckettChecklistXlsx.cjs now merges consecutive same-numbered rows within one section into a single row, players joined '/' in source order -- reproducing the repo's OWN existing convention for a multi-player card (measured on committed CSVs: `base,152,,false,,Alan Benes/Andy Benes` in 1996-sp-baseball.csv; `insert-league-leaders,1,,false,,Mike Bossy/Marcel Dionne/Guy Lafleur` in 1979-80-o-pee-chee-hockey.csv), not a new shape. The merge requires ADJACENCY -- the immediately preceding record in the same section -- so a genuine same-numbered DIFFERENT-card defect elsewhere in a section still refuses rather than silently merging.",
+    "measured": "10 card numbers (11, 38, 84, 117, 130, 151, 203, 204, 211, 327), 3 players each, appearing on both the plain Base Set run and its Golden Mirror Variation parallel (the one rung sharing the Base sheet's own layout) -- 60 raw rows collapsed to 20, dropping the file's row count by 40 (2,943 -> 2,903).",
+    "example": "cardNumber 11: Pete Alonso/Kyle Schwarber/Juan Soto (both the plain row and the Golden Mirror Variation row)."
+  },
   "rookieCardFlag": {
-    "rule": "Beckett's xlsx appends an ' RC' rookie-card flag to the player field on the sheets that carry it (the Base sheet, and the Golden Mirror Variation section which lives on a sheet with the same column layout) -- never on the sheets for the other 8 stated parallel rungs or the 7 originally-own-cards sections. The checklist-csv-contract (docs/reference/checklist-csv-contract.md) has no rookie/RC column, so a new one was NOT invented. The ' RC' suffix is stripped from every `player` cell in this CSV instead, and the fact is preserved here as a card-level list rather than a per-row column, since RC is a property of the CARD, not of one parallel's spelling of it.",
+    "rule": "Beckett's xlsx appends an ' RC' rookie-card flag to the player field on the sheets that carry it (the Base sheet, and the Golden Mirror Variation section which lives on a sheet with the same column layout) -- never on the sheets for the other 8 stated parallel rungs or the 7 originally-own-cards sections. The checklist-csv-contract has no rookie/RC column, so a new one was NOT invented. The ' RC' suffix is stripped from every `player` cell in this CSV instead (PER PLAYER on a merged multi-player row, not just the tail of the whole field), and the fact is preserved here as a card-level list rather than a per-row column, since RC is a property of the CARD, not of one parallel's spelling of it.",
     "whyItMatters": "cleanPlayerName (backend/src/services/portfolioiq/cardCatalog.service.ts) has no RC handling -- confirmed by running it directly: cleanPlayerName('Jonah Tong RC') returns 'Jonah Tong RC' unchanged, and playerSlugify() on that mints `jonah-tong-rc` while every other row for the same player (all 8 other parallels of card #4, every sale, every other product) mints `jonah-tong`. Left unstripped, base rows would never match on playerSlug against their own parallels or against sales for the same card.",
     "measured": "142 rows carried the suffix pre-strip: 71 plain-base rows (category=base, blank parallel) + 71 Golden Mirror Variation rows (the one parallel rung that shares the Base sheet's column layout) -- the same 71 distinct cardNumbers in both groups, 0 exceptions. Every other stated parallel and every one of the 7 roster-folded sections below already read the plain name with no RC suffix anywhere.",
     "rookieCardNumbers": ["4","10","13","15","18","21","24","25","32","35","36","37","42","49","55","67","70","73","74","95","102","104","111","112","116","120","129","132","134","138","143","145","147","148","149","155","157","163","165","167","170","172","184","187","189","201","206","212","213","214","224","232","233","243","247","249","259","268","273","277","283","286","299","312","316","317","321","330","334","339","346"],
     "rookieCardCount": 71
   },
   "r67RosterFold": {
-    "rule": "convertBeckettChecklistXlsx.cjs's classifySections only folds a section onto Base via title-containment (extendsName) or FINISH_WORD vocabulary. 7 sections shared no name tokens with 'Base Set' and are not FINISH_WORD spellings, so they never became fold candidates and stayed category=insert-<slug>/auto-<slug> with a blank parallel column -- which put them on a same-numbered collision course with base at the plain product key, and lib/insert-set-key.cjs's planFile() refused the raw conversion on 7 unregistered same-numbered keys. Re-derived by hand applying R67's own roster test: for each refused section, compare its (cardNumber -> player) map against Base Set (category=base, blank parallel) on the numbers they share, players normalised (split on '/', trim, lowercase, de-duplicate, sort), AFTER the RC-suffix strip above. A section whose roster equals or is a subset of base's on every shared number, zero disagreements, folds onto base with the section's own header text as the parallel (isAuto is untouched -- a signed section stays signed). A section with a disagreement, or its own numbering the parent lacks, keeps its own category. This exact rule is what backend/scripts/convertBeckettChecklistXlsx.cjs is being taught in the companion PR (see below); this manifest is the byte-for-byte evidence trail for the hand-applied version that produced the CSV committed here BEFORE that PR existed.",
-    "originalConverterOutput": "NOT kept as a sibling file in this directory -- ingest-checklist-csv-to-catalog.cjs sweeps every *.csv in a directory (fs.readdirSync(DIR).filter(n => n.endsWith('.csv'))), so a second CSV here would be ingested alongside this one the first time this directory is pointed at that script. The full per-row evidence is this manifest section instead; the original converter run is reproducible from the source xlsx (sourceUrl above) with `node backend/scripts/convertBeckettChecklistXlsx.cjs --xlsx <file> --year 2026 --set-key topps --sport baseball --set-name \"2026 Topps Series 1 Baseball\"` before the classifySections fix in the companion PR lands, or byte-identically reproducible by that PR's own fixture test after it lands.",
+    "rule": "convertBeckettChecklistXlsx.cjs's classifySections gained a permanent second pass (added in the same round as the League Leaders/RC fixes): a section whose (cardNumber -> player) map, after RC-suffix strip and R67 normalisation, equals or is a subset of the file's actual flagship run (PLAIN_SECTION, never merely category='base') on every shared number with zero disagreements folds onto it with the section's own header as the parallel. This is now the CONVERTER's own behaviour, not a hand relabel.",
     "perSectionEvidence": [
       { "originalCategory": "insert-hobby-exclusive", "foldedAs": "Hobby Exclusive", "rows": 100, "sharedWithBase": 100, "agree": 100, "disagree": 0, "ownNumbering": 0, "verdict": "folded -- clean subset" },
       { "originalCategory": "insert-retail-tin-exclusive", "foldedAs": "Retail Tin Exclusive", "rows": 100, "sharedWithBase": 100, "agree": 100, "disagree": 0, "ownNumbering": 0, "verdict": "folded -- clean subset" },
@@ -30,7 +35,7 @@
       { "originalCategory": "insert-super-box-exclusive", "foldedAs": "Super Box Exclusive", "rows": 17, "sharedWithBase": 16, "agree": 16, "disagree": 0, "ownNumbering": 1, "verdict": "16 rows folded -- clean subset; 1 row (#420) held, see heldRows" },
       { "originalCategory": "auto-funko-pop-autographs", "foldedAs": "Funko Pop Autographs", "rows": 2, "sharedWithBase": 1, "agree": 1, "disagree": 0, "ownNumbering": 1, "verdict": "1 row folded -- clean subset, isAuto=true kept; 1 row (#420) held, see heldRows" }
     ],
-    "noRegistrationNeeded": "R67's own rule is same-numbers-same-roster is a PARALLEL, not a named set. Every one of the 7 sections above is exactly that (or, for the two #420 rows, a non-colliding orphan that needs no key either). No entries were added to backend/src/services/catalog/productSetKeys.ts for this package."
+    "noRegistrationNeeded": "R67's own rule is same-numbers-same-roster is a PARALLEL, not a named set. No entries were added to backend/src/services/catalog/productSetKeys.ts for this package."
   },
   "heldRows": [
     { "cardNumber": "420", "player": "Luis Arraez", "categories": ["insert-super-box-exclusive", "auto-funko-pop-autographs"], "note": "Left exactly as staged (category unchanged, blank parallel) -- unique cardNumber, no collision with any other row (the signed and unsigned copies differ only by isAuto, computing distinct addresses hiq:baseball:2026:topps:420:base:no-auto and ...:auto). No base counterpart exists (base's own numbering ends at #350), so it is not a parallel of anything measured. Box-topper/bonus-card candidate -- held for Drew's ruling before any key or fold decision." }
@@ -40,7 +45,7 @@
       "sheet": "Base",
       "section": "Base Set",
       "category": "base",
-      "cards": 370,
+      "cards": 350,
       "role": "anchor"
     },
     {
@@ -57,20 +62,30 @@
       "section": "Hobby Exclusive",
       "category": "insert-hobby-exclusive",
       "cards": 100,
-      "role": "own-cards"
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Hobby Exclusive",
+      "rosterFold": true,
+      "agree": 100,
+      "disagree": 0
     },
     {
       "sheet": "Variations",
       "section": "Retail Tin Exclusive",
       "category": "insert-retail-tin-exclusive",
       "cards": 100,
-      "role": "own-cards"
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Retail Tin Exclusive",
+      "rosterFold": true,
+      "agree": 100,
+      "disagree": 0
     },
     {
       "sheet": "Variations",
       "section": "Base - Golden Mirror Variation",
       "category": "insert-base-golden-mirror-variation",
-      "cards": 370,
+      "cards": 350,
       "role": "parallel",
       "anchor": "Base>Base Set",
       "rung": "Golden Mirror Variation"
@@ -125,7 +140,12 @@
       "section": "Flagship Real One Autographs",
       "category": "auto-flagship-real-one-autographs",
       "cards": 48,
-      "role": "own-cards"
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Flagship Real One Autographs",
+      "rosterFold": true,
+      "agree": 48,
+      "disagree": 0
     },
     {
       "sheet": "Autographs",
@@ -167,7 +187,12 @@
       "section": "1952 Base Variation Autographs",
       "category": "auto-1952-base-variation-autographs",
       "cards": 21,
-      "role": "own-cards"
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "1952 Base Variation Autographs",
+      "rosterFold": true,
+      "agree": 21,
+      "disagree": 0
     },
     {
       "sheet": "Autographs",
@@ -209,7 +234,15 @@
       "section": "Funko Pop Autographs",
       "category": "auto-funko-pop-autographs",
       "cards": 2,
-      "role": "own-cards"
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Funko Pop Autographs",
+      "rosterFold": true,
+      "agree": 1,
+      "disagree": 0,
+      "heldNumbers": [
+        "420"
+      ]
     },
     {
       "sheet": "Autographs",
@@ -258,7 +291,12 @@
       "section": "Real One Relics",
       "category": "insert-real-one-relics",
       "cards": 80,
-      "role": "own-cards"
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Real One Relics",
+      "rosterFold": true,
+      "agree": 80,
+      "disagree": 0
     },
     {
       "sheet": "Inserts",
@@ -356,7 +394,15 @@
       "section": "Super Box Exclusive",
       "category": "insert-super-box-exclusive",
       "cards": 37,
-      "role": "own-cards"
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Super Box Exclusive",
+      "rosterFold": true,
+      "agree": 16,
+      "disagree": 0,
+      "heldNumbers": [
+        "420"
+      ]
     }
   ]
 }
