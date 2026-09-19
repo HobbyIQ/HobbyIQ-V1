@@ -75,7 +75,29 @@ export type SplitIdentityReason =
   | "sport-unresolved"
   /** An identity field is not a well-formed address: its sport segment is
    *  empty or names no canonical vertical, so the row is unaddressable. */
-  | "malformed-key";
+  | "malformed-key"
+  /** R70 (Drew, 2026-09-19). The title names a known insert set of its own
+   *  product, and that insert has NO registered product key in
+   *  `catalog/productSetKeys.ts`. The sale is real and kept queryable; it is
+   *  never pooled on the base card because the title said it is a different
+   *  card, and never pooled on a guessed insert key because none is ruled.
+   *  The parked list (grouped by insert root) is the registration queue. */
+  | "insert-named-no-key"
+  /** R70 companion. The title names TWO DIFFERENT insert sets of its own
+   *  product and neither is chosen -- guessing between two named games risks
+   *  filing the sale on the wrong one. */
+  | "two-inserts-named"
+  /** F3+F5 review fix (Drew, 2026-09-19). The title names a REGISTERED
+   *  insert key, but the insert's own checklist rows in card_catalog do not
+   *  confirm this sale (no row at the sale's card number, or -- absent a
+   *  card number -- no row for the sale's player), or the insert has no
+   *  checklist rows at all. A title match alone is vocabulary, not proof:
+   *  seller boilerplate ("Ships from Downtown Toronto") can name a
+   *  registered insert with zero connection to the card, and an insert
+   *  setKey paired with a BASE card's number is an address no checklist
+   *  ever printed. The checklist decides -- absent beats wrong, so the sale
+   *  is parked rather than re-keyed on a title match alone. */
+  | "insert-named-unconfirmed";
 
 export type SplitIdentityOutcome =
   /** The fields agree, or one is a vendor key. Write unchanged. */
@@ -117,6 +139,79 @@ export function withSport(slug: string, sport: string): string {
   if (seg.length < 4) return slug;
   seg[1] = sport.trim().toLowerCase();
   return seg.join(":");
+}
+
+/** The setKey (product) segment of an hiq slug, or null when it names no
+ *  product. `hiq:sport:year:setKey:...` -- segment index 3. */
+export function productSetKeyOf(slug: string | null | undefined): string | null {
+  const product = productIdentityOf(slug);
+  if (product === null) return null;
+  const setKey = product.split(":")[2];
+  return setKey && setKey.trim() ? setKey.trim().toLowerCase() : null;
+}
+
+/**
+ * F1 review fix (Drew, 2026-09-19). Rewrite ONLY the setKey (product)
+ * segment of an hiq slug -- never the sport, never the card number, never
+ * anything else -- so a re-key changes exactly one axis (relocation lists
+ * change one axis only). Used exclusively by `carryProductRekeyOntoCardId`
+ * below, to move `cardId` onto an insert's product key that a title match
+ * has ALREADY been confirmed against the insert's own checklist rows --
+ * never applied speculatively.
+ */
+export function withProductSetKey(slug: string, setKey: string): string {
+  const seg = slug.trim().split(":");
+  if (seg.length < 4) return slug;
+  seg[3] = setKey.trim().toLowerCase();
+  return seg.join(":");
+}
+
+/**
+ * F1 (critical, review finding). `recordSoldComp`'s `doc.cardId` -- the
+ * Cosmos PARTITION KEY, i.e. the pool a sale lands in -- comes from the
+ * CALLER's `input.cardId` verbatim, never from the derived `hobbyiqCardId`.
+ * When the R66/R67 pre-step re-keys `hobbyiqCardId` to a confirmed insert
+ * product while `cardId` stays an `hiq:` slug on the PRE-rewrite BASE
+ * product, `decideSplitIdentity` (just below) sees "same sport, different
+ * product" and PARKS the row as `split-identity` -- and `cardId` never
+ * moves, so the re-key is a complete no-op for the pool the sale is actually
+ * read from (`exactPoolReader` matches on `cardId`; a stray `hobbyiqCardId`
+ * update helps nobody if the partition key still names the wrong card).
+ *
+ * THE RULING, applied here and ONLY here: rewrite `cardId`'s product segment
+ * to the insert's key when, and only when, ALL of:
+ *
+ *   1. `cardId` is itself an `hiq:` slug (a raw vendor id is left alone --
+ *      it names no product for this comparison to apply to, exactly as
+ *      `decideSplitIdentity`'s own vendor-key fail-open already treats it);
+ *   2. `cardId`'s product SETKEY segment equals the PRE-rewrite base setKey
+ *      (the product the title-parse resolved BEFORE the insert pre-step
+ *      ran) -- so this only ever carries a genuine base-to-insert re-key
+ *      forward, never papers over some OTHER pre-existing disagreement
+ *      between `cardId` and the derivation;
+ *   3. the caller states the re-key is CONFIRMED (by the insert's own
+ *      checklist rows -- see `insertSetChecklistConfirm.ts` -- never by a
+ *      title match alone, per F3+F5).
+ *
+ * Changes ONE axis (the product/setKey segment) and nothing else -- sport,
+ * card number, parallel, everything downstream of segment 3 rides unchanged
+ * -- matching the repo's own "relocation lists change one axis only" rule.
+ * Returns the input `cardId` unchanged whenever any condition fails, so a
+ * caller can always call this unconditionally and trust the no-op default.
+ */
+export function carryProductRekeyOntoCardId(input: {
+  cardId: string | null | undefined;
+  preRewriteBaseSetKey: string | null | undefined;
+  insertSetKey: string;
+  confirmed: boolean;
+}): string | null | undefined {
+  if (!input.confirmed) return input.cardId;
+  const cardId = String(input.cardId ?? "");
+  if (!cardId.startsWith("hiq:")) return input.cardId;
+  const cardIdSetKey = productSetKeyOf(cardId);
+  const baseSetKey = String(input.preRewriteBaseSetKey ?? "").trim().toLowerCase();
+  if (!cardIdSetKey || !baseSetKey || cardIdSetKey !== baseSetKey) return input.cardId;
+  return withProductSetKey(cardId, input.insertSetKey);
 }
 
 /**
@@ -318,4 +413,35 @@ export function guardSoldCompDoc(
   }
 
   return outcome;
+}
+
+/**
+ * PARK BY NAME, FOR A REASON DECIDED OUTSIDE THE SPLIT-IDENTITY COMPARISON
+ * (R70, 2026-09-19).
+ *
+ * `decideSplitIdentity` answers exactly one question -- do `cardId` and
+ * `hobbyiqCardId` name the same product. R70's park ("this title names an
+ * insert set with no registered key") and its companion
+ * ("this title names two different insert sets") are not that question at
+ * all: the two identity fields may agree perfectly and the row still must not
+ * be filed, because the TITLE says the card is a different product than the
+ * one the writer is about to mint an id for.
+ *
+ * This is the SAME mutation `guardSoldCompDoc`'s park branch applies --
+ * intentionally: a row parked by either mechanism must be indistinguishable
+ * to every reader and to the unpark lane, per `GuardedSoldCompDoc`'s own
+ * header. It is not a second guard; it is the one park stamp, applied for a
+ * reason the split-identity comparison was never asked about.
+ */
+export function parkSoldCompDoc(
+  doc: GuardedSoldCompDoc,
+  reason: SplitIdentityReason,
+  detail: string,
+  guardedBy: string,
+): void {
+  doc.identityUnverified = true;
+  doc.identityUnverifiedAt = new Date().toISOString();
+  doc.identityUnverifiedBy = guardedBy;
+  doc.identityUnverifiedReason = reason;
+  doc.identityUnverifiedDetail = detail;
 }

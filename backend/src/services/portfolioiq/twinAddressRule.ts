@@ -72,13 +72,27 @@ export type TwinVerdict =
   | { action: "refuse"; liveTwinAt: string };
 
 /**
- * A parked copy is out of every pool, so it is not a competing address.
+ * A parked copy is not a competing address FOR THIS RULE, so `decideTwinAddress`
+ * treats it as though it were not resident anywhere -- see F6 (2026-09-19
+ * review finding on the R66/R67/R70 PR).
  *
  * Both markers count. `flaggedWrong` is the dedup lane's (#1942);
- * `identityUnverified` is the write guard's (CF-ONE-WRITE-PATH-FOR-SOLD-COMPS)
- * -- a row whose identity nothing attests is likewise held out of every pool.
- * Either one means the row is not pricing a card, which is the only property
- * this rule cares about.
+ * `identityUnverified` is the write guard's (CF-ONE-WRITE-PATH-FOR-SOLD-COMPS).
+ * UPDATED (#2330, same day): a parked row IS now excluded from FMV/trend/
+ * index/recent-sales too, not just from this rule. #2330 added the
+ * `(NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified != true)`
+ * (or `= false`, same predicate) clause to the WHERE of all six readers:
+ * `exactPoolReader.ts`'s `readExactPoolRows` (the query behind every
+ * published FMV, `unifiedPricing.service.ts`), `soldCompsGradeReader.ts`'s
+ * `readSoldCompsForGrade` (the observed grade curve), `hobbyIqFmv.service.ts`'s
+ * `queryPool` (the other independent FMV pool engine), `soldCompsStore.service.ts`'s
+ * `readCompsByCardId` (GET /api/compiq/cards/:cardId/recent-sales),
+ * `marketMoversSnapshot.service.ts`'s raw-scan path (Market Movers), and
+ * `marketIndex.service.ts`'s `fetchSales` (the published per-sport index).
+ * A row parked with `identityUnverified` is therefore out of every pool this
+ * file and #2330 together cover -- "parked" now means "invisible to THIS
+ * rule AND to FMV/trend/index/recent-sales/catalog auto-seed", not the
+ * narrower claim this comment made before #2330 shipped.
  */
 export function isParked(row: TwinCandidate | null | undefined): boolean {
   return row?.flaggedWrong === true || row?.identityUnverified === true;

@@ -24,7 +24,8 @@ import {
 } from "./parseTitleIdentity.service.js";
 import { resolveVertical } from "./resolveVertical.service.js";
 import { cardNumberInClause, computeHobbyIqCardId, slugify, normalizeSetKey as canonicalNormalizeSetKey } from "./hobbyIqCardId.service.js";
-import { guardSoldCompDoc } from "./splitIdentityWriteGuard.js";
+import { guardSoldCompDoc, parkSoldCompDoc } from "./splitIdentityWriteGuard.js";
+import { insertSetNamedInTitle } from "./insertSetTitleReader.js";
 import { decideTwinAddress, type TwinCandidate } from "./twinAddressRule.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
 import { yearTheTitleAllows } from "./yearTheTitleAllows.js";
@@ -37,6 +38,10 @@ import { qualifiedSetKeyFromTitle } from "../catalog/productQualifiers.js";
 import { parseGradeFromTitle } from "./gradeParser.js";
 import { judgeCardNumber, logCardNumberVerdict, isTcgVertical } from "./cardNumberIntegrity.js";
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
+// Type-only: insertSetChecklistConfirm.ts's two exports are loaded
+// dynamically below (that module in turn pulls in this one's own
+// narrow-breaker exports, so a static value import here would be circular).
+import type { ConfirmVerdict } from "./insertSetChecklistConfirm.js";
 
 // CF-CHECKLIST-NARROWER (Drew, 2026-08-02). When parseListingIdentity
 // can't extract a cardNumber but we have (player, year, set) triple,
@@ -907,6 +912,41 @@ export interface VendorPersistResult {
   /** Rows whose two identity fields disagreed and an ATTESTED sport settled
    *  it; both fields were rewritten to the attested identity. */
   identityResolved?: number;
+  /** R67 (2026-09-19), CONFIRMED per F3+F5 (review fix, same day): the title
+   *  named a registered insert set of its own product AND the insert's own
+   *  checklist rows confirmed this sale's card number/player; `setKey` was
+   *  rewritten to the insert's own product key before the id was minted, so
+   *  the row prices against the insert's own pool, not the base card of that
+   *  number. */
+  insertSetReKeyed?: number;
+  /** F3+F5 (review fix, 2026-09-19): the title named a REGISTERED insert set,
+   *  but the insert's own checklist rows did not confirm this sale's card
+   *  number/player -- a title match alone (seller boilerplate, an incidental
+   *  mention) never re-keys. Parked with `insert-named-unconfirmed`, distinct
+   *  from `insertSetParkedNoKey` (no registered key exists at all). */
+  insertSetParkedUnconfirmed?: number;
+  /** R70 (2026-09-19): the title named an insert set of its own product with
+   *  NO registered product key, and the BASE checklist did not confirm this
+   *  sale as an ordinary base card either. Parked through the same mechanism
+   *  as `identityParked`; counted separately because the fix for this class
+   *  is registering the key, not attesting a sport. Grouped by insert root,
+   *  this is the registration queue. */
+  insertSetParkedNoKey?: number;
+  /** F4 (review fix, 2026-09-19): the title named an UNREGISTERED root, but
+   *  the BASE checklist confirmed this sale as an ordinary base card at its
+   *  number/player -- the root is an incidental English word (e.g.
+   *  "fireworks", "prime"), not evidence of an insert. Left untouched. */
+  insertWordButBaseConfirmed?: number;
+  /** FIX B (third review, 2026-09-19): the insert-rekey or base-confirm
+   *  checklist read returned UNKNOWN (result-cap hit, timeout, open breaker,
+   *  no container, or a query error) -- no answer was obtained, so the sale
+   *  was left completely untouched: no re-key, no park. Counted separately
+   *  from `insertSetParkedUnconfirmed`/`insertSetParkedNoKey` because this
+   *  bucket is a stalled READ, not a checklist verdict -- since #2330 a park
+   *  removes the row from every FMV pool, so a read failure must never be
+   *  allowed to cause one. Mirrors `insertSetChecklistConfirm.ts`'s own
+   *  process-lifetime `insertConfirmUnknown` counter/log-once-per-reason. */
+  insertSetConfirmUnknown?: number;
   /** CF-THE-TITLE-OUTRANKS-THE-VENDOR-PLAYER: the vendor attributed the sale to
    *  a DIFFERENT person than the title names. Neither is adopted; the row is
    *  skipped as UNDERIVABLE rather than keyed to a card it may not be. */
@@ -1112,6 +1152,11 @@ export async function persistVendorSalesToPool(
       result.skipped++;
       continue;
     }
+    // R66/R67/R70 (Drew, 2026-09-19): set below, once sport/year/setKey/player
+    // are all resolved, when the title names an insert set with no registered
+    // key or names two at once. Applied at the write door alongside
+    // `guardSoldCompDoc`'s own verdict -- see that call site's comment.
+    let insertParkPending: { reason: "insert-named-no-key" | "two-inserts-named" | "insert-named-unconfirmed"; detail: string } | null = null;
     // CF-TCA-STRUCTURED-HINT (Drew, 2026-08-02): identity hint fields
     // (cardNumber / parallel / isAuto / printRun / setName) take priority
     // over the title-guess fallback. When the vendor pre-populated
@@ -1615,6 +1660,132 @@ export async function persistVendorSalesToPool(
       } catch {
         // The parser's answer stands. Absent beats wrong, and a catalog blip
         // must not change what a sale is.
+      }
+    }
+
+    // ── R66/R67/R70 -- A NAMED INSERT SET IS NEVER FILED ON THE BASE CARD ──
+    //
+    // (Drew, 2026-09-19.) PLACEMENT MIRRORS soldCompsStore.recordSoldComp's
+    // own pre-step, and for the same two reasons: runs AFTER the R29/
+    // umbrella-fold block just above (so it reads the WIDENED `setKey` --
+    // an insert set is scoped to the real product an umbrella fold may have
+    // just resolved to, e.g. `upper-deck-series-2`, never the collapsed
+    // umbrella), and BEFORE `computeHobbyIqCardId` right below, which is
+    // therefore also before the checklist-numbered-id upgrade further down:
+    // that upgrade's catalog lookup keys on `setKey`/`slug` AFTER this point,
+    // so rewriting `setKey` here first means it looks up the checklist row of
+    // the INSERT's own product, never the base card's.
+    //
+    // Lives here rather than inside `hobbyIqCardId.service.ts` /
+    // `parseTitleIdentity.service.ts` -- both declared derivation-stamp
+    // inputs -- for the same reason the R29 block above does.
+    //
+    // This writer has no verified-pin concept (`VendorPersistIdentityHint`
+    // carries no pinned-identity field), so the check applies unconditionally
+    // once sport/year/setKey resolve. Pokemon is untouched -- the corpus this
+    // reader consults carries no Pokemon products.
+    if (sport && String(sport).toLowerCase() !== "pokemon" && cardYear && setKey) {
+      const insertPreRewriteBaseSetKey = canonicalNormalizeSetKey(setKey, sport);
+      const insertMatches = insertSetNamedInTitle({
+        title, sport, year: cardYear, setKey: insertPreRewriteBaseSetKey, playerName,
+      });
+      if (insertMatches.length > 1) {
+        insertParkPending = {
+          reason: "two-inserts-named",
+          detail: `title names ${insertMatches.length} distinct insert sets of ${setKey} `
+            + `(${insertMatches.map((m) => m.root).join(", ")}) -- parked, not filed under a guess`,
+        };
+      } else if (insertMatches.length === 1) {
+        const only = insertMatches[0];
+        if (only.registeredKey) {
+          // F3+F5 (review finding): a title match is vocabulary, not proof --
+          // seller boilerplate ("Ships from Downtown Toronto") can name a
+          // registered insert with no connection to the card, and an insert
+          // setKey paired with the BASE card's number is an address no
+          // checklist ever printed. Re-key only when the insert's OWN
+          // checklist rows confirm this sale's card number (or, absent one,
+          // its player). Bounded/cached/fail-open, shared narrow breaker --
+          // see insertSetChecklistConfirm.ts.
+          // FIX B: tri-state. "confirmed" re-keys, "refuted" parks
+          // (unchanged), "unknown" (cap hit / timeout / breaker open / no
+          // container / error) leaves the sale COMPLETELY untouched -- since
+          // #2330 a park removes a comp from every FMV pool, so a read
+          // failure must never be allowed to make that call.
+          let verdict: ConfirmVerdict = "unknown";
+          try {
+            const { insertReKeyConfirmedByChecklist } = await import("./insertSetChecklistConfirm.js");
+            verdict = await insertReKeyConfirmedByChecklist(
+              {
+                sport, year: cardYear, insertSetKey: only.registeredKey,
+                cardNumber: parsed.cardNumber, playerName,
+              },
+              {
+                container: await getCatalogContainerForRead(),
+                runQuery: (run) => narrowQuery(() => run()),
+                breakerIsOpen: narrowBreakerIsOpen,
+                recordSkip: recordNarrowSkip,
+                queryOptions: { abortSignal: AbortSignal.timeout(NARROW_QUERY_TIMEOUT_MS) },
+              },
+            );
+          } catch {
+            verdict = "unknown";
+          }
+          if (verdict === "confirmed") {
+            setKey = only.registeredKey;
+            result.insertSetReKeyed = (result.insertSetReKeyed ?? 0) + 1;
+          } else if (verdict === "refuted") {
+            insertParkPending = {
+              reason: "insert-named-unconfirmed",
+              detail: `title names insert "${only.root}" of ${setKey} (registered as `
+                + `${only.registeredKey}), but its checklist rows do not confirm this sale's `
+                + `card number/player -- parked, not re-keyed on a title match alone`,
+            };
+            result.insertSetParkedUnconfirmed = (result.insertSetParkedUnconfirmed ?? 0) + 1;
+          } else {
+            // unknown: no re-key, no park -- the confirm helper already
+            // incremented insertConfirmUnknown and logged once per reason.
+            result.insertSetConfirmUnknown = (result.insertSetConfirmUnknown ?? 0) + 1;
+          }
+        } else {
+          // F4 (review finding): an unregistered root is often an ordinary
+          // English word appearing incidentally in a base-card title. Park
+          // only if the BASE checklist REFUTES this sale as a base card --
+          // when it CONFIRMS, the word is incidental and the sale is
+          // ordinary base coverage, left untouched. FIX B: "unknown" also
+          // leaves it untouched (no park on a read failure).
+          let baseVerdict: ConfirmVerdict = "unknown";
+          try {
+            const { baseCardConfirmedBySale } = await import("./insertSetChecklistConfirm.js");
+            baseVerdict = await baseCardConfirmedBySale(
+              {
+                sport, year: cardYear, baseSetKey: insertPreRewriteBaseSetKey,
+                cardNumber: parsed.cardNumber, playerName,
+              },
+              {
+                container: await getCatalogContainerForRead(),
+                runQuery: (run) => narrowQuery(() => run()),
+                breakerIsOpen: narrowBreakerIsOpen,
+                recordSkip: recordNarrowSkip,
+                queryOptions: { abortSignal: AbortSignal.timeout(NARROW_QUERY_TIMEOUT_MS) },
+              },
+            );
+          } catch {
+            baseVerdict = "unknown";
+          }
+          if (baseVerdict === "confirmed") {
+            result.insertWordButBaseConfirmed = (result.insertWordButBaseConfirmed ?? 0) + 1;
+          } else if (baseVerdict === "refuted") {
+            insertParkPending = {
+              reason: "insert-named-no-key",
+              detail: `title names insert "${only.root}" of ${setKey}, which has no registered `
+                + `product key -- parked, not pooled on the base card`,
+            };
+            result.insertSetParkedNoKey = (result.insertSetParkedNoKey ?? 0) + 1;
+          } else {
+            // unknown: leave untouched, no park.
+            result.insertSetConfirmUnknown = (result.insertSetConfirmUnknown ?? 0) + 1;
+          }
+        }
       }
     }
 
@@ -2570,6 +2741,30 @@ export async function persistVendorSalesToPool(
             attestedBy: verdict.attestedBy,
           }));
         }
+      }
+
+      // R70: the insert-set title pre-step found a named insert with no
+      // registered key (or two named at once). Parked through the SAME
+      // mechanism as the split-identity guard just above -- a reader cannot
+      // tell the two apart, and both mean "this row is real, kept, and out of
+      // every pool". Checked AFTER the split-identity guard, never instead of
+      // it: the two reasons are independent and either may apply to one row.
+      if (insertParkPending) {
+        parkSoldCompDoc(
+          doc as Record<string, unknown>,
+          insertParkPending.reason,
+          insertParkPending.detail,
+          "persistVendorSalesToPool:insert-set-title-reader",
+        );
+        console.warn(JSON.stringify({
+          event: "sold_comp_insert_set_parked",
+          source: "persistVendorSalesToPool",
+          vendorSource: source,
+          reason: insertParkPending.reason,
+          cardId: doc.cardId,
+          hobbyiqCardId: doc.hobbyiqCardId,
+          detail: insertParkPending.detail,
+        }));
       }
 
       await container.items.upsert(doc);
