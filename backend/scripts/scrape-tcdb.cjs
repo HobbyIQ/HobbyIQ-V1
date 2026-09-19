@@ -22,6 +22,12 @@ const fs = require("fs");
 const path = require("path");
 const cheerio = require("cheerio");
 
+// CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME (2026-09-19, follow-up to
+// #2294). The canonical cleanPlayerName (RC-family + generational-suffix
+// comma), bridged the same dist-or-fallback way player-identity.cjs bridges
+// playerIdentityKey -- see scripts/lib/player-name.cjs.
+const { cleanPlayerName: cleanPlayerNameCanonical } = require("./lib/player-name.cjs");
+
 // CF-TCDB-INSERT-CATEGORY (Drew, 2026-08-17). An insert set has its OWN
 // numbering, so scraping 1995-96 Fleer - Class Encounters as category "base"
 // would mint `hiq:basketball:1995:fleer:4:base:no-auto` and overwrite Fleer
@@ -107,8 +113,15 @@ function slugify(s) {
 
 function cleanPlayerName(raw) {
   let s = String(raw || "").trim();
+  // Strip trailing parens ("(RC)" incidentally caught here too) and a
+  // leading hyphen TCDB's own page markup carries -- neither is the
+  // canonical cleaner's job.
   s = s.replace(/\s*\([^)]+\)\s*$/, "").trim();
   s = s.replace(/^\s*-\s*/, "").trim();
+  // CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME (#2294): the bare " RC" /
+  // " RC*" shape (no parens) and the generational-suffix comma are the ONE
+  // canonical cleanPlayerName's job, applied last.
+  s = cleanPlayerNameCanonical(s);
   if (s.length < 2 || s.length > 80) return null;
   return s;
 }

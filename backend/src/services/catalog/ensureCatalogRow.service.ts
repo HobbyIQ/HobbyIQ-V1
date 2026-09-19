@@ -14,7 +14,7 @@
 
 import { CosmosClient, type Container, type JSONObject } from "@azure/cosmos";
 import { deriveBrand, deriveParentSetKey, normalizeSetKey, slugify } from "../portfolioiq/hobbyIqCardId.service.js";
-import { upsertCatalogEntry, type CardCatalogEntry } from "../portfolioiq/cardCatalog.service.js";
+import { cleanPlayerName, upsertCatalogEntry, type CardCatalogEntry } from "../portfolioiq/cardCatalog.service.js";
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 let _container: Container | null = null;
@@ -146,6 +146,15 @@ export async function ensureCatalogRow(input: EnsureCatalogRowInput): Promise<vo
   const parallel = input.parallel ?? "Base";
   const cardNumber = String(input.cardNumber ?? "").trim().toUpperCase();
   if (!cardNumber || !setKey) return;
+  // CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME (2026-09-19, follow-up to
+  // #2294). This mint path built playerSlug straight off the caller's raw
+  // playerName, so an auto-seed row minted from a checklist string that still
+  // carried " RC" ("Jonah Tong RC") would mint playerSlug "jonah-tong-rc" --
+  // a fresh split identity even after #2294 closed deriveCatalogEntry's own
+  // mint path. Cleaned ONCE here and used everywhere below, so playerName /
+  // playerSlug / searchText / searchTokens all agree with each other, the same
+  // way deriveCatalogEntry keeps them in step.
+  const cleanedPlayerName = input.playerName ? cleanPlayerName(input.playerName) : null;
   const now = new Date().toISOString();
   const doc: Omit<CardCatalogEntry, "observedAt" | "lastSeenAt"> = {
     id: input.slug,
@@ -162,17 +171,17 @@ export async function ensureCatalogRow(input: EnsureCatalogRowInput): Promise<vo
     parallelSlug: slugify(parallel),
     isAuto: input.isAuto === true,
     printRun: input.printRun ?? null,
-    playerName: input.playerName ?? null,
-    playerSlug: input.playerName ? slugify(input.playerName) : null,
+    playerName: cleanedPlayerName,
+    playerSlug: cleanedPlayerName ? slugify(cleanedPlayerName) : null,
     source: "ingest-auto-seed",
     confidence: 0.85,
     observedCompCount: 1,
     firstSeenAt: now,
     vendorIds: {},
-    searchText: [input.year, cardNumber, input.playerName ?? "", parallel].filter(Boolean).join(" ").toLowerCase(),
+    searchText: [input.year, cardNumber, cleanedPlayerName ?? "", parallel].filter(Boolean).join(" ").toLowerCase(),
     searchTokens: Array.from(new Set([
       String(input.year), cardNumber.toLowerCase(), brand,
-      ...(input.playerName ? input.playerName.toLowerCase().split(/\s+/) : []),
+      ...(cleanedPlayerName ? cleanedPlayerName.toLowerCase().split(/\s+/) : []),
       ...parallel.toLowerCase().split(/\s+/).filter(Boolean),
       ...setKey.split("-").filter(Boolean),
     ])),

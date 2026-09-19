@@ -361,6 +361,33 @@ describe("a fold never changes the player: the ordinary ladder is untouched", ()
     expect(r.action).toBe("refused");
     expect(w.catalog.writes()).toEqual([]);
   });
+
+  // CF-A-ROOKIE-MARKER-IS-NOT-A-DIFFERENT-PLAYER (2026-09-19). Before
+  // playerIdentityKey.ts routed through cleanPlayerName, "Jonah Tong RC" and
+  // "Jonah Tong" reduced to DIFFERENT keys (jonahtongrc vs jonahtong), so this
+  // exact pair would have hit the arbitration arms above -- exactly like Kyle
+  // Hamilton vs Devin Leary -- and REFUSED with neither side corroborated,
+  // even though it is one rookie under two spellings of the same checklist
+  // marker. It must now land on the ordinary ladder, never the arbitration.
+  it("an RC-suffixed name and its clean spelling are the SAME player, not a conflict to arbitrate", async () => {
+    const alias = opticRow(ALIAS, "1", "base", "Jonah Tong RC");
+    const dest = opticRow(DEST, "1", "base", "Jonah Tong", { vendorIds: { cardhedge: "ch-2" } });
+    const w = world(alias, dest);
+    const r = await move(w, alias, dest.id);
+    expect(r.action).not.toBe("refused");
+    expect(r.action).toBe("fold");
+    expect(r.decision).toMatch(/vendorIds/);       // the ORDINARY ladder decided it
+    expect(r.playerArbitration).toBeUndefined();    // never even reached arm 1/arm 2
+  });
+
+  it("the RC pair still folds when the RC copy is the one with more evidence", async () => {
+    const alias = opticRow(ALIAS, "3", "base", "Jonah Tong RC", { vendorIds: { cardhedge: "ch-3" } });
+    const dest = opticRow(DEST, "3", "base", "Jonah Tong");
+    const w = world(alias, dest);
+    const r = await move(w, alias, dest.id);
+    expect(r.action).not.toBe("refused");
+    expect(r.playerArbitration).toBeUndefined();
+  });
 });
 
 // ── 4. mutation checks ───────────────────────────────────────────────────────

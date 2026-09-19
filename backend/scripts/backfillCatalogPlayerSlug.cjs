@@ -25,7 +25,21 @@
 //   node scripts/backfillCatalogPlayerSlug.cjs --apply
 //   node scripts/backfillCatalogPlayerSlug.cjs --apply --sets topps-chrome --years 2024
 
+const path = require("node:path");
 const { CosmosClient } = require("@azure/cosmos");
+// CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME (2026-09-19, follow-up to
+// #2294). This script derived playerSlug straight off the stored playerName
+// field, so a pre-#2294 row still carrying " RC" ("Jonah Tong RC") would
+// derive "jonah-tong-rc" -- RE-AFFIRMING the split identity #2294's repair
+// script is meant to close, on every re-run. cleanPlayerName is the one
+// canonical helper (deriveCatalogEntry / the CSV checklist ingest / the
+// backfill-playerslug lane all use it); loaded through the shared bridge
+// (scripts/lib/player-name.cjs, the same dist-or-fallback shape
+// player-identity.cjs already uses for playerIdentityKey) rather than
+// restating the RC regex a fourth time. Falls back to a no-op if dist is not
+// built, so a tree-less run degrades to its OLD behaviour -- un-improved,
+// never worse.
+const { cleanPlayerName } = require(path.join(__dirname, "lib", "player-name.cjs"));
 
 const args = process.argv.slice(2);
 const has = (f) => args.includes(f);
@@ -102,7 +116,7 @@ async function handle(id) {
   const name = String(row.playerName ?? "").trim();
   if (!name) { stats.noName++; return; }
 
-  const want = slugify(name);
+  const want = slugify(cleanPlayerName(name));
   if (!want) { stats.noName++; return; }
   if (row.playerSlug === want) { stats.alreadyOk++; return; }
 

@@ -24,6 +24,13 @@ const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+// CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME (2026-09-19, follow-up to #2294).
+// This lane derived playerSlug straight off the stored playerName field, so a
+// pre-#2294 row still carrying " RC" ("Jonah Tong RC") would derive
+// "jonah-tong-rc" here -- RE-AFFIRMING the split identity #2294's repair
+// script is meant to close, on every re-run. Loaded through the shared bridge
+// (scripts/lib/player-name.cjs) rather than restating the RC regex here.
+const { cleanPlayerName } = require(path.join(__dirname, "lib", "player-name.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 64));
@@ -102,7 +109,7 @@ async function main() {
       await Promise.all(mine.slice(i, i + CONCURRENCY).map(async (d) => {
         scanned++;
         try {
-          const ps = slugify(d.playerName);
+          const ps = slugify(cleanPlayerName(d.playerName));
           if (!ps) { emptyName++; return; }
           if (!APPLY) { written++; return; }
           const tok = new Set((Array.isArray(d.searchTokens) ? d.searchTokens : []).map((x) => String(x).toLowerCase()).filter(Boolean));

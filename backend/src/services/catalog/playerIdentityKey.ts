@@ -1,3 +1,5 @@
+import { cleanPlayerName } from "../portfolioiq/cardCatalog.service.js";
+
 /**
  * playerIdentityKey.ts -- the ONE reduction that decides whether two catalog
  * rows name the same card.
@@ -92,6 +94,38 @@
  * file has no checklist. Those pairs stay contended and are settled by the arms
  * -- the market titles answer them -- or refused for a human. Folding them by
  * string rule would be exactly the "right guard, wrong scope" error.
+ *
+ * ── A ROOKIE MARKER IS NOT A DIFFERENT PLAYER (2026-09-19) ──────────────────
+ *
+ * #2294 fixed cleanPlayerName so the catalog stops MINTING "jonah-tong-rc" as
+ * a playerSlug, but the fold lane runs on the STORED playerName field, and
+ * every row minted before that fix -- and every row this reduction is ever
+ * asked to compare against one of them -- still carries the raw checklist
+ * text with " RC" attached. Before this change, playerIdentityKey("Jonah
+ * Tong RC") -> "jonahtongrc" and playerIdentityKey("Jonah Tong") ->
+ * "jonahtong": DIFFERENT KEYS, so the survivor rule in catalogRowOps.service
+ * (CF-A-FOLD-NEVER-CHANGES-THE-PLAYER) read the RC row and its clean sibling
+ * at the same card number as two different players and either arbitrated a
+ * survivor by corroboration/sale-title evidence that had nothing to do with
+ * the real question, or REFUSED the pair outright with neither side
+ * corroborated. RC-suffixed rows are, by construction, rookies, so this was
+ * concentrated damage on exactly the population where a fold decision matters
+ * most.
+ *
+ * The fix: reduce through cleanPlayerName FIRST, on the ORIGINAL-CASE string
+ * -- before this function's own lowercasing, because cleanPlayerName's RC
+ * strip is deliberately case-sensitive (an already-lowercased "jonah tong rc"
+ * would never match it). cleanPlayerName only touches the RC family (" RC",
+ * " RC*", " (RC)") and the pre-existing generational-suffix comma case; every
+ * other input passes through unchanged, so this is additive in exactly the
+ * same sense the symbol transliterations above are: a name cleanPlayerName
+ * does not touch reduces exactly as it did before.
+ *
+ * SAME SCOPE AS #2294, DELIBERATELY. TC/UER/SP/SSP/RR/DP/tier-letter rows
+ * still produce their own keys from the raw text -- cleanPlayerName leaves
+ * them untouched, so this reduction does too. A card whose two rows differ
+ * only by one of those markers still reads as two players here, exactly as
+ * before, until Drew rules on them.
  */
 
 /** Symbols that carry card identity, mapped to the English token the same card
@@ -117,10 +151,17 @@ const IDENTITY_SYMBOLS: ReadonlyArray<readonly [RegExp, string]> = [
  * A player/card name reduced to the letters and digits that identify it.
  *
  * "T.J. Hockenson" and "TJ Hockenson" are one person; "Flabébé" and "Flabebe"
- * are one card; "Suicune ☆" and "Suicune" are NOT. See the header.
+ * are one card; "Suicune ☆" and "Suicune" are NOT; "Jonah Tong RC" and
+ * "Jonah Tong" are the same rookie, not two different players. See the header.
  */
 export function playerIdentityKey(name: unknown): string {
-  let s = String(name ?? "").trim().toLowerCase();
+  // cleanPlayerName's RC-family strip is case-sensitive and must see the
+  // ORIGINAL casing -- run it before this function's own toLowerCase(), on
+  // the untrimmed original (cleanPlayerName trims internally). A name it does
+  // not touch (no RC/RC*/(RC), no generational-suffix comma) comes back
+  // byte-identical, so this is a strict narrowing of what reduces together,
+  // never a widening.
+  let s = cleanPlayerName(String(name ?? "")).trim().toLowerCase();
   if (!s) return "";
   for (const [re, to] of IDENTITY_SYMBOLS) s = s.replace(re, to);
   // Accents fold to their base letter rather than being deleted: NFD splits

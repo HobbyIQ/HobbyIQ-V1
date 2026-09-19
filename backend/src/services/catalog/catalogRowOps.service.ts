@@ -41,7 +41,7 @@
 //   authority                  authorityRank (catalogAuthority.service)
 
 import type { Container, PartitionKey, PatchOperation, SqlQuerySpec } from "@azure/cosmos";
-import { deriveCatalogEntry, type CardCatalogEntry } from "../portfolioiq/cardCatalog.service.js";
+import { cleanPlayerName, deriveCatalogEntry, type CardCatalogEntry } from "../portfolioiq/cardCatalog.service.js";
 import {
   deriveBrand,
   deriveParentSetKey,
@@ -445,7 +445,17 @@ function buildIncoming(
   const keepField = askedSetKey === null && fieldExtendsStem(rowSetKey, parsed.setKey);
   const setKey = keepField ? rowSetKey : parsed.setKey;
 
-  const playerName = merged.playerName ? String(merged.playerName).trim() || null : null;
+  // CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME (2026-09-19, follow-up to
+  // #2294). `merged.playerName` is a stored field that predates #2294 for
+  // every row minted before it, so it can still carry the checklist's raw
+  // " RC"/" RC*"/" (RC)" text. Cleaned HERE, once, so every use below --
+  // deriveCatalogEntry's input, the fallback slug on the `!agrees` branch,
+  // AND the field actually written to `doc.playerName` -- agrees with the
+  // playerSlug this function writes. Before this, `doc.playerName` was always
+  // the RAW field (even on the `agrees` branch, where playerSlug WAS already
+  // clean via deriveCatalogEntry), so a survivor could carry a clean slug
+  // beside a dirty playerName field.
+  const playerName = merged.playerName ? cleanPlayerName(String(merged.playerName)) || null : null;
   const cardNumber = String(merged.cardNumber ?? "").trim().toUpperCase();
   const parallel = String(merged.parallel ?? "Base");
   const printRun = typeof merged.printRun === "number" && Number.isFinite(merged.printRun)
