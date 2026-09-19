@@ -802,6 +802,104 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("upper-deck-milk-caps", { names: ["upper-deck-pogs"], family: "upper-deck", parent: "upper-deck" }),
   P("topps-holsum", { family: "topps", parent: "topps" }),
 
+  /**
+   * UPPER DECK HOCKEY SUB-BRANDS (2026-09-19, rekey-catalog-id-to-setkey
+   * follow-up). A read-only census of `card_catalog` ids under
+   * `hiq:hockey:<2019..2026>:upper-deck:` found ~118,000 checklist-sourced
+   * (checklistcenter-2026-09-06) rows whose setKey FIELD already names one of
+   * these products while their id stem still says the bare `upper-deck`
+   * umbrella -- the same D23/CF-THE-ID-FOLLOWS-ITS-OWN-SETKEY-FIELD shape the
+   * pilot fixed for Extended Series, but the rekey lane REFUSES an
+   * unregistered target (`unregistered-setkey`), so these rows cannot move
+   * until the table names them, exactly as the Leaf products above needed
+   * their own rows before their lane could reach them.
+   *
+   * `S()`, spelled: each is the checklist's own product name and should
+   * resolve from a title too (CF-THE-ID-CARRIES-THE-PRODUCT) -- before this,
+   * "2023-24 Upper Deck Artifacts ..." normalized to the bare `upper-deck`
+   * umbrella exactly like every other named release the table did not yet
+   * spell; after, it resolves to `upper-deck-artifacts`. That is the intended
+   * direction: a named product is its own key, and it is why a fresh sale of
+   * one of these products will derive the SAME id the rekey lane gives its
+   * matching catalog rows, rather than colliding with them one segment off.
+   *
+   * `parent: "upper-deck"` for provenance (the reference ladder, the reverse
+   * walk), and it is the FULL WEIGHT of what these entries do to the
+   * matcher. Deliberately NO `refines`: `refines` is CF-VERIFIED-REFINEMENTS-
+   * ONLY (a series split or a ruled named edition sharing ONE continuous
+   * numbering with its parent -- the header above `widenedSetKeys` is
+   * explicit that a bare STARTSWITH would wrongly let a specialization's
+   * ladder answer flagship comps, "the bowman-chrome != bowman merge in
+   * mirror image"). Every one of these is its OWN checklist, its OWN
+   * numbering and (mostly) its OWN print runs -- The Cup is a rookie-patch-
+   * auto product, Artifacts/Ultimate Collection/Synergy/Trilogy/Clear Cut
+   * are each a distinct release with a distinct price curve, CHL/AHL/PWHL/
+   * Team Canada (Juniors) are league-licensed sets with no numbering
+   * relationship to the NHL flagship, and the two centennial sets and the
+   * promo/box-set/card-day issues are one-off releases. Registering these
+   * with `refines` would be the SAME mistake Black Diamond Rookie Edition and
+   * Exquisite were explicitly NOT given it for, just below, and would widen
+   * the matcher's flagship-comps fallback into a rookie-patch-auto or a
+   * league-set pool it was never measured against. Each also gets its OWN
+   * `family` for the same reason those two do: these products do not share a
+   * price curve with base Upper Deck (or with each other), so `family`
+   * defaults to the key itself (the table's own default -- omitted here as
+   * everywhere else that default applies).
+   *
+   * `upper-deck-extended-series` (registered D39, already `refines:
+   * "upper-deck"`) and bare `upper-deck` are UNCHANGED -- not re-declared
+   * here.
+   *
+   * NOT RE-REGISTERED: `upper-deck-parkhurst` (measured: the census rows are
+   * all "upper deck parkhurst hockey", Upper Deck's own 2020-21 revival of
+   * the Parkhurst name, not the unrelated vintage 1950s-60s Parkhurst
+   * product) -- checked against a standalone `parkhurst` key first
+   * (`productEntry("parkhurst")` returns null; no existing registration to
+   * collide with), so it is registered below like every other sub-brand
+   * rather than folded onto something that does not exist in this table.
+   * `o-pee-chee` (registered, standalone, no `parent`) is a SEPARATE Topps-
+   * era Canadian product line and shares no census setKey with anything
+   * here; checked and left alone.
+   */
+  S("upper-deck-the-cup", { parent: "upper-deck" }),
+  S("upper-deck-premier", { parent: "upper-deck" }),
+  S("upper-deck-allure", { parent: "upper-deck" }),
+  S("upper-deck-credentials", { parent: "upper-deck" }),
+  S("upper-deck-artifacts", { parent: "upper-deck" }),
+  S("upper-deck-chl", { parent: "upper-deck" }),
+  S("upper-deck-team-canada-juniors", { parent: "upper-deck" }),
+  S("upper-deck-ultimate-collection", { parent: "upper-deck" }),
+  S("upper-deck-clear-cut", { parent: "upper-deck" }),
+  S("upper-deck-synergy", { parent: "upper-deck" }),
+  S("upper-deck-parkhurst", { parent: "upper-deck" }),
+  S("upper-deck-team-canada", { parent: "upper-deck" }),
+  S("upper-deck-ice", { parent: "upper-deck" }),
+  S("upper-deck-engrained", { parent: "upper-deck" }),
+  S("upper-deck-stature", { parent: "upper-deck" }),
+  // upper-deck-engrained-icons: NOT nested under upper-deck-engrained despite
+  // the name similarity -- the census shows overlapping but not identical
+  // card numbers (171 of ~800-934 shared) between the two, which is not the
+  // "one continuous numbering" a series-split parent/child needs, and this
+  // task's job is to register what the checklist source's OWN setKey field
+  // already asserts, not to rule a taxonomy relationship neither the source
+  // nor Drew has stated. Sibling under `upper-deck`, same as every other
+  // sub-brand here, until someone rules otherwise.
+  S("upper-deck-engrained-icons", { parent: "upper-deck" }),
+  S("upper-deck-trilogy", { parent: "upper-deck" }),
+  S("upper-deck-boston-bruins-centennial", { parent: "upper-deck" }),
+  S("upper-deck-ahl", { parent: "upper-deck" }),
+  S("upper-deck-chronology-volume-2", { parent: "upper-deck" }),
+  S("upper-deck-pwhl", { parent: "upper-deck" }),
+  S("upper-deck-detroit-red-wings-centennial", { parent: "upper-deck" }),
+  S("upper-deck-tim-hortons", { parent: "upper-deck" }),
+  S("upper-deck-nhl-star-rookies-box-set", { parent: "upper-deck" }),
+  S("upper-deck-spring-promo", { parent: "upper-deck" }),
+  S("upper-deck-spring-expo-promo", { parent: "upper-deck" }),
+  S("upper-deck-fall-expo-promo", { parent: "upper-deck" }),
+  S("upper-deck-rookie-box-set", { parent: "upper-deck" }),
+  S("upper-deck-nhl-star-rookies", { parent: "upper-deck" }),
+  S("upper-deck-national-hockey-card-day", { parent: "upper-deck" }),
+
   // -- Leaf: every product the catalog's own field spellings name (measured
   //    2026-08-30; the bare `leaf` rule collapsed all of them). Own family
   //    each -- Leaf products do not share a numbering -- under the Leaf root.
