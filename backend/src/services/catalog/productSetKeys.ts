@@ -1131,6 +1131,158 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   S("panini-photogenic-rookie-portrait-autographs", { parent: "panini-photogenic" }),
   S("panini-photogenic-snapshots-autographs", { parent: "panini-photogenic" }),
   S("panini-photogenic-the-shoe-game", { parent: "panini-photogenic" }),
+  /**
+   * R67 (Drew, ruling round of 2026-09-19): 2024 PANINI ZENITH FOOTBALL --
+   * THE NAMED INSERT SETS.
+   *
+   * Measured directly against the fixture already on main
+   * (`tests/fixtures/checklist-category/zenith-2024-fb-categories.json`,
+   * 6,214 rows, the real 2024 Zenith football checklist). Same method as the
+   * Photogenic registration above: the module's own production fold
+   * (`insert-set-key.cjs`'s `rungFoldingFor`, run over every row, never
+   * re-derived by hand) resolves the standard colour-prefix cases; the R67
+   * roster test -- cardNumber + player, players split on "/", trimmed,
+   * lowercased, de-duplicated, sorted -- resolves everything else BY HAND,
+   * because Zenith uses two naming shapes the module's prefix-only fold
+   * cannot see on its own:
+   *
+   *   TIER/RETAILER NAMES, not colours, sharing NO common prefix. Nine
+   *   category spellings -- 1st Down, 2nd Down, 3rd Down, 4th Down, Hobby,
+   *   No Huddle, Retail, Touchdown, Two-Minute Drill -- plus the module's own
+   *   already-derived `rookies-red-zone` (its 4 colour files: Blue/Gold/Red/
+   *   White) are ALL the exact same 100-card Rookies checklist: every shared
+   *   number names the same player, zero disagreements, so under R67's own
+   *   rule ("the roster decides", not the word used) these are ten parallel
+   *   spellings of ONE root, `rookies` -- exactly the "siblings name the set
+   *   even with no base tier" shape, just spelled with retailer names instead
+   *   of colours. The signed side is the same shape one level down: `Rookies
+   *   Autographs No Huddle` (63 rows) and `... Two-Minute Drill` (59 rows)
+   *   plus the module's own `rookies-red-zone-autographs` root (base + 4
+   *   colours) all measure the SAME signed subset (0.79-1.00 pairwise overlap,
+   *   the residual gap being real short-print scarcity, not different
+   *   players) -- one root, `rookies-autographs`.
+   *
+   *   A NAME WORD IN THE MIDDLE, not a suffix. `High Point Kaboom
+   *   Signatures`, `... Lightning Signatures` and `... Spokes Signatures`
+   *   are not colour-SUFFIXED spellings the module's stripper can reach
+   *   ("Kaboom" sits between "High Point" and "Signatures", not at the tail);
+   *   measured, `High Point Signatures` (20), `Lightning Signatures` (25) and
+   *   `Spokes Signatures` (21) are each an EXACT SUBSET of `Kaboom
+   *   Signatures` (26, the largest print run) on the same numbers -- one
+   *   root, `high-point-signatures` (named for the plain spelling, per the
+   *   convention `z-graphs` and `zoom-blue` already use one level up).
+   *
+   * TWENTY-SEVEN ROOTS SURVIVED, after both hand-verified clusters:
+   *
+   *     a-to-z                        26 rows,  5 colour rungs
+   *     alphas                        25 rows,  1 colour rung (gold ice)
+   *     behind-the-numbers            25 rows,  4 colour rungs
+   *     chalk-talk                    25 rows,  4 colour rungs
+   *     color-guard                   20 rows,  4 rungs (laundry-tag x3 + prime)
+   *     first-look                    25 rows,  1 colour rung (gold ice)
+   *     high-point-signatures         20 rows -- CLUSTER: kaboom(26)/
+   *                                              lightning(25)/spokes(21) all
+   *                                              subsets on the same numbers
+   *     idols                         20 rows,  5 colour rungs
+   *     pinnacle-inscriptions         19 rows (silver kept separate, below)
+   *     pinnacle-inscriptions-silver  25 rows -- roster is NOT a subset of
+   *                                              plain (extra numbers), so it
+   *                                              stands per R67's own-key rule
+   *     rookie-patch-autographs      152 rows,  colour rungs blue/gold/red
+   *                                              (module-folded); ice (37) and
+   *                                              white (39) HELD OUT, see below
+   *     rookies                      100 rows -- CLUSTER: 1st/2nd/3rd/4th-
+   *                                              down, hobby, no-huddle,
+   *                                              retail, touchdown, two-
+   *                                              minute-drill, red-zone
+   *                                              blue/gold/red/white -- ten
+   *                                              spellings, one 100-card
+   *                                              roster, zero disagreement
+   *     rookies-autographs            62-75 rows -- CLUSTER: autographs-no-
+   *                                              huddle(63)/two-minute-
+   *                                              drill(59), red-zone-
+   *                                              autographs + its 4 colours --
+   *                                              one signed Rookies subset
+   *     splash                        25 rows,  4 colour rungs
+   *     state-of-the-art              24 rows,  5 colour rungs
+   *     the-shield                    25 rows,  1 colour rung (gold ice)
+   *     turning-pro-memorabilia       20 rows,  4 rungs (laundry-tag x3 + prime)
+   *     z-graphs                      31 rows,  3 rungs (kaboom/lightning/spokes
+   *                                              -- module-folded, true SUFFIX
+   *                                              spellings, unlike High Point)
+   *     z-jersey                      40 rows,  4 rungs (laundry-tag x3 + prime)
+   *     z-jersey-autographs           27 rows,  4 colour rungs
+   *     z-marquee                     30 rows,  5 colour rungs
+   *     z-summit-autographs           16 rows,  4 colour rungs
+   *     z-team                        25 rows,  4 colour rungs
+   *     zoned-in                      20 rows,  4 rungs (laundry-tag x3 + prime)
+   *     zoom-blue                     10 rows,  3 rungs (kaboom/lightning/spokes)
+   *     zoom-gold                      8 rows,  2 rungs (kaboom/spokes)
+   *     zoom-red                      10 rows,  3 rungs (kaboom/lightning/spokes)
+   *
+   * HELD OUT, NOT REGISTERED, NOT FOLDED (Drew, pending ruling):
+   *
+   *     rookie-patch-autographs-ice     37 rows
+   *     rookie-patch-autographs-white   39 rows
+   *
+   *   Both have a BLANK parallel column, so the module's own strip rule
+   *   correctly leaves them unfolded (blue/gold/red DO carry a matching
+   *   parallel column and fold cleanly into the 152-row `rookie-patch-
+   *   autographs` root). Their rosters are NOT a subset of that 152-row pool
+   *   -- ice overlaps it at roughly half, white similarly -- which could mean
+   *   real short-print scarcity (same product, different signers pulled per
+   *   colour, same as the signed Rookies cluster above) or two genuinely
+   *   separate card sets; this file cannot tell which without the print-run
+   *   data. Leaving both unregistered is the safe side: an unregistered root
+   *   only refuses ingestion, where a wrongly-folded one loses rows silently
+   *   -- the exact defect class #2271 exists to prevent.
+   *
+   * A THIRD ANCHORING GAP, FOUND WHILE MEASURING. #2273 anchored two Zenith
+   * previews that were folding onto `panini-contenders-optic`
+   * (`...rookie-ticket-rps-preview` and `...rookie-ticket-variation-rps-
+   * preview`, both registered above). A third preview in the same fixture,
+   * `Contenders Optic Veteran Ticket Preview` (16/15/15 rows across
+   * Blue/Green/Red, no plain file -- the "siblings name the set" shape again),
+   * collapses onto the same `panini-contenders-optic` today, verified by
+   * running `normalizeSetKey`, not by reading the regex. `productSetKeyForName`
+   * (spelled-name lookup) runs BEFORE the unanchored regex vocabulary
+   * (`normalizeSetKey`, D23), so registering the spelled key below is
+   * sufficient on its own -- no additional regex anchor needed, unlike
+   * `troops-tribute` and the other two Contenders Optic previews, which had
+   * to be anchored because their EXACT spelling was never registered before
+   * #2273 wrote the rule. This one goes straight to the table.
+   *
+   * `family` left at the default (each insert its own pricing family), same
+   * as the Photogenic and Illusions precedents.
+   */
+  S("panini-zenith-contenders-optic-veteran-ticket-preview", { parent: "panini-zenith" }),
+  S("panini-zenith-a-to-z", { parent: "panini-zenith" }),
+  S("panini-zenith-alphas", { parent: "panini-zenith" }),
+  S("panini-zenith-behind-the-numbers", { parent: "panini-zenith" }),
+  S("panini-zenith-chalk-talk", { parent: "panini-zenith" }),
+  S("panini-zenith-color-guard", { parent: "panini-zenith" }),
+  S("panini-zenith-first-look", { parent: "panini-zenith" }),
+  S("panini-zenith-high-point-signatures", { parent: "panini-zenith" }),
+  S("panini-zenith-idols", { parent: "panini-zenith" }),
+  S("panini-zenith-pinnacle-inscriptions", { parent: "panini-zenith" }),
+  S("panini-zenith-pinnacle-inscriptions-silver", { parent: "panini-zenith" }),
+  S("panini-zenith-rookie-patch-autographs", { parent: "panini-zenith" }),
+  S("panini-zenith-rookies", { parent: "panini-zenith" }),
+  S("panini-zenith-rookies-autographs", { parent: "panini-zenith" }),
+  S("panini-zenith-splash", { parent: "panini-zenith" }),
+  S("panini-zenith-state-of-the-art", { parent: "panini-zenith" }),
+  S("panini-zenith-the-shield", { parent: "panini-zenith" }),
+  S("panini-zenith-turning-pro-memorabilia", { parent: "panini-zenith" }),
+  S("panini-zenith-z-graphs", { parent: "panini-zenith" }),
+  S("panini-zenith-z-jersey", { parent: "panini-zenith" }),
+  S("panini-zenith-z-jersey-autographs", { parent: "panini-zenith" }),
+  S("panini-zenith-z-marquee", { parent: "panini-zenith" }),
+  S("panini-zenith-z-summit-autographs", { parent: "panini-zenith" }),
+  S("panini-zenith-z-team", { parent: "panini-zenith" }),
+  S("panini-zenith-zoned-in", { parent: "panini-zenith" }),
+  S("panini-zenith-zoom-blue", { parent: "panini-zenith" }),
+  S("panini-zenith-zoom-gold", { parent: "panini-zenith" }),
+  S("panini-zenith-zoom-red", { parent: "panini-zenith" }),
   // R53(ii) (Drew, 2026-09-15): SELECT'S TIERS ARE THEIR OWN CARD SETS.
   //
   // Panini Select prints its base set in named tiers -- Concourse, Premier
