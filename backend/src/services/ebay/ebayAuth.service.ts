@@ -251,7 +251,7 @@ export function isTerminalTokenError(message: string): boolean {
   if (m.includes("invalid_scope") || m.includes("unauthorized_client")) return true;
   // `fetchEbayToken` puts the HTTP status in the message ("eBay token
   // exchange failed: 400 ...").
-  return /(400|401|403)/.test(m);
+  return /\b(400|401|403)\b/.test(m);
 }
 
 /** Returns a valid access token for the user, refreshing if needed. Throws if not connected. */
