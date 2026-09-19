@@ -207,21 +207,20 @@ describe("Select FB R67 insert keys", () => {
 });
 
 describe("Tiers are listed, not touched (open question, per instruction)", () => {
-  it("lists the five tiers seen in this file; three are already registered (#2231), two are not -- neither changed here", () => {
+  it("lists the five tiers seen in this file; all five are now registered -- three by #2231, two by R71", () => {
     // Concourse, Club Level, Field Level, Premier Level, Suite Level -- no
     // Courtside Level in THIS football file. #2231 registered concourse,
-    // premier-level and field-level; club-level and suite-level are NOT
-    // registered and currently fold to bare panini-select. This PR does not
-    // register, fold, or otherwise touch ANY tier -- listed for the record
-    // only, per instruction, so Drew's separate tier ruling has the full
-    // picture when it comes.
-    const registeredByOthers = ["concourse", "field-level", "premier-level"];
-    const notYetRegistered = ["club-level", "suite-level"];
-    for (const tier of registeredByOthers) {
-      expect(isProductSetKey(`panini-select-${tier}`), `${tier} is registered by #2231, not this PR`).toBe(true);
-    }
-    for (const tier of notYetRegistered) {
-      expect(isProductSetKey(`panini-select-${tier}`), `${tier} stays unregistered -- held for the open tier question`).toBe(false);
+    // premier-level and field-level; R71 (owner ruling, 2026-09-19) closed
+    // the open question this file originally held open and registered
+    // club-level and suite-level too, against the same checklistinsider
+    // package this file already reads (manifest provenance literally names
+    // "the Concourse/Club Level/Suite Level/Premier Level/Field Level
+    // tiers"). See selectTiersR71AreTheirOwnCardSets.test.ts for the full
+    // registration pin; this assertion only updates the "not yet" list this
+    // file was tracking.
+    const allFiveTiers = ["concourse", "field-level", "premier-level", "club-level", "suite-level"];
+    for (const tier of allFiveTiers) {
+      expect(isProductSetKey(`panini-select-${tier}`), `${tier} is registered`).toBe(true);
     }
   });
 });
