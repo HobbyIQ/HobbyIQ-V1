@@ -65,16 +65,20 @@ describe("playerIdentityKey -- what the RC fold does NOT do", () => {
     expect(playerIdentityKey("J.R. Richard")).not.toBe(playerIdentityKey("J."));
   });
 
-  it("TC/UER/SP/SSP/RR/DP/tier-letter rows are NOT folded -- same scope as #2294", () => {
-    // cleanPlayerName leaves these untouched, so this reduction must too:
-    // a card whose two rows differ only by one of these markers still reads
-    // as two players here, exactly as before #2294, until Drew rules on them.
-    expect(playerIdentityKey("New York Yankees TC")).not.toBe(playerIdentityKey("New York Yankees"));
-    expect(playerIdentityKey("Mike Trout UER")).not.toBe(playerIdentityKey("Mike Trout"));
-    expect(playerIdentityKey("Jonah Tong SP")).not.toBe(playerIdentityKey("Jonah Tong"));
-    expect(playerIdentityKey("Jonah Tong SSP")).not.toBe(playerIdentityKey("Jonah Tong"));
-    expect(playerIdentityKey("Al Leiter RR")).not.toBe(playerIdentityKey("Al Leiter"));
-    expect(playerIdentityKey("Luis De Los Santos DP")).not.toBe(playerIdentityKey("Luis De Los Santos"));
+  it("R72 (owner, 2026-09-19): TC/UER/SP/SSP/RR/DP/tier-letter rows NOW fold onto the clean spelling", () => {
+    // cleanPlayerName was extended by R72 to strip these too, so this
+    // reduction inherits the change unchanged -- see this file's header and
+    // cardCatalog.service.ts's cleanPlayerName header for the ruling. Folding
+    // the KEY is not folding the CARD: this is a VETO the fold guard consults
+    // (catalogRowOps.service.ts's arbitratePlayer, "different player ->
+    // refuse"), never a merge trigger by itself -- see the header above.
+    expect(playerIdentityKey("New York Yankees TC")).toBe(playerIdentityKey("New York Yankees"));
+    expect(playerIdentityKey("Mike Trout UER")).toBe(playerIdentityKey("Mike Trout"));
+    expect(playerIdentityKey("Jonah Tong SP")).toBe(playerIdentityKey("Jonah Tong"));
+    expect(playerIdentityKey("Jonah Tong SSP")).toBe(playerIdentityKey("Jonah Tong"));
+    expect(playerIdentityKey("Al Leiter RR")).toBe(playerIdentityKey("Al Leiter"));
+    expect(playerIdentityKey("Luis De Los Santos DP")).toBe(playerIdentityKey("Luis De Los Santos"));
+    expect(playerIdentityKey("Rich Hunter B RC")).toBe(playerIdentityKey("Rich Hunter"));
   });
 
   it("Pokemon identity symbols and accents are unaffected -- cleanPlayerName's regexes are ASCII-only", () => {

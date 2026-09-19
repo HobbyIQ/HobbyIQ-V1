@@ -290,10 +290,17 @@ on:
           - probe-price-routes
           # D15 (2026-08-29): three catalog repairs on catalogRowOps.
           - repair-trailing-comma-player-names
-          # 2026-09-19: a rookie marker inside the player cell is not the
-          # name -- sibling of repair-trailing-comma-player-names, same
-          # field-patch shape (SCOPE required sport:year cells; optional
-          # setKey filter rides `titles`, see BCP_TITLES below).
+          # 2026-09-19: a marker inside the player cell is not the name --
+          # sibling of repair-trailing-comma-player-names, same field-patch
+          # shape (SCOPE required sport:year cells; optional setKey filter
+          # rides `titles`, see BCP_TITLES below). RULING R72 (owner,
+          # 2026-09-19) extends it past the RC family to RR/DP/TC/UER/SP/SSP
+          # and the tier-letter-before-RC shape, selected one family per
+          # dispatch by the existing generic `mode` input (empty = rc,
+          # unchanged default) -- see the script header for the full
+          # mode -> slug-ending table. sp/ssp/uer are listed for human
+          # review (they can name a different card), never silently patched
+          # like rc/rr/dp/tc/tier-rc.
           - repair-rc-marker-playername
           - repair-isauto-from-cardnumber-catalog
           - conform-one-of-one-parallels
@@ -863,7 +870,7 @@ on:
         default: false
         type: boolean
       mode:
-        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). For repair-card-number-from-title (D28): 'grade' | 'slash' | 'ordinal' | 'year' | 'nonumber' | 'all' (needs scope=all) -- REQUIRED, no default. For clean-base-cards-parallel-slug: 'cards' | 'subset' | 'both' (needs scope=all) -- REQUIRED. For measure-card-number-integrity: 'grade' | 'shapes' | 'months' | 'catalog-year'. For repair-bcp-misfiled-parallels (D33): 'card-as-parallel' (retire the rows whose parallel is another card) | 'chrome-ladder' (move the refractor ladder from the paper number to the chrome one) | 'first-edition' (move 1st Edition rows to their own product) | 'names' (the comma before Jr./Sr./II) | 'number-glued' (black-1 -> black:num-1) -- REQUIRED, no default. For rekey-product-setkey: 'catalog' (move the catalog rows by id stem) | 'pool' (re-key the sold_comps rows; REQUIRES years) | 'holdings' (conform the holdings, slot 0) -- REQUIRED, no default. For backfill-searchtokens-all-sports: 'recompute-stale' widens the scan past the missing-tokens predicate (a STALE row satisfies neither half of it) and rewrites only rows the coverage canary's own classifyRowTokens calls stale; pass the sport in `sports`. Empty = the script's default."
+        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). For repair-card-number-from-title (D28): 'grade' | 'slash' | 'ordinal' | 'year' | 'nonumber' | 'all' (needs scope=all) -- REQUIRED, no default. For clean-base-cards-parallel-slug: 'cards' | 'subset' | 'both' (needs scope=all) -- REQUIRED. For measure-card-number-integrity: 'grade' | 'shapes' | 'months' | 'catalog-year'. For repair-bcp-misfiled-parallels (D33): 'card-as-parallel' (retire the rows whose parallel is another card) | 'chrome-ladder' (move the refractor ladder from the paper number to the chrome one) | 'first-edition' (move 1st Edition rows to their own product) | 'names' (the comma before Jr./Sr./II) | 'number-glued' (black-1 -> black:num-1) -- REQUIRED, no default. For rekey-product-setkey: 'catalog' (move the catalog rows by id stem) | 'pool' (re-key the sold_comps rows; REQUIRES years) | 'holdings' (conform the holdings, slot 0) -- REQUIRED, no default. For backfill-searchtokens-all-sports: 'recompute-stale' widens the scan past the missing-tokens predicate (a STALE row satisfies neither half of it) and rewrites only rows the coverage canary's own classifyRowTokens calls stale; pass the sport in `sports`. For repair-rc-marker-playername (RULING R72, 2026-09-19): 'rc' (default, empty = rc) | 'rr' | 'dp' | 'tc' | 'uer' | 'sp' | 'ssp' | 'tier-rc' -- selects ONE marker family's slug-ending scan per dispatch (see the script header for the full mapping); sp/ssp/uer list every row for human review because that marker can name a different card. Empty = the script's default."
         required: false
         default: ""
       slug_prefix:
@@ -3099,6 +3106,17 @@ jobs:
         # Stops at its own 110-minute budget and PRINTS its summary; a run killed
         # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
         # BUDGET (#1361): relaunch iff the marker printed, never on a count.
+        #
+        # RULING R72 (owner, 2026-09-19) extends this lane to one marker
+        # family per dispatch, selected by the EXISTING generic `mode` input
+        # (env MODE, already carried to every script by the generic run step
+        # above -- no new workflow_dispatch input claimed). Default (mode
+        # unset) is 'rc', so a relaunch that predates this change still
+        # repairs exactly what it always repaired; `-f mode=` is added here
+        # so a relaunch of a NAMED family (rr/dp/tc/uer/sp/ssp/tier-rc)
+        # continues under the SAME family rather than silently falling back
+        # to rc mid-sweep. See the script header for the mode -> slug-ending
+        # table.
         if: ${{ !cancelled() && inputs.script == 'repair-rc-marker-playername' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -3110,11 +3128,28 @@ jobs:
             N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
             echo "repaired=${N:-0}"
           budget-notice: |
-            echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} mode=${{ inputs.mode || 'rc' }} to continue"
           finished-notice: |
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           dispatch: |
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-rc-marker-playername -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-rc-marker-playername -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}" -f mode="${{ inputs.mode }}"
+
+      # R72 (2026-09-19): the sp/ssp/uer families can name a genuinely
+      # different CARD, not only a different fact about the same person's
+      # card (see cleanPlayerName's header) -- so every row those modes would
+      # touch is listed in full in this run's own stdout (VARIANT-REVIEW
+      # lines), which /tmp/backfill.log already carries whole. Uploaded here,
+      # same shape as the id-follows-setkey-field rekey log above, so the
+      # full list survives past the Actions UI's console truncation for a
+      # human to read before trusting an APPLY under one of these modes.
+      - name: Upload the RC-marker repair log
+        if: ${{ always() && inputs.script == 'repair-rc-marker-playername' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: repair-rc-marker-playername-${{ inputs.mode || 'rc' }}-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
 
       # The id-follows-setkey-field log carries every REFUSED row in full (by
       # reason: not-checklist-authority, unregistered-setkey, segment-parse-

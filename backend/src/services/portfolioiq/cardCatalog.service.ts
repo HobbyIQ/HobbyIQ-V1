@@ -543,6 +543,17 @@ export function deriveCatalogEntry(input: {
     // the caller states the clash, which only the checklist ingest can see.
     subsetName: input.subsetName ?? null,
     subsetInId: input.subsetInId === true,
+    // CF-PLAYER-IS-THE-NUMBER (PR #2325 follow-up). `playerName` is already
+    // validated non-empty above (line 531) before this call is ever reached,
+    // but it was never forwarded here, so computeHobbyIqCardId saw
+    // `playerName: undefined` and unnumberedCardSegment always returned null
+    // — every unnumbered (nno-shaped) cardNumber threw "unnumbered card has
+    // no player to identify it", even on rows with a real player. This is
+    // the SAME cleaned playerName already used below for searchText,
+    // displayName and the stored playerName field; it produces the identical
+    // `player-<slug>` shape soldCompsStore.service.ts's caller already mints
+    // (see playerIsTheNumber.test.ts) — no new id shape introduced.
+    playerName,
   });
   if (!slug || !slug.startsWith("hiq:")) return null;
 
@@ -702,63 +713,100 @@ const GENERATIONAL_SUFFIX_COMMA = /,\s*(Jr|Sr|III|IV|II|V)\.?(?![A-Za-z])/gi;
 
 /**
  * CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME (2026-09-19, census by another
- * agent). Checklist sources (baseballcardpedia, cardboardconnection,
- * checklistinsider, tcdb, drew-rulings CSVs) put the rookie marker INSIDE the
- * player cell -- "Jonah Tong RC" -- rather than in its own column the way
- * beckettChecklistParser's spreadsheet markers do. Uncaught, playerSlugify
- * mints `jonah-tong-rc`, and the SIBLING row of the same card number (a
- * source that omits the marker, or the same card in a later season) carries
- * the clean slug -- one card, split across two player identities. Measured:
+ * agent; EXTENDED 2026-09-19 by RULING R72, owner). Checklist sources
+ * (baseballcardpedia, cardboardconnection, checklistinsider, tcdb,
+ * drew-rulings CSVs) put marker text INSIDE the player cell -- "Jonah Tong
+ * RC" -- rather than in its own column the way beckettChecklistParser's
+ * spreadsheet markers do. Uncaught, playerSlugify mints `jonah-tong-rc`, and
+ * the SIBLING row of the same card number (a source that omits the marker,
+ * or the same card in a later season) carries the clean slug -- one card,
+ * split across two player identities. Measured (first pass, RC family only):
  * >=33,000 card_catalog rows across ~40 product-years carry a playerSlug
  * ending `-rc` (2026 topps 10,821; 2026 topps-chrome 2,885; 2022 bowman
  * 1,826; 2024 bowman 1,910; 2019 topps-update 1,734; 2015-2017 topps ~4,000;
  * hockey upper-deck-series-1/2 2019-2024 ~5,800; ...).
  *
- * SCOPE OF THIS PASS: the RC family only -- " RC", " RC*", " (RC)" -- because
- * it is the one marker that is unambiguously "rookie" and never part of a
- * player's own name or a card fact that changes the card's identity. Every
- * other suffix shape seen at the same position is DELIBERATELY left alone
- * here and needs its own ruling:
+ * R72 RULES ON THE MARKERS THE FIRST PASS DELIBERATELY LEFT OPEN. Every one of
+ * the following is now stripped as a trailing, whitespace-separated, UPPERCASE
+ * whole token, order-insensitive and repeat-safe:
  *
- *   " TC"          team card ("New York Yankees TC") -- TC is not a person
- *                  at all; stripping it would not clean a name, it would
- *                  turn a team card into a fabricated player.
- *   " UER"         (Uncorrected) Error card -- a fact about the PRINTING,
- *                  which the checklist states as part of what this card IS.
- *   " SP" / " SSP" short-print / super-short-print -- may be load-bearing for
- *                  identity (a short-print can be a distinct card from the
- *                  base version at the same number) and the census did not
- *                  rule on this.
- *   " RR"          Rated Rookie (e.g. "Al Leiter RR RC") -- checked below:
- *                  no existing code path recognises RR as a marker, so it is
- *                  NOT handled by this pass either. "Al Leiter RR RC" ->
- *                  "Al Leiter RR" after this fix, not "Al Leiter" -- RR is a
- *                  follow-up.
- *   " DP"          Draft Pick (e.g. "Luis De Los Santos DP RC") -- same:
- *                  unhandled, needs its own ruling.
- *   single tier letter before RC ("Rich Hunter B RC", "Livan Hernandez G RC",
- *                  1996 Topps Finest) -- a bare letter is too easily a real
- *                  name fragment or initial to strip by pattern; needs Drew's
- *                  ruling with the product's own tier vocabulary in hand.
+ *   RC family      " RC", " RC*", " (RC)"           -- unchanged from the first pass.
+ *   RR             Rated Rookie ("Al Leiter RR RC" -> "Al Leiter").
+ *   DP             Draft Pick ("Luis De Los Santos DP RC" -> "Luis De Los Santos").
+ *   TC             Team card ("New York Yankees TC" -> "New York Yankees"). TC is
+ *                  stripped ONLY as a trailing token -- it is still not a person,
+ *                  but the ruling is that the TEAM is kept as the card's "name"
+ *                  the same way a player's name is, so the marker itself goes.
+ *   UER            (Uncorrected) Error card.
+ *   SP / SSP       Short print / super-short-print.
  *
- * These are listed, not guessed at: stripping any of them here without a
- * ruling risks exactly the damage this fix repairs, in the other direction
- * (turning a real identity distinction into a silent merge).
+ * A single TIER LETTER stripped ONLY when it directly precedes an RC-family
+ * marker -- "Rich Hunter B RC" -> "Rich Hunter" (B/G/S = Bronze/Gold/Silver,
+ * 1996 Topps Finest), "Livan Hernandez G RC" -> "Livan Hernandez", "Mike Grace
+ * S RC" -> "Mike Grace". The letter is NEVER stripped on its own (a bare
+ * trailing initial is exactly as likely to be a real name fragment as a tier
+ * mark) -- only when it sits immediately before a marker this function is
+ * about to remove from the RC family specifically. RR/DP/TC/UER/SP/SSP do not
+ * carry a tier-letter prefix in any observed source, so the composite pattern
+ * is scoped to the RC family only.
+ *
+ * SP / SSP / UER CAN NAME A DIFFERENT CARD. Unlike RC/RR/DP/TC, a short-print
+ * or error variation can be a genuinely distinct printing at the same card
+ * number -- stripping the marker from the NAME is still correct (the person
+ * on the card is the same person), but nothing downstream may treat two rows
+ * as the same CARD on the strength of the cleaned name alone. That is why
+ * playerIdentityKey folding SP/SSP/UER rows onto their clean sibling's key is
+ * safe (see playerIdentityKey.ts's header) -- the player-name key is a VETO
+ * ("different player -> refuse"), never a merge trigger; the repair lane
+ * (repair-rc-marker-playername.cjs) additionally LISTS every SP/SSP/UER row
+ * it would touch rather than silently patching it, so a human reviews before
+ * anything ships. See that script's banner and playerIdentityKey.ts for the
+ * citation this comment promises.
  *
  * THE MATCH IS A CASE-SENSITIVE, WHITESPACE-ANCHORED, END-OF-STRING TOKEN.
  * Case-sensitivity is load-bearing: a name that merely ENDS in those letters
  * without the marker's own casing/spacing shape -- "Marc" (no space before
- * "RC"), "DuPRC" (no space, wrong case) -- is untouched, because the token
- * must be preceded by whitespace and be exactly "RC" (optionally with a
- * trailing "*", or wrapped in parens) with nothing after it. "J.R. Richard"
- * is untouched for the same reason: "R" alone is not the two-letter "RC"
- * token, so there is no match starting there. Applied in a loop so a
- * doubled/redundant marker ("Name RC RC") is fully stripped in one call
- * (repeated-safe), and re-applied AFTER the generational-suffix comma pass so
- * a source that writes both ("Bobby Witt, Jr. RC") ends up "Bobby Witt Jr.",
- * not "Bobby Witt, Jr." with the marker still attached.
+ * "RC"), "DuPRC" (no space, wrong case), "CC Sabathia", "J.P. Crawford", "Chan
+ * Ho Park", "Tommy La Stella", "DJ LeMahieu", "A.J. Burnett" -- is untouched,
+ * because the token must be preceded by whitespace and be exactly one of the
+ * marker spellings with nothing after it. "J.R. Richard" is untouched for the
+ * same reason: "R" alone is not the two-letter "RC" token, so there is no
+ * match starting there. Applied in a loop so a doubled/redundant marker
+ * ("Name RC RC") or a stack of different markers in either order ("Al Leiter
+ * RR RC" or, hypothetically, "Al Leiter RC RR") is fully stripped in one call
+ * (repeated-safe, order-insensitive), and re-applied AFTER the
+ * generational-suffix comma pass so a source that writes both ("Bobby Witt,
+ * Jr. RC") ends up "Bobby Witt Jr.", not "Bobby Witt, Jr." with the marker
+ * still attached.
  */
 const ROOKIE_MARKER_RC = /\s+(?:RC\*?|\(RC\))$/;
+/** A single tier letter immediately before an RC-family marker, e.g.
+ *  " B RC" in "Rich Hunter B RC". Scoped to the RC family only -- see header.
+ *  Checked and stripped BEFORE `ROOKIE_MARKER_RC` alone so "Rich Hunter B RC"
+ *  loses both tokens in one loop iteration rather than leaving "Rich Hunter B"
+ *  as a false fixed point (a bare trailing letter matches no other pattern
+ *  here, so if this ran after RC alone was already gone, the letter would
+ *  never be reached). */
+const TIER_LETTER_BEFORE_RC = /\s+[A-Z]\s+(?:RC\*?|\(RC\))$/;
+/** RR / DP / TC / UER / SP / SSP -- R72's extension beyond the RC family.
+ *  Same shape as ROOKIE_MARKER_RC: case-sensitive, whitespace-anchored,
+ *  end-of-string, one whole token. SSP is listed before SP only for reading
+ *  order -- as whole-token alternatives neither can partially match the
+ *  other's spelling. */
+const OTHER_TRAILING_MARKERS = /\s+(?:RR|DP|TC|UER|SSP|SP)$/;
+/** SP / SSP / UER specifically -- the subset that can name a genuinely
+ *  different CARD (short print, error) rather than only a rookie/team/draft
+ *  fact. Exported so a caller (the repair lane) can flag a row for review
+ *  instead of silently trusting the cleaned name as proof of a merge. */
+export const CARD_VARIANT_MARKERS = /\s+(?:UER|SSP|SP)$/;
+/** A cell that carries NOTHING but a marker -- no whitespace before it,
+ *  because there is no name before it to be whitespace-separated FROM.
+ *  Every other pattern above requires a leading `\s+`, which is right for a
+ *  real name ("Marc" must not lose an "RC" it does not have) but wrong for
+ *  the degenerate case: a source that stamped only the marker into the
+ *  player cell with nothing else. Matched start-to-end, case-sensitive, same
+ *  token set as the two trailing-marker patterns combined. */
+const BARE_MARKER_ONLY = /^(?:RC\*?|\(RC\)|RR|DP|TC|UER|SSP|SP)$/;
 
 export function cleanPlayerName(raw: string | null | undefined): string {
   // CF-A-COMMA-BEFORE-JR-IS-NOT-A-TEAM (D33, Drew 2026-08-30). The picker
@@ -776,11 +824,31 @@ export function cleanPlayerName(raw: string | null | undefined): string {
     .replace(/\s{2,}/g, " ")
     .trim()
     .replace(/[\s,;]+$/, "");
-  // CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME: strip a trailing RC-family
-  // token, repeated-safe ("Name RC RC" -- unseen but cheap to guard).
-  while (ROOKIE_MARKER_RC.test(out)) {
-    out = out.replace(ROOKIE_MARKER_RC, "").replace(/[\s,;]+$/, "");
+  // CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME, extended by R72: strip every
+  // trailing marker token -- RC family (with its own tier-letter prefix),
+  // RR, DP, TC, UER, SP, SSP -- repeated and order-insensitive so a stack in
+  // either order ("Name RR RC", "Name RC RR") or a doubled marker
+  // ("Name RC RC") is fully stripped in one call. The tier-letter+RC
+  // composite is checked first each iteration so "Rich Hunter B RC" loses
+  // both tokens rather than stopping at "Rich Hunter B".
+  while (
+    TIER_LETTER_BEFORE_RC.test(out) ||
+    ROOKIE_MARKER_RC.test(out) ||
+    OTHER_TRAILING_MARKERS.test(out)
+  ) {
+    if (TIER_LETTER_BEFORE_RC.test(out)) {
+      out = out.replace(TIER_LETTER_BEFORE_RC, "");
+    } else if (ROOKIE_MARKER_RC.test(out)) {
+      out = out.replace(ROOKIE_MARKER_RC, "");
+    } else {
+      out = out.replace(OTHER_TRAILING_MARKERS, "");
+    }
+    out = out.replace(/[\s,;]+$/, "");
   }
+  // A cell that carries ONLY a marker (no name at all) reduces to empty, not
+  // to the marker text -- the caller must treat empty the same way it treats
+  // a null playerName ("no name"), never mint a slug from the marker itself.
+  if (BARE_MARKER_ONLY.test(out)) return "";
   return out;
 }
 

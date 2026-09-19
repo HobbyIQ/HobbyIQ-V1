@@ -121,11 +121,48 @@ import { cleanPlayerName } from "../portfolioiq/cardCatalog.service.js";
  * same sense the symbol transliterations above are: a name cleanPlayerName
  * does not touch reduces exactly as it did before.
  *
- * SAME SCOPE AS #2294, DELIBERATELY. TC/UER/SP/SSP/RR/DP/tier-letter rows
- * still produce their own keys from the raw text -- cleanPlayerName leaves
- * them untouched, so this reduction does too. A card whose two rows differ
- * only by one of those markers still reads as two players here, exactly as
- * before, until Drew rules on them.
+ * RULING R72 (owner, 2026-09-19) EXTENDS cleanPlayerName'S SCOPE, AND THIS
+ * REDUCTION INHERITS IT UNCHANGED. cleanPlayerName now also strips RR, DP,
+ * TC, UER, SP, SSP and a tier letter directly before an RC-family marker --
+ * see that function's header in cardCatalog.service.ts for the full ruling.
+ * Because this file reduces through cleanPlayerName first, a pair like
+ * "Jonah Tong SP" / "Jonah Tong" or "New York Yankees TC" / "New York
+ * Yankees" now folds onto ONE playerIdentityKey, exactly the way the RC
+ * family already did.
+ *
+ * THIS IS STILL ONLY A VETO, NEVER A MERGE TRIGGER -- read carefully, because
+ * "the keys are now equal" sounds like "the rows now merge" and it is NOT
+ * that. The one and only place this key decides anything is
+ * catalogRowOps.service.ts's `arbitratePlayer` (playerKeyOf = this function,
+ * aliased at that file's own "const playerKeyOf = playerIdentityKey;"): at
+ * catalogRowOps.service.ts:838, `if (!keyIn || !keyInc || keyIn === keyInc)
+ * return { kind: "not-a-conflict" };`. When the keys are EQUAL, the function
+ * returns "not-a-conflict" and arbitratePlayer's own contradiction logic
+ * (corroboration / sale-title tally / refuse-by-name) simply never runs --
+ * it does not cause chooseSurvivor (catalogRowOps.service.ts:935) to pick a
+ * survivor or write anything. chooseSurvivor's ACTUAL merge decision runs on
+ * source authority, vendorIds, sales count and confidence
+ * (catalogRowOps.service.ts:942-977), all upstream of and independent of this
+ * key; the two rows being compared were already going to be evaluated as
+ * candidates for the SAME address (same slug/id) by the caller before either
+ * function is reached. A different playerIdentityKey is what makes
+ * arbitratePlayer FIRE and potentially REFUSE the pair (or arbitrate a
+ * winner) instead of falling through to the ordinary ladder; an equal key
+ * only removes that veto's objection -- it supplies no merge logic of its
+ * own. So R72 stripping SP/SSP/UER from the compared NAME cannot, by itself,
+ * cause two rows to be folded that would not already have collided on
+ * address; it can only stop this ONE guard from blocking a fold the address
+ * collision and the ladder were already going to decide. SP/SSP/UER can still
+ * name a genuinely different CARD (a short-print or error variation) --
+ * that identity question is NOT this file's job and was never decided by
+ * playerName equality; it is why the repair lane
+ * (repair-rc-marker-playername.cjs) lists every SP/SSP/UER row for a human
+ * instead of trusting the cleaned name as proof of anything by itself.
+ *
+ * RR/DP/TC/tier-letter rows fold the same way and carry no such caveat --
+ * RC/RR/DP/TC never name a different card at the same number, only a
+ * different FACT about the same person's card, which is exactly what
+ * cleanPlayerName's header states.
  */
 
 /** Symbols that carry card identity, mapped to the English token the same card
