@@ -543,6 +543,17 @@ export function deriveCatalogEntry(input: {
     // the caller states the clash, which only the checklist ingest can see.
     subsetName: input.subsetName ?? null,
     subsetInId: input.subsetInId === true,
+    // CF-PLAYER-IS-THE-NUMBER (PR #2325 follow-up). `playerName` is already
+    // validated non-empty above (line 531) before this call is ever reached,
+    // but it was never forwarded here, so computeHobbyIqCardId saw
+    // `playerName: undefined` and unnumberedCardSegment always returned null
+    // — every unnumbered (nno-shaped) cardNumber threw "unnumbered card has
+    // no player to identify it", even on rows with a real player. This is
+    // the SAME cleaned playerName already used below for searchText,
+    // displayName and the stored playerName field; it produces the identical
+    // `player-<slug>` shape soldCompsStore.service.ts's caller already mints
+    // (see playerIsTheNumber.test.ts) — no new id shape introduced.
+    playerName,
   });
   if (!slug || !slug.startsWith("hiq:")) return null;
 
