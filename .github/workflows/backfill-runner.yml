@@ -198,6 +198,19 @@ on:
           # 2000/base4 is the English Base Set 2, so a pool sweep with no year
           # axis would take both. No new input: the TO key travels in `titles`.
           - rekey-product-setkey
+          # CF-THE-ID-FOLLOWS-ITS-OWN-SETKEY-FIELD (2026-09-19, hockey pilot).
+          # 127,210 checklist rows carry a correct setKey FIELD (D39 sub-
+          # brands like upper-deck-extended-series) while their id's segment 3
+          # still says the bare upper-deck umbrella. Rekeys the id onto the
+          # row's OWN field via moveCatalogRow's new idFollowsOwnSetKeyField
+          # option -- never a rename, never a fold (a target that already
+          # exists is out of scope, reported as target-exists). SCOPE is
+          # sport:year cells (`scope`, e.g. hockey:2024,hockey:2025); the
+          # target setKey list rides `titles` (e.g.
+          # upper-deck-extended-series), same convention as
+          # repair-rc-marker-playername's SET_KEYS. Both are REQUIRED, no
+          # 'all' escape hatch.
+          - rekey-catalog-id-to-setkey
           # CF-A-WRONG-IDENTITY-IS-NOT-A-MISSING-ONE (Drew, 2026-09-04, R2).
           # Re-derives the identity of holdings that HAVE one and have the
           # WRONG one -- the population `recheck-holding-identity`'s own sweep
@@ -774,7 +787,7 @@ on:
         required: false
         default: "16"
       scope:
-        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool). For rename-setkey-to-product MODE=product: comma-separated ruled product keys (e.g. topps-series-1,leaf-metal); the default here or 'all' = every ruled product. NOTE the default is 'refractor' and it is INHERITED, not chosen -- for triage-contenthash-collisions and consolidate-catalog-duplicates it narrows NOTHING (both read SCOPE only as the 'all' escape hatch for the no-sports/no-years refusal), so the triage now REFUSES any non-'all' value rather than ignoring it: pass scope=all with those two and narrow with sports/years/slot instead. For rematch-sold-comps MODE=apply-improve this is the APPLY CLASS SCOPE: 'base-eviction' | 'improve' | 'both' -- REQUIRED, and the inherited default 'refractor' is REFUSED (exit 2), because an apply names the class it writes. MODE=census ignores it. ALSO the three RULED SCOPES of 2026-09-06, each armed ONLY by its own name and deliberately NOT by 'improve'/'both'/'all' (every fleet dispatch in flight predates the rulings): 'grade-from-title' -- a FIELD BACKFILL, not a re-key: stamps gradeCompany/gradeValue on rows whose title states a grader token and whose grade fields are empty, at the row's EXISTING address (the slug carries no grade segment; see CF-CARD-IDENTITY-VS-GRADE). 'year-from-title-vintage' -- moves a vintage sale off the slug year that is really its SALE year onto the title's issue year (#1890's class). 'sport-from-product' -- a card's sport is the PRODUCT's sport, read from the product's own checklist; multi-sport products are refused by name. ALSO 'revert-eviction' on the SAME script and mode: the UNDO. It moves the rows a base-eviction wave wrote whose titles G6 now refuses back to the slug their own rekeyedFrom marker recorded, arms NO write class, and is refused if combined with one (a run cannot revert and write at once). It shards on sha1(id) rather than the 32-slot year table, so slots=1 is correct for it."
+        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool). For rename-setkey-to-product MODE=product: comma-separated ruled product keys (e.g. topps-series-1,leaf-metal); the default here or 'all' = every ruled product. NOTE the default is 'refractor' and it is INHERITED, not chosen -- for triage-contenthash-collisions and consolidate-catalog-duplicates it narrows NOTHING (both read SCOPE only as the 'all' escape hatch for the no-sports/no-years refusal), so the triage now REFUSES any non-'all' value rather than ignoring it: pass scope=all with those two and narrow with sports/years/slot instead. For rematch-sold-comps MODE=apply-improve this is the APPLY CLASS SCOPE: 'base-eviction' | 'improve' | 'both' -- REQUIRED, and the inherited default 'refractor' is REFUSED (exit 2), because an apply names the class it writes. MODE=census ignores it. ALSO the three RULED SCOPES of 2026-09-06, each armed ONLY by its own name and deliberately NOT by 'improve'/'both'/'all' (every fleet dispatch in flight predates the rulings): 'grade-from-title' -- a FIELD BACKFILL, not a re-key: stamps gradeCompany/gradeValue on rows whose title states a grader token and whose grade fields are empty, at the row's EXISTING address (the slug carries no grade segment; see CF-CARD-IDENTITY-VS-GRADE). 'year-from-title-vintage' -- moves a vintage sale off the slug year that is really its SALE year onto the title's issue year (#1890's class). 'sport-from-product' -- a card's sport is the PRODUCT's sport, read from the product's own checklist; multi-sport products are refused by name. ALSO 'revert-eviction' on the SAME script and mode: the UNDO. It moves the rows a base-eviction wave wrote whose titles G6 now refuses back to the slug their own rekeyedFrom marker recorded, arms NO write class, and is refused if combined with one (a run cannot revert and write at once). It shards on sha1(id) rather than the 32-slot year table, so slots=1 is correct for it. For repair-rc-marker-playername and rekey-catalog-id-to-setkey: REQUIRED comma-separated `sport:year` cells (e.g. hockey:2024,hockey:2025) -- the inherited default 'refractor' and the values '' / 'all' are all REFUSED (exit 2) for both; there is no whole-source sweep."
         required: false
         default: "refractor"
         type: string
@@ -789,7 +802,7 @@ on:
         default: ""
         type: string
       titles:
-        description: "For ingest-checklists-end-to-end (bcp phase): extra baseballcardpedia page titles, comma-separated (e.g. 2012_Topps_Allen_and_Ginter,1990_Donruss). Empty = the per-year flagship list. For rekey-product-setkey: the TO setKey -- the product the rows move ONTO (e.g. japanese-rocket-gang); `setkey_like` is the FROM key."
+        description: "For ingest-checklists-end-to-end (bcp phase): extra baseballcardpedia page titles, comma-separated (e.g. 2012_Topps_Allen_and_Ginter,1990_Donruss). Empty = the per-year flagship list. For rekey-product-setkey: the TO setKey -- the product the rows move ONTO (e.g. japanese-rocket-gang); `setkey_like` is the FROM key. For repair-rc-marker-playername: an OPTIONAL comma-separated setKey filter narrowing `scope`'s sport:year cells. For rekey-catalog-id-to-setkey: the REQUIRED comma-separated target setKey list whose id should adopt its own setKey field (e.g. upper-deck-extended-series) -- empty or a wildcard ('all','*') is refused; `scope` carries the required sport:year cells (e.g. hockey:2024,hockey:2025)."
         required: false
         default: ""
         type: string
@@ -1661,6 +1674,15 @@ jobs:
           # required SCOPE=sport:year cells to one or more products. Same
           # reuse reason as above: no dispatch input left to claim. Empty =
           # every setKey in the scoped cell(s).
+          # rekey-catalog-id-to-setkey (2026-09-19) reads BCP_TITLES as its
+          # REQUIRED comma-separated target-setKey list (SET_KEYS) -- e.g.
+          # upper-deck-extended-series -- narrowing its required
+          # SCOPE=sport:year cells. Unlike repair-rc-marker-playername's use
+          # above, empty or a wildcard ('all', '*') is REFUSED here (exit 2):
+          # this lane rewrites the id segment itself, so "every setKey" is a
+          # whole-source write that needs its own name
+          # (feedback_a_whole_source_retire_needs_its_name). The pilot dispatch
+          # is scope=hockey:2024,hockey:2025 titles=upper-deck-extended-series.
           USER_ID: ${{ inputs.script == 'rederive-holding-identity' && inputs.scope == 'user' && 'user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4' || '' }}
           SOURCES: ${{ inputs.sources }}
           # CF-A-SOURCE-THAT-CONTRADICTS-ITSELF-MINTS-NO-IDENTITIES (Drew,
@@ -3062,6 +3084,44 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-rc-marker-playername -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+
+      # The id-follows-setkey-field log carries every REFUSED row in full (by
+      # reason: not-checklist-authority, unregistered-setkey, segment-parse-
+      # failed, target-exists), never a truncated sample -- the pilot's whole
+      # point is that a reviewer can audit exactly which 9,370 rows moved and
+      # why anything else did not, same reason the checklist-numbered fold log
+      # above is kept.
+      - name: Upload the id-follows-setkey-field rekey log
+        if: ${{ always() && inputs.script == 'rekey-catalog-id-to-setkey' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rekey-catalog-id-to-setkey-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the id-follows-setkey-field rekey until the scope is clean
+        # Stops at its own 110-minute budget and PRINTS its summary; a run killed
+        # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
+        # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
+        # re-run after a budget stop is idempotent by construction: a row that
+        # already moved no longer matches the umbrella-prefix selection.
+        if: ${{ !cancelled() && inputs.script == 'rekey-catalog-id-to-setkey' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: rekey-catalog-id-to-setkey
+          preamble: |
+            N=$(grep -aoE "^  MOVED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "moved=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (moved=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rekey-catalog-id-to-setkey -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
       - name: Self-relaunch the isAuto-from-card-number repair until the slot is clean
         # Stops at its own 140-minute budget and PRINTS its summary; a run killed

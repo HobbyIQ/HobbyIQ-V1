@@ -887,6 +887,204 @@ describe("moveCatalogRow: a graded child can MOVE, not only be swept up", () => 
   });
 });
 
+// CF-THE-ID-FOLLOWS-ITS-OWN-SETKEY-FIELD (rekey-catalog-id-to-setkey, hockey
+// pilot). moveCatalogRow's ordinary cross-product guard refuses a newSlug
+// whose setKey segment disagrees with the row's id stem unless the caller
+// asked for that PRODUCT by name via changedFields.setKey. This option is a
+// THIRD lane: the id adopts the row's OWN setKey field, with no
+// changedFields.setKey at all. It must be accepted for EXACTLY that one shape
+// and refused for every mutation of it -- the mutation check IS the test.
+describe("moveCatalogRow: idFollowsOwnSetKeyField", () => {
+  const UMBRELLA_OLD = "hiq:hockey:2024:upper-deck:12:base:no-auto";
+  const SUB_BRAND_NEW = "hiq:hockey:2024:upper-deck-extended-series:12:base:no-auto";
+
+  function umbrellaRow(over: Doc = {}): Doc {
+    return {
+      id: UMBRELLA_OLD, cardId: UMBRELLA_OLD, hobbyiqCardId: UMBRELLA_OLD,
+      sport: "hockey", year: 2024, cardYear: 2024,
+      setKey: "upper-deck-extended-series", setName: "Upper Deck Extended Series",
+      cardNumber: "12", parallel: "Base", parallelSlug: "base", isAuto: false, printRun: null,
+      playerName: "Connor Bedard", playerSlug: "connor-bedard",
+      vendorIds: {}, source: "checklistinsider-2026-08-27", confidence: 0.9,
+      observedAt: "2026-08-27T00:00:00.000Z", lastSeenAt: "2026-08-27T00:00:00.000Z",
+      searchTokens: ["stale"], searchText: "stale", displayName: "stale",
+      _rid: "rid", _self: "self", _etag: "etag", _attachments: "att", _ts: 1,
+      ...over,
+    };
+  }
+
+  it("moves a row whose id segment 3 is rewritten to its own setKey field, and nothing else", async () => {
+    const w = world({ old: umbrellaRow(), incumbent: null, extraCatalog: [], sales: [] });
+    const r = await moveCatalogRow(w.cat, umbrellaRow(), SUB_BRAND_NEW, {}, {
+      reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, salesContainer: w.pool,
+    });
+    expect(r.action).toBe("move");
+    expect(r.survivor).toBe("incoming");
+    const row = w.catalog.docs.get(SUB_BRAND_NEW)!;
+    expect(row.id).toBe(SUB_BRAND_NEW);
+    expect(row.cardId).toBe(SUB_BRAND_NEW);
+    expect(row.hobbyiqCardId).toBe(SUB_BRAND_NEW);
+    expect(row.setKey).toBe("upper-deck-extended-series");
+    expect(row.playerName).toBe("Connor Bedard");
+    // Nothing about the card besides the id segment changed.
+    expect(row.cardNumber).toBe("12");
+    expect(row.parallel).toBe("Base");
+    expect(row.isAuto).toBe(false);
+    expect(w.catalog.docs.has(UMBRELLA_OLD)).toBe(false);
+  });
+
+  it("moves the row's graded child with it (the parent's own cascade), same as an ordinary move", async () => {
+    const w = world({
+      old: umbrellaRow(),
+      incumbent: null,
+      extraCatalog: [gradedChild(UMBRELLA_OLD, "psa-10"), gradedChild(UMBRELLA_OLD, "psa-9")],
+      sales: [],
+    });
+    const r = await moveCatalogRow(w.cat, umbrellaRow(), SUB_BRAND_NEW, {}, {
+      reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, salesContainer: w.pool,
+    });
+    expect(r.action).toBe("move");
+    expect(r.gradedChildrenRetired).toBe(2);
+    expect(w.catalog.docs.has(`${UMBRELLA_OLD}:psa-10`)).toBe(false);
+    expect(w.catalog.docs.has(`${UMBRELLA_OLD}:psa-9`)).toBe(false);
+  });
+
+  it("re-points both sale shapes: hobbyiqCardId patch AND a partition re-key sale", async () => {
+    // s1 is partitioned elsewhere (cardId=`pool-s1`) and moveCatalogRow's own
+    // in-place patch re-points its /hobbyiqCardId. A sale whose PARTITION KEY
+    // is the old slug (cardId===oldId, the second shape sold_comps carries)
+    // cannot be patched across partitions by this primitive at all -- it is
+    // the caller's job to relocate it first, which the real lane does via
+    // relocate-sold-comp BEFORE calling moveCatalogRow. This test pins the
+    // half moveCatalogRow itself is responsible for: the hobbyiqCardId-keyed
+    // sale.
+    const w = world({
+      old: umbrellaRow(), incumbent: null, extraCatalog: [],
+      sales: [sale("s1", UMBRELLA_OLD), sale("s2", UMBRELLA_OLD)],
+    });
+    const r = await moveCatalogRow(w.cat, umbrellaRow(), SUB_BRAND_NEW, {}, {
+      reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, salesContainer: w.pool,
+    });
+    expect(r.salesRepointed).toBe(2);
+    expect(w.sales.get("s1")!.hobbyiqCardId).toBe(SUB_BRAND_NEW);
+    expect(w.sales.get("s2")!.hobbyiqCardId).toBe(SUB_BRAND_NEW);
+  });
+
+  it("dryRun writes nothing", async () => {
+    const w = world({ old: umbrellaRow(), incumbent: null, extraCatalog: [], sales: [] });
+    const r = await moveCatalogRow(w.cat, umbrellaRow(), SUB_BRAND_NEW, {}, {
+      reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, dryRun: true, salesContainer: w.pool,
+    });
+    expect(r.action).toBe("move");
+    expect(w.log.filter((l) => /\.(upsert|patch|delete) /.test(l))).toEqual([]);
+    expect(w.catalog.docs.has(UMBRELLA_OLD)).toBe(true);
+    expect(w.catalog.docs.has(SUB_BRAND_NEW)).toBe(false);
+  });
+
+  it("a second run after the first is idempotent: the row no longer matches the selection", async () => {
+    // The row now LIVES at SUB_BRAND_NEW with id segment 3 already equal to
+    // its own setKey field, so a re-run of the SAME call (same oldRow shape,
+    // now stale) throws "newSlug equals..." is not what happens here --
+    // moveCatalogRow is never called twice on the same row by the real lane;
+    // the SELECTION query (`c.setKey = @target AND STARTSWITH(c.id, umbrella)`)
+    // simply no longer matches a row whose id already carries the target
+    // setKey. This test pins that moving TWICE onto the SAME newSlug is a noop,
+    // which is the fallback safety net if a caller ever did retry blindly.
+    const w = world({ old: umbrellaRow(), incumbent: null, extraCatalog: [], sales: [] });
+    await moveCatalogRow(w.cat, umbrellaRow(), SUB_BRAND_NEW, {}, {
+      reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, salesContainer: w.pool,
+    });
+    const movedRow = w.catalog.docs.get(SUB_BRAND_NEW)!;
+    const r2 = await moveCatalogRow(w.cat, movedRow as never, SUB_BRAND_NEW, {}, {
+      reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, salesContainer: w.pool,
+    });
+    expect(r2.action).toBe("noop");
+  });
+
+  // ── MUTATION CHECK: the option is accepted for EXACTLY one shape ──────────
+  it("REFUSES when changedFields.setKey rides alongside the flag", async () => {
+    const w = world({ old: umbrellaRow(), incumbent: null, extraCatalog: [], sales: [] });
+    await expect(moveCatalogRow(w.cat, umbrellaRow() as never, SUB_BRAND_NEW, { setKey: "upper-deck-extended-series" }, {
+      reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, salesContainer: w.pool,
+    })).rejects.toThrow(/cannot be combined with changedFields\.setKey/);
+  });
+
+  it("REFUSES when the row carries no setKey field at all", async () => {
+    const w = world({ old: umbrellaRow({ setKey: "" }), incumbent: null, extraCatalog: [], sales: [] });
+    await expect(moveCatalogRow(w.cat, umbrellaRow({ setKey: "" }) as never, SUB_BRAND_NEW, {}, {
+      reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, salesContainer: w.pool,
+    })).rejects.toThrow(/requires the row to carry a setKey field/);
+  });
+
+  it("REFUSES when newSlug changes a DIFFERENT segment than 3 (e.g. the card number)", async () => {
+    const w = world({ old: umbrellaRow(), incumbent: null, extraCatalog: [], sales: [] });
+    const wrongSegment = "hiq:hockey:2024:upper-deck-extended-series:99:base:no-auto";
+    await expect(moveCatalogRow(w.cat, umbrellaRow() as never, wrongSegment, {}, {
+      reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, salesContainer: w.pool,
+    })).rejects.toThrow(/requires newSlug to be the row's id with ONLY segment 3/);
+  });
+
+  it("REFUSES when newSlug names a DIFFERENT setKey than the row's own field", async () => {
+    const w = world({ old: umbrellaRow(), incumbent: null, extraCatalog: [], sales: [] });
+    const wrongTarget = "hiq:hockey:2024:upper-deck-premier:12:base:no-auto";
+    await expect(moveCatalogRow(w.cat, umbrellaRow() as never, wrongTarget, {}, {
+      reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, salesContainer: w.pool,
+    })).rejects.toThrow(/requires newSlug to be the row's id with ONLY segment 3/);
+  });
+
+  it("a graded child's own id also adopts its setKey field correctly (segment 3 stays segment 3 regardless of the tail tier)", async () => {
+    // The validation re-derives newSlug from `oldRow.id` by splitting on ":"
+    // and swapping index 3 -- that index is ALWAYS the setKey, whether or not
+    // a grade tier rides after it, so a graded child's own move through this
+    // option is accepted exactly like its parent's.
+    const w = world({ old: umbrellaRow(), incumbent: null, extraCatalog: [], sales: [] });
+    const child = gradedChild(UMBRELLA_OLD, "psa-10", { source: umbrellaRow().source, setKey: "upper-deck-extended-series" });
+    const r = await moveCatalogRow(
+      w.cat, child as never, `${SUB_BRAND_NEW}:psa-10`,
+      {}, { reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, salesContainer: w.pool },
+    );
+    expect(r.action).toBe("move");
+    expect(w.catalog.docs.get(`${SUB_BRAND_NEW}:psa-10`)!.id).toBe(`${SUB_BRAND_NEW}:psa-10`);
+  });
+
+  it("REFUSES when the graded child's newSlug carries a DIFFERENT setKey than its own field", async () => {
+    const w = world({ old: umbrellaRow(), incumbent: null, extraCatalog: [], sales: [] });
+    const child = gradedChild(UMBRELLA_OLD, "psa-10", { source: umbrellaRow().source, setKey: "upper-deck-extended-series" });
+    const wrongTarget = "hiq:hockey:2024:upper-deck-premier:12:base:no-auto:psa-10";
+    await expect(moveCatalogRow(
+      w.cat, child as never, wrongTarget,
+      {}, { reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, salesContainer: w.pool },
+    )).rejects.toThrow(/requires newSlug to be the row's id with ONLY segment 3/);
+  });
+
+  it("without the flag, the SAME newSlug still hits the ordinary cross-product refusal", async () => {
+    // Proves the new option is genuinely opt-in: the same (oldRow, newSlug)
+    // pair that the flag accepts is refused by the unchanged default path,
+    // exactly the guard bowman-paper -> bowman was refused by before this
+    // option existed.
+    const w = world({ old: umbrellaRow(), incumbent: null, extraCatalog: [], sales: [] });
+    await expect(moveCatalogRow(w.cat, umbrellaRow() as never, SUB_BRAND_NEW, {}, {
+      reason: "no flag this time", salesContainer: w.pool,
+    })).rejects.toThrow(/newSlug says setKey .* but the row's id says .* and no setKey change was asked for/);
+  });
+
+  it("a target that already exists is the CALLER's job to detect before calling moveCatalogRow (fold is out of scope for this lane)", async () => {
+    // moveCatalogRow itself still runs its ordinary chooseSurvivor ladder when
+    // an incumbent is present (idFollowsOwnSetKeyField only changes the
+    // BUILD-INCOMING guard, never the collision policy) -- the rekey lane
+    // itself checks target-exists BEFORE calling moveCatalogRow and never
+    // reaches this path, but the primitive is not silently unsafe if a future
+    // caller forgets to look first: a same-authority incumbent still wins by
+    // the ordinary ladder rather than being silently overwritten.
+    const incumbent = { ...umbrellaRow({ id: SUB_BRAND_NEW, cardId: SUB_BRAND_NEW, hobbyiqCardId: SUB_BRAND_NEW }), playerName: "Someone Else" };
+    const w = world({ old: umbrellaRow(), incumbent, extraCatalog: [], sales: [] });
+    const r = await moveCatalogRow(w.cat, umbrellaRow() as never, SUB_BRAND_NEW, {}, {
+      reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, salesContainer: w.pool,
+    });
+    expect(["fold", "replace", "refused"]).toContain(r.action);
+  });
+});
+
 describe("isGradedChildOf", () => {
   const parent = "hiq:baseball:2024:topps:1:gold:no-auto";
   it("accepts the parent's own tiers and rejects the numbered sibling's", () => {

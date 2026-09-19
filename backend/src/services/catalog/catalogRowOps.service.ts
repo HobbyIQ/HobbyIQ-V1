@@ -112,6 +112,30 @@ export interface MoveCatalogRowOptions {
    *  `null` for "I checked, it is not there"). Same contract as
    *  upsertCatalogEntry's `known` -- CF-DO-NOT-LOOK-TWICE. */
   known?: CatalogRowDoc | null;
+  /**
+   * CF-THE-ID-FOLLOWS-ITS-OWN-SETKEY-FIELD (2026-09-19, rekey-catalog-id-to-
+   * setkey). The cross-product guard in `buildIncoming` REFUSES whenever
+   * newSlug's setKey segment disagrees with the row's id stem and the caller
+   * passed no `changedFields.setKey` -- exactly right for a fold (the twin's
+   * own product must not silently change) and exactly wrong for THIS lane's
+   * one job: 127,210 checklist rows whose setKey FIELD already names the
+   * correct sub-brand (`upper-deck-extended-series`, ...) while their id stem
+   * still says the bare umbrella (`upper-deck`). Their id needs to adopt the
+   * field it already carries -- neither a fold (the product IS changing, on
+   * the id) nor a rename (nobody is asking for a NEW product; the row is
+   * simply catching its id up to what it already says).
+   *
+   * ONLY ACCEPTED for exactly that one shape, checked here rather than
+   * trusted from the caller: `newSlug` must equal `oldRow.id` with segment 3
+   * (and only segment 3) replaced by `oldRow.setKey` (lowercased). Anything
+   * else -- a different segment changed, a setKey that is not the row's own
+   * field, a `changedFields.setKey` supplied alongside it -- throws. This is
+   * deliberately NOT a general "trust the caller" escape hatch: every other
+   * caller of moveCatalogRow keeps today's refusal unchanged, because the
+   * validation re-derives newSlug from oldRow itself rather than taking the
+   * caller's word for what changed.
+   */
+  idFollowsOwnSetKeyField?: boolean;
   retry?: CatalogOpsRetry;
 }
 
@@ -400,6 +424,7 @@ function buildIncoming(
   oldRow: CatalogRowDoc,
   newSlug: string,
   changedFields: Partial<CardCatalogEntry> & Record<string, unknown>,
+  idFollowsOwnSetKeyField: boolean = false,
 ): CatalogRowDoc {
   const merged = { ...stripSlugBoundFields(oldRow), ...changedFields } as CatalogRowDoc;
   const split = parseSlugWithGrade(newSlug);
@@ -417,20 +442,74 @@ function buildIncoming(
     );
   }
   const oldIdSetKey = idSetKeySegment(oldRow.id);
-  // Did the caller ASK for a product change? Only an explicit `setKey` in
-  // changedFields does that; a fold passes printRun / cardNumber and means
-  // "same product, new address".
-  const askedSetKey = Object.prototype.hasOwnProperty.call(changedFields, "setKey")
-    ? String(changedFields.setKey ?? "").trim()
-    : null;
-  const expected = askedSetKey === null ? oldIdSetKey : askedSetKey;
-  if (parsed.setKey !== expected) {
-    throw new Error(
-      askedSetKey === null
-        ? `moveCatalogRow: newSlug says setKey "${parsed.setKey}" but the row's id says "${oldIdSetKey}" (${String(oldRow.id)} -> ${newSlug}) and no setKey change was asked for -- a cross-product move is not a move`
-        : `moveCatalogRow: newSlug says setKey "${parsed.setKey}" but the caller asked for "${askedSetKey}" (${String(oldRow.id)} -> ${newSlug}) -- a cross-product move is not a move`,
-    );
+
+  // CF-THE-ID-FOLLOWS-ITS-OWN-SETKEY-FIELD. `idFollowsOwnSetKeyField` is
+  // ONLY accepted for the one shape it names: newSlug is oldRow.id with
+  // segment 3 (and only segment 3) replaced by oldRow's OWN setKey field.
+  // This is re-derived from oldRow HERE rather than trusted from the caller,
+  // so a caller cannot pass the flag and slip through a different change --
+  // the validation throws on anything else, including a `changedFields.setKey`
+  // riding alongside it (that would be asking for a DIFFERENT product than
+  // the row's own field, which is a rename and must go through the ordinary
+  // `changedFields.setKey` path instead, not this one).
+  if (idFollowsOwnSetKeyField) {
+    if (Object.prototype.hasOwnProperty.call(changedFields, "setKey")) {
+      throw new Error(
+        "moveCatalogRow: idFollowsOwnSetKeyField cannot be combined with changedFields.setKey -- "
+        + "it exists to adopt the row's OWN setKey field, not a caller-supplied one",
+      );
+    }
+    const ownSetKey = String(oldRow.setKey ?? "").trim().toLowerCase();
+    if (!ownSetKey) {
+      throw new Error(`moveCatalogRow: idFollowsOwnSetKeyField requires the row to carry a setKey field (${String(oldRow.id)})`);
+    }
+    const oldParts = String(oldRow.id).split(":");
+    const expectedParts = [...oldParts];
+    expectedParts[3] = ownSetKey;
+    const expectedSlug = expectedParts.join(":");
+    if (newSlug !== expectedSlug) {
+      throw new Error(
+        `moveCatalogRow: idFollowsOwnSetKeyField requires newSlug to be the row's id with ONLY segment 3 `
+        + `replaced by its own setKey field ("${expectedSlug}"), got "${newSlug}" (${String(oldRow.id)})`,
+      );
+    }
+    if (parsed.setKey !== ownSetKey) {
+      // parseSlugWithGrade/parseHobbyIqCardId disagree with the literal segment
+      // swap above (e.g. a grammar rule normalizes something) -- refuse rather
+      // than silently adopt a THIRD spelling nobody asked for.
+      throw new Error(
+        `moveCatalogRow: idFollowsOwnSetKeyField built "${newSlug}" but it parses back with setKey "${parsed.setKey}", `
+        + `not the row's own field "${ownSetKey}" -- refusing rather than adopting a third spelling`,
+      );
+    }
+  } else {
+    // Did the caller ASK for a product change? Only an explicit `setKey` in
+    // changedFields does that; a fold passes printRun / cardNumber and means
+    // "same product, new address".
+    const askedSetKey = Object.prototype.hasOwnProperty.call(changedFields, "setKey")
+      ? String(changedFields.setKey ?? "").trim()
+      : null;
+    const expected = askedSetKey === null ? oldIdSetKey : askedSetKey;
+    if (parsed.setKey !== expected) {
+      throw new Error(
+        askedSetKey === null
+          ? `moveCatalogRow: newSlug says setKey "${parsed.setKey}" but the row's id says "${oldIdSetKey}" (${String(oldRow.id)} -> ${newSlug}) and no setKey change was asked for -- a cross-product move is not a move`
+          : `moveCatalogRow: newSlug says setKey "${parsed.setKey}" but the caller asked for "${askedSetKey}" (${String(oldRow.id)} -> ${newSlug}) -- a cross-product move is not a move`,
+      );
+    }
   }
+  // `askedSetKey` feeds the ONLY-IMPROVE field-keep decision below. Under
+  // idFollowsOwnSetKeyField the id IS being deliberately adopted from the
+  // row's own field, so there is no "caller asked for a rename" to record --
+  // it behaves like the fold lane's "no product asked for" for that decision,
+  // and fieldExtendsStem(rowSetKey, parsed.setKey) is trivially true (they are
+  // now the same string) so `keepField` lands on the row's own spelling either
+  // way.
+  const askedSetKey = idFollowsOwnSetKeyField
+    ? null
+    : (Object.prototype.hasOwnProperty.call(changedFields, "setKey")
+      ? String(changedFields.setKey ?? "").trim()
+      : null);
   // ONLY-IMPROVE. On a FOLD the caller named no product, so the row's own
   // field gets to keep the argument: when it EXTENDS the new stem
   // (topps-baseball-japan-edition over topps) it is the more specific
@@ -944,7 +1023,9 @@ export async function moveCatalogRow(
     return { action: "noop", newSlug, salesRepointed: 0, gradedChildrenRetired: 0, survivor: null, decision: "newSlug equals the row's id; nothing to move" };
   }
 
-  const incoming = rehome ? rehomeIncoming(oldRow, oldPk, changedFields) : buildIncoming(oldRow, newSlug, changedFields);
+  const incoming = rehome
+    ? rehomeIncoming(oldRow, oldPk, changedFields)
+    : buildIncoming(oldRow, newSlug, changedFields, opts.idFollowsOwnSetKeyField === true);
   const incumbent = "known" in opts ? (opts.known ?? null) : await readIncumbent(container, newSlug, retry);
 
   let action: MoveCatalogRowAction;
