@@ -33,6 +33,33 @@
  * "what a publisher might call the plain run" (a whitelist approach was
  * tried first and broke 2026 Topps Tier One, whose plain run is split into
  * "Base - Tier 1/2/3" with no single canonical spelling at all).
+ *
+ * CF-BECKETT-EXPLICIT-ANCHOR-IS-NOT-A-BLANK-CHEQUE (2026-09-19), same
+ * investigation, a second defect in the same function. category === "base"
+ * also makes classifySections mark a section `explicitAnchor: true`, which
+ * bypasses the extendsName title-containment guard for every OTHER section
+ * tested against it — not just for Zenith's merged section, but for a
+ * perfectly correctly-categorized "Base Set" too. 2024 Panini Photogenic
+ * Football's Base tab numbers #1-100; ten of its Inserts-sheet sections
+ * ("Avatars", "Draft Snapshots", "For the Cure", "In-Motion",
+ * "Progressions", "Rookie Introductions", "Rookie Pix", "The Shoe Game",
+ * "Troops Tribute", "A Different View") are genuinely independent named
+ * insert sets whose OWN numbering (1-10 or 1-20) is a subset of Base Set's
+ * range, so the numeric-overlap test found a 100% match and folded every one
+ * of them onto Base Set as a false parallel — ten distinct card sets
+ * collapsed onto the flagship base run, the same defect class
+ * CF-EVERY-INGEST-USES-THE-ONE-FORMAT documented for checklistinsider and
+ * #2265/#2266 fixed downstream for Illusions/Select, found here natively,
+ * upstream, in the converter itself.
+ *
+ * The fix restricts the explicitAnchor bypass to a candidate section that is
+ * ITSELF evidence of a finish/rung — FINISH_WORD, already the file's own
+ * evidence-based vocabulary for ladder lines, reused here to test a section
+ * HEADER instead. "International Refractors" (needs the bypass; it does not
+ * literally contain "Chrome Prospects") and "Packfractor" (extended
+ * FINISH_WORD with a bare "fractor" root, since neither literal "refractor"
+ * nor "superfractor" matched it) still pass; "Avatars" and "Troops Tribute"
+ * do not, and now correctly stay their own card sets.
  */
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
@@ -136,5 +163,45 @@ describe("2024 Panini Zenith Football converts without the false-anchor collapse
     expect(zSummitBlue.length).toBeGreaterThan(0);
     const variationRows = rows.filter((r) => r.category === "auto-contenders-optic-rookie-ticket-rps-preview-blue-checklist" && r.parallel === "Variation");
     expect(variationRows.length).toBeGreaterThan(0);
+  });
+});
+
+describe("categoryFor's explicitAnchor bypass only fires for a finish-shaped section name", () => {
+  it("keeps a bare finish/rung name eligible without a literal name match", () => {
+    // FINISH_WORD is exported implicitly via categoryFor's own module scope,
+    // exercised here through the section-header cases that actually matter.
+    expect(categoryFor("Chrome", "International Refractors")).toBe("insert-international-refractors");
+    expect(categoryFor("Chrome", "Chrome Prospect Packfractor Autographs"))
+      .toBe("auto-chrome-prospect-packfractor-autographs");
+  });
+
+  it("never treats an independent insert-set name as finish-shaped", () => {
+    for (const name of ["Avatars", "Draft Snapshots", "Troops Tribute", "The Shoe Game", "Rookie Pix"]) {
+      expect(categoryFor("Inserts", name), name).toBe(`insert-${name.toLowerCase().replace(/\s+/g, "-")}`);
+    }
+  });
+});
+
+describe("2024 Panini Photogenic Football converts without the numeric-subset collapse", () => {
+  it("keeps all ten named insert sets as their own card sets, not parallels of Base Set", () => {
+    const rows = convert("2024-Panini-PhotoGenic-Football-Checklist.xlsx", "panini-photogenic");
+    const cats = new Set(rows.map((r) => r.category));
+    for (const c of [
+      "insert-avatars-checklist", "insert-draft-snapshots-checklist", "insert-for-the-cure-checklist",
+      "insert-in-motion-checklist", "insert-progressions-checklist", "insert-rookie-introductions-checklist",
+      "insert-rookie-pix-checklist", "insert-the-shoe-game-checklist", "insert-troops-tribute-checklist",
+      "insert-a-different-view-checklist",
+    ]) expect(cats.has(c), c).toBe(true);
+    // None of these ten may appear as a parallel rung of "base" — that was
+    // the false fold (a 100%-numeric-subset match on Base Set's own #1-100).
+    const falseParallelsOfBase = rows.filter((r) => r.category === "base" && /^(Avatars|Draft Snapshots|Troops Tribute)/.test(r.parallel));
+    expect(falseParallelsOfBase).toHaveLength(0);
+  });
+
+  it("keeps the one genuine fold — Base Silver Autographs is a rung on Base Autographs", () => {
+    const rows = convert("2024-Panini-PhotoGenic-Football-Checklist.xlsx", "panini-photogenic");
+    const silverAutos = rows.filter((r) => r.category === "auto-base-autographs-checklist" && r.parallel === "Silver");
+    expect(silverAutos.length).toBeGreaterThan(0);
+    for (const r of silverAutos) expect(r.isAuto).toBe("true");
   });
 });

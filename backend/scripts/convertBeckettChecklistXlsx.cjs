@@ -40,6 +40,12 @@ const SET_NAME = val("--set-name", "");
 const SPORT = val("--sport", "baseball");
 const OUT = val("--out", "");
 const SOURCE_URL = val("--source-url", "");
+// CF-BECKETT-S3-SOURCE-LABEL (2026-09-19). Optional, additive. Distinguishes
+// a checklist fetched directly from the S3 origin (beckett-www.s3.amazonaws.com)
+// via discoverBeckettS3Checklists.cjs from the same converter's other callers,
+// which read the img.beckett.com CDN URL discoverBeckettChecklists.cjs finds.
+// Defaults to "" so every existing caller's manifest is byte-identical.
+const SOURCE_LABEL = val("--source-label", "");
 // Only a direct run needs the CLI args; the classifier is also imported as a
 // module (see module.exports at the bottom) and must not exit on load.
 if (require.main === module && (!XLSX || !YEAR || !SET_KEY || !OUT)) {
@@ -371,9 +377,26 @@ function classifySections(sections) {
       const ct = tokens(cand.section).map((t) => t.toLowerCase());
       return at.length > 0 && ct.length > at.length && at.every((t) => ct.includes(t));
     };
+    // CF-BECKETT-EXPLICIT-ANCHOR-IS-NOT-A-BLANK-CHEQUE (2026-09-19). The
+    // explicitAnchor branch above exists for "International Refractors" on
+    // 2026 Bowman Chrome — a real rung whose section header extends nothing
+    // ("Chrome Prospects" is not a token of it) and would otherwise never
+    // clear extendsName. But left unconditional it also cleared for 2024
+    // Panini Photogenic Football's "Avatars" / "Draft Snapshots" / "Troops
+    // Tribute" / seven more — genuinely independent named insert sets whose
+    // own numbering (1-10, 1-20) happens to be a SUBSET of Base Set's #1-100,
+    // so the numeric-overlap test alone found a 100% match and folded every
+    // one of them onto Base Set as a false parallel, the same "sheet name /
+    // explicitAnchor waives the containment guard" hole
+    // CF-BECKETT-BASE-SHEET-IS-NOT-ONE-SECTION already found and fixed for
+    // categoryFor. The bypass is only safe for a section that is ITSELF
+    // evidence of a finish/rung rather than a product name — FINISH_WORD
+    // already carries that vocabulary for ladder lines; a section header
+    // just is a longer line to test it against.
+    const looksLikeFinishName = (cand) => FINISH_WORD.test(cand.section);
     const candidates = anchors.filter((a) =>
       a !== sec && isAutoSection(a) === isAutoSection(sec) &&
-      (a.explicitAnchor || extendsName(sec, a)));
+      ((a.explicitAnchor && looksLikeFinishName(sec)) || extendsName(sec, a)));
     let best = null;
     for (const a of candidates) {
       const hit = [...sec.numbers].filter((n) => a.numbers.has(n)).length;
@@ -510,7 +533,11 @@ const PLACEHOLDER = /^(tba|n\/?a|none|list tba\.?|checklist tba\.?|coming soon)\
 // "100 cards.") is still refused, so this widens what counts as a rung without
 // inventing one -- no-synthetic-parallels holds, because every rung emitted is
 // a line the publisher printed.
-const FINISH_WORD = /refractor|prizm|foil|shimmer|wave|atomic|mojo|superfractor|parallel|logo|variation|sparkle|speckle|holo|disco|laser|pulsar|velocity|mini\s*diamond/i;
+// "fractor" (not just "refractor"/"superfractor" as literals) so the same
+// root covers Packfractor, which is neither -- CF-BECKETT-EXPLICIT-ANCHOR-IS-
+// NOT-A-BLANK-CHEQUE below reuses this vocabulary to test a SECTION HEADER,
+// not just a ladder line, and "Packfractor" failed the two-literal version.
+const FINISH_WORD = /fractor|prizm|foil|shimmer|wave|atomic|mojo|parallel|logo|variation|sparkle|speckle|holo|disco|laser|pulsar|velocity|mini\s*diamond/i;
 
 function parseRung(line) {
   const raw = String(line || "").trim();
@@ -696,6 +723,7 @@ function main() {
   const manifest = {
     scrapedAt: new Date().toISOString(),
     sourceUrl: SOURCE_URL,
+    ...(SOURCE_LABEL ? { source: SOURCE_LABEL } : {}),
     sport: SPORT,
     year: YEAR,
     setName: SET_NAME || SET_KEY,

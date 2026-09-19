@@ -1,0 +1,334 @@
+{
+  "scrapedAt": "2026-09-19T01:33:38.626Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/02/2024-Panini-Zenith-Football-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "football",
+  "year": 2024,
+  "setName": "2024 Panini Zenith Football",
+  "productKey": "2024-panini-zenith",
+  "setKey": "panini-zenith",
+  "rowCount": 5423,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Rookie Patch Autographs - #201-242",
+      "category": "auto-rookie-patch-autographs-201-242",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Base",
+      "section": "Rookies",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Rookie Patch Autographs",
+      "category": "auto-rookie-patch-autographs",
+      "cards": 38,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Two Minute Drill Checklist",
+      "category": "auto-base-autographs-two-minute-drill-checklist",
+      "cards": 49,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Red Zone Checklist",
+      "category": "auto-base-autographs-red-zone-checklist",
+      "cards": 17,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Red Red Zone Checklist",
+      "category": "auto-base-autographs-red-red-zone-checklist",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Contenders Optic Rookie Ticket RPS Preview Blue Checklist",
+      "category": "auto-contenders-optic-rookie-ticket-rps-preview-blue-checklist",
+      "cards": 36,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Contenders Optic Rookie Ticket Variation RPS Preview Blue Checklist",
+      "category": "auto-contenders-optic-rookie-ticket-variation-rps-preview-blue-checklist",
+      "cards": 36,
+      "role": "parallel",
+      "anchor": "Autographs>Contenders Optic Rookie Ticket RPS Preview Blue Checklist",
+      "rung": "Variation"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Contenders Optic Veteran Ticket Preview Blue Checklist",
+      "category": "auto-contenders-optic-veteran-ticket-preview-blue-checklist",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "High Point Signatures Checklist",
+      "category": "auto-high-point-signatures-checklist",
+      "cards": 26,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Pinnacle Inscriptions Checklist",
+      "category": "auto-pinnacle-inscriptions-checklist",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Pinnacle Inscriptions Silver Checklist",
+      "category": "auto-pinnacle-inscriptions-silver-checklist",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Patch Autographs Ice Checklist",
+      "category": "auto-rookie-patch-autographs-ice-checklist",
+      "cards": 37,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Two Minute Drill Checklist",
+      "category": "auto-rookies-autographs-two-minute-drill-checklist",
+      "cards": 59,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs No Huddle Checklist",
+      "category": "auto-rookies-autographs-no-huddle-checklist",
+      "cards": 63,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Red Zone Autographs Checklist",
+      "category": "auto-rookies-red-zone-autographs-checklist",
+      "cards": 62,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Red Zone Autographs Blue Checklist",
+      "category": "auto-rookies-red-zone-autographs-blue-checklist",
+      "cards": 64,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Red Zone Autographs Gold Checklist",
+      "category": "auto-rookies-red-zone-autographs-gold-checklist",
+      "cards": 69,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Red Zone Autographs Red Checklist",
+      "category": "auto-rookies-red-zone-autographs-red-checklist",
+      "cards": 62,
+      "role": "own-cards-UNNAMEABLE",
+      "anchor": "Autographs>Rookies Red Zone Autographs Checklist",
+      "note": "numbers match the anchor exactly but the section name yields no rung"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Red Zone Autographs White Checklist",
+      "category": "auto-rookies-red-zone-autographs-white-checklist",
+      "cards": 75,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z Summit Autographs Checklist",
+      "category": "auto-z-summit-autographs-checklist",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z Summit Autographs Blue Checklist",
+      "category": "auto-z-summit-autographs-blue-checklist",
+      "cards": 16,
+      "role": "parallel",
+      "anchor": "Autographs>Z Summit Autographs Checklist",
+      "rung": "Blue"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z Summit Autographs Gold Checklist",
+      "category": "auto-z-summit-autographs-gold-checklist",
+      "cards": 16,
+      "role": "parallel",
+      "anchor": "Autographs>Z Summit Autographs Checklist",
+      "rung": "Gold"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z Summit Autographs Red Checklist",
+      "category": "auto-z-summit-autographs-red-checklist",
+      "cards": 16,
+      "role": "parallel",
+      "anchor": "Autographs>Z Summit Autographs Checklist",
+      "rung": "Red"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z Summit Autographs White Checklist",
+      "category": "auto-z-summit-autographs-white-checklist",
+      "cards": 16,
+      "role": "parallel",
+      "anchor": "Autographs>Z Summit Autographs Checklist",
+      "rung": "White"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z-Graphs Checklist",
+      "category": "auto-z-graphs-checklist",
+      "cards": 36,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z-Jersey Autographs Checklist",
+      "category": "auto-z-jersey-autographs-checklist",
+      "cards": 38,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Color Guard Checklist",
+      "category": "insert-color-guard-checklist",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Turning Pro Memorabilia Checklist",
+      "category": "insert-turning-pro-memorabilia-checklist",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Z Jersey Checklist",
+      "category": "insert-z-jersey-checklist",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Zoned In Checklist",
+      "category": "insert-zoned-in-checklist",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "A to Z Checklist",
+      "category": "insert-a-to-z-checklist",
+      "cards": 26,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Alphas Checklist",
+      "category": "insert-alphas-checklist",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Behind The Numbers Checklist",
+      "category": "insert-behind-the-numbers-checklist",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Chalk Talk Checklist",
+      "category": "insert-chalk-talk-checklist",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "First Look Checklist",
+      "category": "insert-first-look-checklist",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Idols Checklist",
+      "category": "insert-idols-checklist",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Splash Checklist",
+      "category": "insert-splash-checklist",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "State of the Art Checklist",
+      "category": "insert-state-of-the-art-checklist",
+      "cards": 24,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "The Shield Checklist",
+      "category": "insert-the-shield-checklist",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Z Marquee Checklist",
+      "category": "insert-z-marquee-checklist",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Z-Team Checklist",
+      "category": "insert-z-team-checklist",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Zoom Gold Checklist",
+      "category": "insert-zoom-gold-checklist",
+      "cards": 8,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Zoom Red Checklist",
+      "category": "insert-zoom-red-checklist",
+      "cards": 10,
+      "role": "own-cards"
+    }
+  ]
+}
