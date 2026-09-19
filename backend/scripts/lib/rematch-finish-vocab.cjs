@@ -578,9 +578,38 @@ function insertSetNamedInTitle(title, sport, year, setKey) {
   const names = c.insertNamesByProduct?.get(insertKey(sport, year, setKey));
   if (!names || !names.size) return null;
   const parallelNames = c.namesByProduct?.get(productKey(year, setKey)) ?? null;
+  // THE PRODUCT'S OWN NAME IS NOT AN INSERT OF ITSELF (R66, 2026-09-19).
+  //
+  // 35 insert roots in the committed corpus are built ENTIRELY of their own
+  // product's setKey words -- `Flawless` on panini-flawless, `Elite` on
+  // donruss-elite, `Immaculate` on panini-immaculate-collection, `Select` on
+  // panini-select, `Certified` on panini-certified.
+  //
+  // Every title of those products names the product, so without this guard
+  // R66 reads an insert in EVERY sale and withholds the whole product:
+  //
+  //   "2025 Panini Certified #1 Marvin Harrison Jr. Mirror #/399"
+  //        -> insert "certified"        <- the PRODUCT, not an insert
+  //   "2024 Panini Select Basketball #23 Base Silver"
+  //        -> insert "select"           <- likewise
+  //
+  // `isProductWord` already answers "is this word this product's own name",
+  // per (year, setKey), and is the same authority the finish vocabulary uses
+  // -- so there is no second list to keep in step. A root every one of whose
+  // words is a product word cannot distinguish an insert sale from a base
+  // sale, and is skipped.
+  //
+  // A root that merely CONTAINS a product word is kept: `Select Certified` on
+  // panini-select is a real insert, and its other word carries the meaning.
+  const allWordsAreProductWords = (n) => {
+    const ws = String(n).split(" ").filter(Boolean);
+    return ws.length > 0 && ws.every((w) => isProductWord(w, setKey));
+  };
+
   let best = null;
   for (const n of names) {
     if (!n) continue;
+    if (allWordsAreProductWords(n)) continue;
     // An insert name that is ALSO a parallel name of this product cannot
     // decide anything on its own -- see the header.
     if (parallelNames && parallelNames.has(n) && !n.includes(" ")) continue;
