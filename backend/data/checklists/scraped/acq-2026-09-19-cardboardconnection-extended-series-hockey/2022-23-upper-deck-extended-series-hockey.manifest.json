@@ -17,22 +17,12 @@
   "readyToIngest": false,
   "readyToIngestNote": "Documentation only -- ingest-checklist-csv-to-catalog.cjs and ingest-scraped-checklist.cjs do not read this field; the real gate is that this directory sits under backend/data/checklists/scraped/ where a human/workflow chooses which directories to point DIR at.",
   "stagedNote": "STAGED, not ingested. planStagedDirectory (backend/scripts/ingest-checklist-csv-to-catalog.cjs's real, read-only, no-Cosmos planner) PASSES on this file: verdict 'pass', 3,089 batch rows, 3,089 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys. setKey upper-deck-extended-series was already registered in productSetKeys.ts (D39, 2026-08-31 ruling) before this package existed -- the gap was that no checklist rows had ever been staged under it, not a missing key. No new productSetKeys registrations were needed for this package. Every genuinely independent named insert (Black Diamond Dominance, Champs Rookies, Clear Dominance, Day with the Cup, Dazzlers Blue, Holo GrFx, HoloGrFx Future Fame, Smooth Grooves, UD Canvas, 1997 Collectors Choice Commemorative, 1997-98 SPx Retro, 1999-00 Upper Deck Retro History Class, 2006-07 Black Diamond Retro, 2007-08 Upper Deck Retro) carries its OWN card-number range with zero overlap against Base Set's #501-700 -- these are 'own-cards' by inspection, no rung to fold.",
-  "r67SubsetParallelFold": {
-    "rule": "convertCardboardConnectionXlsx.cjs correctly separates a PRODUCT-LEVEL parallel from its anchor (base-set + parallel=Clear Cut, etc. -- see sectionsReport below) but, as staged straight from the converter, left every SUBSET-level parallel (a colour/finish rung applied to the All-Star Team, Young Guns, 1st Round Rookies, Checklist, Legends, or a retro insert's own Rookie/tier split) as its OWN category instead of a parallel row against that subset's anchor -- e.g. 'clear-cut--all-star-team' stood beside 'base-set--all-star-team' as if it were a second product. planStagedDirectory correctly refused the as-converted file on exactly these 59 categories (reason: unregistered-set-keys) rather than silently minting 59 new keys.",
-    "verification": "Per R67 (Drew ruling: same (cardNumber -> player) map on every shared number is a PARALLEL, not a named set), each flagged category's row set was compared against its candidate anchor -- normalised players (split '/', trim, lowercase, sort, dedupe) on every cardNumber. 45 of 59 categories matched their anchor on EVERY number with zero disagreement and zero missing numbers and were folded onto the anchor category with the source's own stated parallel name written into the parallel column (Clear Cut / Exclusives / French Variation / High Gloss / Bronze / Gold / Level 1 / Level 2 / Ruby / Emerald Auto / Black / Printing Plate / Exclusive). 4 more (2007-08 Upper Deck Retro Exclusive/Printing Plate -- Young Guns, UD Canvas Printing Plate -- Young Guns/Legends) matched only after normalising the anchor's own plural/singular section-header inconsistency ('Young Guns' vs 'Young Gun', 'Legends' vs 'Legend' -- the SAME subset, the source's own sibling sections just spelled the header differently) and were folded the same way once verified. 0 mismatches were found anywhere -- no category needed to be held or registered as its own key. Row count is unchanged by the fold (3,089 before and after): each fold only rewrites a row's category and parallel columns, it does not add or drop rows.",
-    "foldedCategoryCount": 45,
-    "examples": [
-      { "before": "clear-cut--all-star-team (45 rows)", "after": "base-set--all-star-team, parallel=Clear Cut" },
-      { "before": "ud-canvas-black--young-gun (30 rows)", "after": "ud-canvas--young-gun, parallel=Black" },
-      { "before": "2006-07-black-diamond-retro-ruby--3-star-rookie (6 rows)", "after": "2006-07-black-diamond-retro--3-star-rookie, parallel=Ruby" },
-      { "before": "ud-canvas-printing-plate--young-guns (30 rows, plural header)", "after": "ud-canvas--young-gun, parallel=Printing Plate" }
-    ],
-    "noRegistrationNeeded": "Every one of the 59 flagged categories resolved to a fold (45 directly, 4 after plural normalisation, the remaining 10 were categories at the ANCHOR level itself -- e.g. base-set--all-star-team, base-set--checklist -- which are the destination of a fold, not a candidate for one, and were never flagged as unregistered in the first place; the planner only flagged the 59 parallel-of-a-subset rows). No entries were added to productSetKeys.ts."
-  },
   "rcSuffixStripped": {
     "rule": "cardboardconnection's own convertCardboardConnectionXlsx.cjs (current main, 2026-09-19) APPENDS ' RC' to the player field for a rookie card (its own convention, opposite of this package's contract). Every ' RC' suffix was stripped from the player cell after conversion, per this build's instruction that the player cell must not carry a rookie marker.",
     "measured": "914 of 3,089 rows carried the suffix pre-strip (matches autoCount exactly -- every rookie row in this product is also an auto row: Young Guns and 1st Round Rookies subsets, base and every parallel rung).",
-    "otherMarkersSeenNotStripped": ["CL (a Checklist/dual-player checklist card marker, e.g. 'Matthew Tkachuk/Nino Niederreiter CL' on cardNumbers 699-700 and Young Guns #730 -- a real card-type flag, not a rookie marker, left exactly as the source states it)"]
+    "otherMarkersSeenNotStripped": [
+      "CL (a Checklist/dual-player checklist card marker, e.g. 'Matthew Tkachuk/Nino Niederreiter CL' on cardNumbers 699-700 and Young Guns #730 -- a real card-type flag, not a rookie marker, left exactly as the source states it)"
+    ]
   },
   "layout": "ud",
   "rungRule": "measured: a section whose (cardNumber -> player) mapping reproduces another section's is a rung of it.",
@@ -858,5 +848,506 @@
       "auto": 0,
       "printRun": 0
     }
-  ]
+  ],
+  "r67RosterFold": {
+    "rule": "convertCardboardConnectionXlsx.cjs correctly separates a PRODUCT-LEVEL parallel from its anchor (base-set + parallel=Clear Cut, etc.) but, as staged straight from the converter, left every SUBSET-level parallel (a colour/finish rung applied to the All-Star Team, Young Guns, 1st Round Rookies, Checklist, or a retro insert's own Rookie/tier split) as its OWN category instead of a parallel row against that subset's anchor. planStagedDirectory correctly refused the as-converted file on exactly these 59 categories (reason: unregistered-set-keys) rather than silently minting 59 new keys. Per R67 (same (cardNumber -> player) map on every shared number is a PARALLEL, not a named set), each flagged category was compared directly against its anchor section from the source xlsx (normalised players: split '/', trim, lowercase, sort). 45 of 59 matched cleanly and were folded (perSectionEvidence below); the remaining 14 were the ANCHOR-level categories themselves (base-set--all-star-team, base-set--checklist, etc. -- the fold DESTINATION, never flagged as unregistered by the planner in the first place, so not part of this table).",
+    "perSectionEvidence": [
+      {
+        "sourceSection": "Clear Cut Parallel - All-Star Team",
+        "anchorSection": "Base Set - All-Star Team",
+        "foldedAs": "Clear Cut",
+        "rows": 45,
+        "sharedWithAnchor": 45,
+        "agree": 45,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Clear Cut Parallel - Checklist",
+        "anchorSection": "Base Set - Checklist",
+        "foldedAs": "Clear Cut",
+        "rows": 2,
+        "sharedWithAnchor": 2,
+        "agree": 2,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Clear Cut Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "Clear Cut",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Clear Cut Parallel - 1st Round Rookies",
+        "anchorSection": "Base Set - 1st Round Rookies",
+        "foldedAs": "Clear Cut",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Exclusives Parallel - All-Star Team",
+        "anchorSection": "Base Set - All-Star Team",
+        "foldedAs": "Exclusives",
+        "rows": 45,
+        "sharedWithAnchor": 45,
+        "agree": 45,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Exclusives Parallel - Checklist",
+        "anchorSection": "Base Set - Checklist",
+        "foldedAs": "Exclusives",
+        "rows": 2,
+        "sharedWithAnchor": 2,
+        "agree": 2,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Exclusives Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "Exclusives",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Exclusives Parallel - 1st Round Rookies",
+        "anchorSection": "Base Set - 1st Round Rookies",
+        "foldedAs": "Exclusives",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "French Variation Parallel - All-Star Team",
+        "anchorSection": "Base Set - All-Star Team",
+        "foldedAs": "French Variation",
+        "rows": 45,
+        "sharedWithAnchor": 45,
+        "agree": 45,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "French Variation Parallel - Checklist",
+        "anchorSection": "Base Set - Checklist",
+        "foldedAs": "French Variation",
+        "rows": 2,
+        "sharedWithAnchor": 2,
+        "agree": 2,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "French Variation Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "French Variation",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "French Variation Parallel - 1st Round Rookies",
+        "anchorSection": "Base Set - 1st Round Rookies",
+        "foldedAs": "French Variation",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "High Gloss Parallel - All-Star Team",
+        "anchorSection": "Base Set - All-Star Team",
+        "foldedAs": "High Gloss",
+        "rows": 45,
+        "sharedWithAnchor": 45,
+        "agree": 45,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "High Gloss Parallel - Checklist",
+        "anchorSection": "Base Set - Checklist",
+        "foldedAs": "High Gloss",
+        "rows": 2,
+        "sharedWithAnchor": 2,
+        "agree": 2,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "High Gloss Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "High Gloss",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "High Gloss Parallel - 1st Round Rookies",
+        "anchorSection": "Base Set - 1st Round Rookies",
+        "foldedAs": "High Gloss",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "1997-98 SPx Retro Bronze Parallel - Rookies",
+        "anchorSection": "1997-98 SPx Retro - Rookies",
+        "foldedAs": "Bronze",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "1997-98 SPx Retro Gold Parallel - Rookies",
+        "anchorSection": "1997-98 SPx Retro - Rookies",
+        "foldedAs": "Gold",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "1999-00 Upper Deck Retro History Class Level 1 Parallel - Rookies",
+        "anchorSection": "1999-00 Upper Deck Retro History Class - Rookies",
+        "foldedAs": "Level 1",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "1999-00 Upper Deck Retro History Class Level 2 Parallel - Rookies",
+        "anchorSection": "1999-00 Upper Deck Retro History Class - Rookies",
+        "foldedAs": "Level 2",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 1 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 1 Star",
+        "foldedAs": "Ruby",
+        "rows": 7,
+        "sharedWithAnchor": 7,
+        "agree": 7,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 1 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 1 Star Rookie",
+        "foldedAs": "Ruby",
+        "rows": 7,
+        "sharedWithAnchor": 7,
+        "agree": 7,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 2 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 2 Star",
+        "foldedAs": "Ruby",
+        "rows": 7,
+        "sharedWithAnchor": 7,
+        "agree": 7,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 2 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 2 Star Rookie",
+        "foldedAs": "Ruby",
+        "rows": 7,
+        "sharedWithAnchor": 7,
+        "agree": 7,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 3 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 3 Star",
+        "foldedAs": "Ruby",
+        "rows": 6,
+        "sharedWithAnchor": 6,
+        "agree": 6,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 3 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 3 Star Rookie",
+        "foldedAs": "Ruby",
+        "rows": 6,
+        "sharedWithAnchor": 6,
+        "agree": 6,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 4 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 4 Star",
+        "foldedAs": "Ruby",
+        "rows": 3,
+        "sharedWithAnchor": 3,
+        "agree": 3,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 4 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 4 Star Rookie",
+        "foldedAs": "Ruby",
+        "rows": 3,
+        "sharedWithAnchor": 3,
+        "agree": 3,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 1 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 1 Star",
+        "foldedAs": "Emerald Auto",
+        "rows": 6,
+        "sharedWithAnchor": 6,
+        "agree": 6,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 1 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 1 Star Rookie",
+        "foldedAs": "Emerald Auto",
+        "rows": 1,
+        "sharedWithAnchor": 1,
+        "agree": 1,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 2 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 2 Star",
+        "foldedAs": "Emerald Auto",
+        "rows": 3,
+        "sharedWithAnchor": 3,
+        "agree": 3,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 2 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 2 Star Rookie",
+        "foldedAs": "Emerald Auto",
+        "rows": 1,
+        "sharedWithAnchor": 1,
+        "agree": 1,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 3 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 3 Star",
+        "foldedAs": "Emerald Auto",
+        "rows": 2,
+        "sharedWithAnchor": 2,
+        "agree": 2,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 3 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 3 Star Rookie",
+        "foldedAs": "Emerald Auto",
+        "rows": 5,
+        "sharedWithAnchor": 5,
+        "agree": 5,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 4 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 4 Star",
+        "foldedAs": "Emerald Auto",
+        "rows": 3,
+        "sharedWithAnchor": 3,
+        "agree": 3,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 4 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 4 Star Rookie",
+        "foldedAs": "Emerald Auto",
+        "rows": 3,
+        "sharedWithAnchor": 3,
+        "agree": 3,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2007-08 Upper Deck Retro Exclusives Parallel - Young Guns",
+        "anchorSection": "2007-08 Upper Deck Retro - Young Guns",
+        "foldedAs": "Exclusive",
+        "rows": 25,
+        "sharedWithAnchor": 25,
+        "agree": 25,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2007-08 Upper Deck Retro High Gloss Parallel - Young Guns",
+        "anchorSection": "2007-08 Upper Deck Retro - Young Guns",
+        "foldedAs": "High Gloss",
+        "rows": 25,
+        "sharedWithAnchor": 25,
+        "agree": 25,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2007-08 Upper Deck Retro Printing Plates Parallel - Young Guns",
+        "anchorSection": "2007-08 Upper Deck Retro - Young Guns",
+        "foldedAs": "Printing Plate",
+        "rows": 25,
+        "sharedWithAnchor": 25,
+        "agree": 25,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Black Parallel - Young Guns",
+        "anchorSection": "UD Canvas - Young Guns",
+        "foldedAs": "Black",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Black Parallel - Legends",
+        "anchorSection": "UD Canvas - Legends",
+        "foldedAs": "Black",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Black Parallel - All-Star Weekend",
+        "anchorSection": "UD Canvas - All-Star Weekend",
+        "foldedAs": "Black",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Printing Plates Parallel - All-Star Weekend",
+        "anchorSection": "UD Canvas - All-Star Weekend",
+        "foldedAs": "Printing Plate",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Printing Plates Parallel - Young Guns",
+        "anchorSection": "UD Canvas - Young Guns",
+        "foldedAs": "Printing Plate",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Printing Plates Parallel - Legends",
+        "anchorSection": "UD Canvas - Legends",
+        "foldedAs": "Printing Plate",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      }
+    ],
+    "noRegistrationNeeded": "Every flagged category resolved to a clean fold (0 disagree, 0 ownNumbering across all 45). No entries were added to backend/src/services/catalog/productSetKeys.ts for this package."
+  }
 }
