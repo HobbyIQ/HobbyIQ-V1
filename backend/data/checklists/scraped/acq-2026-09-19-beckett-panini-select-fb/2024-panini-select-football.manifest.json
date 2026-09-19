@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-09-19T22:53:07.368Z",
+  "scrapedAt": "2026-09-19T23:38:43.750Z",
   "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/07/2024-Panini-Select-Football-Checklist.xlsx",
   "source": "beckett-s3-2026-09-19",
   "sport": "football",
@@ -7,11 +7,11 @@
   "setName": "2024 Panini Select Football",
   "productKey": "2024-panini-select",
   "setKey": "panini-select",
-  "rowCount": 18886,
+  "rowCount": 19986,
   "parallelColumnAuthoritative": true,
   "heldRows": {
-    "rows": 18886,
-    "reason": "convertBeckettChecklistXlsx.cjs's explicitAnchor bypass (see CF-BECKETT-EXPLICIT-ANCHOR-IS-NOT-A-BLANK-CHEQUE in the script) still misfires on this workbook: a Memorabilia-sheet section whose OWN name contains a FINISH_WORD token ('Prizm') clears looksLikeFinishName and is tested for a numeric-only fold onto the Base/Concourse explicitAnchor, bypassing extendsName -- with no roster check in that pass. Four already-registered named insert products fold onto Base>Base Concourse as fabricated parallel names purely because their own numbering (1-25/1-42) is a 100% subset of Concourse's 1-100 range, even though their rosters DISAGREE with Concourse card-for-card (measured: Base Concourse #1 = Tory Taylor; the four sections' own #1 = Caleb Williams / Adonai Mitchell / Caleb Williams / Kurt Warner -- verified via rosterFoldAgainst, which correctly reports disagree>0 for this pairing, proving the roster-fold pass is NOT the one firing here): insert-draft-selections-memorabilia-prizm (25 rows, -> registered panini-select-draft-selections-memorabilia), insert-jumbo-rookie-swatch-prizm (42 rows, -> registered panini-select-jumbo-rookie-swatch), insert-rookie-swatches-prizm (25 rows, -> registered panini-select-rookie-swatches), insert-sparks-prizm (58 rows, -> registered panini-select-sparks). 150 of 18,886 rows (0.8%) land under category=base with a fabricated parallel string instead of their own registered insert-set key. Every other row in this file (18,736) is unaffected -- base anchors, autograph sections (isAuto true/false populated on every row, no blanks), and every other insert/parallel fold were spot-checked clean. Held whole-file rather than partially, because the ingester's manifest gate only supports an all-or-nothing hold and 'absent beats wrong' for the 150 known-bad rows outweighs shipping the 18,736 good ones early. Unhold once the converter's explicitAnchor+FINISH_WORD bypass gets a roster check (or an equivalent fix) and the four sections re-emit under their own registered category with a blank parallel."
+    "rows": 19986,
+    "reason": "REGENERATED 2026-09-19 after fixing convertBeckettChecklistXlsx.cjs's explicitAnchor+FINISH_WORD bypass (see CF-BECKETT-THE-ROSTER-DECIDES-THE-EXPLICIT-ANCHOR-FOLD-TOO in the script): the four Memorabilia-sheet sections (Draft Selections Memorabilia Prizm, Jumbo Rookie Swatch Prizm, Rookie Swatches Prizm, Sparks Prizm) that previously false-folded onto Base>Base Concourse now correctly re-emit under their own registered category with a blank parallel -- the false-fold defect this file was originally held for is FIXED. The file remains HELD, not because its rows are wrong, but because planStagedDirectory still REFUSEs it on the ordinary, unrelated unregistered-set-keys gate: 10 named insert/autograph set keys (panini-select-select-signatures-prizm 1,278 rows, panini-select-sparks-prizm 464, panini-select-jumbo-rookie-swatch-prizm 336, panini-select-draft-selections-memorabilia-prizm 225, panini-select-rookie-swatches-prizm 225, panini-select-signatures-prizm 199, panini-select-rookie-signature-memorabilia-prizm 180, panini-select-jumbo-rookie-signature-swatches-prizm 45, panini-select-2025-xrc-mystery-autograph-prizm 20, panini-select-jumbo-signature-swatches-prizm 12 -- each a trailing-Prizm-suffix spelling of an already-registered sibling key, same shape as Mosaic/Zenith's reported suffix mismatches) are not yet registered in hobbyIqCardId.service.ts, and 832 id collisions follow from those same unregistered keys falling back to a shared bucket -- the identical, ordinary REFUSE shape Mosaic and Photogenic ship WITHOUT a heldRows gate (they REFUSE via the ingester's own unregistered-set-keys check, with no manifest flag needed). This file keeps heldRows, unlike those two, only because the PRIOR heldRows already existed here and removing it is a decision the task instructions reserve for 'the planner is clean' -- REPORT would additionally still refuse on the keys/collisions above even with heldRows lifted, so nothing is gained by removing it before those keys are registered. Unhold (or simply let the ordinary unregistered-set-keys refusal stand, matching Mosaic/Photogenic) once the 10 keys above are registered in both productSetKeys.ts and hobbyIqCardId.service.ts."
   },
   "sectionsReport": [
     {
@@ -139,18 +139,14 @@
       "section": "Draft Selections Memorabilia Prizm",
       "category": "insert-draft-selections-memorabilia-prizm",
       "cards": 25,
-      "role": "parallel",
-      "anchor": "Base>Base Concourse",
-      "rung": "Draft Selections Memorabilia Prizm"
+      "role": "own-cards"
     },
     {
       "sheet": "Memorabilia",
       "section": "Jumbo Rookie Swatch Prizm",
       "category": "insert-jumbo-rookie-swatch-prizm",
       "cards": 42,
-      "role": "parallel",
-      "anchor": "Base>Base Concourse",
-      "rung": "Jumbo Rookie Swatch Prizm"
+      "role": "own-cards"
     },
     {
       "sheet": "Memorabilia",
@@ -164,18 +160,14 @@
       "section": "Rookie Swatches Prizm",
       "category": "insert-rookie-swatches-prizm",
       "cards": 25,
-      "role": "parallel",
-      "anchor": "Base>Base Concourse",
-      "rung": "Rookie Swatches Prizm"
+      "role": "own-cards"
     },
     {
       "sheet": "Memorabilia",
       "section": "Sparks Prizm",
       "category": "insert-sparks-prizm",
       "cards": 58,
-      "role": "parallel",
-      "anchor": "Base>Base Concourse",
-      "rung": "Sparks Prizm"
+      "role": "own-cards"
     },
     {
       "sheet": "Inserts",

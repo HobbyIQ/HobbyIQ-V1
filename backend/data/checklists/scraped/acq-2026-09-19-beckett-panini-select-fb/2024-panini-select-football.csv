@@ -16400,73 +16400,567 @@ auto-spectra-hof-signatures-prizm,72,,true,,Isaac Bruce
 auto-spectra-hof-signatures-prizm,73,,true,,Joe Klecko
 auto-spectra-hof-signatures-prizm,74,,true,,Kellen Winslow
 auto-spectra-hof-signatures-prizm,75,,true,,Harry Carson
-base,1,Draft Selections Memorabilia Prizm,false,,Caleb Williams
-base,2,Draft Selections Memorabilia Prizm,false,,Jayden Daniels
-base,3,Draft Selections Memorabilia Prizm,false,,Bo Nix
-base,4,Draft Selections Memorabilia Prizm,false,,Drake Maye
-base,5,Draft Selections Memorabilia Prizm,false,,Malik Nabers
-base,6,Draft Selections Memorabilia Prizm,false,,Marvin Harrison Jr.
-base,7,Draft Selections Memorabilia Prizm,false,,Xavier Worthy
-base,8,Draft Selections Memorabilia Prizm,false,,Brock Bowers
-base,9,Draft Selections Memorabilia Prizm,false,,Michael Penix Jr.
-base,10,Draft Selections Memorabilia Prizm,false,,J.J. McCarthy
-base,11,Draft Selections Memorabilia Prizm,false,,Spencer Rattler
-base,12,Draft Selections Memorabilia Prizm,false,,Joe Milton III
-base,13,Draft Selections Memorabilia Prizm,false,,Rome Odunze
-base,14,Draft Selections Memorabilia Prizm,false,,Brian Thomas Jr.
-base,15,Draft Selections Memorabilia Prizm,false,,Ladd McConkey
-base,16,Draft Selections Memorabilia Prizm,false,,Keon Coleman
-base,17,Draft Selections Memorabilia Prizm,false,,Dallas Turner
-base,18,Draft Selections Memorabilia Prizm,false,,Laiatu Latu
-base,19,Draft Selections Memorabilia Prizm,false,,Jonathon Brooks
-base,20,Draft Selections Memorabilia Prizm,false,,Blake Corum
-base,21,Draft Selections Memorabilia Prizm,false,,Braelon Allen
-base,22,Draft Selections Memorabilia Prizm,false,,Trey Benson
-base,23,Draft Selections Memorabilia Prizm,false,,Jaylen Wright
-base,24,Draft Selections Memorabilia Prizm,false,,Adonai Mitchell
-base,25,Draft Selections Memorabilia Prizm,false,,Bucky Irving
-base,1,Jumbo Rookie Swatch Prizm,false,,Adonai Mitchell
-base,2,Jumbo Rookie Swatch Prizm,false,,Audric Estime
-base,3,Jumbo Rookie Swatch Prizm,false,,Blake Corum
-base,4,Jumbo Rookie Swatch Prizm,false,,Bo Nix
-base,5,Jumbo Rookie Swatch Prizm,false,,Braelon Allen
-base,6,Jumbo Rookie Swatch Prizm,false,,Brenden Rice
-base,7,Jumbo Rookie Swatch Prizm,false,,Brian Thomas Jr.
-base,8,Jumbo Rookie Swatch Prizm,false,,Brock Bowers
-base,9,Jumbo Rookie Swatch Prizm,false,,Bucky Irving
-base,10,Jumbo Rookie Swatch Prizm,false,,Caleb Williams
-base,11,Jumbo Rookie Swatch Prizm,false,,Dallas Turner
-base,12,Jumbo Rookie Swatch Prizm,false,,Drake Maye
-base,13,Jumbo Rookie Swatch Prizm,false,,J.J. McCarthy
-base,14,Jumbo Rookie Swatch Prizm,false,,Jalen McMillan
-base,15,Jumbo Rookie Swatch Prizm,false,,Ja'Lynn Polk
-base,16,Jumbo Rookie Swatch Prizm,false,,Ja'Tavion Sanders
-base,17,Jumbo Rookie Swatch Prizm,false,,Jayden Daniels
-base,18,Jumbo Rookie Swatch Prizm,false,,Jaylen Wright
-base,19,Jumbo Rookie Swatch Prizm,false,,Jermaine Burton
-base,20,Jumbo Rookie Swatch Prizm,false,,Joe Milton III
-base,21,Jumbo Rookie Swatch Prizm,false,,Jonathon Brooks
-base,22,Jumbo Rookie Swatch Prizm,false,,Jordan Travis
-base,23,Jumbo Rookie Swatch Prizm,false,,Keon Coleman
-base,24,Jumbo Rookie Swatch Prizm,false,,Kool-Aid McKinstry
-base,25,Jumbo Rookie Swatch Prizm,false,,Ladd McConkey
-base,26,Jumbo Rookie Swatch Prizm,false,,Laiatu Latu
-base,27,Jumbo Rookie Swatch Prizm,false,,Luke McCaffrey
-base,28,Jumbo Rookie Swatch Prizm,false,,Malachi Corley
-base,29,Jumbo Rookie Swatch Prizm,false,,Malik Nabers
-base,30,Jumbo Rookie Swatch Prizm,false,,MarShawn Lloyd
-base,31,Jumbo Rookie Swatch Prizm,false,,Marvin Harrison Jr.
-base,32,Jumbo Rookie Swatch Prizm,false,,Michael Penix Jr.
-base,33,Jumbo Rookie Swatch Prizm,false,,Ray Davis
-base,34,Jumbo Rookie Swatch Prizm,false,,Ricky Pearsall
-base,35,Jumbo Rookie Swatch Prizm,false,,Roman Wilson
-base,36,Jumbo Rookie Swatch Prizm,false,,Rome Odunze
-base,37,Jumbo Rookie Swatch Prizm,false,,Spencer Rattler
-base,38,Jumbo Rookie Swatch Prizm,false,,Trey Benson
-base,39,Jumbo Rookie Swatch Prizm,false,,Troy Franklin
-base,40,Jumbo Rookie Swatch Prizm,false,,Will Shipley
-base,41,Jumbo Rookie Swatch Prizm,false,,Xavier Legette
-base,42,Jumbo Rookie Swatch Prizm,false,,Xavier Worthy
+insert-draft-selections-memorabilia-prizm,1,,false,,Caleb Williams
+insert-draft-selections-memorabilia-prizm,1,Red Prizms,false,,Caleb Williams
+insert-draft-selections-memorabilia-prizm,1,White Prizms,false,75,Caleb Williams
+insert-draft-selections-memorabilia-prizm,1,Copper Prizms,false,49,Caleb Williams
+insert-draft-selections-memorabilia-prizm,1,Blue Prizms,false,35,Caleb Williams
+insert-draft-selections-memorabilia-prizm,1,Tie-Dye Prizms,false,25,Caleb Williams
+insert-draft-selections-memorabilia-prizm,1,Gold Prizms,false,10,Caleb Williams
+insert-draft-selections-memorabilia-prizm,1,Green Prizms,false,5,Caleb Williams
+insert-draft-selections-memorabilia-prizm,1,Black Prizms,false,1,Caleb Williams
+insert-draft-selections-memorabilia-prizm,2,,false,,Jayden Daniels
+insert-draft-selections-memorabilia-prizm,2,Red Prizms,false,,Jayden Daniels
+insert-draft-selections-memorabilia-prizm,2,White Prizms,false,75,Jayden Daniels
+insert-draft-selections-memorabilia-prizm,2,Copper Prizms,false,49,Jayden Daniels
+insert-draft-selections-memorabilia-prizm,2,Blue Prizms,false,35,Jayden Daniels
+insert-draft-selections-memorabilia-prizm,2,Tie-Dye Prizms,false,25,Jayden Daniels
+insert-draft-selections-memorabilia-prizm,2,Gold Prizms,false,10,Jayden Daniels
+insert-draft-selections-memorabilia-prizm,2,Green Prizms,false,5,Jayden Daniels
+insert-draft-selections-memorabilia-prizm,2,Black Prizms,false,1,Jayden Daniels
+insert-draft-selections-memorabilia-prizm,3,,false,,Bo Nix
+insert-draft-selections-memorabilia-prizm,3,Red Prizms,false,,Bo Nix
+insert-draft-selections-memorabilia-prizm,3,White Prizms,false,75,Bo Nix
+insert-draft-selections-memorabilia-prizm,3,Copper Prizms,false,49,Bo Nix
+insert-draft-selections-memorabilia-prizm,3,Blue Prizms,false,35,Bo Nix
+insert-draft-selections-memorabilia-prizm,3,Tie-Dye Prizms,false,25,Bo Nix
+insert-draft-selections-memorabilia-prizm,3,Gold Prizms,false,10,Bo Nix
+insert-draft-selections-memorabilia-prizm,3,Green Prizms,false,5,Bo Nix
+insert-draft-selections-memorabilia-prizm,3,Black Prizms,false,1,Bo Nix
+insert-draft-selections-memorabilia-prizm,4,,false,,Drake Maye
+insert-draft-selections-memorabilia-prizm,4,Red Prizms,false,,Drake Maye
+insert-draft-selections-memorabilia-prizm,4,White Prizms,false,75,Drake Maye
+insert-draft-selections-memorabilia-prizm,4,Copper Prizms,false,49,Drake Maye
+insert-draft-selections-memorabilia-prizm,4,Blue Prizms,false,35,Drake Maye
+insert-draft-selections-memorabilia-prizm,4,Tie-Dye Prizms,false,25,Drake Maye
+insert-draft-selections-memorabilia-prizm,4,Gold Prizms,false,10,Drake Maye
+insert-draft-selections-memorabilia-prizm,4,Green Prizms,false,5,Drake Maye
+insert-draft-selections-memorabilia-prizm,4,Black Prizms,false,1,Drake Maye
+insert-draft-selections-memorabilia-prizm,5,,false,,Malik Nabers
+insert-draft-selections-memorabilia-prizm,5,Red Prizms,false,,Malik Nabers
+insert-draft-selections-memorabilia-prizm,5,White Prizms,false,75,Malik Nabers
+insert-draft-selections-memorabilia-prizm,5,Copper Prizms,false,49,Malik Nabers
+insert-draft-selections-memorabilia-prizm,5,Blue Prizms,false,35,Malik Nabers
+insert-draft-selections-memorabilia-prizm,5,Tie-Dye Prizms,false,25,Malik Nabers
+insert-draft-selections-memorabilia-prizm,5,Gold Prizms,false,10,Malik Nabers
+insert-draft-selections-memorabilia-prizm,5,Green Prizms,false,5,Malik Nabers
+insert-draft-selections-memorabilia-prizm,5,Black Prizms,false,1,Malik Nabers
+insert-draft-selections-memorabilia-prizm,6,,false,,Marvin Harrison Jr.
+insert-draft-selections-memorabilia-prizm,6,Red Prizms,false,,Marvin Harrison Jr.
+insert-draft-selections-memorabilia-prizm,6,White Prizms,false,75,Marvin Harrison Jr.
+insert-draft-selections-memorabilia-prizm,6,Copper Prizms,false,49,Marvin Harrison Jr.
+insert-draft-selections-memorabilia-prizm,6,Blue Prizms,false,35,Marvin Harrison Jr.
+insert-draft-selections-memorabilia-prizm,6,Tie-Dye Prizms,false,25,Marvin Harrison Jr.
+insert-draft-selections-memorabilia-prizm,6,Gold Prizms,false,10,Marvin Harrison Jr.
+insert-draft-selections-memorabilia-prizm,6,Green Prizms,false,5,Marvin Harrison Jr.
+insert-draft-selections-memorabilia-prizm,6,Black Prizms,false,1,Marvin Harrison Jr.
+insert-draft-selections-memorabilia-prizm,7,,false,,Xavier Worthy
+insert-draft-selections-memorabilia-prizm,7,Red Prizms,false,,Xavier Worthy
+insert-draft-selections-memorabilia-prizm,7,White Prizms,false,75,Xavier Worthy
+insert-draft-selections-memorabilia-prizm,7,Copper Prizms,false,49,Xavier Worthy
+insert-draft-selections-memorabilia-prizm,7,Blue Prizms,false,35,Xavier Worthy
+insert-draft-selections-memorabilia-prizm,7,Tie-Dye Prizms,false,25,Xavier Worthy
+insert-draft-selections-memorabilia-prizm,7,Gold Prizms,false,10,Xavier Worthy
+insert-draft-selections-memorabilia-prizm,7,Green Prizms,false,5,Xavier Worthy
+insert-draft-selections-memorabilia-prizm,7,Black Prizms,false,1,Xavier Worthy
+insert-draft-selections-memorabilia-prizm,8,,false,,Brock Bowers
+insert-draft-selections-memorabilia-prizm,8,Red Prizms,false,,Brock Bowers
+insert-draft-selections-memorabilia-prizm,8,White Prizms,false,75,Brock Bowers
+insert-draft-selections-memorabilia-prizm,8,Copper Prizms,false,49,Brock Bowers
+insert-draft-selections-memorabilia-prizm,8,Blue Prizms,false,35,Brock Bowers
+insert-draft-selections-memorabilia-prizm,8,Tie-Dye Prizms,false,25,Brock Bowers
+insert-draft-selections-memorabilia-prizm,8,Gold Prizms,false,10,Brock Bowers
+insert-draft-selections-memorabilia-prizm,8,Green Prizms,false,5,Brock Bowers
+insert-draft-selections-memorabilia-prizm,8,Black Prizms,false,1,Brock Bowers
+insert-draft-selections-memorabilia-prizm,9,,false,,Michael Penix Jr.
+insert-draft-selections-memorabilia-prizm,9,Red Prizms,false,,Michael Penix Jr.
+insert-draft-selections-memorabilia-prizm,9,White Prizms,false,75,Michael Penix Jr.
+insert-draft-selections-memorabilia-prizm,9,Copper Prizms,false,49,Michael Penix Jr.
+insert-draft-selections-memorabilia-prizm,9,Blue Prizms,false,35,Michael Penix Jr.
+insert-draft-selections-memorabilia-prizm,9,Tie-Dye Prizms,false,25,Michael Penix Jr.
+insert-draft-selections-memorabilia-prizm,9,Gold Prizms,false,10,Michael Penix Jr.
+insert-draft-selections-memorabilia-prizm,9,Green Prizms,false,5,Michael Penix Jr.
+insert-draft-selections-memorabilia-prizm,9,Black Prizms,false,1,Michael Penix Jr.
+insert-draft-selections-memorabilia-prizm,10,,false,,J.J. McCarthy
+insert-draft-selections-memorabilia-prizm,10,Red Prizms,false,,J.J. McCarthy
+insert-draft-selections-memorabilia-prizm,10,White Prizms,false,75,J.J. McCarthy
+insert-draft-selections-memorabilia-prizm,10,Copper Prizms,false,49,J.J. McCarthy
+insert-draft-selections-memorabilia-prizm,10,Blue Prizms,false,35,J.J. McCarthy
+insert-draft-selections-memorabilia-prizm,10,Tie-Dye Prizms,false,25,J.J. McCarthy
+insert-draft-selections-memorabilia-prizm,10,Gold Prizms,false,10,J.J. McCarthy
+insert-draft-selections-memorabilia-prizm,10,Green Prizms,false,5,J.J. McCarthy
+insert-draft-selections-memorabilia-prizm,10,Black Prizms,false,1,J.J. McCarthy
+insert-draft-selections-memorabilia-prizm,11,,false,,Spencer Rattler
+insert-draft-selections-memorabilia-prizm,11,Red Prizms,false,,Spencer Rattler
+insert-draft-selections-memorabilia-prizm,11,White Prizms,false,75,Spencer Rattler
+insert-draft-selections-memorabilia-prizm,11,Copper Prizms,false,49,Spencer Rattler
+insert-draft-selections-memorabilia-prizm,11,Blue Prizms,false,35,Spencer Rattler
+insert-draft-selections-memorabilia-prizm,11,Tie-Dye Prizms,false,25,Spencer Rattler
+insert-draft-selections-memorabilia-prizm,11,Gold Prizms,false,10,Spencer Rattler
+insert-draft-selections-memorabilia-prizm,11,Green Prizms,false,5,Spencer Rattler
+insert-draft-selections-memorabilia-prizm,11,Black Prizms,false,1,Spencer Rattler
+insert-draft-selections-memorabilia-prizm,12,,false,,Joe Milton III
+insert-draft-selections-memorabilia-prizm,12,Red Prizms,false,,Joe Milton III
+insert-draft-selections-memorabilia-prizm,12,White Prizms,false,75,Joe Milton III
+insert-draft-selections-memorabilia-prizm,12,Copper Prizms,false,49,Joe Milton III
+insert-draft-selections-memorabilia-prizm,12,Blue Prizms,false,35,Joe Milton III
+insert-draft-selections-memorabilia-prizm,12,Tie-Dye Prizms,false,25,Joe Milton III
+insert-draft-selections-memorabilia-prizm,12,Gold Prizms,false,10,Joe Milton III
+insert-draft-selections-memorabilia-prizm,12,Green Prizms,false,5,Joe Milton III
+insert-draft-selections-memorabilia-prizm,12,Black Prizms,false,1,Joe Milton III
+insert-draft-selections-memorabilia-prizm,13,,false,,Rome Odunze
+insert-draft-selections-memorabilia-prizm,13,Red Prizms,false,,Rome Odunze
+insert-draft-selections-memorabilia-prizm,13,White Prizms,false,75,Rome Odunze
+insert-draft-selections-memorabilia-prizm,13,Copper Prizms,false,49,Rome Odunze
+insert-draft-selections-memorabilia-prizm,13,Blue Prizms,false,35,Rome Odunze
+insert-draft-selections-memorabilia-prizm,13,Tie-Dye Prizms,false,25,Rome Odunze
+insert-draft-selections-memorabilia-prizm,13,Gold Prizms,false,10,Rome Odunze
+insert-draft-selections-memorabilia-prizm,13,Green Prizms,false,5,Rome Odunze
+insert-draft-selections-memorabilia-prizm,13,Black Prizms,false,1,Rome Odunze
+insert-draft-selections-memorabilia-prizm,14,,false,,Brian Thomas Jr.
+insert-draft-selections-memorabilia-prizm,14,Red Prizms,false,,Brian Thomas Jr.
+insert-draft-selections-memorabilia-prizm,14,White Prizms,false,75,Brian Thomas Jr.
+insert-draft-selections-memorabilia-prizm,14,Copper Prizms,false,49,Brian Thomas Jr.
+insert-draft-selections-memorabilia-prizm,14,Blue Prizms,false,35,Brian Thomas Jr.
+insert-draft-selections-memorabilia-prizm,14,Tie-Dye Prizms,false,25,Brian Thomas Jr.
+insert-draft-selections-memorabilia-prizm,14,Gold Prizms,false,10,Brian Thomas Jr.
+insert-draft-selections-memorabilia-prizm,14,Green Prizms,false,5,Brian Thomas Jr.
+insert-draft-selections-memorabilia-prizm,14,Black Prizms,false,1,Brian Thomas Jr.
+insert-draft-selections-memorabilia-prizm,15,,false,,Ladd McConkey
+insert-draft-selections-memorabilia-prizm,15,Red Prizms,false,,Ladd McConkey
+insert-draft-selections-memorabilia-prizm,15,White Prizms,false,75,Ladd McConkey
+insert-draft-selections-memorabilia-prizm,15,Copper Prizms,false,49,Ladd McConkey
+insert-draft-selections-memorabilia-prizm,15,Blue Prizms,false,35,Ladd McConkey
+insert-draft-selections-memorabilia-prizm,15,Tie-Dye Prizms,false,25,Ladd McConkey
+insert-draft-selections-memorabilia-prizm,15,Gold Prizms,false,10,Ladd McConkey
+insert-draft-selections-memorabilia-prizm,15,Green Prizms,false,5,Ladd McConkey
+insert-draft-selections-memorabilia-prizm,15,Black Prizms,false,1,Ladd McConkey
+insert-draft-selections-memorabilia-prizm,16,,false,,Keon Coleman
+insert-draft-selections-memorabilia-prizm,16,Red Prizms,false,,Keon Coleman
+insert-draft-selections-memorabilia-prizm,16,White Prizms,false,75,Keon Coleman
+insert-draft-selections-memorabilia-prizm,16,Copper Prizms,false,49,Keon Coleman
+insert-draft-selections-memorabilia-prizm,16,Blue Prizms,false,35,Keon Coleman
+insert-draft-selections-memorabilia-prizm,16,Tie-Dye Prizms,false,25,Keon Coleman
+insert-draft-selections-memorabilia-prizm,16,Gold Prizms,false,10,Keon Coleman
+insert-draft-selections-memorabilia-prizm,16,Green Prizms,false,5,Keon Coleman
+insert-draft-selections-memorabilia-prizm,16,Black Prizms,false,1,Keon Coleman
+insert-draft-selections-memorabilia-prizm,17,,false,,Dallas Turner
+insert-draft-selections-memorabilia-prizm,17,Red Prizms,false,,Dallas Turner
+insert-draft-selections-memorabilia-prizm,17,White Prizms,false,75,Dallas Turner
+insert-draft-selections-memorabilia-prizm,17,Copper Prizms,false,49,Dallas Turner
+insert-draft-selections-memorabilia-prizm,17,Blue Prizms,false,35,Dallas Turner
+insert-draft-selections-memorabilia-prizm,17,Tie-Dye Prizms,false,25,Dallas Turner
+insert-draft-selections-memorabilia-prizm,17,Gold Prizms,false,10,Dallas Turner
+insert-draft-selections-memorabilia-prizm,17,Green Prizms,false,5,Dallas Turner
+insert-draft-selections-memorabilia-prizm,17,Black Prizms,false,1,Dallas Turner
+insert-draft-selections-memorabilia-prizm,18,,false,,Laiatu Latu
+insert-draft-selections-memorabilia-prizm,18,Red Prizms,false,,Laiatu Latu
+insert-draft-selections-memorabilia-prizm,18,White Prizms,false,75,Laiatu Latu
+insert-draft-selections-memorabilia-prizm,18,Copper Prizms,false,49,Laiatu Latu
+insert-draft-selections-memorabilia-prizm,18,Blue Prizms,false,35,Laiatu Latu
+insert-draft-selections-memorabilia-prizm,18,Tie-Dye Prizms,false,25,Laiatu Latu
+insert-draft-selections-memorabilia-prizm,18,Gold Prizms,false,10,Laiatu Latu
+insert-draft-selections-memorabilia-prizm,18,Green Prizms,false,5,Laiatu Latu
+insert-draft-selections-memorabilia-prizm,18,Black Prizms,false,1,Laiatu Latu
+insert-draft-selections-memorabilia-prizm,19,,false,,Jonathon Brooks
+insert-draft-selections-memorabilia-prizm,19,Red Prizms,false,,Jonathon Brooks
+insert-draft-selections-memorabilia-prizm,19,White Prizms,false,75,Jonathon Brooks
+insert-draft-selections-memorabilia-prizm,19,Copper Prizms,false,49,Jonathon Brooks
+insert-draft-selections-memorabilia-prizm,19,Blue Prizms,false,35,Jonathon Brooks
+insert-draft-selections-memorabilia-prizm,19,Tie-Dye Prizms,false,25,Jonathon Brooks
+insert-draft-selections-memorabilia-prizm,19,Gold Prizms,false,10,Jonathon Brooks
+insert-draft-selections-memorabilia-prizm,19,Green Prizms,false,5,Jonathon Brooks
+insert-draft-selections-memorabilia-prizm,19,Black Prizms,false,1,Jonathon Brooks
+insert-draft-selections-memorabilia-prizm,20,,false,,Blake Corum
+insert-draft-selections-memorabilia-prizm,20,Red Prizms,false,,Blake Corum
+insert-draft-selections-memorabilia-prizm,20,White Prizms,false,75,Blake Corum
+insert-draft-selections-memorabilia-prizm,20,Copper Prizms,false,49,Blake Corum
+insert-draft-selections-memorabilia-prizm,20,Blue Prizms,false,35,Blake Corum
+insert-draft-selections-memorabilia-prizm,20,Tie-Dye Prizms,false,25,Blake Corum
+insert-draft-selections-memorabilia-prizm,20,Gold Prizms,false,10,Blake Corum
+insert-draft-selections-memorabilia-prizm,20,Green Prizms,false,5,Blake Corum
+insert-draft-selections-memorabilia-prizm,20,Black Prizms,false,1,Blake Corum
+insert-draft-selections-memorabilia-prizm,21,,false,,Braelon Allen
+insert-draft-selections-memorabilia-prizm,21,Red Prizms,false,,Braelon Allen
+insert-draft-selections-memorabilia-prizm,21,White Prizms,false,75,Braelon Allen
+insert-draft-selections-memorabilia-prizm,21,Copper Prizms,false,49,Braelon Allen
+insert-draft-selections-memorabilia-prizm,21,Blue Prizms,false,35,Braelon Allen
+insert-draft-selections-memorabilia-prizm,21,Tie-Dye Prizms,false,25,Braelon Allen
+insert-draft-selections-memorabilia-prizm,21,Gold Prizms,false,10,Braelon Allen
+insert-draft-selections-memorabilia-prizm,21,Green Prizms,false,5,Braelon Allen
+insert-draft-selections-memorabilia-prizm,21,Black Prizms,false,1,Braelon Allen
+insert-draft-selections-memorabilia-prizm,22,,false,,Trey Benson
+insert-draft-selections-memorabilia-prizm,22,Red Prizms,false,,Trey Benson
+insert-draft-selections-memorabilia-prizm,22,White Prizms,false,75,Trey Benson
+insert-draft-selections-memorabilia-prizm,22,Copper Prizms,false,49,Trey Benson
+insert-draft-selections-memorabilia-prizm,22,Blue Prizms,false,35,Trey Benson
+insert-draft-selections-memorabilia-prizm,22,Tie-Dye Prizms,false,25,Trey Benson
+insert-draft-selections-memorabilia-prizm,22,Gold Prizms,false,10,Trey Benson
+insert-draft-selections-memorabilia-prizm,22,Green Prizms,false,5,Trey Benson
+insert-draft-selections-memorabilia-prizm,22,Black Prizms,false,1,Trey Benson
+insert-draft-selections-memorabilia-prizm,23,,false,,Jaylen Wright
+insert-draft-selections-memorabilia-prizm,23,Red Prizms,false,,Jaylen Wright
+insert-draft-selections-memorabilia-prizm,23,White Prizms,false,75,Jaylen Wright
+insert-draft-selections-memorabilia-prizm,23,Copper Prizms,false,49,Jaylen Wright
+insert-draft-selections-memorabilia-prizm,23,Blue Prizms,false,35,Jaylen Wright
+insert-draft-selections-memorabilia-prizm,23,Tie-Dye Prizms,false,25,Jaylen Wright
+insert-draft-selections-memorabilia-prizm,23,Gold Prizms,false,10,Jaylen Wright
+insert-draft-selections-memorabilia-prizm,23,Green Prizms,false,5,Jaylen Wright
+insert-draft-selections-memorabilia-prizm,23,Black Prizms,false,1,Jaylen Wright
+insert-draft-selections-memorabilia-prizm,24,,false,,Adonai Mitchell
+insert-draft-selections-memorabilia-prizm,24,Red Prizms,false,,Adonai Mitchell
+insert-draft-selections-memorabilia-prizm,24,White Prizms,false,75,Adonai Mitchell
+insert-draft-selections-memorabilia-prizm,24,Copper Prizms,false,49,Adonai Mitchell
+insert-draft-selections-memorabilia-prizm,24,Blue Prizms,false,35,Adonai Mitchell
+insert-draft-selections-memorabilia-prizm,24,Tie-Dye Prizms,false,25,Adonai Mitchell
+insert-draft-selections-memorabilia-prizm,24,Gold Prizms,false,10,Adonai Mitchell
+insert-draft-selections-memorabilia-prizm,24,Green Prizms,false,5,Adonai Mitchell
+insert-draft-selections-memorabilia-prizm,24,Black Prizms,false,1,Adonai Mitchell
+insert-draft-selections-memorabilia-prizm,25,,false,,Bucky Irving
+insert-draft-selections-memorabilia-prizm,25,Red Prizms,false,,Bucky Irving
+insert-draft-selections-memorabilia-prizm,25,White Prizms,false,75,Bucky Irving
+insert-draft-selections-memorabilia-prizm,25,Copper Prizms,false,49,Bucky Irving
+insert-draft-selections-memorabilia-prizm,25,Blue Prizms,false,35,Bucky Irving
+insert-draft-selections-memorabilia-prizm,25,Tie-Dye Prizms,false,25,Bucky Irving
+insert-draft-selections-memorabilia-prizm,25,Gold Prizms,false,10,Bucky Irving
+insert-draft-selections-memorabilia-prizm,25,Green Prizms,false,5,Bucky Irving
+insert-draft-selections-memorabilia-prizm,25,Black Prizms,false,1,Bucky Irving
+insert-jumbo-rookie-swatch-prizm,1,,false,,Adonai Mitchell
+insert-jumbo-rookie-swatch-prizm,1,White Prizms,false,75,Adonai Mitchell
+insert-jumbo-rookie-swatch-prizm,1,Tie-Dye Prizms,false,25,Adonai Mitchell
+insert-jumbo-rookie-swatch-prizm,1,Gold Prizms,false,10,Adonai Mitchell
+insert-jumbo-rookie-swatch-prizm,1,Green Prizms,false,5,Adonai Mitchell
+insert-jumbo-rookie-swatch-prizm,1,Brand Logo,false,1,Adonai Mitchell
+insert-jumbo-rookie-swatch-prizm,1,Nike Laundry Tag,false,1,Adonai Mitchell
+insert-jumbo-rookie-swatch-prizm,1,NFL Shield,false,1,Adonai Mitchell
+insert-jumbo-rookie-swatch-prizm,2,,false,,Audric Estime
+insert-jumbo-rookie-swatch-prizm,2,White Prizms,false,75,Audric Estime
+insert-jumbo-rookie-swatch-prizm,2,Tie-Dye Prizms,false,25,Audric Estime
+insert-jumbo-rookie-swatch-prizm,2,Gold Prizms,false,10,Audric Estime
+insert-jumbo-rookie-swatch-prizm,2,Green Prizms,false,5,Audric Estime
+insert-jumbo-rookie-swatch-prizm,2,Brand Logo,false,1,Audric Estime
+insert-jumbo-rookie-swatch-prizm,2,Nike Laundry Tag,false,1,Audric Estime
+insert-jumbo-rookie-swatch-prizm,2,NFL Shield,false,1,Audric Estime
+insert-jumbo-rookie-swatch-prizm,3,,false,,Blake Corum
+insert-jumbo-rookie-swatch-prizm,3,White Prizms,false,75,Blake Corum
+insert-jumbo-rookie-swatch-prizm,3,Tie-Dye Prizms,false,25,Blake Corum
+insert-jumbo-rookie-swatch-prizm,3,Gold Prizms,false,10,Blake Corum
+insert-jumbo-rookie-swatch-prizm,3,Green Prizms,false,5,Blake Corum
+insert-jumbo-rookie-swatch-prizm,3,Brand Logo,false,1,Blake Corum
+insert-jumbo-rookie-swatch-prizm,3,Nike Laundry Tag,false,1,Blake Corum
+insert-jumbo-rookie-swatch-prizm,3,NFL Shield,false,1,Blake Corum
+insert-jumbo-rookie-swatch-prizm,4,,false,,Bo Nix
+insert-jumbo-rookie-swatch-prizm,4,White Prizms,false,75,Bo Nix
+insert-jumbo-rookie-swatch-prizm,4,Tie-Dye Prizms,false,25,Bo Nix
+insert-jumbo-rookie-swatch-prizm,4,Gold Prizms,false,10,Bo Nix
+insert-jumbo-rookie-swatch-prizm,4,Green Prizms,false,5,Bo Nix
+insert-jumbo-rookie-swatch-prizm,4,Brand Logo,false,1,Bo Nix
+insert-jumbo-rookie-swatch-prizm,4,Nike Laundry Tag,false,1,Bo Nix
+insert-jumbo-rookie-swatch-prizm,4,NFL Shield,false,1,Bo Nix
+insert-jumbo-rookie-swatch-prizm,5,,false,,Braelon Allen
+insert-jumbo-rookie-swatch-prizm,5,White Prizms,false,75,Braelon Allen
+insert-jumbo-rookie-swatch-prizm,5,Tie-Dye Prizms,false,25,Braelon Allen
+insert-jumbo-rookie-swatch-prizm,5,Gold Prizms,false,10,Braelon Allen
+insert-jumbo-rookie-swatch-prizm,5,Green Prizms,false,5,Braelon Allen
+insert-jumbo-rookie-swatch-prizm,5,Brand Logo,false,1,Braelon Allen
+insert-jumbo-rookie-swatch-prizm,5,Nike Laundry Tag,false,1,Braelon Allen
+insert-jumbo-rookie-swatch-prizm,5,NFL Shield,false,1,Braelon Allen
+insert-jumbo-rookie-swatch-prizm,6,,false,,Brenden Rice
+insert-jumbo-rookie-swatch-prizm,6,White Prizms,false,75,Brenden Rice
+insert-jumbo-rookie-swatch-prizm,6,Tie-Dye Prizms,false,25,Brenden Rice
+insert-jumbo-rookie-swatch-prizm,6,Gold Prizms,false,10,Brenden Rice
+insert-jumbo-rookie-swatch-prizm,6,Green Prizms,false,5,Brenden Rice
+insert-jumbo-rookie-swatch-prizm,6,Brand Logo,false,1,Brenden Rice
+insert-jumbo-rookie-swatch-prizm,6,Nike Laundry Tag,false,1,Brenden Rice
+insert-jumbo-rookie-swatch-prizm,6,NFL Shield,false,1,Brenden Rice
+insert-jumbo-rookie-swatch-prizm,7,,false,,Brian Thomas Jr.
+insert-jumbo-rookie-swatch-prizm,7,White Prizms,false,75,Brian Thomas Jr.
+insert-jumbo-rookie-swatch-prizm,7,Tie-Dye Prizms,false,25,Brian Thomas Jr.
+insert-jumbo-rookie-swatch-prizm,7,Gold Prizms,false,10,Brian Thomas Jr.
+insert-jumbo-rookie-swatch-prizm,7,Green Prizms,false,5,Brian Thomas Jr.
+insert-jumbo-rookie-swatch-prizm,7,Brand Logo,false,1,Brian Thomas Jr.
+insert-jumbo-rookie-swatch-prizm,7,Nike Laundry Tag,false,1,Brian Thomas Jr.
+insert-jumbo-rookie-swatch-prizm,7,NFL Shield,false,1,Brian Thomas Jr.
+insert-jumbo-rookie-swatch-prizm,8,,false,,Brock Bowers
+insert-jumbo-rookie-swatch-prizm,8,White Prizms,false,75,Brock Bowers
+insert-jumbo-rookie-swatch-prizm,8,Tie-Dye Prizms,false,25,Brock Bowers
+insert-jumbo-rookie-swatch-prizm,8,Gold Prizms,false,10,Brock Bowers
+insert-jumbo-rookie-swatch-prizm,8,Green Prizms,false,5,Brock Bowers
+insert-jumbo-rookie-swatch-prizm,8,Brand Logo,false,1,Brock Bowers
+insert-jumbo-rookie-swatch-prizm,8,Nike Laundry Tag,false,1,Brock Bowers
+insert-jumbo-rookie-swatch-prizm,8,NFL Shield,false,1,Brock Bowers
+insert-jumbo-rookie-swatch-prizm,9,,false,,Bucky Irving
+insert-jumbo-rookie-swatch-prizm,9,White Prizms,false,75,Bucky Irving
+insert-jumbo-rookie-swatch-prizm,9,Tie-Dye Prizms,false,25,Bucky Irving
+insert-jumbo-rookie-swatch-prizm,9,Gold Prizms,false,10,Bucky Irving
+insert-jumbo-rookie-swatch-prizm,9,Green Prizms,false,5,Bucky Irving
+insert-jumbo-rookie-swatch-prizm,9,Brand Logo,false,1,Bucky Irving
+insert-jumbo-rookie-swatch-prizm,9,Nike Laundry Tag,false,1,Bucky Irving
+insert-jumbo-rookie-swatch-prizm,9,NFL Shield,false,1,Bucky Irving
+insert-jumbo-rookie-swatch-prizm,10,,false,,Caleb Williams
+insert-jumbo-rookie-swatch-prizm,10,White Prizms,false,75,Caleb Williams
+insert-jumbo-rookie-swatch-prizm,10,Tie-Dye Prizms,false,25,Caleb Williams
+insert-jumbo-rookie-swatch-prizm,10,Gold Prizms,false,10,Caleb Williams
+insert-jumbo-rookie-swatch-prizm,10,Green Prizms,false,5,Caleb Williams
+insert-jumbo-rookie-swatch-prizm,10,Brand Logo,false,1,Caleb Williams
+insert-jumbo-rookie-swatch-prizm,10,Nike Laundry Tag,false,1,Caleb Williams
+insert-jumbo-rookie-swatch-prizm,10,NFL Shield,false,1,Caleb Williams
+insert-jumbo-rookie-swatch-prizm,11,,false,,Dallas Turner
+insert-jumbo-rookie-swatch-prizm,11,White Prizms,false,75,Dallas Turner
+insert-jumbo-rookie-swatch-prizm,11,Tie-Dye Prizms,false,25,Dallas Turner
+insert-jumbo-rookie-swatch-prizm,11,Gold Prizms,false,10,Dallas Turner
+insert-jumbo-rookie-swatch-prizm,11,Green Prizms,false,5,Dallas Turner
+insert-jumbo-rookie-swatch-prizm,11,Brand Logo,false,1,Dallas Turner
+insert-jumbo-rookie-swatch-prizm,11,Nike Laundry Tag,false,1,Dallas Turner
+insert-jumbo-rookie-swatch-prizm,11,NFL Shield,false,1,Dallas Turner
+insert-jumbo-rookie-swatch-prizm,12,,false,,Drake Maye
+insert-jumbo-rookie-swatch-prizm,12,White Prizms,false,75,Drake Maye
+insert-jumbo-rookie-swatch-prizm,12,Tie-Dye Prizms,false,25,Drake Maye
+insert-jumbo-rookie-swatch-prizm,12,Gold Prizms,false,10,Drake Maye
+insert-jumbo-rookie-swatch-prizm,12,Green Prizms,false,5,Drake Maye
+insert-jumbo-rookie-swatch-prizm,12,Brand Logo,false,1,Drake Maye
+insert-jumbo-rookie-swatch-prizm,12,Nike Laundry Tag,false,1,Drake Maye
+insert-jumbo-rookie-swatch-prizm,12,NFL Shield,false,1,Drake Maye
+insert-jumbo-rookie-swatch-prizm,13,,false,,J.J. McCarthy
+insert-jumbo-rookie-swatch-prizm,13,White Prizms,false,75,J.J. McCarthy
+insert-jumbo-rookie-swatch-prizm,13,Tie-Dye Prizms,false,25,J.J. McCarthy
+insert-jumbo-rookie-swatch-prizm,13,Gold Prizms,false,10,J.J. McCarthy
+insert-jumbo-rookie-swatch-prizm,13,Green Prizms,false,5,J.J. McCarthy
+insert-jumbo-rookie-swatch-prizm,13,Brand Logo,false,1,J.J. McCarthy
+insert-jumbo-rookie-swatch-prizm,13,Nike Laundry Tag,false,1,J.J. McCarthy
+insert-jumbo-rookie-swatch-prizm,13,NFL Shield,false,1,J.J. McCarthy
+insert-jumbo-rookie-swatch-prizm,14,,false,,Jalen McMillan
+insert-jumbo-rookie-swatch-prizm,14,White Prizms,false,75,Jalen McMillan
+insert-jumbo-rookie-swatch-prizm,14,Tie-Dye Prizms,false,25,Jalen McMillan
+insert-jumbo-rookie-swatch-prizm,14,Gold Prizms,false,10,Jalen McMillan
+insert-jumbo-rookie-swatch-prizm,14,Green Prizms,false,5,Jalen McMillan
+insert-jumbo-rookie-swatch-prizm,14,Brand Logo,false,1,Jalen McMillan
+insert-jumbo-rookie-swatch-prizm,14,Nike Laundry Tag,false,1,Jalen McMillan
+insert-jumbo-rookie-swatch-prizm,14,NFL Shield,false,1,Jalen McMillan
+insert-jumbo-rookie-swatch-prizm,15,,false,,Ja'Lynn Polk
+insert-jumbo-rookie-swatch-prizm,15,White Prizms,false,75,Ja'Lynn Polk
+insert-jumbo-rookie-swatch-prizm,15,Tie-Dye Prizms,false,25,Ja'Lynn Polk
+insert-jumbo-rookie-swatch-prizm,15,Gold Prizms,false,10,Ja'Lynn Polk
+insert-jumbo-rookie-swatch-prizm,15,Green Prizms,false,5,Ja'Lynn Polk
+insert-jumbo-rookie-swatch-prizm,15,Brand Logo,false,1,Ja'Lynn Polk
+insert-jumbo-rookie-swatch-prizm,15,Nike Laundry Tag,false,1,Ja'Lynn Polk
+insert-jumbo-rookie-swatch-prizm,15,NFL Shield,false,1,Ja'Lynn Polk
+insert-jumbo-rookie-swatch-prizm,16,,false,,Ja'Tavion Sanders
+insert-jumbo-rookie-swatch-prizm,16,White Prizms,false,75,Ja'Tavion Sanders
+insert-jumbo-rookie-swatch-prizm,16,Tie-Dye Prizms,false,25,Ja'Tavion Sanders
+insert-jumbo-rookie-swatch-prizm,16,Gold Prizms,false,10,Ja'Tavion Sanders
+insert-jumbo-rookie-swatch-prizm,16,Green Prizms,false,5,Ja'Tavion Sanders
+insert-jumbo-rookie-swatch-prizm,16,Brand Logo,false,1,Ja'Tavion Sanders
+insert-jumbo-rookie-swatch-prizm,16,Nike Laundry Tag,false,1,Ja'Tavion Sanders
+insert-jumbo-rookie-swatch-prizm,16,NFL Shield,false,1,Ja'Tavion Sanders
+insert-jumbo-rookie-swatch-prizm,17,,false,,Jayden Daniels
+insert-jumbo-rookie-swatch-prizm,17,White Prizms,false,75,Jayden Daniels
+insert-jumbo-rookie-swatch-prizm,17,Tie-Dye Prizms,false,25,Jayden Daniels
+insert-jumbo-rookie-swatch-prizm,17,Gold Prizms,false,10,Jayden Daniels
+insert-jumbo-rookie-swatch-prizm,17,Green Prizms,false,5,Jayden Daniels
+insert-jumbo-rookie-swatch-prizm,17,Brand Logo,false,1,Jayden Daniels
+insert-jumbo-rookie-swatch-prizm,17,Nike Laundry Tag,false,1,Jayden Daniels
+insert-jumbo-rookie-swatch-prizm,17,NFL Shield,false,1,Jayden Daniels
+insert-jumbo-rookie-swatch-prizm,18,,false,,Jaylen Wright
+insert-jumbo-rookie-swatch-prizm,18,White Prizms,false,75,Jaylen Wright
+insert-jumbo-rookie-swatch-prizm,18,Tie-Dye Prizms,false,25,Jaylen Wright
+insert-jumbo-rookie-swatch-prizm,18,Gold Prizms,false,10,Jaylen Wright
+insert-jumbo-rookie-swatch-prizm,18,Green Prizms,false,5,Jaylen Wright
+insert-jumbo-rookie-swatch-prizm,18,Brand Logo,false,1,Jaylen Wright
+insert-jumbo-rookie-swatch-prizm,18,Nike Laundry Tag,false,1,Jaylen Wright
+insert-jumbo-rookie-swatch-prizm,18,NFL Shield,false,1,Jaylen Wright
+insert-jumbo-rookie-swatch-prizm,19,,false,,Jermaine Burton
+insert-jumbo-rookie-swatch-prizm,19,White Prizms,false,75,Jermaine Burton
+insert-jumbo-rookie-swatch-prizm,19,Tie-Dye Prizms,false,25,Jermaine Burton
+insert-jumbo-rookie-swatch-prizm,19,Gold Prizms,false,10,Jermaine Burton
+insert-jumbo-rookie-swatch-prizm,19,Green Prizms,false,5,Jermaine Burton
+insert-jumbo-rookie-swatch-prizm,19,Brand Logo,false,1,Jermaine Burton
+insert-jumbo-rookie-swatch-prizm,19,Nike Laundry Tag,false,1,Jermaine Burton
+insert-jumbo-rookie-swatch-prizm,19,NFL Shield,false,1,Jermaine Burton
+insert-jumbo-rookie-swatch-prizm,20,,false,,Joe Milton III
+insert-jumbo-rookie-swatch-prizm,20,White Prizms,false,75,Joe Milton III
+insert-jumbo-rookie-swatch-prizm,20,Tie-Dye Prizms,false,25,Joe Milton III
+insert-jumbo-rookie-swatch-prizm,20,Gold Prizms,false,10,Joe Milton III
+insert-jumbo-rookie-swatch-prizm,20,Green Prizms,false,5,Joe Milton III
+insert-jumbo-rookie-swatch-prizm,20,Brand Logo,false,1,Joe Milton III
+insert-jumbo-rookie-swatch-prizm,20,Nike Laundry Tag,false,1,Joe Milton III
+insert-jumbo-rookie-swatch-prizm,20,NFL Shield,false,1,Joe Milton III
+insert-jumbo-rookie-swatch-prizm,21,,false,,Jonathon Brooks
+insert-jumbo-rookie-swatch-prizm,21,White Prizms,false,75,Jonathon Brooks
+insert-jumbo-rookie-swatch-prizm,21,Tie-Dye Prizms,false,25,Jonathon Brooks
+insert-jumbo-rookie-swatch-prizm,21,Gold Prizms,false,10,Jonathon Brooks
+insert-jumbo-rookie-swatch-prizm,21,Green Prizms,false,5,Jonathon Brooks
+insert-jumbo-rookie-swatch-prizm,21,Brand Logo,false,1,Jonathon Brooks
+insert-jumbo-rookie-swatch-prizm,21,Nike Laundry Tag,false,1,Jonathon Brooks
+insert-jumbo-rookie-swatch-prizm,21,NFL Shield,false,1,Jonathon Brooks
+insert-jumbo-rookie-swatch-prizm,22,,false,,Jordan Travis
+insert-jumbo-rookie-swatch-prizm,22,White Prizms,false,75,Jordan Travis
+insert-jumbo-rookie-swatch-prizm,22,Tie-Dye Prizms,false,25,Jordan Travis
+insert-jumbo-rookie-swatch-prizm,22,Gold Prizms,false,10,Jordan Travis
+insert-jumbo-rookie-swatch-prizm,22,Green Prizms,false,5,Jordan Travis
+insert-jumbo-rookie-swatch-prizm,22,Brand Logo,false,1,Jordan Travis
+insert-jumbo-rookie-swatch-prizm,22,Nike Laundry Tag,false,1,Jordan Travis
+insert-jumbo-rookie-swatch-prizm,22,NFL Shield,false,1,Jordan Travis
+insert-jumbo-rookie-swatch-prizm,23,,false,,Keon Coleman
+insert-jumbo-rookie-swatch-prizm,23,White Prizms,false,75,Keon Coleman
+insert-jumbo-rookie-swatch-prizm,23,Tie-Dye Prizms,false,25,Keon Coleman
+insert-jumbo-rookie-swatch-prizm,23,Gold Prizms,false,10,Keon Coleman
+insert-jumbo-rookie-swatch-prizm,23,Green Prizms,false,5,Keon Coleman
+insert-jumbo-rookie-swatch-prizm,23,Brand Logo,false,1,Keon Coleman
+insert-jumbo-rookie-swatch-prizm,23,Nike Laundry Tag,false,1,Keon Coleman
+insert-jumbo-rookie-swatch-prizm,23,NFL Shield,false,1,Keon Coleman
+insert-jumbo-rookie-swatch-prizm,24,,false,,Kool-Aid McKinstry
+insert-jumbo-rookie-swatch-prizm,24,White Prizms,false,75,Kool-Aid McKinstry
+insert-jumbo-rookie-swatch-prizm,24,Tie-Dye Prizms,false,25,Kool-Aid McKinstry
+insert-jumbo-rookie-swatch-prizm,24,Gold Prizms,false,10,Kool-Aid McKinstry
+insert-jumbo-rookie-swatch-prizm,24,Green Prizms,false,5,Kool-Aid McKinstry
+insert-jumbo-rookie-swatch-prizm,24,Brand Logo,false,1,Kool-Aid McKinstry
+insert-jumbo-rookie-swatch-prizm,24,Nike Laundry Tag,false,1,Kool-Aid McKinstry
+insert-jumbo-rookie-swatch-prizm,24,NFL Shield,false,1,Kool-Aid McKinstry
+insert-jumbo-rookie-swatch-prizm,25,,false,,Ladd McConkey
+insert-jumbo-rookie-swatch-prizm,25,White Prizms,false,75,Ladd McConkey
+insert-jumbo-rookie-swatch-prizm,25,Tie-Dye Prizms,false,25,Ladd McConkey
+insert-jumbo-rookie-swatch-prizm,25,Gold Prizms,false,10,Ladd McConkey
+insert-jumbo-rookie-swatch-prizm,25,Green Prizms,false,5,Ladd McConkey
+insert-jumbo-rookie-swatch-prizm,25,Brand Logo,false,1,Ladd McConkey
+insert-jumbo-rookie-swatch-prizm,25,Nike Laundry Tag,false,1,Ladd McConkey
+insert-jumbo-rookie-swatch-prizm,25,NFL Shield,false,1,Ladd McConkey
+insert-jumbo-rookie-swatch-prizm,26,,false,,Laiatu Latu
+insert-jumbo-rookie-swatch-prizm,26,White Prizms,false,75,Laiatu Latu
+insert-jumbo-rookie-swatch-prizm,26,Tie-Dye Prizms,false,25,Laiatu Latu
+insert-jumbo-rookie-swatch-prizm,26,Gold Prizms,false,10,Laiatu Latu
+insert-jumbo-rookie-swatch-prizm,26,Green Prizms,false,5,Laiatu Latu
+insert-jumbo-rookie-swatch-prizm,26,Brand Logo,false,1,Laiatu Latu
+insert-jumbo-rookie-swatch-prizm,26,Nike Laundry Tag,false,1,Laiatu Latu
+insert-jumbo-rookie-swatch-prizm,26,NFL Shield,false,1,Laiatu Latu
+insert-jumbo-rookie-swatch-prizm,27,,false,,Luke McCaffrey
+insert-jumbo-rookie-swatch-prizm,27,White Prizms,false,75,Luke McCaffrey
+insert-jumbo-rookie-swatch-prizm,27,Tie-Dye Prizms,false,25,Luke McCaffrey
+insert-jumbo-rookie-swatch-prizm,27,Gold Prizms,false,10,Luke McCaffrey
+insert-jumbo-rookie-swatch-prizm,27,Green Prizms,false,5,Luke McCaffrey
+insert-jumbo-rookie-swatch-prizm,27,Brand Logo,false,1,Luke McCaffrey
+insert-jumbo-rookie-swatch-prizm,27,Nike Laundry Tag,false,1,Luke McCaffrey
+insert-jumbo-rookie-swatch-prizm,27,NFL Shield,false,1,Luke McCaffrey
+insert-jumbo-rookie-swatch-prizm,28,,false,,Malachi Corley
+insert-jumbo-rookie-swatch-prizm,28,White Prizms,false,75,Malachi Corley
+insert-jumbo-rookie-swatch-prizm,28,Tie-Dye Prizms,false,25,Malachi Corley
+insert-jumbo-rookie-swatch-prizm,28,Gold Prizms,false,10,Malachi Corley
+insert-jumbo-rookie-swatch-prizm,28,Green Prizms,false,5,Malachi Corley
+insert-jumbo-rookie-swatch-prizm,28,Brand Logo,false,1,Malachi Corley
+insert-jumbo-rookie-swatch-prizm,28,Nike Laundry Tag,false,1,Malachi Corley
+insert-jumbo-rookie-swatch-prizm,28,NFL Shield,false,1,Malachi Corley
+insert-jumbo-rookie-swatch-prizm,29,,false,,Malik Nabers
+insert-jumbo-rookie-swatch-prizm,29,White Prizms,false,75,Malik Nabers
+insert-jumbo-rookie-swatch-prizm,29,Tie-Dye Prizms,false,25,Malik Nabers
+insert-jumbo-rookie-swatch-prizm,29,Gold Prizms,false,10,Malik Nabers
+insert-jumbo-rookie-swatch-prizm,29,Green Prizms,false,5,Malik Nabers
+insert-jumbo-rookie-swatch-prizm,29,Brand Logo,false,1,Malik Nabers
+insert-jumbo-rookie-swatch-prizm,29,Nike Laundry Tag,false,1,Malik Nabers
+insert-jumbo-rookie-swatch-prizm,29,NFL Shield,false,1,Malik Nabers
+insert-jumbo-rookie-swatch-prizm,30,,false,,MarShawn Lloyd
+insert-jumbo-rookie-swatch-prizm,30,White Prizms,false,75,MarShawn Lloyd
+insert-jumbo-rookie-swatch-prizm,30,Tie-Dye Prizms,false,25,MarShawn Lloyd
+insert-jumbo-rookie-swatch-prizm,30,Gold Prizms,false,10,MarShawn Lloyd
+insert-jumbo-rookie-swatch-prizm,30,Green Prizms,false,5,MarShawn Lloyd
+insert-jumbo-rookie-swatch-prizm,30,Brand Logo,false,1,MarShawn Lloyd
+insert-jumbo-rookie-swatch-prizm,30,Nike Laundry Tag,false,1,MarShawn Lloyd
+insert-jumbo-rookie-swatch-prizm,30,NFL Shield,false,1,MarShawn Lloyd
+insert-jumbo-rookie-swatch-prizm,31,,false,,Marvin Harrison Jr.
+insert-jumbo-rookie-swatch-prizm,31,White Prizms,false,75,Marvin Harrison Jr.
+insert-jumbo-rookie-swatch-prizm,31,Tie-Dye Prizms,false,25,Marvin Harrison Jr.
+insert-jumbo-rookie-swatch-prizm,31,Gold Prizms,false,10,Marvin Harrison Jr.
+insert-jumbo-rookie-swatch-prizm,31,Green Prizms,false,5,Marvin Harrison Jr.
+insert-jumbo-rookie-swatch-prizm,31,Brand Logo,false,1,Marvin Harrison Jr.
+insert-jumbo-rookie-swatch-prizm,31,Nike Laundry Tag,false,1,Marvin Harrison Jr.
+insert-jumbo-rookie-swatch-prizm,31,NFL Shield,false,1,Marvin Harrison Jr.
+insert-jumbo-rookie-swatch-prizm,32,,false,,Michael Penix Jr.
+insert-jumbo-rookie-swatch-prizm,32,White Prizms,false,75,Michael Penix Jr.
+insert-jumbo-rookie-swatch-prizm,32,Tie-Dye Prizms,false,25,Michael Penix Jr.
+insert-jumbo-rookie-swatch-prizm,32,Gold Prizms,false,10,Michael Penix Jr.
+insert-jumbo-rookie-swatch-prizm,32,Green Prizms,false,5,Michael Penix Jr.
+insert-jumbo-rookie-swatch-prizm,32,Brand Logo,false,1,Michael Penix Jr.
+insert-jumbo-rookie-swatch-prizm,32,Nike Laundry Tag,false,1,Michael Penix Jr.
+insert-jumbo-rookie-swatch-prizm,32,NFL Shield,false,1,Michael Penix Jr.
+insert-jumbo-rookie-swatch-prizm,33,,false,,Ray Davis
+insert-jumbo-rookie-swatch-prizm,33,White Prizms,false,75,Ray Davis
+insert-jumbo-rookie-swatch-prizm,33,Tie-Dye Prizms,false,25,Ray Davis
+insert-jumbo-rookie-swatch-prizm,33,Gold Prizms,false,10,Ray Davis
+insert-jumbo-rookie-swatch-prizm,33,Green Prizms,false,5,Ray Davis
+insert-jumbo-rookie-swatch-prizm,33,Brand Logo,false,1,Ray Davis
+insert-jumbo-rookie-swatch-prizm,33,Nike Laundry Tag,false,1,Ray Davis
+insert-jumbo-rookie-swatch-prizm,33,NFL Shield,false,1,Ray Davis
+insert-jumbo-rookie-swatch-prizm,34,,false,,Ricky Pearsall
+insert-jumbo-rookie-swatch-prizm,34,White Prizms,false,75,Ricky Pearsall
+insert-jumbo-rookie-swatch-prizm,34,Tie-Dye Prizms,false,25,Ricky Pearsall
+insert-jumbo-rookie-swatch-prizm,34,Gold Prizms,false,10,Ricky Pearsall
+insert-jumbo-rookie-swatch-prizm,34,Green Prizms,false,5,Ricky Pearsall
+insert-jumbo-rookie-swatch-prizm,34,Brand Logo,false,1,Ricky Pearsall
+insert-jumbo-rookie-swatch-prizm,34,Nike Laundry Tag,false,1,Ricky Pearsall
+insert-jumbo-rookie-swatch-prizm,34,NFL Shield,false,1,Ricky Pearsall
+insert-jumbo-rookie-swatch-prizm,35,,false,,Roman Wilson
+insert-jumbo-rookie-swatch-prizm,35,White Prizms,false,75,Roman Wilson
+insert-jumbo-rookie-swatch-prizm,35,Tie-Dye Prizms,false,25,Roman Wilson
+insert-jumbo-rookie-swatch-prizm,35,Gold Prizms,false,10,Roman Wilson
+insert-jumbo-rookie-swatch-prizm,35,Green Prizms,false,5,Roman Wilson
+insert-jumbo-rookie-swatch-prizm,35,Brand Logo,false,1,Roman Wilson
+insert-jumbo-rookie-swatch-prizm,35,Nike Laundry Tag,false,1,Roman Wilson
+insert-jumbo-rookie-swatch-prizm,35,NFL Shield,false,1,Roman Wilson
+insert-jumbo-rookie-swatch-prizm,36,,false,,Rome Odunze
+insert-jumbo-rookie-swatch-prizm,36,White Prizms,false,75,Rome Odunze
+insert-jumbo-rookie-swatch-prizm,36,Tie-Dye Prizms,false,25,Rome Odunze
+insert-jumbo-rookie-swatch-prizm,36,Gold Prizms,false,10,Rome Odunze
+insert-jumbo-rookie-swatch-prizm,36,Green Prizms,false,5,Rome Odunze
+insert-jumbo-rookie-swatch-prizm,36,Brand Logo,false,1,Rome Odunze
+insert-jumbo-rookie-swatch-prizm,36,Nike Laundry Tag,false,1,Rome Odunze
+insert-jumbo-rookie-swatch-prizm,36,NFL Shield,false,1,Rome Odunze
+insert-jumbo-rookie-swatch-prizm,37,,false,,Spencer Rattler
+insert-jumbo-rookie-swatch-prizm,37,White Prizms,false,75,Spencer Rattler
+insert-jumbo-rookie-swatch-prizm,37,Tie-Dye Prizms,false,25,Spencer Rattler
+insert-jumbo-rookie-swatch-prizm,37,Gold Prizms,false,10,Spencer Rattler
+insert-jumbo-rookie-swatch-prizm,37,Green Prizms,false,5,Spencer Rattler
+insert-jumbo-rookie-swatch-prizm,37,Brand Logo,false,1,Spencer Rattler
+insert-jumbo-rookie-swatch-prizm,37,Nike Laundry Tag,false,1,Spencer Rattler
+insert-jumbo-rookie-swatch-prizm,37,NFL Shield,false,1,Spencer Rattler
+insert-jumbo-rookie-swatch-prizm,38,,false,,Trey Benson
+insert-jumbo-rookie-swatch-prizm,38,White Prizms,false,75,Trey Benson
+insert-jumbo-rookie-swatch-prizm,38,Tie-Dye Prizms,false,25,Trey Benson
+insert-jumbo-rookie-swatch-prizm,38,Gold Prizms,false,10,Trey Benson
+insert-jumbo-rookie-swatch-prizm,38,Green Prizms,false,5,Trey Benson
+insert-jumbo-rookie-swatch-prizm,38,Brand Logo,false,1,Trey Benson
+insert-jumbo-rookie-swatch-prizm,38,Nike Laundry Tag,false,1,Trey Benson
+insert-jumbo-rookie-swatch-prizm,38,NFL Shield,false,1,Trey Benson
+insert-jumbo-rookie-swatch-prizm,39,,false,,Troy Franklin
+insert-jumbo-rookie-swatch-prizm,39,White Prizms,false,75,Troy Franklin
+insert-jumbo-rookie-swatch-prizm,39,Tie-Dye Prizms,false,25,Troy Franklin
+insert-jumbo-rookie-swatch-prizm,39,Gold Prizms,false,10,Troy Franklin
+insert-jumbo-rookie-swatch-prizm,39,Green Prizms,false,5,Troy Franklin
+insert-jumbo-rookie-swatch-prizm,39,Brand Logo,false,1,Troy Franklin
+insert-jumbo-rookie-swatch-prizm,39,Nike Laundry Tag,false,1,Troy Franklin
+insert-jumbo-rookie-swatch-prizm,39,NFL Shield,false,1,Troy Franklin
+insert-jumbo-rookie-swatch-prizm,40,,false,,Will Shipley
+insert-jumbo-rookie-swatch-prizm,40,White Prizms,false,75,Will Shipley
+insert-jumbo-rookie-swatch-prizm,40,Tie-Dye Prizms,false,25,Will Shipley
+insert-jumbo-rookie-swatch-prizm,40,Gold Prizms,false,10,Will Shipley
+insert-jumbo-rookie-swatch-prizm,40,Green Prizms,false,5,Will Shipley
+insert-jumbo-rookie-swatch-prizm,40,Brand Logo,false,1,Will Shipley
+insert-jumbo-rookie-swatch-prizm,40,Nike Laundry Tag,false,1,Will Shipley
+insert-jumbo-rookie-swatch-prizm,40,NFL Shield,false,1,Will Shipley
+insert-jumbo-rookie-swatch-prizm,41,,false,,Xavier Legette
+insert-jumbo-rookie-swatch-prizm,41,White Prizms,false,75,Xavier Legette
+insert-jumbo-rookie-swatch-prizm,41,Tie-Dye Prizms,false,25,Xavier Legette
+insert-jumbo-rookie-swatch-prizm,41,Gold Prizms,false,10,Xavier Legette
+insert-jumbo-rookie-swatch-prizm,41,Green Prizms,false,5,Xavier Legette
+insert-jumbo-rookie-swatch-prizm,41,Brand Logo,false,1,Xavier Legette
+insert-jumbo-rookie-swatch-prizm,41,Nike Laundry Tag,false,1,Xavier Legette
+insert-jumbo-rookie-swatch-prizm,41,NFL Shield,false,1,Xavier Legette
+insert-jumbo-rookie-swatch-prizm,42,,false,,Xavier Worthy
+insert-jumbo-rookie-swatch-prizm,42,White Prizms,false,75,Xavier Worthy
+insert-jumbo-rookie-swatch-prizm,42,Tie-Dye Prizms,false,25,Xavier Worthy
+insert-jumbo-rookie-swatch-prizm,42,Gold Prizms,false,10,Xavier Worthy
+insert-jumbo-rookie-swatch-prizm,42,Green Prizms,false,5,Xavier Worthy
+insert-jumbo-rookie-swatch-prizm,42,Brand Logo,false,1,Xavier Worthy
+insert-jumbo-rookie-swatch-prizm,42,Nike Laundry Tag,false,1,Xavier Worthy
+insert-jumbo-rookie-swatch-prizm,42,NFL Shield,false,1,Xavier Worthy
 insert-multiverse,1,,false,,Kurt Warner/Kurt Warner
 insert-multiverse,1,White Prizm,false,75,Kurt Warner/Kurt Warner
 insert-multiverse,1,Cooper Prizm,false,49,Kurt Warner/Kurt Warner
@@ -16817,89 +17311,695 @@ insert-multiverse,50,Tie-Dye Prizm,false,25,Austin Ekeler /Austin Ekeler
 insert-multiverse,50,Gold Prizm,false,10,Austin Ekeler /Austin Ekeler
 insert-multiverse,50,Green Prizm,false,5,Austin Ekeler /Austin Ekeler
 insert-multiverse,50,Black Prizm,false,1,Austin Ekeler /Austin Ekeler
-base,1,Rookie Swatches Prizm,false,,Troy Franklin
-base,2,Rookie Swatches Prizm,false,,Audric Estime
-base,3,Rookie Swatches Prizm,false,,Roman Wilson
-base,4,Rookie Swatches Prizm,false,,Ja'Lynn Polk
-base,5,Rookie Swatches Prizm,false,,Luke McCaffrey
-base,6,Rookie Swatches Prizm,false,,Ricky Pearsall
-base,7,Rookie Swatches Prizm,false,,Xavier Legette
-base,8,Rookie Swatches Prizm,false,,Jordan Travis
-base,9,Rookie Swatches Prizm,false,,Malachi Corley
-base,10,Rookie Swatches Prizm,false,,Jalen McMillan
-base,11,Rookie Swatches Prizm,false,,Will Shipley
-base,12,Rookie Swatches Prizm,false,,Brenden Rice
-base,13,Rookie Swatches Prizm,false,,Ray Davis
-base,14,Rookie Swatches Prizm,false,,Michael Penix Jr.
-base,15,Rookie Swatches Prizm,false,,J.J. McCarthy
-base,16,Rookie Swatches Prizm,false,,Spencer Rattler
-base,17,Rookie Swatches Prizm,false,,Rome Odunze
-base,18,Rookie Swatches Prizm,false,,Caleb Williams
-base,19,Rookie Swatches Prizm,false,,Bo Nix
-base,20,Rookie Swatches Prizm,false,,Jayden Daniels
-base,21,Rookie Swatches Prizm,false,,Drake Maye
-base,22,Rookie Swatches Prizm,false,,Marvin Harrison Jr.
-base,23,Rookie Swatches Prizm,false,,Xavier Worthy
-base,24,Rookie Swatches Prizm,false,,Malik Nabers
-base,25,Rookie Swatches Prizm,false,,Brian Thomas Jr.
-base,1,Sparks Prizm,false,,Kyler Murray
-base,2,Sparks Prizm,false,,Anthony Richardson
-base,3,Sparks Prizm,false,,Will Levis
-base,4,Sparks Prizm,false,,Brian Burns
-base,5,Sparks Prizm,false,,Josh Allen
-base,6,Sparks Prizm,false,,Nick Chubb
-base,7,Sparks Prizm,false,,Nick Bosa
-base,8,Sparks Prizm,false,,Saquon Barkley
-base,9,Sparks Prizm,false,,Derrick Henry
-base,10,Sparks Prizm,false,,Jaylen Waddle
-base,11,Sparks Prizm,false,,Dak Prescott
-base,12,Sparks Prizm,false,,Amon-Ra St. Brown
-base,13,Sparks Prizm,false,,Myles Garrett
-base,14,Sparks Prizm,false,,Joe Burrow
-base,15,Sparks Prizm,false,,DK Metcalf
-base,16,Sparks Prizm,false,,Javonte Williams
-base,17,Sparks Prizm,false,,C.J. Stroud
-base,18,Sparks Prizm,false,,Patrick Mahomes II
-base,19,Sparks Prizm,false,,Lamar Jackson
-base,20,Sparks Prizm,false,,Tyreek Hill
-base,21,Sparks Prizm,false,,CeeDee Lamb
-base,22,Sparks Prizm,false,,Aidan Hutchinson
-base,23,Sparks Prizm,false,,Tyler Lockett
-base,24,Sparks Prizm,false,,Brock Purdy
-base,25,Sparks Prizm,false,,Jordan Love
-base,26,Sparks Prizm,false,,Travis Kelce
-base,27,Sparks Prizm,false,,Cooper Kupp
-base,28,Sparks Prizm,false,,George Kittle
-base,29,Sparks Prizm,false,,Najee Harris
-base,30,Sparks Prizm,false,,Adam Thielen
-base,31,Sparks Prizm,false,,Kyle Hamilton
-base,32,Sparks Prizm,false,,Courtland Sutton
-base,33,Sparks Prizm,false,,Maxx Crosby
-base,34,Sparks Prizm,false,,Aaron Rodgers
-base,35,Sparks Prizm,false,,Darius Slayton
-base,36,Sparks Prizm,false,,Terry McLaurin
-base,37,Sparks Prizm,false,,Jonathan Taylor
-base,38,Sparks Prizm,false,,Mike Evans
-base,39,Sparks Prizm,false,,Micah Parsons
-base,40,Sparks Prizm,false,,Trevor Lawrence
-base,41,Sparks Prizm,false,,Justin Jefferson
-base,42,Sparks Prizm,false,,Justin Herbert
-base,43,Sparks Prizm,false,,D'Andre Swift
-base,44,Sparks Prizm,false,,Ja'Marr Chase
-base,45,Sparks Prizm,false,,Christian Watson
-base,46,Sparks Prizm,false,,Tre Tucker
-base,47,Sparks Prizm,false,,Bijan Robinson
-base,48,Sparks Prizm,false,,Jahmyr Gibbs
-base,49,Sparks Prizm,false,,Kyren Williams
-base,50,Sparks Prizm,false,,Breece Hall
-base,51,Sparks Prizm,false,,Zay Flowers
-base,52,Sparks Prizm,false,,Sam Darnold
-base,53,Sparks Prizm,false,,Jalen Hurts
-base,54,Sparks Prizm,false,,George Pickens
-base,55,Sparks Prizm,false,,Alvin Kamara
-base,56,Sparks Prizm,false,,Rhamondre Stevenson
-base,57,Sparks Prizm,false,,Tyjae Spears
-base,58,Sparks Prizm,false,,Kerby Joseph
+insert-rookie-swatches-prizm,1,,false,,Troy Franklin
+insert-rookie-swatches-prizm,1,Red Prizms,false,,Troy Franklin
+insert-rookie-swatches-prizm,1,White Prizms,false,75,Troy Franklin
+insert-rookie-swatches-prizm,1,Copper Prizms,false,49,Troy Franklin
+insert-rookie-swatches-prizm,1,Blue Prizms,false,35,Troy Franklin
+insert-rookie-swatches-prizm,1,Tie-Dye Prizms,false,25,Troy Franklin
+insert-rookie-swatches-prizm,1,Gold Prizms,false,10,Troy Franklin
+insert-rookie-swatches-prizm,1,Green Prizms,false,5,Troy Franklin
+insert-rookie-swatches-prizm,1,Black Prizms,false,1,Troy Franklin
+insert-rookie-swatches-prizm,2,,false,,Audric Estime
+insert-rookie-swatches-prizm,2,Red Prizms,false,,Audric Estime
+insert-rookie-swatches-prizm,2,White Prizms,false,75,Audric Estime
+insert-rookie-swatches-prizm,2,Copper Prizms,false,49,Audric Estime
+insert-rookie-swatches-prizm,2,Blue Prizms,false,35,Audric Estime
+insert-rookie-swatches-prizm,2,Tie-Dye Prizms,false,25,Audric Estime
+insert-rookie-swatches-prizm,2,Gold Prizms,false,10,Audric Estime
+insert-rookie-swatches-prizm,2,Green Prizms,false,5,Audric Estime
+insert-rookie-swatches-prizm,2,Black Prizms,false,1,Audric Estime
+insert-rookie-swatches-prizm,3,,false,,Roman Wilson
+insert-rookie-swatches-prizm,3,Red Prizms,false,,Roman Wilson
+insert-rookie-swatches-prizm,3,White Prizms,false,75,Roman Wilson
+insert-rookie-swatches-prizm,3,Copper Prizms,false,49,Roman Wilson
+insert-rookie-swatches-prizm,3,Blue Prizms,false,35,Roman Wilson
+insert-rookie-swatches-prizm,3,Tie-Dye Prizms,false,25,Roman Wilson
+insert-rookie-swatches-prizm,3,Gold Prizms,false,10,Roman Wilson
+insert-rookie-swatches-prizm,3,Green Prizms,false,5,Roman Wilson
+insert-rookie-swatches-prizm,3,Black Prizms,false,1,Roman Wilson
+insert-rookie-swatches-prizm,4,,false,,Ja'Lynn Polk
+insert-rookie-swatches-prizm,4,Red Prizms,false,,Ja'Lynn Polk
+insert-rookie-swatches-prizm,4,White Prizms,false,75,Ja'Lynn Polk
+insert-rookie-swatches-prizm,4,Copper Prizms,false,49,Ja'Lynn Polk
+insert-rookie-swatches-prizm,4,Blue Prizms,false,35,Ja'Lynn Polk
+insert-rookie-swatches-prizm,4,Tie-Dye Prizms,false,25,Ja'Lynn Polk
+insert-rookie-swatches-prizm,4,Gold Prizms,false,10,Ja'Lynn Polk
+insert-rookie-swatches-prizm,4,Green Prizms,false,5,Ja'Lynn Polk
+insert-rookie-swatches-prizm,4,Black Prizms,false,1,Ja'Lynn Polk
+insert-rookie-swatches-prizm,5,,false,,Luke McCaffrey
+insert-rookie-swatches-prizm,5,Red Prizms,false,,Luke McCaffrey
+insert-rookie-swatches-prizm,5,White Prizms,false,75,Luke McCaffrey
+insert-rookie-swatches-prizm,5,Copper Prizms,false,49,Luke McCaffrey
+insert-rookie-swatches-prizm,5,Blue Prizms,false,35,Luke McCaffrey
+insert-rookie-swatches-prizm,5,Tie-Dye Prizms,false,25,Luke McCaffrey
+insert-rookie-swatches-prizm,5,Gold Prizms,false,10,Luke McCaffrey
+insert-rookie-swatches-prizm,5,Green Prizms,false,5,Luke McCaffrey
+insert-rookie-swatches-prizm,5,Black Prizms,false,1,Luke McCaffrey
+insert-rookie-swatches-prizm,6,,false,,Ricky Pearsall
+insert-rookie-swatches-prizm,6,Red Prizms,false,,Ricky Pearsall
+insert-rookie-swatches-prizm,6,White Prizms,false,75,Ricky Pearsall
+insert-rookie-swatches-prizm,6,Copper Prizms,false,49,Ricky Pearsall
+insert-rookie-swatches-prizm,6,Blue Prizms,false,35,Ricky Pearsall
+insert-rookie-swatches-prizm,6,Tie-Dye Prizms,false,25,Ricky Pearsall
+insert-rookie-swatches-prizm,6,Gold Prizms,false,10,Ricky Pearsall
+insert-rookie-swatches-prizm,6,Green Prizms,false,5,Ricky Pearsall
+insert-rookie-swatches-prizm,6,Black Prizms,false,1,Ricky Pearsall
+insert-rookie-swatches-prizm,7,,false,,Xavier Legette
+insert-rookie-swatches-prizm,7,Red Prizms,false,,Xavier Legette
+insert-rookie-swatches-prizm,7,White Prizms,false,75,Xavier Legette
+insert-rookie-swatches-prizm,7,Copper Prizms,false,49,Xavier Legette
+insert-rookie-swatches-prizm,7,Blue Prizms,false,35,Xavier Legette
+insert-rookie-swatches-prizm,7,Tie-Dye Prizms,false,25,Xavier Legette
+insert-rookie-swatches-prizm,7,Gold Prizms,false,10,Xavier Legette
+insert-rookie-swatches-prizm,7,Green Prizms,false,5,Xavier Legette
+insert-rookie-swatches-prizm,7,Black Prizms,false,1,Xavier Legette
+insert-rookie-swatches-prizm,8,,false,,Jordan Travis
+insert-rookie-swatches-prizm,8,Red Prizms,false,,Jordan Travis
+insert-rookie-swatches-prizm,8,White Prizms,false,75,Jordan Travis
+insert-rookie-swatches-prizm,8,Copper Prizms,false,49,Jordan Travis
+insert-rookie-swatches-prizm,8,Blue Prizms,false,35,Jordan Travis
+insert-rookie-swatches-prizm,8,Tie-Dye Prizms,false,25,Jordan Travis
+insert-rookie-swatches-prizm,8,Gold Prizms,false,10,Jordan Travis
+insert-rookie-swatches-prizm,8,Green Prizms,false,5,Jordan Travis
+insert-rookie-swatches-prizm,8,Black Prizms,false,1,Jordan Travis
+insert-rookie-swatches-prizm,9,,false,,Malachi Corley
+insert-rookie-swatches-prizm,9,Red Prizms,false,,Malachi Corley
+insert-rookie-swatches-prizm,9,White Prizms,false,75,Malachi Corley
+insert-rookie-swatches-prizm,9,Copper Prizms,false,49,Malachi Corley
+insert-rookie-swatches-prizm,9,Blue Prizms,false,35,Malachi Corley
+insert-rookie-swatches-prizm,9,Tie-Dye Prizms,false,25,Malachi Corley
+insert-rookie-swatches-prizm,9,Gold Prizms,false,10,Malachi Corley
+insert-rookie-swatches-prizm,9,Green Prizms,false,5,Malachi Corley
+insert-rookie-swatches-prizm,9,Black Prizms,false,1,Malachi Corley
+insert-rookie-swatches-prizm,10,,false,,Jalen McMillan
+insert-rookie-swatches-prizm,10,Red Prizms,false,,Jalen McMillan
+insert-rookie-swatches-prizm,10,White Prizms,false,75,Jalen McMillan
+insert-rookie-swatches-prizm,10,Copper Prizms,false,49,Jalen McMillan
+insert-rookie-swatches-prizm,10,Blue Prizms,false,35,Jalen McMillan
+insert-rookie-swatches-prizm,10,Tie-Dye Prizms,false,25,Jalen McMillan
+insert-rookie-swatches-prizm,10,Gold Prizms,false,10,Jalen McMillan
+insert-rookie-swatches-prizm,10,Green Prizms,false,5,Jalen McMillan
+insert-rookie-swatches-prizm,10,Black Prizms,false,1,Jalen McMillan
+insert-rookie-swatches-prizm,11,,false,,Will Shipley
+insert-rookie-swatches-prizm,11,Red Prizms,false,,Will Shipley
+insert-rookie-swatches-prizm,11,White Prizms,false,75,Will Shipley
+insert-rookie-swatches-prizm,11,Copper Prizms,false,49,Will Shipley
+insert-rookie-swatches-prizm,11,Blue Prizms,false,35,Will Shipley
+insert-rookie-swatches-prizm,11,Tie-Dye Prizms,false,25,Will Shipley
+insert-rookie-swatches-prizm,11,Gold Prizms,false,10,Will Shipley
+insert-rookie-swatches-prizm,11,Green Prizms,false,5,Will Shipley
+insert-rookie-swatches-prizm,11,Black Prizms,false,1,Will Shipley
+insert-rookie-swatches-prizm,12,,false,,Brenden Rice
+insert-rookie-swatches-prizm,12,Red Prizms,false,,Brenden Rice
+insert-rookie-swatches-prizm,12,White Prizms,false,75,Brenden Rice
+insert-rookie-swatches-prizm,12,Copper Prizms,false,49,Brenden Rice
+insert-rookie-swatches-prizm,12,Blue Prizms,false,35,Brenden Rice
+insert-rookie-swatches-prizm,12,Tie-Dye Prizms,false,25,Brenden Rice
+insert-rookie-swatches-prizm,12,Gold Prizms,false,10,Brenden Rice
+insert-rookie-swatches-prizm,12,Green Prizms,false,5,Brenden Rice
+insert-rookie-swatches-prizm,12,Black Prizms,false,1,Brenden Rice
+insert-rookie-swatches-prizm,13,,false,,Ray Davis
+insert-rookie-swatches-prizm,13,Red Prizms,false,,Ray Davis
+insert-rookie-swatches-prizm,13,White Prizms,false,75,Ray Davis
+insert-rookie-swatches-prizm,13,Copper Prizms,false,49,Ray Davis
+insert-rookie-swatches-prizm,13,Blue Prizms,false,35,Ray Davis
+insert-rookie-swatches-prizm,13,Tie-Dye Prizms,false,25,Ray Davis
+insert-rookie-swatches-prizm,13,Gold Prizms,false,10,Ray Davis
+insert-rookie-swatches-prizm,13,Green Prizms,false,5,Ray Davis
+insert-rookie-swatches-prizm,13,Black Prizms,false,1,Ray Davis
+insert-rookie-swatches-prizm,14,,false,,Michael Penix Jr.
+insert-rookie-swatches-prizm,14,Red Prizms,false,,Michael Penix Jr.
+insert-rookie-swatches-prizm,14,White Prizms,false,75,Michael Penix Jr.
+insert-rookie-swatches-prizm,14,Copper Prizms,false,49,Michael Penix Jr.
+insert-rookie-swatches-prizm,14,Blue Prizms,false,35,Michael Penix Jr.
+insert-rookie-swatches-prizm,14,Tie-Dye Prizms,false,25,Michael Penix Jr.
+insert-rookie-swatches-prizm,14,Gold Prizms,false,10,Michael Penix Jr.
+insert-rookie-swatches-prizm,14,Green Prizms,false,5,Michael Penix Jr.
+insert-rookie-swatches-prizm,14,Black Prizms,false,1,Michael Penix Jr.
+insert-rookie-swatches-prizm,15,,false,,J.J. McCarthy
+insert-rookie-swatches-prizm,15,Red Prizms,false,,J.J. McCarthy
+insert-rookie-swatches-prizm,15,White Prizms,false,75,J.J. McCarthy
+insert-rookie-swatches-prizm,15,Copper Prizms,false,49,J.J. McCarthy
+insert-rookie-swatches-prizm,15,Blue Prizms,false,35,J.J. McCarthy
+insert-rookie-swatches-prizm,15,Tie-Dye Prizms,false,25,J.J. McCarthy
+insert-rookie-swatches-prizm,15,Gold Prizms,false,10,J.J. McCarthy
+insert-rookie-swatches-prizm,15,Green Prizms,false,5,J.J. McCarthy
+insert-rookie-swatches-prizm,15,Black Prizms,false,1,J.J. McCarthy
+insert-rookie-swatches-prizm,16,,false,,Spencer Rattler
+insert-rookie-swatches-prizm,16,Red Prizms,false,,Spencer Rattler
+insert-rookie-swatches-prizm,16,White Prizms,false,75,Spencer Rattler
+insert-rookie-swatches-prizm,16,Copper Prizms,false,49,Spencer Rattler
+insert-rookie-swatches-prizm,16,Blue Prizms,false,35,Spencer Rattler
+insert-rookie-swatches-prizm,16,Tie-Dye Prizms,false,25,Spencer Rattler
+insert-rookie-swatches-prizm,16,Gold Prizms,false,10,Spencer Rattler
+insert-rookie-swatches-prizm,16,Green Prizms,false,5,Spencer Rattler
+insert-rookie-swatches-prizm,16,Black Prizms,false,1,Spencer Rattler
+insert-rookie-swatches-prizm,17,,false,,Rome Odunze
+insert-rookie-swatches-prizm,17,Red Prizms,false,,Rome Odunze
+insert-rookie-swatches-prizm,17,White Prizms,false,75,Rome Odunze
+insert-rookie-swatches-prizm,17,Copper Prizms,false,49,Rome Odunze
+insert-rookie-swatches-prizm,17,Blue Prizms,false,35,Rome Odunze
+insert-rookie-swatches-prizm,17,Tie-Dye Prizms,false,25,Rome Odunze
+insert-rookie-swatches-prizm,17,Gold Prizms,false,10,Rome Odunze
+insert-rookie-swatches-prizm,17,Green Prizms,false,5,Rome Odunze
+insert-rookie-swatches-prizm,17,Black Prizms,false,1,Rome Odunze
+insert-rookie-swatches-prizm,18,,false,,Caleb Williams
+insert-rookie-swatches-prizm,18,Red Prizms,false,,Caleb Williams
+insert-rookie-swatches-prizm,18,White Prizms,false,75,Caleb Williams
+insert-rookie-swatches-prizm,18,Copper Prizms,false,49,Caleb Williams
+insert-rookie-swatches-prizm,18,Blue Prizms,false,35,Caleb Williams
+insert-rookie-swatches-prizm,18,Tie-Dye Prizms,false,25,Caleb Williams
+insert-rookie-swatches-prizm,18,Gold Prizms,false,10,Caleb Williams
+insert-rookie-swatches-prizm,18,Green Prizms,false,5,Caleb Williams
+insert-rookie-swatches-prizm,18,Black Prizms,false,1,Caleb Williams
+insert-rookie-swatches-prizm,19,,false,,Bo Nix
+insert-rookie-swatches-prizm,19,Red Prizms,false,,Bo Nix
+insert-rookie-swatches-prizm,19,White Prizms,false,75,Bo Nix
+insert-rookie-swatches-prizm,19,Copper Prizms,false,49,Bo Nix
+insert-rookie-swatches-prizm,19,Blue Prizms,false,35,Bo Nix
+insert-rookie-swatches-prizm,19,Tie-Dye Prizms,false,25,Bo Nix
+insert-rookie-swatches-prizm,19,Gold Prizms,false,10,Bo Nix
+insert-rookie-swatches-prizm,19,Green Prizms,false,5,Bo Nix
+insert-rookie-swatches-prizm,19,Black Prizms,false,1,Bo Nix
+insert-rookie-swatches-prizm,20,,false,,Jayden Daniels
+insert-rookie-swatches-prizm,20,Red Prizms,false,,Jayden Daniels
+insert-rookie-swatches-prizm,20,White Prizms,false,75,Jayden Daniels
+insert-rookie-swatches-prizm,20,Copper Prizms,false,49,Jayden Daniels
+insert-rookie-swatches-prizm,20,Blue Prizms,false,35,Jayden Daniels
+insert-rookie-swatches-prizm,20,Tie-Dye Prizms,false,25,Jayden Daniels
+insert-rookie-swatches-prizm,20,Gold Prizms,false,10,Jayden Daniels
+insert-rookie-swatches-prizm,20,Green Prizms,false,5,Jayden Daniels
+insert-rookie-swatches-prizm,20,Black Prizms,false,1,Jayden Daniels
+insert-rookie-swatches-prizm,21,,false,,Drake Maye
+insert-rookie-swatches-prizm,21,Red Prizms,false,,Drake Maye
+insert-rookie-swatches-prizm,21,White Prizms,false,75,Drake Maye
+insert-rookie-swatches-prizm,21,Copper Prizms,false,49,Drake Maye
+insert-rookie-swatches-prizm,21,Blue Prizms,false,35,Drake Maye
+insert-rookie-swatches-prizm,21,Tie-Dye Prizms,false,25,Drake Maye
+insert-rookie-swatches-prizm,21,Gold Prizms,false,10,Drake Maye
+insert-rookie-swatches-prizm,21,Green Prizms,false,5,Drake Maye
+insert-rookie-swatches-prizm,21,Black Prizms,false,1,Drake Maye
+insert-rookie-swatches-prizm,22,,false,,Marvin Harrison Jr.
+insert-rookie-swatches-prizm,22,Red Prizms,false,,Marvin Harrison Jr.
+insert-rookie-swatches-prizm,22,White Prizms,false,75,Marvin Harrison Jr.
+insert-rookie-swatches-prizm,22,Copper Prizms,false,49,Marvin Harrison Jr.
+insert-rookie-swatches-prizm,22,Blue Prizms,false,35,Marvin Harrison Jr.
+insert-rookie-swatches-prizm,22,Tie-Dye Prizms,false,25,Marvin Harrison Jr.
+insert-rookie-swatches-prizm,22,Gold Prizms,false,10,Marvin Harrison Jr.
+insert-rookie-swatches-prizm,22,Green Prizms,false,5,Marvin Harrison Jr.
+insert-rookie-swatches-prizm,22,Black Prizms,false,1,Marvin Harrison Jr.
+insert-rookie-swatches-prizm,23,,false,,Xavier Worthy
+insert-rookie-swatches-prizm,23,Red Prizms,false,,Xavier Worthy
+insert-rookie-swatches-prizm,23,White Prizms,false,75,Xavier Worthy
+insert-rookie-swatches-prizm,23,Copper Prizms,false,49,Xavier Worthy
+insert-rookie-swatches-prizm,23,Blue Prizms,false,35,Xavier Worthy
+insert-rookie-swatches-prizm,23,Tie-Dye Prizms,false,25,Xavier Worthy
+insert-rookie-swatches-prizm,23,Gold Prizms,false,10,Xavier Worthy
+insert-rookie-swatches-prizm,23,Green Prizms,false,5,Xavier Worthy
+insert-rookie-swatches-prizm,23,Black Prizms,false,1,Xavier Worthy
+insert-rookie-swatches-prizm,24,,false,,Malik Nabers
+insert-rookie-swatches-prizm,24,Red Prizms,false,,Malik Nabers
+insert-rookie-swatches-prizm,24,White Prizms,false,75,Malik Nabers
+insert-rookie-swatches-prizm,24,Copper Prizms,false,49,Malik Nabers
+insert-rookie-swatches-prizm,24,Blue Prizms,false,35,Malik Nabers
+insert-rookie-swatches-prizm,24,Tie-Dye Prizms,false,25,Malik Nabers
+insert-rookie-swatches-prizm,24,Gold Prizms,false,10,Malik Nabers
+insert-rookie-swatches-prizm,24,Green Prizms,false,5,Malik Nabers
+insert-rookie-swatches-prizm,24,Black Prizms,false,1,Malik Nabers
+insert-rookie-swatches-prizm,25,,false,,Brian Thomas Jr.
+insert-rookie-swatches-prizm,25,Red Prizms,false,,Brian Thomas Jr.
+insert-rookie-swatches-prizm,25,White Prizms,false,75,Brian Thomas Jr.
+insert-rookie-swatches-prizm,25,Copper Prizms,false,49,Brian Thomas Jr.
+insert-rookie-swatches-prizm,25,Blue Prizms,false,35,Brian Thomas Jr.
+insert-rookie-swatches-prizm,25,Tie-Dye Prizms,false,25,Brian Thomas Jr.
+insert-rookie-swatches-prizm,25,Gold Prizms,false,10,Brian Thomas Jr.
+insert-rookie-swatches-prizm,25,Green Prizms,false,5,Brian Thomas Jr.
+insert-rookie-swatches-prizm,25,Black Prizms,false,1,Brian Thomas Jr.
+insert-sparks-prizm,1,,false,,Kyler Murray
+insert-sparks-prizm,1,White Prizms,false,75,Kyler Murray
+insert-sparks-prizm,1,Tie-Dye Prizms,false,25,Kyler Murray
+insert-sparks-prizm,1,Gold Prizms,false,10,Kyler Murray
+insert-sparks-prizm,1,Green Prizms,false,5,Kyler Murray
+insert-sparks-prizm,1,Laundry Tag NFL Player's Logo,false,1,Kyler Murray
+insert-sparks-prizm,1,Laundry Tag NFL Shield,false,1,Kyler Murray
+insert-sparks-prizm,1,Laundry Tag Nike Swoosh,false,1,Kyler Murray
+insert-sparks-prizm,2,,false,,Anthony Richardson
+insert-sparks-prizm,2,White Prizms,false,75,Anthony Richardson
+insert-sparks-prizm,2,Tie-Dye Prizms,false,25,Anthony Richardson
+insert-sparks-prizm,2,Gold Prizms,false,10,Anthony Richardson
+insert-sparks-prizm,2,Green Prizms,false,5,Anthony Richardson
+insert-sparks-prizm,2,Laundry Tag NFL Player's Logo,false,1,Anthony Richardson
+insert-sparks-prizm,2,Laundry Tag NFL Shield,false,1,Anthony Richardson
+insert-sparks-prizm,2,Laundry Tag Nike Swoosh,false,1,Anthony Richardson
+insert-sparks-prizm,3,,false,,Will Levis
+insert-sparks-prizm,3,White Prizms,false,75,Will Levis
+insert-sparks-prizm,3,Tie-Dye Prizms,false,25,Will Levis
+insert-sparks-prizm,3,Gold Prizms,false,10,Will Levis
+insert-sparks-prizm,3,Green Prizms,false,5,Will Levis
+insert-sparks-prizm,3,Laundry Tag NFL Player's Logo,false,1,Will Levis
+insert-sparks-prizm,3,Laundry Tag NFL Shield,false,1,Will Levis
+insert-sparks-prizm,3,Laundry Tag Nike Swoosh,false,1,Will Levis
+insert-sparks-prizm,4,,false,,Brian Burns
+insert-sparks-prizm,4,White Prizms,false,75,Brian Burns
+insert-sparks-prizm,4,Tie-Dye Prizms,false,25,Brian Burns
+insert-sparks-prizm,4,Gold Prizms,false,10,Brian Burns
+insert-sparks-prizm,4,Green Prizms,false,5,Brian Burns
+insert-sparks-prizm,4,Laundry Tag NFL Player's Logo,false,1,Brian Burns
+insert-sparks-prizm,4,Laundry Tag NFL Shield,false,1,Brian Burns
+insert-sparks-prizm,4,Laundry Tag Nike Swoosh,false,1,Brian Burns
+insert-sparks-prizm,5,,false,,Josh Allen
+insert-sparks-prizm,5,White Prizms,false,75,Josh Allen
+insert-sparks-prizm,5,Tie-Dye Prizms,false,25,Josh Allen
+insert-sparks-prizm,5,Gold Prizms,false,10,Josh Allen
+insert-sparks-prizm,5,Green Prizms,false,5,Josh Allen
+insert-sparks-prizm,5,Laundry Tag NFL Player's Logo,false,1,Josh Allen
+insert-sparks-prizm,5,Laundry Tag NFL Shield,false,1,Josh Allen
+insert-sparks-prizm,5,Laundry Tag Nike Swoosh,false,1,Josh Allen
+insert-sparks-prizm,6,,false,,Nick Chubb
+insert-sparks-prizm,6,White Prizms,false,75,Nick Chubb
+insert-sparks-prizm,6,Tie-Dye Prizms,false,25,Nick Chubb
+insert-sparks-prizm,6,Gold Prizms,false,10,Nick Chubb
+insert-sparks-prizm,6,Green Prizms,false,5,Nick Chubb
+insert-sparks-prizm,6,Laundry Tag NFL Player's Logo,false,1,Nick Chubb
+insert-sparks-prizm,6,Laundry Tag NFL Shield,false,1,Nick Chubb
+insert-sparks-prizm,6,Laundry Tag Nike Swoosh,false,1,Nick Chubb
+insert-sparks-prizm,7,,false,,Nick Bosa
+insert-sparks-prizm,7,White Prizms,false,75,Nick Bosa
+insert-sparks-prizm,7,Tie-Dye Prizms,false,25,Nick Bosa
+insert-sparks-prizm,7,Gold Prizms,false,10,Nick Bosa
+insert-sparks-prizm,7,Green Prizms,false,5,Nick Bosa
+insert-sparks-prizm,7,Laundry Tag NFL Player's Logo,false,1,Nick Bosa
+insert-sparks-prizm,7,Laundry Tag NFL Shield,false,1,Nick Bosa
+insert-sparks-prizm,7,Laundry Tag Nike Swoosh,false,1,Nick Bosa
+insert-sparks-prizm,8,,false,,Saquon Barkley
+insert-sparks-prizm,8,White Prizms,false,75,Saquon Barkley
+insert-sparks-prizm,8,Tie-Dye Prizms,false,25,Saquon Barkley
+insert-sparks-prizm,8,Gold Prizms,false,10,Saquon Barkley
+insert-sparks-prizm,8,Green Prizms,false,5,Saquon Barkley
+insert-sparks-prizm,8,Laundry Tag NFL Player's Logo,false,1,Saquon Barkley
+insert-sparks-prizm,8,Laundry Tag NFL Shield,false,1,Saquon Barkley
+insert-sparks-prizm,8,Laundry Tag Nike Swoosh,false,1,Saquon Barkley
+insert-sparks-prizm,9,,false,,Derrick Henry
+insert-sparks-prizm,9,White Prizms,false,75,Derrick Henry
+insert-sparks-prizm,9,Tie-Dye Prizms,false,25,Derrick Henry
+insert-sparks-prizm,9,Gold Prizms,false,10,Derrick Henry
+insert-sparks-prizm,9,Green Prizms,false,5,Derrick Henry
+insert-sparks-prizm,9,Laundry Tag NFL Player's Logo,false,1,Derrick Henry
+insert-sparks-prizm,9,Laundry Tag NFL Shield,false,1,Derrick Henry
+insert-sparks-prizm,9,Laundry Tag Nike Swoosh,false,1,Derrick Henry
+insert-sparks-prizm,10,,false,,Jaylen Waddle
+insert-sparks-prizm,10,White Prizms,false,75,Jaylen Waddle
+insert-sparks-prizm,10,Tie-Dye Prizms,false,25,Jaylen Waddle
+insert-sparks-prizm,10,Gold Prizms,false,10,Jaylen Waddle
+insert-sparks-prizm,10,Green Prizms,false,5,Jaylen Waddle
+insert-sparks-prizm,10,Laundry Tag NFL Player's Logo,false,1,Jaylen Waddle
+insert-sparks-prizm,10,Laundry Tag NFL Shield,false,1,Jaylen Waddle
+insert-sparks-prizm,10,Laundry Tag Nike Swoosh,false,1,Jaylen Waddle
+insert-sparks-prizm,11,,false,,Dak Prescott
+insert-sparks-prizm,11,White Prizms,false,75,Dak Prescott
+insert-sparks-prizm,11,Tie-Dye Prizms,false,25,Dak Prescott
+insert-sparks-prizm,11,Gold Prizms,false,10,Dak Prescott
+insert-sparks-prizm,11,Green Prizms,false,5,Dak Prescott
+insert-sparks-prizm,11,Laundry Tag NFL Player's Logo,false,1,Dak Prescott
+insert-sparks-prizm,11,Laundry Tag NFL Shield,false,1,Dak Prescott
+insert-sparks-prizm,11,Laundry Tag Nike Swoosh,false,1,Dak Prescott
+insert-sparks-prizm,12,,false,,Amon-Ra St. Brown
+insert-sparks-prizm,12,White Prizms,false,75,Amon-Ra St. Brown
+insert-sparks-prizm,12,Tie-Dye Prizms,false,25,Amon-Ra St. Brown
+insert-sparks-prizm,12,Gold Prizms,false,10,Amon-Ra St. Brown
+insert-sparks-prizm,12,Green Prizms,false,5,Amon-Ra St. Brown
+insert-sparks-prizm,12,Laundry Tag NFL Player's Logo,false,1,Amon-Ra St. Brown
+insert-sparks-prizm,12,Laundry Tag NFL Shield,false,1,Amon-Ra St. Brown
+insert-sparks-prizm,12,Laundry Tag Nike Swoosh,false,1,Amon-Ra St. Brown
+insert-sparks-prizm,13,,false,,Myles Garrett
+insert-sparks-prizm,13,White Prizms,false,75,Myles Garrett
+insert-sparks-prizm,13,Tie-Dye Prizms,false,25,Myles Garrett
+insert-sparks-prizm,13,Gold Prizms,false,10,Myles Garrett
+insert-sparks-prizm,13,Green Prizms,false,5,Myles Garrett
+insert-sparks-prizm,13,Laundry Tag NFL Player's Logo,false,1,Myles Garrett
+insert-sparks-prizm,13,Laundry Tag NFL Shield,false,1,Myles Garrett
+insert-sparks-prizm,13,Laundry Tag Nike Swoosh,false,1,Myles Garrett
+insert-sparks-prizm,14,,false,,Joe Burrow
+insert-sparks-prizm,14,White Prizms,false,75,Joe Burrow
+insert-sparks-prizm,14,Tie-Dye Prizms,false,25,Joe Burrow
+insert-sparks-prizm,14,Gold Prizms,false,10,Joe Burrow
+insert-sparks-prizm,14,Green Prizms,false,5,Joe Burrow
+insert-sparks-prizm,14,Laundry Tag NFL Player's Logo,false,1,Joe Burrow
+insert-sparks-prizm,14,Laundry Tag NFL Shield,false,1,Joe Burrow
+insert-sparks-prizm,14,Laundry Tag Nike Swoosh,false,1,Joe Burrow
+insert-sparks-prizm,15,,false,,DK Metcalf
+insert-sparks-prizm,15,White Prizms,false,75,DK Metcalf
+insert-sparks-prizm,15,Tie-Dye Prizms,false,25,DK Metcalf
+insert-sparks-prizm,15,Gold Prizms,false,10,DK Metcalf
+insert-sparks-prizm,15,Green Prizms,false,5,DK Metcalf
+insert-sparks-prizm,15,Laundry Tag NFL Player's Logo,false,1,DK Metcalf
+insert-sparks-prizm,15,Laundry Tag NFL Shield,false,1,DK Metcalf
+insert-sparks-prizm,15,Laundry Tag Nike Swoosh,false,1,DK Metcalf
+insert-sparks-prizm,16,,false,,Javonte Williams
+insert-sparks-prizm,16,White Prizms,false,75,Javonte Williams
+insert-sparks-prizm,16,Tie-Dye Prizms,false,25,Javonte Williams
+insert-sparks-prizm,16,Gold Prizms,false,10,Javonte Williams
+insert-sparks-prizm,16,Green Prizms,false,5,Javonte Williams
+insert-sparks-prizm,16,Laundry Tag NFL Player's Logo,false,1,Javonte Williams
+insert-sparks-prizm,16,Laundry Tag NFL Shield,false,1,Javonte Williams
+insert-sparks-prizm,16,Laundry Tag Nike Swoosh,false,1,Javonte Williams
+insert-sparks-prizm,17,,false,,C.J. Stroud
+insert-sparks-prizm,17,White Prizms,false,75,C.J. Stroud
+insert-sparks-prizm,17,Tie-Dye Prizms,false,25,C.J. Stroud
+insert-sparks-prizm,17,Gold Prizms,false,10,C.J. Stroud
+insert-sparks-prizm,17,Green Prizms,false,5,C.J. Stroud
+insert-sparks-prizm,17,Laundry Tag NFL Player's Logo,false,1,C.J. Stroud
+insert-sparks-prizm,17,Laundry Tag NFL Shield,false,1,C.J. Stroud
+insert-sparks-prizm,17,Laundry Tag Nike Swoosh,false,1,C.J. Stroud
+insert-sparks-prizm,18,,false,,Patrick Mahomes II
+insert-sparks-prizm,18,White Prizms,false,75,Patrick Mahomes II
+insert-sparks-prizm,18,Tie-Dye Prizms,false,25,Patrick Mahomes II
+insert-sparks-prizm,18,Gold Prizms,false,10,Patrick Mahomes II
+insert-sparks-prizm,18,Green Prizms,false,5,Patrick Mahomes II
+insert-sparks-prizm,18,Laundry Tag NFL Player's Logo,false,1,Patrick Mahomes II
+insert-sparks-prizm,18,Laundry Tag NFL Shield,false,1,Patrick Mahomes II
+insert-sparks-prizm,18,Laundry Tag Nike Swoosh,false,1,Patrick Mahomes II
+insert-sparks-prizm,19,,false,,Lamar Jackson
+insert-sparks-prizm,19,White Prizms,false,75,Lamar Jackson
+insert-sparks-prizm,19,Tie-Dye Prizms,false,25,Lamar Jackson
+insert-sparks-prizm,19,Gold Prizms,false,10,Lamar Jackson
+insert-sparks-prizm,19,Green Prizms,false,5,Lamar Jackson
+insert-sparks-prizm,19,Laundry Tag NFL Player's Logo,false,1,Lamar Jackson
+insert-sparks-prizm,19,Laundry Tag NFL Shield,false,1,Lamar Jackson
+insert-sparks-prizm,19,Laundry Tag Nike Swoosh,false,1,Lamar Jackson
+insert-sparks-prizm,20,,false,,Tyreek Hill
+insert-sparks-prizm,20,White Prizms,false,75,Tyreek Hill
+insert-sparks-prizm,20,Tie-Dye Prizms,false,25,Tyreek Hill
+insert-sparks-prizm,20,Gold Prizms,false,10,Tyreek Hill
+insert-sparks-prizm,20,Green Prizms,false,5,Tyreek Hill
+insert-sparks-prizm,20,Laundry Tag NFL Player's Logo,false,1,Tyreek Hill
+insert-sparks-prizm,20,Laundry Tag NFL Shield,false,1,Tyreek Hill
+insert-sparks-prizm,20,Laundry Tag Nike Swoosh,false,1,Tyreek Hill
+insert-sparks-prizm,21,,false,,CeeDee Lamb
+insert-sparks-prizm,21,White Prizms,false,75,CeeDee Lamb
+insert-sparks-prizm,21,Tie-Dye Prizms,false,25,CeeDee Lamb
+insert-sparks-prizm,21,Gold Prizms,false,10,CeeDee Lamb
+insert-sparks-prizm,21,Green Prizms,false,5,CeeDee Lamb
+insert-sparks-prizm,21,Laundry Tag NFL Player's Logo,false,1,CeeDee Lamb
+insert-sparks-prizm,21,Laundry Tag NFL Shield,false,1,CeeDee Lamb
+insert-sparks-prizm,21,Laundry Tag Nike Swoosh,false,1,CeeDee Lamb
+insert-sparks-prizm,22,,false,,Aidan Hutchinson
+insert-sparks-prizm,22,White Prizms,false,75,Aidan Hutchinson
+insert-sparks-prizm,22,Tie-Dye Prizms,false,25,Aidan Hutchinson
+insert-sparks-prizm,22,Gold Prizms,false,10,Aidan Hutchinson
+insert-sparks-prizm,22,Green Prizms,false,5,Aidan Hutchinson
+insert-sparks-prizm,22,Laundry Tag NFL Player's Logo,false,1,Aidan Hutchinson
+insert-sparks-prizm,22,Laundry Tag NFL Shield,false,1,Aidan Hutchinson
+insert-sparks-prizm,22,Laundry Tag Nike Swoosh,false,1,Aidan Hutchinson
+insert-sparks-prizm,23,,false,,Tyler Lockett
+insert-sparks-prizm,23,White Prizms,false,75,Tyler Lockett
+insert-sparks-prizm,23,Tie-Dye Prizms,false,25,Tyler Lockett
+insert-sparks-prizm,23,Gold Prizms,false,10,Tyler Lockett
+insert-sparks-prizm,23,Green Prizms,false,5,Tyler Lockett
+insert-sparks-prizm,23,Laundry Tag NFL Player's Logo,false,1,Tyler Lockett
+insert-sparks-prizm,23,Laundry Tag NFL Shield,false,1,Tyler Lockett
+insert-sparks-prizm,23,Laundry Tag Nike Swoosh,false,1,Tyler Lockett
+insert-sparks-prizm,24,,false,,Brock Purdy
+insert-sparks-prizm,24,White Prizms,false,75,Brock Purdy
+insert-sparks-prizm,24,Tie-Dye Prizms,false,25,Brock Purdy
+insert-sparks-prizm,24,Gold Prizms,false,10,Brock Purdy
+insert-sparks-prizm,24,Green Prizms,false,5,Brock Purdy
+insert-sparks-prizm,24,Laundry Tag NFL Player's Logo,false,1,Brock Purdy
+insert-sparks-prizm,24,Laundry Tag NFL Shield,false,1,Brock Purdy
+insert-sparks-prizm,24,Laundry Tag Nike Swoosh,false,1,Brock Purdy
+insert-sparks-prizm,25,,false,,Jordan Love
+insert-sparks-prizm,25,White Prizms,false,75,Jordan Love
+insert-sparks-prizm,25,Tie-Dye Prizms,false,25,Jordan Love
+insert-sparks-prizm,25,Gold Prizms,false,10,Jordan Love
+insert-sparks-prizm,25,Green Prizms,false,5,Jordan Love
+insert-sparks-prizm,25,Laundry Tag NFL Player's Logo,false,1,Jordan Love
+insert-sparks-prizm,25,Laundry Tag NFL Shield,false,1,Jordan Love
+insert-sparks-prizm,25,Laundry Tag Nike Swoosh,false,1,Jordan Love
+insert-sparks-prizm,26,,false,,Travis Kelce
+insert-sparks-prizm,26,White Prizms,false,75,Travis Kelce
+insert-sparks-prizm,26,Tie-Dye Prizms,false,25,Travis Kelce
+insert-sparks-prizm,26,Gold Prizms,false,10,Travis Kelce
+insert-sparks-prizm,26,Green Prizms,false,5,Travis Kelce
+insert-sparks-prizm,26,Laundry Tag NFL Player's Logo,false,1,Travis Kelce
+insert-sparks-prizm,26,Laundry Tag NFL Shield,false,1,Travis Kelce
+insert-sparks-prizm,26,Laundry Tag Nike Swoosh,false,1,Travis Kelce
+insert-sparks-prizm,27,,false,,Cooper Kupp
+insert-sparks-prizm,27,White Prizms,false,75,Cooper Kupp
+insert-sparks-prizm,27,Tie-Dye Prizms,false,25,Cooper Kupp
+insert-sparks-prizm,27,Gold Prizms,false,10,Cooper Kupp
+insert-sparks-prizm,27,Green Prizms,false,5,Cooper Kupp
+insert-sparks-prizm,27,Laundry Tag NFL Player's Logo,false,1,Cooper Kupp
+insert-sparks-prizm,27,Laundry Tag NFL Shield,false,1,Cooper Kupp
+insert-sparks-prizm,27,Laundry Tag Nike Swoosh,false,1,Cooper Kupp
+insert-sparks-prizm,28,,false,,George Kittle
+insert-sparks-prizm,28,White Prizms,false,75,George Kittle
+insert-sparks-prizm,28,Tie-Dye Prizms,false,25,George Kittle
+insert-sparks-prizm,28,Gold Prizms,false,10,George Kittle
+insert-sparks-prizm,28,Green Prizms,false,5,George Kittle
+insert-sparks-prizm,28,Laundry Tag NFL Player's Logo,false,1,George Kittle
+insert-sparks-prizm,28,Laundry Tag NFL Shield,false,1,George Kittle
+insert-sparks-prizm,28,Laundry Tag Nike Swoosh,false,1,George Kittle
+insert-sparks-prizm,29,,false,,Najee Harris
+insert-sparks-prizm,29,White Prizms,false,75,Najee Harris
+insert-sparks-prizm,29,Tie-Dye Prizms,false,25,Najee Harris
+insert-sparks-prizm,29,Gold Prizms,false,10,Najee Harris
+insert-sparks-prizm,29,Green Prizms,false,5,Najee Harris
+insert-sparks-prizm,29,Laundry Tag NFL Player's Logo,false,1,Najee Harris
+insert-sparks-prizm,29,Laundry Tag NFL Shield,false,1,Najee Harris
+insert-sparks-prizm,29,Laundry Tag Nike Swoosh,false,1,Najee Harris
+insert-sparks-prizm,30,,false,,Adam Thielen
+insert-sparks-prizm,30,White Prizms,false,75,Adam Thielen
+insert-sparks-prizm,30,Tie-Dye Prizms,false,25,Adam Thielen
+insert-sparks-prizm,30,Gold Prizms,false,10,Adam Thielen
+insert-sparks-prizm,30,Green Prizms,false,5,Adam Thielen
+insert-sparks-prizm,30,Laundry Tag NFL Player's Logo,false,1,Adam Thielen
+insert-sparks-prizm,30,Laundry Tag NFL Shield,false,1,Adam Thielen
+insert-sparks-prizm,30,Laundry Tag Nike Swoosh,false,1,Adam Thielen
+insert-sparks-prizm,31,,false,,Kyle Hamilton
+insert-sparks-prizm,31,White Prizms,false,75,Kyle Hamilton
+insert-sparks-prizm,31,Tie-Dye Prizms,false,25,Kyle Hamilton
+insert-sparks-prizm,31,Gold Prizms,false,10,Kyle Hamilton
+insert-sparks-prizm,31,Green Prizms,false,5,Kyle Hamilton
+insert-sparks-prizm,31,Laundry Tag NFL Player's Logo,false,1,Kyle Hamilton
+insert-sparks-prizm,31,Laundry Tag NFL Shield,false,1,Kyle Hamilton
+insert-sparks-prizm,31,Laundry Tag Nike Swoosh,false,1,Kyle Hamilton
+insert-sparks-prizm,32,,false,,Courtland Sutton
+insert-sparks-prizm,32,White Prizms,false,75,Courtland Sutton
+insert-sparks-prizm,32,Tie-Dye Prizms,false,25,Courtland Sutton
+insert-sparks-prizm,32,Gold Prizms,false,10,Courtland Sutton
+insert-sparks-prizm,32,Green Prizms,false,5,Courtland Sutton
+insert-sparks-prizm,32,Laundry Tag NFL Player's Logo,false,1,Courtland Sutton
+insert-sparks-prizm,32,Laundry Tag NFL Shield,false,1,Courtland Sutton
+insert-sparks-prizm,32,Laundry Tag Nike Swoosh,false,1,Courtland Sutton
+insert-sparks-prizm,33,,false,,Maxx Crosby
+insert-sparks-prizm,33,White Prizms,false,75,Maxx Crosby
+insert-sparks-prizm,33,Tie-Dye Prizms,false,25,Maxx Crosby
+insert-sparks-prizm,33,Gold Prizms,false,10,Maxx Crosby
+insert-sparks-prizm,33,Green Prizms,false,5,Maxx Crosby
+insert-sparks-prizm,33,Laundry Tag NFL Player's Logo,false,1,Maxx Crosby
+insert-sparks-prizm,33,Laundry Tag NFL Shield,false,1,Maxx Crosby
+insert-sparks-prizm,33,Laundry Tag Nike Swoosh,false,1,Maxx Crosby
+insert-sparks-prizm,34,,false,,Aaron Rodgers
+insert-sparks-prizm,34,White Prizms,false,75,Aaron Rodgers
+insert-sparks-prizm,34,Tie-Dye Prizms,false,25,Aaron Rodgers
+insert-sparks-prizm,34,Gold Prizms,false,10,Aaron Rodgers
+insert-sparks-prizm,34,Green Prizms,false,5,Aaron Rodgers
+insert-sparks-prizm,34,Laundry Tag NFL Player's Logo,false,1,Aaron Rodgers
+insert-sparks-prizm,34,Laundry Tag NFL Shield,false,1,Aaron Rodgers
+insert-sparks-prizm,34,Laundry Tag Nike Swoosh,false,1,Aaron Rodgers
+insert-sparks-prizm,35,,false,,Darius Slayton
+insert-sparks-prizm,35,White Prizms,false,75,Darius Slayton
+insert-sparks-prizm,35,Tie-Dye Prizms,false,25,Darius Slayton
+insert-sparks-prizm,35,Gold Prizms,false,10,Darius Slayton
+insert-sparks-prizm,35,Green Prizms,false,5,Darius Slayton
+insert-sparks-prizm,35,Laundry Tag NFL Player's Logo,false,1,Darius Slayton
+insert-sparks-prizm,35,Laundry Tag NFL Shield,false,1,Darius Slayton
+insert-sparks-prizm,35,Laundry Tag Nike Swoosh,false,1,Darius Slayton
+insert-sparks-prizm,36,,false,,Terry McLaurin
+insert-sparks-prizm,36,White Prizms,false,75,Terry McLaurin
+insert-sparks-prizm,36,Tie-Dye Prizms,false,25,Terry McLaurin
+insert-sparks-prizm,36,Gold Prizms,false,10,Terry McLaurin
+insert-sparks-prizm,36,Green Prizms,false,5,Terry McLaurin
+insert-sparks-prizm,36,Laundry Tag NFL Player's Logo,false,1,Terry McLaurin
+insert-sparks-prizm,36,Laundry Tag NFL Shield,false,1,Terry McLaurin
+insert-sparks-prizm,36,Laundry Tag Nike Swoosh,false,1,Terry McLaurin
+insert-sparks-prizm,37,,false,,Jonathan Taylor
+insert-sparks-prizm,37,White Prizms,false,75,Jonathan Taylor
+insert-sparks-prizm,37,Tie-Dye Prizms,false,25,Jonathan Taylor
+insert-sparks-prizm,37,Gold Prizms,false,10,Jonathan Taylor
+insert-sparks-prizm,37,Green Prizms,false,5,Jonathan Taylor
+insert-sparks-prizm,37,Laundry Tag NFL Player's Logo,false,1,Jonathan Taylor
+insert-sparks-prizm,37,Laundry Tag NFL Shield,false,1,Jonathan Taylor
+insert-sparks-prizm,37,Laundry Tag Nike Swoosh,false,1,Jonathan Taylor
+insert-sparks-prizm,38,,false,,Mike Evans
+insert-sparks-prizm,38,White Prizms,false,75,Mike Evans
+insert-sparks-prizm,38,Tie-Dye Prizms,false,25,Mike Evans
+insert-sparks-prizm,38,Gold Prizms,false,10,Mike Evans
+insert-sparks-prizm,38,Green Prizms,false,5,Mike Evans
+insert-sparks-prizm,38,Laundry Tag NFL Player's Logo,false,1,Mike Evans
+insert-sparks-prizm,38,Laundry Tag NFL Shield,false,1,Mike Evans
+insert-sparks-prizm,38,Laundry Tag Nike Swoosh,false,1,Mike Evans
+insert-sparks-prizm,39,,false,,Micah Parsons
+insert-sparks-prizm,39,White Prizms,false,75,Micah Parsons
+insert-sparks-prizm,39,Tie-Dye Prizms,false,25,Micah Parsons
+insert-sparks-prizm,39,Gold Prizms,false,10,Micah Parsons
+insert-sparks-prizm,39,Green Prizms,false,5,Micah Parsons
+insert-sparks-prizm,39,Laundry Tag NFL Player's Logo,false,1,Micah Parsons
+insert-sparks-prizm,39,Laundry Tag NFL Shield,false,1,Micah Parsons
+insert-sparks-prizm,39,Laundry Tag Nike Swoosh,false,1,Micah Parsons
+insert-sparks-prizm,40,,false,,Trevor Lawrence
+insert-sparks-prizm,40,White Prizms,false,75,Trevor Lawrence
+insert-sparks-prizm,40,Tie-Dye Prizms,false,25,Trevor Lawrence
+insert-sparks-prizm,40,Gold Prizms,false,10,Trevor Lawrence
+insert-sparks-prizm,40,Green Prizms,false,5,Trevor Lawrence
+insert-sparks-prizm,40,Laundry Tag NFL Player's Logo,false,1,Trevor Lawrence
+insert-sparks-prizm,40,Laundry Tag NFL Shield,false,1,Trevor Lawrence
+insert-sparks-prizm,40,Laundry Tag Nike Swoosh,false,1,Trevor Lawrence
+insert-sparks-prizm,41,,false,,Justin Jefferson
+insert-sparks-prizm,41,White Prizms,false,75,Justin Jefferson
+insert-sparks-prizm,41,Tie-Dye Prizms,false,25,Justin Jefferson
+insert-sparks-prizm,41,Gold Prizms,false,10,Justin Jefferson
+insert-sparks-prizm,41,Green Prizms,false,5,Justin Jefferson
+insert-sparks-prizm,41,Laundry Tag NFL Player's Logo,false,1,Justin Jefferson
+insert-sparks-prizm,41,Laundry Tag NFL Shield,false,1,Justin Jefferson
+insert-sparks-prizm,41,Laundry Tag Nike Swoosh,false,1,Justin Jefferson
+insert-sparks-prizm,42,,false,,Justin Herbert
+insert-sparks-prizm,42,White Prizms,false,75,Justin Herbert
+insert-sparks-prizm,42,Tie-Dye Prizms,false,25,Justin Herbert
+insert-sparks-prizm,42,Gold Prizms,false,10,Justin Herbert
+insert-sparks-prizm,42,Green Prizms,false,5,Justin Herbert
+insert-sparks-prizm,42,Laundry Tag NFL Player's Logo,false,1,Justin Herbert
+insert-sparks-prizm,42,Laundry Tag NFL Shield,false,1,Justin Herbert
+insert-sparks-prizm,42,Laundry Tag Nike Swoosh,false,1,Justin Herbert
+insert-sparks-prizm,43,,false,,D'Andre Swift
+insert-sparks-prizm,43,White Prizms,false,75,D'Andre Swift
+insert-sparks-prizm,43,Tie-Dye Prizms,false,25,D'Andre Swift
+insert-sparks-prizm,43,Gold Prizms,false,10,D'Andre Swift
+insert-sparks-prizm,43,Green Prizms,false,5,D'Andre Swift
+insert-sparks-prizm,43,Laundry Tag NFL Player's Logo,false,1,D'Andre Swift
+insert-sparks-prizm,43,Laundry Tag NFL Shield,false,1,D'Andre Swift
+insert-sparks-prizm,43,Laundry Tag Nike Swoosh,false,1,D'Andre Swift
+insert-sparks-prizm,44,,false,,Ja'Marr Chase
+insert-sparks-prizm,44,White Prizms,false,75,Ja'Marr Chase
+insert-sparks-prizm,44,Tie-Dye Prizms,false,25,Ja'Marr Chase
+insert-sparks-prizm,44,Gold Prizms,false,10,Ja'Marr Chase
+insert-sparks-prizm,44,Green Prizms,false,5,Ja'Marr Chase
+insert-sparks-prizm,44,Laundry Tag NFL Player's Logo,false,1,Ja'Marr Chase
+insert-sparks-prizm,44,Laundry Tag NFL Shield,false,1,Ja'Marr Chase
+insert-sparks-prizm,44,Laundry Tag Nike Swoosh,false,1,Ja'Marr Chase
+insert-sparks-prizm,45,,false,,Christian Watson
+insert-sparks-prizm,45,White Prizms,false,75,Christian Watson
+insert-sparks-prizm,45,Tie-Dye Prizms,false,25,Christian Watson
+insert-sparks-prizm,45,Gold Prizms,false,10,Christian Watson
+insert-sparks-prizm,45,Green Prizms,false,5,Christian Watson
+insert-sparks-prizm,45,Laundry Tag NFL Player's Logo,false,1,Christian Watson
+insert-sparks-prizm,45,Laundry Tag NFL Shield,false,1,Christian Watson
+insert-sparks-prizm,45,Laundry Tag Nike Swoosh,false,1,Christian Watson
+insert-sparks-prizm,46,,false,,Tre Tucker
+insert-sparks-prizm,46,White Prizms,false,75,Tre Tucker
+insert-sparks-prizm,46,Tie-Dye Prizms,false,25,Tre Tucker
+insert-sparks-prizm,46,Gold Prizms,false,10,Tre Tucker
+insert-sparks-prizm,46,Green Prizms,false,5,Tre Tucker
+insert-sparks-prizm,46,Laundry Tag NFL Player's Logo,false,1,Tre Tucker
+insert-sparks-prizm,46,Laundry Tag NFL Shield,false,1,Tre Tucker
+insert-sparks-prizm,46,Laundry Tag Nike Swoosh,false,1,Tre Tucker
+insert-sparks-prizm,47,,false,,Bijan Robinson
+insert-sparks-prizm,47,White Prizms,false,75,Bijan Robinson
+insert-sparks-prizm,47,Tie-Dye Prizms,false,25,Bijan Robinson
+insert-sparks-prizm,47,Gold Prizms,false,10,Bijan Robinson
+insert-sparks-prizm,47,Green Prizms,false,5,Bijan Robinson
+insert-sparks-prizm,47,Laundry Tag NFL Player's Logo,false,1,Bijan Robinson
+insert-sparks-prizm,47,Laundry Tag NFL Shield,false,1,Bijan Robinson
+insert-sparks-prizm,47,Laundry Tag Nike Swoosh,false,1,Bijan Robinson
+insert-sparks-prizm,48,,false,,Jahmyr Gibbs
+insert-sparks-prizm,48,White Prizms,false,75,Jahmyr Gibbs
+insert-sparks-prizm,48,Tie-Dye Prizms,false,25,Jahmyr Gibbs
+insert-sparks-prizm,48,Gold Prizms,false,10,Jahmyr Gibbs
+insert-sparks-prizm,48,Green Prizms,false,5,Jahmyr Gibbs
+insert-sparks-prizm,48,Laundry Tag NFL Player's Logo,false,1,Jahmyr Gibbs
+insert-sparks-prizm,48,Laundry Tag NFL Shield,false,1,Jahmyr Gibbs
+insert-sparks-prizm,48,Laundry Tag Nike Swoosh,false,1,Jahmyr Gibbs
+insert-sparks-prizm,49,,false,,Kyren Williams
+insert-sparks-prizm,49,White Prizms,false,75,Kyren Williams
+insert-sparks-prizm,49,Tie-Dye Prizms,false,25,Kyren Williams
+insert-sparks-prizm,49,Gold Prizms,false,10,Kyren Williams
+insert-sparks-prizm,49,Green Prizms,false,5,Kyren Williams
+insert-sparks-prizm,49,Laundry Tag NFL Player's Logo,false,1,Kyren Williams
+insert-sparks-prizm,49,Laundry Tag NFL Shield,false,1,Kyren Williams
+insert-sparks-prizm,49,Laundry Tag Nike Swoosh,false,1,Kyren Williams
+insert-sparks-prizm,50,,false,,Breece Hall
+insert-sparks-prizm,50,White Prizms,false,75,Breece Hall
+insert-sparks-prizm,50,Tie-Dye Prizms,false,25,Breece Hall
+insert-sparks-prizm,50,Gold Prizms,false,10,Breece Hall
+insert-sparks-prizm,50,Green Prizms,false,5,Breece Hall
+insert-sparks-prizm,50,Laundry Tag NFL Player's Logo,false,1,Breece Hall
+insert-sparks-prizm,50,Laundry Tag NFL Shield,false,1,Breece Hall
+insert-sparks-prizm,50,Laundry Tag Nike Swoosh,false,1,Breece Hall
+insert-sparks-prizm,51,,false,,Zay Flowers
+insert-sparks-prizm,51,White Prizms,false,75,Zay Flowers
+insert-sparks-prizm,51,Tie-Dye Prizms,false,25,Zay Flowers
+insert-sparks-prizm,51,Gold Prizms,false,10,Zay Flowers
+insert-sparks-prizm,51,Green Prizms,false,5,Zay Flowers
+insert-sparks-prizm,51,Laundry Tag NFL Player's Logo,false,1,Zay Flowers
+insert-sparks-prizm,51,Laundry Tag NFL Shield,false,1,Zay Flowers
+insert-sparks-prizm,51,Laundry Tag Nike Swoosh,false,1,Zay Flowers
+insert-sparks-prizm,52,,false,,Sam Darnold
+insert-sparks-prizm,52,White Prizms,false,75,Sam Darnold
+insert-sparks-prizm,52,Tie-Dye Prizms,false,25,Sam Darnold
+insert-sparks-prizm,52,Gold Prizms,false,10,Sam Darnold
+insert-sparks-prizm,52,Green Prizms,false,5,Sam Darnold
+insert-sparks-prizm,52,Laundry Tag NFL Player's Logo,false,1,Sam Darnold
+insert-sparks-prizm,52,Laundry Tag NFL Shield,false,1,Sam Darnold
+insert-sparks-prizm,52,Laundry Tag Nike Swoosh,false,1,Sam Darnold
+insert-sparks-prizm,53,,false,,Jalen Hurts
+insert-sparks-prizm,53,White Prizms,false,75,Jalen Hurts
+insert-sparks-prizm,53,Tie-Dye Prizms,false,25,Jalen Hurts
+insert-sparks-prizm,53,Gold Prizms,false,10,Jalen Hurts
+insert-sparks-prizm,53,Green Prizms,false,5,Jalen Hurts
+insert-sparks-prizm,53,Laundry Tag NFL Player's Logo,false,1,Jalen Hurts
+insert-sparks-prizm,53,Laundry Tag NFL Shield,false,1,Jalen Hurts
+insert-sparks-prizm,53,Laundry Tag Nike Swoosh,false,1,Jalen Hurts
+insert-sparks-prizm,54,,false,,George Pickens
+insert-sparks-prizm,54,White Prizms,false,75,George Pickens
+insert-sparks-prizm,54,Tie-Dye Prizms,false,25,George Pickens
+insert-sparks-prizm,54,Gold Prizms,false,10,George Pickens
+insert-sparks-prizm,54,Green Prizms,false,5,George Pickens
+insert-sparks-prizm,54,Laundry Tag NFL Player's Logo,false,1,George Pickens
+insert-sparks-prizm,54,Laundry Tag NFL Shield,false,1,George Pickens
+insert-sparks-prizm,54,Laundry Tag Nike Swoosh,false,1,George Pickens
+insert-sparks-prizm,55,,false,,Alvin Kamara
+insert-sparks-prizm,55,White Prizms,false,75,Alvin Kamara
+insert-sparks-prizm,55,Tie-Dye Prizms,false,25,Alvin Kamara
+insert-sparks-prizm,55,Gold Prizms,false,10,Alvin Kamara
+insert-sparks-prizm,55,Green Prizms,false,5,Alvin Kamara
+insert-sparks-prizm,55,Laundry Tag NFL Player's Logo,false,1,Alvin Kamara
+insert-sparks-prizm,55,Laundry Tag NFL Shield,false,1,Alvin Kamara
+insert-sparks-prizm,55,Laundry Tag Nike Swoosh,false,1,Alvin Kamara
+insert-sparks-prizm,56,,false,,Rhamondre Stevenson
+insert-sparks-prizm,56,White Prizms,false,75,Rhamondre Stevenson
+insert-sparks-prizm,56,Tie-Dye Prizms,false,25,Rhamondre Stevenson
+insert-sparks-prizm,56,Gold Prizms,false,10,Rhamondre Stevenson
+insert-sparks-prizm,56,Green Prizms,false,5,Rhamondre Stevenson
+insert-sparks-prizm,56,Laundry Tag NFL Player's Logo,false,1,Rhamondre Stevenson
+insert-sparks-prizm,56,Laundry Tag NFL Shield,false,1,Rhamondre Stevenson
+insert-sparks-prizm,56,Laundry Tag Nike Swoosh,false,1,Rhamondre Stevenson
+insert-sparks-prizm,57,,false,,Tyjae Spears
+insert-sparks-prizm,57,White Prizms,false,75,Tyjae Spears
+insert-sparks-prizm,57,Tie-Dye Prizms,false,25,Tyjae Spears
+insert-sparks-prizm,57,Gold Prizms,false,10,Tyjae Spears
+insert-sparks-prizm,57,Green Prizms,false,5,Tyjae Spears
+insert-sparks-prizm,57,Laundry Tag NFL Player's Logo,false,1,Tyjae Spears
+insert-sparks-prizm,57,Laundry Tag NFL Shield,false,1,Tyjae Spears
+insert-sparks-prizm,57,Laundry Tag Nike Swoosh,false,1,Tyjae Spears
+insert-sparks-prizm,58,,false,,Kerby Joseph
+insert-sparks-prizm,58,White Prizms,false,75,Kerby Joseph
+insert-sparks-prizm,58,Tie-Dye Prizms,false,25,Kerby Joseph
+insert-sparks-prizm,58,Gold Prizms,false,10,Kerby Joseph
+insert-sparks-prizm,58,Green Prizms,false,5,Kerby Joseph
+insert-sparks-prizm,58,Laundry Tag NFL Player's Logo,false,1,Kerby Joseph
+insert-sparks-prizm,58,Laundry Tag NFL Shield,false,1,Kerby Joseph
+insert-sparks-prizm,58,Laundry Tag Nike Swoosh,false,1,Kerby Joseph
 insert-alter-ego,1,,false,,Travis Kelce
 insert-alter-ego,1,Gold Prizm,false,10,Travis Kelce
 insert-alter-ego,1,Black Prizm,false,1,Travis Kelce

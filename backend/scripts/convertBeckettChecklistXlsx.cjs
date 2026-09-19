@@ -626,9 +626,48 @@ function classifySections(sections) {
     // already carries that vocabulary for ladder lines; a section header
     // just is a longer line to test it against.
     const looksLikeFinishName = (cand) => FINISH_WORD.test(cand.section);
+    // CF-BECKETT-THE-ROSTER-DECIDES-THE-EXPLICIT-ANCHOR-FOLD-TOO (2026-09-19).
+    // looksLikeFinishName narrowed the bypass from "any explicitAnchor" to
+    // "an explicitAnchor whose CANDIDATE section merely contains a finish
+    // word" -- but a finish word in a section's own name is not proof the
+    // section IS a finish/rung rather than an independently named insert
+    // product that happens to be printed in that finish. 2024 Panini Select
+    // Football's Memorabilia sheet lists "Draft Selections Memorabilia
+    // Prizm" (25 cards, #1-25), "Jumbo Rookie Swatch Prizm" (42, #1-42),
+    // "Rookie Swatches Prizm" (25, #1-25) and "Sparks Prizm" (58, #1-58) --
+    // four already-registered named insert products whose own numbering is a
+    // 100% SUBSET of Base>Base Concourse's #1-100 range, so looksLikeFinishName
+    // (true: each contains "Prizm") plus the numeric-overlap test alone was
+    // enough to fold all four onto Base Concourse as fabricated parallel
+    // names ("parallel=Draft Selections Memorabilia Prizm" on a base row),
+    // when their ACTUAL rosters disagree with Concourse card-for-card
+    // (measured: Base Concourse #1 = Tory Taylor; the four sections' own #1 =
+    // Caleb Williams / Adonai Mitchell / Caleb Williams / Kurt Warner) --
+    // 150 rows, plus 832 id collisions downstream. rosterFoldAgainst already
+    // exists and already correctly reports disagree > 0 for this exact
+    // pairing; this bypass just never consulted it, unlike the roster-fold
+    // pass much further down in this same function.
+    //
+    // Doctrine: "the roster decides" (R67, and CF-A-NAMED-INSERT-SET-IS-ITS-
+    // OWN-CARD-SET before it). A colour/finish rung is a parallel of its
+    // anchor only when it reprints the anchor's own roster; a named insert
+    // set is its own card set whatever finish word its title happens to use.
+    // So the explicitAnchor+FINISH_WORD bypass now additionally requires
+    // rosterFoldAgainst to find at least one shared number and ZERO
+    // disagreements -- the identical bar the nameless-section roster-fold
+    // pass already holds itself to. "International Refractors" on Bowman
+    // Chrome and "Chrome Prospect Packfractor Autographs" both still clear
+    // this (their rosters, where numbers overlap the anchor at all, agree);
+    // Select's four Memorabilia sections do not, and fall through to
+    // own-cards under their own registered category exactly as intended.
+    const rosterAgreesWithAnchor = (cand, anchor) => {
+      const fold = rosterFoldAgainst(cand, anchor);
+      return fold.shared > 0 && fold.disagree === 0;
+    };
     const candidates = anchors.filter((a) =>
       a !== sec && isAutoSection(a) === isAutoSection(sec) &&
-      ((a.explicitAnchor && looksLikeFinishName(sec)) || extendsName(sec, a)));
+      ((a.explicitAnchor && looksLikeFinishName(sec) && rosterAgreesWithAnchor(sec, a)) ||
+        extendsName(sec, a)));
     let best = null;
     for (const a of candidates) {
       const hit = [...sec.numbers].filter((n) => a.numbers.has(n)).length;
@@ -767,6 +806,56 @@ function classifySections(sections) {
   return report;
 }
 
+// CF-BECKETT-A-SHEET-THAT-EMITS-NOTHING-IS-A-FAILURE-NOT-A-QUIET-SUCCESS
+// (2026-09-19). Three converter defects found by this same audit
+// (CF-BECKETT-BASE-SHEET-IS-NOT-ONE-SECTION, the count-line/ladder-prose
+// defects, this file's own stated-range-header fix) all share one shape:
+// something makes main() silently emit FEWER rows than the sheet actually
+// has, and the run still exits 0 with a plausible-looking row count. A long-
+// standing further suspicion, never yet measured against a live workbook:
+// Beckett could print the PLAYER in column C rather than column B (row[1])
+// for some sheet, and every row on it would silently fail the `!player`
+// test in main()'s pass 1 and vanish -- zero cards from a sheet that looks,
+// to a human, exactly as populated as every other one.
+//
+// A row is "data-looking" when it is a real multi-cell row (not a header,
+// not inside a ladder, not a count line) whose own first cell reads like a
+// card number -- alphanumeric, no spaces, not a bare finish/parallel word.
+// This is deliberately looser than looksLikeCardNumber-style parsers
+// elsewhere in the repo: it only needs to prove "Beckett put something
+// row-shaped here", not decide whether it truly is one, so a false positive
+// here (counting a row that in fact was not a card) only makes the guard
+// MORE willing to fire, never less.
+const DATA_LOOKING_NUMBER = /^[A-Za-z0-9][A-Za-z0-9-]*$/;
+
+/** Count of "data-looking" rows on a raw (unfiltered) sheet -- the same
+ *  count the CF-BECKETT-A-SHEET-THAT-EMITS-NOTHING-IS-A-FAILURE guard in
+ *  main() compares against how many of that sheet's rows actually became
+ *  card records, to catch a column-shift or similar defect that would
+ *  otherwise silently zero out a whole sheet while the run still exits 0.
+ *  Exported so a fixture can exercise the guard directly without needing a
+ *  whole malformed xlsx. */
+function countDataLookingRows(rows) {
+  let inLadder = false;
+  let count = 0;
+  for (const row of rows) {
+    if (!nonEmpty(row)) continue;
+    if (isCountLine(row)) continue;
+    if (nonEmpty(row) === 1 && row[0]) {
+      const cell = String(row[0]).trim();
+      if (LADDER_HEAD.test(cell)) { inLadder = true; continue; }
+      if (PLACEHOLDER.test(cell)) continue;
+      if (inLadder) continue; // a rung or unnameable ladder prose, not a card
+      inLadder = false;
+      continue; // a section header
+    }
+    inLadder = false;
+    const a = String(row[0] || "").trim();
+    if (a && DATA_LOOKING_NUMBER.test(a)) count++;
+  }
+  return count;
+}
+
 // CF-THE-LADDER-IS-A-LADDER-NOT-A-SECTION (Drew, 2026-08-26).
 //
 // A single populated cell is treated as a section header, and a Beckett sheet
@@ -894,8 +983,14 @@ function main() {
   // ---- pass 1: read every row, remembering which section it came from -----
   const records = [];
   const sections = new Map();   // "sheet>section" -> section descriptor
+  // CF-BECKETT-A-SHEET-THAT-EMITS-NOTHING-IS-A-FAILURE-NOT-A-QUIET-SUCCESS
+  // (2026-09-19). sheet name -> { dataLooking, emitted }, checked once pass 1
+  // finishes (see the guard after this loop, and countDataLookingRows above
+  // for what "data-looking" means).
+  const sheetEmitCounts = new Map();
   for (const [name, rows] of Object.entries(sheets)) {
     if (isSupersetSheet(name)) continue;
+    sheetEmitCounts.set(name, { dataLooking: countDataLookingRows(rows), emitted: 0 });
     let section = name;
     // Every OTHER header on this sheet, computed once, so
     // stripChecklistSuffix can ask "do this sheet's siblings carry the same
@@ -911,6 +1006,63 @@ function main() {
     // The ladder belongs to the section it sits under, and resets with it.
     let inLadder = false;
     let pendingLadder = [];
+    // CF-BECKETT-A-STATED-RANGE-HEADER-MUST-MATCH-ITS-OWN-CARDS (2026-09-19).
+    // 2024 Panini Illusions Football's Base sheet lists TWO section headers
+    // back-to-back -- "Base Set", then (with no card row between them)
+    // "First Impressions Autographed Memorabilia - #101-142" and its own
+    // eleven-rung "Parallels:" block -- before card #1 ever appears:
+    //
+    //     Base Set
+    //     136 cards.
+    //     First Impressions Autographed Memorabilia - #101-142   <- premature
+    //     Parallels:                 <- this ladder is BASE SET's own Trophy
+    //     Dots Trophy Collection         Collection ladder, not the auto
+    //     ... (19 rungs) ...             section's -- it sits where it does
+    //     1   Kyler Murray                only because Beckett announced the
+    //     ...                             next section's NAME early.
+    //     100 J.J. McCarthy
+    //     First Impressions Autographed Memorabilia   <- the SAME section,
+    //     Parallels:                                     named again, for real
+    //     Bronze - /299 (...)                            this time
+    //     ...
+    //     101 Michael Penix Jr.        <- NOW the autographed run's own cards
+    //
+    // The unconditional `section = cell` assignment overwrote "Base Set" the
+    // moment the second header was read, so the 100 plain base cards that
+    // followed were filed under the autograph section instead -- isAuto=true
+    // on 100 unsigned cards, the exact defect class this whole file exists to
+    // catch, just found in the header tracker rather than in categoryFor.
+    //
+    // THE FIX IS NARROW AND EVIDENCE-BASED, NOT "a header only counts once
+    // the current one has cards" -- that general rule was tried first and
+    // broke five committed, already-measured-clean workbooks. 2026 Topps
+    // Series 1 Baseball's Variations sheet has the IDENTICAL shape --
+    // "Base - Clear Variation" / "100 cards" / "Hobby Exclusive" / [cards
+    // 1-100] -- where the SECOND header, not the first, is the one whose
+    // cards these are (Hobby Exclusive is a genuine same-roster parallel of
+    // Base Set); a general "prefer the earlier still-open header" rule gets
+    // Illusions right and Series 1 wrong using the exact same row shape, so
+    // shape alone cannot decide this. The one piece of evidence Beckett
+    // actually prints that DOES decide it: "First Impressions Autographed
+    // Memorabilia - #101-142" states its own numbering range in its own
+    // text, and the cards that immediately follow (#1-100) fall OUTSIDE that
+    // stated range -- proof this header does not own them, whatever section
+    // is genuinely open when it's announced. "Hobby Exclusive" and "Base -
+    // Clear Variation" state no range at all and are untouched by this
+    // check.
+    //
+    // A header matching RANGE_PREVIEW_LINE (already defined above for the
+    // adjacent-pair case) is held PENDING rather than committed immediately.
+    // The next actual card row decides it: if the card's own number falls
+    // inside the header's stated range, the header commits (this is why the
+    // SECOND "First Impressions Autographed Memorabilia" -- Illusions row
+    // 134, this time with no range suffix at all -- is unaffected: it isn't
+    // range-shaped, so it commits immediately as it always did). If the
+    // number falls OUTSIDE the stated range, the header is a premature
+    // announcement: it is discarded, the section already open (and its
+    // ladder) stays in force, and the card row is read against THAT section
+    // instead -- exactly `section`'s pre-existing value, never overwritten.
+    let pendingRangeHeader = null; // { name, lo, hi } | null
     for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
       const row = rows[rowIndex];
       if (!nonEmpty(row)) continue;
@@ -949,9 +1101,22 @@ function main() {
           // recoverable; the section-name theft was not.
           continue;
         }
+        const rangeMatch = /^(.*\S)\s*[–—-]\s*#\s*(\d+)\s*-\s*(\d+)\s*$/.exec(cell);
+        if (rangeMatch) {
+          // Held pending, not committed -- see CF-BECKETT-A-STATED-RANGE-
+          // HEADER-MUST-MATCH-ITS-OWN-CARDS above. `section`, `pendingLadder`
+          // and `inLadder` are all left exactly as they are; only the NEXT
+          // card row's own number decides whether this header was real.
+          pendingRangeHeader = {
+            name: stripChecklistSuffix(rangeMatch[1].trim(), siblingSectionNames, masterNames),
+            lo: Number(rangeMatch[2]), hi: Number(rangeMatch[3]),
+          };
+          continue;
+        }
         section = stripChecklistSuffix(cell, siblingSectionNames, masterNames);
         inLadder = false;
         pendingLadder = [];
+        pendingRangeHeader = null;
         continue;
       }
       // A card row closes the ladder: everything after it belongs to the cards.
@@ -959,6 +1124,29 @@ function main() {
       const cardNumber = String(row[0] || "").trim();
       let player = String(row[1] || "").replace(/,\s*$/, "").trim();
       if (!cardNumber || !player) continue;
+      // Counted here, before the pendingRangeHeader/League-Leaders-merge
+      // logic below -- this is "did the sheet yield a real card row at
+      // all", not a dedup-accurate final count, which is exactly what CF-
+      // BECKETT-A-SHEET-THAT-EMITS-NOTHING-IS-A-FAILURE needs to compare
+      // against countDataLookingRows.
+      sheetEmitCounts.get(name).emitted++;
+      if (pendingRangeHeader) {
+        // A card number is not always purely numeric (Illusions itself mixes
+        // in alpha-prefixed rows elsewhere), so only a row that parses as a
+        // plain integer can be tested against the stated range at all; a
+        // non-numeric number is neither confirming nor refuting evidence and
+        // is treated the same as a mismatch -- absent beats wrong.
+        const n = Number(cardNumber);
+        if (Number.isFinite(n) && n >= pendingRangeHeader.lo && n <= pendingRangeHeader.hi) {
+          section = pendingRangeHeader.name;
+          pendingLadder = [];
+        }
+        // Whether confirmed or refused, the pending header is resolved --
+        // either it committed above, or it is discarded and `section` (and
+        // whatever ladder was already accumulating under it) stays exactly
+        // as it was before this header line was ever read.
+        pendingRangeHeader = null;
+      }
       // An RC flag sits in a later column; the repo's CSV convention folds it
       // into the player field ("Jacob Wilson RC").
       if (row.slice(2).some((c) => /^RC$/i.test(String(c || "").trim()))) player += " RC";
@@ -1039,6 +1227,39 @@ function main() {
       records.push({ sectionKey: key, cardNumber: cardNumber, player: player });
       sec.lastRecordIndex = records.length - 1;
     }
+  }
+
+  // CF-BECKETT-A-SHEET-THAT-EMITS-NOTHING-IS-A-FAILURE-NOT-A-QUIET-SUCCESS
+  // (2026-09-19). A sheet with plenty of data-looking rows that nonetheless
+  // emitted zero (or fewer than half) of them as real card rows is not a
+  // clean, sparse sheet -- it is the shape a column-shift defect (the long-
+  // standing "player printed in column C" suspicion, never yet measured
+  // against a live workbook, but the same failure class as the count-line
+  // and ladder-prose defects this file already fixed) would produce: every
+  // row silently fails `!player` and vanishes while the run still exits 0
+  // with a plausible-looking total row count. FAIL LOUDLY here instead of
+  // letting that possibility hide behind a smaller, still-plausible number.
+  // The threshold (>=10 data-looking rows, <50% emitted) is deliberately
+  // generous -- a genuinely thin, correctly-read sheet (five-card insert,
+  // a handful of case hits) must never trip this, only a sheet that looks
+  // substantial and came back empty or nearly so.
+  const emptySheets = [];
+  for (const [name, counts] of sheetEmitCounts) {
+    if (counts.dataLooking >= 10 && counts.emitted < counts.dataLooking * 0.5) {
+      emptySheets.push({ sheet: name, dataLooking: counts.dataLooking, emitted: counts.emitted });
+    }
+  }
+  if (emptySheets.length) {
+    for (const s of emptySheets) {
+      console.error(
+        `FATAL: sheet "${s.sheet}" looks like it has ${s.dataLooking} card rows but only ` +
+        `${s.emitted} were read as cards (player column empty, or some other column-shape ` +
+        `mismatch). Refusing to emit a plausible-looking row count from a sheet this ` +
+        `under-read -- see CF-BECKETT-A-SHEET-THAT-EMITS-NOTHING-IS-A-FAILURE-NOT-A-QUIET-` +
+        `SUCCESS in convertBeckettChecklistXlsx.cjs.`);
+    }
+    process.exitCode = 3;
+    return { emptySheets };
   }
 
   // ---- pass 2: which sections are parallels of which anchors? -------------
@@ -1193,4 +1414,5 @@ module.exports = {
   stripChecklistSuffix, masterCardSetNames, sheetSectionHeaderNames,
   normalizeRosterPlayer, rosterFoldAgainst,
   rangePreviewLineIndices, RANGE_PREVIEW_LINE,
+  countDataLookingRows,
 };
