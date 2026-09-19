@@ -271,6 +271,57 @@ function candidateSpec(sport, year, umbrella, target) {
 }
 
 /**
+ * True when moveCatalogRow's own `buildIncoming` -> `deriveCatalogEntry` ->
+ * `computeHobbyIqCardId` would throw "unnumbered card has no player to
+ * identify it" for this row -- CF-CATCH-THE-REFUSAL-BEFORE-THE-MOVER
+ * (2026-09-19 hockey pilot, run 35459648728).
+ *
+ * MEASURED AGAINST THE REAL DIST, not assumed from reading the source: this
+ * lane's one FAILURE (`hiq:hockey:2022:upper-deck:nno:base:no-auto`) was
+ * reproduced against the actual compiled moveCatalogRow, and the row's
+ * playerName field turned out NOT to matter -- `deriveCatalogEntry`
+ * (cardCatalog.service.ts) builds the object it hands to
+ * `computeHobbyIqCardId` WITHOUT a `playerName` key at all (confirmed by
+ * instrumenting dist/services/portfolioiq/hobbyIqCardId.service.js: the
+ * function receives `components.playerName === undefined` on every call
+ * `deriveCatalogEntry` makes, even when the row's own playerName field names
+ * a real person like "Connor Bedard"). So `unnumberedCardSegment` always
+ * receives `undefined`, its own `if (!raw) return null;` guard fires every
+ * time, and `computeHobbyIqCardId` throws for EVERY unnumbered (`nno`-shaped)
+ * cardNumber that reaches this path -- not only the ones whose playerName
+ * genuinely names no person. This is a real defect in deriveCatalogEntry
+ * (playerName should be threaded through), but it lives in the canonical
+ * constructor every catalog writer calls, is out of this PR's scope (own
+ * clone, this lane's file only, per the task's own rules), and changing it
+ * would change behaviour for every other caller of moveCatalogRow and
+ * deriveCatalogEntry, not just this lane.
+ *
+ * So the refusal this lane can safely and correctly predict TODAY is exactly
+ * "isUnnumberedCardNumber(cardNumber)" -- reusing the id service's OWN
+ * exported predicate rather than a hand-rolled `nno` regex, so it tracks the
+ * real vocabulary (`nno`, `no-number`, `nonumber`, `n-a`, `na`, `none`,
+ * `unnumbered`) if that set ever changes. If deriveCatalogEntry is ever fixed
+ * to pass playerName through, some of these rows would then successfully
+ * resolve to `player-<name>` and this predicate would become OVER-WIDE
+ * (refusing rows that would actually move) rather than wrong in the unsafe
+ * direction -- a REFUSAL that turns out unnecessary loses nothing a REPORT
+ * did not already flag for a human to look at, while a thrown row that
+ * aborts the whole run loses the rest of the scope. The over-refuse direction
+ * is the safe one to leave standing.
+ *
+ * A row this returns true for is not a lane failure: it is a row this lane
+ * cannot safely move (its own id grammar refuses to name it), and is counted
+ * as a named REFUSAL (`unnumbered-no-player`) rather than thrown at
+ * moveCatalogRow. Every OTHER exception moveCatalogRow can still throw
+ * (a malformed slug, a graded/card address mismatch, a genuine cross-product
+ * guard trip) is not this shape and must still fail the row and the run.
+ */
+function isUnnumberedNoPlayerRow(row, deps) {
+  const cardNumber = String(row.cardNumber ?? "").trim().toUpperCase();
+  return deps.isUnnumberedCardNumber(cardNumber);
+}
+
+/**
  * Plan a single row: the newId it should adopt, or a refusal reason. Pure --
  * no I/O -- so it is unit-testable without a fake container. `deps` are the
  * canonical helpers loaded from dist (or src in tests), per
@@ -323,6 +374,28 @@ function planRow(row, deps) {
       detail: `id segment "${idSetKey}" is neither the target "${setKey}" nor its registered parent "${deps.expectedIdSegment}" -- a different drift than this lane fixes`,
     };
   }
+  // CF-CATCH-THE-REFUSAL-BEFORE-THE-MOVER (2026-09-19 hockey pilot,
+  // run 35459648728). An unnumbered (`nno`) row whose playerName names no
+  // person has an UNDERIVABLE id under CF-PLAYER-IS-THE-NUMBER -- the exact
+  // shape moveCatalogRow's own buildIncoming -> deriveCatalogEntry ->
+  // computeHobbyIqCardId has always thrown on. Caught HERE, before the mover
+  // is ever called, using the id service's OWN exported predicate (never a
+  // string match on the thrown message): this is a row this lane cannot
+  // safely move, not a lane failure, so it is a named REFUSAL rather than a
+  // thrown exception that would abort the whole run.
+  //
+  // Optional so planRow stays callable (and testable) without it, the same
+  // contract deps.expectedIdSegment already has -- a caller that omits it
+  // gets today's behaviour (moveCatalogRow itself would still refuse to mint
+  // the id; only the NAMED, pre-mover refusal is skipped).
+  if (typeof deps.isUnnumberedNoPlayerRow === "function" && deps.isUnnumberedNoPlayerRow(row)) {
+    return {
+      action: "refuse",
+      reason: "unnumbered-no-player",
+      detail: `cardNumber "${row.cardNumber ?? ""}" is unnumbered and playerName "${row.playerName ?? ""}" names no person -- `
+        + `identity is UNDERIVABLE (hobbyiq-cardid: unnumbered card has no player to identify it)`,
+    };
+  }
   const newId = withOwnSetKeySegment(id, setKey);
   if (!newId) return { action: "refuse", reason: "segment-parse-failed", detail: `could not build newId for ${id}` };
   return { action: "move", newId, oldSetKeySegment: idSetKey, setKey };
@@ -366,12 +439,17 @@ async function main() {
   const { productParentOf, productSetKeys } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+  const { isUnnumberedCardNumber } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 
   const registeredSetKeys = new Set(productSetKeys());
   // `expectedIdSegment` is set per-target inside the scan loop (each target
   // setKey has its own registered parent/umbrella); this base object is
   // spread with it there, per row batch.
-  const baseDeps = { catalogAuthorityOf, registeredSetKeys };
+  const baseDeps = {
+    catalogAuthorityOf,
+    registeredSetKeys,
+    isUnnumberedNoPlayerRow: (row) => isUnnumberedNoPlayerRow(row, { isUnnumberedCardNumber }),
+  };
 
   // Every target setKey must be a REGISTERED product with a known umbrella
   // (productParentOf) -- "which umbrella does this sub-brand belong to?" is a
@@ -416,7 +494,7 @@ async function main() {
   const s = {
     scanned: 0, otherShard: 0, moved: 0, gradedMoved: 0, alreadyMatches: 0,
     targetExists: 0, notChecklist: 0, unregisteredSetKey: 0, segmentParseFailed: 0,
-    notOneLevelDrift: 0,
+    notOneLevelDrift: 0, unnumberedNoPlayer: 0,
     salesRepointed: 0, salesRelocated: 0, salesRelocateFailed: 0,
     gradedChildrenRetired: 0, holdingsRepointed: 0, holdingsWalked: 0, holdingDocsWalked: 0,
     failed: 0, notReached: 0,
@@ -426,7 +504,7 @@ async function main() {
   const bySource = new Map();
   const refusals = {
     "not-checklist-authority": [], "unregistered-setkey": [], "segment-parse-failed": [],
-    "target-exists": [], "not-one-level-drift": [],
+    "target-exists": [], "not-one-level-drift": [], "unnumbered-no-player": [],
   };
   const examples = [];
   const failures = [];
@@ -538,23 +616,56 @@ async function main() {
     return { ok: !anyFailed, failures: localFailures, relocated: n };
   }
 
+  // ── PHASE 1: candidate scan, one (sport:year, target setKey) cell at a
+  // time. THROUGHPUT (2026-09-19, follow-up to run 35459648728: 42,923 rows
+  // scanned in 110 minutes ~= 6.5 rows/s). Measured, not guessed: the pilot
+  // scoped 8 scope cells x 30 target setKeys = 240 (cell, target) pairs, and
+  // its own `by setKey`/`by year` breakdown shows only ~85 of those 240 pairs
+  // ever matched a row (17 setKeys x up to 5 of the 8 scoped years) -- the
+  // other ~155 pairs still paid one full `candidateSpec` scan apiece (a
+  // STARTSWITH-prefixed, cross-partition query against card_catalog, which
+  // partitions on /cardId and has no cardId equality in this predicate) with
+  // NOTHING to show for it, and every one of those scans ran fully
+  // SEQUENTIALLY -- CONCURRENCY (already used below, for the per-row
+  // moveCatalogRow batch) was never applied here at all. That serial,
+  // mostly-empty scanning phase is the dominant, easily-fixed cost this
+  // lane's own code controls without touching moveCatalogRow's write-ordered
+  // sequence (a shared primitive many other lanes also call, and not this
+  // PR's to restructure).
+  //
+  // THE FIX stays inside this lane: every (cell, target) pair's candidate
+  // scan is read-only and independent of every other pair's -- nothing about
+  // scanning pair B depends on what pair A found -- so they are launched
+  // CONCURRENCY-at-a-time via the same bounded batching already used for the
+  // per-row move loop below. Row PROCESSING (the loop that calls
+  // moveCatalogRow, including every write under APPLY) is completely
+  // unchanged and still runs one pair at a time, in scope order, exactly as
+  // before -- only the read-only scan that finds each pair's rows is
+  // parallelized across pairs.
+  const cells = [];
   for (const cell of SCOPE_CELLS) {
-    if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
     const [sport, yearStr] = cell.split(":");
     const year = Number(yearStr);
+    for (const target of SET_KEYS) cells.push({ cell, sport, year, target });
+  }
 
-    for (const target of SET_KEYS) {
-      if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
+  const scanned = new Map(); // "cell|target" -> { rows, umbrella, deps }
+  for (let i = 0; i < cells.length; i += CONCURRENCY) {
+    if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
+    await Promise.all(cells.slice(i, i + CONCURRENCY).map(async ({ cell, sport, year, target }) => {
+      if (CLOCK.outOfClock()) { stoppedAtBudget = true; return; } // checked again per-pair: a slow neighbour in this batch must not admit one more scan past budget
       const umbrella = targetUmbrella.get(target);
       const spec = candidateSpec(sport, year, umbrella, target);
-      // SHOULD-FIX 5: the umbrella THIS target was selected under is the only
-      // id segment this lane's ruling covers -- a one-level drift, never a
-      // general "make the id agree with the field" repair. See planRow's doc.
       const deps = { ...baseDeps, expectedIdSegment: umbrella };
-
       const rows = [];
       await forEachPage(cat, spec, async (page) => {
         for (const r of page) {
+          // Preserved from the pre-fix scan loop: a page mid-scan when the
+          // budget expires stops paging THIS pair immediately rather than
+          // draining every remaining page first. Rows already pushed for this
+          // pair still get processed in phase 2; nothing scanned is thrown
+          // away, only the rest of this pair's OWN pages (and every pair
+          // after it in this concurrent batch) are cut short.
           if (CLOCK.outOfClock()) { stoppedAtBudget = true; return false; }
           s.scanned++;
           if (SHARD_SCOPE.SHARDED && shardOf(String(r.id)) !== SHARD_SCOPE.SLOT) { s.otherShard++; continue; }
@@ -562,6 +673,23 @@ async function main() {
         }
         return true;
       });
+      scanned.set(`${cell}|${target}`, { rows, deps });
+    }));
+  }
+
+  // ── PHASE 2: row processing, one (cell, target) pair at a time, in scope
+  // order -- UNCHANGED from before this fix. This is where every write lives
+  // (moveCatalogRow, holdings re-point), so it keeps the exact ordering and
+  // budget/LIMIT checks the lane always had; only phase 1 above got faster.
+  for (const cell of SCOPE_CELLS) {
+    if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
+    const year = Number(cell.split(":")[1]);
+
+    for (const target of SET_KEYS) {
+      if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
+      const found = scanned.get(`${cell}|${target}`);
+      if (!found) continue; // budget ran out mid-scan before this pair was reached; nothing to report as notReached -- it was never scanned, not skipped
+      const { rows, deps } = found;
 
       for (let i = 0; i < rows.length; i += CONCURRENCY) {
         if (CLOCK.outOfClock()) { stoppedAtBudget = true; s.notReached += rows.length - i; break; }
@@ -573,6 +701,7 @@ async function main() {
             if (plan.reason === "not-checklist-authority") s.notChecklist++;
             else if (plan.reason === "unregistered-setkey") s.unregisteredSetKey++;
             else if (plan.reason === "not-one-level-drift") s.notOneLevelDrift++;
+            else if (plan.reason === "unnumbered-no-player") s.unnumberedNoPlayer++;
             else s.segmentParseFailed++;
             const list = refusals[plan.reason];
             if (list) list.push(`  ${row.id}  [${row.source}]  ${plan.detail}`);
@@ -666,8 +795,9 @@ async function main() {
   console.log(`  REFUSED: unregistered setKey                 ${f(s.unregisteredSetKey)}`);
   console.log(`  REFUSED: segment parse failed                ${f(s.segmentParseFailed)}`);
   console.log(`  REFUSED: not a one-level drift                ${f(s.notOneLevelDrift)}   <- id segment names neither the target nor its registered parent`);
+  console.log(`  REFUSED: unnumbered, no player to identify it ${f(s.unnumberedNoPlayer)}   <- CF-PLAYER-IS-THE-NUMBER: id would be UNDERIVABLE; not a lane failure`);
   console.log(`  failed                                       ${f(s.failed)}`);
-  if (s.notReached) console.log(`  not reached                                   ${f(s.notReached)}`);
+  if (s.notReached) console.log(`  not reached                                   ${f(s.notReached)}   <- budget or LIMIT stopped this cell before its batch reached these rows`);
   console.log("");
   console.log(`  sales ${APPLY ? "re-pointed" : "would re-point"} (patch, moveCatalogRow)   ${f(s.salesRepointed)}`);
   console.log(`  sales ${APPLY ? "relocated" : "would relocate"} (re-key, partition-keyed)  ${f(s.salesRelocated)}`);
@@ -712,7 +842,7 @@ async function main() {
   const written = s.moved;
   const skipped = s.alreadyMatches + s.otherShard + s.notReached
     + s.targetExists + s.notChecklist + s.unregisteredSetKey + s.segmentParseFailed
-    + s.notOneLevelDrift;
+    + s.notOneLevelDrift + s.unnumberedNoPlayer;
   const intended = s.scanned;
   console.log("");
   console.log(`  reconciled: intended ${f(intended)} = written ${f(written)} + skipped ${f(skipped)} + failed ${f(s.failed)}`
@@ -770,7 +900,7 @@ async function main() {
   }
 }
 
-module.exports = { planRow, idParts, withOwnSetKeySegment, candidateSpec, INHERITED_SCOPES, CELL_RE, WILDCARDS };
+module.exports = { planRow, idParts, withOwnSetKeySegment, candidateSpec, INHERITED_SCOPES, CELL_RE, WILDCARDS, isUnnumberedNoPlayerRow };
 
 if (require.main === module) {
   main()
