@@ -312,16 +312,54 @@ describe("revert-set-sport-repair -- guards and refusals", () => {
     expect(r.led.salesDeletes).toContain("same-sale");
   });
 
-  it("REFUSES (guard-parked) when the restored hobbyiqCardIdBefore is malformed", () => {
-    const row = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-malformed", hobbyiqCardIdBefore: "hiq:notasport::garbage" };
-    // 'all-repaired' scope: the malformed *Before id cannot be parsed into a
-    // setKey|year cell (cellOf returns null), so a cell-scoped dispatch would
-    // never reach this row at all -- the whole point of this fixture is the
-    // GUARD firing on a row this lane DOES reach.
-    const r = drive({ SCOPE: "all-repaired", BACKFILL_APPLY: "true" }, { sales: [row] });
+  it("REFUSES (guard-parked) when the restored id is well-formed enough to reconstruct but the write-door guard still rejects it", () => {
+    // An EMPTY card-number segment: 7 segments so reSportSlug (this lane's
+    // own rekeyed-since reconstruction) accepts it and current == the
+    // reconstruction (untouched since the repair, so rekeyed-since does NOT
+    // fire) -- but splitIdentityWriteGuard's addressDefect refuses to write
+    // an address with an empty slug segment. This is the guard catching what
+    // this lane's OWN reconstruction check cannot: a malformed id the repair
+    // itself apparently wrote (or a row corrupted some other way) that still
+    // happens to satisfy "segment 1 swapped, everything else byte-identical".
+    const row = {
+      ...WRONG_FLIP_PATCH_SHAPE, id: "s-malformed",
+      sport: "baseball", hobbyiqCardId: "hiq:baseball:1988:fleer::base:no-auto",
+      hobbyiqCardIdBefore: "hiq:basketball:1988:fleer::base:no-auto",
+    };
+    const r = drive({ SCOPE: "fleer|1988", BACKFILL_APPLY: "true" }, { sales: [row] });
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/REFUSED: guard-parked\s+1/);
     expect(r.led.salesPatches.length).toBe(0);
+  });
+
+  it("LEAVEs (rekeyed-since) the exact Jordan :23 interleaving -- a later checklist-numbered repoint added a :num-N tail within the wrong sport", () => {
+    const patchShape = {
+      id: "s-jordan-patch", cardId: "vendor-jordan",
+      sport: "baseball", hobbyiqCardId: "hiq:baseball:1988:fleer:17:base:no-auto:num-23",
+      sportBefore: "basketball", hobbyiqCardIdBefore: "hiq:basketball:1988:fleer:17:base:no-auto",
+      setSportRepairedAt: "2026-08-20T21:58:48.718Z",
+      title: "1988-89 FLEER MICHAEL JORDAN PSA 10 GEM MT #17 CHICAGO BULLS RARE GOAT !!",
+    };
+    const relocateShape = {
+      id: "s-jordan-relocate", cardId: "hiq:baseball:1988:fleer:17:base:no-auto:num-23",
+      sport: "baseball", hobbyiqCardId: "hiq:baseball:1988:fleer:17:base:no-auto:num-23",
+      sportBefore: "basketball", hobbyiqCardIdBefore: "hiq:basketball:1988:fleer:17:base:no-auto",
+      setSportRepairedAt: "2026-08-20T21:58:48.718Z",
+      title: "1988-89 FLEER MICHAEL JORDAN PSA 10 GEM MT #17 CHICAGO BULLS RARE GOAT !!",
+    };
+    const fixture = { sales: [patchShape, relocateShape] };
+
+    const report = drive({ SCOPE: "fleer|1988" }, fixture);
+    const apply = drive({ SCOPE: "fleer|1988", BACKFILL_APPLY: "true" }, fixture);
+
+    expect(report.code).toBe(0);
+    expect(apply.code).toBe(0);
+    expect(report.out).toMatch(/LEAVE: rekeyed-since\s+2/);
+    expect(apply.out).toMatch(/LEAVE: rekeyed-since\s+2/);
+    // REPORT==APPLY parity holds for this bucket too, and neither writes.
+    expect(report.led.salesPatches.length).toBe(0);
+    expect(apply.led.salesPatches.length).toBe(0);
+    expect(apply.led.salesUpserts.length).toBe(0);
   });
 });
 

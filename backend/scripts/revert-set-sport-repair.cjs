@@ -213,6 +213,32 @@ function cellOf(hobbyiqCardIdBefore) {
 }
 
 /**
+ * EXACT MIRROR of repair-set-sport.cjs's own `reSportSlug` (read from that
+ * file, 2026-09-19, to answer the review's BLOCKER 1 exactly rather than
+ * guess): the repair swapped ONLY segment 1 (sport) of the hiq slug,
+ * byte-preserving every other segment --
+ *
+ *   function reSportSlug(slug, toSport) {
+ *     const p = String(slug).split(":");
+ *     if (p.length < 7 || p[0] !== "hiq") return null;
+ *     p[1] = toSport;
+ *     return p.join(":");
+ *   }
+ *
+ * and its APPLY loop wrote exactly `{ sportBefore: fromSport,
+ * hobbyiqCardIdBefore: from, sport: toSport, hobbyiqCardId: to }` with
+ * `to = reSportSlug(from, toSport)` -- NO separate `*After` field and NO
+ * ledger records the after-value directly, so the after-value the repair
+ * wrote is fully reconstructible from hobbyiqCardIdBefore + the sport it
+ * flipped to, and nothing else. This is that reconstruction. */
+function reSportSlug(slug, toSport) {
+  const p = String(slug ?? "").split(":");
+  if (p.length < 7 || p[0] !== "hiq") return null;
+  p[1] = toSport;
+  return p.join(":");
+}
+
+/**
  * Pure per-row decision -- no I/O -- so REPORT and APPLY run the EXACT same
  * logic and a test can assert REPORT's counts equal APPLY's on one fixture.
  *
@@ -227,10 +253,20 @@ function planRow(doc) {
   const sportBefore = str(doc.sportBefore);
   const hobbyiqCardIdBefore = str(doc.hobbyiqCardIdBefore);
   const currentSport = str(doc.sport);
-  const currentHiq = str(doc.hobbyiqCardId ?? doc.cardId);
+  const currentHiq = str(doc.hobbyiqCardId);
+  const cardId = str(doc.cardId);
 
   if (!sportBefore || !hobbyiqCardIdBefore) {
     return { action: "leave", reason: "malformed-before-id", detail: "sportBefore or hobbyiqCardIdBefore missing on a row carrying setSportRepairedAt" };
+  }
+
+  // ── DEFENSIVE REFUSAL (review HIGH 2 follow-up): hobbyiqCardId itself is
+  // missing or empty. This must never silently fall through to reasoning
+  // about cardId in its place -- cardId can be a vendor partition key that
+  // looks nothing like an hiq slug, and treating it as one would misjudge
+  // every later check below.
+  if (!currentHiq) {
+    return { action: "leave", reason: "malformed-current-id", detail: "hobbyiqCardId is empty or absent on a row carrying setSportRepairedAt" };
   }
 
   // ── ALREADY AT TARGET: some earlier process (a prior partial run of this
@@ -244,24 +280,55 @@ function planRow(doc) {
     return { action: "patch", newSport: sportBefore, newHobbyiqCardId: hobbyiqCardIdBefore, alreadyAtTarget: true };
   }
 
-  // ── MOVED-SINCE: the repair itself wrote sport/hobbyiqCardId as a PAIR --
-  // both fields always point at the SAME authority sport (buildAuthority's
-  // single verdict, judgeComp's single "to"). If they disagree with each
-  // other now, something OTHER than the 08-20 repair and this lane has
-  // touched one of the two since (an independent rekey, a rematch pass) --
-  // restoring onto hobbyiqCardIdBefore would silently discard whatever that
-  // later write decided. Left, never guessed past.
-  const currentHiqSport = String(currentHiq).split(":")[1] || "";
-  if (currentHiq.startsWith("hiq:") && currentHiqSport && currentHiqSport !== currentSport) {
-    return { action: "leave", reason: "moved-since", detail: `sport (${currentSport}) and hobbyiqCardId's own sport segment (${currentHiqSport}) disagree -- something else moved this row since the 08-20 repair` };
+  // ── REKEYED-SINCE (review BLOCKER 1, 2026-09-19): does the CURRENT
+  // hobbyiqCardId still equal EXACTLY what the 08-20 repair itself would
+  // have written? repair-set-sport.cjs's own `reSportSlug` swaps ONLY
+  // segment 1 (sport), byte-preserving every other segment -- it never
+  // stored a separate after-value, so "what the repair wrote" is fully
+  // reconstructible as reSportSlug(hobbyiqCardIdBefore, currentSport).
+  //
+  // When the current id does NOT equal that reconstruction, a LATER lane
+  // (repoint-sales-to-checklist-numbered appending a `:num-N` tail,
+  // rekey-catalog-id-to-setkey swapping the setKey segment, an RC-marker
+  // repair, a rematch pass, ...) has re-keyed this row WITHIN the wrong
+  // sport, adding precision this lane has no way to reproduce on the
+  // restored (pre-repair) sport. Restoring hobbyiqCardIdBefore VERBATIM
+  // would silently throw that later precision away -- absent beats wrong,
+  // so this is left, named, and counted separately from `moved-since`
+  // (which is reserved for sport/hobbyiqCardId disagreeing with EACH OTHER,
+  // a distinct and stronger signal of external interference).
+  //
+  // Checked BEFORE judgeRestoreVerdict: a rekeyed-since row is left
+  // regardless of what its title says, because the id itself is evidence
+  // this lane cannot safely act past.
+  const reconstructedAfter = reSportSlug(hobbyiqCardIdBefore, currentSport);
+  if (reconstructedAfter === null) {
+    return { action: "leave", reason: "malformed-current-id", detail: `hobbyiqCardIdBefore (${hobbyiqCardIdBefore}) is not a well-formed hiq slug the repair's own reSportSlug could have produced` };
   }
+  if (currentHiq !== reconstructedAfter) {
+    return { action: "leave", reason: "rekeyed-since", detail: `current hobbyiqCardId (${currentHiq}) does not equal reSportSlug(hobbyiqCardIdBefore, sport) = ${reconstructedAfter} -- a later lane re-keyed this row within the wrong sport (a :num-N tail, a setKey swap, an RC-marker or rematch pass) since the 08-20 repair; restoring hobbyiqCardIdBefore verbatim would discard that later precision`, currentHiq, reconstructedAfter, hobbyiqCardIdBefore };
+  }
+  // NOTE: once currentHiq === reconstructedAfter passes, currentHiq's own
+  // sport segment is BY CONSTRUCTION equal to currentSport (reSportSlug sets
+  // segment 1 to exactly currentSport) -- so a separate "sport and
+  // hobbyiqCardId's sport segment disagree" check can never fire past this
+  // point and is not duplicated here. Every way `sport` and `hobbyiqCardId`
+  // could disagree with each other is already caught above, either as
+  // rekeyed-since (hobbyiqCardId's shape moved) or, when only the bare
+  // `sport` field was independently patched to a third value with
+  // hobbyiqCardId untouched, ALSO as rekeyed-since (the reconstruction is
+  // built FROM the new `sport`, so it changes too and no longer matches the
+  // stale hobbyiqCardId).
 
   const verdict = judgeRestoreVerdict({ title: doc.title, sportBefore, currentSport });
   if (verdict.verdict === "keep") return { action: "keep", reason: verdict.reason, detail: verdict.detail };
   if (verdict.verdict === "leave") return { action: "leave", reason: verdict.reason, detail: verdict.detail };
 
-  // verdict.verdict === "restore" from here.
-  const cardId = str(doc.cardId);
+  // verdict.verdict === "restore" from here. The relocate shape additionally
+  // requires cardId to be EXACTLY the current hobbyiqCardId (never merely
+  // "looks like an hiq slug") -- same exact-match discipline as the
+  // hobbyiqCardId reconstruction above, so a cardId that drifted from
+  // hobbyiqCardId in some OTHER way is never silently relocated past.
   const needsRelocate = cardId && cardId === currentHiq;
 
   return {

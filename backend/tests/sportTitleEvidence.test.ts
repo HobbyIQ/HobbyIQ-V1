@@ -193,3 +193,95 @@ describe("sport-title-evidence: third-sport and no-evidence leave", () => {
     expect(verdict.reason).toBe("no-evidence");
   });
 });
+
+describe("sport-title-evidence: review HIGH 2 -- gazetteer asymmetry (2026-09-19)", () => {
+  it("literal 'basketball'/'football'/'baseball' now evidence their sport, closing the asymmetry against 'hockey'/'soccer'", () => {
+    expect(mod.sportEvidence("2020 Football Card Tom Brady Touchdown").sports.has("football")).toBe(true);
+    expect(mod.sportEvidence("2026 Panini Donruss Baseball #82").sports.has("baseball")).toBe(true);
+    expect(mod.sportEvidence("College Basketball Star Card").sports.has("basketball")).toBe(true);
+  });
+
+  it("a baseball-product title mentioning a basketball/football player's team is now correctly KEPT as baseball (the exact asymmetry bug: 'college basketball ... hockey Devils' used to evidence only the wrong sport)", () => {
+    // Real R76 population cases (A-wrong-flips.jsonl) that the OLD asymmetric
+    // gazetteer wrongly read as "restore to basketball" because it had no
+    // literal "baseball" word to counter-balance the incidental team mention.
+    const verdict = mod.judgeRestoreVerdict({
+      title: "Robert Parish 1988-89 Fleer #12 Boston Celtics Baseball Card - Raw 10",
+      sportBefore: "basketball",
+      currentSport: "baseball",
+    });
+    expect(verdict.verdict).toBe("keep");
+  });
+
+  it("Duke Blue Devils (college basketball) restores to basketball -- an authoritative 'basketball' hit beats a bare, non-authoritative 'devils' (NHL) nickname collision", () => {
+    const verdict = mod.judgeRestoreVerdict({
+      title: "College basketball Duke Blue Devils Zion Williamson",
+      sportBefore: "basketball",
+      currentSport: "hockey",
+    });
+    expect(verdict.verdict).toBe("restore");
+    expect(verdict.reason).toBe("title-backs-before");
+  });
+
+  it("'Center Stage' insert names no sport -- 'center' alone (a weak word) is never sole evidence", () => {
+    const evidence = mod.sportEvidence("Center Stage Insert Card");
+    expect(evidence.sports.size).toBe(0);
+    const verdict = mod.judgeRestoreVerdict({ title: "Center Stage Insert Card", sportBefore: "basketball", currentSport: "baseball" });
+    expect(verdict.verdict).toBe("leave");
+    expect(verdict.reason).toBe("no-evidence");
+  });
+
+  it("'Safety Set' (a grading service term) names no sport -- 'safety' alone (a weak word) is never sole evidence", () => {
+    const evidence = mod.sportEvidence("Safety Set Grading Service");
+    expect(evidence.sports.size).toBe(0);
+    const verdict = mod.judgeRestoreVerdict({ title: "Safety Set Grading Service", sportBefore: "football", currentSport: "baseball" });
+    expect(verdict.verdict).toBe("leave");
+    expect(verdict.reason).toBe("no-evidence");
+  });
+
+  it("a weak word ALONGSIDE a strong hit for the same sport still counts (weak words are demoted only when they would be the SOLE evidence)", () => {
+    const evidence = mod.sportEvidence("1988 Fleer Center Stage Insert Chicago Bulls");
+    expect(evidence.sports.has("basketball")).toBe(true); // "Chicago Bulls" is strong evidence
+  });
+
+  it("phrase exclusions suppress only the MATCHED OCCURRENCE, not the word title-wide -- 'Washington Wizards' survives beside an excluded 'Wizards of the Coast'", () => {
+    const title = "Washington Wizards vs Wizards of the Coast Crossover Promo";
+    const evidence = mod.sportEvidence(title);
+    expect(evidence.sports.has("basketball")).toBe(true);
+    const verdict = mod.judgeRestoreVerdict({ title, sportBefore: "basketball", currentSport: "baseball" });
+    expect(verdict.verdict).toBe("restore");
+  });
+
+  it("football/soccer: a bare literal 'football' with no NFL-specific evidence, alongside genuine soccer evidence, reads as soccer only", () => {
+    const evidence = mod.sportEvidence("2018 Panini Football World Cup Sticker Messi");
+    expect(evidence.sports.has("soccer")).toBe(true);
+    expect(evidence.sports.has("football")).toBe(false);
+  });
+
+  it("football/soccer: an NFL-specific hit (not just the bare word) still evidences football even beside a soccer term", () => {
+    const evidence = mod.sportEvidence("Football Quarterback Legends World Cup Tribute Card");
+    expect(evidence.sports.has("football")).toBe(true);
+    expect(evidence.sports.has("soccer")).toBe(true); // both genuinely present; this is a both-named case, not a suppression
+  });
+
+  it("football/soccer: pure NFL football with no soccer term anywhere still evidences football normally", () => {
+    const evidence = mod.sportEvidence("2020 Football Card Tom Brady Touchdown");
+    expect(evidence.sports.has("football")).toBe(true);
+  });
+
+  it("re-proves the 300/300 census reproduction and the 7 false-positive exclusions after the HIGH-2 fix (no regression)", () => {
+    const misses: unknown[] = [];
+    for (const row of VALIDATION_300) {
+      const verdict = mod.judgeRestoreVerdict({ title: row.title, sportBefore: row.sportBefore, currentSport: row.sport });
+      if (verdict.verdict !== "restore") misses.push({ id: row.id, title: row.title, verdict });
+    }
+    expect(misses).toEqual([]);
+
+    for (const row of FALSE_POSITIVES) {
+      const { sports } = mod.sportEvidence(row.title);
+      if (row.reason === "WoC") expect(sports.has("basketball")).toBe(false);
+      if (row.reason === "phantasmal") expect(sports.has("hockey")).toBe(false);
+      if (row.reason === "ronaldo-mbappe" || row.reason === "kanu") expect(sports.has("hockey")).toBe(false);
+    }
+  });
+});

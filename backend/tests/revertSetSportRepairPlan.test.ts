@@ -94,13 +94,66 @@ describe("revert-set-sport-repair: planRow -- keep / leave / already-at-target /
     expect(plan.alreadyAtTarget).toBe(true);
   });
 
-  it("LEAVE (moved-since): sport and hobbyiqCardId's own sport segment disagree -- something else touched this row", () => {
+  it("LEAVE (rekeyed-since): sport and hobbyiqCardId's own sport segment disagree because a later lane independently patched `sport` to a third value without touching hobbyiqCardId", () => {
+    // hobbyiqCardIdBefore is well-formed (7 segments), so reSportSlug succeeds;
+    // the reconstruction (segment 1 swapped to the CURRENT sport, "baseball")
+    // no longer matches the stored hobbyiqCardId (still carrying "football",
+    // the value some other patch left it at) -- caught as rekeyed-since, not
+    // a separate "sport disagrees with itself" branch (see the code comment:
+    // once the reconstruction test passes, they can never disagree by
+    // construction, so there is only ONE check, not two).
     const plan = mod.planRow(baseDoc({
       sport: "baseball", hobbyiqCardId: "hiq:football:2020:donruss:1:base:no-auto",
       sportBefore: "basketball", hobbyiqCardIdBefore: "hiq:basketball:2020:donruss:1:base:no-auto",
     }));
     expect(plan.action).toBe("leave");
-    expect(plan.reason).toBe("moved-since");
+    expect(plan.reason).toBe("rekeyed-since");
+  });
+
+  it("LEAVE (rekeyed-since): the exact Jordan :23 interleaving from the review -- a later checklist-numbered repoint added a :num-N tail within the wrong sport", () => {
+    // PATCH shape: cardId is a vendor partition, hobbyiqCardId carries the
+    // later lane's added precision.
+    const patchShape = mod.planRow(baseDoc({
+      cardId: "vendor-1",
+      sport: "baseball", hobbyiqCardId: "hiq:baseball:1988:fleer:17:base:no-auto:num-23",
+      sportBefore: "basketball", hobbyiqCardIdBefore: "hiq:basketball:1988:fleer:17:base:no-auto",
+      title: "1988-89 FLEER MICHAEL JORDAN PSA 10 GEM MT #17 CHICAGO BULLS RARE GOAT !!",
+    }));
+    expect(patchShape.action).toBe("leave");
+    expect(patchShape.reason).toBe("rekeyed-since");
+
+    // RELOCATE shape: cardId also carries the rekeyed id.
+    const relocateShape = mod.planRow(baseDoc({
+      cardId: "hiq:baseball:1988:fleer:17:base:no-auto:num-23",
+      sport: "baseball", hobbyiqCardId: "hiq:baseball:1988:fleer:17:base:no-auto:num-23",
+      sportBefore: "basketball", hobbyiqCardIdBefore: "hiq:basketball:1988:fleer:17:base:no-auto",
+      title: "1988-89 FLEER MICHAEL JORDAN PSA 10 GEM MT #17 CHICAGO BULLS RARE GOAT !!",
+    }));
+    expect(relocateShape.action).toBe("leave");
+    expect(relocateShape.reason).toBe("rekeyed-since");
+  });
+
+  it("does NOT leave (rekeyed-since) when the current id is EXACTLY reSportSlug(hobbyiqCardIdBefore, sport) -- the untouched, restorable case", () => {
+    const plan = mod.planRow(baseDoc({
+      cardId: "vendor-2",
+      sport: "baseball", hobbyiqCardId: "hiq:baseball:1988:fleer:17:base:no-auto",
+      sportBefore: "basketball", hobbyiqCardIdBefore: "hiq:basketball:1988:fleer:17:base:no-auto",
+      title: "1988-89 FLEER MICHAEL JORDAN PSA 10 GEM MT #17 CHICAGO BULLS RARE GOAT !!",
+    }));
+    expect(plan.action).toBe("patch");
+    expect(plan.newHobbyiqCardId).toBe("hiq:basketball:1988:fleer:17:base:no-auto");
+  });
+
+  it("LEAVE (malformed-current-id): hobbyiqCardId empty/absent never falls through to reasoning about cardId", () => {
+    const plan = mod.planRow(baseDoc({ hobbyiqCardId: "", cardId: "hiq:baseball:1988:fleer:8:base:no-auto" }));
+    expect(plan.action).toBe("leave");
+    expect(plan.reason).toBe("malformed-current-id");
+  });
+
+  it("LEAVE (malformed-current-id): hobbyiqCardIdBefore is not well-formed enough for reSportSlug to reconstruct", () => {
+    const plan = mod.planRow(baseDoc({ hobbyiqCardIdBefore: "hiq:basketball:1988:fleer" }));
+    expect(plan.action).toBe("leave");
+    expect(plan.reason).toBe("malformed-current-id");
   });
 });
 

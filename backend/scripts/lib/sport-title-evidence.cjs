@@ -98,24 +98,24 @@ const NBA = [
   "hawks", "celtics", "nets", "hornets", "bulls", "cavaliers", "cavs", "mavericks", "mavs", "nuggets",
   "pistons", "warriors", "rockets", "pacers", "clippers", "lakers", "grizzlies", "heat", "bucks",
   "timberwolves", "pelicans", "knicks", "thunder", "magic", "76ers", "sixers", "suns", "trail blazers",
-  "blazers", "kings", "spurs", "raptors", "jazz", "wizards", "nba", "point guard", "shooting guard",
-  "power forward", "center", "small forward", "triple-double", "slam dunk",
+  "blazers", "kings", "spurs", "raptors", "jazz", "wizards", "nba", "basketball", "point guard",
+  "shooting guard", "power forward", "center", "small forward", "triple-double", "slam dunk",
 ];
 const NFL = [
   "cardinals", "falcons", "ravens", "bills", "panthers", "bears", "bengals", "browns", "cowboys",
   "broncos", "lions", "packers", "texans", "colts", "jaguars", "chiefs", "raiders", "chargers",
   "rams", "dolphins", "vikings", "patriots", "saints", "giants", "jets", "eagles", "steelers",
   "49ers", "niners", "seahawks", "buccaneers", "bucs", "titans", "commanders", "redskins",
-  "nfl", "quarterback", "running back", "wide receiver", "tight end", "linebacker", "cornerback",
-  "safety", "punter", "kicker", "touchdown", "interception", "super bowl", "pro bowl",
+  "nfl", "football", "quarterback", "running back", "wide receiver", "tight end", "linebacker",
+  "cornerback", "safety", "punter", "kicker", "touchdown", "interception", "super bowl", "pro bowl",
 ];
 const MLB = [
   "diamondbacks", "d-backs", "braves", "orioles", "red sox", "cubs", "white sox", "reds",
   "guardians", "indians", "rockies", "tigers", "astros", "royals", "angels", "dodgers", "marlins",
   "brewers", "twins", "mets", "yankees", "athletics", "phillies", "pirates", "padres", "giants",
   "mariners", "cardinals", "rays", "rangers", "blue jays", "nationals", "expos",
-  "mlb", "pitcher", "outfielder", "shortstop", "first baseman", "second baseman", "third baseman",
-  "catcher", "world series", "home run",
+  "mlb", "baseball", "pitcher", "outfielder", "shortstop", "first baseman", "second baseman",
+  "third baseman", "catcher", "world series", "home run",
   // "rbi" and bare "era" dropped: both true acronyms/words but too weak a
   // signal alone (e.g. "New Era" cap brand, "steroid era") and rare enough
   // in this pool (12 hits total, 2 of them "New Era") not to be worth the
@@ -147,10 +147,54 @@ ALL.sort((a, b) => b[0].length - a[0].length);
 
 function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
+/**
+ * WEAK WORDS (review HIGH 2, 2026-09-19): single common words -- usually a
+ * position or a generic hobby term -- that name a sport ONLY in context, and
+ * collide with ordinary English or other product names on their own:
+ * "center" ("Center Stage" insert), "safety" ("Safety Set" of a grading
+ * service), "kicker" (a bonus/incentive card, "kicker card"), the *-guard
+ * position words (a plain "guard" occurs in non-sports contexts too, though
+ * this gazetteer only ever compiles the qualified forms "point guard" /
+ * "shooting guard" -- listed here for the same reason). A title whose ONLY
+ * hits are weak words is treated as NO EVIDENCE, never as naming that sport
+ * -- see `sportEvidence`'s `sports`, which excludes any sport backed
+ * exclusively by weak hits. A weak word sitting ALONGSIDE a strong hit for
+ * the SAME sport costs nothing (the strong hit already carries the sport);
+ * it only changes the answer when it would otherwise be the sole evidence. */
+const WEAK_WORDS = new Set([
+  "center", "safety", "kicker", "punter",
+  "point guard", "shooting guard",
+]);
+
+/**
+ * AUTHORITATIVE WORDS (review HIGH 2, 2026-09-19): the sport's own name or
+ * its league acronym. Unlike a team nickname -- which can belong to a
+ * college, a high school, or an unrelated org the gazetteer has never heard
+ * of ("Duke Blue Devils" is not the NHL New Jersey Devils, but a bare
+ * "devils" hit cannot tell the two apart) -- a title that says "basketball"
+ * or "NBA" outright is making a direct, on-purpose claim about the sport,
+ * not a claim mediated through a team name that might belong to anyone.
+ *
+ * When a title carries an authoritative hit for ONE of {sportBefore,
+ * currentSport} and no authoritative hit for the OTHER, a non-authoritative
+ * (plain team-nickname) hit for that other sport is treated as the weaker
+ * signal it is and does not block the authoritative word's verdict --
+ * "college basketball Duke Blue Devils" evidences basketball authoritatively
+ * and hockey only through the bare, unqualified nickname "devils"; the
+ * authoritative hit wins. Two authoritative hits (or an authoritative hit on
+ * one side against a MULTI-WORD, specific team name naming a real
+ * professional franchise on the other -- not merely a bare shared nickname)
+ * still produce `both-named`/`third-sport` exactly as before; this tier only
+ * demotes an otherwise-decisive bare nickname collision, never a genuine
+ * team identification. */
+const AUTHORITATIVE_WORDS = new Set(["hockey", "nhl", "basketball", "nba", "football", "nfl", "baseball", "mlb", "soccer", "mls"]);
+
 const COMPILED = ALL.map(([word, sport]) => ({
   sport,
   word: word.toLowerCase(),
-  re: new RegExp(`(?<![a-z0-9])${escapeRe(word.toLowerCase())}(?![a-z0-9])`),
+  weak: WEAK_WORDS.has(word.toLowerCase()),
+  authoritative: AUTHORITATIVE_WORDS.has(word.toLowerCase()),
+  re: new RegExp(`(?<![a-z0-9])${escapeRe(word.toLowerCase())}(?![a-z0-9])`, "g"),
 }));
 
 /** Words present in TWO-PLUS of the per-sport lists above -- computed, not
@@ -171,9 +215,19 @@ const AMBIGUOUS_NICKNAMES = (() => {
 })();
 
 /**
- * EXCLUSION PHRASES (R76 fix, 2026-09-19). See module header. When a phrase
- * is present in the title, its listed single-word gazetteer terms are
- * suppressed for that title's evaluation.
+ * EXCLUSION PHRASES (R76 fix, 2026-09-19). See module header. Each entry
+ * names a phrase and the gazetteer word inside it that a word-boundary match
+ * would otherwise wrongly credit.
+ *
+ * SUPPRESSION IS PER-OCCURRENCE (review HIGH 2, 2026-09-19), not word-wide.
+ * The first version of this table suppressed the WORD for the whole title --
+ * so "Washington Wizards ... Wizards of the Coast" (a title that names both
+ * the real NBA team AND quotes the Pokemon publisher) would have lost its
+ * genuine basketball evidence along with the false one. `sportEvidence` now
+ * matches the exclusion phrase's OWN span in the title and only discards a
+ * gazetteer hit whose match position falls INSIDE that span -- a "wizards"
+ * hit at index 11 ("Washington Wizards") survives; one at index 40 ("Wizards
+ * of the Coast") does not, in the same title.
  */
 const EXCLUSIONS = [
   { phrase: "wizards of the coast", suppresses: ["wizards"] },
@@ -182,43 +236,110 @@ const EXCLUSIONS = [
 ];
 
 /**
- * sportEvidence(title) -> { sports: Set<string>, hits: [{ word, sport }],
+ * Every [start, end) span of `phrase` in `t`, so a suppression can be scoped
+ * to just that occurrence rather than the whole title.
+ */
+function phraseSpans(t, phrase) {
+  const spans = [];
+  let from = 0;
+  for (;;) {
+    const at = t.indexOf(phrase, from);
+    if (at < 0) break;
+    spans.push([at, at + phrase.length]);
+    from = at + 1;
+  }
+  return spans;
+}
+
+/**
+ * sportEvidence(title) -> { sports: Set<string>, authoritativeSports: Set<string>,
+ *                           hits: [{ word, sport, weak, authoritative }],
  *                           onlyAmbiguousWords: boolean }
  *
- * `sports` is every DISTINCT sport the gazetteer names in the title
- * (word-boundary matched, phrase-exclusions applied); it may be empty, or
- * contain more than one entry -- either because the title genuinely names
- * two sports (a cross-sport insert set, a rival league quoted in its own
- * description), or because it hit an AMBIGUOUS_NICKNAMES word that spans
- * more than one league on its own ("kings" -> {hockey, basketball}). `hits`
- * is every individual match, for callers that want to show their work.
- * `onlyAmbiguousWords` is true iff every hit came from an
- * AMBIGUOUS_NICKNAMES word -- i.e. `sports` is non-empty but nothing in the
- * title single-handedly names one league.
+ * `sports` is every DISTINCT sport with at least one STRONG (non-weak) hit
+ * in the title (word-boundary matched, phrase-exclusions applied per
+ * occurrence) -- see WEAK_WORDS above: a sport backed ONLY by weak-word hits
+ * never enters `sports` at all, so a title like "Center Stage" or "Safety
+ * Set" registers no sport rather than a false basketball/football. It may
+ * be empty, or contain more than one entry -- either because the title
+ * genuinely names two sports, or because it hit an AMBIGUOUS_NICKNAMES word
+ * that spans more than one league on its own ("kings" -> {hockey,
+ * basketball}).
+ *
+ * `authoritativeSports` is the subset of `sports` backed by an
+ * AUTHORITATIVE_WORDS hit (the sport's own name or league acronym) -- see
+ * that doc above for why this is a stronger claim than a team nickname.
+ * `judgeRestoreVerdict` uses it to demote a bare, unqualified nickname
+ * collision against an authoritative hit for the other side; `sportEvidence`
+ * itself makes no before/current comparison and does not otherwise treat
+ * `sports` and `authoritativeSports` differently.
+ *
+ * FOOTBALL/SOCCER (review HIGH 2, 2026-09-19): the literal word "football"
+ * is ambiguous between American football and the rest-of-world name for
+ * soccer. The simplest rule that keeps the 300/300 census reproduction and
+ * fixes the collision: when the ONLY evidence for "football" in a title is
+ * the bare literal word itself (no NFL team/league/position hit) AND the
+ * title ALSO carries genuine soccer evidence, the literal "football" hit is
+ * read as the soccer sense and does not add "football" to `sports` --
+ * soccer wins outright rather than producing a false "both-named". A title
+ * naming BOTH the literal word "football" and an NFL-specific term (e.g.
+ * "quarterback", "Cowboys") still gets football from the specific term
+ * regardless of any soccer word elsewhere; this rule only fires when the
+ * bare word is football's ONLY signal.
+ *
+ * `hits` is every individual surviving match, for callers that want to show
+ * their work (each tagged `weak`/`authoritative`). `onlyAmbiguousWords` is
+ * true iff every entry in `sports` is backed only by AMBIGUOUS_NICKNAMES
+ * words -- i.e. `sports` is non-empty but nothing in the title
+ * single-handedly names one league.
  */
 function sportEvidence(title) {
   const t = String(title || "").toLowerCase();
-  const sports = new Set();
   const hits = [];
-  const suppressed = new Set();
-  let sawUnambiguousHit = false;
-  let sawAnyHit = false;
-
+  const suppressedSpans = [];
   for (const { phrase, suppresses } of EXCLUSIONS) {
-    if (t.includes(phrase)) for (const w of suppresses) suppressed.add(w);
+    const spans = phraseSpans(t, phrase);
+    if (spans.length) for (const w of suppresses) for (const span of spans) suppressedSpans.push({ word: w, span });
   }
+  const isSuppressed = (word, index) =>
+    suppressedSpans.some((s) => s.word === word && index >= s.span[0] && index < s.span[1]);
 
-  for (const { sport, word, re } of COMPILED) {
-    if (suppressed.has(word)) continue;
-    if (re.test(t)) {
-      sports.add(sport);
-      hits.push({ word, sport });
-      sawAnyHit = true;
-      if (!AMBIGUOUS_NICKNAMES.has(word)) sawUnambiguousHit = true;
+  // strongSports / anySports: which sports have at least one STRONG hit, and
+  // which have ANY hit (strong or weak) -- a sport can appear in anySports
+  // without ever entering strongSports (weak-only). authoritativeSports is a
+  // further-refined subset of strongSports.
+  const strongSports = new Set();
+  const anySports = new Set();
+  const authoritativeSports = new Set();
+
+  for (const { sport, word, weak, authoritative, re } of COMPILED) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(t))) {
+      if (isSuppressed(word, m.index)) continue;
+      hits.push({ word, sport, weak, authoritative });
+      anySports.add(sport);
+      if (!weak) strongSports.add(sport);
+      if (authoritative) authoritativeSports.add(sport);
+      if (m[0].length === 0) re.lastIndex++; // defensive: never used (no empty-match terms), guards an infinite loop
     }
   }
 
-  return { sports, hits, onlyAmbiguousWords: sawAnyHit && !sawUnambiguousHit };
+  // ── FOOTBALL/SOCCER: see doc above. Only the bare literal word counts as
+  // football's "only signal" -- any other NFL-gazetteer hit makes this a
+  // no-op.
+  const footballHits = hits.filter((h) => h.sport === "football");
+  const footballOnlyBareWord = footballHits.length > 0 && footballHits.every((h) => h.word === "football");
+  const hasSoccerEvidence = strongSports.has("soccer");
+  if (footballOnlyBareWord && hasSoccerEvidence) {
+    strongSports.delete("football");
+    authoritativeSports.delete("football");
+  }
+
+  const onlyAmbiguousWords = strongSports.size === 0 && anySports.size > 0
+    && [...anySports].every((s) => [...AMBIGUOUS_NICKNAMES.values()].some((leagues) => leagues.has(s)));
+
+  return { sports: strongSports, authoritativeSports, hits, onlyAmbiguousWords };
 }
 
 /**
@@ -252,15 +373,34 @@ function sportEvidence(title) {
  *               that is NEITHER before nor current ("third-sport"), or
  *               names nothing at all ("no-evidence"). A human, not this
  *               function, rules on these.
+ *
+ * AUTHORITATIVE-WORD DEMOTION (review HIGH 2, 2026-09-19): before comparing
+ * `sports` against before/current, if EXACTLY ONE of {before, current} has
+ * an authoritative hit (the sport's own name/acronym) and the OTHER's only
+ * hit is a bare, non-authoritative team-nickname word (no authoritative hit
+ * of its own), that other sport is dropped from the comparison set --
+ * "college basketball Duke Blue Devils" carries authoritative basketball
+ * evidence and only a bare, unqualified "devils" for hockey (a nickname
+ * shared by pro AND non-pro teams the gazetteer cannot tell apart); the
+ * authoritative hit decides. Two authoritative hits (both before and
+ * current named outright) are NOT demoted -- that is a genuine
+ * both-named/third-sport case, not a nickname collision.
  */
 function judgeRestoreVerdict({ title, sportBefore, currentSport }) {
   const before = String(sportBefore || "").toLowerCase();
   const current = String(currentSport || "").toLowerCase();
-  const { sports } = sportEvidence(title);
+  const { sports, authoritativeSports } = sportEvidence(title);
+  const effective = new Set(sports);
 
-  const namesBefore = sports.has(before);
-  const namesCurrent = sports.has(current);
-  const thirdSports = [...sports].filter((s) => s !== before && s !== current);
+  for (const [strongSide, weakSide] of [[before, current], [current, before]]) {
+    if (authoritativeSports.has(strongSide) && effective.has(weakSide) && !authoritativeSports.has(weakSide)) {
+      effective.delete(weakSide);
+    }
+  }
+
+  const namesBefore = effective.has(before);
+  const namesCurrent = effective.has(current);
+  const thirdSports = [...effective].filter((s) => s !== before && s !== current);
 
   if (namesBefore && namesCurrent) {
     return { verdict: "leave", reason: "both-named", detail: `title evidence backs BOTH ${before} and ${current} -- cannot disambiguate` };
@@ -280,4 +420,5 @@ function judgeRestoreVerdict({ title, sportBefore, currentSport }) {
 module.exports = {
   sportEvidence, judgeRestoreVerdict,
   NHL, NBA, NFL, MLB, MLS_SOCCER, AMBIGUOUS_NICKNAMES, EXCLUSIONS,
+  WEAK_WORDS, AUTHORITATIVE_WORDS,
 };
