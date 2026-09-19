@@ -1644,6 +1644,46 @@ export function normalizeSetKey(setName: string, sport?: string | null): string 
   return s;
 }
 
+/**
+ * CF-UD-SERIES-IS-THE-PRODUCT, THE ONE REGEX SOURCE (2026-09-19).
+ *
+ * Per-product title predicates for the registered Upper Deck hockey series
+ * products, each requiring the maker word ("Upper Deck" OR "UD" -- prod reads
+ * 2026-09-19 showed sellers write both, where the D39 original only knew the
+ * full spelling) alongside the product's own word. THE SAME TEST the
+ * `[/(?:^|-)(?:upper-deck|ud)-(?:extended|series-...)/, ...]` rules above
+ * apply to a SLUG, and `scripts/fold-umbrella-to-series.cjs`'s
+ * `seriesFromTitle` applies to already-stored pool rows to re-key them --
+ * exported here, on raw title text, as three independent predicates (not one
+ * collapsed answer) so the relocation script's existing "title names more
+ * than one product -> ambiguous, refuse" logic keeps working unchanged: that
+ * logic needs to see BOTH Series 1 and Series 2 fire on a "Series 1 & Series
+ * 2" title, which a function that already resolved the tie to `null` could
+ * never report.
+ *
+ * Deliberately narrow: a title naming no series word (a plain UD insert like
+ * "UD Canvas") leaves every predicate false rather than guessing one from a
+ * card number -- see the follow-up noted where this PR's slug rules are
+ * defined.
+ */
+const UPPER_DECK_SERIES_MAKER = /\b(?:upper\s*-?\s*deck|ud)\b/i;
+export function titleNamesUpperDeckExtendedSeries(title: string | null | undefined): boolean {
+  const t = String(title ?? "");
+  // "Series" is OPTIONAL: "upper-deck-extended" (no "series") is itself a
+  // registered name of this product in productSetKeys.ts -- the checklist's
+  // own short spelling, not a loosening introduced here -- and prod titles
+  // like "2024 UD Extended Beehive" carry no "series" word at all.
+  return !!t && UPPER_DECK_SERIES_MAKER.test(t) && /\bextended\b(?:\s*series\b)?/i.test(t);
+}
+export function titleNamesUpperDeckSeries1(title: string | null | undefined): boolean {
+  const t = String(title ?? "");
+  return !!t && UPPER_DECK_SERIES_MAKER.test(t) && /\bseries\s*(?:1|one)\b/i.test(t);
+}
+export function titleNamesUpperDeckSeries2(title: string | null | undefined): boolean {
+  const t = String(title ?? "");
+  return !!t && UPPER_DECK_SERIES_MAKER.test(t) && /\bseries\s*(?:2|two)\b/i.test(t);
+}
+
 /** Every key the regex vocabulary can emit — for the guard that checks the
  *  product table knows the family of each of them. */
 export function vocabularyDestinations(): string[] {

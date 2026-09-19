@@ -30,7 +30,7 @@ import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
 import { yearTheTitleAllows } from "./yearTheTitleAllows.js";
 import { extractYearFromTitle } from "./slugRederivation.service.js";
 import { canonicalizeParallelName, variationParallelsForCard, getCatalogContainerForRead } from "../catalog/catalogMatcher.service.js";
-import { resolveProductByChecklist, newResolveCache } from "../catalog/resolveProductByChecklist.js";
+import { resolveProductByChecklist, newResolveCache, productTextForResolver } from "../catalog/resolveProductByChecklist.js";
 import { canonicalVariationName, pickVariationForMarker, reduceVariationStockToCatalog, variationNameFromSlug } from "../catalog/variationVocabulary.js";
 import { qualifiedSetKeyFromTitle } from "../catalog/productQualifiers.js";
 import { parseGradeFromTitle } from "./gradeParser.js";
@@ -1545,15 +1545,29 @@ export async function persistVendorSalesToPool(
     // parser's answer stands, which is today's behaviour exactly.
     if (cardYear && parsed.cardNumber && setKey) {
       try {
+        // CF-AN-UMBRELLA-FOLD-NEEDS-THE-TITLE-NOT-THE-COLLAPSED-KEY (2026-09-19).
+        // For every setKey outside the v1 allow-list (see productTextForResolver's
+        // header) this returns exactly `canonicalNormalizeSetKey(setKey, sport)` --
+        // byte-identical to what this call site always passed. For an allow-
+        // listed umbrella (upper-deck only, today) with a real title, it returns
+        // the title's own slug instead, so candidateProducts can see a series
+        // word ("Series 2") the collapsed setKey lost when the vendor's setName
+        // field won over the title upstream.
+        const productText = productTextForResolver(setKey, sport, title, canonicalNormalizeSetKey);
         const res = await resolveProductByChecklist(
           {
-            productText: canonicalNormalizeSetKey(setKey, sport),
+            productText,
             year: cardYear,
             cardNumber: String(parsed.cardNumber),
             player: playerName ?? null,
             sport,
             // The parser's own answer, so the resolver can refuse to fold a
             // named product up to its flagship (see wouldFoldUpToAnAncestor).
+            // Deliberately the PLAIN normalized setKey, never `productText`:
+            // the fold-up guard compares this against the checklist's verdict
+            // to see whether R29 is being asked to widen a specialization back
+            // to its own ancestor, and an umbrella's OWN title-derived text
+            // must not be mistaken for a specialization it never claimed to be.
             parsedSetKey: canonicalNormalizeSetKey(setKey, sport),
           },
           { container: await getCatalogContainerForRead(), cache: productResolveCache },

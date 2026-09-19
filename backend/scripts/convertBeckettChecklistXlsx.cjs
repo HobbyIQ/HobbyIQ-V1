@@ -417,6 +417,72 @@ function rungName(section, anchorSection) {
   return CANONICAL_RUNG[name.toLowerCase()] || name;
 }
 
+// CF-BECKETT-ROSTER-FOLD-FOR-NAMELESS-SECTIONS (2026-09-19). classifySections's
+// existing fold only ever tries a section against an anchor whose NAME the
+// section extends (extendsName) or that is an explicitAnchor paired with a
+// FINISH_WORD spelling. Neither test can see a section like "Hobby Exclusive"
+// or "Super Box Exclusive": it shares no name token with "Base Set" and is not
+// a colour/finish word, so it never becomes a fold candidate at all and stays
+// its own section with a blank parallel column -- even when every card it
+// lists is, in fact, the identical base card by number AND by player. Measured
+// on 2026 Topps Series 1 Baseball (S3, 2026-09-19): 5 of 7 such sections are
+// clean 100% roster subsets of Base Set on every shared number, and 2 more are
+// clean subsets plus exactly one card with no base counterpart at all.
+//
+// THE ROSTER IS THE FALLBACK TEST, TRIED ONLY WHEN THE NAME TEST FINDS
+// NOTHING. A section that already has a naming relationship to some anchor is
+// decided by that relationship, unchanged -- this never overrides an existing
+// fold, it only rescues the sections that had no fold candidate to test in the
+// first place (`candidates.length === 0`, so `best` stays null and rungName
+// never runs).
+//
+// R67 (Drew, ruling round of 2026-09-19): same numbers + a same-or-subset
+// roster is a PARALLEL, whatever word the section used for the variant.
+// normalizeRosterPlayer is the shared comparison: split on "/", trim,
+// lowercase, de-duplicate, sort (players split so "Will Shipley/Xavier
+// Legette" and "Xavier Legette / Will Shipley" agree) -- AND strip a trailing
+// " RC" first, because Beckett's own RC flag (appended in pass 1 above,
+// `player += " RC"`) is stamped onto the player field by SOME sheets (the
+// Base sheet, and any parallel section built from the same sheet layout) and
+// never by others for the identical card, which would otherwise read as a
+// disagreement that is really a formatting artifact, not a different player.
+function normalizeRosterPlayer(player) {
+  return String(player || "")
+    .split("/")
+    .map((p) => p.trim().replace(/\s+RC$/i, "").trim().toLowerCase())
+    .filter(Boolean)
+    .sort()
+    .join("/");
+}
+
+// A section's roster is a clean fold candidate against `anchor` when every
+// number it shares with the anchor names a subset of the anchor's own roster
+// there, with ZERO disagreements. Numbers the section has that the anchor
+// lacks are reported separately (`extra`) rather than failing the whole
+// section -- R67's own Super Box Exclusive/Funko Pop Autographs case is
+// exactly this: 16 of 17 and 1 of 2 rows are a clean subset, and the
+// remaining row (#420, no base counterpart at all) is neither a disagreement
+// nor a reason to leave the OTHER sixteen rows unfolded.
+function rosterFoldAgainst(sec, anchor) {
+  let agree = 0, disagree = 0;
+  const extra = [];
+  // No roster on either side means no evidence, not a crash: a caller that
+  // built a section descriptor from numbers alone (every classifySections
+  // unit test predating this fold, and any future one) gets "nothing shared,
+  // nothing agrees" -- the same answer classifySections's own numeric-only
+  // path already gives that shape when it has no roster to consult, so a
+  // missing roster degrades to the pre-existing behaviour rather than
+  // throwing partway through the second pass.
+  if (!sec.roster || !anchor.roster) return { agree: 0, disagree: 0, extra: [], shared: 0 };
+  for (const [num, players] of sec.roster) {
+    const anchorPlayers = anchor.roster.get(num);
+    if (!anchorPlayers) { extra.push(num); continue; }
+    const isSubset = [...players].every((p) => anchorPlayers.has(p));
+    if (isSubset) agree++; else disagree++;
+  }
+  return { agree, disagree, extra, shared: agree + disagree };
+}
+
 function secBrief(s) {
   return { sheet: s.sheet, section: s.section, category: s.category, cards: s.cards };
 }
@@ -538,6 +604,81 @@ function classifySections(sections) {
         overlapPct: Number((best.pct * 100).toFixed(1)),
       });
     }
+  }
+
+  // CF-BECKETT-ROSTER-FOLD-FOR-NAMELESS-SECTIONS (2026-09-19), a SEPARATE pass
+  // run only after every name-based fold above has finished. The existing loop
+  // only ever tries a section against an anchor whose NAME it extends
+  // (extendsName) or an explicitAnchor paired with a FINISH_WORD spelling.
+  // Neither test can see a section like "Hobby Exclusive" or "Super Box
+  // Exclusive": it shares no name token with "Base Set" and is not a colour/
+  // finish word, so it falls through to `own-cards` above even when every card
+  // it lists is, in fact, the identical base card by number AND by player.
+  // Measured on 2026 Topps Series 1 Baseball (S3, 2026-09-19): 7 such sections,
+  // 5 clean 100% roster subsets of Base Set plus 2 more that are clean subsets
+  // except for one card each with no base counterpart at all.
+  //
+  // WHY THIS MUST BE ITS OWN PASS, NOT INLINE ABOVE. Photogenic's "Base
+  // Autographs" (61 cards, signed, same roster as Base Set) and "Base Silver
+  // Autographs" (49 cards, extends "Base Autographs"'s name) are the negative
+  // case: tried inline, in size order, "Base Autographs" is classified BEFORE
+  // "Base Silver Autographs" ever gets a chance to claim it as an anchor via
+  // the ordinary extendsName fold, an inline roster-fold would immediately
+  // steal "Base Autographs" onto plain Base Set as `parallel="Base
+  // Autographs"` -- destroying the two-level hierarchy ("Base Autographs" its
+  // own anchor; "Base Silver Autographs" a Silver rung ON IT, never on plain
+  // base) that CF-A-COLOUR-RUNG-IS-NEVER-A-CARD-SET-KEY's own photogenic
+  // ruling requires (isAuto is its own axis: a same-roster signed section
+  // that some OTHER section's name extends must stand as its own anchor, not
+  // fold). Run AFTER the main loop, `anchors` already reflects every section
+  // the ordinary fold chose to make a hub -- HUB-ness is exactly the fact a
+  // same-pass roster-fold cannot see about a section not yet processed.
+  //
+  // A section already claimed as a hub by some OTHER section (own-cards or
+  // not) is excluded, whatever its own roster looks like -- it already has an
+  // identity nothing here should override.
+  //
+  // THE ANCHOR MUST BE THE FILE'S FLAGSHIP RUN SPECIFICALLY -- PLAIN_SECTION,
+  // never merely `category === "base"`. CF-BECKETT-BASE-SHEET-IS-NOT-ONE-
+  // SECTION made "base" permissive for every unsigned section on a Base/
+  // Prospects SHEET, so a workbook can carry several base-category anchors
+  // side by side: 2024 Panini Zenith Football's Base sheet holds "Base Set",
+  // "Rookies" AND "Rookie Patch Autographs", all category "base". Zenith's
+  // own registration (#2276) folds "Rookies Autographs No Huddle" / "...Two
+  // Minute Drill" / "Rookies Red Zone Autographs*" onto "Rookies" (an INSERT
+  // anchor, its own registered `panini-zenith-rookies-autographs` product)
+  // precisely because a same-roster signed retailer-name cluster of a NAMED
+  // INSERT is its own product, not a parallel of the FLAGSHIP base card --
+  // `anchors.find(a => a.category === "base")` picked whichever base-category
+  // anchor came first and folded them onto it as literal-title parallels,
+  // which is wrong on both counts (wrong anchor, and these should not fold at
+  // all). PLAIN_SECTION is already the file's own test for "this is the plain
+  // run, not a same-sheet sibling insert" -- reused here for the identical
+  // reason it protects the explicitAnchor bypass above.
+  const isHub = (s) => all.some((o) => o.parallelOf === s);
+  const stillUnfolded = report.filter((r) => /^own-cards($|-)/.test(r.role) && r.role !== "own-cards-AMBIGUOUS");
+  for (const r of stillUnfolded) {
+    const sec = sections.get(r.sheet + ">" + r.section);
+    if (!sec || sec.parallelOf || isHub(sec)) continue;
+    const baseAnchor = anchors.find((a) => a !== sec && a.category === "base" && PLAIN_SECTION.test(normSection(a.section)));
+    if (!baseAnchor) continue;
+    const fold = rosterFoldAgainst(sec, baseAnchor);
+    if (fold.shared === 0 || fold.disagree > 0) continue;
+    const rung = sec.section; // the section's own header names the parallel
+    sec.parallelOf = baseAnchor;
+    sec.rung = rung;
+    // Numbers this section has that base does not (R67's #420 shape): held
+    // out of the fold, not disagreements -- they keep their own category and
+    // a blank parallel, same as any other own-cards section, while every
+    // clean-subset number folds onto base.
+    sec.foldExceptions = new Set(fold.extra);
+    Object.assign(r, {
+      role: "parallel", anchor: baseAnchor.key, rung: rung,
+      rosterFold: true, agree: fold.agree, disagree: fold.disagree,
+      ...(fold.extra.length ? { heldNumbers: fold.extra } : { overlapPct: undefined }),
+    });
+    delete r.overlapPct;
+    delete r.note;
   }
 
   for (const s of all) {
@@ -742,13 +883,22 @@ function main() {
           sheet: name, section: section, key: key,
           category: categoryFor(name, section),
           numbers: new Set(), cards: 0,
+          // (cardNumber -> Set of normalizeRosterPlayer(player)), for
+          // classifySections's roster-based fold below. Built from the SAME
+          // player string every other pass reads (post-RC-append), so the
+          // roster a section states here never disagrees with what pass 3
+          // emits.
+          roster: new Map(),
           // Whatever "Parallels:" block preceded this section's first card.
           ladder: pendingLadder,
         });
       }
       const sec = sections.get(key);
-      sec.numbers.add(cardNumber.toUpperCase());
+      const num = cardNumber.toUpperCase();
+      sec.numbers.add(num);
       sec.cards++;
+      if (!sec.roster.has(num)) sec.roster.set(num, new Set());
+      sec.roster.get(num).add(normalizeRosterPlayer(player));
       records.push({ sectionKey: key, cardNumber: cardNumber, player: player });
     }
   }
@@ -760,17 +910,46 @@ function main() {
   const out = [];
   for (const rec of records) {
     const sec = sections.get(rec.sectionKey);
-    const target = sec.parallelOf || sec;
-    const isAuto = target.category.startsWith("auto-") ? "true" : "false";
+    // CF-BECKETT-ROSTER-FOLD-FOR-NAMELESS-SECTIONS's per-row carve-out: a
+    // roster fold can clear for most of a section's numbers while a few (R67's
+    // #420 Luis Arraez shape -- no base counterpart at all) have nothing to
+    // fold onto. Those numbers are emitted exactly as an ordinary own-cards
+    // section would be: original category, blank parallel -- never silently
+    // dropped, never forced onto an anchor that does not carry them.
+    const heldOut = sec.foldExceptions && sec.foldExceptions.has(rec.cardNumber.toUpperCase());
+    const foldsHere = sec.parallelOf && !heldOut;
+    const target = foldsHere ? sec.parallelOf : sec;
+    // isAuto comes from the SECTION's own category, never the fold target's.
+    // The two always agreed under the pre-existing name-based fold (it
+    // requires isAutoSection(anchor) === isAutoSection(section) before it
+    // will even consider a candidate), so this is a no-op there. The
+    // roster-based fold above deliberately allows a signed section to fold
+    // onto the unsigned base anchor (R67: "the tail says SIGNED" -- isAuto is
+    // its own axis, not the address) and target.category would otherwise
+    // silently overwrite isAuto=true with the anchor's own false.
+    const isAuto = sec.category.startsWith("auto-") ? "true" : "false";
+    // CF-BECKETT-RC-IS-A-FLAG-NOT-A-NAME (2026-09-19). The RC flag appended
+    // above ("Jacob Wilson RC") is stamped onto the player field by only SOME
+    // sheets for a card that appears, unflagged, on every other sheet under
+    // the identical name -- measured on 2026 Topps Series 1 Baseball, 71
+    // rookies read "<Name> RC" on the Base sheet and its Golden Mirror
+    // Variation section, "<Name>" everywhere else. Left in, cleanPlayerName
+    // (cardCatalog.service.ts) does not strip it either, so playerSlug would
+    // mint "jonah-tong-rc" for the base row and "jonah-tong" for every one of
+    // its own parallels and any sale -- never matching. The checklist-csv-
+    // contract has no rookie/RC column, so none is invented here; the flag is
+    // simply not carried into the emitted `player` field. A future column for
+    // it is a separate decision, not silently reconstructable from this CSV.
+    const emitPlayer = rec.player.replace(/\s+RC$/i, "");
     // The plain card. Parallel stays BLANK, never "Base" — normalizeParallel()
     // already reads "" as the base tier, so the blank lies about nothing.
     out.push({
       category: target.category,
       cardNumber: rec.cardNumber,
-      parallel: sec.parallelOf ? sec.rung : "",
+      parallel: foldsHere ? sec.rung : "",
       isAuto: isAuto,
       printRun: "",
-      player: rec.player,
+      player: emitPlayer,
     });
 
     // CF-EMIT-THE-WHOLE-LADDER. Newer Beckett workbooks DO publish the ladder:
@@ -784,7 +963,7 @@ function main() {
     // every card would be the cross join that no-synthetic-parallels forbids.
     // Per section it is not a template -- it is Beckett stating which
     // parallels this specific run of cards has.
-    if (!sec.parallelOf) {
+    if (!foldsHere) {
       for (const rung of sec.ladder || []) {
         out.push({
           category: target.category,
@@ -792,7 +971,7 @@ function main() {
           parallel: rung.name,
           isAuto: isAuto,
           printRun: rung.printRun == null ? "" : String(rung.printRun),
-          player: rec.player,
+          player: emitPlayer,
         });
       }
     }
@@ -869,4 +1048,5 @@ if (require.main === module) main();
 module.exports = {
   classifySections, rungName, categoryFor, PLAIN_SECTION, parseRung, LADDER_HEAD, isSupersetSheet, isCountLine,
   stripChecklistSuffix, masterCardSetNames, sheetSectionHeaderNames,
+  normalizeRosterPlayer, rosterFoldAgainst,
 };
