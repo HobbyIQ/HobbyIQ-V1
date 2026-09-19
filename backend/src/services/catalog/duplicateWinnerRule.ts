@@ -59,6 +59,7 @@ import {
   printRunOf,
   cleanParallelSlug,
   isAutoByCardNumber,
+  subsetSegmentOf,
   DEFAULT_FORCE_AUTO_PREFIXES,
 } from "./foldTwinRuleChecklistNumbered";
 
@@ -223,13 +224,25 @@ export function groupProductKeyOf(row: Pick<DupRow, "setKey" | "year" | "cardNum
 }
 
 /**
- * THE D30 GROUPING KEY: `sport | year | product | number | parallel | auto`.
+ * THE D30 GROUPING KEY: `sport | year | product | number | parallel | auto |
+ * sub-segment`.
  *
  * Every half except the product is D29's, byte for byte -- `cleanParallelSlug`
- * for the parallel and the same auto-by-card-number gate -- so a group the
- * two keys agree on is the same group, and R1 can still be called on its rows.
- * The product half is the one thing D30 widens, and only as far as one
- * product's own spellings.
+ * for the parallel, the same auto-by-card-number gate, and (CF-A-SUB-SEGMENT-
+ * IS-PART-OF-THE-IDENTITY) the same `subsetSegmentOf` read of the id's
+ * `:sub-<name>[-pattern-N]` disambiguator -- so a group the two keys agree on
+ * is the same group, and R1 can still be called on its rows. The product half
+ * is the one thing D30 widens, and only as far as one product's own
+ * spellings.
+ *
+ * REUSING `subsetSegmentOf` RATHER THAN A SECOND PARSER is the whole point:
+ * two independent readings of one id segment is exactly how D29 and D30 could
+ * drift apart again the way they did before this shared import existed for
+ * `cleanParallelSlug` and the auto gate. `consolidate-catalog-duplicates.cjs`
+ * (D30's own fleet) has the identical 59,522-row exposure `identityKeyOf` had
+ * -- a `:sub-` row and its plain base twin reading as one group -- and this
+ * closes it the same way, appended LAST so a row with no segment groups
+ * byte-identically to before.
  */
 export function groupKeyOf(row: DupRow, forceAutoPrefixes: readonly string[] = DEFAULT_FORCE_AUTO_PREFIXES): string {
   const sport = String(row.sport ?? "").trim().toLowerCase();
@@ -237,7 +250,9 @@ export function groupKeyOf(row: DupRow, forceAutoPrefixes: readonly string[] = D
   const cardNumber = String(row.cardNumber ?? "").trim().toLowerCase();
   const parallel = cleanParallelSlug(row.parallelSlug);
   const auto = row.isAuto === true || isAutoByCardNumber(row.cardNumber, forceAutoPrefixes) ? "auto" : "no-auto";
-  return `${sport}|${year}|${groupProductKeyOf(row)}|${cardNumber}|${parallel}|${auto}`;
+  const sub = subsetSegmentOf(row);
+  const base = `${sport}|${year}|${groupProductKeyOf(row)}|${cardNumber}|${parallel}|${auto}`;
+  return sub ? `${base}|${sub}` : base;
 }
 
 // -- source identity ---------------------------------------------------------
