@@ -2275,6 +2275,20 @@ const STRICT_CHECKLIST_SOURCES = Object.freeze([
   // printed checklist is a scrape with the best possible provenance, and the
   // ruling rows are Drew deciding a card by name.
   "drew-google-sheet", "cardpedia-drew-ruling",
+  // -- a manufacturer's OWN published checklist -----------------------------
+  // CF-A-MANUFACTURERS-OWN-CHECKLIST-IS-A-CHECKLIST (2026-09-19), same
+  // finding and same fix as catalogAuthority.service.ts's CHECKLIST regex --
+  // the two must agree, or a row lands with checklist authority (the loose
+  // gate) but scores STRICT 0 here (the gate that may prove a card exists),
+  // exactly the split this allowlist exists to prevent. upperdeck.com's own
+  // checklist page is the strongest possible provenance there is for an
+  // Upper Deck card: the manufacturer, not a third party, transcribing its
+  // own product. Registered here as `upperdeck-official`, matching
+  // normalizeCatalogSource's stripped form of the `upperdeck-official-
+  // 2026-09-19` tag two staged hockey packages use. topps-official /
+  // panini-official / leaf-official added alongside, pre-emptively, so the
+  // NEXT manufacturer checklist source does not repeat this outage.
+  "upperdeck-official", "topps-official", "panini-official", "leaf-official",
 ]);
 
 /** The catalog's per-ingest suffixes and date stamps, stripped so a trusted
