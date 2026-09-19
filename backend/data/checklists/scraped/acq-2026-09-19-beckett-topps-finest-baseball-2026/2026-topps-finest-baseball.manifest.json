@@ -1,0 +1,39 @@
+{
+  "scrapedAt": "2026-09-19T19:16:29.381Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/06/2026-Topps-Finest-Baseball-Checklist.xlsx",
+  "xlsxHttpStatus": 200,
+  "sha256": "2c28825847fccdfe5f04bb82b78068129d36f52488f9f2a69e6ab930a6de387c",
+  "source": "beckett-s3-2026-09-19",
+  "fetchDate": "2026-09-19",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Topps Finest",
+  "productKey": "2026-topps-finest",
+  "setKey": "topps-finest",
+  "readyToIngest": false,
+  "why": "Rank-20 in the 2026-09-19 sales-volume-ranked acquisition queue (1,352 sales in the sampled 30-day window, 40% not backed, est. 541 not-backed sales). Glob/grep of backend/data/checklists/** found NO committed checklist for this product-year at all (only backend/data/checklists/hand-fetched/parallels-2025-topps-finest-baseball.json exists, for the PRIOR year) -- this is the genuine 'never acquired' case among today's 4 packages, not a wrong-key or narrow-scope situation. The key topps-finest is already registered in productSetKeys.ts (S('topps-finest', {names:['finest'], parent:'topps'})) so no productSetKeys.ts change is needed for this package.",
+  "reproduce": {
+    "discoverCommand": "targeted S3 HEAD probe over window 2026-Topps-Finest-Baseball-Checklist.xlsx across 2026/02..2026/10 (not in discoverBeckettS3Checklists.cjs's GAP_LIST; probed ad hoc with the same bounded-window/politeness logic, 1 req/sec) -- HIT at 2026/06, all earlier months 403.",
+    "convertCommand": "node backend/scripts/convertBeckettChecklistXlsx.cjs --xlsx 2026-topps-finest-baseball.xlsx --year 2026 --set-key topps-finest --set-name \"2026 Topps Finest\" --sport baseball --out 2026-topps-finest-baseball.csv --source-url \"https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/06/2026-Topps-Finest-Baseball-Checklist.xlsx\" --source-label beckett-s3-2026-09-19",
+    "converterOutput": "wrote 2026-topps-finest-baseball.raw.csv; rows=1051 (deduped 0); by kind: {\"base\":350,\"auto\":431,\"insert\":270}; sections: 26 (anchors 4, parallels 0, own-cards 22). No AMBIGUOUS overlaps, no zero-row sheets, no 'Topps Master Checklist' sheet in this workbook (0 all-caps parallel rows, checked directly)."
+  },
+  "rowsByCategory": {
+    "base": { "rows": 350, "note": "4 anchor tiers (Common 100, Uncommon 100, Rare 100, Super Rare 50), all blank parallel -- this Beckett file is card-list only, no refractor-color parallel column for the base set (parallels for this product live elsewhere, e.g. the existing hand-fetched/parallels-2025-topps-finest-baseball.json pattern for the prior year; not sourced in this pass)." },
+    "auto": { "rowsInRawConvert": 431, "rowsStaged": 259, "categories": "10 sections retained: Finest Autographs (159), Finest Ink (24), Gustographs (41), Finest Personality Autographs (15), Topps Rookie Cup Anniversary Autographs (13), Topps Rookie Cup Dual Autographs (20, legitimate 2-name dual per card, not a collision)." },
+    "insert": { "rowsInRawConvert": 270, "rowsStaged": 270, "categories": "10 sections: Arrivals, World's Finest, Topps Team Finest, Finest Timelines, Smashing Through, The Man, Gusto, Nightmare Fuel, Headliners, Aura." }
+  },
+  "trimmedFromRawConvert": {
+    "count": 172,
+    "what": "172 rows across 4 categories dropped whole: auto-finest-mega-autographs (86 rows, section 'Finest Mega Autographs'), auto-finest-moments-autographs (36 rows, 'Finest Moments Autographs'), insert-finest-futures (25 rows, 'Finest Futures'), insert-finest-phenoms (25 rows, 'Finest Phenoms').",
+    "why": "R67 roster test, same trap the task brief named for 2026 Bowman/Bowman Chrome: these 4 subsets share initials-based numbering with EACH OTHER, minting DIFFERENT players at the SAME card number -- Finest Futures FF-19 = Samuel Basallo vs Finest Phenoms FF-19 = Konnor Griffin (13 such FF-/FMA- collisions total, full list in plannerVerdict's pre-trim run). Different players, same number = NOT a parallel/variation pair -- each pair is either two independently-numbered products that happen to share a numbering scheme, or needs its own registered key. planStagedDirectory refused the raw 1,051-row convert with reason=unregistered-set-keys (4 unregistered subsets, all resolvesTo topps-finest) and 13 hard id collisions. Left out of this package per the task's instruction to report rather than fix; owner's ruling pending, same as the named UAC-1 / CPA-AN..CRA-JC traps."
+  },
+  "newVsExisting": {
+    "method": "No prior committed checklist exists for 2026 Topps Finest under backend/data/checklists/**, so every cell in this package is new by construction.",
+    "totalCellsInPackage": 879,
+    "newCells": 879,
+    "existingCellsUnchanged": 0
+  },
+  "rosterFoldEvidence": "Spot-checked 30 rows across base/auto/insert categories: no RC/marker suffixes leaked into player cells, no trailing commas, Topps Rookie Cup Dual Autographs correctly merged both names with ' / ' per the roster-fold convention (e.g. legitimate two-player dual, distinct from the excluded FF-/FMA- initials collisions above).",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, offline, run against this trimmed file): 879 batch rows, 879 distinct ids, 0 collisions, 0 unregistered set keys, 0 duplicatesFolded, 0 unslugable. (The pre-trim 1051-row raw convert refused with reason=unregistered-set-keys, 13 collisions, 4 unregistered subsets -- see trimmedFromRawConvert above; this manifest describes the POST-trim, passing file.)",
+  "note": "STAGED, not ingested. This package closes the base-350 + non-colliding auto/insert number ladder; the base set's refractor-color PARALLEL matrix (the other half of rank-20's diagnosed gap, per the ranked queue's parallelMiss examples at #88/#28/#99) is not sourced in this pass -- this Beckett file carries no parallel column for Finest's base set, unlike 2025 Topps Chrome's file. A parallel source (Beckett variations guide, cardboardconnection, or a hand-fetched JSON in the style of parallels-2025-topps-finest-baseball.json) is a separate follow-up."
+}
