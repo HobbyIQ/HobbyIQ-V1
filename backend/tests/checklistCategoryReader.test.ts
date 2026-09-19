@@ -290,3 +290,72 @@ describe("disambiguateSiblingCategories — when the column cannot tell them apa
     expect(readChecklistCategory("insert-base-red-zone-blue", "").parallel).toBe("Red Zone Blue");
   });
 });
+
+describe("a tier name the NUMBERS contradict is a conflict, not a correction", () => {
+  // MEASURED on 2024-25 panini-select basketball:
+  //
+  //   insert-base-set-concourse                       #1-100    (#1 Holmgren)
+  //   insert-base-set-premier-level                   #101-200
+  //   insert-base-set-courtside                       #201-300
+  //   insert-base-set-courtside-green-tectonic-prizms #1-100    (#1 Holmgren)
+  //
+  // The last carries COURTSIDE's name over CONCOURSE's roster and range. Its
+  // parallel column is blank, so it collapses to plain `base` and collides on
+  // 100 ids.
+  const RANGES = { concourse: [1, 100], "premier-level": [101, 200], courtside: [201, 300] };
+
+  it("reports the contradiction and names what the range says instead", () => {
+    const r = readChecklistCategory(
+      "insert-base-set-courtside-green-tectonic-prizms", "",
+      { tierRanges: RANGES, cardNumber: 1 },
+    );
+    expect(r.conflict).toMatchObject({
+      reason: "tier-name-contradicts-card-number",
+      statedTier: "courtside",
+      cardNumber: 1,
+      rangeSays: "concourse",
+    });
+  });
+
+  it("does NOT re-assign the card — one observed row is not a rule", () => {
+    // Swept all 1,236 tier-suffixed categories in every Select file: this is
+    // the ONLY one whose numbers contradict its tier name. Auto-correcting on
+    // a single case would be re-filing a card to a DIFFERENT PRODUCT on an
+    // inference, which is the expensive direction to be wrong in. The caller
+    // refuses the category by name instead.
+    const r = readChecklistCategory(
+      "insert-base-set-courtside-green-tectonic-prizms", "",
+      { tierRanges: RANGES, cardNumber: 1 },
+    );
+    expect(r.tierKey, "the STATED tier is reported unchanged").toBe("courtside");
+  });
+
+  it("a legitimate tier row in its own range reports no conflict", () => {
+    const r = readChecklistCategory("insert-base-set-courtside", "", { tierRanges: RANGES, cardNumber: 250 });
+    expect(r.tierKey).toBe("courtside");
+    expect(r.conflict).toBeNull();
+  });
+
+  it("tierRanges is OPTIONAL — a caller that cannot supply it gets today's answer", () => {
+    // The corpus builder reads names, not numbers. It must be no worse off.
+    const r = readChecklistCategory("insert-base-set-courtside-green-tectonic-prizms", "");
+    expect(r.conflict).toBeNull();
+    expect(r.tierKey).toBe("courtside");
+  });
+
+  it("`insert-base-set-<x>` is the same as `insert-base-<x>` — 113 files spell it so", () => {
+    // 167,474 rows carry the extra `set-` segment. Without handling it the
+    // tier match fails on every one, filing "Set Courtside" as a PARALLEL of
+    // the flagship instead of naming the Courtside product.
+    expect(readChecklistCategory("insert-base-set-concourse", "").tierKey).toBe("concourse");
+    expect(readChecklistCategory("insert-base-concourse", "").tierKey).toBe("concourse");
+    expect(readChecklistCategory("insert-base-set-all-stars", "").parallel).toBe("All Stars");
+  });
+
+  it("courtside is a real tier the registry lacks — named and flagged", () => {
+    // Same shape as suite-level. ACQUISITION: `panini-select-courtside`.
+    const r = readChecklistCategory("insert-base-set-courtside", "");
+    expect(r.tierKey).toBe("courtside");
+    expect(r.tierIsRegistered).toBe(false);
+  });
+});
