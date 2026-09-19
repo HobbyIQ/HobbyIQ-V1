@@ -451,49 +451,19 @@ describe("robustness -- absent/malformed inputs never throw and never match", ()
 });
 
 // ---------------------------------------------------------------------------
-// R70 PARK MECHANISM: `parkSoldCompDoc` writes the stamp the writers apply,
-// and a POOL-EXCLUSION CHECK against the real reader behind FMV computation
-// -- per the coordinator's explicit ask: name the reader, cite file:line,
-// and say plainly whether a row parked with `insert-named-no-key` is
-// excluded from pool reads the way other parked rows are.
+// R70 PARK MECHANISM: `parkSoldCompDoc` writes the stamp the writers apply.
 //
-// FINDING (2026-09-19, this PR): it is NOT. `exactPoolReader.ts`'s
-// `readExactPoolRows` -- the query behind `computeUnifiedPrice`
-// (unifiedPricing.service.ts) and therefore every FMV published -- filters
-// exactly three fields in its WHERE clause (exactPoolReader.ts:179-181):
-// `priceAnomaly`, `flaggedWrong`, `excludedFromFmv`. It does NOT filter
-// `identityUnverified`. `soldCompsGradeReader.ts:112-113` filters the same
-// two (`flaggedWrong`, `excludedFromFmv`), also never `identityUnverified`.
-//
-// This is a PRE-EXISTING gap, not something this PR introduces: every prior
-// `SplitIdentityReason` (`split-identity`, `sport-unresolved`,
-// `malformed-key`, all shipped before this PR) sets ONLY the
-// `identityUnverified*` fields via `guardSoldCompDoc`
-// (splitIdentityWriteGuard.ts:318-329) -- never `flaggedWrong` or
-// `excludedFromFmv`. `parkSoldCompDoc` (this PR's new export, same file,
-// ~343-362) applies the identical stamp for the two new reasons, so a row
-// parked by either mechanism is EQUALLY (in)visible to `exactPoolReader.ts` --
-// consistent with every reason that came before it, not a new hole this PR
-// opens on its own.
-//
-// The header comment on `GuardedSoldCompDoc` (splitIdentityWriteGuard.ts:43,
-// "which keeps it out of EVERY pool") is therefore ahead of what the FMV
-// read path actually does. `identityUnverified` DOES exclude a row from two
-// narrower, write-time mechanisms: `twinAddressRule.ts:84`'s `isParked`
-// (decides whether a would-be twin is a live rival during ingest) and
-// `soldCompsStore.service.ts`'s catalog-auto-seed guard (~line 2519,
-// `identityParked`, stops a parked row from minting a catalog row). Neither
-// is the FMV pool.
-//
-// NOT FIXED HERE: closing this is a change to `exactPoolReader.ts` and
-// `soldCompsGradeReader.ts` (add `(NOT IS_DEFINED(c.identityUnverified) OR
-// c.identityUnverified != true)` to both WHERE clauses) that affects EVERY
-// existing park reason, not only this PR's two new ones -- broader than this
-// PR's scope and risky to fold in unreviewed. Flagged as a REQUIRED
-// follow-up, not optional: today, an `insert-named-no-key` (or
-// `split-identity`, or any other) parked row still prices whatever card its
-// `cardId`/`hobbyiqCardId` name, because nothing downstream of the write door
-// excludes it.
+// NOTE (review fix, 2026-09-19): the two tests that USED to sit here --
+// asserting `exactPoolReader.ts` / `soldCompsGradeReader.ts` do NOT filter
+// `identityUnverified` -- were REMOVED, not merely rewritten. F2, a
+// SEPARATE PR by another author, closes exactly that gap (the FMV readers
+// will start excluding `identityUnverified` rows), and those two tests
+// pinned the CURRENT, about-to-change behaviour byte-for-byte -- keeping
+// them here would turn F2's own PR red the moment it lands, for a query
+// shape this PR does not own and must not gate. The finding itself (parked
+// !== excluded from FMV, today) is preserved in prose on
+// `twinAddressRule.ts`'s `isParked` header (F6 fix, same review) rather than
+// as an executable pin in this file.
 describe("R70 park mechanism -- parkSoldCompDoc writes the stamp", () => {
   it("stamps identityUnverified + reason + detail on the doc, matching guardSoldCompDoc's own park shape", async () => {
     const { parkSoldCompDoc } = await import("../src/services/portfolioiq/splitIdentityWriteGuard");
@@ -514,82 +484,6 @@ describe("R70 park mechanism -- parkSoldCompDoc writes the stamp", () => {
     parkSoldCompDoc(doc, "two-inserts-named", "title names 2 distinct insert sets", "test:insert-set-title-reader");
     expect(doc.identityUnverified).toBe(true);
     expect(doc.identityUnverifiedReason).toBe("two-inserts-named");
-  });
-});
-
-describe("R70 park mechanism -- POOL-EXCLUSION GAP (pre-existing, confirmed, not fixed here)", () => {
-  const captured: { query?: string } = {};
-  beforeEach(() => { captured.query = undefined; });
-
-  async function loadExactPoolReader() {
-    const { vi } = await import("vitest");
-    vi.resetModules();
-    vi.doMock("@azure/cosmos", () => ({
-      CosmosClient: class {
-        database() {
-          return {
-            container: () => ({
-              items: {
-                query: (spec: { query: string }) => {
-                  captured.query = spec.query;
-                  return { fetchAll: async () => ({ resources: [] }) };
-                },
-              },
-            }),
-          };
-        }
-      },
-    }));
-    process.env.COSMOS_CONNECTION_STRING = "AccountEndpoint=https://x/;AccountKey=k==;";
-    return await import("../src/services/compiq/exactPoolReader.js");
-  }
-
-  it("readExactPoolRows -- the query behind every published FMV -- does NOT filter identityUnverified", async () => {
-    const { readExactPoolRows } = await loadExactPoolReader();
-    await readExactPoolRows({
-      cardId: "hiq:football:2024:donruss-optic:6:base:no-auto", hobbyiqCardId: null, windowDays: 90,
-    });
-    expect(captured.query).toBeDefined();
-    // The three fields it DOES filter (unchanged by this PR).
-    expect(captured.query).toContain("c.flaggedWrong != true");
-    expect(captured.query).toContain("c.excludedFromFmv != true");
-    expect(captured.query).toContain("c.priceAnomaly != true");
-    // THE GAP: no clause anywhere mentions identityUnverified. A row this PR
-    // (or any prior park reason) marks `identityUnverified: true` is still
-    // read into this pool exactly like an unparked row.
-    expect(captured.query).not.toContain("identityUnverified");
-  });
-
-  it("the same gap exists for soldCompsGradeReader's own query (also pre-existing, also unfixed here)", async () => {
-    const { vi } = await import("vitest");
-    vi.resetModules();
-    const gradeCaptured: { query?: string } = {};
-    vi.doMock("@azure/cosmos", () => ({
-      CosmosClient: class {
-        database() {
-          return {
-            container: () => ({
-              items: {
-                query: (spec: { query: string }) => {
-                  gradeCaptured.query = spec.query;
-                  return { fetchAll: async () => ({ resources: [] }) };
-                },
-              },
-            }),
-          };
-        }
-      },
-    }));
-    process.env.COSMOS_CONNECTION_STRING = "AccountEndpoint=https://x/;AccountKey=k==;";
-    // readSoldCompsForGrade(cardId, grade, opts) -- its real signature, so the
-    // query is actually issued rather than the probe throwing before it gets
-    // there (which would make the assertion below vacuous).
-    const { readSoldCompsForGrade } = await import("../src/services/compiq/soldCompsGradeReader.js");
-    await readSoldCompsForGrade("hiq:football:2024:donruss-optic:6:base:no-auto", "Raw", { windowDays: 90 });
-    expect(gradeCaptured.query).toBeDefined();
-    expect(gradeCaptured.query).toContain("c.flaggedWrong");
-    expect(gradeCaptured.query).toContain("c.excludedFromFmv");
-    expect(gradeCaptured.query).not.toContain("identityUnverified");
   });
 });
 

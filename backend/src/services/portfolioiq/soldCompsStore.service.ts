@@ -50,7 +50,7 @@ import {
 import { computeHobbyIqCardId, resolveSetKeyForSlug, normalizeSetKey, sameCardNumber } from "./hobbyIqCardId.service.js";
 import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./slugGuard.service.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
-import { guardSoldCompDoc, parkSoldCompDoc } from "./splitIdentityWriteGuard.js";
+import { guardSoldCompDoc, parkSoldCompDoc, carryProductRekeyOntoCardId } from "./splitIdentityWriteGuard.js";
 import { insertSetNamedInTitle } from "./insertSetTitleReader.js";
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
@@ -1106,7 +1106,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // the split-identity write door alongside `guardSoldCompDoc`'s own verdict,
   // after `doc` exists -- see the door's own comment for why the two share
   // one park mechanism rather than a second one.
-  let insertParkPending: { reason: "insert-named-no-key" | "two-inserts-named"; detail: string } | null = null;
+  let insertParkPending: { reason: "insert-named-no-key" | "two-inserts-named" | "insert-named-unconfirmed"; detail: string } | null = null;
   // CF-PRE-INGEST-CLEAN (Drew, 2026-08-01). ALWAYS run vendor-specific
   // pre-ingest cleaning as the FIRST step. This is Pass 1 of the
   // two-pass ingest cleaning. Any of the 46 callers of this function
@@ -1343,6 +1343,18 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // untouched by construction -- the corpus this reader consults has no
   // Pokemon products, and the sport check below is the explicit belt to that
   // braces.
+  // F1 (review finding): the setKey this pre-step read BEFORE any insert
+  // re-key, captured so `carryProductRekeyOntoCardId` (below, at the
+  // split-identity write door) can tell "cardId already names the base
+  // product this re-key moved away from" from "cardId already disagreed for
+  // some OTHER reason" -- it must only ever carry a genuine base-to-insert
+  // move forward, never paper over an unrelated mismatch.
+  let insertPreRewriteBaseSetKey: string | null = null;
+  // F3+F5 (review finding): set only when a re-key is CONFIRMED by the
+  // insert's own checklist rows (insertSetChecklistConfirm.ts), never by a
+  // title match alone. Read at the split-identity write door.
+  let insertReKeyConfirmed = false;
+  let insertReKeySetKey: string | null = null;
   const insertPinCandidate = String(input.pinnedHobbyIqCardId ?? "").trim();
   let insertPreStepSetName = umbrellaFoldedSetName ?? input.setName;
   if (!insertPinCandidate.startsWith("hiq:")) {
@@ -1350,6 +1362,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     if (insertSport && String(insertSport).toLowerCase() !== "pokemon" && typeof input.cardYear === "number") {
       const insertSetKey = resolveSetKeyForSlug(insertSport, insertPreStepSetName ?? "", input.cardYear);
       if (insertSetKey && insertSetKey !== "unknown") {
+        insertPreRewriteBaseSetKey = insertSetKey;
         const insertMatches = insertSetNamedInTitle({
           title: input.title,
           sport: insertSport,
@@ -1366,19 +1379,109 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
           };
         } else if (insertMatches.length === 1) {
           const only = insertMatches[0];
+          const insertPreCardNumber = (input.cardNumber && input.cardNumber.trim())
+            ? input.cardNumber.trim()
+            : extractCardNumberFromTitle(input.title);
           if (only.registeredKey) {
-            // R67: the insert is its own product. Rewriting setName here means
-            // deriveHobbyIqSlug (next) and doc.setName (below) both mint the
-            // insert's own id, not the base card's -- and the numbered-id
-            // upgrade further down looks up the insert's own checklist row.
-            insertPreStepSetName = only.registeredKey;
+            // F3+F5 (review finding): a title match is vocabulary, not proof.
+            // Re-key ONLY when the insert's OWN checklist rows confirm this
+            // sale at its card number (or, absent one, its player) -- never
+            // on the title match alone. Bounded, cached, fail-open catalog
+            // read shared with persistVendorSalesToPool's narrow breaker; see
+            // insertSetChecklistConfirm.ts's header for the full reasoning.
+            let confirmed = false;
+            try {
+              const { insertReKeyConfirmedByChecklist } = await import("./insertSetChecklistConfirm.js");
+              const { getCatalogContainerForRead } = await import("../catalog/catalogMatcher.service.js");
+              const { narrowQuery, narrowBreakerIsOpen, recordNarrowSkip, NARROW_QUERY_TIMEOUT_MS } =
+                await import("./persistVendorSalesToPool.service.js");
+              confirmed = await insertReKeyConfirmedByChecklist(
+                {
+                  sport: insertSport, year: input.cardYear, insertSetKey: only.registeredKey,
+                  cardNumber: insertPreCardNumber, playerName: input.playerName,
+                },
+                {
+                  container: await getCatalogContainerForRead(),
+                  runQuery: (run) => narrowQuery(() => run()),
+                  breakerIsOpen: narrowBreakerIsOpen,
+                  recordSkip: recordNarrowSkip,
+                  queryOptions: { abortSignal: AbortSignal.timeout(NARROW_QUERY_TIMEOUT_MS) },
+                },
+              );
+            } catch {
+              // Fail open onto "unconfirmed" -- never a re-key on a blip.
+              confirmed = false;
+            }
+            if (confirmed) {
+              // R67: the insert is its own product, CONFIRMED by its own
+              // checklist. Rewriting setName here means deriveHobbyIqSlug
+              // (next) and doc.setName (below) both mint the insert's own
+              // id, not the base card's -- and the numbered-id upgrade
+              // further down looks up the insert's own checklist row.
+              insertPreStepSetName = only.registeredKey;
+              insertReKeyConfirmed = true;
+              insertReKeySetKey = only.registeredKey;
+            } else {
+              // F3+F5: named, registered, but NOT confirmed against the
+              // insert's own checklist at this card's number/player -- a
+              // title match alone (seller boilerplate, an incidental mention)
+              // never re-keys. Absent beats wrong: park, keep, count,
+              // distinctly from R70's "no registered key at all" reason.
+              insertParkPending = {
+                reason: "insert-named-unconfirmed",
+                detail: `title names insert "${only.root}" of ${insertSetKey} (registered as `
+                  + `${only.registeredKey}), but its checklist rows do not confirm this sale's `
+                  + `card number/player -- parked, not re-keyed on a title match alone`,
+              };
+            }
           } else {
-            // R70: named, but nothing registers it. Park, keep, count.
-            insertParkPending = {
-              reason: "insert-named-no-key",
-              detail: `title names insert "${only.root}" of ${insertSetKey}, which has no registered `
-                + `product key -- parked, not pooled on the base card`,
-            };
+            // F4 (review finding): an UNREGISTERED root is often an ordinary
+            // English word appearing incidentally in a base-card title
+            // ("fireworks", "prime", "dominance") -- park only if the BASE
+            // checklist does NOT already confirm this sale as a base card.
+            // When it does, the word is incidental and the sale is real,
+            // ordinary base-card coverage; leave it untouched.
+            let baseConfirmed = false;
+            try {
+              const { baseCardConfirmedBySale } = await import("./insertSetChecklistConfirm.js");
+              const { getCatalogContainerForRead } = await import("../catalog/catalogMatcher.service.js");
+              const { narrowQuery, narrowBreakerIsOpen, recordNarrowSkip, NARROW_QUERY_TIMEOUT_MS } =
+                await import("./persistVendorSalesToPool.service.js");
+              baseConfirmed = await baseCardConfirmedBySale(
+                {
+                  sport: insertSport, year: input.cardYear, baseSetKey: insertSetKey,
+                  cardNumber: insertPreCardNumber, playerName: input.playerName,
+                },
+                {
+                  container: await getCatalogContainerForRead(),
+                  runQuery: (run) => narrowQuery(() => run()),
+                  breakerIsOpen: narrowBreakerIsOpen,
+                  recordSkip: recordNarrowSkip,
+                  queryOptions: { abortSignal: AbortSignal.timeout(NARROW_QUERY_TIMEOUT_MS) },
+                },
+              );
+            } catch {
+              baseConfirmed = false;
+            }
+            if (baseConfirmed) {
+              console.log(JSON.stringify({
+                event: "sold_comp_insert_word_but_base_confirmed",
+                source: "soldCompsStore.recordSoldComp",
+                vendorSource: input.source,
+                root: only.root,
+                setKey: insertSetKey,
+                detail: "unregistered insert root named incidentally in a title the base checklist confirms -- left untouched",
+              }));
+            } else {
+              // R70: named, nothing registers it, and the base checklist
+              // does not confirm this as an ordinary base sale either. Park,
+              // keep, count -- the parked list is the registration queue.
+              insertParkPending = {
+                reason: "insert-named-no-key",
+                detail: `title names insert "${only.root}" of ${insertSetKey}, which has no registered `
+                  + `product key -- parked, not pooled on the base card`,
+              };
+            }
           }
         }
       }
@@ -1692,9 +1795,39 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // normalizer so display + slug + hobbyiqCardId all agree.
   const canonicalParallel = canonicalizeParallel(input.parallel);
 
+  // F1 (critical, review finding on R66/R67). `cardId` is the Cosmos
+  // PARTITION KEY -- the pool a sale is actually read from -- and it comes
+  // from the caller's `input.cardId` verbatim. When the R66/R67 pre-step
+  // above re-keyed `hobbyiqCardId` (via `insertPreStepSetName`) to a
+  // CONFIRMED insert product, a `cardId` still naming the pre-rewrite base
+  // product must move with it, or `decideSplitIdentity` below sees "same
+  // sport, different product" and parks the row -- the re-key becomes a
+  // no-op for the pool, since `exactPoolReader` matches on `cardId`. See
+  // `carryProductRekeyOntoCardId`'s own header for the exact three
+  // conditions (hiq slug, matches the PRE-rewrite base setKey, confirmed) --
+  // any caller not meeting them gets `input.cardId` back unchanged, so this
+  // is always safe to call unconditionally.
+  const effectiveCardId = carryProductRekeyOntoCardId({
+    cardId: input.cardId,
+    preRewriteBaseSetKey: insertPreRewriteBaseSetKey,
+    insertSetKey: insertReKeySetKey ?? "",
+    confirmed: insertReKeyConfirmed,
+  }) ?? input.cardId;
+  if (effectiveCardId !== input.cardId) {
+    console.log(JSON.stringify({
+      event: "sold_comp_insert_rekey_carried_to_card_id",
+      source: "soldCompsStore.recordSoldComp",
+      vendorSource: input.source,
+      wasCardId: input.cardId,
+      nowCardId: effectiveCardId,
+      insertSetKey: insertReKeySetKey,
+      detail: "cardId's product segment moved with the confirmed insert re-key so the pool and hobbyiqCardId agree",
+    }));
+  }
+
   const doc: SoldCompDoc = {
-    id: makeId(input.source, input.sourceExternalId ?? null, input.cardId, input.soldAt),
-    cardId: input.cardId.trim(),
+    id: makeId(input.source, input.sourceExternalId ?? null, effectiveCardId, input.soldAt),
+    cardId: effectiveCardId.trim(),
     playerName: input.playerName.trim(),
     cardYear: input.cardYear ?? null,
     setName: input.setName ?? null,

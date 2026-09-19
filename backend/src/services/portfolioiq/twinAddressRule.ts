@@ -72,13 +72,24 @@ export type TwinVerdict =
   | { action: "refuse"; liveTwinAt: string };
 
 /**
- * A parked copy is out of every pool, so it is not a competing address.
+ * A parked copy is not a competing address FOR THIS RULE, so `decideTwinAddress`
+ * treats it as though it were not resident anywhere. This is narrower than "out
+ * of every pool" -- see F6 (2026-09-19 review finding on the R66/R67/R70 PR).
  *
  * Both markers count. `flaggedWrong` is the dedup lane's (#1942);
- * `identityUnverified` is the write guard's (CF-ONE-WRITE-PATH-FOR-SOLD-COMPS)
- * -- a row whose identity nothing attests is likewise held out of every pool.
- * Either one means the row is not pricing a card, which is the only property
- * this rule cares about.
+ * `identityUnverified` is the write guard's (CF-ONE-WRITE-PATH-FOR-SOLD-COMPS).
+ * CONFIRMED (per `insertSetTitleReader.test.ts`'s own pool-exclusion-gap
+ * pins, and see that test file's header for the full citation):
+ * `identityUnverified` does NOT exclude a row from `exactPoolReader.ts`'s
+ * `readExactPoolRows` (the query behind every published FMV,
+ * `unifiedPricing.service.ts`) or from `soldCompsGradeReader.ts`'s
+ * `readSoldCompsForGrade` -- neither filters it in its WHERE clause. A row
+ * parked with `identityUnverified` is therefore NOT out of every pool today;
+ * it is out of the narrower set this file and `soldCompsStore.service.ts`'s
+ * catalog-auto-seed guard actually check. A separate PR closes that FMV-pool
+ * gap (excluding `identityUnverified` rows from both readers); until it
+ * ships, "parked" means "invisible to THIS rule and to catalog auto-seed",
+ * not "invisible to FMV".
  */
 export function isParked(row: TwinCandidate | null | undefined): boolean {
   return row?.flaggedWrong === true || row?.identityUnverified === true;

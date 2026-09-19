@@ -908,18 +908,31 @@ export interface VendorPersistResult {
   /** Rows whose two identity fields disagreed and an ATTESTED sport settled
    *  it; both fields were rewritten to the attested identity. */
   identityResolved?: number;
-  /** R67 (2026-09-19): the title named a registered insert set of its own
-   *  product; `setKey` was rewritten to the insert's own product key before
-   *  the id was minted, so the row prices against the insert's own pool, not
-   *  the base card of that number. */
+  /** R67 (2026-09-19), CONFIRMED per F3+F5 (review fix, same day): the title
+   *  named a registered insert set of its own product AND the insert's own
+   *  checklist rows confirmed this sale's card number/player; `setKey` was
+   *  rewritten to the insert's own product key before the id was minted, so
+   *  the row prices against the insert's own pool, not the base card of that
+   *  number. */
   insertSetReKeyed?: number;
+  /** F3+F5 (review fix, 2026-09-19): the title named a REGISTERED insert set,
+   *  but the insert's own checklist rows did not confirm this sale's card
+   *  number/player -- a title match alone (seller boilerplate, an incidental
+   *  mention) never re-keys. Parked with `insert-named-unconfirmed`, distinct
+   *  from `insertSetParkedNoKey` (no registered key exists at all). */
+  insertSetParkedUnconfirmed?: number;
   /** R70 (2026-09-19): the title named an insert set of its own product with
-   *  NO registered product key. Parked through the same mechanism as
-   *  `identityParked` (kept, queryable, out of every pool); counted
-   *  separately because the fix for this class is registering the key, not
-   *  attesting a sport. Grouped by insert root, this is the registration
-   *  queue. */
+   *  NO registered product key, and the BASE checklist did not confirm this
+   *  sale as an ordinary base card either. Parked through the same mechanism
+   *  as `identityParked`; counted separately because the fix for this class
+   *  is registering the key, not attesting a sport. Grouped by insert root,
+   *  this is the registration queue. */
   insertSetParkedNoKey?: number;
+  /** F4 (review fix, 2026-09-19): the title named an UNREGISTERED root, but
+   *  the BASE checklist confirmed this sale as an ordinary base card at its
+   *  number/player -- the root is an incidental English word (e.g.
+   *  "fireworks", "prime"), not evidence of an insert. Left untouched. */
+  insertWordButBaseConfirmed?: number;
   /** CF-THE-TITLE-OUTRANKS-THE-VENDOR-PLAYER: the vendor attributed the sale to
    *  a DIFFERENT person than the title names. Neither is adopted; the row is
    *  skipped as UNDERIVABLE rather than keyed to a card it may not be. */
@@ -1129,7 +1142,7 @@ export async function persistVendorSalesToPool(
     // are all resolved, when the title names an insert set with no registered
     // key or names two at once. Applied at the write door alongside
     // `guardSoldCompDoc`'s own verdict -- see that call site's comment.
-    let insertParkPending: { reason: "insert-named-no-key" | "two-inserts-named"; detail: string } | null = null;
+    let insertParkPending: { reason: "insert-named-no-key" | "two-inserts-named" | "insert-named-unconfirmed"; detail: string } | null = null;
     // CF-TCA-STRUCTURED-HINT (Drew, 2026-08-02): identity hint fields
     // (cardNumber / parallel / isAuto / printRun / setName) take priority
     // over the title-guess fallback. When the vendor pre-populated
@@ -1658,8 +1671,9 @@ export async function persistVendorSalesToPool(
     // once sport/year/setKey resolve. Pokemon is untouched -- the corpus this
     // reader consults carries no Pokemon products.
     if (sport && String(sport).toLowerCase() !== "pokemon" && cardYear && setKey) {
+      const insertPreRewriteBaseSetKey = canonicalNormalizeSetKey(setKey, sport);
       const insertMatches = insertSetNamedInTitle({
-        title, sport, year: cardYear, setKey: canonicalNormalizeSetKey(setKey, sport), playerName,
+        title, sport, year: cardYear, setKey: insertPreRewriteBaseSetKey, playerName,
       });
       if (insertMatches.length > 1) {
         insertParkPending = {
@@ -1670,15 +1684,80 @@ export async function persistVendorSalesToPool(
       } else if (insertMatches.length === 1) {
         const only = insertMatches[0];
         if (only.registeredKey) {
-          setKey = only.registeredKey;
-          result.insertSetReKeyed = (result.insertSetReKeyed ?? 0) + 1;
+          // F3+F5 (review finding): a title match is vocabulary, not proof --
+          // seller boilerplate ("Ships from Downtown Toronto") can name a
+          // registered insert with no connection to the card, and an insert
+          // setKey paired with the BASE card's number is an address no
+          // checklist ever printed. Re-key only when the insert's OWN
+          // checklist rows confirm this sale's card number (or, absent one,
+          // its player). Bounded/cached/fail-open, shared narrow breaker --
+          // see insertSetChecklistConfirm.ts.
+          let confirmed = false;
+          try {
+            const { insertReKeyConfirmedByChecklist } = await import("./insertSetChecklistConfirm.js");
+            confirmed = await insertReKeyConfirmedByChecklist(
+              {
+                sport, year: cardYear, insertSetKey: only.registeredKey,
+                cardNumber: parsed.cardNumber, playerName,
+              },
+              {
+                container: await getCatalogContainerForRead(),
+                runQuery: (run) => narrowQuery(() => run()),
+                breakerIsOpen: narrowBreakerIsOpen,
+                recordSkip: recordNarrowSkip,
+                queryOptions: { abortSignal: AbortSignal.timeout(NARROW_QUERY_TIMEOUT_MS) },
+              },
+            );
+          } catch {
+            confirmed = false;
+          }
+          if (confirmed) {
+            setKey = only.registeredKey;
+            result.insertSetReKeyed = (result.insertSetReKeyed ?? 0) + 1;
+          } else {
+            insertParkPending = {
+              reason: "insert-named-unconfirmed",
+              detail: `title names insert "${only.root}" of ${setKey} (registered as `
+                + `${only.registeredKey}), but its checklist rows do not confirm this sale's `
+                + `card number/player -- parked, not re-keyed on a title match alone`,
+            };
+            result.insertSetParkedUnconfirmed = (result.insertSetParkedUnconfirmed ?? 0) + 1;
+          }
         } else {
-          insertParkPending = {
-            reason: "insert-named-no-key",
-            detail: `title names insert "${only.root}" of ${setKey}, which has no registered `
-              + `product key -- parked, not pooled on the base card`,
-          };
-          result.insertSetParkedNoKey = (result.insertSetParkedNoKey ?? 0) + 1;
+          // F4 (review finding): an unregistered root is often an ordinary
+          // English word appearing incidentally in a base-card title. Park
+          // only if the BASE checklist does not already confirm this sale as
+          // a base card -- when it does, the word is incidental and the sale
+          // is ordinary base coverage, left untouched.
+          let baseConfirmed = false;
+          try {
+            const { baseCardConfirmedBySale } = await import("./insertSetChecklistConfirm.js");
+            baseConfirmed = await baseCardConfirmedBySale(
+              {
+                sport, year: cardYear, baseSetKey: insertPreRewriteBaseSetKey,
+                cardNumber: parsed.cardNumber, playerName,
+              },
+              {
+                container: await getCatalogContainerForRead(),
+                runQuery: (run) => narrowQuery(() => run()),
+                breakerIsOpen: narrowBreakerIsOpen,
+                recordSkip: recordNarrowSkip,
+                queryOptions: { abortSignal: AbortSignal.timeout(NARROW_QUERY_TIMEOUT_MS) },
+              },
+            );
+          } catch {
+            baseConfirmed = false;
+          }
+          if (baseConfirmed) {
+            result.insertWordButBaseConfirmed = (result.insertWordButBaseConfirmed ?? 0) + 1;
+          } else {
+            insertParkPending = {
+              reason: "insert-named-no-key",
+              detail: `title names insert "${only.root}" of ${setKey}, which has no registered `
+                + `product key -- parked, not pooled on the base card`,
+            };
+            result.insertSetParkedNoKey = (result.insertSetParkedNoKey ?? 0) + 1;
+          }
         }
       }
     }
