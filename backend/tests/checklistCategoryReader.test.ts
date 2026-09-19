@@ -72,9 +72,12 @@ describe("(a) insert-base* is the BASE card, and the tail is the parallel", () =
 
 describe("(b) auto-base* is the same card, signed — because the SOURCE said so", () => {
   it.each([
-    ["auto-base-autographs-no-huddle", "Autographs No Huddle"],
-    ["auto-base-red-zone-autographs", "Red Zone Autographs"],
-    ["auto-base-red-zone-autographs-gold", "Red Zone Autographs Gold"],
+    // SPELLINGS UPDATED 2026-09-19: the section word no longer reaches the
+    // parallel axis. `isAuto` carries the signature; see the AUTO IS ITS OWN
+    // AXIS block below for the measurement that forced this.
+    ["auto-base-autographs-no-huddle", "No Huddle"],
+    ["auto-base-red-zone-autographs", "Red Zone"],
+    ["auto-base-red-zone-autographs-gold", "Red Zone Gold"],
   ])("%s -> isAuto true", (category, expected) => {
     const r = readChecklistCategory(category, "");
     expect(r.kind).toBe("auto");
@@ -168,7 +171,7 @@ describe("identityFieldsFromCategory — what a caller building an id needs", ()
       parallel: "Hobby", isAuto: false, tierKey: null, isBaseCard: true,
     });
     expect(identityFieldsFromCategory("auto-base-red-zone-autographs", "")).toEqual({
-      parallel: "Red Zone Autographs", isAuto: true, tierKey: null, isBaseCard: true,
+      parallel: "Red Zone", isAuto: true, tierKey: null, isBaseCard: true,
     });
     expect(identityFieldsFromCategory("insert-z-marquee", "")).toMatchObject({ isBaseCard: false });
   });
@@ -425,5 +428,80 @@ describe("a colour of ONE card, not three cards — the roster decides", () => {
       { category: "insert-x", parallel: "Red" },
     ]);
     expect(m.size).toBe(0);
+  });
+});
+
+describe("AUTO IS ITS OWN AXIS — a section name is never a finish", () => {
+  // A slug is `...:red:auto` against `...:red:no-auto`; the signature lives in
+  // `isAuto` and must never be spelled into the parallel.
+  //
+  // MEASURED: wiring the ingest made 2024 panini-photogenic football WORSE
+  // (841 -> 948 duplicate ids), because `auto-base-red-autographs` returned
+  // "Red Autographs" while its unsigned twin `insert-base-red` returned "Red".
+  // Two spellings of one rung is two pools for one ladder.
+
+  it.each([
+    ["auto-base-red-autographs", "Red"],
+    ["auto-base-black-autographs", "Black"],
+    ["auto-base-autographs-no-huddle", "No Huddle"],
+    ["auto-base-autographs-two-minute-drill", "Two Minute Drill"],
+    // The section word can sit in the MIDDLE of the tail.
+    ["auto-base-red-zone-autographs-blue", "Red Zone Blue"],
+    ["auto-base-vertical-autographs-gold", "Vertical Gold"],
+  ])("%s -> parallel %s, isAuto true", (category, expected) => {
+    const r = readChecklistCategory(category, "");
+    expect(r.parallel).toBe(expected);
+    expect(r.isAuto).toBe(true);
+  });
+
+  it("a bare signed section states NO rung", () => {
+    const r = readChecklistCategory("auto-base-autographs", "");
+    expect(r.parallel).toBeNull();
+    expect(r.isAuto).toBe(true);
+  });
+
+  it("the signed rung now SHARES its unsigned twin's spelling — one ladder", () => {
+    // The whole point, stated as the pair it fixes.
+    expect(readChecklistCategory("insert-base-red", "").parallel).toBe("Red");
+    expect(readChecklistCategory("auto-base-red-autographs", "").parallel).toBe("Red");
+    // ...differing only on the axis that carries the signature.
+    expect(readChecklistCategory("insert-base-red", "").isAuto).toBe(false);
+    expect(readChecklistCategory("auto-base-red-autographs", "").isAuto).toBe(true);
+  });
+
+  it("REAL FILES: every signed base rung matches an unsigned twin where one exists", () => {
+    // Photogenic 11 of 11, Zenith 6 of 7 -- the odd one out is
+    // `auto-base-red-zone-autographs` ("Red Zone"), for which Zenith lists no
+    // unsigned bare Red Zone at all. A genuine absence, not a mismatch.
+    for (const file of ["zenith-2024-fb-categories.json", "select-2024-fb-categories.json"]) {
+      const cats = new Set(realRows(file).map((r) => r.category).filter(Boolean));
+      const unsigned = new Set<string>();
+      const signed = new Map<string, string>();
+      for (const c of cats) {
+        const r = readChecklistCategory(c, "");
+        if (r.kind === "base" && r.parallel) unsigned.add(r.parallel.toLowerCase());
+        if (r.kind === "auto" && r.parallel && c.startsWith("auto-base")) signed.set(r.parallel.toLowerCase(), c);
+      }
+      for (const [rung, cat] of signed) {
+        // No signed rung may still carry a section word.
+        expect(rung, `${cat} still spells a section word into the parallel`)
+          .not.toMatch(/\b(autographs?|auto|signatures?)\b/);
+      }
+    }
+  });
+
+  it("an insert SET whose name contains a section word KEEPS it", () => {
+    // `Rookie Signatures` is a set name, not a parallel, and must not become
+    // "Rookie". Only the BASE ladder under an `auto-` prefix is stripped.
+    expect(readChecklistCategory("insert-rookie-signatures", "").insertRoot).toBe("rookie-signatures");
+    expect(readChecklistCategory("auto-flashback-autographs", "").insertRoot).toBe("flashback-autographs");
+    expect(readChecklistCategory("auto-snapshots-autographs-black", "").insertRoot)
+      .toBe("snapshots-autographs-black");
+  });
+
+  it("a section word in a NON-auto category is untouched", () => {
+    // The strip is gated on the `auto-` prefix. Nothing else may lose a word.
+    expect(readChecklistCategory("insert-base-signature-series", "").parallel)
+      .toBe("Signature Series");
   });
 });
