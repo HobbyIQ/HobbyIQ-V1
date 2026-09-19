@@ -1,0 +1,284 @@
+{
+  "generatedAt": "2026-09-19",
+  "forLane": "relocate-pool-rows-by-list",
+  "rulings": [
+    "Diagnosis 2026-09-19 (staging smoke case 4, run 35472361102 vs prior-pass 35469045247): the query \"2026 Bowman Chrome Owen Carey Black BCP-69\" priced at $12.50 where the smoke pins it withheld. Root cause traced to the pool at hobbyiqCardId hiq:baseball:2026:bowman:bcp-69:black-refractor:no-auto (42 sold_comps rows), NOT to PR #2330 (which only adds an exclusion filter) and not a stale smoke pin.",
+    "CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG (repair-parallel-from-title.cjs doctrine, Drew 2026-08-29): 41 of the 42 rows are CardHedge sales whose title never says 'Black' -- every one reads 'Mojo Refractor' (35 rows, both cardhedge sourceExternalId groups 1780156975067x514711415448764200 and one row's group) or 'Laser Refractor' / 'Lazer Refractor' (6 rows, cardhedge group 1778477514892x343483198805100600). Re-parsing every title with the repo's own ebayTitleParser.service.js's parseListingTitle confirms this split exactly (35 'Mojo Refractor', 6 'Lazer Refractor', 1 'Black X-Fractor' -- see per-row evidence).",
+    "repair-parallel-from-title.cjs's own COLOURS list (Gold/Blue/Black/Silver/etc. bare-and-refractor forms) does not include named finishes ('Mojo', 'Lazer/Laser', 'Reptilian', etc.), so this specific mislabel class was out of that script's measured scope and was never caught by its colours-mode runs. This list is the targeted, report-reviewed fix for this one card's pool, built the same way that script would (title-parse wins over the stored vendor/product tag) but scoped by hand to entries a human reviewed.",
+    "ONE AXIS PER ENTRY, product segment untouched (R75/'a relocation list changes only the ruled axis'): every entry below keeps the hiq id's PRODUCT segment (index 3, 'bowman') exactly as the row's current hobbyiqCardId already has it. Nothing here relocates a row's cardId partition or changes which product it is filed under -- only the parallel (and, for the one numbered row, its num- tail, which is inherent to that parallel identity, not a separate axis) is corrected to what the row's own title states.",
+    "Lazer Refractor (6 rows, REPOINT): destination hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto exists as a checklist-backed card_catalog row (source=hobbymonitor-scraped-2026-08-31, playerName=Owen Carey, setKey=bowman). Every one of the 6 rows is already partitioned under a raw CardHedge vendor id (cardId=1778477514892x343483198805100600, not an hiq slug), so only hobbyiqCardId needs correcting -- REPOINT, not RELOCATE.",
+    "Black X-Fractor /10 (1 row, REPOINT): the one genuine card in this pool -- cardsight title '2026 1st Bowman Owen Carey Chrome X-Fractor BLACK # /10 #BCP-69 Braves', $199.99 -- carries reslugedFrom=hiq:baseball:2026:bowman-chrome:bcp-69:black-refractor:no-auto:num-10 (reslugedAt 2026-08-29), then a later, unrelated bowman-chrome->bowman product repointing (CF-IT-CAME-OUT-OF-BOWMAN, repair-bowman-product-refile.cjs, reslugedAt 2026-09-06) carried it and the 41 contaminated Mojo/Lazer rows onto today's shared hiq:baseball:2026:bowman:bcp-69:black-refractor:no-auto address, silently dropping the /10 print-run identity. Destination hiq:baseball:2026:bowman:bcp-69:black-x-fractor:no-auto:num-10 exists as a checklist-backed card_catalog row (source=hobbymonitor-scraped-2026-08-31, playerName=Owen Carey, setKey=bowman, printRun=10) with the product segment (bowman) already matching this row's current address -- so this is a parallel+num-tail identity correction, not a product move. This row's cardId partition key is itself an hiq slug (hiq:baseball:2026:bowman-chrome:bcp-69:base:no-auto:num-10, unrelated to today's diagnosis and NOT touched here) so this too is a hobbyiqCardId-only REPOINT.",
+    "Mojo Refractor (35 rows, HELD OUT): no checklist-backed card_catalog row exists at hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto (bare 'Mojo Refractor' under the plain bowman product). The bowman-stock checklist's Mojo Refractor insert for BCP-69 is catalogued under a compound insert-set name (hiq:baseball:2026:bowman:bcp-69:mega-chrome-prospects-mojo:no-auto, source=checklistcenter, playerName=Owen Carey) -- a DIFFERENT parallel slug than the title parser produces, and reconciling that naming gap is a catalog-vocabulary question, not a one-axis pool relocation. A bare-'Mojo Refractor' catalog row exists only under bowman-chrome / bowman-chrome-mega-box product segments (hiq:baseball:2026:bowman-chrome:bcp-69:mojo-refractor:no-auto and the -mega-box sibling), which would require ALSO changing the product segment -- explicitly out of scope for a one-axis list (see the companion R75 program, which handles product-segment moves separately). Held out per instructions rather than guessed.",
+    "Follow-up (read-only, paged, no aggregates, 10-minute budget, both pages completed within budget): 2026 sold_comps rows carrying a ':mojo' fragment in hobbyiqCardId under the bowman product family -- hiq:baseball:2026:bowman: 9,326 rows, hiq:baseball:2026:bowman-chrome: 3,918 rows, TOTAL 13,244. This is the scale of the product-segment/insert-naming reconciliation a future product-axis list would need to cover; the 35 held-out rows here are a small fraction of it and were not counted separately within this figure."
+  ],
+  "census": {
+    "poolInspected": "hiq:baseball:2026:bowman:bcp-69:black-refractor:no-auto",
+    "totalRowsAtPool": 42,
+    "repointEntries": 7,
+    "heldOut": 35,
+    "mojoUnderBowmanFamilyFollowUp": 13244
+  },
+  "heldOut": [
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-08-07T22:04:13.000Z::199::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "no checklist-backed card_catalog row at hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto (bare Mojo Refractor is only catalogued under bowman-chrome/bowman-chrome-mega-box product segments, or under bowman as a differently-named compound insert slug -- either fix requires a product-segment or naming-vocabulary change, out of scope for a one-axis list)"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-31T14:21:52.000Z::40::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-30T02:52:51.000Z::199::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-28T14:36:57.000Z::150::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-26T02:30:50.000Z::189::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-22T01:37:15.000Z::120::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-19T01:13:34.000Z::54::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-17T19:49:58.000Z::199::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-17T16:28:52.000Z::135::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-12T00:55:30.000Z::46::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-08T02:30:16.000Z::150::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-07T18:39:08.000Z::112::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-06T02:15:04.000Z::125::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-04T23:49:27.000Z::50::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-04T03:28:56.000Z::126::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-30T01:29:42.000Z::134::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-29T17:35:48.000Z::175::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-28T19:09:06.000Z::199::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-27T01:06:56.000Z::175::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-24T04:49:29.000Z::149::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-24T03:53:56.000Z::174::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-19T22:08:38.000Z::167::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-19T02:52:07.000Z::150::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-19T02:33:35.000Z::125::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-11T17:06:02.000Z::150::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-11T14:06:10.000Z::149::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-11T14:06:10.000Z::185::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-06T19:16:48.000Z::189::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-02T13:54:37.000Z::161::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-01T22:35:47.000Z::325::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-01T00:49:27.000Z::174::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-01T00:48:26.000Z::175::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-05-29T18:42:32.000Z::125::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-05-29T16:35:26.000Z::149::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-05-27T20:57:19.000Z::169::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "titleParallel": "Mojo Refractor",
+      "reason": "same as above -- see first heldOut entry"
+    }
+  ],
+  "entries": [
+    {
+      "id": "cardsight::hiq:baseball:2026:bowman-chrome:bcp-69:base:no-auto:num-10::2026-07-25T10:35:01.008Z",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:bcp-69:base:no-auto:num-10",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:black-x-fractor:no-auto:num-10",
+      "price": 199.99,
+      "evidence": "title=\"2026 1st Bowman Owen Carey Chrome X-Fractor BLACK # /10 #BCP-69 Braves\" -- parseListingTitle reads parallel=\"Black X-Fractor\". Destination hiq:baseball:2026:bowman:bcp-69:black-x-fractor:no-auto:num-10 is a checklist-backed card_catalog row (source=hobbyMonitor-scraped-2026-08-31, playerName=Owen Carey, setKey=bowman, printRun=10), and its product segment (bowman) already matches this row's current hobbyiqCardId product. REPOINT only: cardId (partition key) is hiq:baseball:2026:bowman-chrome:bcp-69:base:no-auto:num-10, an unrelated identity not touched by this list; only hobbyiqCardId is corrected."
+    },
+    {
+      "id": "cardhedge::1778477514892x343483198805100600::2026-06-21T21:37:00.000Z::75::Raw",
+      "fromCardId": "1778477514892x343483198805100600",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto",
+      "price": 0.75,
+      "evidence": "title=\"Owen Carey 1st Bowman Laser Refractor 2026 Bowman Chrome Atlanta Braves #BCP-69 - Raw\" -- parseListingTitle reads parallel=\"Lazer Refractor\", never \"Black\". Destination hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto is a checklist-backed card_catalog row (source=hobbyMonitor-scraped-2026-08-31, playerName=Owen Carey, setKey=bowman). REPOINT: cardId is the raw CardHedge vendor id 1778477514892x343483198805100600, not an hiq slug -- only hobbyiqCardId is corrected."
+    },
+    {
+      "id": "cardhedge::1778477514892x343483198805100600::2026-06-13T20:23:00.000Z::275::Raw",
+      "fromCardId": "1778477514892x343483198805100600",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto",
+      "price": 2.75,
+      "evidence": "title=\"Owen Carey 2026 Bowman #BCP69 Laser Refractor Atlanta Braves 1st Bowman - Raw\" -- parseListingTitle reads parallel=\"Lazer Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1778477514892x343483198805100600::2026-06-11T17:12:00.000Z::200::Raw",
+      "fromCardId": "1778477514892x343483198805100600",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto",
+      "price": 2,
+      "evidence": "title=\"Owen Carey 1st Bowman Laser Refractor 2026 Bowman Chrome Atlanta Braves #BCP-69 - Raw\" -- parseListingTitle reads parallel=\"Lazer Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1778477514892x343483198805100600::2026-06-06T00:51:00.000Z::275::Raw",
+      "fromCardId": "1778477514892x343483198805100600",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto",
+      "price": 2.75,
+      "evidence": "title=\"Owen Carey 2026 Bowman #BCP69 Laser Refractor Atlanta Braves 1st Bowman - Raw\" -- parseListingTitle reads parallel=\"Lazer Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1778477514892x343483198805100600::2026-06-04T04:45:00.000Z::175::Raw",
+      "fromCardId": "1778477514892x343483198805100600",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto",
+      "price": 1.75,
+      "evidence": "title=\"2026 Bowman Chrome - Owen Carey - Braves - #BCP-69 1st Bowman Laser Refractor - Raw\" -- parseListingTitle reads parallel=\"Lazer Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1778477514892x343483198805100600::2026-05-31T16:20:00.000Z::424::Raw",
+      "fromCardId": "1778477514892x343483198805100600",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto",
+      "price": 4.24,
+      "evidence": "title=\"2026 Bowman Chrome 1st Bowman Owen Carey #BCP-69 LASER REFRACTOR - Braves - Raw\" -- parseListingTitle reads parallel=\"Lazer Refractor\". Same destination/shape as the entry above."
+    }
+  ]
+}
