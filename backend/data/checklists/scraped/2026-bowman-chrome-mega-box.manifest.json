@@ -6,6 +6,8 @@
   "setName": "2026 Bowman Chrome Mega Box",
   "productKey": "2026-bowman-chrome-mega-box",
   "setKey": "bowman-chrome-mega-box",
+  "setKeySuperseded": true,
+  "setKeySupersededNote": "R75 (Drew, 2026-09-19): this file's own sourceUrl already names the PLAIN 'Bowman Mega Box' xlsx (note the URL says '2026-Bowman-Mega-Box', not Chrome), and the CSV's roster confirms it -- #1 Aaron Judge, #2 Yoshinobu Yamamoto, #9 Munetaka Murakami RC, #23 Ronald Acuna Jr., #25 Bobby Witt Jr., #52 Shohei Ohtani. That is the plain Bowman Mega Box roster under R75, not Bowman Chrome Mega Box (whose #52 is JJ Wetherholt). The setKey/setName fields on this manifest were wrong; the sourceUrl and the CSV bytes were always right. Superseded by backend/data/checklists/scraped/acq-2026-09-19-beckett-bowman-mega-box-2026/ (setKey bowman-mega). Left in place, not deleted or rewritten -- other tooling references this filename.",
   "rowCount": 268,
   "sectionsReport": [
     {

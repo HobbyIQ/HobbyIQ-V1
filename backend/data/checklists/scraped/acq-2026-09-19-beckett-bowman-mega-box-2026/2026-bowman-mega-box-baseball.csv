@@ -1,0 +1,269 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,,false,,Aaron Judge
+base,2,,false,,Yoshinobu Yamamoto
+base,3,,false,,Chase Burns
+base,6,,false,,Sal Stewart
+base,7,,false,,Bryce Harper
+base,9,,false,,Munetaka Murakami
+base,10,,false,,Nick Kurtz
+base,12,,false,,Jhostynxon Garcia
+base,13,,false,,Cal Raleigh
+base,17,,false,,Francisco Lindor
+base,18,,false,,Roman Anthony
+base,19,,false,,Kyle Teel
+base,20,,false,,Kyle Schwarber
+base,23,,false,,Ronald Acuña Jr.
+base,25,,false,,Bobby Witt Jr.
+base,26,,false,,Payton Tolle
+base,31,,false,,Pete Crow-Armstrong
+base,33,,false,,Brandon Sproat
+base,35,,false,,Jacob Misiorowski
+base,37,,false,,Chase DeLauter
+base,39,,false,,Carson Williams
+base,40,,false,,Drew Gilbert
+base,41,,false,,Trey Yesavage
+base,44,,false,,Elly De La Cruz
+base,45,,false,,Connelly Early
+base,47,,false,,Fernando Tatis Jr.
+base,52,,false,,Shohei Ohtani
+base,53,,false,,Cam Schlittler
+base,58,,false,,Bryce Eldridge
+base,59,,false,,Junior Caminero
+base,61,,false,,Vladimir Guerrero Jr.
+base,62,,false,,Owen Caissie
+base,63,,false,,Roki Sasaki
+base,65,,false,,Jonah Tong
+base,66,,false,,Carter Jensen
+base,68,,false,,Colson Montgomery
+base,70,,false,,Alex Freeland
+base,75,,false,,Jac Caglianone
+base,76,,false,,Tarik Skubal
+base,78,,false,,Cole Young
+base,80,,false,,Corbin Carroll
+base,83,,false,,Bubba Chandler
+base,84,,false,,Harry Ford
+base,85,,false,,Nolan McLean
+base,86,,false,,Jakob Marsee
+base,93,,false,,Samuel Basallo
+base,97,,false,,Juan Soto
+base,98,,false,,C.J. Kayfus
+base,99,,false,,Christian Moore
+base,100,,false,,Mike Trout
+base,BCP-1,,false,,Ethan Holliday
+base,BCP-2,,false,,Max Clark
+base,BCP-7,,false,,Kendry Chourio
+base,BCP-15,,false,,Gage Jump
+base,BCP-16,,false,,Marek Houston
+base,BCP-17,,false,,Caden Scarborough
+base,BCP-21,,false,,Roldy Brito
+base,BCP-25,,false,,Juan Sanchez
+base,BCP-26,,false,,Sean Paul Liñan
+base,BCP-29,,false,,Victor Arias
+base,BCP-33,,false,,Coy James
+base,BCP-35,,false,,Travis Bazzana
+base,BCP-36,,false,,Moisés Chace
+base,BCP-38,,false,,Luis Cova
+base,BCP-40,,false,,Aiva Arquette
+base,BCP-41,,false,,Brailyn Antunez
+base,BCP-45,,false,,Seojun Moon
+base,BCP-47,,false,,Handelfry Encarnacion
+base,BCP-59,,false,,Brendan Tunink
+base,BCP-63,,false,,Leo De Vries
+base,BCP-64,,false,,George Lombard Jr.
+base,BCP-66,,false,,Wyatt Sanford
+base,BCP-69,,false,,Owen Carey
+base,BCP-72,,false,,Luis Arana
+base,BCP-77,,false,,Daniel Pierce
+base,BCP-79,,false,,Esteban Mejia
+base,BCP-82,,false,,Edward Florentino
+base,BCP-88,,false,,Dasan Hill
+base,BCP-90,,false,,Andrew Tess
+base,BCP-92,,false,,Konnor Griffin
+base,BCP-93,,false,,Jorge Quintana
+base,BCP-95,,false,,Eli Willits
+base,BCP-96,,false,,Jesús Made
+base,BCP-98,,false,,Walker Jenkins
+base,BCP-100,,false,,Marconi German
+base,BCP-104,,false,,Henry Lalane
+base,BCP-106,,false,,Francisco Espinoza
+base,BCP-111,,false,,Carson Benge
+base,BCP-115,,false,,JJ Wetherholt
+base,BCP-116,,false,,Dauri Fernandez
+base,BCP-118,,false,,Gabriel Rodriguez
+base,BCP-125,,false,,Wei-En Lin
+base,BCP-135,,false,,Wehiwa Aloy
+base,BCP-139,,false,,Edgar Montero
+base,BCP-141,,false,,Justin Gonzales
+base,BCP-145,,false,,Kevin McGonigle
+base,BCP-148,,false,,Dillon Lewis
+base,BCP-149,,false,,Andrew Fischer
+base,BCP-150,,false,,Wilder Dalis
+base,BCP-151,,false,,Seong-Jun Kim
+base,BCP-1,Image Variation,false,,Ethan Holliday
+base,BCP-2,Image Variation,false,,Max Clark
+base,BCP-16,Image Variation,false,,Marek Houston
+base,BCP-77,Image Variation,false,,Daniel Pierce
+base,BCP-82,Image Variation,false,,Edward Florentino
+base,BCP-92,Image Variation,false,,Konnor Griffin
+base,BCP-96,Image Variation,false,,Jesús Made
+base,BCP-115,Image Variation,false,,JJ Wetherholt
+base,BCP-135,Image Variation,false,,Wehiwa Aloy
+base,BCP-145,Image Variation,false,,Kevin McGonigle
+base,3,Image Variation,false,,Chase Burns
+base,18,Image Variation,false,,Roman Anthony
+base,35,Image Variation,false,,Jacob Misiorowski
+base,39,Image Variation,false,,Carson Williams
+base,41,Image Variation,false,,Trey Yesavage
+base,58,Image Variation,false,,Bryce Eldridge
+base,68,Image Variation,false,,Colson Montgomery
+base,75,Image Variation,false,,Jac Caglianone
+base,83,Image Variation,false,,Bubba Chandler
+base,93,Image Variation,false,,Samuel Basallo
+auto-prospect-mega-autographs,BMA-AC,,true,,Angel Cepeda
+auto-prospect-mega-autographs,BMA-AS,,true,,Andrew Salas
+auto-prospect-mega-autographs,BMA-ASE,,true,,Adam Serwinowski
+auto-prospect-mega-autographs,BMA-BC,,true,,Billy Carlson
+auto-prospect-mega-autographs,BMA-BD,,true,,Bo Davidson
+auto-prospect-mega-autographs,BMA-BM,,true,,Braden Montgomery
+auto-prospect-mega-autographs,BMA-CA,,true,,Cristian Arguelles
+auto-prospect-mega-autographs,BMA-CB,,true,,Caleb Bonemer
+auto-prospect-mega-autographs,BMA-CC,,true,,Cam Caminiti
+auto-prospect-mega-autographs,BMA-CD,,true,,Charles Davalan
+auto-prospect-mega-autographs,BMA-CI,,true,,Cooper Ingle
+auto-prospect-mega-autographs,BMA-CL,,true,,Carlos Lagrange
+auto-prospect-mega-autographs,BMA-CR,,true,,Cris Rodriguez
+auto-prospect-mega-autographs,BMA-EC,,true,,Ethan Conrad
+auto-prospect-mega-autographs,BMA-EF,,true,,Edward Florentino
+auto-prospect-mega-autographs,BMA-EH,,true,,Ethan Holliday
+auto-prospect-mega-autographs,BMA-EM,,true,,Edgar Montero
+auto-prospect-mega-autographs,BMA-EP,,true,,Elian Peña
+auto-prospect-mega-autographs,BMA-EV,,true,,Esmerlyn Valdez
+auto-prospect-mega-autographs,BMA-GF,,true,,Gavin Fien
+auto-prospect-mega-autographs,BMA-GS,,true,,Grant Shepardson
+auto-prospect-mega-autographs,BMA-GW,,true,,Gage Wood
+auto-prospect-mega-autographs,BMA-HA,,true,,Hayden Alvarez
+auto-prospect-mega-autographs,BMA-II,,true,,Ike Irish
+auto-prospect-mega-autographs,BMA-JB,,true,,Josue Briceño
+auto-prospect-mega-autographs,BMA-JCAC,,true,,Juneiker Caceres
+auto-prospect-mega-autographs,BMA-JK,,true,,Johnny King
+auto-prospect-mega-autographs,BMA-JLE,,true,,Jhonny Level
+auto-prospect-mega-autographs,BMA-JP,,true,,JoJo Parker
+auto-prospect-mega-autographs,BMA-JS,,true,,Juan Sanchez
+auto-prospect-mega-autographs,BMA-JT,,true,,James Tibbs III
+auto-prospect-mega-autographs,BMA-JTH,,true,,Jared Thomas
+auto-prospect-mega-autographs,BMA-JY,,true,,Jordan Yost
+auto-prospect-mega-autographs,BMA-KA,,true,,Kevin Alvarez
+auto-prospect-mega-autographs,BMA-KC,,true,,Kaelen Culpepper
+auto-prospect-mega-autographs,BMA-KG,,true,,Konnor Griffin
+auto-prospect-mega-autographs,BMA-KM,,true,,Kash Mayfield
+auto-prospect-mega-autographs,BMA-KW,,true,,Kyson Witherspoon
+auto-prospect-mega-autographs,BMA-MD,,true,,Marco Dinges
+auto-prospect-mega-autographs,BMA-MG,,true,,Marconi German
+auto-prospect-mega-autographs,BMA-MH,,true,,Marek Houston
+auto-prospect-mega-autographs,BMA-MN,,true,,Mason Neville
+auto-prospect-mega-autographs,BMA-MV,,true,,Mitch Voit
+auto-prospect-mega-autographs,BMA-RB,,true,,Roldy Brito
+auto-prospect-mega-autographs,BMA-RS,,true,,Ryan Sloan
+auto-prospect-mega-autographs,BMA-RW,,true,,Ryan Waldschmidt
+auto-prospect-mega-autographs,BMA-SH,,true,,Seth Hernandez
+auto-prospect-mega-autographs,BMA-SHA,,true,,Steele Hall
+auto-prospect-mega-autographs,BMA-SK,,true,,Seong-Jun Kim
+auto-prospect-mega-autographs,BMA-SKI,,true,,Seaver King
+auto-prospect-mega-autographs,BMA-SM,,true,,Shotaro Morii
+auto-prospect-mega-autographs,BMA-TG,,true,,Theo Gillen
+auto-prospect-mega-autographs,BMA-TS,,true,,Tate Southisene
+auto-prospect-mega-autographs,BMA-TW,,true,,Tommy White
+auto-prospect-mega-autographs,BMA-WA,,true,,Wehiwa Aloy
+auto-prospect-mega-autographs,BMA-WC,,true,,Warren Calcaño
+auto-prospect-mega-autographs,BMA-WS,,true,,Wyatt Sanford
+auto-prospect-mega-autographs,BMA-YB,,true,,Yorger Bautista
+auto-prospect-mega-autographs,BMA-YP,,true,,Yairo Padilla
+auto-prospect-mega-autographs,BMA-YR,,true,,Yovanny Rodriguez
+auto-prospect-mega-autographs-image-variations,CPA-DP,,true,,Daniel Pierce
+auto-prospect-mega-autographs-image-variations,CPA-EF,,true,,Edward Florentino
+auto-prospect-mega-autographs-image-variations,CPA-EH,,true,,Ethan Holliday
+auto-prospect-mega-autographs-image-variations,CPA-JMA,,true,,Jesús Made
+auto-prospect-mega-autographs-image-variations,CPA-KG,,true,,Konnor Griffin
+auto-prospect-mega-autographs-image-variations,CPA-KMC,,true,,Kevin McGonigle
+auto-prospect-mega-autographs-image-variations,CPA-MHO,,true,,Marek Houston
+auto-rookie-mega-autographs,RMA-BC,,true,,Bubba Chandler
+auto-rookie-mega-autographs,RMA-CB,,true,,Chase Burns
+auto-rookie-mega-autographs,RMA-CM,,true,,Christian Moore
+auto-rookie-mega-autographs,RMA-CMO,,true,,Colson Montgomery
+auto-rookie-mega-autographs,RMA-CW,,true,,Carson Williams
+auto-rookie-mega-autographs,RMA-JC,,true,,Jac Caglianone
+auto-rookie-mega-autographs,RMA-JM,,true,,Jacob Misiorowski
+auto-rookie-mega-autographs,RMA-JT,,true,,Jonah Tong
+auto-rookie-mega-autographs,RMA-RA,,true,,Roman Anthony
+auto-rookie-mega-autographs,RMA-SB,,true,,Samuel Basallo
+auto-rookie-mega-autographs-image-variations,CRA-BC,,true,,Bubba Chandler
+auto-rookie-mega-autographs-image-variations,CRA-BE,,true,,Bryce Eldridge
+auto-rookie-mega-autographs-image-variations,CRA-CAG,,true,,Jac Caglianone
+auto-rookie-mega-autographs-image-variations,CRA-CB,,true,,Chase Burns
+auto-rookie-mega-autographs-image-variations,CRA-JMI,,true,,Jacob Misiorowski
+auto-rookie-mega-autographs-image-variations,CRA-RA,,true,,Roman Anthony
+insert-mega-bowman-sterling,BST-1,,false,,Jackson Chourio
+insert-mega-bowman-sterling,BST-2,,false,,Freddie Freeman
+insert-mega-bowman-sterling,BST-3,,false,,Julio Rodríguez
+insert-mega-bowman-sterling,BST-4,,false,,Aaron Judge
+insert-mega-bowman-sterling,BST-5,,false,,Max Clark
+insert-mega-bowman-sterling,BST-6,,false,,Shohei Ohtani
+insert-mega-bowman-sterling,BST-7,,false,,Konnor Griffin
+insert-mega-bowman-sterling,BST-8,,false,,Nolan McLean
+insert-mega-bowman-sterling,BST-9,,false,,Leo De Vries
+insert-mega-bowman-sterling,BST-10,,false,,Chase Burns
+insert-mega-bowman-sterling,BST-11,,false,,Ethan Holliday
+insert-mega-bowman-sterling,BST-12,,false,,Roman Anthony
+insert-mega-bowman-sterling,BST-13,,false,,Jacob Misiorowski
+insert-mega-bowman-sterling,BST-14,,false,,Jac Caglianone
+insert-mega-bowman-sterling,BST-15,,false,,Carson Williams
+insert-mega-electric-sluggers,ES-1,,false,,Francisco Lindor
+insert-mega-electric-sluggers,ES-2,,false,,Vladimir Guerrero Jr.
+insert-mega-electric-sluggers,ES-3,,false,,Fernando Tatis Jr.
+insert-mega-electric-sluggers,ES-4,,false,,Junior Caminero
+insert-mega-electric-sluggers,ES-5,,false,,Mookie Betts
+insert-mega-electric-sluggers,ES-6,,false,,Bryce Harper
+insert-mega-electric-sluggers,ES-7,,false,,Juan Soto
+insert-mega-electric-sluggers,ES-8,,false,,Ronald Acuña Jr.
+insert-mega-electric-sluggers,ES-9,,false,,Elly De La Cruz
+insert-mega-electric-sluggers,ES-10,,false,,Samuel Basallo
+insert-mega-electric-sluggers,ES-11,,false,,Bryce Eldridge
+insert-mega-electric-sluggers,ES-12,,false,,JJ Wetherholt
+insert-mega-electric-sluggers,ES-13,,false,,Ethan Holliday
+insert-mega-electric-sluggers,ES-14,,false,,Cal Raleigh
+insert-mega-electric-sluggers,ES-15,,false,,Aaron Judge
+insert-mega-electric-sluggers,ES-16,,false,,Roman Anthony
+insert-mega-electric-sluggers,ES-17,,false,,Konnor Griffin
+insert-mega-electric-sluggers,ES-18,,false,,Shohei Ohtani
+insert-mega-electric-sluggers,ES-19,,false,,Bobby Witt Jr.
+insert-mega-electric-sluggers,ES-20,,false,,Jesús Made
+insert-mega-electric-sluggers,ES-21,,false,,Aiva Arquette
+insert-mega-electric-sluggers,ES-22,,false,,Nick Kurtz
+insert-mega-electric-sluggers,ES-23,,false,,Jac Caglianone
+insert-mega-electric-sluggers,ES-24,,false,,Pete Crow-Armstrong
+insert-mega-electric-sluggers,ES-25,,false,,Mike Trout
+insert-mega-futures,MF-1,,false,,Konnor Griffin
+insert-mega-futures,MF-2,,false,,Marek Houston
+insert-mega-futures,MF-3,,false,,Trey Yesavage
+insert-mega-futures,MF-4,,false,,Owen Caissie
+insert-mega-futures,MF-5,,false,,Chase DeLauter
+insert-mega-futures,MF-6,,false,,Colson Montgomery
+insert-mega-futures,MF-7,,false,,Jac Caglianone
+insert-mega-futures,MF-8,,false,,Brice Matthews
+insert-mega-futures,MF-9,,false,,Chase Burns
+insert-mega-futures,MF-10,,false,,Daniel Pierce
+insert-mega-futures,MF-11,,false,,Edward Florentino
+insert-mega-futures,MF-12,,false,,Aiva Arquette
+insert-mega-futures,MF-13,,false,,Christian Moore
+insert-mega-futures,MF-14,,false,,Bryce Eldridge
+insert-mega-futures,MF-15,,false,,Samuel Basallo
+insert-mega-futures,MF-16,,false,,Max Clark
+insert-mega-futures,MF-17,,false,,Ethan Holliday
+insert-mega-futures,MF-18,,false,,Alex Freeland
+insert-mega-futures,MF-19,,false,,Eli Willits
+insert-mega-futures,MF-20,,false,,Jacob Misiorowski
+insert-mega-futures,MF-21,,false,,Roman Anthony
+insert-mega-futures,MF-22,,false,,Nolan McLean
+insert-mega-futures,MF-23,,false,,George Lombard Jr.
+insert-mega-futures,MF-24,,false,,Leo De Vries
+insert-mega-futures,MF-25,,false,,Sebastian Walcott

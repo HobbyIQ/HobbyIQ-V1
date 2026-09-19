@@ -1,0 +1,36 @@
+{
+  "scrapedAt": "2026-09-19T19:51:48.000Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/08/2026-Bowman-Chrome-Mega-Box-Baseball-Checklist.xlsx",
+  "xlsxHttpStatus": 200,
+  "sha256": "07d2cd385aa8230929a0ec7b452dfe468610e191c6ba9aa244e01ef9f9710d2d",
+  "source": "beckett-s3-2026-09-19",
+  "fetchDate": "2026-09-19",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Bowman Chrome Mega Box",
+  "productKey": "2026-bowman-chrome-mega-box",
+  "setKey": "bowman-chrome-mega-box",
+  "rowCount": 265,
+  "parallelColumnAuthoritative": true,
+  "readyToIngest": false,
+  "why": "R75 (Drew, 2026-09-19): TWO product keys from 2026, ONE before. This is the CHROME Mega Box product (Sept 2026 release; roster #1 Konnor Griffin, #5 Bobby Witt Jr., #23 Fernando Tatis Jr., #25 Cole Young, #52 JJ Wetherholt; BCP-151..249 prospects), distinct from the May 2026 plain 'Bowman Mega Box' release under the SAME numbers but a DIFFERENT roster (see the sibling package acq-2026-09-19-beckett-bowman-mega-box-2026). setKey `bowman-chrome-mega-box` is already registered in productSetKeys.ts (family bowman-chrome, parent bowman-chrome) -- unchanged by R75. What changes in PR B is that this key stops being what EVERY 'Bowman Mega Box' title routes to regardless of year; from 2026 the plain (non-Chrome) spelling routes to `bowman-mega` instead.",
+  "crossedFileNote": "R75 investigation found this exact roster (Griffin/Witt/Tatis/Young/Wetherholt/BCP-) previously mis-filed under backend/data/checklists/hand-fetched/2026-bowman-chrome-mega-box.json with top-level setKey `bowman-mega` (the checklistinsider hand-fetched source, not this Beckett source) -- the WRONG product's key on the RIGHT roster, the mirror image of the other crossed file. That file is left in place (grep of backend/scripts and backend/tests found live references to its filename) but is documented as superseded by this package for identity purposes going forward.",
+  "reproduce": {
+    "discoverCommand": "Bounded S3 HEAD probe of https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/<MM>/2026-Bowman-Chrome-Mega-Box-Baseball-Checklist.xlsx for MM in 07,08,09 (Sept 2026 release, window +/-1 month): 07 -> 403, 08 -> 200 OK (Last-Modified Wed, 19 Aug 2026 14:29:27 GMT, Content-Length 33907), 09 -> 403. HIT at 2026/08.",
+    "convertCommand": "node backend/scripts/convertBeckettChecklistXlsx.cjs --xlsx 2026-bowman-chrome-mega-box-baseball.xlsx --year 2026 --set-key bowman-chrome-mega-box --set-name \"2026 Bowman Chrome Mega Box\" --sport baseball --out 2026-bowman-chrome-mega-box-baseball.csv --source-url \"https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/08/2026-Bowman-Chrome-Mega-Box-Baseball-Checklist.xlsx\" --source-label beckett-s3-2026-09-19",
+    "converterOutput": "wrote 2026-bowman-chrome-mega-box-baseball.csv; rows=265 (deduped 0); by kind: {\"base\":128,\"auto\":92,\"insert\":45}; sections: 10 (anchors 3, parallels 3, own-cards 4); 3 PARALLEL folds (Base - Image Variations -> Base Set, Chrome Prospects - Image Variations -> Chrome Prospects, Base Image Variation Autographs -> Base Set). Sheets: Base, Prospects, Variations, Autographs, Inserts, Full Checklist (skipped, superset), Team Sets (skipped). No 'Topps Master Checklist' sheet present. No sheet produced 0 rows -- checked directly against raw <row> counts per sheet (Base 52, Prospects 52, Variations 24, Autographs 108, Inserts 49 raw xml rows, all > 0)."
+  },
+  "rowsByCategory": {
+    "base": { "rows": 128, "note": "Base Set + Chrome Prospects (including BCP-151..249 prospect numbering) + Image Variation parallel folds." },
+    "auto": { "rows": 92, "categories": "Chrome Prospect Autographs and related, incl. auto-chrome-prospect-image-variation-autographs." },
+    "insert": { "rows": 45, "categories": "Insert sheet sections distinct from Base/Prospects/Autographs." }
+  },
+  "rosterVerified": {
+    "method": "Spot-checked cardNumber -> player against R75's stated roster.",
+    "matches": ["#1 Konnor Griffin", "#5 Bobby Witt Jr.", "#23 Fernando Tatis Jr.", "#25 Cole Young", "#52 JJ Wetherholt", "BCP-151..249 prospects present (66 BCP- rows total)"],
+    "allMatched": true,
+    "note": "No Yellow Mojo /75 or B&W Mojo /15 parallel rows found in this base card-list xlsx -- Beckett's own checklist files are card lists only, no print runs (see convertBeckettChecklistXlsx.cjs header comment); those parallels are a print-run/colour axis that would come from a separate parallels source (e.g. a hand-fetched parallels JSON), not sourced in this pass."
+  },
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, offline, run against this directory alone): 265 batch rows, 265 distinct ids, 0 collisions, 0 duplicatesFolded. See ACQUISITION.manifest.json for the full run output.",
+  "note": "STAGED, not ingested. readyToIngest is a human-review note only -- the real ingest lane (ingest-checklist-csv-to-catalog.cjs) does not read this field; the directory boundary is the actual gate (a human/workflow chooses which DIR to point the ingest at)."
+}
