@@ -2789,6 +2789,23 @@ function isStaged(entry) {
 }
 
 /**
+ * A 404/403 from the source is the source not serving this set -- not a
+ * defect in our pipe, and a different verdict from a broken acquisition.
+ * `exit 9` is the form run() actually builds ("${script} exit ${status}: ...");
+ * an earlier alternation only matched Node's own "exited ... code 9" wording,
+ * so the beckett downloader's 9 was recognised and every OTHER child's was
+ * not. The sportscardchecklist zero-row refusal exits 9 and fell through to
+ * `failed` -- our pipe broke -- when the host had simply not served us.
+ *
+ * Extracted to its own named, exported function so it can be pinned by a
+ * test (`ingestUniverseDriverIsGoneWordBoundary.test.ts`) independent of
+ * the surrounding catch block.
+ */
+function isGoneErrorMessage(msg) {
+  return /HTTP 40[34]|ENOTFOUND|exit(ed)?\s+(?:with\s+)?(?:code\s+)?9\b|workbook empty or unreachable/i.test(String(msg ?? ""));
+}
+
+/**
  * Order the eligible queue. `titlesRaw` is the operator's explicit list (the
  * existing `titles` input / BCP_TITLES env); empty means use the proxy.
  *
@@ -2876,7 +2893,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, childBannerLines, CHILD_BANNER_PATTERNS, CHILD_BANNER_LINES, childCounters, childRefusedEverything, CHILD_COUNTERS, REFUSED_STATUS, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging, LANE_CONVERTER_VERSION, stagedConverterVersion, stagedIsCurrent, BACKOFF_STATUS, BACKOFF_RETRY_MINUTES, CONTROL_PAGES, probeControlPage, HOST_FAULT_STATUSES, CONTROL_WRITE_ATTEMPTS, CONTROL_WRITE_BACKOFF_MS };
+module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, childBannerLines, CHILD_BANNER_PATTERNS, CHILD_BANNER_LINES, childCounters, childRefusedEverything, CHILD_COUNTERS, REFUSED_STATUS, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging, LANE_CONVERTER_VERSION, stagedConverterVersion, stagedIsCurrent, BACKOFF_STATUS, BACKOFF_RETRY_MINUTES, CONTROL_PAGES, probeControlPage, HOST_FAULT_STATUSES, CONTROL_WRITE_ATTEMPTS, CONTROL_WRITE_BACKOFF_MS, isGoneErrorMessage };
 if (require.main !== module) return;
 
 (async () => {
@@ -3601,14 +3618,9 @@ if (require.main !== module) return;
       // when the message was ours; now it carries up to CHILD_STDERR_LINES of
       // the child's stderr, and truncating THAT is the defect this run hit.
       const msg = String(e.message || e).slice(0, 1200);
-      // A 404/403 from the source is the source not serving this set -- not a
-      // defect in our pipe, and a different verdict from a broken acquisition.
-      // `exit 9` is the form run() actually builds ("${script} exit ${status}: ...");
-      // the old alternation only matched Node's own "exited ... code 9" wording,
-      // so the beckett downloader's 9 was recognised and every OTHER child's was
-      // not. The sportscardchecklist zero-row refusal exits 9 and fell through to
-      // `failed` -- our pipe broke -- when the host had simply not served us.
-      const isGone = /HTTP 40[34]|ENOTFOUND|exit(ed)?\s+(?:with\s+)?(?:code\s+)?9|workbook empty or unreachable/i.test(msg);
+      // See isGoneErrorMessage's own doc for the "exit 9" / HTTP 40x / workbook
+      // ruling this reads.
+      const isGone = isGoneErrorMessage(msg);
       // The acquisition itself says when the SOURCE answered "nothing here".
       // That is a verdict about the set, never a symptom of a broken lane.
       // A LANE BACKOFF OUTRANKS EVERY OTHER READING. The host answered, so the

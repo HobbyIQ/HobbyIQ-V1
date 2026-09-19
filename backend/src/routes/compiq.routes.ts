@@ -174,11 +174,11 @@ class PriceLookupDeadlineError extends Error {
  * property all three reliably share. Matching on it keeps a real Cosmos fault
  * (a bad query, a 403) on the fall-through path where it belongs.
  */
-function isAbortLikeError(err: unknown): boolean {
+export function isAbortLikeError(err: unknown): boolean {
   const name = String((err as { name?: unknown })?.name ?? "");
   if (name === "AbortError" || name === "TimeoutError") return true;
   const message = String((err as { message?: unknown })?.message ?? "");
-  return /AbortError|TimeoutError|operation was aborted/i.test(message);
+  return /\bAbortError\b|\bTimeoutError\b|operation was aborted/i.test(message);
 }
 
 /**
