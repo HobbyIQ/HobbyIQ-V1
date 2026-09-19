@@ -101,7 +101,12 @@ import { join } from "node:path";
 import { POKEMON_EN_SET_CODES, POKEMON_JA_SET_CODES } from "../catalog/pokemonSetCodes.js";
 
 interface ParallelCorpus {
-  products?: Record<string, { parallels?: { name?: string }[] }>;
+  products?: Record<string, {
+    parallels?: { name?: string }[];
+    /** Named insert sets. Read ONLY for the global finish-WORD vocabulary
+     *  (see the union below); never for the per-product ladder. */
+    insertSets?: { root?: string; children?: string[] }[];
+  }>;
 }
 
 const lower = (s: string): string => String(s ?? "").toLowerCase();
@@ -434,8 +439,40 @@ function loadCorpus(): void {
     // is what separates finish vocabulary from a player-named insert.
     const wordProducts = new Map<string, Set<string>>();
     for (const [key, product] of Object.entries(raw.products ?? {})) {
-      for (const parallel of product.parallels ?? []) {
-        for (const w of new Set(normaliseName(parallel.name ?? "").split(" ").filter(Boolean))) {
+      // THE FINISH-WORD VOCABULARY TAKES THE UNION (Drew, 2026-09-18).
+      //
+      // Two questions, two sources -- see rematch-finish-vocab's header:
+      //
+      //   is this word a FINISH WORD?      global, parallels + insertSets
+      //   is this a RUNG of this product?  per product, parallels ONLY
+      //
+      // `wordProducts` feeds `finishWords`, which is the FIRST question:
+      // `titleStatesAnUnconfirmedFinish` asks only whether the seller stated
+      // finish evidence at all, never which rung it is. The per-product
+      // ladder below (`byProduct` / `globalNames`) is the second question and
+      // deliberately still reads `parallels[]` alone.
+      //
+      // MEASURED when the insert split started moving names: R55 stopped
+      // parking 4 of its 49 rows, because the only finish evidence in their
+      // titles was a word that had moved into an insert name --
+      //
+      //   "2024 Panini Photogenic Michael Vick In the Action Auto #IAA-MVI"
+      //   "2024 Panini Prestige - Heroes Justin Herbert #13"
+      //   "2025/26 Panini Select Road To FIFA WC Kevin De Bruyne #6 7/10"
+      //   "2025 TOPPS MARVEL X-MEN FINEST '97 RISE ... JUBILEE #63"
+      //
+      // Every one of those titles DOES state finish evidence; the corpus
+      // simply files the name under insertSets now. Reading both keeps the
+      // evidence test honest while the ladder stays clean.
+      const namesForVocabulary = [
+        ...(product.parallels ?? []).map((x) => x.name ?? ""),
+        ...(product.insertSets ?? []).flatMap((isSet) => [
+          isSet.root ?? "",
+          ...((isSet.children ?? []) as string[]),
+        ]),
+      ];
+      for (const nm of namesForVocabulary) {
+        for (const w of new Set(normaliseName(nm ?? "").split(" ").filter(Boolean))) {
           if (w.length < 3 || /^\d+$/.test(w)) continue;
           let s = wordProducts.get(w);
           if (!s) { s = new Set<string>(); wordProducts.set(w, s); }
