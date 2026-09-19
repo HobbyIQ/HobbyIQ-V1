@@ -98,7 +98,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 // THE ONE READER OF THE `category` COLUMN, shared with the ingester so the
 // two cannot drift on what a category means. See its header.
-const { readChecklistCategory } = require("./lib/checklist-category.cjs");
+const { readChecklistCategory, insertSetsFromCategories, humanise: humaniseSlug } = require("./lib/checklist-category.cjs");
 
 /**
  * THE OVERLAY: RUNGS A RULING ADDED THAT NO SOURCE FILE CARRIES.
@@ -148,6 +148,158 @@ function loadOverlay(file) {
 
 /** Root comparison key: case and punctuation are spelling, not identity. */
 const normForRoot = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+/** Fold a trailing "s" so "Illusionists" and "Illusionist" compare equal --
+ * the same fold `build-parallel-vocabulary.cjs` already uses to keep a set's
+ * plural label from truncating to its un-suffixed member (see the root
+ * DISPLAY NAME comment below). Applied per word, not to the whole phrase, so
+ * "Rookie Phenoms Jerseys" folds the same as "Rookie Phenom Jersey". */
+const foldTrailingS = (w) => {
+  const x = String(w ?? "").toLowerCase();
+  return x.endsWith("s") && x.length > 3 ? x.slice(0, -1) : x;
+};
+const foldedPhrase = (s) => normForRoot(s).split(" ").filter(Boolean).map(foldTrailingS).join(" ");
+
+/**
+ * A BARE COLOUR WORD IS NEVER A SET NAMING ITSELF.
+ *
+ * Mirrors rematch-finish-vocab.cjs's FINISH_COLOR_TOKENS (kept as a small,
+ * separate copy rather than an import -- that module reads THIS corpus, and
+ * importing back would be circular). MEASURED (2026-09-19):
+ * hockey|2022|upper-deck-premier's `insert-gold` category carries "Gold //"
+ * on every row -- source noise (an unstripped print-run glue the existing
+ * `cleanName` does not clean either, a pre-existing data-quality gap, not
+ * something this pass owns) that still folds to the category's own root
+ * "gold". Treating it as self-naming would have DELETED "Gold //" (seen 265
+ * times, its own /65 print run, genuinely distinct from the plain "Gold" /10
+ * rung already in this product's parallels) with nowhere for it to land --
+ * unlike "Illusionist"/"Immortal", a bare colour word is never a PROPER NOUN
+ * an insert set is named after, so there is no legitimate case this
+ * exclusion could cost.
+ */
+const PLAIN_COLOR_WORDS = new Set([
+  "gold", "orange", "purple", "blue", "green", "red", "black", "pink", "yellow",
+  "teal", "aqua", "bronze", "silver", "platinum", "copper", "sepia", "magenta",
+  "cyan", "lime", "indigo", "violet", "rose", "amber", "onyx", "emerald",
+  "ruby", "sapphire", "gunmetal", "chartreuse", "fuchsia", "neon", "atomic",
+]);
+
+/**
+ * THE SET'S OWN CATEGORY, WHEN THE PARALLEL COLUMN NAMES THE SET ITSELF
+ * (Drew's R66 KNOWN GAP, closed 2026-09-19).
+ *
+ * `insertSetsFromCategories` (checklist-category.cjs) admits a bare root only
+ * when its category states NO parallel at all -- see its own header for why
+ * that precondition exists (an invented root cost 73 real Prizm rungs the
+ * last time this was tried without evidence). That rule is right for Zenith's
+ * `insert-z-marquee` (parallel column blank on every row) but misses a
+ * different, real shape: 2024 panini-illusions' `insert-illusionists` rows
+ * carry "Illusionist" -- singular -- in the parallel column on every one of
+ * their 18 rows. That is the SET naming itself, not a distinct parallel; the
+ * set's own children ("Illusionists Black", "Illusionists Gold", ...) already
+ * exist as fully-spelled names and split into their own one-item "roots"
+ * today for lack of anywhere to merge under.
+ *
+ * MEASURED across both committed source dirs (2026-09-19): 449 bare `insert-`
+ * categories, across 136 files, whose every attested parallel value folds
+ * (singular/plural only, never a different word) to the category's own root
+ * -- "Illusionist"/illusionists, "Screamer"/screamers, "Signature"/signatures,
+ * "Firework"/fireworks, "Talisman"/talismans. None collides with a real
+ * multi-word Prizm/Select/Optic parallel, because a fold match requires the
+ * ENTIRE phrase to reduce to the root -- "Prizm Gold" does not fold to
+ * "prizm", so the defect that cost Prizm its 73 rungs cannot recur here.
+ *
+ * A root whose bare category is made ENTIRELY of its own product's setKey
+ * words ("Elite" on donruss-elite, from `insert-elite`) is still returned --
+ * this is corpus evidence, not the R66 title reader, and the over-reach guard
+ * belongs at the READER that decides whether a SALE TITLE names an insert,
+ * not here. `isProductWord` is per (year, setKey); the corpus has no title to
+ * judge against.
+ *
+ * @param {Array<{category: string, parallel: string}>} rows one product's rows
+ * @returns {{ sets: Array<{root: string, children: string[]}>, selfNames: Set<string> }}
+ *   `selfNames` is the parallel text (lowercased, e.g. "illusionist") that
+ *   named the set rather than a rung -- the caller drops these out of
+ *   `parallels[]` so the set's own name stops posing as a base parallel.
+ */
+function bareSelfNamedInsertRoots(rows) {
+  const byCat = new Map();
+  for (const r of rows ?? []) {
+    const cat = String(r?.category ?? "").trim().toLowerCase();
+    if (!cat) continue;
+    const read = readChecklistCategory(cat, r?.parallel);
+    if (read.kind !== "insert") continue;
+    if (!byCat.has(cat)) byCat.set(cat, new Set());
+    const stated = String(r?.parallel ?? "").trim();
+    if (stated) byCat.get(cat).add(stated);
+  }
+  const sets = [];
+  const selfNames = new Set();
+  for (const [cat, pars] of byCat) {
+    if (!pars.size) continue;           // the blank case is insertSetsFromCategories's job
+    const read = readChecklistCategory(cat, [...pars][0]);
+    const root = read.insertRoot;
+    if (!root) continue;
+    const rootFold = foldedPhrase(root);
+    // EVERY attested value must fold to the root -- one clause, no exceptions.
+    // A category with even one value that does NOT fold to the root is
+    // stating a real parallel, not naming itself, and is left alone.
+    if (![...pars].every((v) => foldedPhrase(v) === rootFold)) continue;
+    // A ROOT ENDING IN "PARALLEL" OR "VARIANT" IS DESCRIBING ITSELF AS A
+    // FINISH, NOT NAMING A SET (2026-09-19).
+    //
+    // MEASURED: hockey|2025|flair labels its entire base-card finish ladder
+    // this way -- `insert-spectrum-parallel` ("Spectrum Parallel" on every
+    // row), `insert-blue-ice-parallel` ("Blue Ice Parallel"),
+    // `insert-printing-plates-parallel` -- each with siblings
+    // (`insert-blue-ice-parallel-rookies`) that pass every OTHER clause
+    // here. Corpus-wide, 1,013 bare `insert-*-parallel` / `insert-*-variant`
+    // categories carry siblings this same shape (2022-23 O-Pee-Chee
+    // Platinum's 21 colour-named `-parallel` categories among them) -- a
+    // real, structural pattern from Upper Deck/O-Pee-Chee/Parkhurst
+    // sources, not a one-product exception. In every one of them the tail
+    // names a FINISH ("Rainbow Parallel", "Silver Parallel"), and zero
+    // counterexamples were found where a manufacturer's own creative insert
+    // name literally ends in the generic word "parallel" or "variant".
+    // `insertSetsFromCategories` (the blank-parallel case) never sees this
+    // shape at all, because these rows state their own parallel text --
+    // this clause is this function's alone to carry.
+    if (/(^|\s)(parallel|variant)$/.test(rootFold)) continue;
+    // A BARE COLOUR WORD IS NEVER A SET NAMING ITSELF -- see PLAIN_COLOR_WORDS.
+    if (PLAIN_COLOR_WORDS.has(rootFold)) continue;
+    const hasSibling = [...byCat.keys()].some((c) => c !== cat && c.startsWith(cat + "-"));
+    if (!hasSibling) continue;          // no ladder under it -- nothing to root
+    for (const v of pars) selfNames.add(v.toLowerCase());
+    // Children come from the OTHER halves of the split: whatever
+    // `insertSetsFromCategories` or the name-based splitter already found
+    // under this same root. This function only ever contributes the ROOT
+    // NAME and the self-naming text to drop; it does not invent children.
+    //
+    // `root` here is the RAW dash-joined category tail ("downtown-gold"),
+    // not yet a display name -- `humaniseSlug` (checklist-category.cjs's own
+    // `humanise`) is the one function that turns a slug into what a
+    // checklist would print, and using it here rather than a second
+    // formatter is what stopped "Downtown-gold" leaking into the corpus
+    // instead of "Downtown Gold".
+    sets.push({ root: humaniseSlug(root), children: [] });
+  }
+  return { sets, selfNames };
+}
+
+/**
+ * THE SELF-REFUSAL FLOOR, SHARED BY BOTH THE NAME-BASED SPLIT AND THE
+ * CATEGORY-ONLY PASS. A product must keep at least a QUARTER of its names
+ * AND at least 8, unless its own checklist labels a base ladder somewhere --
+ * see `splitInsertSets`'s own header for why the floor is this generous (a
+ * wrong split silently deletes a rung; a refused one is merely the status
+ * quo), and the category-only pass's own refusal check (in `main`) for why
+ * one shared constant matters: hockey|2025|flair mislabels its ENTIRE base
+ * ladder as `insert-<name>-parallel` categories, and two independent copies
+ * of this threshold could each say "fine" about a share the OTHER pass
+ * would have refused.
+ */
+const MIN_KEPT_FRACTION = 0.25;
+const MIN_KEPT_NAMES = 8;
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -258,6 +410,17 @@ function productOf(csvPath) {
 
 function main() {
   const vocab = new Map();       // "sport|year|setKey" -> Map(key -> entry)
+  // THE RAW category+parallel PAIRS, kept per product alongside `bucket`.
+  //
+  // `bucket` only ever holds rows with a NON-BLANK parallel column (see the
+  // `if (!parallel) continue` a few lines down) -- correct for the name-based
+  // split, but it means a category whose OWN rows carry no parallel text
+  // ("insert-z-marquee", blank on every row) leaves no trace for anything
+  // downstream to read. `insertSetsFromCategories` and
+  // `bareSelfNamedInsertRoots` need every row, blank or not, to see that the
+  // category exists and has siblings -- so this is the second, unfiltered
+  // copy they read.
+  const categoryRowsByProduct = new Map();   // pk -> Array<{category, parallel}>
   let files = 0, rows = 0, cleaned = 0, runsRecovered = 0, dropped = 0;
 
   for (const dir of DIRS) {
@@ -270,6 +433,8 @@ function main() {
       const pk = `${prod.sport}|${prod.year}|${prod.setKey}`;
       if (!vocab.has(pk)) vocab.set(pk, new Map());
       const bucket = vocab.get(pk);
+      if (!categoryRowsByProduct.has(pk)) categoryRowsByProduct.set(pk, []);
+      const categoryRows = categoryRowsByProduct.get(pk);
 
       const lines = fs.readFileSync(p, "utf8").split("\n");
       for (let i = 1; i < lines.length; i++) {
@@ -278,6 +443,7 @@ function main() {
         const cols = splitCsv(line);
         const category = (cols[0] ?? "").trim();
         const parallel = (cols[2] ?? "").trim();
+        if (category) categoryRows.push({ category, parallel });
         // The checklist states the run in its OWN column. Reading only the
         // runs recovered from name-glue captured 2 of 36,734 names — and print
         // run is the one field no sale title can be made to yield.
@@ -427,9 +593,9 @@ function main() {
     // The floor is deliberately generous -- a product must keep at least a
     // quarter of its names AND at least 8 -- because a wrong split is silent
     // (a real rung simply vanishes) while a refused one is merely the status
-    // quo.
-    const MIN_KEPT_FRACTION = 0.25;
-    const MIN_KEPT_NAMES = 8;
+    // quo. MIN_KEPT_FRACTION / MIN_KEPT_NAMES are module-level now, shared
+    // with the category-only pass's own refusal check in `main` -- see their
+    // declaration for why one shared floor matters.
     const movedCount = [...merged.values()].reduce((n, g) => n + g.length, 0);
     const totalCount = parallels.length + movedCount;
     if (movedCount > 0 && totalCount > 0) {
@@ -509,7 +675,6 @@ function main() {
     const split = splitInsertSets(bucket);
     const insertSets = [...split.sets.entries()]
       .map(([root, entries]) => {
-        insertSetCount++; insertNameCount += entries.length;
         // The root's DISPLAY name is the longest common leading run of its
         // children, not the shortest member -- otherwise a one-word member
         // ("Best") labels a set whose real name is longer ("Best Tuddys").
@@ -544,9 +709,121 @@ function main() {
       })
       .sort((a, b) => a.rootKey.localeCompare(b.rootKey));
 
+    // THE CATEGORY-ONLY PASS: bare insert roots the NAME-based split above
+    // cannot see, because their own row carries no name distinct from the
+    // set itself (blank, or a fold of the root -- see the two functions'
+    // headers). Read from the unfiltered `categoryRowsByProduct`, which is
+    // why that map exists alongside `bucket`.
+    const categoryRows = categoryRowsByProduct.get(pk) ?? [];
+    const blankRootSets = insertSetsFromCategories(categoryRows);
+    const selfNamed = bareSelfNamedInsertRoots(categoryRows);
+    const categoryRoots = [...blankRootSets, ...selfNamed.sets];
+
+    // MERGE ON THE SAME "EXTENDS" TEST `splitInsertSets` already uses for its
+    // own roots, NOT fold-equality -- a category root's word count almost
+    // never matches its name-based sibling's (`illusionists` is one word,
+    // `illusionists black` -- already its own one-item root, for lack of
+    // anywhere to merge under -- is two).
+    //
+    // THE CATEGORY ROOT IS ALWAYS THE SHORTER SIDE. It is, by construction,
+    // the BARE category tail (`insertSetsFromCategories` and
+    // `bareSelfNamedInsertRoots` never invent a longer one), so wherever it
+    // shares a prefix with an existing name-based root that root is the more
+    // specific one and must be ABSORBED, never the other way round -- one
+    // direction, no ambiguity about which side wins. `illusionists` absorbs
+    // EVERY `illusionists <colour>` root, not just the first found.
+    //
+    // What has to hold afterwards is the corpus invariant every child obeys
+    // everywhere else: the root is a PREFIX, normalised, of every one of its
+    // children -- see tests/corpusInsertSetsAreNotParallels.test.ts "every
+    // insert child really does carry its root's name" -- so `rootKey` is
+    // built from `cr.root` itself, never folded.
+    let mergedList = insertSets.map((s) => ({ ...s, children: [...s.children] }));
+    for (const cr of categoryRoots) {
+      const crKey = normForRoot(cr.root);
+      const extends_ = (s) => s.rootKey === crKey || s.rootKey.startsWith(crKey + " ");
+      const extended = mergedList.filter(extends_);
+      const absorbedChildren = extended.flatMap((s) => s.children);
+      const absorbedCategories = extended.flatMap((s) => s.categories ?? []);
+      mergedList = mergedList.filter((s) => !extends_(s));
+      // The bare root itself is a child too -- see this function's own note:
+      // a title with no colour ("Illusionists #13") must still match. Not
+      // duplicated when an absorbed root's OWN name was already the bare root.
+      const ownChild = extended.some((s) => normForRoot(s.root) === crKey) ? [] : [cr.root];
+      mergedList.push({
+        root: cr.root, rootKey: crKey,
+        children: [...new Set([...ownChild, ...cr.children, ...absorbedChildren])].sort(),
+        categories: [...new Set(absorbedCategories)].sort(),
+      });
+    }
+    // THE SAME SELF-REFUSAL `splitInsertSets` APPLIES TO ITS OWN SPLIT, NOW
+    // APPLIED TO THE COMBINED RESULT (2026-09-19).
+    //
+    // MEASURED, and the reason this guard exists at all: hockey|2025|flair
+    // labels its ENTIRE base parallel ladder with `insert-<name>-parallel`
+    // categories ("Spectrum Parallel", "Blue Ice Parallel", "Printing
+    // Plates Parallel" -- real finishes of the base card, not insert sets),
+    // and every one of those bare categories has a sibling
+    // (`insert-blue-ice-parallel-rookies`, `insert-*-parallel` variants),
+    // which is exactly the shape `bareSelfNamedInsertRoots` and
+    // `insertSetsFromCategories` are built to recognise. Applied
+    // unconditionally, the category pass alone swept 8 of the product's 9
+    // real parallels into one-item "insert sets", the same defect class
+    // `splitInsertSets`'s own MIN_KEPT_FRACTION guard exists to catch for
+    // the name-based split -- this product just has no `insert-base-*` or
+    // plain `base` row carrying parallel text for that guard's
+    // `sourceLabelsItsBase` check to see (Flair's `base` rows are blank).
+    //
+    // So the same two-part test runs again here, over the FULL merged
+    // result: does the product's own checklist label a base ladder
+    // ANYWHERE (blank-parallel `base`/`insert-base-*`/`auto-base*` rows
+    // count too, via `categoryRows` rather than `bucket`, since a blank
+    // row never reaches `bucket`), or does what is kept clear the 25%/8
+    // floor. Failing both means the product is Flair-shaped -- refuse the
+    // CATEGORY additions specifically (the name-based split already passed
+    // its own check and is never re-litigated here) and record what would
+    // have moved, the same shape `suspectInsertRoots` already uses.
+    const sourceLabelsItsBaseAnywhere = categoryRows.some((r) => {
+      const k = readChecklistCategory(r.category, r.parallel).kind;
+      return k === "base" || k === "auto";
+    });
+    const mergedMoved = mergedList.reduce((n, s) => n + s.children.length, 0);
+    const mergedTotal = split.parallels.length + mergedMoved;
+    // Same shape as splitInsertSets's own `keptEnough`: the >=8 floor is
+    // NEVER waived, and clears the bar either by the source labelling a base
+    // ladder anywhere or by keeping a quarter of the total.
+    const categoryPassKeptEnough = mergedTotal === 0
+      || (split.parallels.length >= MIN_KEPT_NAMES
+        && (sourceLabelsItsBaseAnywhere || split.parallels.length / mergedTotal >= MIN_KEPT_FRACTION));
+    let mergedInsertSets, categoryPassRefused;
+    if (categoryPassKeptEnough || !categoryRoots.length) {
+      mergedInsertSets = mergedList.sort((a, b) => a.rootKey.localeCompare(b.rootKey));
+      categoryPassRefused = null;
+    } else {
+      // Refuse the category pass's contribution; the name-based split's own
+      // result (already vetted by its own guard) stands untouched.
+      mergedInsertSets = insertSets;
+      categoryPassRefused = categoryRoots.map((cr) => ({ rootKey: normForRoot(cr.root), children: cr.children }));
+    }
+    insertSetCount += mergedInsertSets.length;
+    insertNameCount += mergedInsertSets.reduce((n, s) => n + s.children.length, 0);
+
+    // A SELF-NAMED ROOT IS NOT A PARALLEL -- but only when the category pass
+    // that found it was not itself refused above; a refused pass leaves the
+    // self-naming text exactly where flat parallels always kept it, same as
+    // every other name on a refused product.
+    //
+    // "Illusionist" is the set talking about itself, not a rung of the base
+    // card -- drop it from `parallels[]` now that its root has somewhere to
+    // live. Matched on the exact name (lowercased), never a substring, so
+    // nothing else is touched.
+    const parallelsWithoutSelfNames = (!categoryPassRefused && selfNamed.selfNames.size)
+      ? split.parallels.filter((e) => !selfNamed.selfNames.has(e.name.toLowerCase()))
+      : split.parallels;
+
     out[pk] = {
       sport, year: Number(year), setKey,
-      parallels: split.parallels
+      parallels: parallelsWithoutSelfNames
         .sort((a, b) => b.seen - a.seen || a.name.localeCompare(b.name))
         .map((e) => {
           names++;
@@ -559,7 +836,7 @@ function main() {
             ...(e.overlay ? { overlay: e.overlay } : {}),
           };
         }),
-      ...(insertSets.length ? { insertSets } : {}),
+      ...(mergedInsertSets.length ? { insertSets: mergedInsertSets } : {}),
       // The split refused itself for this product (see splitInsertSets): its
       // source labels the base ladder as inserts, so the names stay flat and
       // what WOULD have moved is recorded instead of acted on.
@@ -593,6 +870,6 @@ function main() {
   console.log(`\nwritten to ${OUT}`);
 }
 
-module.exports = { cleanName, splitCsv };
+module.exports = { cleanName, splitCsv, bareSelfNamedInsertRoots, foldedPhrase };
 
 if (require.main === module) main();

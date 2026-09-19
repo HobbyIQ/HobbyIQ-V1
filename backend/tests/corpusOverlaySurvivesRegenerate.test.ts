@@ -61,7 +61,7 @@ describe("the shipped corpus loses no product and no unexplained name", () => {
   ) as {
     products?: Record<string, {
       parallels?: { name?: string }[];
-      insertSets?: { children: string[] }[];
+      insertSets?: { rootKey?: string; children: string[] }[];
     }>;
   };
 
@@ -88,6 +88,13 @@ describe("the shipped corpus loses no product and no unexplained name", () => {
     expect(gone).toEqual([]);
   });
 
+  /** Fold a trailing "s" per word -- mirrors build-parallel-vocabulary.cjs's
+   * own `foldedPhrase`, kept as a local copy for the same reason PLAIN_COLOR_
+   * WORDS is: this test reads the builder's OUTPUT, not its internals. */
+  const foldTrailingS = (w: string) => (w.endsWith("s") && w.length > 3 ? w.slice(0, -1) : w);
+  const foldedPhrase = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean).map(foldTrailingS).join(" ");
+
   it("every name a product had is still accounted for", () => {
     const prev = onMain(); if (!prev) return;
     const lost: string[] = [];
@@ -105,6 +112,18 @@ describe("the shipped corpus loses no product and no unexplained name", () => {
       ]);
       for (const n of [...had]) {
         if (normed.has(n.replace(/[^a-z0-9]+/g, " ").trim())) had.delete(n);
+      }
+      // R66 PR 1 (2026-09-19): A NAME THAT FOLDS TO ITS OWN NEW ROOT IS NOT
+      // LOST, IT IS THE ROOT. `insert-illusionists` states "Illusionist" on
+      // every row; that singular text is the set naming itself, and once
+      // `bareSelfNamedInsertRoots` gives the set a root ("Illusionists"),
+      // the singular self-reference is dropped from parallels[] on purpose
+      // -- see build-parallel-vocabulary.cjs's own header. Compare on the
+      // FOLDED root key (singular/plural only, never a different word) so
+      // this legitimate removal is not reported as a silent loss.
+      const rootFolds = new Set((after.insertSets ?? []).map((s) => foldedPhrase(s.rootKey ?? "")));
+      for (const n of [...had]) {
+        if (rootFolds.has(foldedPhrase(n))) had.delete(n);
       }
       if (had.size) lost.push(`${key}: ${[...had].slice(0, 4).join(", ")}`);
     }
