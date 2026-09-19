@@ -1,0 +1,43 @@
+{
+  "scrapedAt": "2026-09-19T13:16:00.000Z",
+  "articleUrl": "https://www.checklistinsider.com/2025-panini-prizm-baseball",
+  "articleHttpStatus": 200,
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2025/09/2025-Panini-Prizm-Baseball-Checklist-Downloads-Excel-spreadsheet-2.xlsx",
+  "xlsxHttpStatus": 200,
+  "sha256": "5f21329a806aca311fb362ddb80dd0ad5680b8eb8cabec6109d87fc3a758aefd",
+  "source": "checklistinsider-2026-09-19",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Panini Prizm",
+  "productKey": "2025-panini-prizm",
+  "setKey": "panini-prizm",
+  "rowCount": 9900,
+  "readyToIngest": false,
+  "note": "TARGET 3. The only committed artifact for this product-year, backend/data/checklists/hand-fetched/parallels-2025-panini-prizm-baseball.json, is a VOCABULARY list (name + printRun pairs, appliesTo tag) with no card numbers -- it cannot mint catalog rows by itself. classified-final.json's sample sale is a plain '#353 Base' card the vocabulary-only file cannot confirm or mint. This package stages the actual per-card checklist.",
+  "reproduce": {
+    "pipeline": "The repo's OWN checklistinsider pipeline was used end to end -- NOT a one-off script. Coordinator flagged the earlier draft of this package (a hand-written script, C:/tmp/convertChecklistInsiderXlsx.cjs, never committed) as unreproducible; that script has been discarded entirely and is not referenced by this package.",
+    "step1_scrape": "node backend/scripts/scrape-checklistinsider.cjs --sport=baseball --year=2025 --slugsFile=<file containing one line: 2025-panini-prizm-baseball> --delayMs=1500 --out=<staging>.jsonl",
+    "step1_result": "1 page fetched, layout=tabular, 13,483 card rows read from the xlsx (CARD SET | CARD # | ATHLETE | TEAM | SEQ shape, detected by scrape-checklistinsider.cjs's own detectHeader/HEAD regex -- the same Panini tabular layout documented in that script's own header comment), 32 parallel rows read from the page's own ladder list, 9,749 of the 13,483 card rows carried a stated print run (SEQ column).",
+    "step2_convert": "node backend/scripts/convertChecklistInsiderToChecklistCsv.cjs --in=<staging>.jsonl --outDir=<outDir> --verbose",
+    "step2_result": "1 CSV written, 23,083 total rows across 13 anchor sections and 144 parallel-rung sections (the FULL product: Base, Dingers!, Fireworks, Prizmatic, Legendary/Prospect/Throwback Signatures, Prizmatrix Autographs, Legendary/Prospect Dual Autographs, Talisman, Groovy, Color Blast -- every CARD SET value the workbook carries, correctly split into base/insert-*/auto-* categories by the shared classifySections/categoryFor logic imported from convertBeckettChecklistXlsx.cjs).",
+    "step3_scope_filter": "This package keeps ONLY the rows with category=='base' from step 2's output (a plain awk/grep filter on the CSV, not a code change): `awk -F',' 'NR==1 || $1==\"base\"' <step2-output>.csv > 2025-panini-prizm-baseball.csv`. This is the acquisition target -- the flagship numbered checklist and its full Prizm color ladder (300 base + 9,600 colored = 9,900 rows, 32 distinct Prizm colors, Pulsar /499 down to Black Finite / Gold Vinyl 1/1)."
+  },
+  "categoriesExcludedAndWhy": {
+    "count": "13,183 of the 23,083 rows the real pipeline produced were excluded from this package -- every category other than plain 'base'.",
+    "breakdown": "insert-base-prizms-<color> (9,600 rows, 32 categories x 300 cards): this is the SAME (cardNumber, color) cell as the 'base' category's ladder-expanded rows, just derived from the workbook's own per-subset sheets instead of the page's parallel-list ladder -- both signals agree (spot-checked: 'Red Prizms' /299 in both). Restaging it as a second category would double-count the same cells the 'base' rows already cover, not add new ones.",
+    "autoCategoriesFound": "auto-sensational-signatures(-prizms-*), auto-prospect-signatures(-prizms-*), auto-legendary-signatures(-prizms-*), auto-throwback-signatures(-prizms-*), auto-prizmatrix-autographs(-prizms-*), auto-legendary-dual-autographs(-prizms-*), auto-prospect-dual-autographs(-prizms-*) -- 3,472 rows total across 7 distinct autograph insert sets, each already correctly flagged auto-* by the real converter's own classifier (not folded into base, not mislabeled unsigned). KNOWN TRAP CALLED OUT EXPLICITLY: an earlier incident found the checklistinsider layout can mint autograph sections as unsigned when a converter's category detection is wrong -- verified NOT the case here: every one of these 3,472 rows carries a category starting with 'auto-', none landed in the 'base' category this package stages, and this package excludes all of them rather than risk restaging any as unsigned.",
+    "otherInsertsFound": "insert-dingers, insert-fireworks, insert-prizmatic, insert-talisman, insert-groovy, insert-color-blast (plus each insert's own -prizms-<color> parallels) -- 7,528 rows across 6 named insert sets, none registered under panini-prizm sub-keys, out of scope for this pass.",
+    "decision": "Excluded rows are NOT staged anywhere in this package and NOT discarded from the record -- they are fully reproducible from step 2's output via the command above, and a future pass can stage them as their own package once the insert/auto sub-keys are registered (R67 roster test applies per-insert, not done here)."
+  },
+  "verification": "Spot-checked the converter's plain-'base' output against the live page verbatim for cards #1-219 and the full parallels list (fetched 2026-09-19): names, teams and print runs match exactly (e.g. #1 Kristian Campbell, #26 Aaron Judge; Red Prizms /299, Blue Prizms /199, Purple Prizms /149, Black Finite Prizms 1/1). Cross-checked the pipeline's own two independent signals for the same cells (page ladder vs. workbook per-subset rows) and confirmed they agree card-for-card, color-for-color, print-run-for-print-run on a sample.",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run read-only against this file): 9,900 batch rows, 9,900 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys.",
+  "newVsExisting": {
+    "method": "The hand-fetched vocabulary JSON has no card numbers, so every (cardNumber, parallel) cell in this CSV is NEW relative to what a checklist ingest could previously mint for this product-year -- the vocabulary only ever helped a spelling-normalizer, it never wrote a row. This product-year has NO other committed checklist CSV to diff against.",
+    "byCategory": {
+      "base_blankParallel": { "newCells": 300, "existingCellsUnchanged": 0 },
+      "base_coloredPrizm": { "newCells": 9600, "existingCellsUnchanged": 0 }
+    },
+    "newCells": 9900,
+    "existingCellsUnchanged": 0
+  }
+}
