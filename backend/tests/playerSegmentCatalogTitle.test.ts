@@ -97,13 +97,17 @@ const SELLER_TITLES: [string, string][] = [
   ["2000 Topps Tom Brady #236 Football Rookie PSA 8", "Tom Brady"],
   ["2018 Bowman Chrome Juan Soto #BCP-40 Refractor BGS 9.5", "Juan Soto"],
   ["1998 Bowman Chrome Peyton Manning #1 Football RC PSA 9", "Peyton Manning"],
-  // Pinned AS MEASURED, not as wished. "Larry" is a corpus parallel token
-  // (2024 Panini Flawless lists a player-named insert), so the strip takes it
-  // and the surname survives alone. That is a PRE-EXISTING defect of the
-  // corpus harvest, unrelated to the catalog-title shape, and it is pinned here
-  // so this test tells the truth about today's behaviour: if a later PR fixes
-  // the harvest, this line is the one that says so.
-  ["1980-81 Topps Larry Bird Rookie PSA 7", "Bird"],
+  // FIXED (R66 PR1 follow-up, CF-A-SAME-PRODUCT-ACROSS-YEARS-IS-ONE-VOTE,
+  // 2026-09-19). "Larry" used to be a corpus parallel token because
+  // panini-flawless's "Larry O'Brien Trophy Gem" insert repeats across three
+  // years (2022/2023/2024) of the SAME product line, and the frequency floor
+  // counted each year as an independent vote — exactly the "Ken Griffey Jr."
+  // class of contamination this module's own doctrine warns about. The floor
+  // now dedups by distinct base brand (sport|setKey, year dropped), so one
+  // product line repeating its own insert across years contributes ONE vote
+  // and "larry" correctly stays below the floor. This is the line that says
+  // the harvest defect documented here got fixed.
+  ["1980-81 Topps Larry Bird Rookie PSA 7", "Larry Bird"],
 ];
 
 describe("CF-A-CATALOG-TITLE-NAMES-NO-PLAYER", () => {
