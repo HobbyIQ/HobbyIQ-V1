@@ -951,7 +951,12 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
     "panini-score", "panini-classics", "panini-legacy", "panini-threads", "panini-rookies-and-stars", "panini-zenith",
     "panini-court-kings", "panini-origins", "panini-encased", "panini-eminence", "panini-totally-certified",
     "panini-certified", "panini-crusade", "panini-prestige", "panini-elite-extra-edition",
-    "panini-diamond-kings"].map((k) => P(k, { parent: "panini" })),
+    "panini-diamond-kings",
+    // R67 PREREQUISITE (Drew, 2026-09-19): registered so its own named insert
+    // sets (below) have a parent to nest under. Previously unregistered but
+    // already a normalizeSetKey fixed point via the corpus fallback (pinned by
+    // aBrandSubstringIsNotAProduct.test.ts); this makes it a table entry too.
+    "panini-photogenic"].map((k) => P(k, { parent: "panini" })),
   // R50 / R52 / GREATS-OF-THE-GAME (Drew, 2026-09-15). A named product is its
   // own card set, and these four were never registered — so the two that
   // survived did so only because no family catch-all happened to name them,
@@ -1032,18 +1037,100 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   //
   //   panini-photogenic-troops-tribute
   //     2024 Panini Photogenic's own insert, "Troops Tribute" -- named after
-  //     the checklist, not a Topps release. No parent registered: Photogenic
-  //     itself is not yet in this table (it already normalizes to itself via
-  //     the corpus fallback), and R67 asks for exactly this key, nothing more.
+  //     the checklist, not a Topps release. Nested under panini-photogenic,
+  //     registered above alongside the flagship (R67 follow-up).
   //   panini-zenith-contenders-optic-rookie-ticket-rps-preview
   //   panini-zenith-contenders-optic-rookie-ticket-variation-rps-preview
   //     2024 Panini Zenith's own inserts previewing another product's Rookie
   //     Ticket RPS parallel -- the name quotes Contenders Optic, the checklist
   //     is Zenith's. Nested under panini-zenith, which this table already
   //     registers (family "panini", parent "panini").
-  S("panini-photogenic-troops-tribute"),
+  S("panini-photogenic-troops-tribute", { family: "panini-photogenic", parent: "panini-photogenic" }),
   S("panini-zenith-contenders-optic-rookie-ticket-rps-preview", { parent: "panini-zenith" }),
   S("panini-zenith-contenders-optic-rookie-ticket-variation-rps-preview", { parent: "panini-zenith" }),
+  /**
+   * R67 (Drew, ruling round of 2026-09-19): 2024 PANINI PHOTOGENIC FOOTBALL --
+   * THE NAMED INSERT SETS.
+   *
+   * Measured directly against the staged checklist (checklistinsider,
+   * `2024-panini-photogenic-football.csv`, held on PR #2272 pending this
+   * registration -- #2272 refuses to ingest one insert, `Rookie Portrait`,
+   * whose colour rungs collide with base on a blank parallel until its key
+   * exists). The module's own production fold (`insert-set-key.cjs`
+   * `rungFoldingFor`, run over every row of the file, never re-derived by
+   * hand) resolved every category to a root or a colour rung by the R67
+   * roster test -- players and card numbers split on "/", trimmed, lowercased,
+   * de-duplicated, sorted, then compared: a child whose roster is a SUBSET of
+   * its root on the same numbers is a colour rung (parallel axis only); a
+   * child with numbers or players the root lacks is its own key.
+   *
+   * Every colour-suffixed category folded as a subset of its plain-spelled
+   * root with zero exceptions -- `insert-a-different-view-{black,blue,gold,
+   * orange,pink,purple,red,silver}` onto `a-different-view`, and the same
+   * shape for draft-snapshots, for-the-cure, in-the-action-autographs,
+   * progressions, rookie-instants-signatures, rookie-introductions, rookie-
+   * pix, rookie-portrait-autographs, snapshots-autographs and troops-tribute
+   * (troops-tribute registered above, ahead of this block, since it doubles
+   * as the anchoring fix's own key).
+   *
+   * FIFTEEN ROOTS SURVIVED the fold as their own product (sixteen measured,
+   * troops-tribute already registered):
+   *
+   *     a-different-view                    10 rows,  8 colour rungs
+   *     avatars                              20 rows (no colour rungs printed)
+   *     draft-snapshots                      10 rows,  8 colour rungs
+   *     for-the-cure                         10 rows,  8 colour rungs
+   *     in-motion                            10 rows (no colour rungs printed)
+   *     in-the-action-autographs             25 rows,  5 colour rungs
+   *     progressions                         20 rows,  8 colour rungs
+   *     rookie-instants-signatures           20 rows,  5 colour rungs
+   *     rookie-introductions                 20 rows,  8 colour rungs
+   *     rookie-photo-bomb-autographs         48 rows (auto- prefixed, own roster)
+   *     rookie-pix                           20 rows,  8 colour rungs
+   *     rookie-portrait                     450 rows (the product's own insert;
+   *                                                    NOT the -autographs sibling)
+   *     rookie-portrait-autographs           35 rows,  5 colour rungs -- SAME
+   *                                                    numbers/players as
+   *                                                    rookie-portrait, but the
+   *                                                    signed subset is its own
+   *                                                    product per CF-A-COLOUR-
+   *                                                    RUNG-IS-NEVER-A-CARD-SET-
+   *                                                    KEY's "tail says SIGNED"
+   *                                                    rule -- isAuto is its own
+   *                                                    axis, never a parallel.
+   *     snapshots-autographs                 35 rows,  5 colour rungs
+   *     the-shoe-game                        20 rows (no colour rungs printed)
+   *
+   * KNOWN OPEN QUESTION, STATED RATHER THAN SILENCED. The acquisition-queue
+   * estimate for this product was 13 own-key roots; independently re-measuring
+   * against the roster test above (not re-reading the estimate) finds 15,
+   * all fifteen backed by their own checklist rows with zero roster
+   * disagreement in the fold. If two of these are meant to fold together or
+   * be excluded on evidence this file does not carry (attestation, a
+   * duplicate name, or a Drew ruling not reflected in the staged CSV), that is
+   * a follow-up on this same table, not a reason to under-register a measured
+   * root now -- an unregistered root refuses ingestion (safe); a wrongly
+   * folded one loses rows silently (the R67/#2271 defect class).
+   *
+   * `family` left at the default (each insert its own pricing family) --
+   * consistent with the Illusions precedent above, which also gives each of
+   * its five named inserts its own family, not the flagship's.
+   */
+  S("panini-photogenic-a-different-view", { parent: "panini-photogenic" }),
+  S("panini-photogenic-avatars", { parent: "panini-photogenic" }),
+  S("panini-photogenic-draft-snapshots", { parent: "panini-photogenic" }),
+  S("panini-photogenic-for-the-cure", { parent: "panini-photogenic" }),
+  S("panini-photogenic-in-motion", { parent: "panini-photogenic" }),
+  S("panini-photogenic-in-the-action-autographs", { parent: "panini-photogenic" }),
+  S("panini-photogenic-progressions", { parent: "panini-photogenic" }),
+  S("panini-photogenic-rookie-instants-signatures", { parent: "panini-photogenic" }),
+  S("panini-photogenic-rookie-introductions", { parent: "panini-photogenic" }),
+  S("panini-photogenic-rookie-photo-bomb-autographs", { parent: "panini-photogenic" }),
+  S("panini-photogenic-rookie-pix", { parent: "panini-photogenic" }),
+  S("panini-photogenic-rookie-portrait", { parent: "panini-photogenic" }),
+  S("panini-photogenic-rookie-portrait-autographs", { parent: "panini-photogenic" }),
+  S("panini-photogenic-snapshots-autographs", { parent: "panini-photogenic" }),
+  S("panini-photogenic-the-shoe-game", { parent: "panini-photogenic" }),
   // R53(ii) (Drew, 2026-09-15): SELECT'S TIERS ARE THEIR OWN CARD SETS.
   //
   // Panini Select prints its base set in named tiers -- Concourse, Premier
