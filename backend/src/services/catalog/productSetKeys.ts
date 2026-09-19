@@ -1732,15 +1732,25 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
    *
    * ILLUSIONISTS IS THE PRODUCT'S SIGNATURE SET and the one the R31/R33 title
    * refusals kept naming; `-illusionists-autographs` is the SIGNED sibling and
-   * a different card set, not a rung of it. The unsigned `Illusionists` rows
-   * carry a blank parallel and stay on the product key, exactly as the base
-   * ladder does.
+   * a different card set, not a rung of it.
+   *
+   * R67 (2026-09-19) SUPERSEDES R60's UNSIGNED-ILLUSIONISTS EXCLUSION. This
+   * comment used to say the unsigned `Illusionists` rows "carry a blank
+   * parallel and stay on the product key, exactly as the base ladder does" --
+   * that premise no longer matches the staged data. `insert-illusionists`
+   * rows carry their OWN stated parallel ("Illusionist", not blank), and
+   * there is a real same-number/different-player fact against base: base #1
+   * is Kyler Murray, Illusionists #1 is Caleb Williams. R67's own rule (a
+   * named insert set is its own product key) reaches this exactly like every
+   * other insert in the file, and now registers it below, alongside its
+   * already-registered signed sibling.
    */
   S("panini-illusions-trophy-collection", { family: "panini-illusions", parent: "panini-illusions" }),
   S("panini-illusions-mystique-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
   S("panini-illusions-immortalized-jersey-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
   S("panini-illusions-rookie-reflections-dual-patch-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
   S("panini-illusions-illusionists-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
+  S("panini-illusions-illusionists", { family: "panini-illusions", parent: "panini-illusions" }),
 
   /**
    * R67 (Drew, ruling round of 2026-09-19): 2024 PANINI ILLUSIONS FOOTBALL --

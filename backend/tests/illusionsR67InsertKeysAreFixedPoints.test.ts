@@ -128,15 +128,18 @@ describe("Illusions R67 insert keys", () => {
       .toBe("panini-illusions-trophy-collection-signatures");
   });
 
-  it("plain illusionists (unsigned) stays UNREGISTERED — the existing R60 ruling is not overridden here", () => {
-    // See the KNOWN DISCREPANCY note in productSetKeys.ts and this PR's
-    // description: today's staged data shows a real same-number/different-
-    // player fact against base, but the parallel field already disambiguates
-    // the id, so no collision follows either way. A pinned existing test
-    // (illusionsInsertSetsAreTheirOwnCardSets.test.ts) asserts this key is
-    // absent; this test pins the same fact from this file too, so the two
-    // suites cannot silently disagree.
-    expect(isProductSetKey("panini-illusions-illusionists")).toBe(false);
+  it("R67 (2026-09-19) SUPERSEDES R60: plain illusionists (unsigned) is now registered", () => {
+    // The discrepancy this test used to pin is resolved, not silenced: today's
+    // staged data shows insert-illusionists rows carrying their OWN stated
+    // parallel ("Illusionist", not blank) and a real same-number/different-
+    // player fact against base (base #1 Kyler Murray vs Illusionists #1 Caleb
+    // Williams). R67's own rule -- a named insert set is its own product key --
+    // reaches this exactly like every other insert in the file.
+    // illusionsInsertSetsAreTheirOwnCardSets.test.ts's own pinned test is
+    // updated in the same commit, so the two suites cannot silently disagree.
+    expect(isProductSetKey("panini-illusions-illusionists")).toBe(true);
+    expect(normalizeSetKey("panini-illusions-illusionists")).toBe("panini-illusions-illusionists");
+    expect(productParentOf("panini-illusions-illusionists")).toBe("panini-illusions");
   });
 
   it("does not re-register the five R60 keys already shipped", () => {
