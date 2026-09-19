@@ -1,0 +1,124 @@
+{
+  "builtAt": "2026-09-19T00:00:00.000Z",
+  "sources": ["synthetic-fixture-for-insertSetTitleReader.test.ts"],
+  "productCount": 6,
+  "parallelNameCount": 0,
+  "products": {
+    "football|2024|panini-zenith-fixture": {
+      "sport": "football",
+      "year": 2024,
+      "setKey": "panini-zenith-fixture",
+      "parallels": [
+        { "name": "Gold", "printRun": 10, "odds": null, "seen": 1, "spellings": ["Gold"] }
+      ],
+      "insertSets": [
+        {
+          "root": "Z Marquee",
+          "rootKey": "z marquee",
+          "children": ["Z Marquee", "Z Marquee Gold"],
+          "categories": ["insert-z-marquee", "insert-z-marquee-gold"]
+        }
+      ]
+    },
+    "football|2025|panini-certified-fixture": {
+      "sport": "football",
+      "year": 2025,
+      "setKey": "panini-certified-fixture",
+      "parallels": [
+        { "name": "Mirror", "printRun": 99, "odds": null, "seen": 1, "spellings": ["Mirror"] },
+        { "name": "Mirror Black", "printRun": 99, "odds": null, "seen": 1, "spellings": ["Mirror Black"] },
+        { "name": "Mirror Gold", "printRun": 10, "odds": null, "seen": 1, "spellings": ["Mirror Gold"] },
+        { "name": "Trophy Collection Blue", "printRun": 50, "odds": null, "seen": 1, "spellings": ["Trophy Collection Blue"] },
+        { "name": "Trophy Collection Gold", "printRun": 10, "odds": null, "seen": 1, "spellings": ["Trophy Collection Gold"] }
+      ],
+      "insertSets": [
+        {
+          "root": "Certified",
+          "rootKey": "certified",
+          "children": ["Certified"],
+          "categories": ["insert-certified"]
+        },
+        {
+          "root": "Mirror",
+          "rootKey": "mirror",
+          "children": ["Mirror", "Mirror Black", "Mirror Gold"],
+          "categories": ["insert-mirror", "insert-mirror-black", "insert-mirror-gold"]
+        },
+        {
+          "root": "Select Certified",
+          "rootKey": "select certified",
+          "children": ["Select Certified"],
+          "categories": ["insert-select-certified"]
+        },
+        {
+          "root": "Trophy Collection",
+          "rootKey": "trophy collection",
+          "children": ["Trophy Collection", "Trophy Collection Blue", "Trophy Collection Gold"],
+          "categories": ["insert-trophy-collection", "insert-trophy-collection-blue", "insert-trophy-collection-gold"]
+        }
+      ]
+    },
+    "hockey|2024|upper-deck-fixture": {
+      "sport": "hockey",
+      "year": 2024,
+      "setKey": "upper-deck-fixture",
+      "parallels": [],
+      "insertSets": [
+        {
+          "root": "Young Guns",
+          "rootKey": "young guns",
+          "children": ["Young Guns", "Young Guns Rookie Tribute"],
+          "categories": ["insert-young-guns", "insert-young-guns-rookie-tribute"]
+        }
+      ]
+    },
+    "basketball|2024|panini-select-fixture": {
+      "sport": "basketball",
+      "year": 2024,
+      "setKey": "panini-select-fixture",
+      "parallels": [],
+      "insertSets": [
+        {
+          "root": "Rookie",
+          "rootKey": "rookie",
+          "children": ["Rookie Penmanship", "Rookie Signatures"],
+          "categories": ["insert-rookie-penmanship", "insert-rookie-signatures"]
+        },
+        {
+          "root": "Rookie Phenom Jerseys",
+          "rootKey": "rookie phenom jerseys",
+          "children": ["Rookie Phenom Jerseys", "Rookie Phenom Jerseys Gold"],
+          "categories": ["insert-rookie-phenom-jerseys", "insert-rookie-phenom-jerseys-gold"]
+        }
+      ]
+    },
+    "football|2024|two-products-a-fixture": {
+      "sport": "football",
+      "year": 2024,
+      "setKey": "two-products-a-fixture",
+      "parallels": [],
+      "insertSets": [
+        {
+          "root": "Downtown",
+          "rootKey": "downtown",
+          "children": ["Downtown", "Downtown Duo", "Downtown Duos Gold"],
+          "categories": ["insert-downtown", "insert-downtown-duo", "insert-downtown-duos-gold"]
+        }
+      ]
+    },
+    "basketball|2024|two-products-b-fixture": {
+      "sport": "basketball",
+      "year": 2024,
+      "setKey": "two-products-b-fixture",
+      "parallels": [],
+      "insertSets": [
+        {
+          "root": "Downtown",
+          "rootKey": "downtown",
+          "children": ["Downtown"],
+          "categories": ["insert-downtown"]
+        }
+      ]
+    }
+  }
+}

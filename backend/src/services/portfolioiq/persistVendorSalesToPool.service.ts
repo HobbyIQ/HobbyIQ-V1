@@ -24,7 +24,8 @@ import {
 } from "./parseTitleIdentity.service.js";
 import { resolveVertical } from "./resolveVertical.service.js";
 import { cardNumberInClause, computeHobbyIqCardId, slugify, normalizeSetKey as canonicalNormalizeSetKey } from "./hobbyIqCardId.service.js";
-import { guardSoldCompDoc } from "./splitIdentityWriteGuard.js";
+import { guardSoldCompDoc, parkSoldCompDoc } from "./splitIdentityWriteGuard.js";
+import { insertSetNamedInTitle } from "./insertSetTitleReader.js";
 import { decideTwinAddress, type TwinCandidate } from "./twinAddressRule.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
 import { yearTheTitleAllows } from "./yearTheTitleAllows.js";
@@ -907,6 +908,18 @@ export interface VendorPersistResult {
   /** Rows whose two identity fields disagreed and an ATTESTED sport settled
    *  it; both fields were rewritten to the attested identity. */
   identityResolved?: number;
+  /** R67 (2026-09-19): the title named a registered insert set of its own
+   *  product; `setKey` was rewritten to the insert's own product key before
+   *  the id was minted, so the row prices against the insert's own pool, not
+   *  the base card of that number. */
+  insertSetReKeyed?: number;
+  /** R70 (2026-09-19): the title named an insert set of its own product with
+   *  NO registered product key. Parked through the same mechanism as
+   *  `identityParked` (kept, queryable, out of every pool); counted
+   *  separately because the fix for this class is registering the key, not
+   *  attesting a sport. Grouped by insert root, this is the registration
+   *  queue. */
+  insertSetParkedNoKey?: number;
   /** CF-THE-TITLE-OUTRANKS-THE-VENDOR-PLAYER: the vendor attributed the sale to
    *  a DIFFERENT person than the title names. Neither is adopted; the row is
    *  skipped as UNDERIVABLE rather than keyed to a card it may not be. */
@@ -1112,6 +1125,11 @@ export async function persistVendorSalesToPool(
       result.skipped++;
       continue;
     }
+    // R66/R67/R70 (Drew, 2026-09-19): set below, once sport/year/setKey/player
+    // are all resolved, when the title names an insert set with no registered
+    // key or names two at once. Applied at the write door alongside
+    // `guardSoldCompDoc`'s own verdict -- see that call site's comment.
+    let insertParkPending: { reason: "insert-named-no-key" | "two-inserts-named"; detail: string } | null = null;
     // CF-TCA-STRUCTURED-HINT (Drew, 2026-08-02): identity hint fields
     // (cardNumber / parallel / isAuto / printRun / setName) take priority
     // over the title-guess fallback. When the vendor pre-populated
@@ -1615,6 +1633,53 @@ export async function persistVendorSalesToPool(
       } catch {
         // The parser's answer stands. Absent beats wrong, and a catalog blip
         // must not change what a sale is.
+      }
+    }
+
+    // ── R66/R67/R70 -- A NAMED INSERT SET IS NEVER FILED ON THE BASE CARD ──
+    //
+    // (Drew, 2026-09-19.) PLACEMENT MIRRORS soldCompsStore.recordSoldComp's
+    // own pre-step, and for the same two reasons: runs AFTER the R29/
+    // umbrella-fold block just above (so it reads the WIDENED `setKey` --
+    // an insert set is scoped to the real product an umbrella fold may have
+    // just resolved to, e.g. `upper-deck-series-2`, never the collapsed
+    // umbrella), and BEFORE `computeHobbyIqCardId` right below, which is
+    // therefore also before the checklist-numbered-id upgrade further down:
+    // that upgrade's catalog lookup keys on `setKey`/`slug` AFTER this point,
+    // so rewriting `setKey` here first means it looks up the checklist row of
+    // the INSERT's own product, never the base card's.
+    //
+    // Lives here rather than inside `hobbyIqCardId.service.ts` /
+    // `parseTitleIdentity.service.ts` -- both declared derivation-stamp
+    // inputs -- for the same reason the R29 block above does.
+    //
+    // This writer has no verified-pin concept (`VendorPersistIdentityHint`
+    // carries no pinned-identity field), so the check applies unconditionally
+    // once sport/year/setKey resolve. Pokemon is untouched -- the corpus this
+    // reader consults carries no Pokemon products.
+    if (sport && String(sport).toLowerCase() !== "pokemon" && cardYear && setKey) {
+      const insertMatches = insertSetNamedInTitle({
+        title, sport, year: cardYear, setKey: canonicalNormalizeSetKey(setKey, sport), playerName,
+      });
+      if (insertMatches.length > 1) {
+        insertParkPending = {
+          reason: "two-inserts-named",
+          detail: `title names ${insertMatches.length} distinct insert sets of ${setKey} `
+            + `(${insertMatches.map((m) => m.root).join(", ")}) -- parked, not filed under a guess`,
+        };
+      } else if (insertMatches.length === 1) {
+        const only = insertMatches[0];
+        if (only.registeredKey) {
+          setKey = only.registeredKey;
+          result.insertSetReKeyed = (result.insertSetReKeyed ?? 0) + 1;
+        } else {
+          insertParkPending = {
+            reason: "insert-named-no-key",
+            detail: `title names insert "${only.root}" of ${setKey}, which has no registered `
+              + `product key -- parked, not pooled on the base card`,
+          };
+          result.insertSetParkedNoKey = (result.insertSetParkedNoKey ?? 0) + 1;
+        }
       }
     }
 
@@ -2570,6 +2635,30 @@ export async function persistVendorSalesToPool(
             attestedBy: verdict.attestedBy,
           }));
         }
+      }
+
+      // R70: the insert-set title pre-step found a named insert with no
+      // registered key (or two named at once). Parked through the SAME
+      // mechanism as the split-identity guard just above -- a reader cannot
+      // tell the two apart, and both mean "this row is real, kept, and out of
+      // every pool". Checked AFTER the split-identity guard, never instead of
+      // it: the two reasons are independent and either may apply to one row.
+      if (insertParkPending) {
+        parkSoldCompDoc(
+          doc as Record<string, unknown>,
+          insertParkPending.reason,
+          insertParkPending.detail,
+          "persistVendorSalesToPool:insert-set-title-reader",
+        );
+        console.warn(JSON.stringify({
+          event: "sold_comp_insert_set_parked",
+          source: "persistVendorSalesToPool",
+          vendorSource: source,
+          reason: insertParkPending.reason,
+          cardId: doc.cardId,
+          hobbyiqCardId: doc.hobbyiqCardId,
+          detail: insertParkPending.detail,
+        }));
       }
 
       await container.items.upsert(doc);

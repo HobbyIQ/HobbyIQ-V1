@@ -50,7 +50,8 @@ import {
 import { computeHobbyIqCardId, resolveSetKeyForSlug, normalizeSetKey, sameCardNumber } from "./hobbyIqCardId.service.js";
 import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./slugGuard.service.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
-import { guardSoldCompDoc } from "./splitIdentityWriteGuard.js";
+import { guardSoldCompDoc, parkSoldCompDoc } from "./splitIdentityWriteGuard.js";
+import { insertSetNamedInTitle } from "./insertSetTitleReader.js";
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
@@ -1100,6 +1101,12 @@ export function deriveHobbyIqSlug(input: Pick<RecordSoldCompInput,
 }
 
 export async function recordSoldComp(input: RecordSoldCompInput): Promise<RecordSoldCompResult> {
+  // R66/R67/R70: set by the insert-set title pre-step below when the title
+  // names an insert with no registered key, or names two at once. Applied at
+  // the split-identity write door alongside `guardSoldCompDoc`'s own verdict,
+  // after `doc` exists -- see the door's own comment for why the two share
+  // one park mechanism rather than a second one.
+  let insertParkPending: { reason: "insert-named-no-key" | "two-inserts-named"; detail: string } | null = null;
   // CF-PRE-INGEST-CLEAN (Drew, 2026-08-01). ALWAYS run vendor-specific
   // pre-ingest cleaning as the FIRST step. This is Pass 1 of the
   // two-pass ingest cleaning. Any of the 46 callers of this function
@@ -1307,9 +1314,80 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
       }
     }
   }
+
+  // ── R66/R67/R70 -- A NAMED INSERT SET IS NEVER FILED ON THE BASE CARD ────
+  //
+  // (Drew, 2026-09-19.) PLACEMENT IS DELIBERATE, relative to the two existing
+  // pre-steps around it. Runs AFTER the umbrella-fold block just above (so it
+  // reads `umbrellaFoldedSetName ?? input.setName` -- the umbrella fold may
+  // already have widened a collapsed key to a real series/product, e.g.
+  // `upper-deck` -> `upper-deck-series-2`, and an insert set is scoped to
+  // THAT specific product, not the umbrella). Runs BEFORE `deriveHobbyIqSlug`
+  // (right below) and therefore also before the checklist-numbered-id upgrade
+  // further down: that upgrade keys its catalog lookup on `derived.
+  // resolvedSetKey`/`hobbyiqCardId` -- the FINAL setKey -- so if this rewrites
+  // `setName` to the insert's own registered key, the numbered-id upgrade
+  // correctly looks up a checklist-numbered row of the INSERT's own product,
+  // never the base card's.
+  //
+  // Lives here rather than inside `hobbyIqCardId.service.ts` /
+  // `parseTitleIdentity.service.ts` -- both declared derivation-stamp inputs
+  // -- for the same reason the umbrella-fold pre-step lives here: the change
+  // belongs to what gets WRITTEN, not to what either stamp-input module
+  // derives in isolation.
+  //
+  // Never touches a sale whose caller supplied a verified pin: a pin that
+  // resolves REPLACES `hobbyiqCardId` wholesale a few hundred lines below, so
+  // rewriting `setName` first would be pure churn on a row this function is
+  // about to defer to the checklist-ruled identity for anyway. Pokemon is
+  // untouched by construction -- the corpus this reader consults has no
+  // Pokemon products, and the sport check below is the explicit belt to that
+  // braces.
+  const insertPinCandidate = String(input.pinnedHobbyIqCardId ?? "").trim();
+  let insertPreStepSetName = umbrellaFoldedSetName ?? input.setName;
+  if (!insertPinCandidate.startsWith("hiq:")) {
+    const insertSport = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
+    if (insertSport && String(insertSport).toLowerCase() !== "pokemon" && typeof input.cardYear === "number") {
+      const insertSetKey = resolveSetKeyForSlug(insertSport, insertPreStepSetName ?? "", input.cardYear);
+      if (insertSetKey && insertSetKey !== "unknown") {
+        const insertMatches = insertSetNamedInTitle({
+          title: input.title,
+          sport: insertSport,
+          year: input.cardYear,
+          setKey: insertSetKey,
+          playerName: input.playerName,
+        });
+        if (insertMatches.length > 1) {
+          // TWO DIFFERENT INSERT SETS NAMED. Never choose between them.
+          insertParkPending = {
+            reason: "two-inserts-named",
+            detail: `title names ${insertMatches.length} distinct insert sets of ${insertSetKey} `
+              + `(${insertMatches.map((m) => m.root).join(", ")}) -- parked, not filed under a guess`,
+          };
+        } else if (insertMatches.length === 1) {
+          const only = insertMatches[0];
+          if (only.registeredKey) {
+            // R67: the insert is its own product. Rewriting setName here means
+            // deriveHobbyIqSlug (next) and doc.setName (below) both mint the
+            // insert's own id, not the base card's -- and the numbered-id
+            // upgrade further down looks up the insert's own checklist row.
+            insertPreStepSetName = only.registeredKey;
+          } else {
+            // R70: named, but nothing registers it. Park, keep, count.
+            insertParkPending = {
+              reason: "insert-named-no-key",
+              detail: `title names insert "${only.root}" of ${insertSetKey}, which has no registered `
+                + `product key -- parked, not pooled on the base card`,
+            };
+          }
+        }
+      }
+    }
+  }
+
   const derived = deriveHobbyIqSlug({
     ...input,
-    ...(umbrellaFoldedSetName ? { setName: umbrellaFoldedSetName } : {}),
+    ...(insertPreStepSetName !== input.setName ? { setName: insertPreStepSetName } : {}),
     pokemonChecklistNumberWidth: pokemonWidth,
   });
   const { sportForSlug, cardNumberFinal, printRunFinal, guard } = derived;
@@ -2385,6 +2463,30 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
         detail: outcome.detail,
       }));
     }
+  }
+
+  // R70: the insert-set title pre-step found a named insert with no
+  // registered key (or two named at once). Parked through the SAME mechanism
+  // as the split-identity guard just above, so a reader cannot tell the two
+  // apart -- both are "this row is real, kept, and out of every pool".
+  // Deliberately checked AFTER the split-identity guard, never instead of it:
+  // the two reasons are independent and either may apply to the same row.
+  if (insertParkPending) {
+    parkSoldCompDoc(
+      doc as SoldCompDoc & Record<string, unknown>,
+      insertParkPending.reason,
+      insertParkPending.detail,
+      "soldCompsStore.recordSoldComp:insert-set-title-reader",
+    );
+    console.warn(JSON.stringify({
+      event: "sold_comp_insert_set_parked",
+      source: "soldCompsStore.recordSoldComp",
+      vendorSource: input.source,
+      reason: insertParkPending.reason,
+      cardId: doc.cardId,
+      hobbyiqCardId: doc.hobbyiqCardId,
+      detail: insertParkPending.detail,
+    }));
   }
 
   try {
