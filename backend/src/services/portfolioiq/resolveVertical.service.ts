@@ -56,13 +56,20 @@ export interface VerticalResolution {
 
 /** The sport words inferSportFromTitle can actually prove. Kept in sync by the
  *  probe below rather than duplicated: we ask it with two different fallbacks
- *  and only trust an answer it gives consistently. */
-function provenSport(title: string): string | null {
+ *  and only trust an answer it gives consistently.
+ *
+ *  Exported ONLY as a test seam (`resolveVerticalProvenSportWordBoundary
+ *  .test.ts` pins its own now-working `/\bbaseball\b|\bmlb\b/` check
+ *  directly) -- `resolveVertical` below never calls it for a baseball/mlb
+ *  title because its OWN, separate, never-corrupted check at line ~125
+ *  always answers first. See that test file for the measured blast radius:
+ *  0 of 20,840 export titles change vertical because of this repair. */
+export function provenSport(title: string): string | null {
   // inferSportFromTitle has NO explicit baseball branch — baseball is only its
   // FALLBACK. So the two-probe trick below can never confirm baseball, and a
   // title literally reading "1969 Topps Baseball" came back reason="defaulted".
   // That understates confidence badly, since baseball is the largest vertical.
-  if (/(baseball|mlb)/i.test(title)) return "baseball";
+  if (/\b(baseball|mlb)\b/i.test(title)) return "baseball";
   // Ask twice with different fallbacks. A real keyword match returns the same
   // sport both times; a fallback returns whatever we passed in. This avoids
   // duplicating the keyword table and drifting from it.
