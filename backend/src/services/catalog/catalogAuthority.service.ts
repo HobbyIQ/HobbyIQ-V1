@@ -96,8 +96,44 @@ const DERIVED = /^(ingest-auto-seed|sold-comps-stub|catalog-explode|tree-builder
  *  printed — so it is evidence of a listing, never of a card's identity. */
 const VENDOR = /^(cardhedge|cardsight|ebay|user-verified)/;
 
-/** Transcribes a printed checklist. The only class that may adjudicate. */
-const CHECKLIST = /checklist|beckett|cardpedia|bccp|cardboard.?connection|almanac|hobbymonitor|tcdb|tcgdex|pokemon-tcg-data|official-pdf/;
+/**
+ * CF-A-MANUFACTURERS-OWN-CHECKLIST-IS-A-CHECKLIST (2026-09-19). Upper Deck's
+ * own checklist page (upperdeck.com/checklist/...) is a manufacturer
+ * publishing its own product's card list -- the strongest possible checklist
+ * provenance there is, stronger than a third-party transcription of it. It
+ * had no way to spell into this regex at all: the source tag two staged
+ * hockey packages used, `upperdeck-2026-09-19`, matched none of the existing
+ * stems (`checklist`, `beckett`, `cardpedia`, `bccp`, `cardboard.?connection`,
+ * `almanac`, `hobbymonitor`, `tcdb`, `tcgdex`, `pokemon-tcg-data`,
+ * `official-pdf`) and fell through to UNKNOWN -- catalogAuthority.md's own
+ * ingest gate (`catalogAuthority.service.ts` consumers) refuses to write a
+ * row with unknown authority, so both packages' 8,800 hockey rows blocked at
+ * ingest with `FATAL: SOURCE "upperdeck-2026-09-19" classifies as unknown,
+ * not checklist`.
+ *
+ * NOT a bare `upperdeck` stem: `beckett`/`cardpedia`/etc. above are safe
+ * unanchored substrings because none of them is also a common word inside an
+ * unrelated vendor or product name, but `upperdeck` (or `upper-deck`) is the
+ * card BRAND itself -- it appears inside `sold_comps` source tags, sale
+ * titles turned into slugs, and vendor product-classification strings that
+ * have nothing to do with a checklist transcription, and an unanchored
+ * `upperdeck` would promote every one of them. `-official` is the
+ * disambiguating tag: a manufacturer's own checklist page, never a vendor's
+ * or a title's spelling of the brand. Same shape for the other manufacturers
+ * with their own public checklist pages (Topps, Panini, Leaf), registered
+ * pre-emptively so the NEXT one of these does not repeat this outage --
+ * `(?:upperdeck|upper-deck|topps|panini|leaf)-official\b`, word-boundary
+ * anchored so `upperdeck-official-2026-09-19` matches but a hypothetical
+ * `upperdeck-officially-licensed-something` (a real word, not this tag)
+ * would not silently ride along on a shared prefix.
+ *
+ * `official-pdf` above already matches a DIFFERENT existing tag shape
+ * (`bbm-japan-official-pdf`, a hand-fetched Japanese-market PDF checklist --
+ * checked directly against every manifest using it before adding this
+ * sibling alternative; none of them are `*-official` without `-pdf`, so the
+ * two alternatives cannot collide) and is left completely untouched.
+ */
+const CHECKLIST = /checklist|beckett|cardpedia|bccp|cardboard.?connection|almanac|hobbymonitor|tcdb|tcgdex|pokemon-tcg-data|official-pdf|(?:upperdeck|upper-deck|topps|panini|leaf)-official\b/;
 
 /**
  * Classify a catalog row's source.
