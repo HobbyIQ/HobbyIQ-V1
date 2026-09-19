@@ -255,6 +255,11 @@ on:
           - probe-price-routes
           # D15 (2026-08-29): three catalog repairs on catalogRowOps.
           - repair-trailing-comma-player-names
+          # 2026-09-19: a rookie marker inside the player cell is not the
+          # name -- sibling of repair-trailing-comma-player-names, same
+          # field-patch shape (SCOPE required sport:year cells; optional
+          # setKey filter rides `titles`, see BCP_TITLES below).
+          - repair-rc-marker-playername
           - repair-isauto-from-cardnumber-catalog
           - conform-one-of-one-parallels
           # D23 (2026-08-30): the id carries the product -- the rename fleet
@@ -1651,6 +1656,11 @@ jobs:
           # user instead of a named list); it reuses the pinned userId the
           # reprice lane already carries, and the script REFUSES to run with
           # both halves empty rather than sweeping every holding.
+          # repair-rc-marker-playername (2026-09-19) reads BCP_TITLES as an
+          # OPTIONAL comma-separated setKey filter (SET_KEYS), narrowing its
+          # required SCOPE=sport:year cells to one or more products. Same
+          # reuse reason as above: no dispatch input left to claim. Empty =
+          # every setKey in the scoped cell(s).
           USER_ID: ${{ inputs.script == 'rederive-holding-identity' && inputs.scope == 'user' && 'user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4' || '' }}
           SOURCES: ${{ inputs.sources }}
           # CF-A-SOURCE-THAT-CONTRADICTS-ITSELF-MINTS-NO-IDENTITIES (Drew,
@@ -3031,6 +3041,27 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-trailing-comma-player-names -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sources="${{ inputs.sources }}"
+
+      - name: Self-relaunch the RC-marker player-name repair until the slot is clean
+        # Stops at its own 110-minute budget and PRINTS its summary; a run killed
+        # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
+        # BUDGET (#1361): relaunch iff the marker printed, never on a count.
+        if: ${{ !cancelled() && inputs.script == 'repair-rc-marker-playername' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: repair-rc-marker-playername
+          preamble: |
+            N=$(grep -aoE "^  REPAIRED +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "repaired=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (repaired=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repaired=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-rc-marker-playername -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
       - name: Self-relaunch the isAuto-from-card-number repair until the slot is clean
         # Stops at its own 140-minute budget and PRINTS its summary; a run killed
