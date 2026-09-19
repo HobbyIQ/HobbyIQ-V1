@@ -171,9 +171,9 @@ used every time: *does the collapse put different cards in one pool?*
 | `topps-sapphire-chrome-factory-set` (1,044) | `topps-chrome-sapphire` | 2016 Chrome Sapphire was *sold* as a factory set. A box configuration is not an identity. |
 | `black-diamond` (2,676) | `upper-deck-black-diamond` | CF-UD-INSERT-LINES anchors the bare spelling **on purpose**; every sample title is "Upper Deck Black Diamond". |
 | `topps-allen-and-ginter-chrome` (1,690) | `topps-allen-ginter-chrome` | Spelling only ("and" vs the elided form). The Chrome subset itself was **already** distinct (21,442 checklist rows) — this stops its pool splitting across two spellings. |
-| `bowman-mega-box` (33,137) | `bowman-chrome-mega-box` | **Drew 2026-09-04 — KEEP THE COLLAPSE.** A spelling, not a product. CF-BOWMAN-MEGA-BOX-DISTINCT still separates the mega-box *line* from `bowman-chrome`; within the line the short key names the same cards. |
+| `bowman-mega-box` (33,137) | `bowman-chrome-mega-box` | **Drew 2026-09-04 — KEEP THE COLLAPSE.** A spelling, not a product. CF-BOWMAN-MEGA-BOX-DISTINCT still separates the mega-box *line* from `bowman-chrome`; within the line the short key names the same cards. **SUPERSEDED for 2026+ by R75 (2026-09-19, Drew): from 2026 onward, plain "Bowman Mega Box" and "Bowman Chrome Mega Box" are TWO DIFFERENT PRODUCTS with the same card numbers and different players (rosters verified in PR #2319). This alias still holds for pre-2026 releases, where the two spellings genuinely name one product — the fold must become year-aware rather than removed outright. See `backend/data/pool-relocations/2026-09-19-r75-bowman-mega-box-uncross-sales.json` and `backend/data/catalog-relocations/2026-09-19-r75-bowman-mega-box-catalog-reslug.json`.** |
 | `bowman-sapphire` (7,722) | `bowman-chrome-sapphire` | **Drew 2026-09-04 — KEEP THE COLLAPSE**, re-affirming CF-SAPPHIRE-ONE-NAME against the corpus that disagreed (four Beckett scrapes, and the short 2025 title outnumbering the long one 3:1). |
-| `bowman-mega-box-chrome` (6,359) | `bowman-chrome-mega-box` | **Drew 2026-09-04 — KEEP THE COLLAPSE.** The third word order of one release. |
+| `bowman-mega-box-chrome` (6,359) | `bowman-chrome-mega-box` | **Drew 2026-09-04 — KEEP THE COLLAPSE.** The third word order of one release. **SUPERSEDED for 2026+ by R75 (2026-09-19) — see the `bowman-mega-box` row above; the same year-aware carve-out applies to this spelling.** |
 | `topps-nscc-bowman-national-convention` (221) | `bowman-chrome-nscc` | **Drew 2026-09-04.** The 2021 **Bowman** National release; the "topps" is the parent company, not a second maker. Every census sample title is "&lt;year&gt; Bowman Chrome National Convention Baseball". |
 
 ### Ruled DISTINCT — 9 keys the deriver must stop collapsing
@@ -186,7 +186,7 @@ used every time: *does the collapse put different cards in one pool?*
 | `scoreboard-mantle` (153) | `score` | 1997 Scoreboard Mickey Mantle — a Classic/Scoreboard tribute set. Reaches `score` only because "score" is a **prefix of "scoreboard"**. |
 | `scoremasters` (44) | `score` | 1989 Scoremasters, same prefix accident. A prefix match is not an identity — which is the whole point of this file. |
 | `topps-allen-and-ginters-national-die-cuts` (146) | `topps-allen-ginter` | A National-convention die-cut release. Convention exclusives price on their own scarcity (CF-BOWMAN-NSCC-DISTINCT reasoning). |
-| `bowman-mega` (412) | `bowman-chrome-mega-box` | CF-BOWMAN-MEGA-BOX-DISTINCT: "Mega box is different from 2026 bowman." The 2026 short spelling of that distinct line. |
+| `bowman-mega` (412) | `bowman-chrome-mega-box` | CF-BOWMAN-MEGA-BOX-DISTINCT: "Mega box is different from 2026 bowman." The 2026 short spelling of that distinct line. **REINFORCED by R75 (2026-09-19, Drew): `bowman-mega` is now the registered 2026+ product key for plain "2026 Bowman Mega Box" (PR #2319), fully distinct from `bowman-chrome-mega-box` — same card numbers, different players. This DISTINCT ruling was directionally correct all along; R75 only formalizes it with verified rosters and un-crosses the two checklist files that had swapped them.** |
 | `topps-update-japan` (1) | `topps-update-series` | A Japan-market release. Small — but a small number is never dismissed as noise, and the market's own key wins. |
 | `black-diamond-rookie-edition` (194) | `upper-deck-black-diamond` | **Drew 2026-09-04 — its own product, never the base line.** A rookie-only release (all 2000, baseballcardpedia) against a destination pool holding the base sets ("1999 Upper Deck Black Diamond Baseball", 857 rows). A rookie-only checklist fused into a full veteran one drags a rookie card's FMV toward veteran comps and back. CF-UD-INSERT-LINES is **pinned off it** in both spellings. |
 
@@ -198,9 +198,9 @@ checklist row behind it.
 
 | Key | Rows | Ruling | Effect on the deriver |
 |---|---:|---|---|
-| `bowman-mega-box` | 33,137 | **alias** -> `bowman-chrome-mega-box` | none — it already collapsed; the collapse is now *declared* |
+| `bowman-mega-box` | 33,137 | **alias** -> `bowman-chrome-mega-box` | none — it already collapsed; the collapse is now *declared*. **SUPERSEDED for 2026+ by R75 (2026-09-19) — see the Ruled ALIAS table above.** |
 | `bowman-sapphire` | 7,722 | **alias** -> `bowman-chrome-sapphire` | none — same |
-| `bowman-mega-box-chrome` | 6,359 | **alias** -> `bowman-chrome-mega-box` | none — same |
+| `bowman-mega-box-chrome` | 6,359 | **alias** -> `bowman-chrome-mega-box` | none — same. **SUPERSEDED for 2026+ by R75 (2026-09-19) — see the Ruled ALIAS table above.** |
 | `topps-nscc-bowman-national-convention` | 221 | **alias** -> `bowman-chrome-nscc` | none to the output; the fold is now by **declaration** rather than by a substring match |
 | `black-diamond-rookie-edition` | 194 | **distinct** — a fixed point | **changed**: it no longer folds into `upper-deck-black-diamond` |
 
