@@ -1344,11 +1344,22 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // ONE checklist-numbered row on this identity. Same rule the fold lane
   // enforces (`pickChecklistNumberedTarget`), read here rather than
   // reimplemented. Fails open onto the derived slug on any error.
+  //
+  // #2221 REUSE. This is not a batch loop -- one call is one sale -- so no
+  // per-batch cache would help; the module-level bounded/TTL cache inside
+  // resolveChecklistNumberedIngest.ts is used instead (opts.cache omitted).
+  // The query itself shares persistVendorSalesToPool's exported
+  // `narrowQuery` / `narrowBreakerIsOpen` / `NARROW_QUERY_TIMEOUT_MS`: two of
+  // this function's OTHER callers (chHistoricalBackfill.service.ts,
+  // historicalBackfill.service.ts) loop over many rows the same way the TCA
+  // webhook's detached batch did, so this needs the SAME breaker, not a
+  // recordSoldComp-local one that stays blind to the webhook's failures.
   if (hobbyiqCardId && !printRunFinal && sportForSlug && input.cardYear) {
     try {
-      const { resolveChecklistNumberedIngestId, newNumberedIngestCache } =
-        await import("../catalog/resolveChecklistNumberedIngest.js");
+      const { resolveChecklistNumberedIngestId } = await import("../catalog/resolveChecklistNumberedIngest.js");
       const { getCatalogContainerForRead } = await import("../catalog/catalogMatcher.service.js");
+      const { narrowQuery, narrowBreakerIsOpen, recordNarrowSkip, NARROW_QUERY_TIMEOUT_MS } =
+        await import("./persistVendorSalesToPool.service.js");
       const numberedId = await resolveChecklistNumberedIngestId(
         {
           slug: hobbyiqCardId,
@@ -1360,7 +1371,13 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
           isAuto: input.isAuto ?? false,
           printRun: printRunFinal,
         },
-        { container: await getCatalogContainerForRead(), cache: newNumberedIngestCache() },
+        {
+          container: await getCatalogContainerForRead(),
+          runQuery: (run) => narrowQuery(() => run()),
+          breakerIsOpen: narrowBreakerIsOpen,
+          recordSkip: recordNarrowSkip,
+          queryOptions: { abortSignal: AbortSignal.timeout(NARROW_QUERY_TIMEOUT_MS) },
+        },
       );
       if (numberedId && numberedId !== hobbyiqCardId) {
         console.log(JSON.stringify({

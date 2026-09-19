@@ -91,11 +91,32 @@ const CATALOG_CACHE_MAX = 5000;
  * The breaker is per-batch, reset by `withNarrowBreaker`, so one bad batch
  * cannot leave the narrow disabled for the process.
  */
-const NARROW_QUERY_TIMEOUT_MS = 8_000;
+// Exported so any OTHER card_catalog narrow sharing this file's incident
+// class (a per-sale cross-partition query on the ingest hot path) binds to
+// the SAME timeout and the SAME breaker rather than inventing a second one.
+// resolveChecklistNumberedIngest.ts is the first such reuse — see its own
+// header for why: it queries card_catalog per sale exactly like
+// checklistNarrow did, and #2221 is the incident that shape already caused.
+export const NARROW_QUERY_TIMEOUT_MS = 8_000;
 const NARROW_BREAKER_THRESHOLD = 20;
 
 type NarrowBreaker = { consecutiveFailures: number; open: boolean; skipped: number; failed: number };
 let _narrowBreaker: NarrowBreaker | null = null;
+
+/** Is the shared narrow breaker currently open? A caller outside any
+ *  `withNarrowBreaker` scope sees false (no batch, no breaker) — the same
+ *  "behaves exactly as before" default `checklistNarrow` itself has. */
+export function narrowBreakerIsOpen(): boolean {
+  return _narrowBreaker?.open === true;
+}
+
+/** Count one query skipped because the breaker was already open, without
+ *  running it. Shared bookkeeping so `withNarrowBreaker`'s own summary log
+ *  (`salesSkippedAfterOpen`) reflects every caller that honoured the breaker,
+ *  not just checklistNarrow's own skips. No-op outside a breaker scope. */
+export function recordNarrowSkip(): void {
+  if (_narrowBreaker) _narrowBreaker.skipped++;
+}
 
 /** Open a breaker scope for one batch. Absent, the narrow behaves as before. */
 export async function withNarrowBreaker<T>(work: () => Promise<T>): Promise<T> {
@@ -140,8 +161,14 @@ export function _checklistNarrowForTest(
  * Run one narrow query, feeding the breaker. A success resets the consecutive
  * counter — the signal is CONSECUTIVE failures, because one timeout is noise
  * and twenty in a row means the container is not answering us at all.
+ *
+ * Exported: THE one place a card_catalog narrow reports a success or a
+ * failure to the shared breaker. `checklistNarrow` below and
+ * `resolveChecklistNumberedIngest.ts`'s per-identity lookup both route
+ * through this, so "twenty consecutive failures trips the breaker" is one
+ * rule fed by every per-sale narrow, not counted separately per caller.
  */
-async function narrowQuery<T>(run: () => Promise<T>): Promise<T> {
+export async function narrowQuery<T>(run: () => Promise<T>): Promise<T> {
   try {
     const out = await run();
     if (_narrowBreaker) _narrowBreaker.consecutiveFailures = 0;
@@ -1618,6 +1645,14 @@ export async function persistVendorSalesToPool(
     // stated one keeps it, right or wrong (absent beats wrong) -- and only
     // ever ADDS the id when the catalog holds exactly one checklist-numbered
     // row on this identity. Fails open onto the derived slug on any error.
+    //
+    // #2221 REUSE, NOT A SECOND TIMEOUT/BREAKER. This module's own
+    // card_catalog query is the SAME per-sale cross-partition shape that
+    // caused #2221 (3.8M queries, 92% failing at the SDK's 60 s default), so
+    // it routes through THIS FILE's exported `narrowQuery` (feeds the shared
+    // breaker `withNarrowBreaker` opens around this whole batch) with the
+    // SAME `NARROW_QUERY_TIMEOUT_MS` abort, and checks `narrowBreakerIsOpen()`
+    // first so an already-open breaker costs this lookup zero queries.
     if (!parsed.printRun) {
       try {
         const numberedId = await resolveChecklistNumberedIngestId(
@@ -1631,7 +1666,14 @@ export async function persistVendorSalesToPool(
             isAuto: parsed.isAuto,
             printRun: parsed.printRun ?? null,
           },
-          { container: await getCatalogContainerForRead(), cache: numberedIngestCache },
+          {
+            container: await getCatalogContainerForRead(),
+            cache: numberedIngestCache,
+            runQuery: (run) => narrowQuery(() => run()),
+            breakerIsOpen: narrowBreakerIsOpen,
+            recordSkip: recordNarrowSkip,
+            queryOptions: { abortSignal: AbortSignal.timeout(NARROW_QUERY_TIMEOUT_MS) },
+          },
         );
         if (numberedId && numberedId !== slug) {
           console.log(JSON.stringify({
