@@ -210,6 +210,28 @@ const GREATS_OF_THE_GAME_ERA_MAKER: Readonly<Record<string, string>> = Object.fr
 });
 
 /**
+ * R75 (Drew, 2026-09-19): TWO Bowman Mega Box product keys from 2026, ONE
+ * before. Through 2025 a "Bowman Mega Box" title (with or without the word
+ * "Chrome") names ONE product, `bowman-chrome-mega-box` — unchanged by this
+ * ruling, still the vocabulary's own year-agnostic fold and still the pinned
+ * outcome in tests/setKeyReconciliation.test.ts. From 2026 the two releases
+ * ship as separate products with DIFFERENT rosters at the SAME card numbers
+ * (#52 Shohei Ohtani, plain Mega Box, May 2026 vs #52 JJ Wetherholt, Chrome
+ * Mega Box, Sept 2026) — the same card-coincidence test
+ * CF-BOWMAN-MEGA-BOX-DISTINCT already used to split Mega Box from flagship
+ * Bowman Chrome in the first place.
+ *
+ * The actual redirect (bare "Bowman Mega Box" text, year >= this boundary,
+ * no "chrome" in the title -> `bowman-mega`) lives in
+ * hobbyIqCardId.service.ts's resolveSetKeyForSlug, the one call site with
+ * both the raw setName text and the year in hand — spellForEra only ever
+ * receives the already-vocabulary-collapsed setKey, which cannot be told
+ * apart from a genuine "Bowman Chrome Mega Box" title by the time it gets
+ * here. This constant is the shared boundary so the two files cannot drift.
+ */
+export const BOWMAN_MEGA_BOX_SPLIT_FROM_YEAR = 2026;
+
+/**
  * CF-A-CHECKLIST-ROW-SPELLS-ITS-ERA-LIKE-A-SALE-DOES (Drew, 2026-09-05).
  *
  * THE DEFECT. `ERA_SPLIT_TABLE` (setKeyReconciliation.ts) rules that Score,
@@ -593,6 +615,20 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("bowman-chrome-prospects", { family: "bowman-chrome", parent: "bowman-chrome" }),
   P("bowman-chrome-updates", { family: "bowman-chrome", parent: "bowman-chrome" }),
   P("bowman-chrome-mega-box", { family: "bowman-chrome", parent: "bowman-chrome" }),
+  // R75 (Drew, 2026-09-19): "Bowman Mega Box" (plain, no Chrome) becomes its
+  // OWN product from 2026 — the May 2026 release, numbered 1..N with a
+  // different roster than the Sept 2026 Bowman Chrome Mega Box at the SAME
+  // numbers (#52 Ohtani here, #52 Wetherholt on bowman-chrome-mega-box; see
+  // CF-BOWMAN-MEGA-BOX-DISTINCT, 2026-08-12, which first ruled Mega Box
+  // distinct from flagship Bowman/Bowman Chrome). Its OWN family, not
+  // bowman-chrome's — the cards do not coincide with Bowman Chrome's at all,
+  // only with themselves across years — but `parent: "bowman"` for the
+  // reference/verify walk, the same retail-exclusive relationship
+  // bowman-paper has to flagship Bowman. Before 2026 both spellings
+  // ("Bowman Mega Box" and "Bowman Chrome Mega Box") name ONE product,
+  // bowman-chrome-mega-box — see spellForEra's BOWMAN_MEGA_BOX_ERA_MISNOMERS
+  // in this file and the year-aware routing in hobbyIqCardId.service.ts.
+  P("bowman-mega", { parent: "bowman" }),
   // The NSCC wrapper-redemption promo — its own product (BNR- numbering, its
   // own price curve) but still a Bowman Chrome child, like Mega Box above.
   P("bowman-chrome-nscc", { family: "bowman-chrome", parent: "bowman-chrome" }),

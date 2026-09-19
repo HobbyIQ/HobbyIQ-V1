@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { normalizeSetKey } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
+import { normalizeSetKey, resolveSetKeyForSlug } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 import {
   ERA_SPLIT_TABLE,
   alreadyRuledCollapses,
@@ -766,5 +766,85 @@ describe("the 2026-09-05 sales-side spellings", () => {
       if (aliases.get(from) === to) wrong.push(`${from} -> ${to} was declared, but: ${why}`);
     }
     expect(wrong, `refused pairs that got declared anyway:\n${wrong.join("\n")}`).toEqual([]);
+  });
+});
+
+/**
+ * R75 (Drew, 2026-09-19). TWO Bowman Mega Box product keys from 2026, ONE
+ * before. The year-agnostic vocabulary fold (`normalizeSetKey`, tested above
+ * at "keeps the standing rulings the pins already state") is UNCHANGED by
+ * this ruling — 2025-and-earlier titles of both spellings still collapse onto
+ * `bowman-chrome-mega-box`. The year-aware correction lives one layer up, in
+ * `resolveSetKeyForSlug`, which is the one function with both the raw title
+ * text and the year in hand.
+ */
+describe("R75: Bowman Mega Box splits into two products from 2026", () => {
+  it("2026 plain 'Bowman Mega Box' resolves to bowman-mega", () => {
+    expect(resolveSetKeyForSlug("baseball", "Bowman Mega Box", 2026)).toBe("bowman-mega");
+    expect(resolveSetKeyForSlug("baseball", "2026 Bowman Mega Box", 2026)).toBe("bowman-mega");
+    expect(resolveSetKeyForSlug("baseball", "2026 Bowman Mega Box Baseball", 2026)).toBe("bowman-mega");
+  });
+
+  it("2026 'Bowman Chrome Mega Box' still resolves to bowman-chrome-mega-box", () => {
+    expect(resolveSetKeyForSlug("baseball", "Bowman Chrome Mega Box", 2026)).toBe("bowman-chrome-mega-box");
+    expect(resolveSetKeyForSlug("baseball", "2026 Bowman Chrome Mega Box", 2026)).toBe("bowman-chrome-mega-box");
+  });
+
+  it("'Bowman Mega Box Chrome' word order still resolves to bowman-chrome-mega-box in 2026", () => {
+    // Word order does not change which product this is -- "chrome" present
+    // anywhere in the title means the Chrome release, exactly as the
+    // pre-2026 alias table already treats "Bowman Mega Box Chrome" and
+    // "Bowman Chrome Mega Box" as the same spelling.
+    expect(resolveSetKeyForSlug("baseball", "2026 Bowman Mega Box Chrome", 2026)).toBe("bowman-chrome-mega-box");
+  });
+
+  it("2024 and 2025, both spellings, still resolve to ONE product", () => {
+    for (const year of [2024, 2025]) {
+      expect(resolveSetKeyForSlug("baseball", "Bowman Mega Box", year)).toBe("bowman-chrome-mega-box");
+      expect(resolveSetKeyForSlug("baseball", "Bowman Chrome Mega Box", year)).toBe("bowman-chrome-mega-box");
+      expect(resolveSetKeyForSlug("baseball", `${year} Bowman Mega Box Baseball`, year)).toBe("bowman-chrome-mega-box");
+    }
+  });
+
+  it("bare 'Bowman' and 'Bowman Chrome' are untouched by the split", () => {
+    expect(resolveSetKeyForSlug("baseball", "Bowman", 2026)).toBe("bowman");
+    expect(resolveSetKeyForSlug("baseball", "2026 Bowman", 2026)).toBe("bowman");
+    expect(resolveSetKeyForSlug("baseball", "Bowman Chrome", 2026)).toBe("bowman-chrome");
+    expect(resolveSetKeyForSlug("baseball", "2026 Bowman Chrome", 2026)).toBe("bowman-chrome");
+    // And in the pre-split years too -- the rule only ever narrows a
+    // "mega box" title, never a plain flagship one.
+    expect(resolveSetKeyForSlug("baseball", "Bowman", 2024)).toBe("bowman");
+    expect(resolveSetKeyForSlug("baseball", "Bowman Chrome", 2024)).toBe("bowman-chrome");
+  });
+
+  it("a year the caller cannot supply leaves the pre-split (Chrome Mega Box) key", () => {
+    // Absent beats wrong (CF-SLUG-REFUSE-FALLBACKS): with no year to compare
+    // against the 2026 boundary, the rule cannot fire, and the row keeps the
+    // vocabulary's own year-agnostic answer rather than guessing which era it
+    // is from.
+    expect(resolveSetKeyForSlug("baseball", "Bowman Mega Box", Number.NaN)).toBe("bowman-chrome-mega-box");
+  });
+
+  it("bowman-mega is registered in productSetKeys.ts", () => {
+    expect(productEntry("bowman-mega")).not.toBeNull();
+  });
+
+  it("bowman-mega is still the RULED_DISTINCT fixed point CF-BOWMAN-MEGA-BOX-DISTINCT declared", () => {
+    // Untouched by R75: this pin already existed as part of ruledDistinct()'s
+    // generic sweep, restated here by name since R75 is exactly the ruling
+    // that depends on it staying a fixed point.
+    expect(normalizeSetKey("bowman-mega")).toBe("bowman-mega");
+  });
+
+  it("the 08-12 ruling's pins are unchanged", () => {
+    // CF-BOWMAN-MEGA-BOX-DISTINCT's own standing assertions, restated here so
+    // a future edit to this file cannot silently narrow them: the short
+    // spellings still KEEP THE COLLAPSE onto bowman-chrome-mega-box at the
+    // normalizeSetKey layer (year-agnostic), which is what makes the 2026
+    // split in resolveSetKeyForSlug a correction layered ON TOP rather than a
+    // rewrite of the standing ruling.
+    expect(normalizeSetKey("bowman-mega-box")).toBe("bowman-chrome-mega-box");
+    expect(normalizeSetKey("bowman-mega-box-chrome")).toBe("bowman-chrome-mega-box");
+    expect(normalizeSetKey("bowman-chrome-mega-box")).toBe("bowman-chrome-mega-box");
   });
 });
