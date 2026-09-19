@@ -1,0 +1,319 @@
+{
+  "generatedAt": "2026-09-19",
+  "forLane": "relocate-pool-rows-by-list",
+  "rulings": [
+    "Diagnosis 2026-09-19 (staging smoke case 4, run 35472361102 vs prior-pass 35469045247): the query \"2026 Bowman Chrome Owen Carey Black BCP-69\" priced at $12.50 where the smoke pins it withheld. Root cause traced to the pool at hobbyiqCardId hiq:baseball:2026:bowman:bcp-69:black-refractor:no-auto (42 sold_comps rows), NOT to PR #2330 (which only adds an exclusion filter) and not a stale smoke pin.",
+    "CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG (repair-parallel-from-title.cjs doctrine, Drew 2026-08-29): 41 of the 42 rows are CardHedge sales whose title never says 'Black' -- every one reads 'Mojo Refractor' (35 rows, both cardhedge sourceExternalId groups 1780156975067x514711415448764200 and one row's group) or 'Laser Refractor' / 'Lazer Refractor' (6 rows, cardhedge group 1778477514892x343483198805100600). Re-parsing every title with the repo's own ebayTitleParser.service.js's parseListingTitle confirms this split exactly (35 'Mojo Refractor', 6 'Lazer Refractor', 1 'Black X-Fractor' -- see per-row evidence).",
+    "repair-parallel-from-title.cjs's own COLOURS list (Gold/Blue/Black/Silver/etc. bare-and-refractor forms) does not include named finishes ('Mojo', 'Lazer/Laser', 'Reptilian', etc.), so this specific mislabel class was out of that script's measured scope and was never caught by its colours-mode runs. This list is the targeted, report-reviewed fix for this one card's pool, built the same way that script would (title-parse wins over the stored vendor/product tag) but scoped by hand to entries a human reviewed.",
+    "ONE AXIS PER ENTRY, product segment untouched (R75/'a relocation list changes only the ruled axis'): every entry below keeps the hiq id's PRODUCT segment (index 3, 'bowman') exactly as the row's current hobbyiqCardId already has it. Nothing here relocates a row's cardId partition or changes which product it is filed under -- only the parallel (and, for the one numbered row, its num- tail, which is inherent to that parallel identity, not a separate axis) is corrected to what the row's own title states.",
+    "Lazer Refractor (6 rows, REPOINT): destination hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto exists as a checklist-backed card_catalog row (source=hobbymonitor-scraped-2026-08-31, playerName=Owen Carey, setKey=bowman). Every one of the 6 rows is already partitioned under a raw CardHedge vendor id (cardId=1778477514892x343483198805100600, not an hiq slug), so only hobbyiqCardId needs correcting -- REPOINT, not RELOCATE.",
+    "Black X-Fractor /10 (1 row, REPOINT): the one genuine card in this pool -- cardsight title '2026 1st Bowman Owen Carey Chrome X-Fractor BLACK # /10 #BCP-69 Braves', $199.99 -- carries reslugedFrom=hiq:baseball:2026:bowman-chrome:bcp-69:black-refractor:no-auto:num-10 (reslugedAt 2026-08-29), then a later, unrelated bowman-chrome->bowman product repointing (CF-IT-CAME-OUT-OF-BOWMAN, repair-bowman-product-refile.cjs, reslugedAt 2026-09-06) carried it and the 41 contaminated Mojo/Lazer rows onto today's shared hiq:baseball:2026:bowman:bcp-69:black-refractor:no-auto address, silently dropping the /10 print-run identity. Destination hiq:baseball:2026:bowman:bcp-69:black-x-fractor:no-auto:num-10 exists as a checklist-backed card_catalog row (source=hobbymonitor-scraped-2026-08-31, playerName=Owen Carey, setKey=bowman, printRun=10) with the product segment (bowman) already matching this row's current address -- so this is a parallel+num-tail identity correction, not a product move. This row's cardId partition key is itself an hiq slug (hiq:baseball:2026:bowman-chrome:bcp-69:base:no-auto:num-10, unrelated to today's diagnosis and NOT touched here) so this too is a hobbyiqCardId-only REPOINT.",
+    "Mojo Refractor (35 rows) -- REVISED RULING (2026-09-19, coordinator): PARALLEL-axis REPOINT to hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto, the SAME bowman-product address where this card's other Mojo Refractor sales already sit. Confirmed read-only: 56 rows already reside at that exact destination slug, including (1) id=tca-ebay::198386448076 '2026 Bowman Owen Carey Blue  Mojo Refractor /499  #BCP-69' $0.99; (2) id=tca-ebay::236900890806 '2026 OWEN CAREY 1st Bowman Chrome Light Blue Mojo Refractor  /499 #BCP-69 Braves' $5.00; (3) id=cardsight::backstop:owen carey|2026|bcp-69|black::2026-07-12T00:55:00+00:00::46 '2026 Bowman #BCP-69 Owen Carey Chrome Prospects Mojo Refractor - Raw' $0.46 -- the last one is TITLE-IDENTICAL to one of these 35 rows, confirming it is the correct sibling address for this exact title shape. None of the 35 rows' titles name a colour (no Blue/Gold/Red/etc.), so the bare hiq:...:mojo-refractor:no-auto slug applies to all 35 uniformly; no colour-qualified variant needed.",
+    "BY DESIGN, this destination (hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto) has NO checklist-backed card_catalog row under the bowman product segment -- the bowman-stock checklist's Mojo Refractor insert for BCP-69 is catalogued under a differently-named compound insert-set slug (hiq:baseball:2026:bowman:bcp-69:mega-chrome-prospects-mojo:no-auto) or under the bowman-chrome/-mega-box product segments. This list does NOT mint a new catalog row anywhere, and does not create a new pool address: it moves these 35 rows onto an address that ALREADY holds 56 sibling sales of the same card and parallel, making them consistent with rows that were already there. Reconciling the catalog naming gap (or moving this whole address's product segment from bowman to bowman-mega per the R75 program) is an explicit, separate two-step follow-up -- not attempted here.",
+    "Follow-up (read-only, paged, no aggregates, 10-minute budget, both pages completed within budget): 2026 sold_comps rows carrying a ':mojo' fragment in hobbyiqCardId under the bowman product family -- hiq:baseball:2026:bowman: 9,326 rows, hiq:baseball:2026:bowman-chrome: 3,918 rows, TOTAL 13,244. This sizes the PRODUCT-axis (bowman -> bowman-mega, R75) follow-up list that must run AFTER the Bowman Mega catalog ladder moves; the 35 rows repointed in THIS list land inside that same 9,326-row bowman: bucket and will be swept by that later product-axis list along with their pre-existing 56 siblings."
+  ],
+  "census": {
+    "poolInspected": "hiq:baseball:2026:bowman:bcp-69:black-refractor:no-auto",
+    "totalRowsAtPool": 42,
+    "repointEntries": 42,
+    "heldOut": 0,
+    "expectedResidualAtPoolAfterApply": 0,
+    "mojoUnderBowmanFamilyFollowUp": 13244
+  },
+  "entries": [
+    {
+      "id": "cardsight::hiq:baseball:2026:bowman-chrome:bcp-69:base:no-auto:num-10::2026-07-25T10:35:01.008Z",
+      "fromCardId": "hiq:baseball:2026:bowman-chrome:bcp-69:base:no-auto:num-10",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:black-x-fractor:no-auto:num-10",
+      "price": 199.99,
+      "evidence": "title=\"2026 1st Bowman Owen Carey Chrome X-Fractor BLACK # /10 #BCP-69 Braves\" -- parseListingTitle reads parallel=\"Black X-Fractor\". Destination hiq:baseball:2026:bowman:bcp-69:black-x-fractor:no-auto:num-10 is a checklist-backed card_catalog row (source=hobbyMonitor-scraped-2026-08-31, playerName=Owen Carey, setKey=bowman, printRun=10), and its product segment (bowman) already matches this row's current hobbyiqCardId product. REPOINT only: cardId (partition key) is hiq:baseball:2026:bowman-chrome:bcp-69:base:no-auto:num-10, an unrelated identity not touched by this list; only hobbyiqCardId is corrected."
+    },
+    {
+      "id": "cardhedge::1778477514892x343483198805100600::2026-06-21T21:37:00.000Z::75::Raw",
+      "fromCardId": "1778477514892x343483198805100600",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto",
+      "price": 0.75,
+      "evidence": "title=\"Owen Carey 1st Bowman Laser Refractor 2026 Bowman Chrome Atlanta Braves #BCP-69 - Raw\" -- parseListingTitle reads parallel=\"Lazer Refractor\", never \"Black\". Destination hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto is a checklist-backed card_catalog row (source=hobbyMonitor-scraped-2026-08-31, playerName=Owen Carey, setKey=bowman). REPOINT: cardId is the raw CardHedge vendor id 1778477514892x343483198805100600, not an hiq slug -- only hobbyiqCardId is corrected."
+    },
+    {
+      "id": "cardhedge::1778477514892x343483198805100600::2026-06-13T20:23:00.000Z::275::Raw",
+      "fromCardId": "1778477514892x343483198805100600",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto",
+      "price": 2.75,
+      "evidence": "title=\"Owen Carey 2026 Bowman #BCP69 Laser Refractor Atlanta Braves 1st Bowman - Raw\" -- parseListingTitle reads parallel=\"Lazer Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1778477514892x343483198805100600::2026-06-11T17:12:00.000Z::200::Raw",
+      "fromCardId": "1778477514892x343483198805100600",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto",
+      "price": 2,
+      "evidence": "title=\"Owen Carey 1st Bowman Laser Refractor 2026 Bowman Chrome Atlanta Braves #BCP-69 - Raw\" -- parseListingTitle reads parallel=\"Lazer Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1778477514892x343483198805100600::2026-06-06T00:51:00.000Z::275::Raw",
+      "fromCardId": "1778477514892x343483198805100600",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto",
+      "price": 2.75,
+      "evidence": "title=\"Owen Carey 2026 Bowman #BCP69 Laser Refractor Atlanta Braves 1st Bowman - Raw\" -- parseListingTitle reads parallel=\"Lazer Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1778477514892x343483198805100600::2026-06-04T04:45:00.000Z::175::Raw",
+      "fromCardId": "1778477514892x343483198805100600",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto",
+      "price": 1.75,
+      "evidence": "title=\"2026 Bowman Chrome - Owen Carey - Braves - #BCP-69 1st Bowman Laser Refractor - Raw\" -- parseListingTitle reads parallel=\"Lazer Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1778477514892x343483198805100600::2026-05-31T16:20:00.000Z::424::Raw",
+      "fromCardId": "1778477514892x343483198805100600",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:lazer-refractor:no-auto",
+      "price": 4.24,
+      "evidence": "title=\"2026 Bowman Chrome 1st Bowman Owen Carey #BCP-69 LASER REFRACTOR - Braves - Raw\" -- parseListingTitle reads parallel=\"Lazer Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-08-07T22:04:13.000Z::199::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.99,
+      "evidence": "title=\"2026 Bowman - Chrome Prospects Owen Carey #BCP-69 Mojo Refractor (RC) - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\", never \"Black\". Destination hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto already holds 56 sibling Mojo Refractor sales of this exact card (see rulings), so this REPOINT is consistency-with-siblings, not a new address. REPOINT: cardId is the raw CardHedge vendor id 1780156975067x514711415448764200, not an hiq slug -- only hobbyiqCardId is corrected."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-31T14:21:52.000Z::40::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 0.4,
+      "evidence": "title=\"2026 Bowman Chrome Owen Carey 1st Bowman Mojo Refractor #BCP-69 Atlanta Braves - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-30T02:52:51.000Z::199::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.99,
+      "evidence": "title=\"Owen Carey 2026 1st Bowman Mojo Refractor #BCP-69 - Braves - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-28T14:36:57.000Z::150::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.5,
+      "evidence": "title=\"2026 Bowman #BCP-69 Owen Carey Chrome Prospects Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-26T02:30:50.000Z::189::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.89,
+      "evidence": "title=\"2026 Bowman Chrome Owen Carey 1st Mojo Refractor #BCP-69 Atlanta Braves - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-22T01:37:15.000Z::120::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.2,
+      "evidence": "title=\"2026 Bowman Mega Box Owen Carey Chrome Mojo Refractor 1st #BCP-69 Braves - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-19T01:13:34.000Z::54::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 0.54,
+      "evidence": "title=\"2026 Bowman Chrome Prospect #BCP-69 Owen Carey Mojo Refractor 1st Atlanta Braves - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-17T19:49:58.000Z::199::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.99,
+      "evidence": "title=\"Owen Carey 2026 Bowman Chrome Prospects 1st Mojo Refractor #BCP-69 Braves - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-17T16:28:52.000Z::135::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.35,
+      "evidence": "title=\"2026 Bowman #BCP-69 Owen Carey Chrome Prospects Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-12T00:55:30.000Z::46::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 0.46,
+      "evidence": "title=\"2026 Bowman #BCP-69 Owen Carey Chrome Prospects Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-08T02:30:16.000Z::150::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.5,
+      "evidence": "title=\"2026 Bowman Baseball Owen Carey 1st Bowman - Mojo Refractor #BCP-69, Braves - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-07T18:39:08.000Z::112::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.12,
+      "evidence": "title=\"2026 Bowman #BCP-69 Owen Carey Chrome Prospects Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-06T02:15:04.000Z::125::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.25,
+      "evidence": "title=\"2026 Bowman Chrome Baseball Owen Carey #BCP-69 Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-04T23:49:27.000Z::50::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 0.5,
+      "evidence": "title=\"2026 Bowman Owen Carey Chrome Prospects Mojo Refractor #BCP-69 Braves - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-07-04T03:28:56.000Z::126::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.26,
+      "evidence": "title=\"2026 Bowman #BCP-69 Owen Carey Chrome Prospects Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-30T01:29:42.000Z::134::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.34,
+      "evidence": "title=\"2026 Bowman Chrome Prospect - #BCP-69 Owen Carey, 1st Bowman (Mojo Refractor) - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-29T17:35:48.000Z::175::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.75,
+      "evidence": "title=\"Owen Carey 2026 Bowman Chrome Prospects 1st Mojo Refractor #BCP-69 Braves - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-28T19:09:06.000Z::199::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.99,
+      "evidence": "title=\"2026 Bowman Chrome Baseball Card #BCP-69 Owen Carey 1st Bowman Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-27T01:06:56.000Z::175::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.75,
+      "evidence": "title=\"2026 Bowman #BCP-69 Owen Carey Chrome Prospects Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-24T04:49:29.000Z::149::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.49,
+      "evidence": "title=\"2026 Bowman #BCP-69 Owen Carey Chrome 1st Prospects Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-24T03:53:56.000Z::174::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.74,
+      "evidence": "title=\"2026 Bowman Chrome - Owen Carey #BCP-69 1st Bowman Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-19T22:08:38.000Z::167::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.67,
+      "evidence": "title=\"2026 Bowman Baseball #BCP-69 Owen Carey 1st Bowman Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-19T02:52:07.000Z::150::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.5,
+      "evidence": "title=\"2026 Bowman Baseball Owen Carey #BCP-69- Mojo Refractor Rc - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-19T02:33:35.000Z::125::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.25,
+      "evidence": "title=\"2026 Bowman Chrome - 1st Prospects Mojo Refractor Owen Carey BCP-69 - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-11T17:06:02.000Z::150::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.5,
+      "evidence": "title=\"2026 Bowman Chrome Owen Carey 1st Bowman Mojo Refractor #BCP-69 Atlanta Braves - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-11T14:06:10.000Z::149::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.49,
+      "evidence": "title=\"2026 Bowman Chrome Mojo Refractor Owen Carey #BCP-69 Braves - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-11T14:06:10.000Z::185::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.85,
+      "evidence": "title=\"2026 Bowman Chrome Prospects Owen Carey BCP-69 1st Bowman Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-06T19:16:48.000Z::189::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.89,
+      "evidence": "title=\"2026 Bowman Mega \\\"Mojo Refractor\\\" Owen Carey #BCP-69 - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-02T13:54:37.000Z::161::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.61,
+      "evidence": "title=\"2026 Bowman #BCP-69 Owen Carey Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-01T22:35:47.000Z::325::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 3.25,
+      "evidence": "title=\"2026 Bowman #BCP-69 Owen Carey Chrome Prospects Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-01T00:49:27.000Z::174::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.74,
+      "evidence": "title=\"2026 Bowman Chrome Baseball Owen Carey #BCP-69 Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-06-01T00:48:26.000Z::175::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.75,
+      "evidence": "title=\"2026 Topps Bowman Chrome 1st Owen Carey #BCP-69 Mojo Refractor Braves MegaBox - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-05-29T18:42:32.000Z::125::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.25,
+      "evidence": "title=\"2026 Bowman #BCP-69 Owen Carey Chrome Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-05-29T16:35:26.000Z::149::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.49,
+      "evidence": "title=\"2026 Bowman Chrome Baseball Owen Carey #BCP-69 Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    },
+    {
+      "id": "cardhedge::1780156975067x514711415448764200::2026-05-27T20:57:19.000Z::169::Raw",
+      "fromCardId": "1780156975067x514711415448764200",
+      "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bcp-69:mojo-refractor:no-auto",
+      "price": 1.69,
+      "evidence": "title=\"2026 Bowman #BCP-69 Owen Carey Chrome Prospects Mojo Refractor - Raw\" -- parseListingTitle reads parallel=\"Mojo Refractor\". Same destination/shape as the entry above."
+    }
+  ]
+}
