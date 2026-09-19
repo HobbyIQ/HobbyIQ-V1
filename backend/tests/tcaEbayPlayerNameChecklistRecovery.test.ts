@@ -227,38 +227,52 @@ async function classifyWithChecklistLookup(
 describe("TCA eBay player-name checklist lookup — 1,000-row 09-10 fixture, before/after", () => {
   const rows = loadFixture("tcaEbay0910Sample1000.json");
 
-  it("before: matches the measured baseline on this fixture after R66 PR1's corpus growth (500/1000, was 497)", async () => {
+  it("before: matches #2088's own measured baseline on this fixture (497/1000)", async () => {
     // Same gates as #2088's classify(), WITHOUT the checklist rescue — the
     // baseline this PR starts from.
     //
-    // R66 PR1 (bare insert-set roots) moved this pin 497 -> 500. Traced row by
-    // row against main (see PR #2306's follow-up comment): 28 rows flip
-    // outcome, all via playerSegmentIsAPerson.ts's corpus-frequency vocabulary
-    // (unmodified by this PR, but it reads the SAME checklist-parallel-names.json
-    // this PR grows) — never via the new checklist-rescue mechanism itself.
-    //   - 12 rows correctly LOSE a bogus "player" ("Fifa", "Look/Booster",
-    //     "Fifa/Parrell" on box/case/lot listings) once "Fifa"/"Liga"/"Ligue"
-    //     cross the corpus's 2-product frequency floor as real Panini Select
-    //     soccer insert names and get stripped instead of leaking into the
-    //     guessed name. Correct: these were never a person.
-    //   - 4 rows correctly GAIN a real multi-player name once the same
-    //     stripping clears the noise blocking them (e.g. "Cristiano Ronaldo
-    //     Joao Felix", "Corentin Tolisso Malick Fofana").
-    //   - 11 rows WRONGLY gain a name that still carries a leftover word —
-    //     a team/city/nation ("Columbus", "Ac Milan", "Strasbourg Alsace",
-    //     "France", "Mexico") or an insert name that individually still sits
-    //     BELOW the frequency floor ("Terrace", "Bookend", "Tim Hortons").
-    //     Root cause: stripping "Fifa"/"Liga"/"WC" shrank these residues under
-    //     playerSegmentIsAPerson.ts's NAME_CEILING (4), so a name that used to
-    //     be safely refused as "too long, cannot bound" now bounds into a
-    //     wrong name. This is a pre-existing gap in playerSegmentIsAPerson.ts
-    //     (no team/nation-word guard, and single-product insert names sit
-    //     below its frequency-2 floor) — NOT a defect in this PR's corpus or
-    //     statedFinishFromChecklist.ts changes, and NOT fixed here: it is the
-    //     same class of side effect as the Heritage finish-word case already
-    //     called out above, exposed rather than caused. Fixing it belongs to
-    //     R66 PR2 (the reader) or a follow-up to playerSegmentIsAPerson.ts,
-    //     not this corpus PR. Net measured: 15 gains - 12 losses = +3.
+    // FIX A LANDED (playerSegmentIsAPerson.ts, CF-A-SAME-PRODUCT-ACROSS-YEARS-
+    // IS-ONE-VOTE) — this pin is held at main's 497, unchanged, because after
+    // the fix the count on this fixture is EXACTLY 497 again: R66 PR1's corpus
+    // growth (bare insert-set roots) no longer moves it at all.
+    //
+    // R66 PR1 as originally submitted moved this count 497 -> 500 via 28 row
+    // flips, all through playerSegmentIsAPerson.ts's corpus-frequency
+    // vocabulary (a file this PR does not otherwise touch, but which reads the
+    // SAME checklist-parallel-names.json this PR grows) — never through the
+    // new checklist-rescue mechanism itself. Root cause: that module's global
+    // frequency floor counted every `sport|year|setKey` corpus ENTRY as one
+    // vote, so the SAME product line repeating an insert name across several
+    // years (`panini-select-fifa` 2023+2024 both carry "Autographed
+    // Memorabilia Fifa") cleared the cross-product floor alone, stripping
+    // "Fifa"/"Liga"/"Ligue" out of every title everywhere and shrinking
+    // unrelated residues under NAME_CEILING until a leftover team/nation word
+    // ("Columbus", "Ac Milan", "France", "Tim Hortons") bounded into a wrong
+    // player name (11 of the 15 newly-resolving rows).
+    //
+    // FIX: dedup the floor by DISTINCT BASE BRAND (sport|setKey, year
+    // dropped) instead of by raw corpus entry. "Fifa"/"Liga"/"Ligue"/
+    // "Pageantry"/"Goalie"/"Etchings" now contribute one vote per product
+    // line and stay below the floor; genuinely cross-product words ("wnba",
+    // shared independently by panini-prizm-wnba/donruss-wnba/panini-
+    // impeccable-wnba; "world"/"cup"/"road") are unaffected and still strip
+    // exactly as they did on main.
+    //
+    // MEASURED after the fix, row by row against main: of the original 28
+    // flips, ALL are gone except idx 28 ("2025-26 Upper Deck Metal Universe
+    // Nathan Mackinnon Lethal Weapon") and 5 others that move between
+    // noPlayer/sportUnresolved without ever touching wouldResolve. idx 28 was
+    // main's own pre-existing wrong answer ("Nathan Mackinnon Lethal Weapon"
+    // — "Lethal Weapon" is skybox-metal-universe's own insert name leaking
+    // into the guessed name); the fix correctly refuses it to noPlayer instead
+    // ("absent beats wrong"). One NEW row not among the original 28 flips
+    // (idx 888, "2025 Panini Prizm Pigskin R/C Ashton Jeanty") gains a wrong
+    // multi-player split ("Pigskin/Ashton Jeanty") for an unrelated reason —
+    // a pre-existing gap in the multi-player-split path (it does not require
+    // each half of a "/"-joined residue to look like a real name), exposed
+    // rather than caused by this fix, and out of scope for a corpus-frequency
+    // change; flagged as a residual, not fixed here. Net on THIS fixture: -1
+    // (idx 28 corrected) +1 (idx 888 newly wrong) = 497, unchanged from main.
     let wouldResolve = 0;
     for (const r of rows) {
       const soldAt = r.sold_at || (r.sale_date ? `${r.sale_date}T12:00:00Z` : null);
@@ -274,10 +288,10 @@ describe("TCA eBay player-name checklist lookup — 1,000-row 09-10 fixture, bef
       const verticalRes = resolveVertical({ declared: r.sport, title, platform: r.platform, category: r.category, setName: setKey });
       if (verticalRes.confident === true) wouldResolve++;
     }
-    expect(wouldResolve).toBe(500);
+    expect(wouldResolve).toBe(497);
   });
 
-  it("after: the checklist lookup recovers additional rows on top of the baseline", async () => {
+  it("after: the checklist lookup recovers additional rows on top of #2088's baseline", async () => {
     let wouldResolve = 0;
     for (const r of rows) {
       const outcome = await classifyWithChecklistLookup(r);
@@ -285,14 +299,12 @@ describe("TCA eBay player-name checklist lookup — 1,000-row 09-10 fixture, bef
     }
     // Pin, not a target: measured on this exact fixture against the mocked
     // checklist above (built from real titles in this fixture's own
-    // sportUnresolved class): 500 -> 573, +73 rows (42 panini-select
-    // football, 31 upper-deck hockey — the mock's two products, unchanged by
-    // R66 PR1's corpus growth: the checklist-rescue mechanism itself recovers
-    // the same 73 rows either way; the whole +3 vs the prior 570 pin is
-    // inherited from the baseline shift above, not from this mechanism). A
-    // future change that drops below this on the SAME fixture with the SAME
-    // mock has regressed this mechanism.
-    expect(wouldResolve).toBe(573);
+    // sportUnresolved class): 497 -> 570, +73 rows (42 panini-select
+    // football, 31 upper-deck hockey — the mock's two products). Unchanged by
+    // R66 PR1 + fix A: the checklist-rescue mechanism itself never depended on
+    // the corpus-frequency floor. A future change that drops below this on
+    // the SAME fixture with the SAME mock has regressed this mechanism.
+    expect(wouldResolve).toBe(570);
   });
 
   it("recovers 'Tetairoa McMillan' — no team, no sport word, checklist-backed", async () => {
@@ -335,21 +347,26 @@ describe("TCA eBay player-name checklist lookup — 1,000-row 09-10 fixture, bef
 describe("TCA eBay player-name checklist lookup — #2084/#2088's 100-row fixture, must not regress", () => {
   const rows100 = loadFixture("tcaEbay0910Sample100.json");
 
-  it("before: matches the measured baseline on this fixture after R66 PR1's corpus growth (41/100, was 39)", async () => {
-    // R66 PR1 moved this pin 39 -> 41 via the same 3 row flips as the 1,000-row
-    // fixture's shared prefix (this 100-row sample is a subset of it): idx 29
-    // "Tim Hortons Andrei Vasilevskiy" and idx 72 "Cole Sillinger Columbus"
-    // both WRONGLY gain a leftover word once "Fifa"/"Liga"/"Ligue" clear the
-    // corpus's frequency floor and shrink their residues under
-    // playerSegmentIsAPerson.ts's NAME_CEILING elsewhere in the corpus load
-    // (same pre-existing gap documented on the 1,000-row fixture's "before"
-    // test above — not fixed here, out of this PR's scope). idx 82 "Allure
-    // Andrei Svechnikov" moves noPlayer -> sportUnresolved (still wrong, but
-    // does not change this count either way since it never reaches
-    // wouldResolve). Net effect on THIS fixture's plain baseline is +2
-    // (39 -> 41): the wrong rows outweigh here because none of the 12
-    // corrections from the 1,000-row set's Panini Select box/case lots
-    // recur in this 100-row sample.
+  it("before: an individually-judged-correct fix moves this pin 39 -> 38", async () => {
+    // R66 PR1 as originally submitted moved this count 39 -> 41 via 3 row
+    // flips shared with the 1,000-row fixture's prefix (idx 29 "Tim Hortons
+    // Andrei Vasilevskiy", idx 72 "Cole Sillinger Columbus", both WRONG; idx
+    // 82 moved noPlayer -> sportUnresolved, no count effect). Fix A
+    // (playerSegmentIsAPerson.ts, CF-A-SAME-PRODUCT-ACROSS-YEARS-IS-ONE-VOTE
+    // — see the 1,000-row fixture's "before" test above for the full
+    // mechanism) removes all three: this fixture is now back at 39, matching
+    // main exactly, EXCEPT for one further row fix A additionally corrects
+    // that is NOT one of the original three:
+    //
+    //   idx 28 "2025-26 Upper Deck Metal Universe Nathan Mackinnon Lethal
+    //   Weapon" — main WRONGLY resolves this to "Nathan Mackinnon Lethal
+    //   Weapon" ("Lethal Weapon" is skybox-metal-universe's own insert name,
+    //   not part of the player's name; "metal" now correctly strips as
+    //   generic finish vocabulary, but "universe"/"lethal"/"weapon" then push
+    //   the residue past NAME_CEILING, so the row correctly refuses to
+    //   noPlayer instead of keeping the padded name). This is a genuine
+    //   improvement over main, individually judged correct, so the pin moves
+    //   BELOW main's own count here: 39 -> 38.
     let wouldResolve = 0;
     for (const r of rows100) {
       const soldAt = r.sold_at || (r.sale_date ? `${r.sale_date}T12:00:00Z` : null);
@@ -365,7 +382,7 @@ describe("TCA eBay player-name checklist lookup — #2084/#2088's 100-row fixtur
       const verticalRes = resolveVertical({ declared: r.sport, title, platform: r.platform, category: r.category, setName: setKey });
       if (verticalRes.confident === true) wouldResolve++;
     }
-    expect(wouldResolve).toBe(41);
+    expect(wouldResolve).toBe(38);
   });
 
   it("after: the checklist lookup recovers the clean Upper Deck hockey names in this fixture, never regressing", async () => {
@@ -375,12 +392,12 @@ describe("TCA eBay player-name checklist lookup — #2084/#2088's 100-row fixtur
       if (outcome === "wouldResolve") wouldResolve++;
     }
     // Pin, not a target: measured against the mocked 2025|upper-deck
-    // checklist above: 41 -> 72, +31 rows, all upper-deck hockey (this
+    // checklist above: 38 -> 69, +31 rows, all upper-deck hockey (this
     // fixture has no Panini Select rows at all — the checklist-rescue
-    // mechanism itself is unaffected by R66 PR1; the whole +2 vs the prior 70
-    // pin is inherited from the baseline shift above). Must never drop below
-    // this fixture's own floor.
-    expect(wouldResolve).toBe(72);
+    // mechanism is unaffected by the corpus-frequency fix; the -1 vs the
+    // prior 70 pin is inherited from the corrected baseline above). Must
+    // never drop below this fixture's own floor.
+    expect(wouldResolve).toBe(69);
   });
 
   it("recovers 'Michael Misa' — no team, no sport word, checklist-backed", async () => {

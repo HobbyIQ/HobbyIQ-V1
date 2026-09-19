@@ -159,7 +159,10 @@ interface ParallelCorpus {
  * The distinction the split draws -- is this rung a parallel of the base card,
  * or a set of its own -- matters to the R31 write path. It does not matter
  * here: for "is this word part of a card's name rather than a person's", an
- * insert name counts exactly as much as a parallel.
+ * insert name counts exactly as much as a parallel. `everyCorpusName` feeds
+ * BOTH the global frequency floor and the per-product bucket, exactly as it
+ * did before R66 PR1 -- see `ownSetKeyWords` below for the fix that keeps a
+ * growing corpus from letting a product's OWN name cross that floor.
  */
 function everyCorpusName(product: {
   parallels?: { name?: string }[];
@@ -176,6 +179,58 @@ function everyCorpusName(product: {
 let _corpusWords: Set<string> | null = null;
 let _corpusByProduct: Map<string, Set<string>> | null = null;
 let _corpusLoadFailed = false;
+
+/**
+ * THE SAME PRODUCT ACROSS YEARS IS ONE VOTE, NOT ONE PER YEAR.
+ *
+ * CF-A-SAME-PRODUCT-ACROSS-YEARS-IS-ONE-VOTE (2026-09-19), found while
+ * tracing R66 PR1's fixture regressions (PR #2306 follow-up).
+ *
+ * The global frequency floor (`CORPUS_FREQUENCY_FLOOR`) exists to separate a
+ * recurring finish word from a one-off name -- see the doc below. Its unit of
+ * "distinct" was every `sport|year|setKey` entry, so the SAME product line
+ * repeating an insert name across several years of the same corpus counts as
+ * several distinct occurrences instead of one. R66 PR1 grew `insertSets[]`
+ * corpus-wide and exposed how easily that inflates the floor:
+ *
+ *   - `soccer|2023|panini-select-fifa` and `soccer|2024|panini-select-fifa`
+ *     both carry insert names like "Autographed Memorabilia Fifa" -- "fifa"
+ *     reaches 2 entries and clears the floor globally, even though both are
+ *     the SAME product line one year apart, naming itself on every rung.
+ *   - `hockey|2023/2024/2025|sp-authentic` all carry the insert "Pageantry"
+ *     -- 3 entries, same story, and unrelated to any product's own setKey.
+ *
+ * Once a word crosses the floor this way, it strips out of EVERY title
+ * everywhere, not just the one product line that produced it -- shrinking
+ * unrelated residues ("Michael Olise ... Terrace ... France",
+ * "... Tim Hortons Goalie Etchings Andrei Vasilevskiy ...") under
+ * `NAME_CEILING` until a leftover team/nation/subset word ("France",
+ * "Columbus", "Tim Hortons") gets bounded into a wrong player name. Measured
+ * on the 1,000-row TCA fixture: 11 of 15 newly-resolving rows were wrong this
+ * way before this fix.
+ *
+ * Fix: count distinct BASE BRANDS (`sport|setKey`, year dropped), not
+ * distinct `sport|year|setKey` entries. "fifa"/"pageantry" then contribute
+ * once each (one base brand, several years) and stay under the floor. A
+ * genuinely recurring word is unaffected: "wnba" is chosen independently by
+ * five UNRELATED base brands (panini-prizm-wnba, donruss-wnba,
+ * panini-impeccable-wnba, ...) and still clears the floor; "world"/"cup"
+ * still clear it from many unrelated products. Measured: this drops
+ * "fifa"/"liga"/"ligue"/"pageantry"/"goalie"/"etchings"/"sealed" below the
+ * floor while leaving "wnba"/"world"/"cup"/"road" above it -- matching main's
+ * own pre-PR1 stripping behaviour on the rows that depend on them
+ * ("Caitlin Clark Indiana Fever" still resolves).
+ *
+ * A NAIVE FIRST ATTEMPT excluded a token only when it matched the CURRENT
+ * product's own setKey word, unconditionally. That under-corrected (it never
+ * caught "Pageantry", which names no product's own setKey) and, on an
+ * earlier revision that dropped the exclusion's product scope entirely,
+ * over-corrected by also zeroing "wnba" globally -- both measured against
+ * this same fixture before landing on the base-brand dedup above.
+ */
+function baseBrandFor(sport: string, setKey: string): string {
+  return `${sport}|${setKey}`;
+}
 
 /**
  * THE CORPUS CONTAINS PLAYER-NAMED INSERTS, AND A NAIVE HARVEST EATS NAMES.
@@ -267,13 +322,30 @@ function loadCorpus(): void {
     if (text == null) throw new Error("checklist-parallel-names.json not found");
     const raw = JSON.parse(text) as ParallelCorpus;
 
-    // Pass 1: count how many distinct parallel names each token appears in, so
-    // the frequency floor can tell a finish word from a player-named insert.
+    // Pass 1: count how many distinct BASE BRANDS (sport|setKey, year
+    // dropped) each token appears in, so the frequency floor can tell a
+    // finish word from a player-named insert -- BOTH fields, exactly as
+    // before R66 PR1 grew insertSets[] (see everyCorpusName's doc). The one
+    // change from pre-PR1 main: dedup by base brand instead of by raw
+    // `sport|year|setKey` product key (see baseBrandFor's doc) -- the same
+    // product line repeating an insert name across several years of the
+    // corpus (panini-select-fifa 2023+2024, sp-authentic 2023+2024+2025)
+    // contributes ONE vote, not one per year, so it cannot clear the floor
+    // alone; a word genuinely chosen by several UNRELATED base brands
+    // (panini-prizm-wnba, donruss-wnba, panini-impeccable-wnba) still can.
     const frequency = new Map<string, number>();
-    for (const product of Object.values(raw.products ?? {})) {
+    const wordBrandsSeen = new Map<string, Set<string>>(); // word -> base brands already counted
+    for (const [key, product] of Object.entries(raw.products ?? {})) {
+      const parts = key.split("|");
+      const brand = baseBrandFor(parts[0] ?? "", parts[2] ?? "");
       for (const name of everyCorpusName(product)) {
         for (const w of new Set(tokenize(name))) {
-          if (w.length >= 3 && !/^\d+$/.test(w)) frequency.set(w, (frequency.get(w) ?? 0) + 1);
+          if (w.length < 3 || /^\d+$/.test(w)) continue;
+          let seen = wordBrandsSeen.get(w);
+          if (!seen) { seen = new Set<string>(); wordBrandsSeen.set(w, seen); }
+          if (seen.has(brand)) continue; // this base brand already contributed this word
+          seen.add(brand);
+          frequency.set(w, (frequency.get(w) ?? 0) + 1);
         }
       }
     }
