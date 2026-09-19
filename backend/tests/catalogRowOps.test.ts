@@ -1247,15 +1247,41 @@ describe("moveCatalogRow: relocateSales hook (order is the invariant, including 
     expect(called).toBe(false);
   });
 
-  it("is never called on a dryRun", async () => {
+  // CF-REPORT-MUST-PREDICT-APPLY (2026-09-19). The hook USED to be skipped
+  // entirely on a dryRun, which is why the hockey pilot's own REPORT printed
+  // "sales relocated 0" while its APPLY, minutes later, relocated 1,192 --
+  // a structural zero, not a forecast. It now runs under dryRun too, told
+  // which mode it is in via the third `{ dryRun }` argument, so a caller's
+  // hook can enumerate read-only and hand back a REAL count.
+  it("IS called on a dryRun, told dryRun: true, and its result still populates salesRelocated", async () => {
     const w = world({ old: umbrellaRow(), incumbent: null, extraCatalog: [], sales: [] });
-    let called = false;
-    const relocateSales = async () => { called = true; return { ok: true }; };
+    let calledWith: unknown;
+    const relocateSales = async (oldId: string, newSlug: string, ctx: { dryRun: boolean }) => {
+      calledWith = { oldId, newSlug, ctx };
+      return { ok: true };
+    };
     const r = await moveCatalogRow(w.cat, umbrellaRow() as never, SUB_BRAND_NEW, {}, {
       reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, dryRun: true, salesContainer: w.pool, relocateSales,
     });
-    expect(called).toBe(false);
-    expect(r.salesRelocated).toBeUndefined();
+    expect(calledWith).toEqual({ oldId: UMBRELLA_OLD, newSlug: SUB_BRAND_NEW, ctx: { dryRun: true } });
+    expect(r.salesRelocated).toBe(true);
+    // Nothing was written: the survivor is never upserted on a dryRun, and
+    // the old row is never deleted -- the hook running read-only changes
+    // nothing about moveCatalogRow's own dryRun write gate.
+    expect(w.catalog.writes()).toEqual([]);
+  });
+
+  it("a dryRun hook that reports failure still writes nothing, and salesRelocated is false (a real prediction)", async () => {
+    const w = world({ old: umbrellaRow(), incumbent: null, extraCatalog: [], sales: [] });
+    const relocateSales = async () => ({ ok: false, failures: ["would fail: verify mismatch"] });
+    const r = await moveCatalogRow(w.cat, umbrellaRow() as never, SUB_BRAND_NEW, {}, {
+      reason: "id follows its own setKey field", idFollowsOwnSetKeyField: true, dryRun: true, salesContainer: w.pool, relocateSales,
+    });
+    expect(r.salesRelocated).toBe(false);
+    expect(r.salesRelocateFailures).toEqual(["would fail: verify mismatch"]);
+    expect(r.decision).toMatch(/sale relocation would NOT complete/);
+    expect(w.catalog.writes()).toEqual([]);
+    expect(w.sales.writes()).toEqual([]);
   });
 
   it("callers who never pass relocateSales are completely unaffected (hook absent = today's behaviour)", async () => {
