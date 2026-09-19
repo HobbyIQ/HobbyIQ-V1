@@ -1,0 +1,356 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,,false,,Jacob Wilson
+base,2,,false,,Hyeseong Kim
+base,3,,false,,Dylan Crews
+base,4,,false,,Matt Olson
+base,5,,false,,Yusei Kikuchi
+base,6,,false,,Manny Machado
+base,7,,false,,Bobby Witt Jr.
+base,8,,false,,Fernando Tatis Jr.
+base,9,,false,,Logan Gilbert
+base,10,,false,,Cade Horton
+base,11,,false,,Mick Abel
+base,12,,false,,Roki Sasaki
+base,13,,false,,Ronald Acuña Jr.
+base,14,,false,,Willy Adames
+base,15,,false,,Alex Bregman
+base,16,,false,,Jackson Holliday
+base,17,,false,,Shohei Ohtani
+base,18,,false,,Chandler Simpson
+base,19,,false,,Shota Imanaga
+base,20,,false,,CJ Abrams
+base,21,,false,,José Ramírez
+base,22,,false,,Juan Soto
+base,23,,false,,Salvador Perez
+base,24,,false,,Andrew McCutchen
+base,25,,false,,Trey Sweeney
+base,26,,false,,Mookie Betts
+base,27,,false,,Mike Trout
+base,28,,false,,Chad Patrick
+base,29,,false,,James Wood
+base,30,,false,,Paul Skenes
+base,31,,false,,Blake Snell
+base,32,,false,,Luisangel Acuña
+base,33,,false,,Freddie Freeman
+base,34,,false,,Jazz Chisholm Jr.
+base,35,,false,,Randy Arozarena
+base,36,,false,,Wyatt Langford
+base,37,,false,,Bryce Harper
+base,38,,false,,Jackson Merrill
+base,39,,false,,Marcelo Mayer
+base,40,,false,,Jackson Chourio
+base,41,,false,,Dillon Dingler
+base,42,,false,,Moisés Ballesteros
+base,43,,false,,Yandy Díaz
+base,44,,false,,Kevin Alcántara
+base,45,,false,,Corey Seager
+base,46,,false,,Matt Shaw
+base,47,,false,,Jacob deGrom
+base,48,,false,,Sandy Alcantara
+base,49,,false,,Matt Chapman
+base,50,,false,,Jake Mangum
+base,51,,false,,Ketel Marte
+base,52,,false,,Shane Smith
+base,53,,false,,Walker Buehler
+base,54,,false,,Carlos Correa
+base,55,,false,,Zach Neto
+base,56,,false,,Bo Bichette
+base,57,,false,,Kyle Tucker
+base,58,,false,,Kristian Campbell
+base,59,,false,,Francisco Lindor
+base,60,,false,,Seiya Suzuki
+base,61,,false,,Luke Keaschall
+base,62,,false,,Chase Dollander
+base,63,,false,,Hayden Birdsong
+base,64,,false,,Masyn Winn
+base,65,,false,,Lawrence Butler
+base,66,,false,,Julio Rodríguez
+base,67,,false,,Noah Cameron
+base,68,,false,,Angel Martínez
+base,69,,false,,Zac Veen
+base,70,,false,,Christian Yelich
+base,71,,false,,Chase Meidroth
+base,72,,false,,Zack Wheeler
+base,73,,false,,Sean Burke
+base,74,,false,,Vladimir Guerrero Jr.
+base,75,,false,,Drake Baldwin
+base,76,,false,,Yoshinobu Yamamoto
+base,77,,false,,Cam Smith
+base,78,,false,,Cody Bellinger
+base,79,,false,,Will Warren
+base,80,,false,,Junior Caminero
+base,81,,false,,Yordan Alvarez
+base,82,,false,,Trea Turner
+base,83,,false,,Coby Mayo
+base,84,,false,,Spencer Schwellenbach
+base,85,,false,,Corbin Carroll
+base,86,,false,,Tsung-Che Cheng
+base,87,,false,,Ezequiel Tovar
+base,88,,false,,Edgar Quero
+base,89,,false,,Elly De La Cruz
+base,90,,false,,Max Muncy
+base,91,,false,,Agustín Ramírez
+base,92,,false,,Logan Henderson
+base,93,,false,,Nick Kurtz
+base,94,,false,,Corbin Burnes
+base,95,,false,,Tarik Skubal
+base,96,,false,,Gunnar Henderson
+base,97,,false,,Royce Lewis
+base,98,,false,,Kumar Rocker
+base,99,,false,,Aaron Judge
+base,100,,false,,Dalton Rushing
+base,1,Rookie Red RC Variation,false,,Jacob Wilson
+base,2,Rookie Red RC Variation,false,,Hyeseong Kim
+base,3,Rookie Red RC Variation,false,,Dylan Crews
+base,10,Rookie Red RC Variation,false,,Cade Horton
+base,11,Rookie Red RC Variation,false,,Mick Abel
+base,12,Rookie Red RC Variation,false,,Roki Sasaki
+base,18,Rookie Red RC Variation,false,,Chandler Simpson
+base,25,Rookie Red RC Variation,false,,Trey Sweeney
+base,28,Rookie Red RC Variation,false,,Chad Patrick
+base,29,Rookie Red RC Variation,false,,James Wood
+base,32,Rookie Red RC Variation,false,,Luisangel Acuña
+base,39,Rookie Red RC Variation,false,,Marcelo Mayer
+base,41,Rookie Red RC Variation,false,,Dillon Dingler
+base,42,Rookie Red RC Variation,false,,Moisés Ballesteros
+base,44,Rookie Red RC Variation,false,,Kevin Alcántara
+base,46,Rookie Red RC Variation,false,,Matt Shaw
+base,50,Rookie Red RC Variation,false,,Jake Mangum
+base,52,Rookie Red RC Variation,false,,Shane Smith
+base,58,Rookie Red RC Variation,false,,Kristian Campbell
+base,61,Rookie Red RC Variation,false,,Luke Keaschall
+base,62,Rookie Red RC Variation,false,,Chase Dollander
+base,63,Rookie Red RC Variation,false,,Hayden Birdsong
+base,67,Rookie Red RC Variation,false,,Noah Cameron
+base,68,Rookie Red RC Variation,false,,Angel Martínez
+base,69,Rookie Red RC Variation,false,,Zac Veen
+base,71,Rookie Red RC Variation,false,,Chase Meidroth
+base,73,Rookie Red RC Variation,false,,Sean Burke
+base,75,Rookie Red RC Variation,false,,Drake Baldwin
+base,77,Rookie Red RC Variation,false,,Cam Smith
+base,79,Rookie Red RC Variation,false,,Will Warren
+base,83,Rookie Red RC Variation,false,,Coby Mayo
+base,84,Rookie Red RC Variation,false,,Spencer Schwellenbach
+base,86,Rookie Red RC Variation,false,,Tsung-Che Cheng
+base,88,Rookie Red RC Variation,false,,Edgar Quero
+base,90,Rookie Red RC Variation,false,,Max Muncy
+base,91,Rookie Red RC Variation,false,,Agustín Ramírez
+base,92,Rookie Red RC Variation,false,,Logan Henderson
+base,93,Rookie Red RC Variation,false,,Nick Kurtz
+base,98,Rookie Red RC Variation,false,,Kumar Rocker
+base,100,Rookie Red RC Variation,false,,Dalton Rushing
+base,BCP-153,,false,,Josuar Gonzalez
+base,BCP-154,,false,,Jac Caglianone
+base,BCP-155,,false,,Elian Peña
+base,BCP-156,,false,,Andrew Salas
+base,BCP-157,,false,,Jakob Christian
+base,BCP-158,,false,,Devin Fitz-Gerald
+base,BCP-159,,false,,Kendry Martínez
+base,BCP-160,,false,,Jirvin Morillo
+base,BCP-161,,false,,Haritzon Castillo
+base,BCP-162,,false,,Cristopher Polanco
+base,BCP-163,,false,,Johan De Los Santos
+base,BCP-164,,false,,George Lombard Jr.
+base,BCP-165,,false,,Spencer Giesting
+base,BCP-166,,false,,Cam Schlittler
+base,BCP-167,,false,,Roman Anthony
+base,BCP-168,,false,,Enry Torres
+base,BCP-169,,false,,Ethan Salas
+base,BCP-170,,false,,Shotaro Morii
+base,BCP-171,,false,,Bubba Chandler
+base,BCP-172,,false,,John Gil
+base,BCP-173,,false,,Deivid Coronil
+base,BCP-174,,false,,Liberts Aponte
+base,BCP-175,,false,,Raymer Medina
+base,BCP-176,,false,,Cristopher Acosta
+base,BCP-177,,false,,Noah Schultz
+base,BCP-178,,false,,Gabriel Davalillo
+base,BCP-179,,false,,Will Taylor
+base,BCP-180,,false,,Bryce Eldridge
+base,BCP-181,,false,,RJ Schreck
+base,BCP-182,,false,,Kai Roberts
+base,BCP-183,,false,,Marco Dinges
+base,BCP-184,,false,,Nate George
+base,BCP-185,,false,,Warren Calcaño
+base,BCP-186,,false,,Elorky Rodriguez
+base,BCP-187,,false,,Ramcell Medina
+base,BCP-188,,false,,Teilon Serrano
+base,BCP-189,,false,,Stiven Marinez
+base,BCP-190,,false,,Kenny Fenelon
+base,BCP-191,,false,,Christopher Suero
+base,BCP-192,,false,,Nathan Church
+base,BCP-193,,false,,Jose Anderson
+base,BCP-194,,false,,Yorger Bautista
+base,BCP-195,,false,,David Sandlin
+base,BCP-196,,false,,Hiverson López
+base,BCP-197,,false,,Ayden Johnson
+base,BCP-198,,false,,Alirio Ferrebus
+base,BCP-199,,false,,Mani Cedeno
+base,BCP-200,,false,,Rainiel Rodriguez
+base,BCP-201,,false,,Anyelo Marquez
+base,BCP-202,,false,,Carlos Lagrange
+base,BCP-203,,false,,Heins Brito
+base,BCP-204,,false,,Leo De Vries
+base,BCP-205,,false,,Kevin Defrank
+base,BCP-206,,false,,Bo Davidson
+base,BCP-207,,false,,Juan Cabada
+base,BCP-208,,false,,Jordan Sanchez
+base,BCP-209,,false,,Wilfri De La Cruz
+base,BCP-210,,false,,Pedro Catuy
+base,BCP-211,,false,,Brayan Cortesia
+base,BCP-212,,false,,Caden Powell
+base,BCP-213,,false,,Ronny Cruz
+base,BCP-214,,false,,Diego Tornes
+base,BCP-215,,false,,Justice Bigbie
+base,BCP-216,,false,,Harold Rivas
+base,BCP-217,,false,,Nestor Miranda
+base,BCP-218,,false,,Luke Dickerson
+base,BCP-219,,false,,Alessander De La Cruz
+base,BCP-220,,false,,Cristian Arguelles
+base,BCP-221,,false,,Royelny Strop
+base,BCP-222,,false,,Yahil Melendez
+base,BCP-223,,false,,Jhoan De La Cruz
+base,BCP-224,,false,,Ching-Hsien Ko
+base,BCP-225,,false,,Warel Solano
+base,BCP-226,,false,,Brett Bateman
+base,BCP-227,,false,,Kevin Alvarez
+base,BCP-228,,false,,Arjun Nimmala
+base,BCP-229,,false,,Yulian Barreto
+base,BCP-230,,false,,Juan Tomas
+base,BCP-231,,false,,Juneiker Caceres
+base,BCP-232,,false,,Nieves Izaguirre
+base,BCP-233,,false,,Jhonny Severino
+base,BCP-234,,false,,Carson Williams
+base,BCP-235,,false,,Sadbiel Delzine
+base,BCP-236,,false,,Yairo Padilla
+base,BCP-237,,false,,Djean Macares
+base,BCP-238,,false,,Robert Hipwell
+base,BCP-239,,false,,Luis Peña
+base,BCP-240,,false,,Maykel Coret
+base,BCP-241,,false,,JJ Wetherholt
+base,BCP-242,,false,,Moises Marchán
+base,BCP-243,,false,,Bryce Boettcher
+base,BCP-244,,false,,Zach Cole
+base,BCP-245,,false,,Jesus Made
+base,BCP-246,,false,,Kale Fountain
+base,BCP-247,,false,,Santiago Leon
+base,BCP-248,,false,,Charlie Condon
+base,BCP-249,,false,,Elian De La Cruz
+base,BCP-250,,false,,Cris Rodriguez
+base,BCP-251,,false,,Tommy White
+base,BCP-252,,false,,DJ Layton
+base,BCP-153,International Refractor Variation,false,,Josuar Gonzalez
+base,BCP-155,International Refractor Variation,false,,Elian Peña
+base,BCP-156,International Refractor Variation,false,,Andrew Salas
+base,BCP-159,International Refractor Variation,false,,Kendry Martínez
+base,BCP-161,International Refractor Variation,false,,Haritzon Castillo
+base,BCP-162,International Refractor Variation,false,,Cristopher Polanco
+base,BCP-163,International Refractor Variation,false,,Johan De Los Santos
+base,BCP-169,International Refractor Variation,false,,Ethan Salas
+base,BCP-170,International Refractor Variation,false,,Shotaro Morii
+base,BCP-173,International Refractor Variation,false,,Deivid Coronil
+base,BCP-174,International Refractor Variation,false,,Liberts Aponte
+base,BCP-175,International Refractor Variation,false,,Raymer Medina
+base,BCP-176,International Refractor Variation,false,,Cristopher Acosta
+base,BCP-178,International Refractor Variation,false,,Gabriel Davalillo
+base,BCP-185,International Refractor Variation,false,,Warren Calcaño
+base,BCP-186,International Refractor Variation,false,,Elorky Rodriguez
+base,BCP-187,International Refractor Variation,false,,Ramcell Medina
+base,BCP-188,International Refractor Variation,false,,Teilon Serrano
+base,BCP-189,International Refractor Variation,false,,Stiven Marinez
+base,BCP-190,International Refractor Variation,false,,Kenny Fenelon
+base,BCP-194,International Refractor Variation,false,,Yorger Bautista
+base,BCP-196,International Refractor Variation,false,,Hiverson López
+base,BCP-197,International Refractor Variation,false,,Ayden Johnson
+base,BCP-198,International Refractor Variation,false,,Alirio Ferrebus
+base,BCP-199,International Refractor Variation,false,,Mani Cedeno
+base,BCP-200,International Refractor Variation,false,,Rainiel Rodriguez
+base,BCP-205,International Refractor Variation,false,,Kevin Defrank
+base,BCP-207,International Refractor Variation,false,,Juan Cabada
+base,BCP-209,International Refractor Variation,false,,Wilfri De La Cruz
+base,BCP-211,International Refractor Variation,false,,Brayan Cortesia
+base,BCP-214,International Refractor Variation,false,,Diego Tornes
+base,BCP-216,International Refractor Variation,false,,Harold Rivas
+base,BCP-217,International Refractor Variation,false,,Nestor Miranda
+base,BCP-221,International Refractor Variation,false,,Royelny Strop
+base,BCP-222,International Refractor Variation,false,,Yahil Melendez
+base,BCP-223,International Refractor Variation,false,,Jhoan De La Cruz
+base,BCP-225,International Refractor Variation,false,,Warel Solano
+base,BCP-227,International Refractor Variation,false,,Kevin Alvarez
+base,BCP-230,International Refractor Variation,false,,Juan Tomas
+base,BCP-232,International Refractor Variation,false,,Nieves Izaguirre
+base,BCP-233,International Refractor Variation,false,,Jhonny Severino
+base,BCP-235,International Refractor Variation,false,,Sadbiel Delzine
+base,BCP-236,International Refractor Variation,false,,Yairo Padilla
+base,BCP-237,International Refractor Variation,false,,Djean Macares
+base,BCP-240,International Refractor Variation,false,,Maykel Coret
+base,BCP-242,International Refractor Variation,false,,Moises Marchán
+base,BCP-245,International Refractor Variation,false,,Jesus Made
+base,BCP-247,International Refractor Variation,false,,Santiago Leon
+base,BCP-249,International Refractor Variation,false,,Elian De La Cruz
+base,BCP-250,International Refractor Variation,false,,Cris Rodriguez
+base,1,Image Variation,false,,Jacob Wilson
+base,2,Image Variation,false,,Hyeseong Kim
+base,3,Image Variation,false,,Dylan Crews
+base,12,Image Variation,false,,Roki Sasaki
+base,29,Image Variation,false,,James Wood
+base,32,Image Variation,false,,Luisangel Acuña
+base,39,Image Variation,false,,Marcelo Mayer
+base,46,Image Variation,false,,Matt Shaw
+base,58,Image Variation,false,,Kristian Campbell
+base,62,Image Variation,false,,Chase Dollander
+base,77,Image Variation,false,,Cam Smith
+base,BCP-153,Image Variation,false,,Josuar Gonzalez
+base,BCP-154,Image Variation,false,,Jac Caglianone
+base,BCP-155,Image Variation,false,,Elian Peña
+base,BCP-156,Image Variation,false,,Andrew Salas
+base,BCP-167,Image Variation,false,,Roman Anthony
+base,BCP-170,Image Variation,false,,Shotaro Morii
+base,BCP-214,Image Variation,false,,Diego Tornes
+base,BCP-245,Image Variation,false,,Jesus Made
+base,BCP-251,Image Variation,false,,Tommy White
+base,1,Etched In Glass Variation,false,,Jacob Wilson
+base,2,Etched In Glass Variation,false,,Hyeseong Kim
+base,3,Etched In Glass Variation,false,,Dylan Crews
+base,12,Etched In Glass Variation,false,,Roki Sasaki
+base,29,Etched In Glass Variation,false,,James Wood
+base,32,Etched In Glass Variation,false,,Luisangel Acuña
+base,39,Etched In Glass Variation,false,,Marcelo Mayer
+base,46,Etched In Glass Variation,false,,Matt Shaw
+base,58,Etched In Glass Variation,false,,Kristian Campbell
+base,75,Etched In Glass Variation,false,,Drake Baldwin
+base,77,Etched In Glass Variation,false,,Cam Smith
+base,BCP-153,Etched In Glass Variation,false,,Josuar Gonzalez
+base,BCP-155,Etched In Glass Variation,false,,Elian Peña
+base,BCP-156,Etched In Glass Variation,false,,Andrew Salas
+base,BCP-170,Etched In Glass Variation,false,,Shotaro Morii
+base,BCP-199,Etched In Glass Variation,false,,Mani Cedeno
+base,BCP-214,Etched In Glass Variation,false,,Diego Tornes
+base,BCP-236,Etched In Glass Variation,false,,Yairo Padilla
+base,BCP-250,Etched In Glass Variation,false,,Cris Rodriguez
+base,BCP-251,Etched In Glass Variation,false,,Tommy White
+base,1,Rookie Color Run Variation,false,,Jacob Wilson
+base,2,Rookie Color Run Variation,false,,Hyeseong Kim
+base,3,Rookie Color Run Variation,false,,Dylan Crews
+base,12,Rookie Color Run Variation,false,,Roki Sasaki
+base,29,Rookie Color Run Variation,false,,James Wood
+base,32,Rookie Color Run Variation,false,,Luisangel Acuña
+base,39,Rookie Color Run Variation,false,,Marcelo Mayer
+base,46,Rookie Color Run Variation,false,,Matt Shaw
+base,58,Rookie Color Run Variation,false,,Kristian Campbell
+base,77,Rookie Color Run Variation,false,,Cam Smith
+base,1,Rookie Short Print Image Variation,false,,Jacob Wilson
+base,2,Rookie Short Print Image Variation,false,,Hyeseong Kim
+base,3,Rookie Short Print Image Variation,false,,Dylan Crews
+base,12,Rookie Short Print Image Variation,false,,Roki Sasaki
+base,29,Rookie Short Print Image Variation,false,,James Wood
+base,32,Rookie Short Print Image Variation,false,,Luisangel Acuña
+base,44,Rookie Short Print Image Variation,false,,Kevin Alcántara
+base,46,Rookie Short Print Image Variation,false,,Matt Shaw
+base,58,Rookie Short Print Image Variation,false,,Kristian Campbell
+base,62,Rookie Short Print Image Variation,false,,Chase Dollander
+base,75,Rookie Short Print Image Variation,false,,Drake Baldwin
+base,77,Rookie Short Print Image Variation,false,,Cam Smith
+base,83,Rookie Short Print Image Variation,false,,Coby Mayo
+base,88,Rookie Short Print Image Variation,false,,Edgar Quero
+base,98,Rookie Short Print Image Variation,false,,Kumar Rocker
