@@ -47,7 +47,7 @@ import {
   recordDedupSuccess,
   recordDedupTimeout,
 } from "./dedupBreaker.js";
-import { computeHobbyIqCardId, resolveSetKeyForSlug, sameCardNumber } from "./hobbyIqCardId.service.js";
+import { computeHobbyIqCardId, resolveSetKeyForSlug, normalizeSetKey, sameCardNumber } from "./hobbyIqCardId.service.js";
 import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./slugGuard.service.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
 import { guardSoldCompDoc } from "./splitIdentityWriteGuard.js";
@@ -1257,7 +1257,61 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
       }
     }
   }
-  const derived = deriveHobbyIqSlug({ ...input, pokemonChecklistNumberWidth: pokemonWidth });
+  // CF-AN-UMBRELLA-FOLD-NEEDS-THE-TITLE-NOT-THE-COLLAPSED-KEY (2026-09-19).
+  // Same async-pre-step-before-the-sync-derivation shape as the Pokemon width
+  // block just above: a per-row catalog question that deriveHobbyIqSlug (a
+  // synchronous function) cannot ask itself, resolved here and handed down as
+  // a plain field. See resolveProductByChecklist.ts's productTextForResolver
+  // for the v1 allow-list (upper-deck only) and why it is narrow.
+  //
+  // Reuses the SAME resolver persistVendorSalesToPool.service.ts calls (R29,
+  // "the checklist decides the product") rather than a second implementation:
+  // one seam, two writers. On any failure the input's own setName stands --
+  // absent beats wrong, and a catalog blip must never change what a sale is.
+  let umbrellaFoldedSetName: string | null = null;
+  {
+    const preSport = input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear);
+    const preCardNumber = (input.cardNumber && input.cardNumber.trim())
+      ? input.cardNumber.trim()
+      : extractCardNumberFromTitle(input.title);
+    if (input.setName && input.cardYear && preCardNumber) {
+      try {
+        const { productTextForResolver, resolveProductByChecklist, newResolveCache } =
+          await import("../catalog/resolveProductByChecklist.js");
+        const { getCatalogContainerForRead } = await import("../catalog/catalogMatcher.service.js");
+        const plainSetKey = resolveSetKeyForSlug(
+          normalizeSportStrict(preSport) ?? "", input.setName, input.cardYear,
+        );
+        // `plainSetKey` is already fully resolved -- `normalizeSetKey` on an
+        // already-canonical key is its own fixed point, the same round-trip
+        // persistVendorSalesToPool.service.ts relies on at its own call site.
+        const productText = productTextForResolver(plainSetKey, preSport, input.title, normalizeSetKey);
+        if (productText !== plainSetKey) {
+          const res = await resolveProductByChecklist(
+            {
+              productText,
+              year: input.cardYear,
+              cardNumber: preCardNumber,
+              player: input.playerName ?? null,
+              sport: preSport,
+              parsedSetKey: plainSetKey,
+            },
+            { container: await getCatalogContainerForRead(), cache: newResolveCache() },
+          );
+          if (res.setKey && res.setKey !== plainSetKey) umbrellaFoldedSetName = res.setKey;
+        }
+      } catch {
+        // The input's own setName stands. A catalog blip must not change
+        // what a sale is (same discipline as persistVendorSalesToPool's
+        // identical try/catch around this same resolver call).
+      }
+    }
+  }
+  const derived = deriveHobbyIqSlug({
+    ...input,
+    ...(umbrellaFoldedSetName ? { setName: umbrellaFoldedSetName } : {}),
+    pokemonChecklistNumberWidth: pokemonWidth,
+  });
   const { sportForSlug, cardNumberFinal, printRunFinal, guard } = derived;
   if (!guard.ok) {
     // Sampled — this fires on a meaningful slice of vendor rows and must

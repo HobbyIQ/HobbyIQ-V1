@@ -85,11 +85,13 @@ import {
   productParentOf,
   productSetKeys,
   productAncestry,
+  productRefinementsOf,
   isProductSetKey,
 } from "./productSetKeys.js";
 import {
   applySiblingChecklistOverride,
   siblingSetKeysToAlsoCheck,
+  slugify,
 } from "../portfolioiq/hobbyIqCardId.service.js";
 
 /** What the title says, normalized. Every field may be absent -- the resolver
@@ -344,6 +346,79 @@ async function someCandidateHasAChecklist(
  *   none holds it                         -> unknown, naming the near miss
  *   no candidate has any checklist        -> no-checklist + acquisition list
  */
+/**
+ * CF-AN-UMBRELLA-FOLD-NEEDS-THE-TITLE-NOT-THE-COLLAPSED-KEY (2026-09-19).
+ *
+ * THE DEFECT (found tracing why fresh, fully-spelled "Upper Deck Series 2"
+ * sales were still keying bare `upper-deck` after the deriver's Series-1/2/
+ * Extended vocabulary shipped). `candidateProducts` finds a registered
+ * product's CHILDREN too (via the parent chain, added at the bottom of that
+ * function) -- but only when the text it is given actually CONTAINS the
+ * child's words as a contiguous run of segments. Every caller of
+ * `resolveProductByChecklist` passes `canonicalNormalizeSetKey(setKey, sport)`
+ * as `productText` -- the setKey the vendor field or an upstream parser
+ * ALREADY DECIDED, which for a CardHedge/TCA row is often just `"upper-deck"`
+ * with no trace of "Series 2" ever having existed. Verified read-only:
+ * `candidateProducts(slugify("2023-24 Upper Deck Series 2 Young Guns"), 2024)`
+ * already returns `["upper-deck-series-2", "upper-deck"]` with ZERO code
+ * changes -- the resolver's own two-gate machinery (title names a candidate,
+ * checklist confirms the card number) was always capable of this. It was
+ * simply never handed a string that could name the child.
+ *
+ * WHAT THIS FUNCTION DOES. Returns the `productText` a caller should pass:
+ * the plain `canonicalNormalizeSetKey(setKey, sport)` UNCHANGED for every key
+ * outside the v1 allow-list below, and — for an allow-listed umbrella — the
+ * SLUGIFIED TITLE instead, so `candidateProducts` can see the series word the
+ * collapsed setKey lost. The two gates in `resolveProductByChecklist` are
+ * untouched by this: it only widens what `candidateProducts` is asked to
+ * search, never what counts as a match. Two series words in one title still
+ * come back as two candidates and the resolver's own tie-break still refuses
+ * (unless the #2064 override table breaks it); no checklist row at the child
+ * number still returns `unknown`/`no-checklist` and `setKey` stays on the
+ * umbrella, exactly as R29 already guarantees for every other input.
+ *
+ * WHY AN EXPLICIT ALLOW-LIST, NOT "every umbrella `productRefinementsOf`
+ * returns non-empty for". Measured against the live table (2026-09-19):
+ *
+ *   upper-deck      -> series-1, series-2, extended-series   (6 spellings)
+ *   topps           -> series-1, series-2, update-series, "topps-3"  (15)
+ *   topps-chrome    -> update-series, BEN BALLER, SONIC LITE  (8)
+ *   topps-heritage  -> high-number                             (4)
+ *
+ * `refines` is ALSO how this table records a NAMED EDITION that is not a
+ * series split at all -- `topps-chrome-ben-baller` and `topps-chrome-sonic-
+ * lite` are R64 (Drew, 2026-09-18) rulings that a limited retail edition is
+ * its own product, decided by a checklist-authorship question ("count by
+ * source"), not by a card-number-ladder question the way Series 1 vs 2 is.
+ * The table has no field today that tells the two classes apart -- treating
+ * every `refines` entry the same would apply an umbrella-fold rule built and
+ * tested against ONE ruling (D39, hockey Upper Deck series) to THREE others
+ * nobody asked this change to touch, two of which (`topps`, `topps-chrome`)
+ * are large enough and old enough that a title mis-read would move real
+ * money. So v1 is scoped to exactly the umbrella the evidence and the
+ * ruling are about, named here rather than derived, and every other
+ * `refines`-bearing umbrella is passed through completely unchanged --
+ * pinned by a test using a real Topps Chrome title. Widening this list to
+ * `topps` / `topps-chrome` / `topps-heritage` needs its own ruling per
+ * umbrella (which of their `refines` children are genuinely series-shaped)
+ * before it is safe, and is listed as a follow-up rather than done here.
+ */
+const UMBRELLA_FOLD_ALLOW_LIST: ReadonlySet<string> = new Set(["upper-deck"]);
+
+export function productTextForResolver(
+  setKey: string | null | undefined,
+  sport: string | null | undefined,
+  title: string | null | undefined,
+  normalize: (setKey: string, sport?: string | null) => string,
+): string {
+  const decided = normalize(String(setKey ?? ""), sport ?? null);
+  if (!UMBRELLA_FOLD_ALLOW_LIST.has(decided)) return decided;
+  if (productRefinementsOf(decided).length === 0) return decided;
+  const t = String(title ?? "").trim();
+  if (!t) return decided;
+  return slugify(t);
+}
+
 export async function resolveProductByChecklist(
   evidence: ProductEvidence,
   ctx: ResolveCtx,
