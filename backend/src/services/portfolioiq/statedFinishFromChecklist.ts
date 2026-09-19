@@ -1348,6 +1348,46 @@ export function statedFinishFromChecklist(
     if (!best || name.length > best.length) best = name;
   }
   if (!best) return null;
+  // TRIED AND BACKED OUT (2026-09-19, R66 PR 2 follow-up): "if the chosen
+  // answer is a strict token-subset of another name in the same
+  // product-year's parallels that the title ALSO fully states, prefer the
+  // longer name" -- implemented exactly as specified (promote `best` to a
+  // strictly longer, word-superset name from the SAME `productNames` list,
+  // gated on that longer name passing the identical `titleStatesName
+  // EludingProductWords` test this candidate loop already uses) and
+  // measured through `parseListingIdentity` on the full 20,840-row export:
+  // BYTE-IDENTICAL to without it (0 HARM, 31 GAIN, 24 DIFFERENT-NAMED, 4
+  // less-specific -- the same 4 rows, unchanged).
+  //
+  // WHY IT DID NOT FIRE ON EITHER RESIDUAL ROW, TRACED. Both supersets that
+  // would need to win are never "also fully stated" in the required sense:
+  //
+  //   "2024 Panini Obsidian ... Atomic Initials Purple /50" -- `best` here
+  //   is "Electric Etch Purple" (a real, separate checklist row on
+  //   SOCCER's own 2024 panini-obsidian list, present because `byProduct`
+  //   merges basketball+football+soccer's 2024 entries under one
+  //   sport-agnostic year|setKey key). The candidate one word longer,
+  //   "Electric Etch Purple Flood", is a DIFFERENT real row (basketball/
+  //   football's own) -- but "flood" is in neither the title nor this
+  //   product's elidable stock words, so it never passes the stated test
+  //   the rule requires before it will promote to it. The rule is correct
+  //   to refuse: nothing in this title supports "Flood" being the truth.
+  //
+  //   "2021 Panini Prizm ... Tier II Bronze Donut Circles /40" -- `best`
+  //   is already "Bronze Donut Circles Prizm" (the corpus's one and only
+  //   registered name) at the point this rule runs; "Prizm" is stripped
+  //   AFTER, by the later stock-word-respelling step
+  //   (CF-THE-SPELLING-IS-THE-RUNG), which is a different mechanism this
+  //   rule cannot and should not reach into. There is no unstated LONGER
+  //   sibling here to promote to -- the apparent "truncation" is this
+  //   module's own, separately-justified doctrine of dropping a stock word
+  //   the seller never wrote, not a candidate-selection defect.
+  //
+  // Left in the file as this comment rather than the code: a no-op change
+  // is not "the fix," and reintroducing dead code that never fires invites
+  // the next person to assume it does something. The 4 rows (2 distinct
+  // titles) stand as a documented residue -- see the PR body for the
+  // accepted rationale.
   // A SPORT WORD IS NEVER THE ANSWER (2026-09-13). Some products list a name
   // built from the sport ("Basketball Prizms", "Image Variation Basketball"),
   // and every title of that product states the sport -- so such a name matches
