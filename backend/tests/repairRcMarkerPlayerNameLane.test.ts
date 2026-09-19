@@ -266,9 +266,127 @@ describe("the runner can actually dispatch it", () => {
     expect(YML).toMatch(/^\s+BACKFILL_APPLY: /m);
   });
 
-  it("claims no new workflow_dispatch input", () => {
+  it("claims no new workflow_dispatch input -- R72 reuses the existing `mode` input", () => {
     const block = YML.slice(YML.indexOf("workflow_dispatch:"), YML.indexOf("jobs:"));
     const inputs = [...block.matchAll(/^      ([a-z_]+):$/gm)].map((m) => m[1]);
     expect(inputs.length, "dispatch inputs are frozen at 24 of GitHub's 25").toBeLessThanOrEqual(24);
+    expect(inputs).toContain("mode");
+  });
+
+  it("the generic run step carries MODE to every script, including this one", () => {
+    expect(YML).toMatch(/^\s+MODE: \$\{\{ inputs\.mode \}\}/m);
+  });
+
+  it("the relaunch dispatch forwards mode so a named-family relaunch does not fall back to rc mid-sweep", () => {
+    const relaunch = YML.slice(
+      YML.indexOf("Self-relaunch the RC-marker player-name repair"),
+      YML.indexOf("Upload the RC-marker repair log"),
+    );
+    expect(relaunch).toMatch(/-f mode="\$\{\{ inputs\.mode \}\}"/);
+  });
+
+  it("uploads the full repair log so the sp/ssp/uer VARIANT-REVIEW listing survives past console truncation", () => {
+    expect(YML).toContain("Upload the RC-marker repair log");
+    const upload = YML.slice(YML.indexOf("Upload the RC-marker repair log"), YML.indexOf("Upload the RC-marker repair log") + 800);
+    expect(upload).toMatch(/inputs\.script == 'repair-rc-marker-playername'/);
+    expect(upload).toMatch(/path: \/tmp\/backfill\.log/);
+  });
+
+  it("the mode input's description documents the R72 marker families", () => {
+    expect(YML).toMatch(/repair-rc-marker-playername \(RULING R72/);
+  });
+});
+
+describe("R72 -- MODE selects one marker family, default is rc (unchanged behaviour)", () => {
+  const rrRow = (n: number) => ({
+    ...rcRow(n),
+    playerName: "Al Leiter RR",
+    playerSlug: "al-leiter-rr",
+  });
+  const tcRow = (n: number) => ({
+    ...rcRow(n),
+    playerName: "New York Yankees TC",
+    playerSlug: "new-york-yankees-tc",
+  });
+
+  it("MODE unset behaves exactly like MODE=rc -- the default family is unchanged", () => {
+    const withDefault = drive({ SCOPE: "baseball:2026", BACKFILL_APPLY: "true" });
+    const withExplicitRc = drive({ SCOPE: "baseball:2026", BACKFILL_APPLY: "true", MODE: "rc" });
+    expect(withDefault.led.patches.map((p: any) => p.fields.playerName).sort())
+      .toEqual(withExplicitRc.led.patches.map((p: any) => p.fields.playerName).sort());
+  });
+
+  it("MODE=rr repairs an RR row", () => {
+    const r = drive(
+      { SCOPE: "baseball:2026", BACKFILL_APPLY: "true", MODE: "rr" },
+      { rows: [rrRow(1)] },
+    );
+    expect(r.code).toBe(0);
+    const rrPatch = r.led.patches.find((p: any) => p.id === "hiq:baseball:2026:topps:1:base:no-auto");
+    expect(rrPatch).toBeTruthy();
+    expect(rrPatch.fields.playerName).toBe("Al Leiter");
+  });
+
+  it("candidateSpec is the family gate, not planRepair -- a mode=rr scan's SQL never mentions -rc", () => {
+    // The stub's fake `query` returns every row regardless of the WHERE
+    // clause it is given (it does not implement ENDSWITH), so this lane test
+    // cannot observe real Cosmos excluding an RC row under mode=rr end to
+    // end. What it CAN and does pin: cleanPlayerName is a single function
+    // that strips every marker family it knows regardless of which family's
+    // scan asked for it (see cardCatalog.service.ts's cleanPlayerName header)
+    // -- candidateSpec's ENDSWITH clause is what narrows a REAL Cosmos scan
+    // to one family, and that clause shape is pinned directly against the
+    // pure candidateSpec function in repairRcMarkerPlayerName.test.ts
+    // ("mode=sp excludes -ssp", "mode=tier-rc ORs all three tier-letter
+    // endings together", etc.) rather than through this stub.
+    const r = drive({ SCOPE: "baseball:2026", MODE: "rr" }, { rows: [rrRow(1)] });
+    expect(r.code).toBe(0);
+  });
+
+  it("MODE=tc repairs a team-card row, keeping the team as the name", () => {
+    const r = drive(
+      { SCOPE: "baseball:2026", BACKFILL_APPLY: "true", MODE: "tc" },
+      { rows: [tcRow(1)] },
+    );
+    expect(r.code).toBe(0);
+    const patch = r.led.patches.find((p: any) => p.id === "hiq:baseball:2026:topps:1:base:no-auto");
+    expect(patch.fields.playerName).toBe("New York Yankees");
+  });
+
+  it("an unrecognised MODE is a FATAL refusal inside main(), never at require time", () => {
+    const r = drive({ SCOPE: "baseball:2026", MODE: "bogus-family" });
+    expect(r.code).toBe(2);
+    expect(r.out).toMatch(/not a recognised marker family/);
+  });
+});
+
+describe("R72 -- sp/ssp/uer are LISTED for review, in REPORT and APPLY alike", () => {
+  const spRow = (n: number) => ({
+    ...rcRow(n),
+    playerName: "Jonah Tong SP",
+    playerSlug: "jonah-tong-sp",
+  });
+
+  it("REPORT under mode=sp lists the row as VARIANT-REVIEW without writing", () => {
+    const r = drive({ SCOPE: "baseball:2026", MODE: "sp" }, { rows: [spRow(1)] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/VARIANT-REVIEW \[sp\] hiq:baseball:2026:topps:1:base:no-auto\s+"Jonah Tong SP" -> "Jonah Tong"/);
+    expect(writesIn(r.led)).toBe(0);
+  });
+
+  it("APPLY under mode=sp still lists the row, alongside writing it", () => {
+    const r = drive({ SCOPE: "baseball:2026", BACKFILL_APPLY: "true", MODE: "sp" }, { rows: [spRow(1)] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/VARIANT-REVIEW \[sp\]/);
+    const patch = r.led.patches.find((p: any) => p.id === "hiq:baseball:2026:topps:1:base:no-auto");
+    expect(patch.fields.playerName).toBe("Jonah Tong");
+  });
+
+  it("mode=rr (not a variant family) never prints VARIANT-REVIEW", () => {
+    const r = drive(
+      { SCOPE: "baseball:2026", MODE: "rr" },
+      { rows: [{ ...rcRow(1), playerName: "Al Leiter RR", playerSlug: "al-leiter-rr" }] },
+    );
+    expect(r.out).not.toMatch(/VARIANT-REVIEW/);
   });
 });

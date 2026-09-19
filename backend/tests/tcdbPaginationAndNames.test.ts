@@ -135,9 +135,22 @@ describe("defect 2 — team cards and multi-player cards are present with names"
     );
     const rows = readCsv(path.join(outDir, `tcdb-${result.productKey}.csv`));
     expect(rows.length).toBe(32);
-    // Plain-text name cell, no Person.cfm anchor on the page at all.
+    // Plain-text name cell, no Person.cfm anchor on the page at all. TCDB's
+    // own markup writes the trailing " TC" into this cell as plain text
+    // ("Algerie TC"); the row's TEAM-CARD-NESS is never read from that
+    // suffix anywhere downstream -- extractRowsFromPage (scrape-tcdb.cjs)
+    // decides "is this a team card" structurally, from the presence of a
+    // Team.cfm anchor and the absence of a Person.cfm anchor in the SAME row
+    // (see this file's `personAnchors.length > 0` branch), and the CSV's own
+    // `category` column ("insert-team-photos", passed to runScraper above)
+    // carries that fact independently of the player-name text. Nothing greps
+    // " TC" out of the name to derive a flag, so RULING R72 (owner,
+    // 2026-09-19) applies here exactly as everywhere else: a team card keeps
+    // the TEAM as its name, and the scraper's shared cleaner
+    // (scripts/lib/player-name.cjs -> cleanPlayerName) now strips the
+    // marker. "Algerie TC" -> "Algerie" is correct, not a name truncation.
     const algeria = rows.find((r) => r.cardNumber === "1");
-    expect(algeria?.player).toBe("Algerie TC");
+    expect(algeria?.player).toBe("Algerie");
     const usa = rows.find((r) => r.player.includes("United States"));
     expect(usa).toBeDefined();
   });
