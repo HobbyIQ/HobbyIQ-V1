@@ -319,11 +319,6 @@ async function queryPool(
     // subsystems have already tagged as bad-identity/bad-price. Matches
     // findNeighborComps line 187; catches the 39K cardsight $0.99
     // pollution and any other flaggedWrong rows across the pool.
-    //
-    // R70 (owner ruling, 2026-09-19): also drop rows PARKED by the write
-    // guard (`identityUnverified: true`) — the row's own identity is
-    // unverified, so it must not price this pool either. Same
-    // undefined-tolerant shape as the flaggedWrong clause above it.
     const { resources } = await container.items.query({
       query: `SELECT TOP ${POOL_ROW_CEILING} c.price, c.soldAt, c.source, c.parallel, c.autoStyle, c.gradeQualifier, c.url,
                      c.isAuto, c.printRun, c.gradeCompany, c.gradeValue, c.qualityFlags,
@@ -331,7 +326,6 @@ async function queryPool(
               FROM c
               WHERE ${whereClause} AND c.soldAt > @from${asOfIso ? " AND c.soldAt < @asOf" : ""}${sourceClause}
                 AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)
-                AND (NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified = false)
               ORDER BY c.soldAt DESC`,
       parameters: params,
     }, {
