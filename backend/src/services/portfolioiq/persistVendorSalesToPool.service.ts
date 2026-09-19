@@ -31,6 +31,7 @@ import { yearTheTitleAllows } from "./yearTheTitleAllows.js";
 import { extractYearFromTitle } from "./slugRederivation.service.js";
 import { canonicalizeParallelName, variationParallelsForCard, getCatalogContainerForRead } from "../catalog/catalogMatcher.service.js";
 import { resolveProductByChecklist, newResolveCache, productTextForResolver } from "../catalog/resolveProductByChecklist.js";
+import { resolveChecklistNumberedIngestId, newNumberedIngestCache } from "../catalog/resolveChecklistNumberedIngest.js";
 import { canonicalVariationName, pickVariationForMarker, reduceVariationStockToCatalog, variationNameFromSlug } from "../catalog/variationVocabulary.js";
 import { qualifiedSetKeyFromTitle } from "../catalog/productQualifiers.js";
 import { parseGradeFromTitle } from "./gradeParser.js";
@@ -1070,6 +1071,11 @@ export async function persistVendorSalesToPool(
   // card, and a batch is overwhelmingly repeats -- sharing the cache is what
   // keeps this a few hundred indexed reads instead of one per row.
   const productResolveCache = newResolveCache();
+  // ONE checklist-numbered-ingest cache for the whole batch, same reasoning
+  // as productResolveCache above: a batch repeats the same card's identity
+  // across many rows, so sharing the cache keeps this a few hundred indexed
+  // reads instead of one per row. See resolveChecklistNumberedIngest.ts.
+  const numberedIngestCache = newNumberedIngestCache();
 
   for (const row of rows) {
     const title = String(row.title ?? "").trim();
@@ -1600,6 +1606,54 @@ export async function persistVendorSalesToPool(
       result.skipped++;
       continue;
     }
+
+    // CF-AN-INGEST-TWIN-NEVER-OUTLIVES-ITS-FOLD (2026-09-19). See
+    // resolveChecklistNumberedIngest.ts. Runs REGARDLESS of
+    // CATALOG_MATCH_ONLY_ENABLED, unlike the canonicalize block below: this is
+    // not the fuzzy matcher, it is the same narrow authority rule the fold
+    // lane already enforces (pickChecklistNumberedTarget), so a vendor batch
+    // that never reaches canonicalize still gets the checklist's `:num-N`
+    // instead of re-deriving the twin the fold just retired. Only ever fires
+    // when the derived slug carries no print run of its own -- a title that
+    // stated one keeps it, right or wrong (absent beats wrong) -- and only
+    // ever ADDS the id when the catalog holds exactly one checklist-numbered
+    // row on this identity. Fails open onto the derived slug on any error.
+    if (!parsed.printRun) {
+      try {
+        const numberedId = await resolveChecklistNumberedIngestId(
+          {
+            slug,
+            sport,
+            year: cardYear,
+            setKey,
+            cardNumber: parsed.cardNumber,
+            parallelSlug: canonicalParallel,
+            isAuto: parsed.isAuto,
+            printRun: parsed.printRun ?? null,
+          },
+          { container: await getCatalogContainerForRead(), cache: numberedIngestCache },
+        );
+        if (numberedId && numberedId !== slug) {
+          console.log(JSON.stringify({
+            event: "persist_vendor_checklist_numbered_upgrade",
+            source: "persistVendorSalesToPool",
+            vendorSource: source,
+            computedSlug: slug,
+            resolvedSlug: numberedId,
+            detail: "un-numbered derived slug upgraded to the catalog's one checklist-numbered row",
+          }));
+          slug = numberedId;
+        }
+      } catch (err) {
+        // Fail open: the derived slug stands, same as before this upgrade existed.
+        console.warn(JSON.stringify({
+          event: "persist_vendor_checklist_numbered_upgrade_failed",
+          source: "persistVendorSalesToPool",
+          error: (err as Error)?.message ?? String(err),
+        }));
+      }
+    }
+
     // CF-CATALOG-MATCH-ONLY-RESOLVE (Drew, 2026-08-08 rev 2). The
     // catalog is curated — ingest MATCHES against it. Not just an exact-
     // slug check: RESOLVE via the fuzzy catalog matcher (canonicalize)

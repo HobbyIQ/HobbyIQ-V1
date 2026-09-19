@@ -1333,6 +1333,56 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   }
   let hobbyiqCardId = derived.slug;
 
+  // CF-AN-INGEST-TWIN-NEVER-OUTLIVES-ITS-FOLD (2026-09-19). See
+  // resolveChecklistNumberedIngest.ts for the full case: the fold lane
+  // deletes an un-numbered twin once its sales re-point onto the checklist's
+  // `:num-N` row, but the NEXT sale of that card derives the same short slug
+  // again unless something upgrades it here. Narrow and additive: only ever
+  // fires when the derived slug carries no print run of its own (a title
+  // that stated one keeps it, right or wrong -- absent beats wrong), and
+  // only ever ADDS the checklist's `:num-N` when the catalog holds exactly
+  // ONE checklist-numbered row on this identity. Same rule the fold lane
+  // enforces (`pickChecklistNumberedTarget`), read here rather than
+  // reimplemented. Fails open onto the derived slug on any error.
+  if (hobbyiqCardId && !printRunFinal && sportForSlug && input.cardYear) {
+    try {
+      const { resolveChecklistNumberedIngestId, newNumberedIngestCache } =
+        await import("../catalog/resolveChecklistNumberedIngest.js");
+      const { getCatalogContainerForRead } = await import("../catalog/catalogMatcher.service.js");
+      const numberedId = await resolveChecklistNumberedIngestId(
+        {
+          slug: hobbyiqCardId,
+          sport: sportForSlug,
+          year: input.cardYear,
+          setKey: derived.resolvedSetKey,
+          cardNumber: cardNumberFinal ?? "",
+          parallelSlug: input.parallel ?? null,
+          isAuto: input.isAuto ?? false,
+          printRun: printRunFinal,
+        },
+        { container: await getCatalogContainerForRead(), cache: newNumberedIngestCache() },
+      );
+      if (numberedId && numberedId !== hobbyiqCardId) {
+        console.log(JSON.stringify({
+          event: "recordcomp_checklist_numbered_upgrade",
+          source: "soldCompsStore.recordSoldComp",
+          vendorSource: input.source,
+          computedSlug: hobbyiqCardId,
+          resolvedSlug: numberedId,
+          detail: "un-numbered derived slug upgraded to the catalog's one checklist-numbered row",
+        }));
+        hobbyiqCardId = numberedId;
+      }
+    } catch (err) {
+      // Fail open: the derived slug stands, same as before this upgrade existed.
+      console.warn(JSON.stringify({
+        event: "recordcomp_checklist_numbered_upgrade_failed",
+        source: "soldCompsStore.recordSoldComp",
+        error: (err as Error)?.message ?? String(err),
+      }));
+    }
+  }
+
   // ── CF-ONE-IDENTITY-ONE-DERIVATION (D38, Drew 2026-08-30) ─────────────────
   //
   // THE cpa-jg SKIP. During the D37 backfill APPLY, an emit carrying the
