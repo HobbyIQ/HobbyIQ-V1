@@ -40,6 +40,12 @@ const SET_NAME = val("--set-name", "");
 const SPORT = val("--sport", "baseball");
 const OUT = val("--out", "");
 const SOURCE_URL = val("--source-url", "");
+// CF-BECKETT-S3-SOURCE-LABEL (2026-09-19). Optional, additive. Distinguishes
+// a checklist fetched directly from the S3 origin (beckett-www.s3.amazonaws.com)
+// via discoverBeckettS3Checklists.cjs from the same converter's other callers,
+// which read the img.beckett.com CDN URL discoverBeckettChecklists.cjs finds.
+// Defaults to "" so every existing caller's manifest is byte-identical.
+const SOURCE_LABEL = val("--source-label", "");
 // Only a direct run needs the CLI args; the classifier is also imported as a
 // module (see module.exports at the bottom) and must not exit on load.
 if (require.main === module && (!XLSX || !YEAR || !SET_KEY || !OUT)) {
@@ -136,6 +142,97 @@ const slug = (s) => String(s || "").toLowerCase()
   .normalize("NFKD").replace(/[^\w\s-]/g, "")
   .replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 
+// CF-BECKETT-CHECKLIST-IS-A-TITLE-ARTIFACT-NOT-A-NAME (2026-09-19). Many
+// Beckett workbooks title every Autographs/Inserts/Memorabilia section header
+// "<Set Name> Checklist" -- "Z Marquee Checklist", "Zoom Blue Checklist" -- but
+// the word names the PAGE, not the card set. Left in, it rode straight into the
+// category slug and the minted parallel/insert-set-key text
+// (`z-marquee-checklist`), which is what a registered insert-set key would then
+// carry verbatim forever.
+//
+// MEASURED, NOT GUESSED, on both committed fixtures: 2024 Panini Zenith
+// Football's Master sheet lists the same card sets WITHOUT the suffix ("Z
+// Marquee", never "Z Marquee Checklist") for every single Autographs/Inserts/
+// Memorabilia section -- 27 of 27 checked -- while its Base sheet's own
+// sections ("Base Set", "Rookies", "Rookie Patch Autographs") carry no suffix
+// AT ALL on either sheet or Master. 2024 Panini Photogenic Football's ten
+// Inserts sections and eight Autographs sections show the identical split.
+//
+// So this strips a trailing " Checklist" only when BOTH hold:
+//   (a) Master's own Card Set column states the same name WITHOUT the suffix
+//       (the authority for what the card set is actually called), or, when no
+//       Master sheet exists or does not carry this section, when
+//   (b) at least one OTHER section on the SAME sheet also carries the exact
+//       same suffix -- a sheet-wide title convention, measured from that
+//       sheet's own other headers, never assumed from one section alone.
+//
+// This is why a genuine "Team Checklist" insert (a card literally named that,
+// no sibling on its sheet titled the same way, and Master -- if present --
+// stating the same full name including the word) is never touched: neither
+// gate fires for a section that is alone in carrying the word, and Master's
+// own spelling always wins when it disagrees.
+function stripChecklistSuffix(section, siblingSectionNames, masterNames) {
+  const raw = String(section || "").trim();
+  const m = /^(.*\S)\s+Checklist$/i.exec(raw);
+  if (!m) return raw;
+  const bare = m[1];
+  // Master is the authority when it has an opinion at all.
+  if (masterNames && masterNames.size) {
+    if (masterNames.has(bare.toLowerCase())) return bare;
+    if (masterNames.has(raw.toLowerCase())) return raw;
+    // Master exists but names neither form for this section -- fall through to
+    // the sheet-wide sibling signal rather than guess from Master's silence.
+  }
+  const siblingsCarryIt = (siblingSectionNames || []).some((other) => {
+    if (other === raw) return false;
+    return /\sChecklist$/i.test(String(other || "").trim());
+  });
+  return siblingsCarryIt ? bare : raw;
+}
+
+/** Every distinct value in the Master sheet's first ("Card Set") column,
+ *  lower-cased, when the sheet exists and its header row is the expected
+ *  shape. Returns an empty Set (never null) so a caller with no Master sheet
+ *  degrades to the sibling-suffix signal alone rather than special-casing
+ *  "no Master" at every call site. */
+function masterCardSetNames(sheets) {
+  const rows = sheets["Master"];
+  const out = new Set();
+  if (!rows || !rows.length) return out;
+  const header = (rows[0] || []).map((c) => String(c || "").trim().toLowerCase());
+  if (!/^card\s*set$/i.test(header[0] || "")) return out;
+  for (const r of rows.slice(1)) {
+    const name = String((r || [])[0] || "").trim();
+    if (name) out.add(name.toLowerCase());
+  }
+  return out;
+}
+
+/** Every single-cell header row on one sheet, in the shape stripChecklistSuffix
+ *  needs to test "do this sheet's OTHER sections carry the same suffix" --
+ *  built once per sheet, cheaply, from the same non-empty/non-ladder test
+ *  main()'s own pass uses, so this never disagrees with what main() treats as
+ *  a section header. */
+function sheetSectionHeaderNames(rows) {
+  const out = [];
+  let inLadder = false;
+  for (const row of rows) {
+    if (!nonEmpty(row)) continue;
+    if (isCountLine(row)) continue;
+    if (nonEmpty(row) === 1 && row[0]) {
+      const cell = String(row[0]).trim();
+      if (LADDER_HEAD.test(cell)) { inLadder = true; continue; }
+      if (PLACEHOLDER.test(cell)) continue;
+      if (inLadder) { if (!parseRung(cell)) continue; else continue; }
+      out.push(cell);
+      inLadder = false;
+      continue;
+    }
+    inLadder = false;
+  }
+  return out;
+}
+
 // Roster sheets repeat every card already listed elsewhere, grouped a second
 // way. Including them ingests each card two or three times. Beckett names this
 // sheet inconsistently across products ('Team Sets' in Bowman Chrome, 'Teams'
@@ -225,7 +322,45 @@ function categoryFor(sheetName, section) {
   // fetchHobbyMonitorChecklist.cjs, the lane that reads its relics correctly,
   // already emits them. What was missing was never a field; it was the section
   // name, which the count-line and ladder defects below were deleting.
-  if (/^base\b|^prospects?\b/i.test(sheet)) return "base";
+  //
+  // CF-BECKETT-BASE-SHEET-IS-NOT-ONE-SECTION (2026-09-19). The line above
+  // tested the SHEET only, so it returned "base" for EVERY section printed on
+  // a tab named Base/Prospects, including subsets that are their own distinct
+  // card run and share the tab only because Beckett put them there — 2024
+  // Panini Zenith Football's Base tab carries three: "Base Set" (#1-100),
+  // "Rookies" (#101-200), and "Rookie Patch Autographs" (#201-242, SIGNED).
+  // categoryFor("Base", "Rookie Patch Autographs - #201-242") returned "base",
+  // which in classifySections makes the section an explicitAnchor — bypassing
+  // the extendsName title-containment guard entirely — AND sets isAuto=false
+  // on 100 cards Beckett's own Master sheet lists as autographed. This is the
+  // exact "categoryFor returned base for everything on the sheet" collapse
+  // CF-EVERY-INGEST-USES-THE-ONE-FORMAT (2026-08-26) documented for
+  // checklistinsider, now found natively in this converter: a sheet name is
+  // not a section.
+  //
+  // A whitelist of "what the plain run is called" is the wrong shape of fix —
+  // tried first, and it broke 2026 Topps Tier One, whose plain run is spelled
+  // "Base - Tier 1" / "Base - Tier 2" / "Base - Tier 3" (a tier-numbered
+  // three-way split with no single canonical name at all). Guessing every
+  // spelling a publisher might use for "this is the plain run" is the same
+  // unbounded-whitelist trap PLAIN_SECTION's own history already warns about.
+  //
+  // The one thing that is NEVER true of a plain, unsigned base/rookie/prospect
+  // run — on any Beckett workbook seen so far — is that its own section name
+  // says SIGNED. That is the one bit of section-name evidence this file can
+  // trust without a whitelist, and it is also the only bit whose absence
+  // caused real harm (isAuto=false on signed cards). So: stay permissive for
+  // every section on a Base/Prospects sheet EXCEPT one that names itself
+  // Autograph/Signed — that one is never the plain run, however plain its
+  // sheet's name is, and falls through to auto-<subset> below instead.
+  const sectionNorm = String(section || "").trim();
+  const looksSigned = /\bautograph|\bautographed\b|\bsign(ed|atures?)\b/i.test(sectionNorm);
+  if (/^base\b|^prospects?\b/i.test(sheet) && !looksSigned) return "base";
+  // A section on the Base/Prospects sheet that says SIGNED in its own name
+  // (Rookie Patch Autographs, Autographed Rookies, ...) is an auto subset that
+  // merely shares the tab with the plain run — never file it as "insert-" just
+  // because its SHEET's own name doesn't happen to say "Autograph" too.
+  if (looksSigned) return "auto-" + s;
   // Signed when the SHEET says signed. Autographed Relics is an autograph sheet
   // that happens to carry a swatch; the signature is what sets isAuto.
   if (/\bautograph|\bautographed\b|\bsign(ed|atures?)\b/i.test(sheet)) return "auto-" + s;
@@ -333,9 +468,26 @@ function classifySections(sections) {
       const ct = tokens(cand.section).map((t) => t.toLowerCase());
       return at.length > 0 && ct.length > at.length && at.every((t) => ct.includes(t));
     };
+    // CF-BECKETT-EXPLICIT-ANCHOR-IS-NOT-A-BLANK-CHEQUE (2026-09-19). The
+    // explicitAnchor branch above exists for "International Refractors" on
+    // 2026 Bowman Chrome — a real rung whose section header extends nothing
+    // ("Chrome Prospects" is not a token of it) and would otherwise never
+    // clear extendsName. But left unconditional it also cleared for 2024
+    // Panini Photogenic Football's "Avatars" / "Draft Snapshots" / "Troops
+    // Tribute" / seven more — genuinely independent named insert sets whose
+    // own numbering (1-10, 1-20) happens to be a SUBSET of Base Set's #1-100,
+    // so the numeric-overlap test alone found a 100% match and folded every
+    // one of them onto Base Set as a false parallel, the same "sheet name /
+    // explicitAnchor waives the containment guard" hole
+    // CF-BECKETT-BASE-SHEET-IS-NOT-ONE-SECTION already found and fixed for
+    // categoryFor. The bypass is only safe for a section that is ITSELF
+    // evidence of a finish/rung rather than a product name — FINISH_WORD
+    // already carries that vocabulary for ladder lines; a section header
+    // just is a longer line to test it against.
+    const looksLikeFinishName = (cand) => FINISH_WORD.test(cand.section);
     const candidates = anchors.filter((a) =>
       a !== sec && isAutoSection(a) === isAutoSection(sec) &&
-      (a.explicitAnchor || extendsName(sec, a)));
+      ((a.explicitAnchor && looksLikeFinishName(sec)) || extendsName(sec, a)));
     let best = null;
     for (const a of candidates) {
       const hit = [...sec.numbers].filter((n) => a.numbers.has(n)).length;
@@ -472,7 +624,11 @@ const PLACEHOLDER = /^(tba|n\/?a|none|list tba\.?|checklist tba\.?|coming soon)\
 // "100 cards.") is still refused, so this widens what counts as a rung without
 // inventing one -- no-synthetic-parallels holds, because every rung emitted is
 // a line the publisher printed.
-const FINISH_WORD = /refractor|prizm|foil|shimmer|wave|atomic|mojo|superfractor|parallel|logo|variation|sparkle|speckle|holo|disco|laser|pulsar|velocity|mini\s*diamond/i;
+// "fractor" (not just "refractor"/"superfractor" as literals) so the same
+// root covers Packfractor, which is neither -- CF-BECKETT-EXPLICIT-ANCHOR-IS-
+// NOT-A-BLANK-CHEQUE below reuses this vocabulary to test a SECTION HEADER,
+// not just a ladder line, and "Packfractor" failed the two-literal version.
+const FINISH_WORD = /fractor|prizm|foil|shimmer|wave|atomic|mojo|parallel|logo|variation|sparkle|speckle|holo|disco|laser|pulsar|velocity|mini\s*diamond/i;
 
 function parseRung(line) {
   const raw = String(line || "").trim();
@@ -513,6 +669,11 @@ function parseRung(line) {
 function main() {
   const files = readZip(fs.readFileSync(path.resolve(XLSX)));
   const sheets = sheetsByName(files);
+  // Master, when present, is the authority on a card set's real name (see
+  // CF-BECKETT-CHECKLIST-IS-A-TITLE-ARTIFACT-NOT-A-NAME above); an empty Set
+  // when absent, so every call site below degrades to the sibling-suffix
+  // signal alone rather than branching on "is there a Master sheet".
+  const masterNames = masterCardSetNames(sheets);
 
   // ---- pass 1: read every row, remembering which section it came from -----
   const records = [];
@@ -520,6 +681,10 @@ function main() {
   for (const [name, rows] of Object.entries(sheets)) {
     if (isSupersetSheet(name)) continue;
     let section = name;
+    // Every OTHER header on this sheet, computed once, so
+    // stripChecklistSuffix can ask "do this sheet's siblings carry the same
+    // suffix" without re-scanning the sheet per section.
+    const siblingSectionNames = sheetSectionHeaderNames(rows);
     // The ladder belongs to the section it sits under, and resets with it.
     let inLadder = false;
     let pendingLadder = [];
@@ -557,7 +722,7 @@ function main() {
           // recoverable; the section-name theft was not.
           continue;
         }
-        section = cell;
+        section = stripChecklistSuffix(cell, siblingSectionNames, masterNames);
         inLadder = false;
         pendingLadder = [];
         continue;
@@ -658,6 +823,7 @@ function main() {
   const manifest = {
     scrapedAt: new Date().toISOString(),
     sourceUrl: SOURCE_URL,
+    ...(SOURCE_LABEL ? { source: SOURCE_LABEL } : {}),
     sport: SPORT,
     year: YEAR,
     setName: SET_NAME || SET_KEY,
@@ -700,4 +866,7 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { classifySections, rungName, categoryFor, PLAIN_SECTION, parseRung, LADDER_HEAD, isSupersetSheet, isCountLine };
+module.exports = {
+  classifySections, rungName, categoryFor, PLAIN_SECTION, parseRung, LADDER_HEAD, isSupersetSheet, isCountLine,
+  stripChecklistSuffix, masterCardSetNames, sheetSectionHeaderNames,
+};

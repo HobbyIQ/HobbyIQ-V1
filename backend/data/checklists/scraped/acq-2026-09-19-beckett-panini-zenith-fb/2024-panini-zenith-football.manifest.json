@@ -1,0 +1,334 @@
+{
+  "scrapedAt": "2026-09-19T01:56:44.718Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/02/2024-Panini-Zenith-Football-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "football",
+  "year": 2024,
+  "setName": "2024 Panini Zenith Football",
+  "productKey": "2024-panini-zenith",
+  "setKey": "panini-zenith",
+  "rowCount": 5423,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Rookie Patch Autographs - #201-242",
+      "category": "auto-rookie-patch-autographs-201-242",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Base",
+      "section": "Rookies",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Rookie Patch Autographs",
+      "category": "auto-rookie-patch-autographs",
+      "cards": 38,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Two Minute Drill",
+      "category": "auto-base-autographs-two-minute-drill",
+      "cards": 49,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Red Zone",
+      "category": "auto-base-autographs-red-zone",
+      "cards": 17,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Red Red Zone",
+      "category": "auto-base-autographs-red-red-zone",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Contenders Optic Rookie Ticket RPS Preview Blue",
+      "category": "auto-contenders-optic-rookie-ticket-rps-preview-blue",
+      "cards": 36,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Contenders Optic Rookie Ticket Variation RPS Preview Blue",
+      "category": "auto-contenders-optic-rookie-ticket-variation-rps-preview-blue",
+      "cards": 36,
+      "role": "parallel",
+      "anchor": "Autographs>Contenders Optic Rookie Ticket RPS Preview Blue",
+      "rung": "Variation"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Contenders Optic Veteran Ticket Preview Blue",
+      "category": "auto-contenders-optic-veteran-ticket-preview-blue",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "High Point Signatures",
+      "category": "auto-high-point-signatures",
+      "cards": 26,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Pinnacle Inscriptions",
+      "category": "auto-pinnacle-inscriptions",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Pinnacle Inscriptions Silver",
+      "category": "auto-pinnacle-inscriptions-silver",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Patch Autographs Ice",
+      "category": "auto-rookie-patch-autographs-ice",
+      "cards": 37,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Two Minute Drill",
+      "category": "auto-rookies-autographs-two-minute-drill",
+      "cards": 59,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs No Huddle",
+      "category": "auto-rookies-autographs-no-huddle",
+      "cards": 63,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Red Zone Autographs",
+      "category": "auto-rookies-red-zone-autographs",
+      "cards": 62,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Red Zone Autographs Blue",
+      "category": "auto-rookies-red-zone-autographs-blue",
+      "cards": 64,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Red Zone Autographs Gold",
+      "category": "auto-rookies-red-zone-autographs-gold",
+      "cards": 69,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Red Zone Autographs Red",
+      "category": "auto-rookies-red-zone-autographs-red",
+      "cards": 62,
+      "role": "own-cards-UNNAMEABLE",
+      "anchor": "Autographs>Rookies Red Zone Autographs",
+      "note": "numbers match the anchor exactly but the section name yields no rung"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Red Zone Autographs White",
+      "category": "auto-rookies-red-zone-autographs-white",
+      "cards": 75,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z Summit Autographs",
+      "category": "auto-z-summit-autographs",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z Summit Autographs Blue",
+      "category": "auto-z-summit-autographs-blue",
+      "cards": 16,
+      "role": "parallel",
+      "anchor": "Autographs>Z Summit Autographs",
+      "rung": "Blue"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z Summit Autographs Gold",
+      "category": "auto-z-summit-autographs-gold",
+      "cards": 16,
+      "role": "parallel",
+      "anchor": "Autographs>Z Summit Autographs",
+      "rung": "Gold"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z Summit Autographs Red",
+      "category": "auto-z-summit-autographs-red",
+      "cards": 16,
+      "role": "parallel",
+      "anchor": "Autographs>Z Summit Autographs",
+      "rung": "Red"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z Summit Autographs White",
+      "category": "auto-z-summit-autographs-white",
+      "cards": 16,
+      "role": "parallel",
+      "anchor": "Autographs>Z Summit Autographs",
+      "rung": "White"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z-Graphs",
+      "category": "auto-z-graphs",
+      "cards": 36,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Z-Jersey Autographs",
+      "category": "auto-z-jersey-autographs",
+      "cards": 38,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Color Guard",
+      "category": "insert-color-guard",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Turning Pro Memorabilia",
+      "category": "insert-turning-pro-memorabilia",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Z Jersey",
+      "category": "insert-z-jersey",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Zoned In",
+      "category": "insert-zoned-in",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "A to Z",
+      "category": "insert-a-to-z",
+      "cards": 26,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Alphas",
+      "category": "insert-alphas",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Behind The Numbers",
+      "category": "insert-behind-the-numbers",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Chalk Talk",
+      "category": "insert-chalk-talk",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "First Look",
+      "category": "insert-first-look",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Idols",
+      "category": "insert-idols",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Splash",
+      "category": "insert-splash",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "State of the Art",
+      "category": "insert-state-of-the-art",
+      "cards": 24,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "The Shield",
+      "category": "insert-the-shield",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Z Marquee",
+      "category": "insert-z-marquee",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Z-Team",
+      "category": "insert-z-team",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Zoom Gold",
+      "category": "insert-zoom-gold",
+      "cards": 8,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Zoom Red",
+      "category": "insert-zoom-red",
+      "cards": 10,
+      "role": "own-cards"
+    }
+  ]
+}

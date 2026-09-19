@@ -1,0 +1,77 @@
+{
+  "generatedAt": "2026-09-19T01:35:04.840Z",
+  "hits": [
+    {
+      "url": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/12/2024-Panini-Prizm-Football-Checklist.xlsx",
+      "product": "2024-Panini-Prizm-Football",
+      "sport": "football",
+      "year": 2024,
+      "bytes": 764949,
+      "sha256": "5a5312ece0b4de031a9413e121ee509e7154b29682b602d6c3ae11658ade693c",
+      "fetchedAt": "2026-09-19T01:32:07.830Z"
+    },
+    {
+      "url": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/11/2024-Panini-Mosaic-Football-Checklist.xlsx",
+      "product": "2024-Panini-Mosaic-Football",
+      "sport": "football",
+      "year": 2024,
+      "bytes": 571312,
+      "sha256": "90370062ad0381cc201d964d15d224d86f33dd8792802a5d99c3279b0842ff6a",
+      "fetchedAt": "2026-09-19T01:32:23.727Z"
+    },
+    {
+      "url": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/02/2024-Panini-Zenith-Football-Checklist.xlsx",
+      "product": "2024-Panini-Zenith-Football",
+      "sport": "football",
+      "year": 2024,
+      "bytes": 228977,
+      "sha256": "62431e78b0ab7edb7170ce15e940189972b4618a688e2c2b5cbe09ac1391a927",
+      "fetchedAt": "2026-09-19T01:32:28.046Z"
+    },
+    {
+      "url": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/01/2024-Panini-Illusions-Football-Checklist.xlsx",
+      "product": "2024-Panini-Illusions-Football",
+      "sport": "football",
+      "year": 2024,
+      "bytes": 273351,
+      "sha256": "4685243ee64ada2c5c2a4a9b4e4c196a071e5d8d8e21f6729bd18b9d49eb58b8",
+      "fetchedAt": "2026-09-19T01:32:29.154Z"
+    },
+    {
+      "url": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/01/2024-Panini-PhotoGenic-Football-Checklist.xlsx",
+      "product": "2024-Panini-Photogenic-Football",
+      "sport": "football",
+      "year": 2024,
+      "bytes": 124698,
+      "sha256": "ce772bfc5c75bc031c93e9b5c19c695634141ec67e85cd192bb07d0079872cca",
+      "fetchedAt": "2026-09-19T01:32:36.601Z"
+    },
+    {
+      "url": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/04/2024-Panini-Phoenix-Football-Checklist.xlsx",
+      "product": "2024-Panini-Phoenix-Football",
+      "sport": "football",
+      "year": 2024,
+      "bytes": 563272,
+      "sha256": "462a2494b46e70af5005e1365f538dc03bbe9f33197da003c340c1edf12e994e",
+      "fetchedAt": "2026-09-19T01:32:39.888Z"
+    },
+    {
+      "url": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/10/2025-Panini-Mosaic-Football-Checklist.xlsx",
+      "product": "2025-Panini-Mosaic-Football",
+      "sport": "football",
+      "year": 2025,
+      "bytes": 681940,
+      "sha256": "597bf68e19e996a9ec7255569607e05b81913d8acbd89bd3606fa17280e2c812",
+      "fetchedAt": "2026-09-19T01:33:07.231Z"
+    },
+    {
+      "url": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/02/2025-Panini-PhotoGenic-Football-Checklist.xlsx",
+      "product": "2025-Panini-Photogenic-Football",
+      "sport": "football",
+      "year": 2025,
+      "bytes": 178974,
+      "sha256": "ec1761a688ac48071b7f051b70894f172c66459d162c9a39f357b15dd914f238",
+      "fetchedAt": "2026-09-19T01:33:29.768Z"
+    }
+  ]
+}

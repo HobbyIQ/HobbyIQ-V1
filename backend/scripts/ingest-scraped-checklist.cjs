@@ -18,6 +18,28 @@ const {
   deriveCatalogEntry,
   upsertCatalogEntry,
 } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
+const { computeHobbyIqCardId, normalizeSetKey } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+// CF-A-SECOND-INGESTER-IS-A-SECOND-SET-OF-RULES (2026-09-19). This script
+// minted every row on `manifest.setKey` verbatim -- no insert-set separation,
+// no id-collision guard, no unregistered-key refusal -- while
+// ingest-checklist-csv-to-catalog.cjs, reading the SAME CSV contract, refuses
+// on exactly those two things via lib/insert-set-key.cjs. Two ingesters
+// disagreeing about what a row's ADDRESS is IS the defect
+// CF-ONE-DERIVATION-OR-TWO-CENSUSES (in that module's own comments) exists to
+// end, and it was live: a Beckett S3 Zenith Football conversion measured 646
+// real id-collisions across 34 unregistered insert-set keys that this script's
+// old code would have upserted over each other silently, one write per second
+// on a shared source label. This is why "0 refused" from this script was never
+// a green measurement -- there was no refusal path to trip.
+//
+// planFile is the SAME module ingest-checklist-csv-to-catalog.cjs calls, run
+// here with the manifest's own setKey as the product key. A file with no
+// same-numbered clash (the shape every HobbyMonitor product staged so far
+// takes -- one set per file, one numbering run) computes `separate` as empty
+// and plans every row onto the plain product key, UNCHANGED from what this
+// script always did. Nothing here narrows what already worked; it only
+// refuses what was silently colliding.
+const INSERT_SET = require(path.join(__dirname, "lib", "insert-set-key.cjs"));
 
 function parseCsv(text) {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0 && !l.startsWith("#"));
@@ -48,6 +70,60 @@ async function main() {
   console.log(`▸ ${APPLY ? "APPLY" : "DRY-RUN"}  csv=${csvPath}  rows=${rows.length}`);
   console.log(`  product: ${manifest.setName} (${manifest.year}, ${manifest.sport})`);
   console.log(`  source URL: ${manifest.sourceUrl}`);
+
+  // CF-A-SECOND-INGESTER-IS-A-SECOND-SET-OF-RULES. Measure the SAME address
+  // every row below will compute, before writing a single one. `computeId`
+  // mirrors this script's own per-row derivation (below) exactly enough for
+  // the guard to agree with the write it is guarding: category ->
+  // (parallel, isAuto), the one piece the two derivation branches disagree on.
+  const productSetKey = String(manifest.setKey || manifest.setName || "").trim();
+  const parallelColumnAuthoritative = manifest.parallelColumnAuthoritative === true;
+  const PLAIN_SECTION_FOR_PLAN = /^(base[- ]?set|base|chrome[- ]prospects?|base[- ]prospects?|prospects?|chrome[- ]prospect[- ]autographs?|rookie[- ]autographs?|chrome[- ]rookie[- ]autographs?)$/;
+  const sectionLabelForPlan = (slug) => slug
+    .replace(/^(insert|auto)-/, "")
+    .split("-").filter(Boolean)
+    .map((w) => (w.length <= 2 ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1)))
+    .join(" ");
+  function planRowShape(row) {
+    const cat = String(row.category || "").toLowerCase();
+    if (parallelColumnAuthoritative) {
+      return { category: cat, cardNumber: row.cardNumber, parallel: String(row.parallel || "").trim(), isAuto: cat.startsWith("auto-") };
+    }
+    let parallel = "";
+    let isAuto = false;
+    if (cat.startsWith("insert-")) {
+      const label = sectionLabelForPlan(cat);
+      if (!PLAIN_SECTION_FOR_PLAN.test(label.toLowerCase())) parallel = label;
+    } else if (cat.startsWith("auto-")) {
+      isAuto = true;
+      const label = sectionLabelForPlan(cat);
+      if (!PLAIN_SECTION_FOR_PLAN.test(label.toLowerCase())) parallel = label;
+    }
+    return { category: cat, cardNumber: row.cardNumber, parallel, isAuto };
+  }
+  const computeIdForPlan = (r) => computeHobbyIqCardId({
+    sport: manifest.sport, year: manifest.year, setKey: r.setKey, cardNumber: r.cardNumber,
+    parallel: r.parallel || "Base", isAuto: !!r.isAuto, printRun: null, authoritativeSetKey: true,
+  });
+  const planRows = rows.map(planRowShape).filter((r) => r.category === "base" || r.category.startsWith("insert-") || r.category.startsWith("auto-"));
+  const plan = INSERT_SET.planFile({ rows: planRows, productSetKey, computeId: computeIdForPlan, normalize: normalizeSetKey });
+  if (plan.verdict === "refuse") {
+    console.error(`\n!! REFUSED ${csvPath} — ${plan.reason}`);
+    if (plan.reason === "unregistered-set-keys") {
+      console.error(`   ${plan.unregistered.length} insert-set key(s) this product needs are not yet normalizeSetKey fixed points:`);
+      for (const u of plan.unregistered.slice(0, 20)) {
+        console.error(`     ${u.setKey}  rows=${u.rows}  categories=${u.categories.slice(0, 2).join(", ")}${u.resolvesTo ? `  (resolves to "${u.resolvesTo}" -- would silently fold there, not refuse, if registered as-is)` : ""}`);
+      }
+      console.error(`   Register each in productSetKeys.ts + hobbyIqCardId.service.ts before re-running (see ingest-checklist-csv-to-catalog.cjs's own refusal for the pattern), then re-run.`);
+    } else if (plan.reason === "id-collisions") {
+      console.error(`   ${plan.collisions.length} address(es) claimed by more than one row:`);
+      for (const c of plan.collisions.slice(0, 10)) console.error(INSERT_SET.formatCollision(c));
+    }
+    console.error(`   NO ROWS WRITTEN. The unit of refusal is the whole file -- a partial write here would leave some subsets minted on the flagship key and others not, indistinguishable from success.`);
+    process.exit(1);
+  }
+  const finalIdFor = INSERT_SET.finalIdFor({ productSetKey, separate: plan.separate, foldRungs: plan.foldRungs }, computeIdForPlan);
+  const setKeyFor = (row) => INSERT_SET.setKeyForRow({ productSetKey, category: String(row.category || "").toLowerCase(), parallel: row.parallel, subsetName: row.subsetName, separate: plan.separate, foldRungs: plan.foldRungs });
 
   let base = 0, insertBase = 0, autoBase = 0, wrote = 0, failed = 0, skipped = 0;
   const preview = [];
@@ -138,13 +214,22 @@ async function main() {
     // written before the column existed simply has none, and blank stays
     // unknown. See backend/docs/reference/checklist-csv-contract.md.
     const rarity = row.rarity && row.rarity.trim() ? row.rarity.trim() : null;
-    // Canonicalize setKey from manifest (setName is display-only; passing
-    // it as setKey stores an un-normalized value that breaks setKey
-    // filters even though the slug computation strips the year).
+    // CF-A-SECOND-INGESTER-IS-A-SECOND-SET-OF-RULES. The plan already measured
+    // this file at the top of main() and either refused or approved it. A
+    // "pass" file's own `separate` set is, for the overwhelming majority of
+    // staged checklists (one set per file, one numbering run — everything
+    // HobbyMonitor has staged so far), EMPTY: setKeyFor then returns the plain
+    // product key for every row, unchanged from what this script always
+    // computed. Only a same-numbered clash moves a row onto its own
+    // `<product>-<insert>` key, and only a measured colour rung's own name
+    // rides the parallel axis instead of the key.
+    const { setKey: rowSetKey } = setKeyFor({ category: cat, parallel, subsetName: row.subsetName });
+    const rungFold = INSERT_SET.parallelForRow({ category: cat, parallel, subsetName: row.subsetName, foldRungs: plan.foldRungs });
+    if (rungFold) parallel = rungFold;
     const entry = deriveCatalogEntry({
       sport: manifest.sport,
       year: manifest.year,
-      setKey: manifest.setKey || manifest.setName,
+      setKey: rowSetKey || manifest.setKey || manifest.setName,
       // The publisher's own product name, so the row's search text and display
       // name lead with what a person would actually type. deriveCatalogEntry
       // builds both now (CF-DERIVE-BUILDS-ITS-OWN-SEARCH-FIELDS); without a

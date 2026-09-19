@@ -1,0 +1,149 @@
+{
+  "scrapedAt": "2026-09-19T01:56:54.660Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/01/2024-Panini-PhotoGenic-Football-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "football",
+  "year": 2024,
+  "setName": "2024 Panini Photogenic Football",
+  "productKey": "2024-panini-photogenic",
+  "setKey": "panini-photogenic",
+  "rowCount": 3896,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 150,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Rookie Portrait",
+      "category": "base",
+      "cards": 50,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs",
+      "category": "auto-base-autographs",
+      "cards": 61,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Silver Autographs",
+      "category": "auto-base-silver-autographs",
+      "cards": 49,
+      "role": "parallel",
+      "anchor": "Autographs>Base Autographs",
+      "rung": "Silver"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "In the Action Autographs",
+      "category": "auto-in-the-action-autographs",
+      "cards": 29,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Instants Signatures",
+      "category": "auto-rookie-instants-signatures",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Photo Bomb Autographs",
+      "category": "auto-rookie-photo-bomb-autographs",
+      "cards": 8,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Portrait Autographs",
+      "category": "auto-rookie-portrait-autographs",
+      "cards": 36,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Snapshots Autographs",
+      "category": "auto-snapshots-autographs",
+      "cards": 37,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "A Different View",
+      "category": "insert-a-different-view",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Avatars",
+      "category": "insert-avatars",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Draft Snapshots",
+      "category": "insert-draft-snapshots",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "For the Cure",
+      "category": "insert-for-the-cure",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "In-Motion",
+      "category": "insert-in-motion",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Progressions",
+      "category": "insert-progressions",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Rookie Introductions",
+      "category": "insert-rookie-introductions",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Rookie Pix",
+      "category": "insert-rookie-pix",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "The Shoe Game",
+      "category": "insert-the-shoe-game",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Troops Tribute",
+      "category": "insert-troops-tribute",
+      "cards": 10,
+      "role": "own-cards"
+    }
+  ]
+}
