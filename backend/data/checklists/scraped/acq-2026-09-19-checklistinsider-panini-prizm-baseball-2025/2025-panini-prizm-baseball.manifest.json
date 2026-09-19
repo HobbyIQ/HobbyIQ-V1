@@ -1,0 +1,23 @@
+{
+  "scrapedAt": "2026-09-19T12:00:00.000Z",
+  "sourceUrl": "https://xcdn.checklistinsider.com/public/2025/09/2025-Panini-Prizm-Baseball-Checklist-Downloads-Excel-spreadsheet-2.xlsx",
+  "source": "checklistinsider-2026-09-19",
+  "sha256": "5f21329a806aca311fb362ddb80dd0ad5680b8eb8cabec6109d87fc3a758aefd",
+  "articleUrl": "https://www.checklistinsider.com/2025-panini-prizm-baseball",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Panini Prizm",
+  "productKey": "2025-panini-prizm",
+  "setKey": "panini-prizm",
+  "rowCount": 9900,
+  "readyToIngest": false,
+  "note": "TARGET 3. The only committed artifact for this product-year, backend/data/checklists/hand-fetched/parallels-2025-panini-prizm-baseball.json, is a VOCABULARY list (name + printRun pairs, appliesTo tag) with no card numbers -- it cannot mint catalog rows by itself. This file is the actual per-card checklist: checklistinsider.com's own downloadable XLSX, a flat 13,484-row sheet (CARD SET | CARD # | ATHLETE | TEAM | SEQ) covering every subset (Base, Dingers!, Fireworks, Prizmatic, Legendary Signatures, etc.) at every Prizm color. This CSV converts ONLY the 'Base' and 'Base Prizms <Color>' CARD SET rows (300 base + 9,600 colored-parallel rows = 9,900) -- the flagship numbered checklist and its full Prizm color ladder, which is the actual acquisition target (classified-final.json's sample sale is plain '#353 Base'). The other 143 CARD SET values (inserts, autos, multi-player Legendary Dual Autographs, etc.) are intentionally left unconverted this pass -- not restaged, not guessed.",
+  "verification": "Spot-checked against the live page (checklistinsider.com/2025-panini-prizm-baseball, fetched 2026-09-19) verbatim for cards #1-219 and the full parallels list: names, teams and print runs match exactly (e.g. #1 Kristian Campbell, #26 Aaron Judge; Red Prizms /299, Blue Prizms /199, Purple Prizms /149, Black Finite Prizms 1/1). The XLSX's SEQ column (print run) is internally consistent per parallel across all 300 cards -- one value per color, no exceptions found.",
+  "converterUsed": "one-off script written for this pass, C:/tmp/convertChecklistInsiderXlsx.cjs (not committed -- checklistinsider's flat CARD-SET-column shape is unlike Beckett's sectioned-sheet xlsx, so convertBeckettChecklistXlsx.cjs does not apply). Logic: CARD SET=='Base' -> category=base, parallel blank; CARD SET starts with 'Base Prizms ' -> category=base, parallel='<Color> Prizm'; every other CARD SET value skipped. SEQ copied to printRun only when purely numeric.",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run read-only against this file): 9,900 batch rows, 9,900 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys.",
+  "newVsExisting": {
+    "method": "The hand-fetched vocabulary JSON has no card numbers, so every (cardNumber, parallel) cell in this CSV is NEW relative to what a checklist ingest could previously mint for this product-year -- the vocabulary only ever helped a spelling-normalizer, it never wrote a row.",
+    "newCells": 9900,
+    "existingCellsUnchanged": 0
+  }
+}
