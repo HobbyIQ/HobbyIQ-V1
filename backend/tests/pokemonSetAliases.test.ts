@@ -17,7 +17,10 @@
 // the set.
 
 import { describe, it, expect } from "vitest";
-import { computeHobbyIqCardId } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
+import {
+  computeHobbyIqCardId,
+  resolveSetKeyForSlug,
+} from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 import { POKEMON_SET_ALIASES } from "../src/services/catalog/pokemonSetAliases.js";
 
 const slugFor = (setKey: string, opts: { sport?: string; year?: number; cardNumber?: string } = {}) =>
@@ -80,5 +83,61 @@ describe("CF-POKEMON-CHECKLISTS — set-name aliases converge on the TCG set id"
       expect(id).toMatch(/^[a-z0-9-]+$/);
       expect(id).not.toMatch(/^(?:19|20)\d{2}-/);
     }
+  });
+});
+
+// CF-A-VENDOR-CAN-DROP-THE-CODE-A-CHECKLIST-NEVER-DROPS (2026-09-19).
+//
+// CardHedge's setName for a Black Star Promos product drops the era code that
+// every tcgdex set name embeds ("SVP Black Star Promos"), so its own spelling
+// ("2023 Pokemon Scarlet & Violet Black Star Promos") never resolved through
+// the generated table and those sales sat on `hiq:pokemon:2023:unknown:*`.
+// setkey-reconciliation.json shows 38,652 real pool rows at exactly that
+// address. This block pins the fix and its boundaries.
+describe("CF-A-VENDOR-CAN-DROP-THE-CODE-A-CHECKLIST-NEVER-DROPS — codeless promo spellings", () => {
+  it("the CardHedge Scarlet & Violet Black Star Promos spelling resolves to svp", () => {
+    expect(resolveSetKeyForSlug("pokemon", "2023 Pokemon Scarlet & Violet Black Star Promos", 2023))
+      .toBe("svp");
+    // Prior years CardHedge emits under the same codeless spelling (measured:
+    // 2024 and 2025 in setkey-reconciliation.json) must resolve identically.
+    expect(resolveSetKeyForSlug("pokemon", "2024 Pokemon Scarlet & Violet Black Star Promos", 2024))
+      .toBe("svp");
+    expect(resolveSetKeyForSlug("pokemon", "2025 Pokemon Scarlet & Violet Black Star Promos", 2025))
+      .toBe("svp");
+  });
+
+  it("the Sword & Shield sibling of the same shape resolves to swshp", () => {
+    expect(resolveSetKeyForSlug("pokemon", "2019 Pokemon Sword & Shield Black Star Promos", 2019))
+      .toBe("swshp");
+  });
+
+  it("a Japanese title never lands on the English promo code", () => {
+    // "Japanese" in the setName routes through the JA vocabulary before this
+    // table is ever consulted (CF-THE-JAPANESE-CODE-IS-THE-KEY) — a Japanese
+    // promo sale must never resolve to the English svp/swshp code merely
+    // because it shares the "Black Star Promos" words.
+    expect(resolveSetKeyForSlug("pokemon", "2023 Pokemon Japanese Scarlet & Violet Black Star Promos", 2023))
+      .not.toBe("svp");
+    expect(resolveSetKeyForSlug("pokemon", "2019 Pokemon Japanese Sword & Shield Black Star Promos", 2019))
+      .not.toBe("swshp");
+  });
+
+  it("an unresolved name still returns unknown rather than a guessed code", () => {
+    // The ambiguous BARE "Black Star Promos" spelling (no series word) is
+    // deliberately not in the table — every promo-era set shares that name —
+    // so it must fall through to a slug, never silently pick one era's code.
+    const slug = resolveSetKeyForSlug("pokemon", "2023 Pokemon Black Star Promos", 2023);
+    expect(slug).not.toBe("svp");
+    expect(["svp", "swshp", "bwp", "smp", "dpp", "hgssp", "np", "basep", "mep", "xyp"])
+      .not.toContain(slug === "black-star-promos" ? "__never__" : slug);
+  });
+
+  it("the four unproven codeless promo siblings are still absent (documented, not guessed)", () => {
+    // Same mechanical gap as svp/swshp — proven code and series name — but no
+    // committed sighting of the exact vendor spelling, so left unadded.
+    expect(POKEMON_SET_ALIASES["diamond-pearl-black-star-promos"]).toBeUndefined();
+    expect(POKEMON_SET_ALIASES["heartgold-soulsilver-black-star-promos"]).toBeUndefined();
+    expect(POKEMON_SET_ALIASES["black-white-black-star-promos"]).toBeUndefined();
+    expect(POKEMON_SET_ALIASES["sun-moon-black-star-promos"]).toBeUndefined();
   });
 });
