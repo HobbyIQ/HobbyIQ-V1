@@ -58,17 +58,23 @@ function shim(opts: {
   catalog?: Array<Record<string, unknown>>;
   sales?: Array<Record<string, unknown>>;
   portfolio?: Array<Record<string, unknown>>;
+  /** Sale ROW IDS whose sold_comps upsert must throw -- deterministically
+   *  simulating a relocation failure (a network error, a throttled write)
+   *  without depending on the real guard's exact malformed-input behaviour. */
+  failSalesUpsertForIds?: string[];
 } = {}): { requirePath: string; ledger: string } {
   const ledger = path.join(tmp, `ledger-${Math.random().toString(36).slice(2)}.json`);
   const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
   const catalog = opts.catalog ?? [];
   const sales = opts.sales ?? [];
   const portfolio = opts.portfolio ?? [];
+  const failSalesUpsertForIds = opts.failSalesUpsertForIds ?? [];
 
   fs.writeFileSync(p, `
 const Module = require("node:module");
 const fs = require("node:fs");
 const LEDGER = ${JSON.stringify(ledger)};
+const FAIL_SALES_UPSERT_FOR_IDS = new Set(${JSON.stringify(failSalesUpsertForIds)});
 
 const state = {
   catalog: new Map(${JSON.stringify(catalog)}.map((d) => [d.id, d])),
@@ -105,6 +111,9 @@ function makeContainer(name, store, onUpsert, onDelete, onPatch) {
     }),
     items: {
       upsert: async (doc) => {
+        if (name === "sold_comps" && FAIL_SALES_UPSERT_FOR_IDS.has(doc.id)) {
+          throw new Error("simulated upsert failure for " + doc.id);
+        }
         store.set(doc.id, structuredClone(doc));
         if (onUpsert) onUpsert(doc);
         return { resource: structuredClone(doc) };
@@ -259,7 +268,9 @@ describe("rekey-catalog-id-to-setkey -- REPORT writes nothing", () => {
     );
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/REPORT ONLY -- nothing is written/);
-    expect(r.out).toMatch(/would move\s+1/);
+    expect(r.out).toMatch(/WOULD MOVE\s+1/);
+    // SHOULD-FIX 4: REPORT never contains the APPLY-only relaunch count line.
+    expect(r.out).not.toMatch(/^\s*MOVED\s+\d/m);
     expect(r.led.catalogUpserts.length).toBe(0);
     expect(r.led.catalogDeletes.length).toBe(0);
   });
@@ -332,6 +343,45 @@ describe("rekey-catalog-id-to-setkey -- APPLY moves the row", () => {
     expect(r.led.portfolioPatches.some((p: any) => p.id === "p1")).toBe(true);
     expect(r.out).toMatch(/holdings re-pointed\s+1/);
   });
+
+  // ── SHOULD-FIX 3 (review): a real `:sub-<name>:` id, only segment 3 changes.
+  it("moves a row with a `:sub-<name>:` segment, preserving it and every later segment byte-for-byte", () => {
+    const SUB_OLD = "hiq:hockey:2024:upper-deck:sub-young-guns:201:base:no-auto";
+    const SUB_NEW = "hiq:hockey:2024:upper-deck-extended-series:sub-young-guns:201:base:no-auto";
+    const row = UMBRELLA_ROW("201", { id: SUB_OLD, cardId: SUB_OLD, hobbyiqCardId: SUB_OLD });
+    const r = drive(
+      { SCOPE: "hockey:2024", SET_KEYS: "upper-deck-extended-series", BACKFILL_APPLY: "true" },
+      { catalog: [row], portfolio: [{ id: "p1", userId: "u1", holdings: {} }] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.catalogUpserts).toContain(SUB_NEW);
+    expect(r.led.catalogDeletes).toContain(SUB_OLD);
+  });
+
+  // ── BLOCKER 1 (review): a failed partition-keyed relocation keeps the old
+  // row -- moveCatalogRow refuses the delete, and this lane counts it FAILED.
+  it("counts a failed sale relocation as FAILED and keeps the old catalog row (never deletes it)", () => {
+    const parent = UMBRELLA_ROW("12");
+    const saleRow = { id: "s-broken", cardId: OLD_ID("12"), hobbyiqCardId: OLD_ID("12"), price: 10, parallel: "Base", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2024-01-01" };
+    const r = drive(
+      { SCOPE: "hockey:2024", SET_KEYS: "upper-deck-extended-series", BACKFILL_APPLY: "true" },
+      {
+        catalog: [parent], sales: [saleRow], portfolio: [{ id: "p1", userId: "u1", holdings: {} }],
+        // Deterministically fail the relocation's upsert step -- simulating a
+        // crash/network error mid-relocation without depending on the real
+        // guard's malformed-input behaviour.
+        failSalesUpsertForIds: ["s-broken"],
+      },
+    );
+    expect(r.code).not.toBe(0);
+    // The old catalog row must NOT have been deleted -- moveCatalogRow itself
+    // refused the delete because relocateSales reported failure.
+    expect(r.led.catalogDeletes).not.toContain(OLD_ID("12"));
+    // Nor was the survivor's upsert wasted: the catalog row still exists at
+    // the new address (safe on its own), it is only the delete that was held.
+    expect(r.led.catalogUpserts).toContain(NEW_ID("12"));
+    expect(r.out).toMatch(/FAILED sale relocation/);
+  });
 });
 
 describe("rekey-catalog-id-to-setkey -- refusals, listed by reason", () => {
@@ -378,6 +428,48 @@ describe("rekey-catalog-id-to-setkey -- refusals, listed by reason", () => {
     expect(plan.action).toBe("skip");
     expect(plan.reason).toBe("already-matches");
     expect(idParts(NEW_ID("14"))![3]).toBe("upper-deck-extended-series");
+  });
+
+  // ── SHOULD-FIX 5 (review): a one-level-drift-only lane refuses (rather than
+  // silently moves) a row whose id segment is neither the target nor its
+  // registered parent. The real candidate query cannot produce this shape
+  // either (STARTSWITH already pins segment 3 to the umbrella), so this is
+  // pinned directly against planRow -- the same reasoning as the
+  // already-matches test immediately above.
+  it("refuses (not-one-level-drift) a row whose id segment is neither the target nor its registered parent", () => {
+    const { planRow } = require(LANE);
+    const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+    const { productSetKeys, productParentOf } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
+    const deps = {
+      catalogAuthorityOf, registeredSetKeys: new Set(productSetKeys()),
+      expectedIdSegment: productParentOf("upper-deck-extended-series"), // "upper-deck"
+    };
+    // A row whose id segment names some THIRD product -- not the target
+    // ("upper-deck-extended-series") and not the target's parent ("upper-deck").
+    const driftedRow = {
+      id: "hiq:hockey:2024:o-pee-chee:12:base:no-auto",
+      cardId: "hiq:hockey:2024:o-pee-chee:12:base:no-auto",
+      setKey: "upper-deck-extended-series",
+      source: "checklistinsider-2026-08-27",
+    };
+    const plan = planRow(driftedRow, deps);
+    expect(plan.action).toBe("refuse");
+    expect(plan.reason).toBe("not-one-level-drift");
+    expect(plan.detail).toMatch(/neither the target .* nor its registered parent/);
+  });
+
+  it("planRow without expectedIdSegment (no deps.expectedIdSegment) does not apply the one-level-drift check -- callers that supply it opt in", () => {
+    const { planRow } = require(LANE);
+    const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+    const { productSetKeys } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
+    const driftedRow = {
+      id: "hiq:hockey:2024:o-pee-chee:12:base:no-auto",
+      cardId: "hiq:hockey:2024:o-pee-chee:12:base:no-auto",
+      setKey: "upper-deck-extended-series",
+      source: "checklistinsider-2026-08-27",
+    };
+    const plan = planRow(driftedRow, { catalogAuthorityOf, registeredSetKeys: new Set(productSetKeys()) });
+    expect(plan.action).toBe("move");
   });
 });
 
@@ -441,5 +533,23 @@ describe("the runner can actually dispatch it", () => {
   it("the workflow file is under GitHub's 512 KB dispatch ceiling", () => {
     const bytes = fs.statSync(RUNNER).size;
     expect(bytes).toBeLessThan(512 * 1024);
+  });
+
+  // ── SHOULD-FIX 4 (review): confirm the relaunch DECISION keys only on the
+  // budget-stop marker, never on the MOVED/WOULD MOVE count line -- so a
+  // REPORT run's WOULD MOVE wording (which the dispatch step's own preamble
+  // cannot match) cannot silently change whether the runner re-dispatches.
+  it("the relaunch action's actual decision greps only the budget-stop / finishLane lines, never a MOVED count", () => {
+    const actionSrc = fs.readFileSync(
+      path.join(backend, "..", ".github", "actions", "relaunch-on-marker", "action.yml"),
+      "utf8",
+    );
+    const decisionBlock = actionSrc.slice(actionSrc.indexOf("LOG=\"$RELAUNCH_LOG\""));
+    expect(decisionBlock).toMatch(/grep -aqE "stopped at the \.\*budget"/);
+    expect(decisionBlock).toMatch(/grep -aqE "finishLane: exiting code/);
+    // The decision block itself never conditions on a per-lane count line
+    // (MOVED, REPAIRED, ...) -- only this lane's OWN dispatch-step preamble
+    // (tested above) reads MOVED, purely to populate the notice text.
+    expect(decisionBlock).not.toMatch(/MOVED/);
   });
 });

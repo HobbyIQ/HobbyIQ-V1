@@ -136,6 +136,46 @@ export interface MoveCatalogRowOptions {
    * caller's word for what changed.
    */
   idFollowsOwnSetKeyField?: boolean;
+  /**
+   * CF-ORDER-IS-THE-INVARIANT-INCLUDES-THE-CALLER'S-OWN-SALES (2026-09-19,
+   * rekey-catalog-id-to-setkey review). moveCatalogRow's own header states the
+   * order a move must keep: copy the survivor, re-point its sales, retire
+   * graded children, delete the old row LAST -- so a crash between any two
+   * steps leaves a duplicate identity, never a dangling sale. That guarantee
+   * only covers the sales `salesContainer`'s own patch can reach (rows keyed
+   * by `hobbyiqCardId`, patched in place). A caller whose sales container is
+   * ALSO partitioned by the id that is moving (sold_comps' own `/cardId`) has
+   * a SECOND population -- rows whose PARTITION KEY is the old slug -- that a
+   * patch cannot reach at all; they need a relocate (upsert new address, verify
+   * read-back, delete old). If that relocation runs OUTSIDE this function --
+   * before it, as rekey-catalog-id-to-setkey originally did, or after it -- a
+   * crash in that window leaves either a sale with no catalog row (relocated
+   * before the copy) or a catalog row this caller believes is fully wired
+   * while some of its sales still point at the address about to be deleted
+   * (relocated after). Both are the exact hazard ORDER IS THE INVARIANT exists
+   * to prevent, just moved one level up, out of this function's view.
+   *
+   * `relocateSales`, when supplied, is invoked INSIDE this function's own
+   * ordered sequence -- after the survivor is written at `newSlug` and after
+   * the ordinary `salesContainer` patch, but BEFORE graded children are
+   * retired and BEFORE the old row is deleted. It receives `(oldId, newSlug)`
+   * and must return `{ ok: boolean; failures?: readonly string[] }`: `ok` true
+   * means every sale this caller is responsible for relocating now points at
+   * `newSlug` (or there were none), verified by the caller's own read-back.
+   * `ok: false` REFUSES the deletion of the old row -- the survivor stays
+   * written (it already exists and sales can safely point at it), graded
+   * children are still retired (they are regenerable and unrelated to the
+   * sales hazard), but the old row is kept so an incompletely-relocated sale
+   * still has SOMETHING to point at rather than nothing. The failures are
+   * carried back on the result (`salesRelocateFailures`) so the caller can
+   * report them without re-deriving what went wrong.
+   *
+   * Never called on a REHOME (the slug does not change) or when `dryRun` is
+   * true (nothing computed here should cause I/O in a caller's hook either --
+   * a caller that wants a dry-run preview of its own relocation is expected to
+   * read `dryRun` off this same options object itself).
+   */
+  relocateSales?: (oldId: string, newSlug: string) => Promise<{ ok: boolean; failures?: readonly string[] }>;
   retry?: CatalogOpsRetry;
 }
 
@@ -152,10 +192,19 @@ export interface MoveCatalogRowResult {
   survivor: "incoming" | "incumbent" | null;
   /** Why -- the "say what you chose" line, in words a script can print. */
   decision: string;
-  /** Set on `action: "refused"` only: the two names the caller must settle,
-   *  so a report can list the pair without re-reading either row. */
+  /** Set on `action: "refused"` only: what the caller must settle, so a report
+   *  can list it without re-reading either row.
+   *
+   *  `different-player-uncorroborated` -- the two rows name DIFFERENT PLAYERS
+   *  and nothing corroborates either. `target-exists` -- ONLY reachable under
+   *  `idFollowsOwnSetKeyField`: a row already lives at `newSlug`. That option
+   *  exists to adopt the caller's OWN setKey field onto its OWN id, never to
+   *  fold two rows into one, so an incumbent at the destination refuses the
+   *  whole move rather than falling through to the ordinary authority ladder
+   *  -- a caller asking for this narrow move gets exactly that move or a
+   *  refusal, never a silent fold it did not ask for. */
   refusal?: {
-    reason: "different-player-uncorroborated";
+    reason: "different-player-uncorroborated" | "target-exists";
     incomingPlayer: string | null;
     incumbentPlayer: string | null;
   };
@@ -171,6 +220,20 @@ export interface MoveCatalogRowResult {
     losingPlayer: string | null;
     detail: string;
   };
+  /**
+   * Set only when the caller supplied `relocateSales` and it ran (never on a
+   * rehome, never on `dryRun`). `true` means every sale it is responsible for
+   * now points at `newSlug`, verified by the caller's own read-back, or there
+   * were none. `false` means the old row was DELIBERATELY KEPT (never
+   * deleted) because the caller's hook could not confirm every sale moved --
+   * see `relocateSales`'s own doc for why the delete is refused rather than
+   * merely reported.
+   */
+  salesRelocated?: boolean;
+  /** The hook's own failure list, carried back verbatim when
+   *  `salesRelocated === false`, so the caller need not have kept its own
+   *  copy to report them. */
+  salesRelocateFailures?: readonly string[];
 }
 
 export interface RetireCatalogRowOptions {
@@ -1026,7 +1089,39 @@ export async function moveCatalogRow(
   const incoming = rehome
     ? rehomeIncoming(oldRow, oldPk, changedFields)
     : buildIncoming(oldRow, newSlug, changedFields, opts.idFollowsOwnSetKeyField === true);
-  const incumbent = "known" in opts ? (opts.known ?? null) : await readIncumbent(container, newSlug, retry);
+
+  // CF-IDFOLLOWSOWNSETKEYFIELD-NEVER-FOLDS (review finding, 2026-09-19). This
+  // option exists to let a row adopt its OWN setKey field onto its OWN id --
+  // never to merge it with something else already at that address. `known`
+  // (CF-DO-NOT-LOOK-TWICE) is for a caller that has ALREADY point-read the
+  // destination and wants to hand the answer in rather than pay a second
+  // read; passing `known: null` under this option is not that -- it is a
+  // stale answer from a look the caller took BEFORE doing its own I/O
+  // (relocating sales, retrying, awaiting anything), and Cosmos does not wait
+  // for this function to ask a second time. So under this option the read is
+  // ALWAYS fresh, `known` is never honoured, and an incumbent found here
+  // REFUSES the whole move outright -- it never reaches chooseSurvivor's
+  // authority/vendorIds/sales/confidence ladder, because that ladder decides
+  // which of TWO CARDS' fields survive a merge, and this option was never
+  // asked to merge anything.
+  const idFollowsOwnSetKeyField = opts.idFollowsOwnSetKeyField === true;
+  const incumbent = idFollowsOwnSetKeyField
+    ? await readIncumbent(container, newSlug, retry)
+    : ("known" in opts ? (opts.known ?? null) : await readIncumbent(container, newSlug, retry));
+
+  if (idFollowsOwnSetKeyField && incumbent) {
+    return {
+      action: "refused",
+      newSlug,
+      salesRepointed: 0,
+      gradedChildrenRetired: 0,
+      survivor: null,
+      decision: `REFUSED: a row already exists at ${newSlug} [${String(incumbent.source ?? "?")}] -- `
+        + `idFollowsOwnSetKeyField adopts the row's OWN field onto its OWN id and never folds; `
+        + `nothing written  [${oldId} vs ${newSlug}]`,
+      refusal: { reason: "target-exists", incomingPlayer: null, incumbentPlayer: null },
+    };
+  }
 
   let action: MoveCatalogRowAction;
   let survivor: "incoming" | "incumbent";
@@ -1143,15 +1238,47 @@ export async function moveCatalogRow(
     decision += "; sales not re-pointed (no salesContainer)";
   }
 
+  // 2b. A caller's OWN sale relocation, still inside this function's ordered
+  //     sequence and still BEFORE the delete. See `relocateSales`'s own doc:
+  //     this exists for a sales container partitioned by the SAME id that is
+  //     moving (sold_comps' /cardId), where a patch cannot reach every row and
+  //     an out-of-band relocation run before or after this function reopens
+  //     exactly the hazard this function's ordering exists to close. Never run
+  //     on a rehome (the slug did not change, so there is nothing to
+  //     relocate) or on a dryRun (no I/O this function causes should trigger
+  //     a caller's own writes either).
+  let salesRelocated: boolean | undefined;
+  let salesRelocateFailures: readonly string[] | undefined;
+  if (!rehome && !dryRun && opts.relocateSales) {
+    const outcome = await opts.relocateSales(oldId, newSlug);
+    salesRelocated = outcome.ok === true;
+    if (outcome.failures?.length) salesRelocateFailures = outcome.failures;
+    if (!salesRelocated) {
+      decision += `; sale relocation did NOT complete -- the old row is KEPT (not deleted) so an `
+        + `unrelocated sale still has something to point at`;
+    }
+  }
+
   // 3. Graded children of the old slug. Regenerable from the survivor by
   //    materialize-graded-identities; they do not move. A rehomed row keeps
-  //    its own ladder.
+  //    its own ladder. Retired regardless of `salesRelocated`: a graded child
+  //    is unrelated to the sales hazard above and is always safe to retire
+  //    once the survivor exists.
   const gradedChildrenRetired = rehome ? 0 : await retireGradedChildren(container, oldId, retry, dryRun);
 
   // 4. The old row, last -- on a rehome, the copy in the foreign partition.
-  if (!dryRun) await deleteTolerant(container, oldId, oldPk, retry);
+  //    REFUSED when the caller's own relocation could not confirm every sale
+  //    moved: the survivor and its graded-child cleanup already happened
+  //    (both are safe on their own), but deleting the old row now would leave
+  //    an unrelocated sale pointing at nothing at all.
+  if (!dryRun && salesRelocated !== false) await deleteTolerant(container, oldId, oldPk, retry);
 
-  return { action, newSlug, salesRepointed, gradedChildrenRetired, survivor, decision, ...(playerArbitration ? { playerArbitration } : {}) };
+  return {
+    action, newSlug, salesRepointed, gradedChildrenRetired, survivor, decision,
+    ...(playerArbitration ? { playerArbitration } : {}),
+    ...(salesRelocated !== undefined ? { salesRelocated } : {}),
+    ...(salesRelocateFailures ? { salesRelocateFailures } : {}),
+  };
 }
 
 /**

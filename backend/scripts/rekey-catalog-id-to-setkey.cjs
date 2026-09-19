@@ -40,6 +40,44 @@
  * row's own setKey field, nothing else." Every other caller is unaffected --
  * the option is opt-in and off by default.
  *
+ * THIS LANE FIXES A ONE-LEVEL DRIFT ONLY. The defect is exactly one segment:
+ * the id's segment 3 still names the target's REGISTERED IMMEDIATE PARENT
+ * (`productParentOf(target)`), while the setKey field already names the
+ * target. A row whose id segment names something else -- a grandparent, an
+ * unrelated product, a stale spelling two renames back -- is a DIFFERENT
+ * drift this lane does not attempt to fix; it is counted and listed
+ * (`not-one-level-drift`) rather than silently moved on weaker evidence than
+ * this lane was measured against. See `planRow`'s own doc.
+ *
+ * TARGET-EXISTS NEVER FOLDS (review finding, BLOCKER 2). Under
+ * `idFollowsOwnSetKeyField` moveCatalogRow reads the destination FRESH,
+ * immediately before it decides, and REFUSES outright if anything is already
+ * there -- it never runs the ordinary authority/vendorIds/sales/confidence
+ * ladder for this option, because that ladder decides which of TWO CARDS'
+ * fields survive a MERGE, and this lane never asks for one. This script does
+ * NOT pre-read the destination itself and hand the answer in as `known`: a
+ * point read taken before this script's own I/O (relocating sales, retrying)
+ * would be stale by the time moveCatalogRow used it, and an overlapping run
+ * or another mover could create the target in the gap.
+ *
+ * ORDER IS THE INVARIANT, INCLUDING THIS LANE'S OWN SALES (review finding,
+ * BLOCKER 1). sold_comps rows keyed to the OLD id must follow on BOTH
+ * addressing schemes the pool uses: `hobbyiqCardId === oldId` (patched in
+ * place by moveCatalogRow's own `salesContainer`) and `cardId === oldId`
+ * (partitioned AT the old slug, which a patch cannot reach at all and needs a
+ * relocate: upsert new address, verify read-back, delete old). The SECOND
+ * population used to be relocated by this script BEFORE calling
+ * moveCatalogRow, which reopened exactly the hazard moveCatalogRow's own
+ * ordering exists to close: a crash in that window left sales pointing at an
+ * id with no catalog row yet. It is now passed in as `relocateSales`, a hook
+ * moveCatalogRow itself invokes INSIDE its own ordered sequence -- after the
+ * survivor is copied and the hobbyiqCardId-keyed sales are patched, but
+ * BEFORE the old row is deleted -- so at every instant every sale still
+ * points at a row that exists. If the hook cannot confirm every sale moved,
+ * moveCatalogRow KEEPS the old row (never deletes it) so an unrelocated sale
+ * still has something to point at; this script counts that as a failure, not
+ * a success.
+ *
  * SCOPE IS REQUIRED, BY NAME (CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME): sport,
  * years, and an EXPLICIT target setKey list. An empty or wildcard setKey list
  * is refused (exit 2) -- "every upper-deck sub-brand" is not a scope anyone
@@ -52,35 +90,32 @@
  * NEVER a cross-partition COUNT/GROUP BY -- paged with maxItemCount 1000 and
  * a continuation token; card_catalog partitions on /cardId.
  *
- * PER ROW, moveCatalogRow decides everything except one thing this script
- * checks FIRST: whether the target id already exists. That is a FOLD (two
- * rows becoming one) and is explicitly OUT OF SCOPE for this lane -- it is
- * counted `target-exists` and reported, never merged, matching the pilot's
- * "0 collisions" measurement rather than assuming it holds everywhere this
- * lane might later run. Also refused, by name, and listed: the row's source
- * is not checklist authority (catalogAuthorityOf -- vendor/derived rows are
- * never moved by this lane), the row's setKey is not a registered product key
- * (productSetKeys()), segment parsing fails, or the id carries a `sub-`
- * segment in an unexpected position (handled the same way the fold and rename
- * fleets do: `sub-` sits AFTER the setKey segment and is preserved verbatim by
- * the segment-3-only swap, since only index 3 ever changes).
+ * PER ROW, moveCatalogRow decides everything except what this script's pure
+ * `planRow` decides first: the row's source must be checklist authority
+ * (catalogAuthorityOf -- vendor/derived rows are never moved by this lane),
+ * the row's setKey must be a registered product key (productSetKeys()),
+ * segment parsing must succeed, and the id's own segment 3 must be exactly
+ * the target's registered parent (the one-level-drift check above) -- a `sub-`
+ * segment in the id is handled the same way the fold and rename fleets do:
+ * it sits AFTER the setKey segment and is preserved verbatim by the
+ * segment-3-only swap, since only index 3 ever changes. Every refusal is
+ * counted by name and every id listed.
  *
  * GRADED CHILDREN move with their parent -- moveCatalogRow's own contract
- * (copy, re-point sales, retire the OLD slug's graded children, delete the
- * old row, in that order) already does this; nothing extra is needed here.
+ * (copy, re-point sales, relocate this lane's own partition-keyed sales,
+ * retire the OLD slug's graded children, delete the old row, in that order)
+ * already does this; nothing extra is needed here.
  *
- * SALES. sold_comps rows keyed to the OLD id must follow, on BOTH addressing
- * schemes the pool actually uses (CF-CARDHEDGE-DUAL-ID / the D19 movers):
- *   - `hobbyiqCardId === oldId`, partitioned elsewhere -> moveCatalogRow's own
- *     in-place patch (via `salesContainer`) re-points /hobbyiqCardId; `cardId`
- *     is untouched because the partition key cannot be patched.
- *   - `cardId === oldId` (partitioned AT the old slug) -> relocate-sold-comp
- *     (upsert new address -> verify read-back -> delete old), the same
- *     primitive fold-checklist-numbered-twins and rekey-product-setkey use,
- *     so BOTH cardId and hobbyiqCardId equal the new id afterward. Counted on
- *     its own line (`salesRelocated`), never summed into `salesRepointed`.
- * CF-A-SALE-IS-NEVER-LOST: sales before == sales after (patched + relocated +
- * left alone), and every relocate failure is listed by id.
+ * SALES. Both addressing schemes the pool uses (CF-CARDHEDGE-DUAL-ID / the
+ * D19 movers) are covered -- see "ORDER IS THE INVARIANT" above for the
+ * sequencing: `hobbyiqCardId === oldId` via moveCatalogRow's own in-place
+ * patch, `cardId === oldId` via this script's `relocatePartitionKeyedSales`
+ * passed in as the `relocateSales` hook (upsert new address -> verify
+ * read-back -> delete old, the same primitive fold-checklist-numbered-twins
+ * and rekey-product-setkey use). Counted on its own line (`salesRelocated`),
+ * never summed into `salesRepointed`. CF-A-SALE-IS-NEVER-LOST: sales before
+ * == sales after (patched + relocated + left alone), and every relocate
+ * failure is listed by id.
  *
  * HOLDINGS. portfolio.holdings is a MAP -- Object.entries, never
  * `JOIN h IN c.holdings` (feedback_holdings_is_a_map_join_iterates_nothing).
@@ -228,6 +263,26 @@ function candidateSpec(sport, year, umbrella, target) {
  * no I/O -- so it is unit-testable without a fake container. `deps` are the
  * canonical helpers loaded from dist (or src in tests), per
  * CF-DERIVED-FIELDS-ARE-NEVER-HAND-ROLLED.
+ *
+ * CF-THIS-LANE-FIXES-A-ONE-LEVEL-DRIFT-ONLY (SHOULD-FIX 5, review). The
+ * defect this lane closes is exactly one segment of drift: the id's segment 3
+ * still names the target's REGISTERED IMMEDIATE PARENT (`productParentOf`),
+ * while the setKey field already names the target itself. It is NOT a general
+ * "make the id agree with the field" repair for an arbitrary mismatch -- a row
+ * whose id segment names something OTHER than the target's own parent (a
+ * grandparent, an unrelated product, a stale spelling two renames back) is a
+ * DIFFERENT drift with a different cause, and silently swallowing it into this
+ * lane's "the field is the ruling" logic would move a row on weaker evidence
+ * than the one this lane was built and measured against. So `deps.expectedIdSegment`
+ * -- the umbrella this row was SELECTED under (always `productParentOf(target)`,
+ * the same value the candidate query's STARTSWITH prefix used) -- is checked
+ * explicitly here even though the query already guarantees it for every row
+ * this lane actually scans: `planRow` is a pure function callable on ANY row,
+ * and a caller (or a future test, or a future reuse of this function) that
+ * hands it a row whose id segment is neither the target nor the expected
+ * parent gets an explicit, named refusal instead of a newId this lane never
+ * measured for. Counted and listed separately from `segment-parse-failed`
+ * (the id parses fine; it just is not the ONE step of drift this lane fixes).
  */
 function planRow(row, deps) {
   const id = String(row.id ?? "");
@@ -244,6 +299,18 @@ function planRow(row, deps) {
   if (!parts) return { action: "refuse", reason: "segment-parse-failed", detail: `id does not parse as a hiq identity: ${id}` };
   const idSetKey = parts[3];
   if (idSetKey === setKey) return { action: "skip", reason: "already-matches", detail: "id segment already equals the setKey field" };
+  // ONE-LEVEL DRIFT ONLY. `expectedIdSegment` is optional so planRow stays
+  // callable (and testable) without it; when the caller supplies it (the
+  // lane always does, as productParentOf(target)) a row whose id segment is
+  // neither the target NOR its registered parent is a different drift and is
+  // refused by name rather than silently moved.
+  if (deps.expectedIdSegment && idSetKey !== deps.expectedIdSegment) {
+    return {
+      action: "refuse",
+      reason: "not-one-level-drift",
+      detail: `id segment "${idSetKey}" is neither the target "${setKey}" nor its registered parent "${deps.expectedIdSegment}" -- a different drift than this lane fixes`,
+    };
+  }
   const newId = withOwnSetKeySegment(id, setKey);
   if (!newId) return { action: "refuse", reason: "segment-parse-failed", detail: `could not build newId for ${id}` };
   return { action: "move", newId, oldSetKeySegment: idSetKey, setKey };
@@ -289,7 +356,10 @@ async function main() {
   const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
 
   const registeredSetKeys = new Set(productSetKeys());
-  const deps = { catalogAuthorityOf, registeredSetKeys };
+  // `expectedIdSegment` is set per-target inside the scan loop (each target
+  // setKey has its own registered parent/umbrella); this base object is
+  // spread with it there, per row batch.
+  const baseDeps = { catalogAuthorityOf, registeredSetKeys };
 
   // Every target setKey must be a REGISTERED product with a known umbrella
   // (productParentOf) -- "which umbrella does this sub-brand belong to?" is a
@@ -334,6 +404,7 @@ async function main() {
   const s = {
     scanned: 0, otherShard: 0, moved: 0, gradedMoved: 0, alreadyMatches: 0,
     targetExists: 0, notChecklist: 0, unregisteredSetKey: 0, segmentParseFailed: 0,
+    notOneLevelDrift: 0,
     salesRepointed: 0, salesRelocated: 0, salesRelocateFailed: 0,
     gradedChildrenRetired: 0, holdingsRepointed: 0, holdingsWalked: 0, holdingDocsWalked: 0,
     failed: 0, notReached: 0,
@@ -341,7 +412,10 @@ async function main() {
   const bySetKey = new Map();
   const byYear = new Map();
   const bySource = new Map();
-  const refusals = { "not-checklist-authority": [], "unregistered-setkey": [], "segment-parse-failed": [], "target-exists": [] };
+  const refusals = {
+    "not-checklist-authority": [], "unregistered-setkey": [], "segment-parse-failed": [],
+    "target-exists": [], "not-one-level-drift": [],
+  };
   const examples = [];
   const failures = [];
   const bump = (m, k) => m.set(k, (m.get(k) || 0) + 1);
@@ -404,21 +478,39 @@ async function main() {
 
   // Sales whose PARTITION KEY (cardId) is the old id: moveCatalogRow's own
   // in-place patch (via salesContainer) cannot re-key them across partitions
-  // (sold_comps partitions on /cardId), so they are relocated BEFORE the move
-  // -- upsert new address, verify read-back, delete old -- exactly as
-  // fold-checklist-numbered-twins' relocatePartitionKeyedSales does.
+  // (sold_comps partitions on /cardId). BLOCKER 1 fix: this is now invoked BY
+  // moveCatalogRow itself, as the `relocateSales` hook, from INSIDE its own
+  // ordered sequence -- after the survivor is copied, before the old row is
+  // deleted -- rather than by this lane before or after calling it. That is
+  // what keeps "a sale must never point at a row that does not exist" true at
+  // every instant, including a crash mid-relocation: moveCatalogRow refuses
+  // to delete the old row when this returns `ok: false`, so an unrelocated
+  // sale still has the OLD row to point at rather than nothing.
+  //
+  // Returns { ok, failures } -- never throws -- so moveCatalogRow's own
+  // try/catch around its hook call cannot mistake "some sales failed" for
+  // "the whole move failed" (the catalog row and its graded-child cleanup are
+  // still correct either way; only the delete is gated on this).
   async function relocatePartitionKeyedSales(oldId, newId) {
     let n = 0;
+    let anyFailed = false;
+    const localFailures = [];
     await forEachPage(pool, { query: "SELECT * FROM c WHERE c.cardId = @o", parameters: [{ name: "@o", value: oldId }] }, async (rows) => {
       for (const row of rows) {
         const keep = { ...stripSystem(row), cardId: newId, hobbyiqCardId: newId, reslugedFrom: oldId, reslugedReason: "id follows its own setKey field (CF-THE-ID-FOLLOWS-ITS-OWN-SETKEY-FIELD)", reslugedAt: new Date().toISOString() };
         keep.contentHash = contentHashOf(keep);
         const res = await relocateSoldComp(pool, { keep, drop: [{ id: row.id, cardId: oldId }], retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY });
-        if (res.ok) { s.salesRelocated++; n++; } else { s.salesRelocateFailed++; failures.push(`  sale relocate failed ${row.id}@${oldId} -> ${newId}: ${res.error}`); }
+        if (res.ok) {
+          s.salesRelocated++; n++;
+        } else {
+          anyFailed = true;
+          const line = `sale relocate failed ${row.id}@${oldId} -> ${newId}: ${res.error}`;
+          localFailures.push(line);
+        }
       }
       return true;
     }, 200);
-    return n;
+    return { ok: !anyFailed, failures: localFailures, relocated: n };
   }
 
   for (const cell of SCOPE_CELLS) {
@@ -430,6 +522,10 @@ async function main() {
       if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
       const umbrella = targetUmbrella.get(target);
       const spec = candidateSpec(sport, year, umbrella, target);
+      // SHOULD-FIX 5: the umbrella THIS target was selected under is the only
+      // id segment this lane's ruling covers -- a one-level drift, never a
+      // general "make the id agree with the field" repair. See planRow's doc.
+      const deps = { ...baseDeps, expectedIdSegment: umbrella };
 
       const rows = [];
       await forEachPage(cat, spec, async (page) => {
@@ -451,6 +547,7 @@ async function main() {
           if (plan.action === "refuse") {
             if (plan.reason === "not-checklist-authority") s.notChecklist++;
             else if (plan.reason === "unregistered-setkey") s.unregisteredSetKey++;
+            else if (plan.reason === "not-one-level-drift") s.notOneLevelDrift++;
             else s.segmentParseFailed++;
             const list = refusals[plan.reason];
             if (list) list.push(`  ${row.id}  [${row.source}]  ${plan.detail}`);
@@ -459,41 +556,48 @@ async function main() {
           // plan.action === "move" from here.
           const { newId } = plan;
           try {
-            // TARGET-EXISTS CHECK, before any write. A fold is out of scope
-            // for this lane -- counted and reported, never merged.
-            let incumbent = null;
-            try {
-              const { resource } = await retry(() => cat.item(newId, newId).read());
-              incumbent = resource ?? null;
-            } catch (e) {
-              if (e?.code !== 404 && e?.statusCode !== 404) throw e;
-            }
-            if (incumbent) {
-              s.targetExists++;
-              refusals["target-exists"].push(`  ${row.id} -> ${newId}  [${row.source}] -- target already exists [${incumbent.source}]; a fold is out of scope for this lane`);
-              return;
-            }
-
-            // Sales partitioned AT the old id must relocate BEFORE the
-            // catalog move (ORDER IS THE INVARIANT: a sale must never point
-            // at a row that does not exist). moveCatalogRow's own
-            // salesContainer patch handles sales whose partition key is
-            // something ELSE (hobbyiqCardId === oldId only).
-            await relocatePartitionKeyedSales(String(row.id), newId);
-
+            // moveCatalogRow itself refuses (target-exists) when an incumbent
+            // already lives at newId under idFollowsOwnSetKeyField -- see its
+            // own doc: this option never folds. No pre-read is done here any
+            // more (BLOCKER 2 fix): a point-read taken here, then handed in
+            // as `known` after this lane does its own I/O (the old shape),
+            // is a STALE answer by the time moveCatalogRow would have used
+            // it -- an overlapping run or another mover could create the
+            // target in the gap and this lane would have silently carried a
+            // wrong "nothing is there" into the write. moveCatalogRow reads
+            // fresh, immediately before it decides, every time.
             const res = await moveCatalogRow(cat, row, newId, {}, {
               reason: "id follows its own setKey field (CF-THE-ID-FOLLOWS-ITS-OWN-SETKEY-FIELD, hockey pilot)",
               idFollowsOwnSetKeyField: true,
               dryRun: !APPLY,
               salesContainer: pool,
-              known: null,
+              // BLOCKER 1 fix: partition-keyed sales (cardId === oldId, which
+              // a patch on salesContainer cannot reach) relocate INSIDE
+              // moveCatalogRow's own ordered sequence -- after the survivor
+              // is copied and the hobbyiqCardId-keyed sales are patched, but
+              // BEFORE the old row is deleted. See relocateSales's own doc on
+              // MoveCatalogRowOptions for why this must live inside that
+              // function rather than being called before or after it.
+              relocateSales: (oldId, movedToId) => relocatePartitionKeyedSales(oldId, movedToId),
               retry,
             });
             if (res.action === "refused") {
-              // Should not be reachable (no incumbent, so chooseSurvivor never
-              // runs), but handled defensively rather than assumed away.
               s.targetExists++;
-              refusals["target-exists"].push(`  ${row.id} -> ${newId}: unexpected refusal ${res.decision}`);
+              refusals["target-exists"].push(`  ${row.id} -> ${newId}: ${res.decision}`);
+              return;
+            }
+            if (res.salesRelocated === false) {
+              // The catalog row moved and its graded children retired, but the
+              // caller's own partition-keyed sale relocation could not confirm
+              // every sale -- moveCatalogRow therefore KEPT the old row rather
+              // than deleting it (see its own doc). Counted as a failure, not
+              // a success: an operator must look at exactly which sales did
+              // not relocate before this row can be considered done.
+              s.failed++;
+              s.salesRelocateFailed += (res.salesRelocateFailures ?? []).length || 1;
+              failures.push(`  FAILED sale relocation ${row.id} -> ${newId}: old row kept, not deleted. ${
+                (res.salesRelocateFailures ?? []).join("; ") || "(no detail returned)"
+              }`);
               return;
             }
             s.moved++;
@@ -518,12 +622,13 @@ async function main() {
 
   console.log("");
   console.log(`scanned ${f(s.scanned)} candidate rows${SHARD_SCOPE.SHARDED ? `  (${f(s.otherShard)} in other shards)` : ""}`);
-  console.log(`  ${APPLY ? "MOVED" : "would move"}    ${f(s.moved)}   <- ${f(s.gradedMoved)} of them graded children (moved with their parent's cascade, or matched directly)`);
+  console.log(`  ${APPLY ? "MOVED" : "WOULD MOVE"}    ${f(s.moved)}   <- ${f(s.gradedMoved)} of them graded children (moved with their parent's cascade, or matched directly)`);
   console.log(`  already matches (id == setKey field)  ${f(s.alreadyMatches)}`);
   console.log(`  REFUSED: target-exists (fold, out of scope)  ${f(s.targetExists)}`);
   console.log(`  REFUSED: not checklist authority             ${f(s.notChecklist)}`);
   console.log(`  REFUSED: unregistered setKey                 ${f(s.unregisteredSetKey)}`);
   console.log(`  REFUSED: segment parse failed                ${f(s.segmentParseFailed)}`);
+  console.log(`  REFUSED: not a one-level drift                ${f(s.notOneLevelDrift)}   <- id segment names neither the target nor its registered parent`);
   console.log(`  failed                                       ${f(s.failed)}`);
   if (s.notReached) console.log(`  not reached                                   ${f(s.notReached)}`);
   console.log("");
@@ -561,7 +666,8 @@ async function main() {
   // ── THE RECONCILIATION ------------------------------------------------------
   const written = s.moved;
   const skipped = s.alreadyMatches + s.otherShard + s.notReached
-    + s.targetExists + s.notChecklist + s.unregisteredSetKey + s.segmentParseFailed;
+    + s.targetExists + s.notChecklist + s.unregisteredSetKey + s.segmentParseFailed
+    + s.notOneLevelDrift;
   const intended = s.scanned;
   console.log("");
   console.log(`  reconciled: intended ${f(intended)} = written ${f(written)} + skipped ${f(skipped)} + failed ${f(s.failed)}`
@@ -595,11 +701,19 @@ async function main() {
   }
 
   console.log("");
-  // The runner's relaunch action greps `^  MOVED +[0-9,]+` -- the SAME shape
-  // repair-rc-marker-playername's `REPAIRED` line uses (CF-RELAUNCH-ONLY-ON-
-  // BUDGET, #1361). The words after the number are free; the count must come
-  // first.
-  console.log(`  MOVED ${f(written)}   <- id segment 3 rewritten to the row's own setKey field`);
+  // CF-A-REPORT-NEVER-CLAIMS-A-WRITE (review finding, SHOULD-FIX 4). REPORT
+  // prints `WOULD MOVE`; only an APPLY run -- where `written` is a count of
+  // rows this run actually wrote -- prints `MOVED`. The runner's relaunch
+  // decision itself does NOT key on this line at all (CF-RELAUNCH-ONLY-ON-
+  // BUDGET, #1361): `.github/actions/relaunch-on-marker` greps only
+  // `stopped at the .*budget` / `finishLane: exiting code` to decide whether
+  // to re-dispatch, in BOTH modes, so a REPORT run relaunching correctly
+  // continues a report and never flips a report into a write. The dispatch
+  // step's own `preamble` additionally greps `^  MOVED +[0-9,]+` ONLY to put a
+  // count into its human-readable notice text (`moved=N`); that grep matches
+  // nothing on a REPORT run's `WOULD MOVE` line and the notice falls back to
+  // `moved=0`, which is correct -- a report moved nothing.
+  console.log(`  ${APPLY ? "MOVED" : "WOULD MOVE"} ${f(written)}   <- id segment 3 rewritten to the row's own setKey field`);
   if (stoppedAtBudget || CLOCK.outOfClock()) {
     console.log(`  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- the slot has more to do`);
   }
