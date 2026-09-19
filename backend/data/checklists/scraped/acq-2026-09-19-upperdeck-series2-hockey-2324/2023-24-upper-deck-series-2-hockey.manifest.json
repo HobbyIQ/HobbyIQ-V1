@@ -1,0 +1,63 @@
+{
+  "source": "upperdeck-2026-09-19",
+  "sourceUrl": "https://upperdeck.com/checklist/2023-24-upper-deck-series-2-checklist/",
+  "sourceHtmlSha256": "363110834def16568d4780270eda7e627c708075a5803de412254f721f5b4a60",
+  "fetchedAt": "2026-09-19",
+  "sport": "hockey",
+  "year": 2023,
+  "setName": "2023-24 Upper Deck Series 2 Hockey",
+  "productKey": "2023-24-upper-deck-series-2-hockey",
+  "setKey": "upper-deck-series-2",
+  "rowCount": 4400,
+  "parallelColumnAuthoritative": true,
+  "readyToIngest": false,
+  "readyToIngestNote": "Documentation only -- ingest-checklist-csv-to-catalog.cjs and ingest-scraped-checklist.cjs do not read this field; the real gate is that this directory sits under backend/data/checklists/scraped/ where a human/workflow chooses which directories to point DIR at.",
+  "gapThisFills": "2023-24 Upper Deck Series 2 Hockey had NO staged checklist anywhere in the repo before this package (checked backend/data/checklists for every upper-deck*hockey* file first: acq-2026-09-13-cbc and acq-2026-09-14-cardboardconnection carry 2019-20 through 2024-25 Series 1 and several years of Series 2, but 2023-24 Series 2 specifically was absent). Cardboard Connection's own page for this product (https://www.cardboardconnection.com/2023-24-upper-deck-series-2-hockey-cards) states outright 'The checklist will be added as soon as it is available' -- no xlsx was ever published there for this year, confirmed by WebFetch, not guessed. Beckett's S3 origin (2024/02/2023-24-Upper-Deck-Series-2-Hockey-Checklist.xlsx, HTTP 200) DOES have a file, but its Inserts sheet carries the same odds-line-before-'Parallels:' layout defect documented in the 2022-23 Extended Series package's sibling manifest -- confirmed by direct inspection of its 'Inserts' sheet (row 3 is an unstated-odds prose line, e.g. '1:3.3 WalMart Mega pack.', sitting BEFORE the 'Parallels:' marker line, which convertBeckettChecklistXlsx.cjs's current section-header logic has no isCountLine-style exemption for and would mint as the section's name in place of the real insert title) -- so Beckett was not used for this package, matching what happened when it WAS tried and rejected for 2022-23 Extended Series. Fell through to source #3, upperdeck.com's own checklist page, which publishes the full table as static server-rendered HTML (a <table class=\"csv-table\"> with all 4,400 rows already in the page's raw bytes -- verified this is NOT an AJAX/DataTables fetch: curl with no JS execution returns the complete table).",
+  "converterNote": "No existing repo script reads upperdeck.com's own HTML checklist table shape (distinct from both convertBeckettChecklistXlsx.cjs's multi-sheet xlsx and convertCardboardConnectionXlsx.cjs's flat cconnect xlsx). A one-off parser was written for this build only (not committed -- lives in this builder's scratch directory, not backend/scripts/) that: (1) extracts the <table class=\"csv-table\"> block, (2) reads the <thead> to map column names to indices rather than assuming position (this product's table header reads 'Tech' where the sibling 2024-25 Extended Series page reads 'Mem/Tech' -- confirmed by direct inspection, not assumed), (3) groups rows by the table's own 'Set Name' cell, (4) determines which Set Name groups are PARALLELS of one another by comparing their (cardNumber -> player) maps for EXACT equality (same size, same content) rather than by string-matching the section title -- the same R67 contract as the CBC package, applied programmatically instead of by hand. If a future package needs the same source again, this logic belongs in its own committed script rather than being re-derived per package.",
+  "r67Verification": {
+    "rule": "Two Set Name groups fold into one category (anchor + parallel column) only when their (cardNumber -> player) maps are IDENTICAL on every entry -- verified programmatically, not assumed from the section title.",
+    "cleanFolds": "25 anchor groups found by exact-map matching, all with 100% agreement (Base Set + 7 colour parallels; Base Set - Young Guns + its 7 parallels; every named insert -- Dazzlers Blue, Deep Roots, Director of Boards, Ecliptic, Fluoresence Red, Glaring, Highlighters Yellow, Honor Roll, Instinctive, Monster Season, O-Pee-Chee Glossy, UD Canvas (plus its Young Guns/Retired/Program of Excellence subsets), UD Portraits, 1994-95 Rookie Die-Cut, 2023-24 Rookie Commemorative Class -- each with its own colour/finish parallels correctly folded onto it). A 26th fold was added by hand after the planner's first run flagged it: 'Oversized Parallel - Young Guns' (14 rows, cardNumbers a SUBSET of Base Set - Young Guns's 50) failed the automated exact-SIZE-match grouping (14 != 50) even though every one of its 14 numbers agreed with Base Set - Young Guns on the player (verified: 14 agree, 0 disagree, 0 missing) -- a subset fold, the same shape as the Beckett Topps 'Hobby Exclusive' example already documented elsewhere in this repo's manifests. Folded onto base-set-young-guns as parallel=Oversized.",
+    "genuineCollisionFound": "\"PC's\" (cardNumbers PC-1..PC-35, e.g. #PC-31 Filip Forsberg) and \"Population Count 1000\" (cardNumbers PC-31..PC-60, e.g. #PC-31 Connor McDavid) are TWO DIFFERENT PRODUCTS that share the PC- number prefix by coincidence and OVERLAP on PC-31 through PC-35 with DIFFERENT PLAYERS at the same number -- verified directly (#PC-31 is Filip Forsberg in one, Connor McDavid in the other). This is the R67 'different players/own numbering' branch: each needs its OWN registered productSetKey, not a fold. Staged here as two separate categories (pc-s, population-count-1000), left UNREGISTERED on purpose -- registration belongs in its own PR touching backend/src/services/catalog/productSetKeys.ts with a fixed-point test, per this build's own instructions, not bundled into a data-only PR.",
+    "plannerVerdict": "planStagedDirectory (real ingest lane, read-only, no Cosmos) run against this directory: FIRST run verdict 'refuse', reason 'unregistered-set-keys', flagging pc-s, population-count-1000, AND oversized-parallel-young-guns (3 keys) plus 14 id collisions against base-set-young-guns (#451, #456, ... -- the Oversized subset colliding with plain Young Guns at the SAME address because it had not yet been given a parallel value). SECOND run, after folding Oversized onto base-set-young-guns as documented above: verdict 'refuse', reason 'unregistered-set-keys', flagging ONLY pc-s and population-count-1000 (2 keys, see keysNeeded below), 0 collisions. Every other category passes clean."
+  },
+  "keysNeeded": [
+    {
+      "setKey": "upper-deck-series-2-pcs",
+      "rows": 105,
+      "note": "\"PC's\" insert (Prospect/Combine-style, unclear expansion from the page alone -- Drew's ruling needed on display name), cardNumbers PC-1 through PC-35, 3 rungs (PC's / Sparkle Parallel / Gold Sparkle Parallel) x 35 cards. Player at #PC-31 is Filip Forsberg."
+    },
+    {
+      "setKey": "upper-deck-series-2-population-count-1000",
+      "rows": 210,
+      "note": "\"Population Count 1000\" insert, cardNumbers PC-31 through PC-60 (announced print run of 1,000, stepping down through 500/100/50/25/10/1 parallels), 7 rungs x 30 cards. Player at #PC-31 is Connor McDavid -- collides with PC's #PC-31 (Filip Forsberg) on the raw card number alone; the two are unrelated products."
+    }
+  ],
+  "sectionsReport": [
+    { "category": "base-set", "anchorSection": "Base Set", "cardRange": "251-450", "cards": 200, "parallels": ["Deluxe", "Outburst", "Clear Cut", "Exclusives", "High Gloss", "Outburst Red", "Outburst Gold"] },
+    { "category": "base-set-young-guns", "anchorSection": "Base Set - Young Guns", "cardRange": "451-500", "cards": 50, "parallels": ["Deluxe", "Outburst", "Clear Cut", "Exclusives", "High Gloss", "Outburst Red", "Outburst Gold", "Oversized (14-card subset fold, see r67Verification)"] },
+    { "category": "1994-95-rookie-die-cut", "anchorSection": "1994-95 Rookie Die-Cut", "cardRange": "RDT-11..RDT-20", "cards": 10, "parallels": ["Red"] },
+    { "category": "2023-24-rookie-commemorative-class", "anchorSection": "2023-24 Rookie Commemorative Class", "cardRange": "RC-16..RC-30", "cards": 15, "parallels": ["Red"] },
+    { "category": "day-with-the-cup", "anchorSection": "Day With The Cup", "cardRange": "DC1-DC12", "cards": 12, "parallels": [], "note": "own-cards, singleton" },
+    { "category": "dazzlers-blue", "anchorSection": "Dazzlers Blue", "cardRange": "DZ-51..DZ-100", "cards": 50, "parallels": ["Orange", "Green", "Pink", "Red", "Black", "Printing Plates"] },
+    { "category": "deep-roots", "anchorSection": "Deep Roots", "cardRange": "DR-1..DR-50", "cards": 50, "parallels": ["Purple"] },
+    { "category": "director-of-boards", "anchorSection": "Director of Boards", "cardRange": "DB-1..DB-15", "cards": 15, "parallels": ["Sparkle", "Gold Sparkle"] },
+    { "category": "ecliptic", "anchorSection": "Ecliptic", "cardRange": "EC-1..EC-20", "cards": 20, "parallels": ["Sparkle", "Gold Sparkle"] },
+    { "category": "fluoresence-red", "anchorSection": "Fluoresence Red", "cardRange": "F-1..F-50", "cards": 50, "parallels": ["Gold", "Blue", "Pink", "Green"], "note": "source spells the anchor 'Fluoresence' and the parallels 'Fluorescence' -- kept exactly as the source states each, not normalised" },
+    { "category": "glaring", "anchorSection": "Glaring", "cardRange": "GL-1..GL-18", "cards": 18, "parallels": ["Gold", "Printing Plates"] },
+    { "category": "highlighters-yellow", "anchorSection": "Highlighters Yellow", "cardRange": "HL-1..HL-25", "cards": 25, "parallels": ["Orange", "Pink", "Green"] },
+    { "category": "honor-roll", "anchorSection": "Honor Roll", "cardRange": "HR36..HR70", "cards": 35, "parallels": ["Red", "Silver", "Gold", "Printing Plates"] },
+    { "category": "instinctive", "anchorSection": "Instinctive", "cardRange": "IN-1..IN-30", "cards": 30, "parallels": ["Sparkle", "Gold Sparkle"] },
+    { "category": "monster-season", "anchorSection": "Monster Season", "cardRange": "MS-1..MS-82", "cards": 82, "parallels": ["Gold"] },
+    { "category": "o-pee-chee-glossy", "anchorSection": "O-Pee-Chee Glossy", "cardRange": "R-26..R-50", "cards": 25, "parallels": ["Gold"] },
+    { "category": "pc-s", "anchorSection": "PC's", "cardRange": "PC-1..PC-35", "cards": 35, "parallels": ["Sparkle", "Gold Sparkle"], "note": "UNREGISTERED -- see keysNeeded, R67 collision with population-count-1000" },
+    { "category": "population-count-1000", "anchorSection": "Population Count 1000", "cardRange": "PC-31..PC-60", "cards": 30, "parallels": ["500", "100", "50", "25", "10", "1"], "note": "UNREGISTERED -- see keysNeeded, R67 collision with pc-s" },
+    { "category": "ud-canvas", "anchorSection": "UD Canvas", "cardRange": "C121-C210", "cards": 90, "parallels": ["Black and White", "Printing Plates"] },
+    { "category": "ud-canvas-young-guns", "anchorSection": "UD Canvas - Young Guns", "cardRange": "C211-C240", "cards": 30, "parallels": ["Black and White", "Printing Plates"] },
+    { "category": "ud-canvas-retired", "anchorSection": "UD Canvas - Retired", "cardRange": "C241-C255", "cards": 15, "parallels": ["Black and White", "Printing Plates"] },
+    { "category": "ud-canvas-program-of-excellence", "anchorSection": "UD Canvas - Program of Excellence", "cardRange": "C256-C270", "cards": 15, "parallels": ["Black and White", "Printing Plates"] },
+    { "category": "ud-canvas-signatures", "anchorSection": "UD Canvas Signatures", "cards": 1, "parallels": [], "note": "own-cards, singleton, the file's only auto row (#CA-RN Luc Robitaille/Bernie Nicholls)" },
+    { "category": "ud-portraits", "anchorSection": "UD Portraits", "cardRange": "P31-P60", "cards": 30, "parallels": ["Silver Frame", "Red Frame", "Printing Plates"] }
+  ],
+  "markersSeenNotStripped": ["CL (dual-player Checklist card marker, e.g. 'Connor Bedard/Leo Carlsson CL' -- a real card-type flag, left exactly as the source states it, same convention as the 2022-23 Extended Series package)"],
+  "rcSuffixNote": "upperdeck.com's own table has a separate 'Rookie' column (blank/'RC' flag) that this CSV does not carry over, matching the repo's existing CSV contract (no rookie column); the player field itself never carried an ' RC' suffix on this source, so nothing needed stripping here (contrast with the CardboardConnection xlsx source used for 2022-23 Extended Series, which does append it)."
+}
