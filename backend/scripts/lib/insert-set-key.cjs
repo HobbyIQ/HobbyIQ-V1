@@ -304,7 +304,74 @@ function parallelForRow({ category, parallel, subsetName, foldRungs }) {
  *
  * -> { ids, collisions: [{ id, rows: [row, ...] }], unslugable }
  */
-function idCollisions(rows, computeId) {
+/**
+ * THE IDENTITY FIELDS A DUPLICATE MUST AGREE ON, in a stable order.
+ *
+ * Deliberately NOT the whole row: `category` is exactly what differs between a
+ * source's two spellings of one card, and notes/provenance are not identity.
+ * If these five agree the two rows describe the same card in every respect the
+ * catalog stores.
+ */
+function identityTuple(r) {
+  return [
+    String(r?.player ?? "").trim().toLowerCase(),
+    String(r?.cardNumber ?? "").trim().toLowerCase(),
+    String(r?.parallel ?? "").trim().toLowerCase(),
+    String(r?.isAuto ?? "") === "true" ? "auto" : "no-auto",
+    String(r?.printRun ?? "").trim(),
+  ].join(" ");
+}
+
+/**
+ * CF-A-DUPLICATE-IS-NOT-A-COLLISION (Drew, 2026-09-19).
+ *
+ * Two rows of ONE file minting one id is normally the defect this guard exists
+ * to catch: two different cards fighting for one address, and refusing the
+ * file is right because a set key cannot separate them.
+ *
+ * But some sources simply LIST THE SAME CARD TWICE, under two spellings of the
+ * same section. Measured on 2024 panini-photogenic football:
+ *
+ *     [base]              #1 (Black)  Ja'Marr Chase
+ *     [insert-base-black] #1 (Black)  Ja'Marr Chase
+ *
+ * Same player, same number, same parallel, same auto flag, same print run --
+ * one card, written twice. There is nothing to separate and nothing to lose:
+ * writing it once is the correct and complete answer, and refusing the whole
+ * file over it withholds 4,646 good rows for a defect in the source's
+ * bookkeeping.
+ *
+ * THE TEST IS AGREEMENT ON IDENTITY, NOT ON THE ROW. `category` is excluded on
+ * purpose -- it is the very field that differs between the two spellings. Any
+ * disagreement in player, cardNumber, parallel, isAuto or printRun and the
+ * group is NOT a duplicate: it stays an id-collision and the file is refused
+ * exactly as before. Two players at one number is the defect; one player
+ * written twice is a typo.
+ *
+ * BUT `category` CANNOT BE IGNORED OUTRIGHT -- it is also the ONLY field that
+ * says which SUBSET a row belongs to, and `subsetsToSeparate` (below) reuses
+ * this function to find same-numbered subsets by asking "what collides on the
+ * plain product key?". A base card and a same-numbered NAMED SUBSET can share
+ * every one of the five identity fields by coincidence -- same player, same
+ * number, blank parallel, no auto, no print run -- and that is not a source
+ * spelling one card twice, it is R30's own defect: two different cards
+ * fighting for one address. Folding it here would hide the collision from the
+ * one guard that exists to catch it (measured on the cbc shape: a base set and
+ * College Penmanship both numbered 1-3 silently lost the subset's three rows).
+ * So the fold requires the SAME EFFECTIVE SUBSET too -- `subsetSlugFor`,
+ * through any rung fold, since a rung and its root are one subset by
+ * construction -- and only degenerates to "ignore category" when the category
+ * spellings the source used both name the SAME subset, exactly the Photogenic
+ * shape (`base` and `insert-base-black` both read as base, per
+ * `categorySubsetSlug`).
+ *
+ * `foldRungs` is optional -- omitted, a rung and its own colour spelling are
+ * not folded together here, which only makes the guard MORE conservative
+ * (fewer folds, more refusals), never less safe.
+ *
+ * -> { ids, collisions, unslugable, duplicatesFolded }
+ */
+function idCollisions(rows, computeId, foldRungs) {
   const byId = new Map();
   let unslugable = 0;
   for (const r of rows) {
@@ -314,12 +381,28 @@ function idCollisions(rows, computeId) {
     if (!byId.has(id)) byId.set(id, []);
     byId.get(id).push(r);
   }
+  const effectiveSubsetOf = (r) => {
+    const slug = subsetSlugFor({ category: r?.category, parallel: r?.parallel, subsetName: r?.subsetName });
+    return slug && foldRungs && foldRungs.has(slug) ? foldRungs.get(slug).root : slug;
+  };
   const collisions = [];
+  let duplicatesFolded = 0;
   for (const [id, group] of byId) {
-    if (group.length > 1) collisions.push({ id, rows: group });
+    if (group.length < 2) continue;
+    const tuples = new Set(group.map(identityTuple));
+    const subsets = new Set(group.map(effectiveSubsetOf));
+    if (tuples.size === 1 && subsets.size === 1) {
+      // One card, written N times under spellings that all name the SAME
+      // subset. Keep one; the rest are the source's own duplication and are
+      // counted, never silently dropped.
+      duplicatesFolded += group.length - 1;
+      byId.set(id, [group[0]]);
+      continue;
+    }
+    collisions.push({ id, rows: group });
   }
   collisions.sort((a, b) => b.rows.length - a.rows.length || a.id.localeCompare(b.id));
-  return { ids: byId.size, collisions, unslugable };
+  return { ids: byId.size, collisions, unslugable, duplicatesFolded };
 }
 
 /**
@@ -350,7 +433,7 @@ function subsetsToSeparate(rows, productSetKey, computeId, foldRungs) {
     ...r,
     setKey: productSetKey,
     parallel: parallelForRow({ category: r.category, parallel: r.parallel, subsetName: r.subsetName, foldRungs }),
-  }));
+  }), foldRungs);
   const separate = new Set();
   for (const c of collisions) {
     const slugs = new Set(c.rows.map((r) => {
@@ -845,17 +928,17 @@ function planFile({ rows, productSetKey, computeId, normalize, separate: given, 
   const keys = insertSetKeysOf(rows, productSetKey, separate, foldRungs);
   const unregistered = unregisteredKeys(keys, normalize);
   const finalId = finalIdFor({ productSetKey, separate, foldRungs }, computeId);
-  const { ids, collisions, unslugable } = idCollisions(rows, finalId);
+  const { ids, collisions, unslugable, duplicatesFolded } = idCollisions(rows, finalId, foldRungs);
   // ORDER IS LOAD-BEARING: an unregistered key is reported even when the
   // separation it would perform already removes every collision, because
   // writing to a key that folds elsewhere is the worse outcome of the two.
   if (unregistered.length) {
-    return { verdict: "refuse", reason: "unregistered-set-keys", separate, foldRungs, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
+    return { verdict: "refuse", reason: "unregistered-set-keys", separate, foldRungs, keys, unregistered, ids, collisions, unslugable, duplicatesFolded, rows: rows.length };
   }
   if (collisions.length) {
-    return { verdict: "refuse", reason: "id-collisions", separate, foldRungs, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
+    return { verdict: "refuse", reason: "id-collisions", separate, foldRungs, keys, unregistered, ids, collisions, unslugable, duplicatesFolded, rows: rows.length };
   }
-  return { verdict: "pass", reason: null, separate, foldRungs, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
+  return { verdict: "pass", reason: null, separate, foldRungs, keys, unregistered, ids, collisions, unslugable, duplicatesFolded, rows: rows.length };
 }
 
 /**
