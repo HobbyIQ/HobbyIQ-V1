@@ -15,6 +15,7 @@ import {
   resolveChecklistNumberedIngestId,
   newNumberedIngestCache,
   _clearProcessCacheForTests,
+  RESULT_CAP,
   type NumberedIngestUpgradeInput,
   type NumberedIngestUpgradeOpts,
 } from "../src/services/catalog/resolveChecklistNumberedIngest.js";
@@ -28,16 +29,27 @@ interface Row {
   printRun?: number | null;
 }
 
-/** A card_catalog stand-in answering the (sport, year, cardNumber, isAuto)
- *  query. Counts every call so the tests can assert exact query volume. */
-function fakeContainer(rows: Row[], opts: { onQuery?: () => void; throwing?: boolean } = {}) {
+/** A card_catalog stand-in answering the (sport, year, setKey, cardNumber,
+ *  isAuto, NOT gradeTier) query -- REQUIRES @k (setKey) to be bound, since
+ *  the #2221-review fix put it in the WHERE; a fake that ignored it would
+ *  hide the exact regression that review caught (TOP truncating across
+ *  products before setKey narrowed to one). `rows` is filtered to the
+ *  bound setKey, mirroring what the real WHERE does, then capped at
+ *  RESULT_CAP (or a caller-supplied `cap`) to exercise the "hit the limit"
+ *  path. Counts every call so tests can assert exact query volume. */
+function fakeContainer(rows: Row[], opts: { onQuery?: () => void; throwing?: boolean; cap?: number } = {}) {
   return {
     items: {
       query(spec: { query: string; parameters: Array<{ name: string; value: unknown }> }) {
         opts.onQuery?.();
         const p = Object.fromEntries(spec.parameters.map((x) => [x.name, x.value]));
         const hasCardNumberParam = spec.parameters.some((x) => x.name.startsWith("@n"));
-        const hits = "@a" in p && hasCardNumberParam ? rows : [];
+        const hasGradeExclusion = spec.query.includes("NOT IS_DEFINED(c.gradeTier)");
+        const matched = "@a" in p && "@k" in p && hasCardNumberParam && hasGradeExclusion
+          ? rows.filter((r) => (r.setKey ?? null) === p["@k"])
+          : [];
+        const cap = opts.cap ?? RESULT_CAP;
+        const hits = matched.slice(0, cap);
         return {
           fetchAll: async () => {
             if (opts.throwing) {
@@ -121,6 +133,130 @@ describe("resolveChecklistNumberedIngestId -- the rule", () => {
 
   it("null container (no connection string) -> unchanged", async () => {
     expect(await resolveChecklistNumberedIngestId(BASE, { container: null, cache: newNumberedIngestCache() })).toBeNull();
+  });
+});
+
+describe("the #2295-review cap bug: setKey is in the WHERE, so a wide fan-out never truncates the target product", () => {
+  it("200 rows for the same card number across 10 products, target product's rows LAST in result order -> still resolves", async () => {
+    // Card #1 in one year exists in dozens of products; without c.setKey in
+    // the WHERE, TOP would fill entirely from other products before ever
+    // reaching this one -- the exact silent-miss the review caught. This
+    // fake honours the WHERE (filters to the bound setKey before slicing to
+    // the cap), so the test only passes if the real query does too.
+    const otherProducts = Array.from({ length: 190 }, (_, i) => ({
+      id: `hiq:baseball:2024:other-product-${i % 10}:1:base:no-auto:num-${i + 1}`,
+      source: "checklistcenter-2026-08-30",
+      setKey: `other-product-${i % 10}`,
+      parallelSlug: "base",
+      isAuto: false,
+      printRun: i + 1,
+    }));
+    const targetRows: Row[] = [
+      { id: "hiq:baseball:2024:bowman:1:base-refractor:no-auto:num-499", source: "checklistcenter-2026-08-30", setKey: "bowman", parallelSlug: "base-refractor", isAuto: false, printRun: 499 },
+    ];
+    // Target rows placed LAST, after 190 rows from 10 OTHER products -- if
+    // setKey were not filtered server-side, a TOP cap smaller than 200 would
+    // never reach them.
+    const allRows = [...otherProducts, ...targetRows];
+    expect(allRows.length).toBe(191);
+
+    const input: NumberedIngestUpgradeInput = {
+      slug: "hiq:baseball:2024:bowman:1:refractor:no-auto",
+      sport: "baseball",
+      year: 2024,
+      setKey: "bowman",
+      cardNumber: "1",
+      parallelSlug: "refractor",
+      isAuto: false,
+      printRun: null,
+    };
+    const id = await resolveChecklistNumberedIngestId(input, ctx(allRows));
+    expect(id).toBe("hiq:baseball:2024:bowman:1:base-refractor:no-auto:num-499");
+  });
+
+  it("hitting the result cap exactly -> UNKNOWN (null), and NOT cached as a negative", async () => {
+    // Every row shares the target's OWN setKey, so the WHERE keeps all of
+    // them -- exactly RESULT_CAP rows for one product's parallel ladder,
+    // which is itself the pathological case (a real ladder is ~26 rungs;
+    // this fixture simulates pre-consolidation duplicate spellings pushing
+    // one product over the cap). The checklist's numbered row is placed
+    // LAST, past the cap, so a truncated answer would wrongly say "none".
+    const paddingRows: Row[] = Array.from({ length: RESULT_CAP }, (_, i) => ({
+      id: `hiq:baseball:2024:bowman:1:padding-parallel-${i}:no-auto`,
+      source: "cardhedge",
+      setKey: "bowman",
+      parallelSlug: `padding-parallel-${i}`,
+      isAuto: false,
+      printRun: null,
+    }));
+    const theRealChecklistRow: Row = {
+      id: "hiq:baseball:2024:bowman:1:base-refractor:no-auto:num-499",
+      source: "checklistcenter-2026-08-30",
+      setKey: "bowman",
+      parallelSlug: "base-refractor",
+      isAuto: false,
+      printRun: 499,
+    };
+    const allRows = [...paddingRows, theRealChecklistRow]; // RESULT_CAP + 1 rows total
+
+    const input: NumberedIngestUpgradeInput = {
+      slug: "hiq:baseball:2024:bowman:1:refractor:no-auto",
+      sport: "baseball",
+      year: 2024,
+      setKey: "bowman",
+      cardNumber: "1",
+      parallelSlug: "refractor",
+      isAuto: false,
+      printRun: null,
+    };
+    const cache = newNumberedIngestCache();
+    let queries = 0;
+    const container = fakeContainer(allRows, { onQuery: () => { queries++; } });
+
+    const first = await resolveChecklistNumberedIngestId(input, { container, cache });
+    expect(first).toBeNull(); // UNKNOWN, not "no numbered row"
+
+    // NOT cached: a second call must query again rather than trust a
+    // truncated negative for the rest of the TTL.
+    const second = await resolveChecklistNumberedIngestId(input, { container, cache });
+    expect(second).toBeNull();
+    expect(queries).toBe(2);
+  });
+
+  it("one row under the cap resolves normally -- the cap only refuses AT the boundary", async () => {
+    // RESULT_CAP - 1 total rows (padding + the real row): the query returns
+    // fewer than RESULT_CAP, so this is a COMPLETE answer, not a truncation.
+    const paddingRows: Row[] = Array.from({ length: RESULT_CAP - 2 }, (_, i) => ({
+      id: `hiq:baseball:2024:bowman:1:padding-parallel-${i}:no-auto`,
+      source: "cardhedge",
+      setKey: "bowman",
+      parallelSlug: `padding-parallel-${i}`,
+      isAuto: false,
+      printRun: null,
+    }));
+    const theRealChecklistRow: Row = {
+      id: "hiq:baseball:2024:bowman:1:base-refractor:no-auto:num-499",
+      source: "checklistcenter-2026-08-30",
+      setKey: "bowman",
+      parallelSlug: "base-refractor",
+      isAuto: false,
+      printRun: 499,
+    };
+    const allRows = [...paddingRows, theRealChecklistRow]; // RESULT_CAP - 1 rows total
+    expect(allRows.length).toBe(RESULT_CAP - 1);
+
+    const input: NumberedIngestUpgradeInput = {
+      slug: "hiq:baseball:2024:bowman:1:refractor:no-auto",
+      sport: "baseball",
+      year: 2024,
+      setKey: "bowman",
+      cardNumber: "1",
+      parallelSlug: "refractor",
+      isAuto: false,
+      printRun: null,
+    };
+    const id = await resolveChecklistNumberedIngestId(input, ctx(allRows));
+    expect(id).toBe("hiq:baseball:2024:bowman:1:base-refractor:no-auto:num-499");
   });
 });
 

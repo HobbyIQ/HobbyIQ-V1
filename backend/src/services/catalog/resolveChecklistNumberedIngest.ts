@@ -162,6 +162,15 @@ export function _clearProcessCacheForTests(): void {
 
 const isChecklist = (source: string | null | undefined): boolean => catalogAuthorityOf(source) === "checklist";
 
+/** See the query's own comment at the call site for the full justification:
+ *  the largest hardcoded ladder (parallelLadders.ts) is 26 rungs; this
+ *  query's own filter shape (sport, year, setKey, cardNumber, isAuto) minus
+ *  the grade axis has run at TOP 300 in catalogMatcher.service.ts since
+ *  2026-08-14. 100 is comfortably above the real ladder while excluding
+ *  graded children that query does not. Exported so a test can assert
+ *  against it rather than a repeated literal. */
+export const RESULT_CAP = 100;
+
 export interface NumberedIngestUpgradeInput {
   /** The slug ingest just derived, before this upgrade. */
   slug: string;
@@ -284,32 +293,87 @@ export async function resolveChecklistNumberedIngestId(
       container.items
         .query<CatalogFieldRow>(
           {
-            // TOP bounds a pathological identity (a wrong/shared cardNumber
-            // matching far more rows than any real card ever does) to one
-            // page rather than a full cross-partition scan; a real card's
-            // numbered ladder is a handful of rows. Projection is the six
-            // fields identityKeyOf / pickChecklistNumberedTarget actually
-            // read -- no SELECT *. CROSS-PARTITION: card_catalog partitions
-            // on /cardId (docs/cosmos-60s-callsites-2026-09-16.md) and none
-            // of sport, year, cardNumber or isAuto is that key -- same
-            // fan-out shape as checklistNarrow, which is exactly why this
-            // shares its breaker and its timeout.
+            // CF-A-CAP-BELOW-THE-LADDER-IS-A-SILENT-MISS (2026-09-19 review).
+            // c.setKey IS IN THE WHERE, deliberately, unlike an earlier
+            // revision of this query: without it, "card #1, 2024, baseball"
+            // fans out across every product that ever printed a #1 -- dozens
+            // of products x dozens of parallels each -- and a TOP far larger
+            // than any one product's ladder would still truncate before the
+            // target product's own rows and silently answer "no numbered
+            // row". identityKeyOf already groups on the setKey FIELD (not the
+            // id segment, mid-rename-safe -- see its own header), so filtering
+            // SQL on the same field loses nothing the in-memory identity
+            // filter below would have kept anyway.
+            //
+            // c.parallelSlug is NOT filtered in SQL, on purpose: identityKeyOf
+            // compares the CLEANED parallel (`cleanParallelSlug` strips
+            // `base-`/`base-cards-` and lowercases -- this module's own
+            // header opens with the exact case a raw equality would miss,
+            // `base-refractor` vs `refractor`). A SQL `c.parallelSlug = @p`
+            // would exclude the checklist row this module exists to find.
+            // The identity filter below is what actually narrows to the
+            // parallel; SQL only narrows to (sport, year, setKey, cardNumber,
+            // isAuto), same as catalogMatcher.service.ts's own
+            // (sport, year, cardNumber, isAuto, setKey) query at :1356.
+            //
+            // NOT IS_DEFINED(c.gradeTier) excludes graded-child rows -- same
+            // scope fold-checklist-numbered-twins.cjs's own pass 1 uses
+            // (":179") -- so this counts identities, not (identity x grade
+            // tier) explosions.
+            //
+            // TOP 100: with setKey pinned, the candidate set is one card
+            // number's parallel ladder on ONE product. The largest hardcoded
+            // ladder in parallelLadders.ts is 26 rungs (2026 Bowman Chrome
+            // Prospect Autographs); catalogMatcher.service.ts's own
+            // (sport, year, cardNumber, isAuto, setKey) query -- the same
+            // filter shape, MINUS the grade exclusion this query adds -- has
+            // used TOP 300 since 2026-08-14 on the stated grounds that "a
+            // card has far fewer than 300 parallels". 100 sits comfortably
+            // above the real ladder (room for pre-consolidation spelling
+            // duplicates of the same rung) while excluding the grade axis
+            // that query does not, so it is tighter without being narrower
+            // than what is already trusted in production for this exact
+            // shape.
             query:
-              `SELECT TOP 50 c.id, c.source, c.setKey, c.parallelSlug, c.isAuto, c.printRun FROM c ` +
-              `WHERE c.sport = @s AND c.year = @y AND c.cardNumber IN (${num.sql}) AND c.isAuto = @a`,
+              `SELECT TOP ${RESULT_CAP} c.id, c.source, c.setKey, c.parallelSlug, c.isAuto, c.printRun FROM c ` +
+              `WHERE c.sport = @s AND c.year = @y AND c.setKey = @k AND c.cardNumber IN (${num.sql}) AND c.isAuto = @a ` +
+              `AND NOT IS_DEFINED(c.gradeTier)`,
             parameters: [
               { name: "@s", value: input.sport },
               { name: "@y", value: input.year },
+              { name: "@k", value: setKey },
               ...num.params,
               { name: "@a", value: input.isAuto },
             ],
           },
           // The abortSignal lands HERE, on the SDK call -- see queryOptions's
           // own doc for why that is load-bearing, not cosmetic.
-          { maxItemCount: 50, ...opts.queryOptions },
+          { maxItemCount: RESULT_CAP, ...opts.queryOptions },
         )
         .fetchAll(),
     );
+
+    // CF-A-CAP-HIT-IS-UNKNOWN-NOT-EMPTY. Hitting TOP exactly means the real
+    // candidate set may extend past what was fetched -- the checklist's
+    // numbered row could be sitting just past the cut. Answering "no numbered
+    // row" here would be a WRONG negative, worse than no answer, and caching
+    // it would freeze that wrong answer for the rest of the TTL. So this
+    // returns null WITHOUT caching, and counts the event so the true rate is
+    // visible rather than silently absorbed into "unnumbered-twin, none
+    // found".
+    if ((resources ?? []).length >= RESULT_CAP) {
+      console.warn(JSON.stringify({
+        event: "checklist_numbered_ingest_result_cap_hit",
+        source: "resolveChecklistNumberedIngest",
+        sport: input.sport,
+        year: input.year,
+        setKey,
+        cardNumber: input.cardNumber,
+        cap: RESULT_CAP,
+        detail: "the candidate set may extend past TOP; answering UNKNOWN rather than a wrong negative -- not cached",
+      }));
+      return null;
+    }
 
     const rows: IdentityRow[] = (resources ?? [])
       .filter((r): r is CatalogFieldRow => typeof r?.id === "string" && r.id.startsWith("hiq:"))
