@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createRequire } from "node:module";
+import fs from "node:fs";
 import path from "node:path";
 
 const require_ = createRequire(import.meta.url);
@@ -296,5 +297,85 @@ describe("the mover guards the address it is moving TO", () => {
     expect(res.stage).toBe("done");
     expect(written[0]!.identityUnverified).toBeUndefined();
     expect(deleted).toHaveLength(1);
+  });
+});
+
+describe("CF-BOTH-ADDRESSES-MOVE-TOGETHER (fold-checklist-numbered-twins.cjs's own relocate call)", () => {
+  // Verified finding: tca-ebay rows observed with cardId at the target
+  // (hiq:...:topps-finest:39:orange-refractor:no-auto:num-25) but
+  // hobbyiqCardId still on the old slug (hiq:...:topps:39:orange-refractor:
+  // no-auto). Reviewed fold-checklist-numbered-twins.cjs's own
+  // relocatePartitionKeyedSales: it builds `keep` with BOTH `cardId:
+  // targetId` and `hobbyiqCardId: targetId` set explicitly (never left to a
+  // spread from the old row), and passes verifyFields: ["cardId",
+  // "hobbyiqCardId"] to relocateSoldComp -- so a write that upserted the
+  // fields correctly is the ONLY way `ok: true` comes back. These tests pin
+  // that guarantee at the relocateSoldComp layer directly: a write that
+  // (hypothetically) only moved cardId and left hobbyiqCardId stale is
+  // ALWAYS reported ok:false, verify-mismatch, never silently accepted.
+  const target = "hiq:baseball:2026:topps-finest:39:orange-refractor:no-auto:num-25";
+  const stale = "hiq:baseball:2026:topps:39:orange-refractor:no-auto";
+
+  it("a write that moved cardId but left hobbyiqCardId on the old slug is caught by verifyFields, never accepted", async () => {
+    // Simulates the exact defect class: the upsert store somehow persisted
+    // cardId at the target but hobbyiqCardId at the stale slug (as if `keep`
+    // had been built without the explicit hobbyiqCardId override). The
+    // read-back must show this mismatch and refuse, not report ok:true.
+    const corrupted = { id: "tca-ebay::999", cardId: target, hobbyiqCardId: stale, price: 12 };
+    const pool = {
+      item: (id: string, pk: string) => ({
+        read: async () => (pk === target ? { resource: corrupted } : { resource: null }),
+        delete: async () => {},
+      }),
+      items: {
+        upsert: async () => { /* pretend the corrupted doc landed */ },
+        query: () => ({ fetchAll: async () => ({ resources: [] }) }),
+      },
+    };
+    const res = await relocateSoldComp(pool as never, {
+      keep: { id: "tca-ebay::999", cardId: target, hobbyiqCardId: target, price: 12 },
+      drop: [{ id: "tca-ebay::999", cardId: stale }],
+      verifyFields: ["cardId", "hobbyiqCardId"],
+      guard: () => ({ verdict: "ok" }),
+      wait: async () => {},
+    });
+    expect(res.ok).toBe(false);
+    // Never deleted the old row when the keeper could not be verified --
+    // CF-A-VERIFY-MISMATCH-IS-A-DUPLICATE-NOT-A-FAILURE: report it, do not
+    // strand the sale by deleting the twin under an unverified keeper.
+    expect(res.deleted).toHaveLength(0);
+  });
+
+  it("fold-checklist-numbered-twins.cjs's relocatePartitionKeyedSales builds `keep` with an explicit hobbyiqCardId override, not a spread default", () => {
+    const source = fs.readFileSync(
+      path.join(process.cwd(), "scripts", "fold-checklist-numbered-twins.cjs"),
+      "utf8",
+    );
+    const fn = source.slice(source.indexOf("async function relocatePartitionKeyedSales"));
+    expect(fn).toMatch(/cardId:\s*targetId/);
+    expect(fn).toMatch(/hobbyiqCardId:\s*targetId/);
+    // Both fields must be set in the SAME object literal, after the row
+    // spread, so neither can be shadowed by a stale field from the old row.
+    const keepLine = fn.split("\n").find((l) => l.includes("cardId: targetId"));
+    expect(keepLine).toBeDefined();
+    expect(keepLine).toMatch(/\.\.\.stripSystem\(row\)/);
+    expect(keepLine).toMatch(/cardId:\s*targetId.*hobbyiqCardId:\s*targetId|hobbyiqCardId:\s*targetId.*cardId:\s*targetId/);
+    expect(fn).toContain('verifyFields: ["cardId", "hobbyiqCardId"]');
+  });
+
+  it("the moveCatalogRow PATCH path (non-partition-keyed sales) never touches cardId -- this is not the same gap", () => {
+    // moveCatalogRow's sales patch queries by hobbyiqCardId = oldId and
+    // patches ONLY /hobbyiqCardId, because cardId is the partition key and
+    // cannot be patched in place. For the rows it touches, cardId legitimately
+    // stays whatever it always was (never the twin's own partition to begin
+    // with), so there is no cardId/hobbyiqCardId divergence to introduce --
+    // the patch path answers a different population than the relocate path.
+    const source = fs.readFileSync(
+      path.join(process.cwd(), "src", "services", "catalog", "catalogRowOps.service.ts"),
+      "utf8",
+    );
+    const patchOpsBlock = source.slice(source.indexOf("const ops: PatchOperation[]"), source.indexOf("const ops: PatchOperation[]") + 400);
+    expect(patchOpsBlock).toContain('path: "/hobbyiqCardId"');
+    expect(patchOpsBlock).not.toContain('path: "/cardId"');
   });
 });

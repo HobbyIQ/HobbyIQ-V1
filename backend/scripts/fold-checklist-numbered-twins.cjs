@@ -224,6 +224,12 @@ async function main() {
     groups: 0, groupsWithFold: 0, noChecklistNumbered: 0, ambiguous: 0,
     twinsFolded: 0, unnumberedTwin: 0, respelledSamePrintRun: 0, noAutoGhost: 0, rivalPrintRun: 0,
     twinIsChecklist: 0, twinIsTarget: 0, differentIdentity: 0,
+    // CF-A-CROSS-PRODUCT-FOLD-IS-NOT-A-FOLD: the identity key's setKey FIELD
+    // put these two rows in one group, but their ids' own setKey segments
+    // disagree -- Bowman vs Bowman Chrome vs Sapphire vs Paper, never folded
+    // across, whatever the field says. Caught before the attempt, its own
+    // bucket, never counted as a failure.
+    crossProductNotFolded: 0,
     salesRepointed: 0, salesRelocated: 0, salesRelocateFailed: 0,
     gradedRetired: 0, holdingsRepointed: 0, holdingDocsWalked: 0, holdingsWalked: 0,
     survivorNotIncumbent: 0, failed: 0, notReached: 0,
@@ -237,10 +243,14 @@ async function main() {
   };
   const byFamily = new Map();  // family -> { groups, twins, unnumbered, differentN, ghost }
   const byKind = { "unnumbered-twin": 0, "respelled-same-print-run": 0, "no-auto-ghost": 0 };
-  const samples = [], pinnedSamples = [], rivalSamples = [];
+  const samples = [], pinnedSamples = [], rivalSamples = [], crossProductSamples = [];
   /** Every refused pair, in full -- a pair truncated out of the log is a pair
    *  nobody can settle, and settling them is the whole point of refusing. */
   const refusals = [];
+  /** Every FAILED fold, in full -- see the note at the push site: a run that
+   *  failed hundreds of folds and printed five of them cannot be told apart
+   *  from a run with one defect repeated hundreds of times. */
+  const failures = [];
   /** Every contended pair with what the arms saw and which decided. */
   const contendedLines = [];
   const r2Contradictions = [];
@@ -303,6 +313,40 @@ async function main() {
         else if (d.skip === "rival-print-run") {
           stats.rivalPrintRun++;
           if (rivalSamples.length < 20) rivalSamples.push(`  ${twin.id}  [${twin.source}] /${printRunOf(twin)}  vs checklist ${target.id} /${printRunOf(target)}`);
+        }
+        continue;
+      }
+
+      // CF-A-CROSS-PRODUCT-FOLD-IS-NOT-A-FOLD (verified against run 35414193671).
+      //
+      // identityKeyOf groups by the setKey FIELD, not the id -- right for R1
+      // (#330 in foldTwinRuleChecklistNumbered.test.ts pins it), because the
+      // D23 rename renames the field first and a group keyed on the id segment
+      // would lose the rows mid-flight. But the FIELD can also drift the OTHER
+      // way: an `ingest-auto-seed` twin whose id still reads
+      // `...:bowman-paper:...` while its setKey FIELD was generalised (or never
+      // corrected) to plain `bowman` groups with a `bowman` target by field --
+      // and moveCatalogRow's own guard, reading the id (never the field, by
+      // design: CF-THE-ID-CARRIES-THE-PRODUCT), then throws "a cross-product
+      // move is not a move" on EVERY one of these, which this lane was counting
+      // as `failed`. Measured live: `bowman-paper -> bowman`,
+      // `bowman-chrome-sapphire -> bowman`, `bowman-chrome -> bowman-draft`.
+      //
+      // Bowman vs Bowman Chrome vs Sapphire vs Paper are DIFFERENT CARDS --
+      // never folded across them, whatever the field says. Caught HERE, before
+      // the attempt, so it costs no write and is not miscounted as a failure:
+      // it is its own bucket, `crossProductNotFolded`, because it is neither a
+      // successful fold nor a defect in the row -- it is two products sharing
+      // one identity key by a field/id mismatch that this lane does not own.
+      const twinIdSetKey = String(twin.id ?? "").split(":")[3] ?? "";
+      const targetIdSetKey = String(target.id ?? "").split(":")[3] ?? "";
+      if (twinIdSetKey && targetIdSetKey && twinIdSetKey !== targetIdSetKey) {
+        stats.crossProductNotFolded++;
+        if (crossProductSamples.length < 20) {
+          crossProductSamples.push(
+            `  ${twin.id}  [${twin.source}] setKey field="${twin.setKey}"  vs  ${target.id}  [${target.source}] setKey field="${target.setKey}"` +
+            `  -- id segments disagree ("${twinIdSetKey}" != "${targetIdSetKey}") though the FIELD grouped them`,
+          );
         }
         continue;
       }
@@ -394,7 +438,16 @@ async function main() {
         await repointHoldings(portfolio, holdingsIndex, twin.id, target.id, stats);
       } catch (e) {
         stats.failed++;
-        if (stats.failed <= 5) console.log(`  failed ${twin.id}: ${String(e.message).slice(0, 140)}`);
+        // EVERY FAILURE IS LISTED, never a truncated sample -- a run that
+        // failed 632 of 632 folds and printed 5 of them left an operator no
+        // way to tell whether the other 627 were the same defect or 627
+        // different ones (verified against run 35414193671, link 1). No
+        // message truncation either: the full error, not the first 140
+        // characters, since the truncation point itself hid the identity a
+        // stack trace would have named.
+        const line = `  failed ${twin.id} -> ${target.id}: ${String(e?.stack ?? e?.message ?? e)}`;
+        failures.push(line);
+        console.log(line.split("\n")[0]);
       }
     }
     if (foldedHere) { stats.groupsWithFold++; bump(family, "groups"); }
@@ -411,6 +464,7 @@ async function main() {
   console.log(`    respelled, same /N       ${f(stats.respelledSamePrintRun)}   <- the half the old script cannot reach at all`);
   console.log(`    no-auto ghost            ${f(stats.noAutoGhost)}   <- CPA is auto by definition`);
   console.log(`  left alone: twin is checklist ${f(stats.twinIsChecklist)}  |  is the target ${f(stats.twinIsTarget)}  |  different identity ${f(stats.differentIdentity)}`);
+  console.log(`  cross-product (not folded) ${f(stats.crossProductNotFolded)}   <- the setKey FIELD grouped them, the ids' own setKey segments disagree; different cards, never a defect to fix here`);
   console.log(`  RIVAL /N (reported, NOT folded) ${f(stats.rivalPrintRun)}   <- a real second print run is a second card; a human rules on these`);
   console.log(`  CONTENDED: different player ${f(stats.contendedPairs)}   <- evidence gathered for these only; the rest fold on the ordinary ladder`);
   console.log(`  REFUSED: different player  ${f(stats.refusedDifferentPlayer)}   <- twin and target name different people and neither is corroborated; NOTHING written`);
@@ -447,6 +501,11 @@ async function main() {
     for (const r of rivalSamples) console.log(r);
   }
 
+  if (crossProductSamples.length) {
+    console.log(`\n  CROSS-PRODUCT SAMPLES (${f(stats.crossProductNotFolded)} total; the setKey FIELD grouped these, the ids disagree -- never folded, not a defect in the row):`);
+    for (const c of crossProductSamples) console.log(c);
+  }
+
   if (contendedLines.length) {
     console.log(`\n  DIFFERENT PLAYER at one address -- the evidence, per pair (${f(contendedLines.length)}):`);
     for (const l of contendedLines) console.log(l);
@@ -455,6 +514,11 @@ async function main() {
   if (refusals.length) {
     console.log(`\n  REFUSED -- different players at one address, neither corroborated (${f(refusals.length)}). Nothing was written for any of these:`);
     for (const r of refusals) console.log(r);
+  }
+
+  if (failures.length) {
+    console.log(`\n  FAILED -- every one, in full (${f(failures.length)}). No sample truncation: a run that failed hundreds of folds and printed five of them cannot be told apart from a run with one defect repeated hundreds of times:`);
+    for (const fl of failures) console.log(fl);
   }
 
   if (r2Contradictions.length) {
@@ -472,9 +536,9 @@ async function main() {
       // A REFUSAL IS INTENDED AND SKIPPED. The row was adopted and adjudicated;
       // the adjudication said "write nothing". Counting it as written would
       // claim a write that did not happen.
-      intended: stats.twinsFolded + stats.noChecklistNumbered + stats.ambiguous + stats.twinIsChecklist + stats.twinIsTarget + stats.differentIdentity + stats.rivalPrintRun + stats.refusedDifferentPlayer + stats.failed,
+      intended: stats.twinsFolded + stats.noChecklistNumbered + stats.ambiguous + stats.twinIsChecklist + stats.twinIsTarget + stats.differentIdentity + stats.crossProductNotFolded + stats.rivalPrintRun + stats.refusedDifferentPlayer + stats.failed,
       written: stats.twinsFolded,
-      skipped: stats.noChecklistNumbered + stats.ambiguous + stats.twinIsChecklist + stats.twinIsTarget + stats.differentIdentity + stats.rivalPrintRun + stats.refusedDifferentPlayer,
+      skipped: stats.noChecklistNumbered + stats.ambiguous + stats.twinIsChecklist + stats.twinIsTarget + stats.differentIdentity + stats.crossProductNotFolded + stats.rivalPrintRun + stats.refusedDifferentPlayer,
       failed: stats.failed,
     });
     console.log(`  written sub-totals (not skipped): un-numbered ${f(stats.unnumberedTwin)} | respelled-same-/N ${f(stats.respelledSamePrintRun)} | ghost ${f(stats.noAutoGhost)}`);

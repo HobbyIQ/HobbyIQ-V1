@@ -2170,6 +2170,19 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
+      # The checklist-numbered fold's log carries every FAILED fold in full
+      # (never a 5-line sample), every REFUSED-different-player pair, and the
+      # new cross-product (not folded) bucket -- the evidence an APPLY dispatch
+      # is quotable from, same reason the Bowman refile log above is kept.
+      - name: Upload the checklist-numbered fold log
+        if: ${{ always() && inputs.script == 'fold-checklist-numbered-twins' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fold-checklist-numbered-twins-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
+
       # Split-identity census self-relaunch. Relaunch iff the budget marker
       # printed (#1361), forwarding every input verbatim -- `apply` included
       # (#1578: a report that relaunches as a write is the defect that rule
