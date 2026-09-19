@@ -1398,6 +1398,52 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
    */
   S("nba-hoops-premium-stock", { family: "nba-hoops", parent: "nba-hoops" }),
 
+  /**
+   * 2024 PANINI ILLUSIONS -- THE FIVE NAMED INSERT SETS (R60, Drew: a named
+   * insert set is its own card set, keyed `<product>-<insert>`; R38 registers
+   * Panini keys en bloc).
+   *
+   * MEASURED, not proposed. The committed checklistinsider file
+   * `2024-panini-illusions-football.csv` is REFUSED WHOLE by the ingester's
+   * id-integrity guard -- `files REFUSED, id integrity 1 (10,871 rows)`, zero
+   * written -- and the guard names exactly these five keys, each with the
+   * categories that produce it:
+   *
+   *     panini-illusions-trophy-collection                        2,300 rows
+   *     panini-illusions-mystique-autographs                        270
+   *     panini-illusions-immortalized-jersey-autographs             197
+   *     panini-illusions-rookie-reflections-dual-patch-autographs     81
+   *     panini-illusions-illusionists-autographs                      34
+   *
+   * Every one of them answers `panini-illusions` today -- verified by RUNNING
+   * normalizeSetKey, not by reading it -- so all five products' cards would
+   * land on the flagship's addresses. 10,871 rows would have taken 8,653
+   * distinct ids; the guard is what stops that, and registration is what
+   * clears the guard. The whole file is held until all five exist: the unit of
+   * refusal is the FILE, never half a product.
+   *
+   * SPELLED (`S`), for the reason Haunted Hoops states above: only a spelled
+   * product answers productSetKeyForName, the leg that runs BEFORE the
+   * unanchored brand patterns. Declared with `P` these keys still collapse
+   * onto `panini-illusions`.
+   *
+   * `parent: "panini-illusions"` records the release they belong to so the
+   * matcher may widen up the ladder, while `family` keeps each pool its own.
+   * None is given the bare name "illusions" -- that belongs to the flagship,
+   * and handing it here re-creates the swallow in the opposite direction.
+   *
+   * ILLUSIONISTS IS THE PRODUCT'S SIGNATURE SET and the one the R31/R33 title
+   * refusals kept naming; `-illusionists-autographs` is the SIGNED sibling and
+   * a different card set, not a rung of it. The unsigned `Illusionists` rows
+   * carry a blank parallel and stay on the product key, exactly as the base
+   * ladder does.
+   */
+  S("panini-illusions-trophy-collection", { family: "panini-illusions", parent: "panini-illusions" }),
+  S("panini-illusions-mystique-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
+  S("panini-illusions-immortalized-jersey-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
+  S("panini-illusions-rookie-reflections-dual-patch-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
+  S("panini-illusions-illusionists-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
+
   // -- Fleer / Skybox / Pinnacle / Score / vintage ----------------------------
   P("fleer"),
   ...["fleer-stickers", "fleer-tradition", "fleer-update", "fleer-metal-universe"].map((k) => P(k, { parent: "fleer" })),
