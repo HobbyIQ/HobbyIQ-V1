@@ -1138,6 +1138,34 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // Black Diamond, SPx, Collector's Choice and MVP, and a plain UD insert
     // line with no Exquisite in its name still folds to `upper-deck` below.
     [/(?:^|-)exquisite(?:-|$)|exquisite-collection/, "upper-deck-exquisite"],
+    // CF-UD-SERIES-IS-THE-PRODUCT (D39 follow-on). productSetKeyForName above
+    // already answers "Upper Deck Series 1/One/2/Two" and "Upper Deck Extended
+    // (Series)" from the table's own `names`, because that spelling appears as
+    // a contiguous run of segments. It never answers the abbreviated "UD"
+    // spelling, because the table's run-matcher only knows the words the
+    // catalog itself carries -- and prod reads (2026-09-19) show sellers write
+    // it both ways: "2023-24 Upper Deck Series 2 Young Guns #492" AND
+    // "2024 UD Extended Beehive #BH-24" AND "2022-23 UD Canvas #C99" (this last
+    // one deliberately NOT resolved here -- Canvas names no series, and
+    // guessing one is exactly the defect this file exists to forbid; see the
+    // PR body for the checklist follow-up that would let a card number decide).
+    //
+    // These three rules are the "UD" half of the same fold D39 already ships
+    // for the fold-umbrella-to-series.cjs relocation lane (its `seriesFromTitle`
+    // uses the identical un-prefixed `\bseries\s*(?:1|one|2|two)\b` /
+    // `\bextended\s*series?\b` tests) -- ported here so a FRESH sale never
+    // needs relocating in the first place. Anchored on `(?:^|-)upper-deck-|
+    // (?:^|-)ud-` so the maker word must actually be present: bare "series-1"
+    // or "extended" with no Upper Deck / UD in the slug at all is not evidence
+    // of this product and must not match.
+    //
+    // Extended is tried FIRST and, on a hit, is the only one that can fire --
+    // "UD Extended Series" contains the word "series" and must never also
+    // register as Series 1 or Series 2, the same ordering the relocation
+    // script's seriesFromTitle enforces.
+    [/(?:^|-)(?:upper-deck|ud)-extended(?:-series)?(?:-|$)/, "upper-deck-extended-series"],
+    [/(?:^|-)(?:upper-deck|ud)-series-?(?:1|one)(?:-|$)/, "upper-deck-series-1"],
+    [/(?:^|-)(?:upper-deck|ud)-series-?(?:2|two)(?:-|$)/, "upper-deck-series-2"],
     [/upper-deck/, "upper-deck"],
     // CF-FLEER-STICKERS (Drew, 2026-07-29). Distinct from base Fleer;
     // basketball's iconic debut product line (1986 Michael Jordan
