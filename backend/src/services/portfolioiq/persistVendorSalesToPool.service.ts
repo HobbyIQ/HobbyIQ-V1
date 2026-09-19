@@ -1665,6 +1665,10 @@ export async function persistVendorSalesToPool(
             parallelSlug: canonicalParallel,
             isAuto: parsed.isAuto,
             printRun: parsed.printRun ?? null,
+            // SHOULD-FIX 3 (#2314 review): extractPrintRun only reads slash
+            // forms; a title stating its run in PROSE ("Numbered to 50",
+            // "SN50") would otherwise slide through as "absent" here.
+            title,
           },
           {
             container: await getCatalogContainerForRead(),

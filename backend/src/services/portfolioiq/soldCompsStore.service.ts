@@ -1370,6 +1370,11 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
           parallelSlug: input.parallel ?? null,
           isAuto: input.isAuto ?? false,
           printRun: printRunFinal,
+          // SHOULD-FIX 3 (#2314 review): a title stating its print run in
+          // PROSE ("Numbered to 50", "SN50") has printRunFinal null from the
+          // slash-only reading; without this the sale would slide through
+          // as "absent" here too.
+          title: input.title,
         },
         {
           container: await getCatalogContainerForRead(),

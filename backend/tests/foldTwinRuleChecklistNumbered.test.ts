@@ -9,6 +9,7 @@ import {
   pickChecklistNumberedTarget,
   printRunOf,
   shardOfIdentity,
+  shortIdChecklistVeto,
   subsetSegmentOf,
   type IdentityRow,
 } from "../src/services/catalog/foldTwinRuleChecklistNumbered.js";
@@ -476,5 +477,31 @@ describe("R1 -- retiring a NUMBERED twin sweeps its own ladder and no sibling's"
   it("parentSlug settles it when present", () => {
     expect(isGradedChildOf({ id: `${twin}:psa-10`, parentSlug: twin }, twin)).toBe(true);
     expect(isGradedChildOf({ id: `${twin}:psa-10`, parentSlug: "hiq:something:else" }, twin)).toBe(false);
+  });
+});
+
+describe("shortIdChecklistVeto -- a checklist-backed row at the short id is a DIFFERENT card, never a twin (review finding on #2314)", () => {
+  it("nothing at the short id -> no veto", () => {
+    expect(shortIdChecklistVeto(null, isChecklist)).toEqual({ veto: false });
+    expect(shortIdChecklistVeto(undefined, isChecklist)).toEqual({ veto: false });
+  });
+
+  it("a vendor/derived row at the short id -> no veto (that is an ordinary twin, the fold's job)", () => {
+    expect(shortIdChecklistVeto({ source: "ingest-auto-seed" }, isChecklist)).toEqual({ veto: false });
+    expect(shortIdChecklistVeto({ source: "cardhedge" }, isChecklist)).toEqual({ veto: false });
+  });
+
+  it("a CHECKLIST row at the short id -> VETO -- a partial print-run ladder means the un-numbered card is real", () => {
+    expect(shortIdChecklistVeto({ source: "checklistcenter-2026-08-30" }, isChecklist))
+      .toEqual({ veto: true, reason: "short-id-is-checklist-backed" });
+  });
+
+  it("no ghost exemption here -- unlike the ordinary fold, a checklist row at the short id is never waved through", () => {
+    // decideChecklistNumberedFold's ghost exemption applies to a NO-AUTO twin
+    // against an AUTO target on an auto-by-definition card number; this veto
+    // takes no isAuto/cardNumber input at all and fires on checklist
+    // authority alone, because a short id (no print run) is never the ghost
+    // shape (which requires the checklist itself to carry the print run).
+    expect(shortIdChecklistVeto({ source: "checklistinsider-2026-08-27" }, isChecklist).veto).toBe(true);
   });
 });
