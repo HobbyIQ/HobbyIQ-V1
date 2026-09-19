@@ -2302,12 +2302,47 @@ function normalizeCatalogSource(raw) {
   // publisher appears as both `tcdb-2026-08-12` and
   // `tcgdex-scraped-2026-08-16`, and an allowlist that had to carry both
   // spellings of every name would eventually miss one.
-  const strip = (x) => x.replace(/-(graded|attested|unnumbered|scraped)$/, "");
+  //
+  // CF-BECKETT-S3-NAMES-THE-ORIGIN-NOT-THE-SOURCE (2026-09-19). `s3` is the
+  // same shape as `scraped`: discoverBeckettS3Checklists.cjs fetches from
+  // Beckett's own S3 origin rather than the img.beckett.com CDN
+  // discoverBeckettChecklists.cjs already used, and tags its manifests
+  // `beckett-s3-<date>` to say so -- a fact about WHICH PIPE the bytes
+  // travelled down, not about who published them. Measured: 20,489 rows
+  // (2026 Topps Series 1, 2023 Chrome Platinum, 2024 Donruss football)
+  // ingested today under exactly this tag, written with CHECKLIST authority
+  // by catalogAuthorityOf's unanchored regex (which matches the "beckett"
+  // substring) while scoring STRICT 0 here, because `-s3` survived to the
+  // final normalised string and `beckett-s3` is not itself a registered
+  // publisher. Stripping it the same way `scraped` already is means
+  // `beckett-s3-<date>` reduces to `beckett` exactly like
+  // `beckett-scraped-<date>` does, rather than adding a one-off
+  // `beckett-s3` string that would need a sibling for the next origin tag
+  // (`beckett-cdn`, `beckett-api`, ...) someone invents later.
+  const strip = (x) => x.replace(/-(graded|attested|unnumbered|scraped|s3)$/, "");
   for (;;) { const next = strip(s); if (next === s) break; s = next; }
   // a trailing ISO-ish date stamp: -2026-08-27, -2026-08-27T..., -20260827
   s = s.replace(/-\d{4}-\d{2}-\d{2}(t[\d:.+-]*)?$/, "").replace(/-\d{8}$/, "");
   // and the suffixes again, in case the date sat between them
   for (;;) { const next = strip(s); if (next === s) break; s = next; }
+  // CF-TCGDEX-JA-MODERN-IS-THE-TCGDEX-JA-LANE (2026-09-19). scrape-tcgdex-ja.cjs
+  // tags its manifests `tcgdex-ja-modern` (53 committed manifests under
+  // backend/data/checklists/tcgdex-ja-modern/ and tcgdex-ja-sv10/ both
+  // declare exactly this string) -- `-modern` names WHICH ERA CORPUS of the
+  // tcgdex JSON API was walked, the same role `-ja` itself plays one level
+  // up (already documented below: "the -ja token names WHICH CORPUS of that
+  // API was walked, not a different source of evidence"). It survived
+  // normalisation as its own three-segment string, which is neither
+  // STRICT_CHECKLIST_SOURCES's `tcgdex` nor STRICT_PUBLISHER_LANES's
+  // `tcgdex-ja`, so it scored strict=false while catalogAuthorityOf's loose
+  // regex still matched the bare "tcgdex" substring inside it -- the same
+  // split this file's own header exists to prevent. A NAMED alias, not a
+  // generic "-modern" strip: this suffix is a corpus qualifier ONLY on this
+  // one publisher's lane, not an ingest verb like `scraped`/`s3` that could
+  // safely generalise to every source, and this file's own STRICT_PUBLISHER_
+  // LANES doc comment above ("WHY A NAMED LIST AND NOT A GENERAL RULE")
+  // gives the reasoning for preferring a named entry over a wider pattern.
+  if (s === "tcgdex-ja-modern") return "tcgdex-ja";
   return s;
 }
 
@@ -2415,10 +2450,61 @@ function catalogRowAnswersForSport(row, sport, normalizeSport) {
   return got === want;
 }
 
+// CF-A-COMPOUND-SOURCE-IS-STRICT-IFF-EVERY-COMPONENT-IS (2026-09-19). A
+// manifest sometimes names its provenance as several publishers joined with
+// "+" -- `beckett+cardboardconnection`, a three-way `beckett+checklistinsider
+// +cardboardconnection` -- because the acquisition cross-checked more than
+// one source before staging the file. The compound STRING itself was never
+// going to be a member of STRICT_CHECKLIST_SOURCES (an allowlist of single
+// publisher names), so every one of these scored strict=false regardless of
+// what it was made of -- including `baseballcardpedia+observed-sold-comps`,
+// which SHOULD score false (a sale observation joined onto a checklist
+// publisher is not itself a checklist), but for the wrong reason: the gate
+// never looked at the components at all, so a compound of three genuinely
+// strict publishers (`beckett+checklistinsider+cardboardconnection`, 3
+// products, 20,489+ rows ingested 2026-09-19) scored the same false as one
+// that should not pass.
+//
+// THE RULE: split on "+", and the compound is strict only when EVERY piece
+// is independently strict once normalised (recursing into this same
+// function, so a per-piece date stamp or `-scraped`/`-s3` suffix is stripped
+// exactly as it would be for that piece standing alone). One weak piece
+// fails the whole compound, which is also why `baseballcardpedia+observed-
+// sold-comps` correctly stays false: `observed-sold-comps` normalises to
+// itself, is not in the allowlist, and is not a registered lane of one --
+// nothing invented, the existing single-source logic just runs once per
+// piece instead of once for the whole string.
+// CF-A-RULING-SOURCE-IS-STRICT-WHATEVER-TRAILS-THE-DATE (2026-09-19).
+// `cardpedia-drew-ruling-2026-09-01` already worked: normalizeCatalogSource's
+// trailing-date strip leaves `cardpedia-drew-ruling`, an exact member of
+// STRICT_CHECKLIST_SOURCES. `checklist-drew-ruling-2026-08-30-red-ink` did
+// not, for a narrower reason than a missing allowlist entry: the date strip
+// is itself ANCHORED AT THE END OF THE STRING, so a slug trailing the date
+// (`-red-ink`, naming WHICH ruling among several on the same day) stops the
+// strip from firing at all, and the whole un-stripped string survives to the
+// allowlist check and fails it. Generalised to `*-drew-ruling*` -- any source
+// containing the substring "drew-ruling" anywhere, regardless of what
+// precedes it (a checklist name, nothing) or trails it (a date, a
+// disambiguating slug) -- is Drew adjudicating a card by name against a
+// checklist he is citing, the same provenance class cardpedia-drew-ruling
+// already names explicitly. A bare `drew-ruling-<date>` (no checklist name
+// prefix at all -- Drew's own unaided ruling, `handAuthored: true` in its
+// manifest) is strict under the identical reasoning: an unaided ruling is
+// not a WEAKER provenance than one that cites a checklist by name, and this
+// repo's own convention already treats a human transcribing/ruling a
+// checklist as "a scrape with the best possible provenance" (the comment on
+// drew-google-sheet's own entry below says exactly this).
+const DREW_RULING_SUBSTRING = /drew-ruling/;
+
 function isStrictChecklistSource(raw) {
   const s = normalizeCatalogSource(raw);
   if (s === "") return false;
+  if (s.includes("+")) {
+    const parts = s.split("+").map((p) => p.trim()).filter(Boolean);
+    return parts.length > 0 && parts.every((p) => isStrictChecklistSource(p));
+  }
   if (STRICT_CHECKLIST_SOURCES.includes(s)) return true;
+  if (DREW_RULING_SUBSTRING.test(s)) return true;
   // A named lane of a named publisher. The lane must resolve to a publisher
   // that is ALREADY strict on its own -- so this can never admit a source the
   // list does not already trust, only a corpus of one it does.
