@@ -1444,6 +1444,76 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   S("panini-illusions-rookie-reflections-dual-patch-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
   S("panini-illusions-illusionists-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
 
+  /**
+   * 2024 PANINI SELECT FOOTBALL -- THE 33 NAMED INSERT SETS (R60 + R38).
+   *
+   * MEASURED. The committed checklistinsider package is REFUSED WHOLE --
+   * `files REFUSED, id integrity 1 (27,324 rows)`, zero written -- on
+   * unregistered-set-keys, and the guard names these 33. 27,324 rows would
+   * have landed on 22,503 distinct ids.
+   *
+   * THE TIERS ARE NOT IN THIS LIST, AND THAT IS THE POINT. Select numbers its
+   * base card by TIER -- `insert-base-concourse`, `-club-level`,
+   * `-suite-level`, `-premier-level`, `-field-level`, 19,900 rows in all --
+   * and #2231 already registered the tier destinations. Those rows are the
+   * product's own base card and stay on the product key; none of them appears
+   * in the refusal list.
+   *
+   * They also CANNOT collide, which is what separates this product from
+   * Zenith. The tiers hold DISJOINT number ranges, measured:
+   *
+   *     concourse      #1   Tory Taylor      (1-200)
+   *     club-level     #201 Xavier Rhodes    (201-300)
+   *     suite-level    #301 Adonai Mitchell  (301+)
+   *
+   * Zenith's variants all reuse #1-100 with the same players, so they collapse
+   * onto one id; Select's never meet. Registration alone therefore clears this
+   * file, and the REPORT confirms it: REFUSED 0, 27,324 rows on 27,324 ids.
+   *
+   * `panini-select-signatures` AND `panini-select-select-signatures` are BOTH
+   * here and both correct. They are two different sets in one product --
+   * `insert-signatures-*` and `insert-select-signatures-*` -- so the doubled
+   * word is the product's own naming, not a slug defect. Collapsing them would
+   * merge two card sets.
+   *
+   * Ordered longest-first, as every one of these blocks is. No key here is a
+   * prefix of another, no singular/plural twin, and none ends in a bare colour
+   * -- all three checked and pinned by test.
+   */
+  S("panini-select-jumbo-rookie-signature-swatch-black-prizm-nfl-shield", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-jumbo-rookie-signature-swatch-black-prizm-brand-logo", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-jumbo-signature-swatch-black-prizm-nfl-shield", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-jumbo-signature-swatch-black-prizm-brand-logo", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-jumbo-rookie-signature-swatch-black-prizm-tag", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-jumbo-signature-swatch-black-prizm-tag", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-jumbo-rookie-signature-swatches", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-spectra-hof-signatures-prizm", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-rookie-signature-memorabilia", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-draft-selections-memorabilia", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-2025-xrc-mystery-autograph", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-select-certified-rookies", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-jumbo-signature-swatches", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-score-select-throwback", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-signature-memorabilia", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-jumbo-rookie-swatch", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-select-signatures", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-rookie-signatures", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-rookie-swatches", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-hall-selections", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-select-numbers", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-select-future", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-turbocharged", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-watercolors", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-color-wheel", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-signatures", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-phenomenon", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-neon-icons", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-multiverse", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-snapshots", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-alter-ego", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-starcade", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-sparks", { family: "panini-select", parent: "panini-select" }),
+
   // -- Fleer / Skybox / Pinnacle / Score / vintage ----------------------------
   P("fleer"),
   ...["fleer-stickers", "fleer-tradition", "fleer-update", "fleer-metal-universe"].map((k) => P(k, { parent: "fleer" })),
