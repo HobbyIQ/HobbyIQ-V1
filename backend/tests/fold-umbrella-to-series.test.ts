@@ -59,6 +59,25 @@ describe("seriesFromTitle -- the title names the product", () => {
     expect(name("2024-25 OPee Chee Hockey Sidney Crosby")).toMatchObject({ ok: true, setKey: "o-pee-chee" });
   });
 
+  // CF-UD-SERIES-IS-THE-PRODUCT (2026-09-19). Prod reads found rows whose
+  // title abbreviates the maker to "UD" rather than "Upper Deck" -- this
+  // relocation script's own header measured 919 "no title evidence" rows
+  // under the umbrella, and an unknown share of those are UD-titled Series
+  // rows this fold could not see before. Widened via the shared predicates
+  // in hobbyIqCardId.service.ts, the same ones the live deriver's slug
+  // vocabulary uses, so the two readings cannot drift apart.
+  it("reads the 'UD' abbreviation the same way as 'Upper Deck'", () => {
+    expect(name("2023-24 UD Series 2 Young Guns #492")).toMatchObject({ ok: true, setKey: "upper-deck-series-2" });
+    expect(name("2024 UD Extended Beehive #BH-24")).toMatchObject({ ok: true, setKey: "upper-deck-extended-series" });
+    expect(name("UD Series 1")).toMatchObject({ ok: true, setKey: "upper-deck-series-1" });
+    expect(name("UD Series One")).toMatchObject({ ok: true, setKey: "upper-deck-series-1" });
+    // Still refuses when the title names no series word at all -- a bare UD
+    // insert line is not evidence, exactly as for the full "Upper Deck" spelling.
+    expect(name("2022-23 UD Canvas #C99")).toMatchObject({ ok: false, reason: "no-title-evidence" });
+    // Still refuses two products named in one title, on the UD spelling too.
+    expect(name("UD Series 1 & Series 2 Combo Lot")).toMatchObject({ ok: false, reason: "ambiguous-title" });
+  });
+
   it("does NOT read 'Series 10' as Series 1", () => {
     // \b1\b: the boundary is why a two-digit number cannot match the one-digit rule.
     const v = name("2024-25 Upper Deck Series 10 Something #5");

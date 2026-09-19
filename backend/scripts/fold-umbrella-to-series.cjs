@@ -112,6 +112,21 @@ const shardOf = (key) => parseInt(crypto.createHash("sha1").update(String(key)).
 
 // ── the ruling, as data ─────────────────────────────────────────────────────
 
+// CF-UD-SERIES-IS-THE-PRODUCT, THE ONE REGEX SOURCE (2026-09-19).
+//
+// These three predicates (hobbyIqCardId.service.ts, compiled to dist/) are
+// the SAME rule the fresh-sale deriver's slug vocabulary applies -- they now
+// also accept "UD" as the maker word, not just "Upper Deck", because prod
+// reads on 2026-09-19 showed sellers write both ("2024 UD Extended Beehive").
+// Requiring them here rather than re-writing the regex inline is what keeps
+// this relocation script and the live deriver from drifting into two
+// different readings of the same title.
+const {
+  titleNamesUpperDeckExtendedSeries,
+  titleNamesUpperDeckSeries1,
+  titleNamesUpperDeckSeries2,
+} = require(path.join(__dirname, "..", "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+
 /**
  * The series products an umbrella folds onto, and the title evidence that names
  * each. Drew's ruling for `upper-deck` is the hockey row; another umbrella gets
@@ -136,12 +151,16 @@ const UMBRELLA_FOLDS = {
     // put, counted ambiguous. A title-only fold would have moved them onto the
     // wrong product.
     { setKey: "o-pee-chee", test: /\bo\s*-?\s*pee\s*-?\s*chee\b|\bopc\b/i },
-    // "Series 1" / "Series One". `\b1\b` so "Series 10" cannot match.
-    { setKey: "upper-deck-series-1", test: /\bseries\s*(?:1|one)\b/i },
-    { setKey: "upper-deck-series-2", test: /\bseries\s*(?:2|two)\b/i },
-    // Extended Series. Must be tried as its own product: it contains the word
-    // "Series" and would otherwise be read as neither 1 nor 2.
-    { setKey: "upper-deck-extended-series", test: /\bextended\s*series\b/i },
+    // Series 1/One, Series 2/Two, and Extended (Series) -- delegated to the
+    // shared predicates above so "UD" resolves here exactly as it does for a
+    // fresh sale. Each `test` exposes a RegExp-shaped `.test(title)` so
+    // `seriesFromTitle` below needs no special case for these three rows, and
+    // each predicate answers independently -- a title naming BOTH Series 1
+    // and Series 2 still makes both of these `true`, which is what lets
+    // `seriesFromTitle`'s own ambiguity check see the clash and refuse.
+    { setKey: "upper-deck-series-1", test: { test: titleNamesUpperDeckSeries1 } },
+    { setKey: "upper-deck-series-2", test: { test: titleNamesUpperDeckSeries2 } },
+    { setKey: "upper-deck-extended-series", test: { test: titleNamesUpperDeckExtendedSeries } },
   ],
 };
 
