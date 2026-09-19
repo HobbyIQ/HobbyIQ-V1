@@ -242,6 +242,21 @@ export async function handleCallback(
  * 429 or a socket error is the OTHER kind: transient, and marking a user
  * reconnect-required for one of those would log them out of their own sync
  * over a blip. Only the terminal shapes count.
+ *
+ * BARE-STATUS FALLBACK, NARROWED (2026-09-19, split from #2315's byte
+ * repair): the fallback below used to also fire on a bare 400 or 403 with
+ * no named OAuth error code. Both are dropped. 400 with no `invalid_*` code
+ * just means "the request was malformed" -- that can be a bug in what WE
+ * sent, not proof the grant is dead. 403 is not part of the OAuth
+ * token-endpoint error vocabulary at all (RFC 6749 §5.2 defines 400/401 for
+ * this endpoint); eBay's own developer community documents 403 responses
+ * from `identity/v1/oauth2/token` for reasons unrelated to a revoked grant
+ * (WAF/edge, access issues), and the endpoint has documented per-grant-type
+ * rate limits (refresh-token grant: 50,000/day) that can plausibly surface
+ * as a bare 400/403 under load -- not a dead credential. 401 stays: the
+ * spec itself defines 401 at the token endpoint for a client
+ * authentication failure, which is exactly the terminal shape this
+ * function exists to catch.
  */
 export function isTerminalTokenError(message: string): boolean {
   const m = String(message ?? "").toLowerCase();
@@ -250,8 +265,9 @@ export function isTerminalTokenError(message: string): boolean {
   if (m.includes("invalid_grant") || m.includes("invalid_client")) return true;
   if (m.includes("invalid_scope") || m.includes("unauthorized_client")) return true;
   // `fetchEbayToken` puts the HTTP status in the message ("eBay token
-  // exchange failed: 400 ...").
-  return /\b(400|401|403)\b/.test(m);
+  // exchange failed: 401 ..."). Bare 400/403 are deliberately NOT terminal
+  // -- see doc-comment above.
+  return /\b401\b/.test(m);
 }
 
 /** Returns a valid access token for the user, refreshing if needed. Throws if not connected. */
