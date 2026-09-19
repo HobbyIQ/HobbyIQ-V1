@@ -489,6 +489,7 @@ async function main() {
   // `written` counts upsert CALLS, and the whole defect is that those two can
   // differ silently. They are reconciled at the end of the run.
   let filesRefused = 0, refusedRows = 0, insertSetKeys = 0, insertSetRows = 0, plannedIds = 0, rungRows = 0;
+  let sourceDuplicates = 0;
   let stopReason = null;
 
   // CF-THE-CLASH-IS-A-FACT-ABOUT-THE-PRODUCT-NOT-THE-FILE (2026-09-13).
@@ -700,6 +701,26 @@ async function main() {
       if (placed.rungParallel) rungRows++;
       r.setKey = placed.setKey;
       if (r.setKey !== product.setKey) insertSetRows++;
+    }
+    if (plan.duplicatesFolded) {
+      const seen = new Set();
+      const deduped = [];
+      for (const r of batch) {
+        let id = null;
+        try {
+          id = computeHobbyIqCardId({
+            sport: product.sport, year: product.year, setKey: r.setKey,
+            cardNumber: String(r.cardNumber), parallel: r.parallel || "Base",
+            isAuto: r.isAuto === "true", printRun: r.printRun ? Number(r.printRun) : null,
+            authoritativeSetKey: true,
+          });
+        } catch { id = null; }
+        if (id && seen.has(id)) { sourceDuplicates++; continue; }
+        if (id) seen.add(id);
+        deduped.push(r);
+      }
+      batch.length = 0;
+      batch.push(...deduped);
     }
     if (plan.keys.length) {
       insertSetKeys += plan.keys.length;
@@ -1095,6 +1116,7 @@ async function main() {
   // measured over exactly the rows that were about to be written, so the two
   // must agree; a gap means rows overwrote each other inside this run.
   console.log(`  distinct ids           ${f(plannedIds)}   <- documents, measured before writing; must equal rows written`);
+  console.log(`  source duplicates folded ${f(sourceDuplicates)}   <- ONE card the file listed twice; kept once, never refused`);
   console.log(`  ${APPLY ? "ingested" : "would ingest"} ${f(written)} rows (${f(signed)} signed)   <- signed = isAuto, from a section the page attested; never inferred from a rung name`);
   if (APPLY) console.log(`    of which kept the existing row ${f(keptExisting)}   <- same id already held by another source at equal/higher authority and confidence; only lastSeenAt moved, the row does NOT carry source=${SOURCE}`);
   {
@@ -1194,10 +1216,14 @@ async function main() {
   // skipped (a deliberate, declared per-row drop, above) or refused (a whole
   // file or whole category dropped by the id-integrity / exploded-category
   // guards, also above).
-  const reconciled = written + failed + skipped + refused;
-  console.log(`  csv rows read ${f(rows)} = written ${f(written)} + failed ${f(failed)} + skipped ${f(skipped)} + refused ${f(refused)}${rows === reconciled ? "  (balances)" : `  <- MISMATCH: sums to ${f(reconciled)}`}`);
+  // A FOLDED DUPLICATE IS A ROW THAT WAS READ AND DELIBERATELY NOT WRITTEN, so
+  // it is its own term. Hiding it inside `skipped` would let a real skip grow
+  // unnoticed behind it; leaving it out breaks the identity the reconciliation
+  // exists to prove.
+  const reconciled = written + failed + skipped + refused + sourceDuplicates;
+  console.log(`  csv rows read ${f(rows)} = written ${f(written)} + failed ${f(failed)} + skipped ${f(skipped)} + refused ${f(refused)} + source duplicates ${f(sourceDuplicates)}${rows === reconciled ? "  (balances)" : `  <- MISMATCH: sums to ${f(reconciled)}`}`);
   if (rows !== reconciled) {
-    console.error(`\nFATAL: csv rows read (${f(rows)}) does not equal written + failed + skipped + refused (${f(reconciled)}).`);
+    console.error(`\nFATAL: csv rows read (${f(rows)}) does not equal written + failed + skipped + refused + source duplicates (${f(reconciled)}).`);
     console.error(`       ${f(Math.abs(rows - reconciled))} row(s) ${rows > reconciled ? "vanished from every counter this run declares" : "were double-counted across buckets"}.`);
     console.error(`       A row this run read must land in exactly one bucket -- the banner cannot be trusted otherwise.`);
     return { exitCode: 5 };

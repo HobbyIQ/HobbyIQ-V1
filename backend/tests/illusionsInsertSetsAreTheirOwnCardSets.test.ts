@@ -28,12 +28,23 @@
  *
  * -- THE SIGNED SIBLING IS A DIFFERENT CARD SET ------------------------------
  *
- * `Illusionists` (unsigned, blank parallel, stays on the product key) and
- * `Illusionists Autographs` are not a card and its rung: they are two card
- * sets, numbered separately. Same for Mystique / Immortalized / Rookie
- * Reflections. The autograph keys are registered; the unsigned roots are not,
- * deliberately -- an unsigned row with a blank parallel IS the product's own
- * card, and giving it a key would split the base pool.
+ * `Illusionists` (unsigned) and `Illusionists Autographs` are not a card and
+ * its rung: they are two card sets, numbered separately. Same for
+ * Mystique / Immortalized / Rookie Reflections -- those three unsigned roots
+ * carry no stated parallel of their own and remain the product's own card,
+ * unregistered, deliberately.
+ *
+ * R67 (2026-09-19) SUPERSEDES R60's UNSIGNED-ILLUSIONISTS EXCLUSION. This
+ * comment used to claim `Illusionists` (unsigned) "carries a blank parallel"
+ * and should stay on the product key for that reason. It does not: the
+ * staged data shows `insert-illusionists` rows carrying their OWN stated
+ * parallel ("Illusionist"), and a real same-number/different-player fact
+ * against base (base #1 is Kyler Murray, Illusionists #1 is Caleb Williams).
+ * R67's own rule -- a named insert set is its own product key -- reaches this
+ * exactly like every other insert in the file, so `panini-illusions-
+ * illusionists` is now registered alongside its signed sibling. See
+ * illusionsR67InsertKeysAreFixedPoints.test.ts for the rest of R67's
+ * Illusions registrations.
  */
 import { describe, expect, it } from "vitest";
 
@@ -100,13 +111,23 @@ describe("2024 Panini Illusions — the five named insert sets", () => {
     expect(normalizeSetKey("autographs", "football")).not.toBe("panini-illusions-illusionists-autographs");
   });
 
-  it("MUTATION: the UNSIGNED roots stay on the product key", () => {
-    // Illusionists (unsigned) is the product's own card with a blank parallel.
-    // Registering it would split the base pool, so it is deliberately absent —
-    // only the signed sibling is a card set of its own.
+  it("MUTATION: the OTHER three unsigned roots (no stated parallel of their own) stay on the product key", () => {
+    // Mystique / Immortalized Jersey / Rookie Reflections Dual Patch carry no
+    // stated parallel column of their own on the unsigned side, so the
+    // unsigned rows remain the product's own card, unregistered.
+    // `panini-illusions-illusionists` is EXCLUDED from this check: R67
+    // (2026-09-19) supersedes the R60 exclusion for it specifically, since
+    // its unsigned rows DO carry their own stated parallel ("Illusionist")
+    // and a real same-number/different-player fact against base. See
+    // illusionsR67InsertKeysAreFixedPoints.test.ts for that registration.
     const ruled = new Set(RULED.map(([k]) => k));
-    expect(ruled.has("panini-illusions-illusionists")).toBe(false);
     expect(ruled.has("panini-illusions-mystique")).toBe(false);
+    expect(ruled.has("panini-illusions-immortalized-jersey")).toBe(false);
+    expect(ruled.has("panini-illusions-rookie-reflections-dual-patch")).toBe(false);
+  });
+
+  it("R67 (2026-09-19): panini-illusions-illusionists (unsigned) is NOW registered, superseding R60's exclusion", () => {
+    expect(normalizeSetKey("panini-illusions-illusionists", "football")).toBe("panini-illusions-illusionists");
   });
 
   it("no ruled key is a prefix of another — the derived-root trap", () => {

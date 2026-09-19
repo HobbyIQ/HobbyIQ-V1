@@ -116,6 +116,57 @@ describe("fold-checklist-numbered-twins -- the report contract", () => {
     expect(source).toContain("relocateSoldComp");
     expect(source).toMatch(/c\.cardId = @t/);
   });
+
+  it("CF-A-CROSS-PRODUCT-FOLD-IS-NOT-A-FOLD: a twin and target whose id setKey SEGMENTS disagree are skipped as their own bucket, never attempted", () => {
+    // Run 35414193671: identityKeyOf groups by the setKey FIELD (right for
+    // R1, D23 mid-flight rename), but an ingest-auto-seed twin's FIELD can
+    // drift from its own id -- `bowman-paper -> bowman`, `bowman-chrome-
+    // sapphire -> bowman`, `bowman-chrome -> bowman-draft` all threw inside
+    // moveCatalogRow's own guard and were miscounted as `failed`. Caught here
+    // BEFORE the attempt, so it costs no write and is not a defect count.
+    expect(source).toContain("crossProductNotFolded");
+    expect(source).toMatch(/cross-product \(not folded\)/);
+    // Must be checked using the ID's own setKey segment (split(":")[3]),
+    // never the row's setKey FIELD -- the field is exactly what put them in
+    // one group; re-reading it here would never catch the drift.
+    expect(source).toMatch(/twin\.id[^\n]*split\(":"\)\[3\]/);
+    expect(source).toMatch(/target\.id[^\n]*split\(":"\)\[3\]/);
+    // The check runs BEFORE the try{} that calls moveCatalogRow, never after
+    // -- a skip that costs a write attempt first is not "caught before it".
+    const crossProductCheckIdx = source.indexOf("crossProductNotFolded++");
+    const tryBlockIdx = source.indexOf("ASK FIRST, RELOCATE AFTER");
+    expect(crossProductCheckIdx).toBeGreaterThan(-1);
+    expect(tryBlockIdx).toBeGreaterThan(-1);
+    expect(crossProductCheckIdx).toBeLessThan(tryBlockIdx);
+  });
+
+  it("every FAILED fold is printed in full, never a 5-line sample", () => {
+    // Run 35414193671, link 1: written 1,704, failed 632, but only 6 lines
+    // printed -- `if (stats.failed <= 5)`. An operator could not tell 632
+    // instances of one defect from 632 different ones. Fixed: every failure
+    // is collected and printed, with the full stack, not a 140-character
+    // truncation.
+    expect(source).not.toMatch(/if\s*\(\s*stats\.failed\s*<=\s*5\s*\)/);
+    expect(source).toMatch(/failures\.push/);
+    expect(source).toMatch(/FAILED -- every one, in full/);
+  });
+});
+
+describe("fold-checklist-numbered-twins -- the run's log is kept as a durable artifact", () => {
+  it("the backfill-runner workflow uploads this lane's log, matching the pattern every other refile/fold lane already uses", () => {
+    const workflow = fs.readFileSync(
+      path.join(backend, "..", ".github", "workflows", "backfill-runner.yml"),
+      "utf8",
+    );
+    expect(workflow).toMatch(/Upload the checklist-numbered fold log/);
+    // The step must gate on the EXISTING inputs.script value, never introduce
+    // a new workflow_dispatch input.
+    expect(workflow).toMatch(/inputs\.script == 'fold-checklist-numbered-twins'/);
+    // Path is the same /tmp/backfill.log every other script's stdout is
+    // tee'd to -- no new log file, no new input needed for it to exist.
+    const uploadBlock = workflow.slice(workflow.indexOf("Upload the checklist-numbered fold log"), workflow.indexOf("Upload the checklist-numbered fold log") + 500);
+    expect(uploadBlock).toContain("/tmp/backfill.log");
+  });
 });
 
 describe("fold-checklist-numbered-twins -- reportWrites counters are DISJOINT", () => {

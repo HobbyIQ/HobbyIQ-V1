@@ -50,6 +50,13 @@ const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/w
 // identity guard on the document it keeps, so a re-key to an unreadable
 // address is refused instead of written.
 const { relocateSoldComp, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
+// CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07): the shared split-identity
+// predicate, reused rather than re-implemented. `relocateSoldComp` already
+// runs this on its own "keep" document before a partition move, but the
+// same-partition branch below (a bare `sold.items.upsert(merged)`) never
+// reached it -- this file's own gap, closed here, not by writing a second
+// guard.
+const { guardSoldCompDoc } = require(path.join(__dirname, "..", "dist", "services", "portfolioiq", "splitIdentityWriteGuard.js"));
 
 const APPLY = process.env.APPLY === "true";
 const MAX_MINUTES = Math.max(1, Number(process.env.MAX_MINUTES || 12));
@@ -98,6 +105,85 @@ function extractGrade(text) {
   return { company: m[1].toUpperCase(), value: Number(m[2]) };
 }
 
+/**
+ * CF-A-SPLIT-CANDIDATE-IS-NEVER-COPIED-ONTO-A-SALE (catalog audit, 2026-09-19
+ * follow-up). `persistVendorSalesToPool` -- the canonical writer for a fresh
+ * tca-ebay row -- mints `cardId: hiq:${slug.slice(4)}` and
+ * `hobbyiqCardId: slug` from the SAME slug, so on a fresh row the two fields
+ * are the identical string by construction. A matched card_catalog candidate
+ * whose OWN `cardId` and `hobbyiqCardId` already disagree is a split row
+ * from a different defect entirely (the fold lanes, a rehome, a stale
+ * field) -- copying both verbatim, as this script used to, propagates that
+ * split onto the sale it enriches. This is the class the observed defect
+ * (tca-ebay rows with cardId at a numbered target and hobbyiqCardId on a
+ * different, unnumbered product) traces to: the CANDIDATE was already split
+ * before this script ever touched the sale.
+ *
+ * Pure and exported so the rule is tested directly rather than through a
+ * live Cosmos run. Neither field missing counts as split -- a candidate
+ * that never carries `hobbyiqCardId` at all is a different (older) shape,
+ * not this defect, and `!==` on `undefined !== "x"` would otherwise flag it.
+ */
+function isSplitCandidate(best) {
+  return Boolean(best && best.cardId && best.hobbyiqCardId && best.cardId !== best.hobbyiqCardId);
+}
+
+/**
+ * Write `patch` onto `existing` (the sale document read back at (row.id,
+ * row.cardId)) and return the merged document as written. Hoisted out of
+ * `processRow` so the write-branch selection and the guard wiring on the
+ * SAME-PARTITION branch are testable directly against a fake `sold`
+ * container, without needing to drive the whole batch/concurrency loop in
+ * `main()`.
+ *
+ * Both branches are the SAME logic `processRow` always ran; nothing here is
+ * a second implementation. `relocateSoldComp` (the partition-move branch)
+ * already calls `guardSoldCompDoc` on the document it keeps -- this function
+ * does not call it a second time there, or the two would drift the moment
+ * one of them changes. The same-partition branch calls it directly, because
+ * that branch never reached `relocateSoldComp` at all.
+ */
+async function writeEnrichedSale(sold, { row, existing, patch }) {
+  const merged = { ...existing, ...patch };
+  if (existing.cardId !== patch.cardId) {
+    // THE PARTITION MOVES. A row cannot be re-keyed in place, so this is a
+    // new document plus a delete of the old one -- and the pool must never
+    // be without the sale between the two. `contentHash` is the
+    // partition-scoped dedup key, so it is recomputed for the NEW cardId or
+    // the store's pre-write dedup can never match this row again.
+    merged.contentHash = contentHashOf(merged);
+    const res = await relocateSoldComp(sold, {
+      keep: merged,
+      drop: [{ id: row.id, cardId: existing.cardId }],
+      verifyFields: ["cardId", "hobbyiqCardId", "price", "soldAt", "contentHash"],
+    });
+    if (!res.ok) {
+      if (res.duplicatesLeft?.length) {
+        console.error(`  DUPLICATE LEFT IN POOL: ${row.id} — ${res.error ?? res.stage}`);
+      }
+      throw new Error(`relocate failed at ${res.stage}: ${res.error ?? "unknown"}`);
+    }
+    return merged;
+  }
+  // CF-ONE-WRITE-PATH-FOR-SOLD-COMPS: the SAME-PARTITION branch used to
+  // upsert `merged` straight to the container -- the one write path this
+  // lane's own tests (oneWritePathForSoldComps.test.ts) require every
+  // sold_comps MINTER to avoid. This is not a mint (it read `existing` back
+  // first), but it still WRITES an identity nothing had checked: `merged` is
+  // not run through `relocateSoldComp` on this branch, so nothing else in
+  // this file calls the guard on it. `guardSoldCompDoc` mutates `merged` in
+  // place: on a real split (park) it stamps `identityUnverified` and the row
+  // still writes, out of every pool but never lost; on a malformed key there
+  // is no address to park at, so it is refused here exactly as
+  // relocateSoldComp refuses one on its own branch.
+  const verdict = guardSoldCompDoc(merged, { guardedBy: "tca-match-enricher" });
+  if (verdict.verdict === "park" && verdict.reason === "malformed-key") {
+    throw new Error(`guard refused: ${verdict.detail}`);
+  }
+  await sold.items.upsert(merged);
+  return merged;
+}
+
 // ─── Main ────────────────────────────────────────────────────────────
 
 async function main() {
@@ -123,8 +209,13 @@ async function main() {
 
   console.log(`[tca-match-enricher] fetched ${pendingRows.length} pending rows`);
 
-  let matched = 0, stillPending = 0, failed = 0, writeAttempted = 0, writeFailed = 0;
+  let matched = 0, stillPending = 0, failed = 0, writeAttempted = 0, writeFailed = 0, splitCandidate = 0;
   const inflight = new Set();
+  /** Every split candidate skipped, in full -- see the push site: a matched
+   *  card_catalog row whose own cardId and hobbyiqCardId disagree is never
+   *  copied onto a sale, and every one skipped this way is named, not just
+   *  counted, so the underlying card_catalog defect is chaseable by id. */
+  const splitCandidateIds = [];
 
   async function processRow(row) {
     try {
@@ -179,6 +270,19 @@ async function main() {
         return;
       }
 
+      // See isSplitCandidate's own header. The candidate is skipped entirely,
+      // never enriched from -- there is no way to pick a correct half here
+      // (this script has no independent evidence to arbitrate with, unlike
+      // guardSoldCompDoc's attested-sport resolve path) -- and it is counted
+      // and named in full, because the catalog row itself needs fixing.
+      if (isSplitCandidate(best)) {
+        splitCandidate++;
+        splitCandidateIds.push(
+          `  ${row.id}  candidate cardId=${best.cardId}  hobbyiqCardId=${best.hobbyiqCardId}  -- split candidate, NOT copied onto the sale`,
+        );
+        return;
+      }
+
       if (!APPLY) { matched++; return; }
 
       // Apply update
@@ -212,33 +316,12 @@ async function main() {
         throw readErr;
       }
       if (!existing) { failed++; writeFailed++; return; }
-      const merged = { ...existing, ...patch };
       try {
-        if (existing.cardId !== patch.cardId) {
-          // THE PARTITION MOVES. A row cannot be re-keyed in place, so this is
-          // a new document plus a delete of the old one -- and the pool must
-          // never be without the sale between the two. `contentHash` is the
-          // partition-scoped dedup key, so it is recomputed for the NEW cardId
-          // or the store's pre-write dedup can never match this row again.
-          merged.contentHash = contentHashOf(merged);
-          const res = await relocateSoldComp(sold, {
-            keep: merged,
-            drop: [{ id: row.id, cardId: existing.cardId }],
-            verifyFields: ["cardId", "hobbyiqCardId", "price", "soldAt", "contentHash"],
-          });
-          if (!res.ok) {
-            // NOT counted here: the `catch` below owns `writeFailed`, and the
-            // throw goes straight to it. Counting in both places double-counts
-            // the same failed row.
-            if (res.duplicatesLeft?.length) {
-              console.error(`  DUPLICATE LEFT IN POOL: ${row.id} — ${res.error ?? res.stage}`);
-            }
-            throw new Error(`relocate failed at ${res.stage}: ${res.error ?? "unknown"}`);
-          }
-        } else {
-          await sold.items.upsert(merged);
-        }
+        await writeEnrichedSale(sold, { row, existing, patch });
       } catch (writeErr) {
+        // NOT counted here for a relocate failure: the throw already carries
+        // that context in its message. Every write failure -- either branch
+        // -- lands in the same counter.
         writeFailed++;
         throw writeErr;
       }
@@ -262,9 +345,44 @@ async function main() {
   await Promise.all([...inflight]);
 
   const elapsedS = ((Date.now() - startMs) / 1000).toFixed(0);
-  console.log(`\n[tca-match-enricher] done — matched=${matched} stillPending=${stillPending} failed=${failed} (writeFailed=${writeFailed}) elapsed=${elapsedS}s`);
+  console.log(`\n[tca-match-enricher] done — matched=${matched} stillPending=${stillPending} split-candidate (not written)=${splitCandidate} failed=${failed} (writeFailed=${writeFailed}) elapsed=${elapsedS}s`);
+  // read = written + skipped + split-candidate + failed. `stillPending` is the
+  // ordinary skip (no confident match, or none matched); `splitCandidate` is
+  // its OWN bucket -- a confident match that was refused for a reason that has
+  // nothing to do with match quality, so folding it into `stillPending` would
+  // hide the one count an operator would want to chase by name.
+  const readCount = pendingRows.length;
+  const consideredCount = matched + stillPending + splitCandidate + failed;
+  console.log(`  reconciled: read ${readCount} (considered ${consideredCount}${consideredCount === readCount ? "" : `, ${readCount - consideredCount} not reached -- wall-clock cap`}) `
+    + `= matched ${matched} + stillPending ${stillPending} + split-candidate ${splitCandidate} + failed ${failed}`);
+  if (splitCandidateIds.length) {
+    console.log(`\n  SPLIT CANDIDATE (not written) -- the matched card_catalog row's own cardId and hobbyiqCardId disagree, so nothing was copied onto the sale (${splitCandidateIds.length}):`);
+    for (const s of splitCandidateIds) console.log(s);
+  }
   if (!APPLY) console.log(`(dry-run — no sold_comps writes)`);
-  if (APPLY) reportWrites({ job: "tca-match-enricher", intended: writeAttempted, written: matched, failed: writeFailed });
+  if (APPLY) {
+    reportWrites({
+      job: "tca-match-enricher",
+      intended: writeAttempted,
+      written: matched,
+      // splitCandidate never reached writeAttempted (it returns before the
+      // read/write section), so it is not part of THIS reconcile's skipped
+      // term -- it is its own line above, over `read`, not over
+      // `writeAttempted`. reportWrites judges the write-attempt population
+      // only; the read-to-write funnel is reconciled separately above.
+      failed: writeFailed,
+    });
+  }
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+// GUARDED BY require.main (2026-09-19), matching fold-checklist-numbered-
+// twins.cjs's own pattern: a plain `require()` of this file -- exactly what a
+// unit test does to reach `isSplitCandidate` in isolation -- must not also
+// dial Cosmos via `main()`. Running the script directly (`node
+// tca-match-enricher.cjs`, or the cron's own invocation) is unaffected:
+// require.main === module is true in both cases.
+if (require.main === module) {
+  main().catch(err => { console.error(err); process.exit(1); });
+}
+
+module.exports = { isSplitCandidate, writeEnrichedSale, tokenize, extractYear, extractCardNumber, extractGrade };

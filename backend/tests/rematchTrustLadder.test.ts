@@ -142,11 +142,16 @@ describe("A -- the finish vocabulary is derived from the checklist parallel corp
     // than an empty read or a hand list.
     //
     // It dropped from ~37k to ~28.6k on 2026-09-15, when the insert-set split
-    // moved 9,415 insert names out of `parallels[]` into `insertSets[]`. The
-    // names still exist and the corpus total is unchanged at 38,017 -- this
-    // statistic counts one of the two fields. `vocabularyStats` is a
-    // diagnostic for the banner, so it is left counting the parallel ladder
-    // (which is what this vocabulary is built from); the floor moves with it.
+    // moved 9,415 insert names out of `parallels[]` into `insertSets[]`, and
+    // the statistic then counted only one of the two fields.
+    //
+    // As of 2026-09-18 it counts BOTH, because the vocabulary reads both
+    // (Drew's ruling: "is this word a finish" is global and takes the union;
+    // "is this a rung of this product" is per-product and stays parallels-only
+    // -- see rematch-finish-vocab's TWO READERS header). Leaving it counting
+    // the ladder alone would have reported a SHRINKING corpus every time the
+    // insert split got better at its job, which is the opposite of what this
+    // floor is for. Now 43,338 names over 660 products.
     expect(s.parallelNames).toBeGreaterThan(25_000);
     // The derived vocabulary is an order of magnitude past the ~90-word list.
     expect(s.globalTokens).toBeGreaterThan(1_000);

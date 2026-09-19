@@ -137,6 +137,34 @@ describe("the key agrees with D29 wherever the product spelling agrees", () => {
     expect(groupKeyOf(r)).toBe(identityKeyOf(r));
   });
 
+  it("CF-A-SUB-SEGMENT-IS-PART-OF-THE-IDENTITY: a row carrying a :sub- id segment agrees too, byte for byte", () => {
+    // The two keys read the SAME subsetSegmentOf(row) -- one parser, not a
+    // second copy -- so a row whose product spelling does not need D30's
+    // widening (no alias, no CPA collapse) produces IDENTICAL keys under
+    // both rules, sub-segment included. Pinned here so the two keys can
+    // never again drift apart on this axis the way they did before
+    // groupKeyOf reused this helper.
+    const r = row({
+      id: "hiq:baseball:1971:topps:sub-tek-pattern-30:15:base:no-auto",
+      setKey: "topps",
+      cardNumber: "15",
+      parallelSlug: "base",
+      isAuto: false,
+    });
+    expect(groupKeyOf(r)).toBe(identityKeyOf(r));
+    expect(groupKeyOf(r)).toContain("|sub-tek-pattern-30");
+    // And the defect this closes, stated the D30 way: a :sub- row and its
+    // plain twin must not group together either.
+    const plain = row({
+      id: "hiq:baseball:1971:topps:15:base:no-auto",
+      setKey: "topps",
+      cardNumber: "15",
+      parallelSlug: "base",
+      isAuto: false,
+    });
+    expect(groupKeyOf(r)).not.toBe(groupKeyOf(plain));
+  });
+
   it("the auto-by-card-number gate still merges a CPA no-auto ghost onto the auto row", () => {
     const ghost = row({ setKey: "bowman-chrome", cardNumber: "CPA-MH", isAuto: false });
     const real = row({ setKey: "bowman-chrome", cardNumber: "CPA-MH", isAuto: true });

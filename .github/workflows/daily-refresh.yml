@@ -246,32 +246,74 @@ jobs:
           # No new dispatch inputs: the instance count comes from the health
           # payload itself, which now reports the same 8-char tag the warm
           # step already used to prove it covered both workers.
+          #
+          # CF-NO-INSTANCE-IS-NOT-A-THIRD-INSTANCE (2026-09-19). Run
+          # 35418597889 refused a good build: both real instances (d456bc97,
+          # 6fd4f9ab) verified the new sha, but a handful of early polls
+          # landed on a recycling worker that answered /api/health with NO
+          # instance field -- exactly the "typically during the recycle" case
+          # this gate already anticipated. `no-instance` was folded into
+          # SEEN_IDS as if it were a third distinct worker, and since a
+          # response with no instance id can never carry one, N_OK could
+          # never reach N_SEEN again -- the gate was unwinnable once a single
+          # no-instance answer arrived.
+          #
+          # A no-instance answer proves nothing about identity, so it must
+          # never enter the set of instances that need verifying. But it also
+          # must not be free cover for a stale worker: if a no-instance answer
+          # carries the WRONG (or absent) sha, that is live evidence of an
+          # unrecycled process, so it still blocks. NOINST_CLEAR_STREAK counts
+          # polls since the last no-instance answer that did NOT carry
+          # EXPECTED -- it advances on every poll (a verified real instance
+          # counts as "not stale evidence" same as an on-sha no-instance
+          # answer) and resets only when a no-instance answer misses. So a
+          # single early no-instance blip clears itself out after
+          # STREAK_NEEDED more polls of any kind, but a no-instance answer
+          # that keeps recurring with the wrong sha keeps the gate blocked.
           STREAK_NEEDED=6           # 6 x 5s = 30s of an unchanging instance set
           MATCHED=""
           SEEN_IDS=""
           OK_IDS=""
           STREAK=0
           PREV_SIG=""
+          NOINST_COUNT=0
+          NOINST_CLEAR_STREAK=0
           for i in $(seq 1 72); do          # 72 x 5s = 6 minutes
             BODY=$(curl -s --max-time 20 "$SLOT/api/health")
             LIVE=$(echo "$BODY" | grep -o '"sha":"[^"]*"' | head -1 | cut -d'"' -f4)
             INST=$(echo "$BODY" | grep -o '"instance":"[^"]*"' | head -1 | cut -d'"' -f4)
-            # An answer with no instance tag is an OLD build by construction:
-            # the field ships in this change. Treat it as a distinct worker
-            # that has not recycled, never as a pass.
-            TAG="${INST:-no-instance}"
-            case " $SEEN_IDS " in *" $TAG "*) ;; *) SEEN_IDS="$SEEN_IDS $TAG" ;; esac
-            if [ -n "$LIVE" ] && [ "$LIVE" = "$EXPECTED" ] && [ -n "$INST" ]; then
-              case " $OK_IDS " in *" $TAG "*) ;; *) OK_IDS="$OK_IDS $TAG" ;; esac
+            if [ -z "$INST" ]; then
+              # No instance id: never a distinct worker to verify (it can
+              # never earn a match), but its sha is still evidence. A wrong
+              # or missing sha here resets the clear-streak so a
+              # recycling-but-stale worker keeps blocking the swap.
+              NOINST_COUNT=$((NOINST_COUNT + 1))
+              TAG="no-instance"
+              if [ -n "$LIVE" ] && [ "$LIVE" = "$EXPECTED" ]; then
+                NOINST_CLEAR_STREAK=$((NOINST_CLEAR_STREAK + 1))
+              else
+                NOINST_CLEAR_STREAK=0
+              fi
+            else
+              TAG="$INST"
+              case " $SEEN_IDS " in *" $TAG "*) ;; *) SEEN_IDS="$SEEN_IDS $TAG" ;; esac
+              if [ -n "$LIVE" ] && [ "$LIVE" = "$EXPECTED" ]; then
+                case " $OK_IDS " in *" $TAG "*) ;; *) OK_IDS="$OK_IDS $TAG" ;; esac
+              fi
+              NOINST_CLEAR_STREAK=$((NOINST_CLEAR_STREAK + 1))
             fi
             SIG=$(echo "$SEEN_IDS" | tr " " "\n" | grep -v "^$" | sort -u | tr "\n" " ")
             N_SEEN=$(echo "$SIG" | wc -w)
             N_OK=$(echo "$OK_IDS" | wc -w)
-            echo "poll ${i}: instance=${TAG} sha=${LIVE:-<no answer>} | verified ${N_OK}/${N_SEEN} distinct"
+            echo "poll ${i}: instance=${TAG} sha=${LIVE:-<no answer>} | verified ${N_OK}/${N_SEEN} distinct (real) | no-instance seen:${NOINST_COUNT} clear-streak:${NOINST_CLEAR_STREAK}"
             if [ "$SIG" = "$PREV_SIG" ]; then STREAK=$((STREAK + 1)); else STREAK=1; PREV_SIG="$SIG"; fi
-            # Every instance seen has served the expected sha, AND the set of
-            # instances has been stable long enough to trust it is complete.
-            if [ "$N_OK" -ge "$N_SEEN" ] && [ "$N_OK" -gt 0 ] && [ "$STREAK" -ge "$STREAK_NEEDED" ]; then
+            # Every REAL instance seen has served the expected sha, that set
+            # has been stable long enough to trust it is complete, and any
+            # no-instance answers seen are not a stale worker in disguise
+            # (either none arrived, or it has been STREAK_NEEDED polls since
+            # the last one that missed the expected sha).
+            if [ "$N_OK" -ge "$N_SEEN" ] && [ "$N_OK" -gt 0 ] && [ "$STREAK" -ge "$STREAK_NEEDED" ] \
+               && { [ "$NOINST_COUNT" -eq 0 ] || [ "$NOINST_CLEAR_STREAK" -ge "$STREAK_NEEDED" ]; }; then
               MATCHED=yes
               echo "every instance is serving the new build after ${i} polls:${SIG}"
               break
@@ -280,7 +322,7 @@ jobs:
           done
           if [ -z "$MATCHED" ]; then
             echo "::error::not every slot instance reported sha ${EXPECTED} within 6 minutes — not swapping."
-            echo "verified instances:${OK_IDS:- none}  |  instances seen:${SEEN_IDS:- none}"
+            echo "verified instances:${OK_IDS:- none}  |  instances seen:${SEEN_IDS:- none}  |  no-instance answers:${NOINST_COUNT} (clear-streak:${NOINST_CLEAR_STREAK})"
             echo "The slot may still be recycling, or OneDeploy landed a package the"
             echo "worker never picked up. Either way the build is unverified, so"
             echo "production keeps the one it has."

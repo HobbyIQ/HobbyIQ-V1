@@ -96,6 +96,9 @@
  */
 const fs = require("node:fs");
 const path = require("node:path");
+// THE ONE READER OF THE `category` COLUMN, shared with the ingester so the
+// two cannot drift on what a category means. See its header.
+const { readChecklistCategory } = require("./lib/checklist-category.cjs");
 
 /**
  * THE OVERLAY: RUNGS A RULING ADDED THAT NO SOURCE FILE CARRIES.
@@ -337,15 +340,32 @@ function main() {
       //
       // The base category is the manufacturer saying "this is a parallel of
       // the base card". Nothing an insert does can unsay it.
+      // ASKED THROUGH THE SHARED READER (2026-09-18). This used to re-derive
+      // "is this a base category" inline, testing only the FIRST segment -- so
+      // `insert-base-hobby`, the Hobby printing of the BASE card, read as an
+      // insert. The ingester had the same defect independently (485 colliding
+      // ids on 2024 panini-zenith football, 5,338 distinct ids for 6,214 rows),
+      // which is why the rule now lives in ONE module both callers read.
+      //
+      // `auto-base*` is base-like too: it is the same card, signed, and its
+      // tail is a parallel rather than an insert set name.
       const onBase = [...(e.categories ?? [])].some((c) => {
-        const d = String(c).indexOf("-");
-        return (d < 0 ? String(c) : String(c).slice(0, d)) === "base";
+        const k = readChecklistCategory(c, e.name).kind;
+        return k === "base" || k === "auto";
       });
       if (onBase) { parallels.push(e); continue; }
       let root = null;
       for (const cat of e.categories ?? []) {
         const dash = String(cat).indexOf("-");
         if (dash < 0 || String(cat).slice(0, dash) !== "insert") continue;
+        // ...and never from a BASE-LIKE category, whose tail is a parallel or a
+        // tier. Without this the root walk mints an insert set called `base`
+        // (children: "1st Down", "Hobby", "Club Level") -- the same defect
+        // from the other side. One rule, asked through the shared reader.
+        {
+          const k = readChecklistCategory(cat, e.name).kind;
+          if (k === "base" || k === "auto") continue;
+        }
         const sw = normForRoot(String(cat).slice(dash + 1)).split(" ").filter(Boolean);
         for (let k = sw.length; k >= 1; k--) {
           const cand = sw.slice(0, k).join(" ");
@@ -413,8 +433,39 @@ function main() {
     const movedCount = [...merged.values()].reduce((n, g) => n + g.length, 0);
     const totalCount = parallels.length + movedCount;
     if (movedCount > 0 && totalCount > 0) {
+      // THE FLOOR ASKS THE WRONG QUESTION WHEN THE SOURCE LABELS ITS BASE
+      // LADDER EXPLICITLY (2026-09-18).
+      //
+      // The fraction is a PROXY for "did the source mis-categorise this
+      // product's base ladder as inserts?" -- it has to be, because on the
+      // products it was written for (2024 donruss-elite) there is no base
+      // category at all and the only evidence is the shape of what is left.
+      //
+      // When the source DOES carry `insert-base*` categories, that proxy is
+      // unnecessary: the manufacturer has said outright which rows are the
+      // base card's ladder, those names are already in `parallels` via the
+      // base-wins guard above, and a product genuinely CAN have far more
+      // insert names than base rungs. Measured on the two products this was
+      // suppressing:
+      //
+      //   2024 panini-illusions FB   212 names, 173 would move, keeps 18.4%
+      //   2024 panini-photogenic FB   80 names,  70 would move, keeps 12.5%
+      //
+      // Both cleared the >=8 bar and failed only the 25% fraction, so both
+      // emitted `insertSets: ABSENT` -- and R31/R33 then had no corpus witness
+      // for "Illusionists", "In Motion", "Troops Tribute" et al, which is
+      // exactly the gap the R33 survivors were landing in.
+      //
+      // The >=8 floor is KEPT regardless: a split that yields a handful of
+      // names is still more likely to be noise than a ladder, whatever the
+      // categories say.
+      const sourceLabelsItsBase = [...bucket.values()].some((en) =>
+        [...(en.categories ?? [])].some((c) => {
+          const k = readChecklistCategory(c, en.name).kind;
+          return k === "base" || k === "auto";
+        }));
       const keptEnough = parallels.length >= MIN_KEPT_NAMES
-        && parallels.length / totalCount >= MIN_KEPT_FRACTION;
+        && (sourceLabelsItsBase || parallels.length / totalCount >= MIN_KEPT_FRACTION);
       if (!keptEnough) {
         const suspect = [...merged.entries()].map(([rootKey, entries]) => ({
           rootKey, children: entries.map((e) => e.name).sort(),

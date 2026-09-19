@@ -122,21 +122,31 @@ describe("CF-A-BARE-COLOUR-IS-WHATEVER-ITS-OWN-CHECKLIST-SAYS", () => {
     )).toBe("Base");
   });
 
-  it("2024 panini-certified Gold ties between the Mirror line and a same-length insert name", () => {
-    // "Mirror Gold" and "Gold Team" are both two-word names built from "gold" --
-    // a real ambiguity the checklist itself carries, not a defect to paper over.
+  it("2024 panini-certified Gold RESOLVES to Mirror Gold — the split retired the tie", () => {
+    // THIS TEST USED TO EXPECT null, AND ITS OWN COMMENT PREDICTED THE CHANGE.
     //
-    // STILL TRUE after the insert-set split (2026-09-15), and worth saying why.
-    // "Gold Team" IS an insert set, so in principle the split retires this tie
-    // -- but this product's source labels its whole base ladder with insert
-    // categories (100 base rows against 6,929 insert rows), so the split
-    // REFUSES itself here rather than stripping the product to nothing, and
-    // the ladder stays flat. See splitInsertSets's floor and this product's
-    // own `suspectInsertRoots`.
+    // "Mirror Gold" and "Gold Team" were both two-word names built from
+    // "gold", so a bare "Gold" had no single answer and this refused. The
+    // comment noted that `Gold Team` IS an insert set and that the split
+    // would in principle retire the tie -- but that this product's source
+    // labels its base ladder with insert categories, so the 25% floor refused
+    // the split and the ladder stayed flat.
+    //
+    // That floor now exempts products whose source carries `insert-base*`
+    // categories (2026-09-18): the manufacturer has said outright which rows
+    // are the base ladder, so the fraction proxy is unnecessary. This product
+    // now splits into 58 insert roots, and its parallels containing "gold"
+    // are exactly `Mirror Gold` and `Mirror Gold FOTL` -- every `<Insert>
+    // Gold` name (Certified Ballers Mirror Gold, Franchise Foundations Mirror
+    // Gold, ...) is filed where it belongs.
+    //
+    // So the ambiguity is GONE, and the shortest remaining answer is the
+    // right one. The tie was an artefact of the mis-filing, which is what the
+    // original comment suspected.
     expect(bareColourAliasFromChecklist(
       "2024 Panini Certified Football #71 Gold",
       { year: 2024, setKey: "panini-certified" },
-    )).toBeNull();
+    )).toBe("Mirror Gold");
   });
 
   // ── A COLOUR WORD INSIDE THE PRODUCT'S OWN NAME IS NEVER A PARALLEL ─────

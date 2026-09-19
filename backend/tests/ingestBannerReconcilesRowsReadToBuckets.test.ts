@@ -94,7 +94,7 @@ describe("the banner names every failed row and reconciles rows read to every bu
   it("prints the final reconciliation line, checked and balanced", () => {
     const { stdout, status } = runIngest(dir);
     expect(status).toBe(0);
-    expect(stdout).toMatch(/csv rows read 4 = written 3 \+ failed 1 \+ skipped 0 \+ refused 0\s+\(balances\)/);
+    expect(stdout).toMatch(/csv rows read 4 = written 3 \+ failed 1 \+ skipped 0 \+ refused 0 \+ source duplicates 0\s+\(balances\)/);
   });
 });
 
@@ -122,14 +122,18 @@ describe("a run with a skip AND a refusal still balances — every bucket, not j
     expect(stdout).toMatch(/files REFUSED, id integrity 1 \(3 rows\)/);
     // The arithmetic assertion is what matters: every one of the 4 rows this
     // run read lands in exactly one bucket, whichever gate dropped it.
-    expect(stdout).toMatch(/csv rows read 4 = written 0 \+ failed 0 \+ skipped 1 \+ refused 3\s+\(balances\)/);
+    expect(stdout).toMatch(/csv rows read 4 = written 0 \+ failed 0 \+ skipped 1 \+ refused 3 \+ source duplicates 0\s+\(balances\)/);
   });
 });
 
 describe("the reconciliation is a real assertion, not a printed hope", () => {
   it("the check compares `rows` against written+failed+skipped+refused and exits 5 on a mismatch", () => {
     const src = fs.readFileSync(script, "utf8");
-    expect(src).toMatch(/const reconciled = written \+ failed \+ skipped \+ refused;/);
+    // CF-A-DUPLICATE-IS-NOT-A-COLLISION added a FIFTH bucket: a row that was
+    // read and deliberately not written because the file listed the same card
+    // twice. It is its own term rather than hidden inside `skipped`, so a real
+    // skip cannot grow unnoticed behind it — the whole point of this pin.
+    expect(src).toMatch(/const reconciled = written \+ failed \+ skipped \+ refused \+ sourceDuplicates;/);
     expect(src).toMatch(/if \(rows !== reconciled\) \{/);
     expect(src).toMatch(/return \{ exitCode: 5 \};/);
   });

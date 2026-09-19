@@ -951,7 +951,12 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
     "panini-score", "panini-classics", "panini-legacy", "panini-threads", "panini-rookies-and-stars", "panini-zenith",
     "panini-court-kings", "panini-origins", "panini-encased", "panini-eminence", "panini-totally-certified",
     "panini-certified", "panini-crusade", "panini-prestige", "panini-elite-extra-edition",
-    "panini-diamond-kings"].map((k) => P(k, { parent: "panini" })),
+    "panini-diamond-kings",
+    // R67 PREREQUISITE (Drew, 2026-09-19): registered so its own named insert
+    // sets (below) have a parent to nest under. Previously unregistered but
+    // already a normalizeSetKey fixed point via the corpus fallback (pinned by
+    // aBrandSubstringIsNotAProduct.test.ts); this makes it a table entry too.
+    "panini-photogenic"].map((k) => P(k, { parent: "panini" })),
   // R50 / R52 / GREATS-OF-THE-GAME (Drew, 2026-09-15). A named product is its
   // own card set, and these four were never registered — so the two that
   // survived did so only because no family catch-all happened to name them,
@@ -1020,6 +1025,299 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // (`panini-contenders-optic-<insert>`), measured the same way the 53 Optic
   // keys were.
   P("panini-contenders-optic", { family: "panini-contenders", parent: "panini-contenders" }),
+  // R67 (Drew, 2026-09-19): A NAMED INSERT SET IS ITS OWN PRODUCT KEY.
+  //
+  // aBrandSubstringIsNotAProduct.test.ts anchored two rules that would
+  // otherwise fold these three keys onto a DIFFERENT manufacturer's product
+  // (`topps-tribute`, `panini-contenders-optic`) purely on an unanchored
+  // substring match. Anchoring alone only stops the WRONG fold; the vocabulary
+  // still emits the key, so productFamilyIsATable's wholeness check refuses
+  // until the table knows it too (productEntry(k) for every
+  // vocabularyDestinations() key).
+  //
+  //   panini-photogenic-troops-tribute
+  //     2024 Panini Photogenic's own insert, "Troops Tribute" -- named after
+  //     the checklist, not a Topps release. Nested under panini-photogenic,
+  //     registered above alongside the flagship (R67 follow-up).
+  //   panini-zenith-contenders-optic-rookie-ticket-rps-preview
+  //   panini-zenith-contenders-optic-rookie-ticket-variation-rps-preview
+  //     2024 Panini Zenith's own inserts previewing another product's Rookie
+  //     Ticket RPS parallel -- the name quotes Contenders Optic, the checklist
+  //     is Zenith's. Nested under panini-zenith, which this table already
+  //     registers (family "panini", parent "panini").
+  S("panini-photogenic-troops-tribute", { family: "panini-photogenic", parent: "panini-photogenic" }),
+  S("panini-zenith-contenders-optic-rookie-ticket-rps-preview", { parent: "panini-zenith" }),
+  S("panini-zenith-contenders-optic-rookie-ticket-variation-rps-preview", { parent: "panini-zenith" }),
+  /**
+   * R67 (Drew, ruling round of 2026-09-19): 2024 PANINI PHOTOGENIC FOOTBALL --
+   * THE NAMED INSERT SETS.
+   *
+   * Measured directly against the staged checklist (checklistinsider,
+   * `2024-panini-photogenic-football.csv`, held on PR #2272 pending this
+   * registration -- #2272 refuses to ingest one insert, `Rookie Portrait`,
+   * whose colour rungs collide with base on a blank parallel until its key
+   * exists). The module's own production fold (`insert-set-key.cjs`
+   * `rungFoldingFor`, run over every row of the file, never re-derived by
+   * hand) resolved every category to a root or a colour rung by the R67
+   * roster test -- players and card numbers split on "/", trimmed, lowercased,
+   * de-duplicated, sorted, then compared: a child whose roster is a SUBSET of
+   * its root on the same numbers is a colour rung (parallel axis only); a
+   * child with numbers or players the root lacks is its own key.
+   *
+   * Every colour-suffixed category folded as a subset of its plain-spelled
+   * root with zero exceptions -- `insert-a-different-view-{black,blue,gold,
+   * orange,pink,purple,red,silver}` onto `a-different-view`, and the same
+   * shape for draft-snapshots, for-the-cure, in-the-action-autographs,
+   * progressions, rookie-instants-signatures, rookie-introductions, rookie-
+   * pix, rookie-portrait-autographs, snapshots-autographs and troops-tribute
+   * (troops-tribute registered above, ahead of this block, since it doubles
+   * as the anchoring fix's own key).
+   *
+   * FIFTEEN ROOTS SURVIVED the fold as their own product (sixteen measured,
+   * troops-tribute already registered):
+   *
+   *     a-different-view                    10 rows,  8 colour rungs
+   *     avatars                              20 rows (no colour rungs printed)
+   *     draft-snapshots                      10 rows,  8 colour rungs
+   *     for-the-cure                         10 rows,  8 colour rungs
+   *     in-motion                            10 rows (no colour rungs printed)
+   *     in-the-action-autographs             25 rows,  5 colour rungs
+   *     progressions                         20 rows,  8 colour rungs
+   *     rookie-instants-signatures           20 rows,  5 colour rungs
+   *     rookie-introductions                 20 rows,  8 colour rungs
+   *     rookie-photo-bomb-autographs         48 rows (auto- prefixed, own roster)
+   *     rookie-pix                           20 rows,  8 colour rungs
+   *     rookie-portrait                     450 rows (the product's own insert;
+   *                                                    NOT the -autographs sibling)
+   *     rookie-portrait-autographs           35 rows,  5 colour rungs -- SAME
+   *                                                    numbers/players as
+   *                                                    rookie-portrait, but the
+   *                                                    signed subset is its own
+   *                                                    product per CF-A-COLOUR-
+   *                                                    RUNG-IS-NEVER-A-CARD-SET-
+   *                                                    KEY's "tail says SIGNED"
+   *                                                    rule -- isAuto is its own
+   *                                                    axis, never a parallel.
+   *     snapshots-autographs                 35 rows,  5 colour rungs
+   *     the-shoe-game                        20 rows (no colour rungs printed)
+   *
+   * KNOWN OPEN QUESTION, STATED RATHER THAN SILENCED. The acquisition-queue
+   * estimate for this product was 13 own-key roots; independently re-measuring
+   * against the roster test above (not re-reading the estimate) finds 15,
+   * all fifteen backed by their own checklist rows with zero roster
+   * disagreement in the fold. If two of these are meant to fold together or
+   * be excluded on evidence this file does not carry (attestation, a
+   * duplicate name, or a Drew ruling not reflected in the staged CSV), that is
+   * a follow-up on this same table, not a reason to under-register a measured
+   * root now -- an unregistered root refuses ingestion (safe); a wrongly
+   * folded one loses rows silently (the R67/#2271 defect class).
+   *
+   * `family` left at the default (each insert its own pricing family) --
+   * consistent with the Illusions precedent above, which also gives each of
+   * its five named inserts its own family, not the flagship's.
+   */
+  S("panini-photogenic-a-different-view", { parent: "panini-photogenic" }),
+  S("panini-photogenic-avatars", { parent: "panini-photogenic" }),
+  S("panini-photogenic-draft-snapshots", { parent: "panini-photogenic" }),
+  S("panini-photogenic-for-the-cure", { parent: "panini-photogenic" }),
+  S("panini-photogenic-in-motion", { parent: "panini-photogenic" }),
+  S("panini-photogenic-in-the-action-autographs", { parent: "panini-photogenic" }),
+  S("panini-photogenic-progressions", { parent: "panini-photogenic" }),
+  S("panini-photogenic-rookie-instants-signatures", { parent: "panini-photogenic" }),
+  S("panini-photogenic-rookie-introductions", { parent: "panini-photogenic" }),
+  S("panini-photogenic-rookie-photo-bomb-autographs", { parent: "panini-photogenic" }),
+  S("panini-photogenic-rookie-pix", { parent: "panini-photogenic" }),
+  S("panini-photogenic-rookie-portrait", { parent: "panini-photogenic" }),
+  S("panini-photogenic-rookie-portrait-autographs", { parent: "panini-photogenic" }),
+  S("panini-photogenic-snapshots-autographs", { parent: "panini-photogenic" }),
+  S("panini-photogenic-the-shoe-game", { parent: "panini-photogenic" }),
+  /**
+   * R67 (Drew, ruling round of 2026-09-19): 2024 PANINI ZENITH FOOTBALL --
+   * THE NAMED INSERT SETS.
+   *
+   * Measured directly against the fixture already on main
+   * (`tests/fixtures/checklist-category/zenith-2024-fb-categories.json`,
+   * 6,214 rows, the real 2024 Zenith football checklist). Same method as the
+   * Photogenic registration above: the module's own production fold
+   * (`insert-set-key.cjs`'s `rungFoldingFor`, run over every row, never
+   * re-derived by hand) resolves the standard colour-prefix cases; the R67
+   * roster test -- cardNumber + player, players split on "/", trimmed,
+   * lowercased, de-duplicated, sorted -- resolves everything else BY HAND,
+   * because Zenith uses two naming shapes the module's prefix-only fold
+   * cannot see on its own:
+   *
+   *   TIER/RETAILER NAMES, not colours, sharing NO common prefix. Nine
+   *   category spellings -- 1st Down, 2nd Down, 3rd Down, 4th Down, Hobby,
+   *   No Huddle, Retail, Touchdown, Two-Minute Drill -- plus the module's own
+   *   already-derived `rookies-red-zone` (its 4 colour files: Blue/Gold/Red/
+   *   White) are ALL the exact same 100-card Rookies checklist: every shared
+   *   number names the same player, zero disagreements, so under R67's own
+   *   rule ("the roster decides", not the word used) these are ten parallel
+   *   spellings of ONE root, `rookies` -- exactly the "siblings name the set
+   *   even with no base tier" shape, just spelled with retailer names instead
+   *   of colours. The signed side is the same shape one level down: `Rookies
+   *   Autographs No Huddle` (63 rows) and `... Two-Minute Drill` (59 rows)
+   *   plus the module's own `rookies-red-zone-autographs` root (base + 4
+   *   colours) all measure the SAME signed subset (0.79-1.00 pairwise overlap,
+   *   the residual gap being real short-print scarcity, not different
+   *   players) -- one root, `rookies-autographs`.
+   *
+   *   A NAME WORD IN THE MIDDLE, not a suffix. `High Point Kaboom
+   *   Signatures`, `... Lightning Signatures` and `... Spokes Signatures`
+   *   are not colour-SUFFIXED spellings the module's stripper can reach
+   *   ("Kaboom" sits between "High Point" and "Signatures", not at the tail);
+   *   measured, `High Point Signatures` (20), `Lightning Signatures` (25) and
+   *   `Spokes Signatures` (21) are each an EXACT SUBSET of `Kaboom
+   *   Signatures` (26, the largest print run) on the same numbers -- one
+   *   root, `high-point-signatures` (named for the plain spelling, per the
+   *   convention `z-graphs` and `zoom-blue` already use one level up).
+   *
+   * TWENTY-SEVEN ROOTS SURVIVED, after both hand-verified clusters:
+   *
+   *     a-to-z                        26 rows,  5 colour rungs
+   *     alphas                        25 rows,  1 colour rung (gold ice)
+   *     behind-the-numbers            25 rows,  4 colour rungs
+   *     chalk-talk                    25 rows,  4 colour rungs
+   *     color-guard                   20 rows,  4 rungs (laundry-tag x3 + prime)
+   *     first-look                    25 rows,  1 colour rung (gold ice)
+   *     high-point-signatures         20 rows -- CLUSTER: kaboom(26)/
+   *                                              lightning(25)/spokes(21) all
+   *                                              subsets on the same numbers
+   *     idols                         20 rows,  5 colour rungs
+   *     pinnacle-inscriptions         19 rows (silver kept separate, below)
+   *     pinnacle-inscriptions-silver  25 rows -- roster is NOT a subset of
+   *                                              plain (extra numbers), so it
+   *                                              stands per R67's own-key rule
+   *     rookie-patch-autographs      152 rows,  colour rungs blue/gold/red
+   *                                              (module-folded); ice (37) and
+   *                                              white (39) are ALSO parallels
+   *                                              of this root -- RESOLVED, see
+   *                                              below (not registered either,
+   *                                              a parallel is never a key)
+   *     rookies                      100 rows -- CLUSTER: 1st/2nd/3rd/4th-
+   *                                              down, hobby, no-huddle,
+   *                                              retail, touchdown, two-
+   *                                              minute-drill, red-zone
+   *                                              blue/gold/red/white -- ten
+   *                                              spellings, one 100-card
+   *                                              roster, zero disagreement
+   *     rookies-autographs            62-75 rows -- CLUSTER: autographs-no-
+   *                                              huddle(63)/two-minute-
+   *                                              drill(59), red-zone-
+   *                                              autographs + its 4 colours --
+   *                                              one signed Rookies subset
+   *     splash                        25 rows,  4 colour rungs
+   *     state-of-the-art              24 rows,  5 colour rungs
+   *     the-shield                    25 rows,  1 colour rung (gold ice)
+   *     turning-pro-memorabilia       20 rows,  4 rungs (laundry-tag x3 + prime)
+   *     z-graphs                      31 rows,  3 rungs (kaboom/lightning/spokes
+   *                                              -- module-folded, true SUFFIX
+   *                                              spellings, unlike High Point)
+   *     z-jersey                      40 rows,  4 rungs (laundry-tag x3 + prime)
+   *     z-jersey-autographs           27 rows,  4 colour rungs
+   *     z-marquee                     30 rows,  5 colour rungs
+   *     z-summit-autographs           16 rows,  4 colour rungs
+   *     z-team                        25 rows,  4 colour rungs
+   *     zoned-in                      20 rows,  4 rungs (laundry-tag x3 + prime)
+   *     zoom-blue                     10 rows,  3 rungs (kaboom/lightning/spokes)
+   *     zoom-gold                      8 rows,  2 rungs (kaboom/spokes)
+   *     zoom-red                      10 rows,  3 rungs (kaboom/lightning/spokes)
+   *
+   * RESOLVED (Drew, researched follow-up ruling, 2026-09-19): Ice and White
+   * are PARALLELS of the one 39-card Rookie Patch Autographs set (#201-242;
+   * Ice /50, White 1/1), never keys -- NOT registered, same as every other
+   * colour rung in this file (a parallel rides the parallel field, it is
+   * never a setKey).
+   *
+   *     rookie-patch-autographs-ice     37 rows
+   *     rookie-patch-autographs-white   39 rows
+   *
+   *   Both had a BLANK parallel column, so the module's own strip rule
+   *   correctly left them unfolded on the first pass (blue/gold/red DO carry
+   *   a matching parallel column and fold cleanly into the 152-row
+   *   `rookie-patch-autographs` root). The roster mismatch that looked like
+   *   two different checklists was a SOURCE ARTIFACT, not a different card
+   *   set: sportscardchecklist renumbers every colour page from 1, so Ice's
+   *   own file reads #1-42 while the product's real numbers are #201-242.
+   *   Verified: Ice #N -> main #(N+200) matches on player for all 37 rows,
+   *   zero disagreement -- e.g. Ice #1 Michael Penix Jr. is main #201 Michael
+   *   Penix Jr. #229 (Jaylen Wright) is the one number Ice-shifted has that
+   *   the merged blue/gold/red pool lacks -- the "extra" signer the roster
+   *   check flagged before this fix, not a different card. White already
+   *   used the product's real 201-242 numbers and matched on identity once
+   *   its own multi-copy player-field formatting (`"Name/Name/Name/Name/
+   *   Name"`, a scrape artifact, not five co-signers) is split and
+   *   de-duplicated the same way every other roster comparison in this file
+   *   already does.
+   *
+   *   THE FIXTURE'S ICE ROWS ARE RENUMBERED BELOW (201-242, from 1-42) to
+   *   correct the artifact at its source in this repo -- see
+   *   tests/fixtures/checklist-category/zenith-2024-fb-categories.json. That
+   *   fixture is a static snapshot of the real acquisition CSV
+   *   (`2024-panini-zenith-football.csv`); this repo carries no separate
+   *   converter or copy of that CSV to fix independently, so the fixture fix
+   *   here does not, by itself, correct a live acquisition pipeline -- if
+   *   this product is re-acquired from the same source, the same renumbering
+   *   will need catching again at that scrape/staging step.
+   *
+   *   SWEPT: every other Zenith cluster this file folds was checked for the
+   *   same renumber-from-1 artifact (child's number range vs its root's).
+   *   Two other apparent mismatches turned out to be something else, not
+   *   this defect: `high-point-signatures`/`spokes-signatures` are proper
+   *   SUBSETS of `high-point-kaboom-signatures`'s own 1-28 range (real
+   *   short-print gaps, same numbering scheme, not a shift); and
+   *   `pinnacle-inscriptions-silver` names DIFFERENT PLAYERS than
+   *   `pinnacle-inscriptions` at every shared number (#1 is Terrell Owens vs
+   *   Aaron Rodgers) -- a genuinely different checklist, already registered
+   *   separately above, not a renumbering question at all. No other cluster
+   *   in this file showed the shift-from-1 shape.
+   *
+   * A THIRD ANCHORING GAP, FOUND WHILE MEASURING. #2273 anchored two Zenith
+   * previews that were folding onto `panini-contenders-optic`
+   * (`...rookie-ticket-rps-preview` and `...rookie-ticket-variation-rps-
+   * preview`, both registered above). A third preview in the same fixture,
+   * `Contenders Optic Veteran Ticket Preview` (16/15/15 rows across
+   * Blue/Green/Red, no plain file -- the "siblings name the set" shape again),
+   * collapses onto the same `panini-contenders-optic` today, verified by
+   * running `normalizeSetKey`, not by reading the regex. `productSetKeyForName`
+   * (spelled-name lookup) runs BEFORE the unanchored regex vocabulary
+   * (`normalizeSetKey`, D23), so registering the spelled key below is
+   * sufficient on its own -- no additional regex anchor needed, unlike
+   * `troops-tribute` and the other two Contenders Optic previews, which had
+   * to be anchored because their EXACT spelling was never registered before
+   * #2273 wrote the rule. This one goes straight to the table.
+   *
+   * `family` left at the default (each insert its own pricing family), same
+   * as the Photogenic and Illusions precedents.
+   */
+  S("panini-zenith-contenders-optic-veteran-ticket-preview", { parent: "panini-zenith" }),
+  S("panini-zenith-a-to-z", { parent: "panini-zenith" }),
+  S("panini-zenith-alphas", { parent: "panini-zenith" }),
+  S("panini-zenith-behind-the-numbers", { parent: "panini-zenith" }),
+  S("panini-zenith-chalk-talk", { parent: "panini-zenith" }),
+  S("panini-zenith-color-guard", { parent: "panini-zenith" }),
+  S("panini-zenith-first-look", { parent: "panini-zenith" }),
+  S("panini-zenith-high-point-signatures", { parent: "panini-zenith" }),
+  S("panini-zenith-idols", { parent: "panini-zenith" }),
+  S("panini-zenith-pinnacle-inscriptions", { parent: "panini-zenith" }),
+  S("panini-zenith-pinnacle-inscriptions-silver", { parent: "panini-zenith" }),
+  S("panini-zenith-rookie-patch-autographs", { parent: "panini-zenith" }),
+  S("panini-zenith-rookies", { parent: "panini-zenith" }),
+  S("panini-zenith-rookies-autographs", { parent: "panini-zenith" }),
+  S("panini-zenith-splash", { parent: "panini-zenith" }),
+  S("panini-zenith-state-of-the-art", { parent: "panini-zenith" }),
+  S("panini-zenith-the-shield", { parent: "panini-zenith" }),
+  S("panini-zenith-turning-pro-memorabilia", { parent: "panini-zenith" }),
+  S("panini-zenith-z-graphs", { parent: "panini-zenith" }),
+  S("panini-zenith-z-jersey", { parent: "panini-zenith" }),
+  S("panini-zenith-z-jersey-autographs", { parent: "panini-zenith" }),
+  S("panini-zenith-z-marquee", { parent: "panini-zenith" }),
+  S("panini-zenith-z-summit-autographs", { parent: "panini-zenith" }),
+  S("panini-zenith-z-team", { parent: "panini-zenith" }),
+  S("panini-zenith-zoned-in", { parent: "panini-zenith" }),
+  S("panini-zenith-zoom-blue", { parent: "panini-zenith" }),
+  S("panini-zenith-zoom-gold", { parent: "panini-zenith" }),
+  S("panini-zenith-zoom-red", { parent: "panini-zenith" }),
   // R53(ii) (Drew, 2026-09-15): SELECT'S TIERS ARE THEIR OWN CARD SETS.
   //
   // Panini Select prints its base set in named tiers -- Concourse, Premier
@@ -1434,15 +1732,181 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
    *
    * ILLUSIONISTS IS THE PRODUCT'S SIGNATURE SET and the one the R31/R33 title
    * refusals kept naming; `-illusionists-autographs` is the SIGNED sibling and
-   * a different card set, not a rung of it. The unsigned `Illusionists` rows
-   * carry a blank parallel and stay on the product key, exactly as the base
-   * ladder does.
+   * a different card set, not a rung of it.
+   *
+   * R67 (2026-09-19) SUPERSEDES R60's UNSIGNED-ILLUSIONISTS EXCLUSION. This
+   * comment used to say the unsigned `Illusionists` rows "carry a blank
+   * parallel and stay on the product key, exactly as the base ladder does" --
+   * that premise no longer matches the staged data. `insert-illusionists`
+   * rows carry their OWN stated parallel ("Illusionist", not blank), and
+   * there is a real same-number/different-player fact against base: base #1
+   * is Kyler Murray, Illusionists #1 is Caleb Williams. R67's own rule (a
+   * named insert set is its own product key) reaches this exactly like every
+   * other insert in the file, and now registers it below, alongside its
+   * already-registered signed sibling.
    */
   S("panini-illusions-trophy-collection", { family: "panini-illusions", parent: "panini-illusions" }),
   S("panini-illusions-mystique-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
   S("panini-illusions-immortalized-jersey-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
   S("panini-illusions-rookie-reflections-dual-patch-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
   S("panini-illusions-illusionists-autographs", { family: "panini-illusions", parent: "panini-illusions" }),
+  S("panini-illusions-illusionists", { family: "panini-illusions", parent: "panini-illusions" }),
+
+  /**
+   * R67 (Drew, ruling round of 2026-09-19): 2024 PANINI ILLUSIONS FOOTBALL --
+   * THE REST OF THE NAMED INSERT SETS.
+   *
+   * The five above were registered under R60 to clear the ingester's
+   * id-integrity guard (a genuine card-number COLLISION with base). This
+   * batch answers a different question -- not "does the id collide", but R67's
+   * own: "a named insert set is its own product key", so it prices in its own
+   * pool rather than the flagship's, whether or not its rows' addresses
+   * already happen to be safe. Measured directly against the same staged
+   * checklist (`2024-panini-illusions-football.csv`, already on main) with
+   * the module's own production fold (`insert-set-key.cjs`'s
+   * `rungFoldingFor`), same method as Photogenic and Zenith.
+   *
+   * VERIFIED WITH THE REAL PRODUCTION ID, NOT A HAND APPROXIMATION.
+   * `IS.planFile` run with `computeHobbyIqCardId` (not a simplified stand-in)
+   * reports this file `verdict: pass`, 10,871 rows on 10,871 distinct ids,
+   * ZERO collisions, with only the five keys above separated -- because every
+   * insert here states its OWN parallel column, and the parallel is part of
+   * the id. So none of the twenty-three below are needed to stop a
+   * collision; they are needed so `panini-illusions-deja-vu` (for example)
+   * does not price off the flagship's comp pool.
+   *
+   * THE SAME ROSTER TEST AS ZENITH -- cardNumber + player, players split on
+   * "/", trimmed, lowercased, de-duplicated, sorted -- resolved most
+   * colour-suffixed categories automatically via the module's fold (dual-
+   * player cards like Déjà Vu's "Brock Purdy/Joe Montana" needed the SORTED
+   * comparison specifically: the source spells the two names in a different
+   * order between the plain file and its colour files, which the module's
+   * own fold compares as literal strings and therefore missed -- the sorted
+   * roster test is what catches it). Two clusters needed the roster test
+   * applied by hand for that reason:
+   *
+   *   deja-vu (7 spellings -> 1 root): plain + black/blue/gold/green/purple/
+   *     red, all the same 19-card roster once player order is normalized.
+   *   rookie-idols-dual-memorabilia (7 spellings -> 1 root): plain +
+   *     black/blue/gold/green/purple/red, same shape, 20-card roster.
+   *
+   * TWO MORE CLUSTERS, PLAIN COLOUR SUFFIXES THE MODULE'S OWN FOLD ALREADY
+   * HANDLES, but the source SPELLED one of the five wrong:
+   *
+   *   inspirations (5 spellings -> 1 root, `inspirations-all-pro`):
+   *     All-Pro/Conference/Division/Super Bowl/Wild Card, same roster.
+   *   trophy-hunters (5 spellings -> 1 root, `trophy-hunters-all-pro`):
+   *     All-Pro/Conference/Division/Super Bowl/Wild Card, same roster --
+   *     EXCEPT the source's own category for the fifth is spelled
+   *     `Trophy Huinters Wild Card` (transposed letters), a scraper
+   *     transcription typo beside four correctly-spelled `Trophy Hunters`
+   *     siblings. Registered under the CORRECT spelling
+   *     (`trophy-hunters-all-pro`); the typo'd category still resolves to it
+   *     through the roster fold, so no row is lost, and no misspelled key is
+   *     minted.
+   *
+   * AUTO/SIGNED STATUS NEVER MERGES WITH ITS UNSIGNED SIBLING, even when the
+   * roster is an exact match -- CF-A-COLOUR-RUNG-IS-NEVER-A-CARD-SET-KEY's
+   * "tail says SIGNED" rule, same as Photogenic's rookie-portrait /
+   * rookie-portrait-autographs and Zenith's several `-autographs` roots:
+   *
+   *   clutch / clutch-signatures: `Clutch Signatures` (9 rows, numbers 5-19)
+   *     shares every number and player with `Clutch` (20 rows, numbers 1-20)
+   *     where they overlap, but "Signatures" states the signed subset by
+   *     name -- registered as its own key, not folded into Clutch.
+   *   illusionists-autographs (already registered above) / illusionists:
+   *     see the KNOWN DISCREPANCY below.
+   *
+   * TWENTY-THREE ROOTS, with row counts:
+   *
+   *     abracadabra                                20 rows
+   *     amazing                                     25 rows
+   *     bright-lights-signatures                    22 rows
+   *     clutch                                      20 rows
+   *     clutch-signatures                            9 rows -- signed sibling
+   *                                                            of Clutch, own key
+   *     deja-vu                                     19 rows, 6-way CLUSTER
+   *     elusive-ink                                 11 rows
+   *     first-impressions-autographed-memorabilia   35 rows (auto-prefixed,
+   *                                                            own roster, blank
+   *                                                            parallel but its
+   *                                                            OWN print run per
+   *                                                            card -- no collision)
+   *     game-magicians                              25 rows
+   *     great-expectations                         100 rows
+   *     highlight-swatches                           20 rows
+   *     holoheroes                                   30 rows
+   *     holoheroes-rookies                           34 rows -- DIFFERENT
+   *                                                            roster from
+   *                                                            holoheroes,
+   *                                                            zero overlap;
+   *                                                            its own product,
+   *                                                            not a rung
+   *     inspirations-all-pro                        50 rows, 5-way CLUSTER
+   *     prodigy-endorsements                         18 rows
+   *     rookie-endorsements                          38 rows
+   *     rookie-idols-dual-memorabilia                20 rows, 7-way CLUSTER
+   *     rookie-signs                                 33 rows
+   *     rookie-vision-signatures                     20 rows
+   *     shining-stars                                25 rows
+   *     superlatives                                 23 rows
+   *     trophy-collection-signatures                  7 rows -- signed sibling
+   *                                                            of Trophy
+   *                                                            Collection (the
+   *                                                            key registered
+   *                                                            above); currently
+   *                                                            COLLAPSES ONTO
+   *                                                            IT via a
+   *                                                            substring match,
+   *                                                            measured with
+   *                                                            normalizeSetKey
+   *     trophy-hunters-all-pro                      50 rows, 5-way CLUSTER
+   *                                                            (typo fixed, see
+   *                                                            above)
+   *
+   * KNOWN DISCREPANCY, STATED RATHER THAN SILENCED. The R60 comment above
+   * says unsigned `Illusionists` "carries a blank parallel and stays on the
+   * product key" -- but the CURRENT staged CSV shows `insert-illusionists`
+   * rows carrying their own stated parallel ("Illusionist"), not blank, and a
+   * genuine same-number/different-player fact against base (`base #1` is
+   * Kyler Murray; `Illusionists #1` is Caleb Williams). Because the parallel
+   * IS part of the computed id, this does not collide -- `panini-illusions:
+   * 1:base:no-auto` and `panini-illusions:1:illusionist:no-auto` are already
+   * different addresses -- so the R60 test's premise (registering it would
+   * "split the base pool") does not hold against today's data either way,
+   * whatever it described when it was written. NOT REGISTERED HERE: the
+   * existing test (`illusionsInsertSetsAreTheirOwnCardSets.test.ts`) PINS
+   * `panini-illusions-illusionists` absent, and overriding a pinned ruling on
+   * a hunch is exactly the failure mode R67 exists to prevent. Flagged for
+   * Drew in this PR's description instead.
+   *
+   * `family` left at the default (each insert its own pricing family), same
+   * as the Photogenic and Zenith precedents; `parent: "panini-illusions"`
+   * throughout.
+   */
+  S("panini-illusions-abracadabra", { parent: "panini-illusions" }),
+  S("panini-illusions-amazing", { parent: "panini-illusions" }),
+  S("panini-illusions-bright-lights-signatures", { parent: "panini-illusions" }),
+  S("panini-illusions-clutch", { parent: "panini-illusions" }),
+  S("panini-illusions-clutch-signatures", { parent: "panini-illusions" }),
+  S("panini-illusions-deja-vu", { parent: "panini-illusions" }),
+  S("panini-illusions-elusive-ink", { parent: "panini-illusions" }),
+  S("panini-illusions-first-impressions-autographed-memorabilia", { parent: "panini-illusions" }),
+  S("panini-illusions-game-magicians", { parent: "panini-illusions" }),
+  S("panini-illusions-great-expectations", { parent: "panini-illusions" }),
+  S("panini-illusions-highlight-swatches", { parent: "panini-illusions" }),
+  S("panini-illusions-holoheroes", { parent: "panini-illusions" }),
+  S("panini-illusions-holoheroes-rookies", { parent: "panini-illusions" }),
+  S("panini-illusions-inspirations-all-pro", { parent: "panini-illusions" }),
+  S("panini-illusions-prodigy-endorsements", { parent: "panini-illusions" }),
+  S("panini-illusions-rookie-endorsements", { parent: "panini-illusions" }),
+  S("panini-illusions-rookie-idols-dual-memorabilia", { parent: "panini-illusions" }),
+  S("panini-illusions-rookie-signs", { parent: "panini-illusions" }),
+  S("panini-illusions-rookie-vision-signatures", { parent: "panini-illusions" }),
+  S("panini-illusions-shining-stars", { parent: "panini-illusions" }),
+  S("panini-illusions-superlatives", { parent: "panini-illusions" }),
+  S("panini-illusions-trophy-collection-signatures", { parent: "panini-illusions" }),
+  S("panini-illusions-trophy-hunters-all-pro", { parent: "panini-illusions" }),
 
   /**
    * 2024 PANINI SELECT FOOTBALL -- THE 33 NAMED INSERT SETS (R60 + R38).
@@ -1513,6 +1977,71 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   S("panini-select-alter-ego", { family: "panini-select", parent: "panini-select" }),
   S("panini-select-starcade", { family: "panini-select", parent: "panini-select" }),
   S("panini-select-sparks", { family: "panini-select", parent: "panini-select" }),
+
+  /**
+   * R67 (Drew, ruling round of 2026-09-19): 2024 PANINI SELECT FOOTBALL --
+   * FOUR MORE NAMED INSERT ROOTS THE R60 GUARD DID NOT NEED.
+   *
+   * The 33 above were measured against this exact file to clear a genuine id
+   * COLLISION (base's own tiers already have disjoint number ranges, so this
+   * product never collides the way Zenith did -- registration alone clears
+   * the whole file, REFUSED 0). This batch answers R67's separate question --
+   * a named insert prices in its own pool -- for roots the module's own
+   * prefix-based fold could not connect on its own, same method as
+   * Illusions: the colour word sits in the MIDDLE of the category name
+   * (`2025-XRC-BLACK-Prizm`, not a trailing suffix), and the parallel column
+   * is blank on the plain tier, so `categorySubsetSlug`'s suffix-strip has
+   * nothing to strip against.
+   *
+   *   panini-select-2025-xrc (4 spellings -> 1 root): plain + black/gold/
+   *     tie-dye Prizm, exact roster subsets of the plain 20-card checklist.
+   *     Distinct from the ALREADY-REGISTERED `panini-select-2025-xrc-
+   *     mystery-autograph`, which is the SIGNED sibling -- same "tail says
+   *     SIGNED" rule as every other product, unaffected by the shared
+   *     "2025-xrc" name fragment.
+   *
+   *   panini-select-prime-selections-signatures (9 spellings -> 1 root):
+   *     Prizm/Black Prizm (x4 tag variants)/Gold Prizm/Green Prizm/Neon
+   *     Orange Pulsar Prizm/Tie-Dye Prizm Signatures. Zero disagreement on
+   *     every shared number across all nine -- the size differences (34-42
+   *     rows) are real short-print scarcity per colour/tag, the same shape
+   *     Zenith's Rookie Patch Autographs measured, not different checklists.
+   *
+   * TWO REDEMPTION ROOTS, BOTH OWN-KEY, NEITHER A RUNG OF ITS NON-REDEMPTION
+   * SIBLING. A "redemption" card physically occupies the SAME numbered slot
+   * as the real card it stands in for -- `insert-2025-xrc-prizm-redemption`
+   * reuses #501-520, exactly the non-redemption insert's own numbers -- but
+   * the source spells the player as a POSITION SLOT ("QB1", "QB2", ...,
+   * "XRCAuto1") rather than a real name, so EVERY shared number disagrees on
+   * player. That is the R30/R67 defect a colour rung can never be: same
+   * number, different card, and the roster rule's own "zero disagreement"
+   * requirement is exactly what stops it from folding. Drew's ruling: these
+   * are their own product, not a rung of `2025-xrc` or
+   * `2025-xrc-mystery-autograph` respectively.
+   *
+   *   panini-select-2025-xrc-redemption (4 spellings -> 1 root): Redemption/
+   *     Black Prizm Redemption/Gold Prizm Redemption/Tie-Dye Redemption, all
+   *     twenty QB/RB/WR/TE/DEF placeholder slots, zero disagreement --
+   *     colour rungs of EACH OTHER, never of the real-player `2025-xrc`.
+   *   panini-select-2025-xrc-mystery-autograph-redemption (4 spellings -> 1
+   *     root): the signed sibling's placeholder redemption, same shape,
+   *     five XRCAuto slots. MEASURED BEFORE REGISTERING: this key currently
+   *     COLLAPSES ONTO `panini-select-2025-xrc-mystery-autograph` (the real
+   *     signed insert) via a substring match -- exactly the defect this
+   *     registration fixes, verified by running normalizeSetKey.
+   *
+   * TIERS ARE A SEPARATE OPEN QUESTION, NOT ANSWERED HERE. This file's base
+   * card ladders across five tiers -- Concourse, Club Level, Field Level,
+   * Premier Level, Suite Level -- each already registered as its own key
+   * under #2231 (see the block above naming panini-select-concourse etc.).
+   * No Courtside Level tier appears in THIS football file. Listed for the
+   * record, per instruction; nothing about the tiers is touched, folded, or
+   * turned into a NEW key in this PR.
+   */
+  S("panini-select-2025-xrc", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-prime-selections-signatures", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-2025-xrc-redemption", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-2025-xrc-mystery-autograph-redemption", { family: "panini-select", parent: "panini-select" }),
 
   // -- Fleer / Skybox / Pinnacle / Score / vintage ----------------------------
   P("fleer"),

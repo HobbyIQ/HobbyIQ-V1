@@ -109,8 +109,39 @@ export function isAutoByCardNumber(
 }
 
 /**
+ * CF-A-SUB-SEGMENT-IS-PART-OF-THE-IDENTITY (Drew, catalog audit finding,
+ * 2026-09-19). The `:sub-<name>[-pattern-N]` segment `formatSubsetSegment`
+ * (hobbyIqCardId.service) mints right after the setKey -- and
+ * `parseHobbyIqCardId` reads back -- names a subset the checklist itself
+ * disambiguates: the same card number, on the same product, means a
+ * DIFFERENT card depending on which named subset printed it (#1741's Johnson
+ * Reprints vs. Cards That Never Were), or a different physical card entirely
+ * (each Tek pattern, e.g. `sub-tek-pattern-30`, is its own card). Measured on
+ * a baseball catalog audit: 59,522 rows carry this disambiguator ONLY in the
+ * id -- never in parallelSlug, variation or setKey -- because minting it was
+ * the whole point of the mechanism (a row with no other way to say which
+ * card it is).
+ *
+ * Read from `id`, never a field: no row FIELD carries this fact, by
+ * construction (`formatSubsetSegment`'s docstring: "BLANK MEANS UNKNOWN...
+ * minting it would put it back on the plain id"). The `pattern-N` tail STAYS
+ * PART of the segment -- `sub-tek-pattern-30` and `sub-tek-pattern-31` are
+ * two different Tek patterns and two different cards, not one subset with a
+ * numbered rung.
+ *
+ * `sub-base-set` looks like it could be a plain-base label rather than a
+ * real disambiguating subset -- NOT special-cased here; see the PR that
+ * introduced this function for why, and the follow-up question left for
+ * Drew.
+ */
+export function subsetSegmentOf(row: Pick<IdentityRow, "id">): string {
+  const m = String(row.id ?? "").match(/^hiq:[^:]+:[^:]+:[^:]+:(sub-[^:]+):/);
+  return m ? m[1] : "";
+}
+
+/**
  * The identity a row belongs to: sport | year | setKey | cardNumber | cleaned
- * parallel | auto.
+ * parallel | auto | sub-segment.
  *
  * setKey comes from the row FIELD, never the id segment. The D23 rename fleet
  * renames the field first, so mid-flight a row can read
@@ -122,6 +153,13 @@ export function isAutoByCardNumber(
  * auto-by-definition prefix: there both `auto` and `no-auto` rows key as auto,
  * which is what folds bccp's `...:refractor:no-auto:num-499` ghost onto the
  * real auto row instead of leaving it behind.
+ *
+ * THE SUB-SEGMENT IS THE ONE HALF THIS FUNCTION READS FROM THE ID, ON
+ * PURPOSE -- see `subsetSegmentOf`. It is appended LAST and only when
+ * present, so a row that never carried the segment keys BYTE-IDENTICALLY to
+ * before this field existed: `pinned by
+ * foldTwinRuleChecklistNumbered.test.ts` and the D23 setKey test above both
+ * still hold unchanged.
  */
 export function identityKeyOf(
   row: IdentityRow,
@@ -133,7 +171,9 @@ export function identityKeyOf(
   const cardNumber = String(row.cardNumber ?? "").trim().toLowerCase();
   const parallel = cleanParallelSlug(row.parallelSlug);
   const auto = row.isAuto === true || isAutoByCardNumber(row.cardNumber, forceAutoPrefixes) ? "auto" : "no-auto";
-  return `${sport}|${year}|${setKey}|${cardNumber}|${parallel}|${auto}`;
+  const sub = subsetSegmentOf(row);
+  const base = `${sport}|${year}|${setKey}|${cardNumber}|${parallel}|${auto}`;
+  return sub ? `${base}|${sub}` : base;
 }
 
 /** The /N a row carries, from its own field or its id's trailing `:num-N`. */
