@@ -149,13 +149,33 @@ describe("the deploy workflow proves both workers and deploys once", () => {
     expect(s).toMatch(/"\$STREAK" -ge "\$STREAK_NEEDED"/);
   });
 
-  it("an answer with NO instance tag can never satisfy the gate", () => {
-    // The old build does not serve the field at all, so a missing tag is
-    // positive evidence of an un-recycled worker — never a pass. The verified
-    // branch requires a non-empty $INST.
+  it("a response with no instance id is not an instance", () => {
+    // CF-NO-INSTANCE-IS-NOT-A-THIRD-INSTANCE (2026-09-19). Run 35418597889
+    // refused a good build: both real instances (d456bc97, 6fd4f9ab) verified
+    // the new sha, but a couple of early polls landed on a recycling worker
+    // that answered /api/health with NO instance field. The old gate folded
+    // `no-instance` into SEEN_IDS as a third distinct instance — one that,
+    // by construction, can never itself carry an $INST and so can never enter
+    // OK_IDS. Once a single no-instance answer arrived, N_OK could never
+    // reach N_SEEN again and the gate was unwinnable.
+    //
+    // MUTATION CHECK: under the old rule, `verified instances: d456bc97
+    // 6fd4f9ab | instances seen: no-instance d456bc97 6fd4f9ab` (2/3) is
+    // exactly the observed failure with a fully-verified build.
     const s = shell();
-    expect(s).toMatch(/\[ -n "\$INST" \]/);
-    expect(s).toMatch(/no-instance/);
+    // A no-instance answer must never be added to SEEN_IDS/OK_IDS — those
+    // only take a branch guarded by a non-empty $INST.
+    expect(s).toMatch(/if \[ -z "\$INST" \]/);
+    const noInstBranch = s.slice(s.indexOf('if [ -z "$INST" ]'), s.indexOf("else"));
+    expect(noInstBranch).not.toMatch(/SEEN_IDS="\$SEEN_IDS/);
+    expect(noInstBranch).not.toMatch(/OK_IDS="\$OK_IDS/);
+    // It must still count as evidence: a no-instance answer with the wrong
+    // (or absent) sha resets a streak that gates the match, so a stale
+    // worker masquerading as "still recycling" cannot wait the gate out.
+    expect(s).toMatch(/NOINST_CLEAR_STREAK=0/);
+    expect(s).toMatch(/NOINST_CLEAR_STREAK.*-ge "\$STREAK_NEEDED"/);
+    // The log line stays honest about how many no-instance answers were seen.
+    expect(s).toMatch(/no-instance seen:\$\{NOINST_COUNT\}/);
   });
 
   it("warms EIGHT times and requires every call ok", () => {
