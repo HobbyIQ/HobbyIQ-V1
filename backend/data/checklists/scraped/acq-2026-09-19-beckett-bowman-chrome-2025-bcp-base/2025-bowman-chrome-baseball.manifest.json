@@ -1,0 +1,41 @@
+{
+  "scrapedAt": "2026-09-19T12:00:00.000Z",
+  "articleUrl": "https://www.beckett.com/news/2025-bowman-chrome-baseball-cards/",
+  "articleFetchNote": "beckett.com 302s to maintenance.beckett.com; not independently re-checked via Wayback for this specific article this pass -- the xlsx itself is the primary source.",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/08/2025-Bowman-Chrome-Baseball-Checklist.xlsx",
+  "xlsxHttpStatus": 200,
+  "sha256": "25e4f43a40482d52e794449c88f0f9c6972382e81b87a1da06756506397dbaa5",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Bowman Chrome",
+  "productKey": "2025-bowman-chrome",
+  "setKey": "bowman-chrome",
+  "rowCount": 355,
+  "readyToIngest": false,
+  "directorySplitNote": "SPLIT from the original combined package acq-2026-09-19-beckett-bowman-chrome-bcp-base/ (now deleted) after the runner's steward correctly refused it: that directory held TWO CSVs from two different setKeys/sources under one SOURCE env var and one DIR sweep, which ingest-checklist-csv-to-catalog.cjs cannot safely split apart (SOURCE is one value for the whole run; multiple call sites in ingest-universe-driver.cjs also do fs.readdirSync(dir).filter(csv) and take csvs[0]). This directory now holds exactly this ONE CSV, no sibling.",
+  "reproduce": {
+    "convertCommand": "node backend/scripts/convertBeckettChecklistXlsx.cjs --xlsx <path>/2025-bowman-chrome-baseball.xlsx --year 2025 --set-key bowman-chrome --set-name \"2025 Bowman Chrome\" --sport baseball --out 2025-bowman-chrome-baseball.raw.csv --source-url \"https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/08/2025-Bowman-Chrome-Baseball-Checklist.xlsx\" --source-label beckett-s3-2026-09-19",
+    "converterOutput": "wrote 2025-bowman-chrome-baseball.raw.csv; rows=1452 (deduped 0); by kind: {\"base\":570,\"auto\":475,\"insert\":407}; sections: 57 (anchors 4, parallels 15, own-cards 35); 3 AMBIGUOUS overlaps flagged (Autographs > Chrome Rookie Autographs - Short Print Image Variations vs Chrome Rookie Autographs 87.5%; Topps Master Checklist > BASE CARDS IMAGE VARIATIONS vs Base 55%; Topps Master Checklist > ETCHED IN GLASS VARIATION vs Base 55% -- the last two are the Master-sheet duplicate defect, see masterSheetDuplicateRemoved below).",
+    "scopeFilterCommand": "awk -F',' 'NR==1 || $1==\"base\"' 2025-bowman-chrome-baseball.raw.csv > 2025-bowman-chrome-baseball.stage2.csv",
+    "masterSheetFilterCommand": "awk -F',' 'NR==1 { print; next } { par=$3; upper=toupper(par); if (par != \"\" && par == upper && par ~ /[A-Z]/) next; print }' 2025-bowman-chrome-baseball.stage2.csv > 2025-bowman-chrome-baseball.csv"
+  },
+  "rowsByCategory": {
+    "numberedBase_1to100_blankParallel": { "rows": 100 },
+    "numberedBase_1to100_variationParallel": { "rows": 87, "breakdown": { "Etched In Glass Variation": 11, "Image Variation": 11, "Rookie Color Run Variation": 10, "Rookie Red RC Variation": 40, "Rookie Short Print Image Variation": 15 } },
+    "bcpProspects_153to252_blankParallel": { "rows": 100 },
+    "bcpProspects_153to252_variationParallel": { "rows": 68, "breakdown": { "Etched In Glass Variation": 9, "Image Variation": 9, "International Refractor Variation": 50 } },
+    "total": 355,
+    "verifiedByDirectCount": "awk -F',' confirms 187 rows at plain-numbered cardNumbers (1-100, 100 blank + 87 variation) + 168 rows at BCP-153..252 (100 blank + 68 variation) = 355, matching the file's own row count."
+  },
+  "rowsDropped": {
+    "count": 1097,
+    "raw1452minusStaged355": "1452 raw rows - 355 staged = 1097 dropped, split two ways:",
+    "autoAndInsertScope": "475 auto-* rows (Adios, Bowman Ascension(s), Chrome Prospect/Rookie Autographs, Chrome Autograph Relics, Max Volume, Melt Mashers, Prime Choice/Chrome Signatures, Retrofractor Autograph) + 407 insert-* rows (Adios, Bowman GPK, Bowman Spotlights, It Came to the League, Max Volume, Melt Mashers, Meteoric Rise, Retrofractor) = 882 rows. None registered under bowman-chrome sub-keys; out of scope for this data-acquisition pass. Fully reproducible from the raw converter output via the scopeFilterCommand above.",
+    "masterSheetDuplicates": "215 rows dropped by the masterSheetFilterCommand -- see masterSheetDuplicateRemoved below for why."
+  },
+  "note": "Sibling ACQUISITION to acq-2026-09-19-beckett-bowman-2025-bcp-base/2025-bowman-baseball.csv, now in a SEPARATE directory per the steward's refusal (see directorySplitNote). Covers the bowman-chrome product's own numbering: the flagship 100-card Base Chrome set (#1-100) plus its own Bowman Chrome Prospects insert range BCP-153 through BCP-252 (100 cards) -- the Chrome-treated counterpart to the paper product's BCP-1..150 range staged in the sibling directory. Does NOT include BCP-1 through BCP-152 (the paper-Bowman product's own insert, staged in the sibling directory), per productSetKeys.ts treating bowman and bowman-chrome as parent/child but DISTINCT registered keys -- never folded across, now also physically separated at the directory level.",
+  "beckettCardListOnly": "Card list only, no print-run column on the plain Base rows; the 5 named Variation parallels (Etched In Glass, Image, Rookie Color Run, Rookie Red RC, Rookie Short Print Image, International Refractor) DO carry a parallel name (no print run) because Beckett's own Variations/Prospects sheets state them explicitly as their own sections -- these are not synthesized, they are the source's stated sections.",
+  "masterSheetDuplicateRemoved": "This xlsx has a 'Topps Master Checklist' sheet that duplicates rows already captured under their properly-cased section (e.g. 'BASE CARDS' duplicating 'Base>Base Set', 'CARDS CHROME ROOKIE RED RC VARIATION' duplicating 'Rookie Red RC Variation', 'INTERNATIONAL REFRACTOR VARIATION' duplicating the same-named Prospects section, 'ROOKIE COLOR RUN VARIATION' and 'ROOKIE SHORT PRINT IMAGE VARIATION' likewise). convertBeckettChecklistXlsx.cjs's SUPERSET_SHEET regex (`^(master\\b|...)`) only matches a sheet name STARTING WITH 'master' and does not match 'Topps Master Checklist' (master mid-string) -- this defect was written up in full (workbook URL, sha256, sheet names, exact regex/line reference) for the coordinator to route to the builder currently in that file; NOT fixed here. Worked around locally in this CSV only, via the masterSheetFilterCommand above: rows whose parallel column is entirely uppercase are dropped as confirmed duplicates of a properly-cased row at the same cardNumber+player. This filter is local to this CSV; convertBeckettChecklistXlsx.cjs itself is unchanged.",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run read-only against this file, re-run after the directory split): 355 batch rows, 355 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys."
+}
