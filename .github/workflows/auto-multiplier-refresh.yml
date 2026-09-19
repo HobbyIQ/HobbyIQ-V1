@@ -115,13 +115,35 @@ jobs:
         # dir (backend/scripts/) — not backend/. CF-AUTO-MULT-OUTPUT-PATH
         # (Drew, 2026-07-26): prior glob `backend/auto-multipliers-*.json`
         # never matched → workflow died with "scan produced no output
-        # file" even when the scan succeeded. Now scans both scripts/ and
-        # backend root (defensive — either location is honored) and
-        # picks the newest.
+        # file" even when the scan succeeded. Both locations are honored.
+        #
+        # CF-A-NON-MATCHING-GLOB-KILLS-THE-STEP (2026-09-18). That fix was
+        # right about the PATH and still failed, because the failure was
+        # never really about the path:
+        #
+        #   [calibrate] DONE → .../backend/scripts/auto-multipliers-2026-09-13.json
+        #   ::error::scan produced no output file
+        #
+        # The scan wrote the file the glob names. `actions/runner` runs every
+        # `run:` block as `bash --noprofile --norc -e -o pipefail`. Given two
+        # patterns where the SECOND matches nothing, `ls` exits 2 — and with
+        # `pipefail` that status survives the pipe through `tail`, so `-e`
+        # kills the step at the assignment. The `if` never runs; the error
+        # line is only echoed because the runner prints the whole script.
+        # Reproduced: `bash -e t.sh` -> rc=0, `bash -e -o pipefail t.sh` -> rc=2.
+        #
+        # So the glob is expanded WITHOUT `ls`: bash sets an unmatched pattern
+        # to the literal string, a `-f` test rejects those, and nothing in the
+        # search can set a non-zero status. The emptiness check is the one
+        # thing that decides, which is what the original intent was.
         run: |
-          DATED=$(ls backend/scripts/auto-multipliers-*.json backend/auto-multipliers-*.json 2>/dev/null | tail -1)
+          DATED=""
+          for f in backend/scripts/auto-multipliers-*.json backend/auto-multipliers-*.json; do
+            [ -f "$f" ] || continue
+            if [ -z "$DATED" ] || [ "$f" \> "$DATED" ]; then DATED="$f"; fi
+          done
           if [ -z "$DATED" ]; then
-            echo "::error::scan produced no output file"
+            echo "::error::scan produced no output file (searched backend/scripts/ and backend/)"
             exit 1
           fi
           mkdir -p backend/data
