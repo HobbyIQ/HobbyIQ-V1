@@ -1190,7 +1190,10 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
    *                                              stands per R67's own-key rule
    *     rookie-patch-autographs      152 rows,  colour rungs blue/gold/red
    *                                              (module-folded); ice (37) and
-   *                                              white (39) HELD OUT, see below
+   *                                              white (39) are ALSO parallels
+   *                                              of this root -- RESOLVED, see
+   *                                              below (not registered either,
+   *                                              a parallel is never a key)
    *     rookies                      100 rows -- CLUSTER: 1st/2nd/3rd/4th-
    *                                              down, hobby, no-huddle,
    *                                              retail, touchdown, two-
@@ -1220,22 +1223,54 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
    *     zoom-gold                      8 rows,  2 rungs (kaboom/spokes)
    *     zoom-red                      10 rows,  3 rungs (kaboom/lightning/spokes)
    *
-   * HELD OUT, NOT REGISTERED, NOT FOLDED (Drew, pending ruling):
+   * RESOLVED (Drew, researched follow-up ruling, 2026-09-19): Ice and White
+   * are PARALLELS of the one 39-card Rookie Patch Autographs set (#201-242;
+   * Ice /50, White 1/1), never keys -- NOT registered, same as every other
+   * colour rung in this file (a parallel rides the parallel field, it is
+   * never a setKey).
    *
    *     rookie-patch-autographs-ice     37 rows
    *     rookie-patch-autographs-white   39 rows
    *
-   *   Both have a BLANK parallel column, so the module's own strip rule
-   *   correctly leaves them unfolded (blue/gold/red DO carry a matching
-   *   parallel column and fold cleanly into the 152-row `rookie-patch-
-   *   autographs` root). Their rosters are NOT a subset of that 152-row pool
-   *   -- ice overlaps it at roughly half, white similarly -- which could mean
-   *   real short-print scarcity (same product, different signers pulled per
-   *   colour, same as the signed Rookies cluster above) or two genuinely
-   *   separate card sets; this file cannot tell which without the print-run
-   *   data. Leaving both unregistered is the safe side: an unregistered root
-   *   only refuses ingestion, where a wrongly-folded one loses rows silently
-   *   -- the exact defect class #2271 exists to prevent.
+   *   Both had a BLANK parallel column, so the module's own strip rule
+   *   correctly left them unfolded on the first pass (blue/gold/red DO carry
+   *   a matching parallel column and fold cleanly into the 152-row
+   *   `rookie-patch-autographs` root). The roster mismatch that looked like
+   *   two different checklists was a SOURCE ARTIFACT, not a different card
+   *   set: sportscardchecklist renumbers every colour page from 1, so Ice's
+   *   own file reads #1-42 while the product's real numbers are #201-242.
+   *   Verified: Ice #N -> main #(N+200) matches on player for all 37 rows,
+   *   zero disagreement -- e.g. Ice #1 Michael Penix Jr. is main #201 Michael
+   *   Penix Jr. #229 (Jaylen Wright) is the one number Ice-shifted has that
+   *   the merged blue/gold/red pool lacks -- the "extra" signer the roster
+   *   check flagged before this fix, not a different card. White already
+   *   used the product's real 201-242 numbers and matched on identity once
+   *   its own multi-copy player-field formatting (`"Name/Name/Name/Name/
+   *   Name"`, a scrape artifact, not five co-signers) is split and
+   *   de-duplicated the same way every other roster comparison in this file
+   *   already does.
+   *
+   *   THE FIXTURE'S ICE ROWS ARE RENUMBERED BELOW (201-242, from 1-42) to
+   *   correct the artifact at its source in this repo -- see
+   *   tests/fixtures/checklist-category/zenith-2024-fb-categories.json. That
+   *   fixture is a static snapshot of the real acquisition CSV
+   *   (`2024-panini-zenith-football.csv`); this repo carries no separate
+   *   converter or copy of that CSV to fix independently, so the fixture fix
+   *   here does not, by itself, correct a live acquisition pipeline -- if
+   *   this product is re-acquired from the same source, the same renumbering
+   *   will need catching again at that scrape/staging step.
+   *
+   *   SWEPT: every other Zenith cluster this file folds was checked for the
+   *   same renumber-from-1 artifact (child's number range vs its root's).
+   *   Two other apparent mismatches turned out to be something else, not
+   *   this defect: `high-point-signatures`/`spokes-signatures` are proper
+   *   SUBSETS of `high-point-kaboom-signatures`'s own 1-28 range (real
+   *   short-print gaps, same numbering scheme, not a shift); and
+   *   `pinnacle-inscriptions-silver` names DIFFERENT PLAYERS than
+   *   `pinnacle-inscriptions` at every shared number (#1 is Terrell Owens vs
+   *   Aaron Rodgers) -- a genuinely different checklist, already registered
+   *   separately above, not a renumbering question at all. No other cluster
+   *   in this file showed the shift-from-1 shape.
    *
    * A THIRD ANCHORING GAP, FOUND WHILE MEASURING. #2273 anchored two Zenith
    * previews that were folding onto `panini-contenders-optic`
