@@ -7,8 +7,52 @@
   "setName": "2024 Panini Zenith Football",
   "productKey": "2024-panini-zenith",
   "setKey": "panini-zenith",
-  "rowCount": 5423,
+  "rowCount": 5178,
   "parallelColumnAuthoritative": true,
+  "correctionsApplied": {
+    "note": "Run 35473622220 REFUSED this file (unregistered-set-keys) for 7 derived insert-set keys that were never real card sets. Both the converter (convertBeckettChecklistXlsx.cjs) and this CSV were corrected; sectionsReport below is left as the ORIGINAL discovery record (pre-correction) for provenance -- every corrected row still traces to the same workbook cell it came from, only the category/parallel/cardNumber labelling changed.",
+    "converterFix": "CF-BECKETT-A-RANGE-LABEL-LINE-IS-A-TABLE-OF-CONTENTS-NOT-A-HEADER: the Base sheet opens with 'Base Set' / '238 cards.' / 'Rookies - #101-200' / 'Rookie Patch Autographs - #201-242' -- the last two are a table-of-contents preview of sections that appear LATER on the same sheet (their own headers, own cards, at rows 122 and 240), not real headers. The parser previously treated them as headers, so the 'Base Set' section's own 100 veteran cards (#1-100, e.g. #1 Kyler Murray) landed under the category 'auto-rookie-patch-autographs-201-242' instead of their true anchor. Fixed by recognising two range-labelled single-cell lines back-to-back as a preview, never a header. This alone removed 1 of the 7 refused keys (rowCount fell from 5423 to 5178: the ladder rungs these 1,000 mis-sectioned rows carried, e.g. blank/1st Down/2nd Down/..., collapsed onto the correct anchor's own already-emitted parallel set instead of duplicating it under a second category).",
+    "csvCorrections": [
+      {
+        "originalCategory": "auto-rookie-patch-autographs-ice",
+        "correctedTo": "category=auto-rookie-patch-autographs, parallel=Ice, cardNumber +200",
+        "rows": 37,
+        "reason": "RESOLVED per productSetKeys.ts's 2026-09-19 researched ruling: Ice is a PARALLEL of the 39-card Rookie Patch Autographs set (#201-242), never its own key. sportscardchecklist's own Ice page renumbers from 1 (a page-local artifact); the product's real numbers are #201-242. Verified: Ice #1 Michael Penix Jr. -> main #201 Michael Penix Jr., zero disagreement across all 37 rows. The ruling's fix was previously applied only to the test fixture (tests/fixtures/checklist-category/zenith-2024-fb-categories.json); this corrects the live acquisition CSV the same way."
+      },
+      {
+        "originalCategory": "auto-contenders-optic-rookie-ticket-rps-preview-blue",
+        "correctedTo": "category=auto-contenders-optic-rookie-ticket-rps-preview, blank-parallel rows -> parallel=Blue",
+        "rows": 144,
+        "reason": "'Blue' was baked into the category name only on the rows whose own parallel column was blank; the SAME category already carries Green (36) and Red (36) as stated parallels, and Blue/Green/Red/Variation are proven siblings by 100% roster identity (36/36 cards agree on every number). The root 'panini-zenith-contenders-optic-rookie-ticket-rps-preview' (no -blue suffix) is already registered (#2273/#2276) and its colour children fold onto it under normalizeSetKey -- only the CATEGORY needed to stop carrying the baked-in colour."
+      },
+      {
+        "originalCategory": "auto-contenders-optic-veteran-ticket-preview-blue",
+        "correctedTo": "category=auto-contenders-optic-veteran-ticket-preview, blank-parallel rows -> parallel=Blue",
+        "rows": 48,
+        "reason": "Same shape as the Rookie Ticket preview above: Blue baked into the category name, Green (16) and Red (16) already stated as parallels in the same category, 16/16 roster agreement. Root 'panini-zenith-contenders-optic-veteran-ticket-preview' registered by #2276."
+      },
+      {
+        "originalCategory": "auto-rookies-red-zone-autographs (+ -blue/-gold/-red/-white siblings)",
+        "correctedTo": "category=auto-rookies-autographs, parallel=Red Zone / Red Zone Blue / Red Zone Gold / Red Red Zone / Red Zone White",
+        "rows": 332,
+        "reason": "R67 cluster (PR #2276): Red Zone Autographs is a retailer/tier-name spelling of the signed Rookies subset, not a distinct card set -- 61/62 and matching numbers agree with zero disagreement against auto-rookies-autographs-no-huddle/two-minute-drill (see below), all now folded onto the same registered root 'panini-zenith-rookies-autographs'. Did not auto-fold via rungFoldingFor because this file (unlike the test fixture) carries no bare 'auto-rookies-autographs' category for the prefix search to anchor on, and 'red-zone-autographs' shares no textual prefix with 'rookies-autographs' at all."
+      },
+      {
+        "originalCategory": "auto-rookies-autographs-no-huddle",
+        "correctedTo": "category=auto-rookies-autographs, parallel=No Huddle",
+        "rows": 63,
+        "reason": "Same R67 cluster as above; tier name moved to the parallel axis, never a key, per doctrine."
+      },
+      {
+        "originalCategory": "auto-rookies-autographs-two-minute-drill",
+        "correctedTo": "category=auto-rookies-autographs, parallel=Two Minute Drill",
+        "rows": 59,
+        "reason": "Same R67 cluster as above."
+      }
+    ],
+    "verifiedOffline": "backend/scripts/lib/insert-set-key.cjs's planFile (via ingest-checklist-csv-to-catalog.cjs's planStagedDirectory), run against this corrected CSV with no Cosmos: verdict PASS, 0 unregistered keys, 0 id collisions, 5,178 rows on 5,178 distinct ids.",
+    "knownResidual": "The 'Base Autographs Two Minute Drill' / 'Base Autographs Red Zone' / 'Base Autographs Red Red Zone' sections (96 rows total, isAuto=true) still land on the bare 'base' category as PARALLEL TEXT ('Base Autographs Red Zone') of the unsigned Base Set, via convertBeckettChecklistXlsx.cjs's existing roster-fold-onto-flagship pass (ids stay distinct because isAuto rides the id, so this does not collide or refuse). Per checklistinsider.com, the true name of this 100-card veteran set is 'Base Autographs' and it arguably deserves its own anchor the way Photogenic's same-named set does -- left uncorrected here as a naming-quality issue outside this file's refusal, not a collision or misfile."
+  },
   "sectionsReport": [
     {
       "sheet": "Base",

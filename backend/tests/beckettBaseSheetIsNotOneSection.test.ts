@@ -68,7 +68,7 @@ import * as path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { categoryFor, stripChecklistSuffix, masterCardSetNames } = require("../scripts/convertBeckettChecklistXlsx.cjs");
+const { categoryFor, stripChecklistSuffix, masterCardSetNames, rangePreviewLineIndices } = require("../scripts/convertBeckettChecklistXlsx.cjs");
 
 const CONVERTER = path.join(__dirname, "..", "scripts", "convertBeckettChecklistXlsx.cjs");
 const FIXTURES = path.join(__dirname, "fixtures", "beckett");
@@ -128,7 +128,46 @@ describe("2024 Panini Zenith Football converts without the false-anchor collapse
     // The wrong, merged section name must never appear as a category at all.
     expect([...cats].some((c) => /^base$/.test(c) === false && /201-242/.test(c) && !/auto-/.test(c)))
       .toBe(false);
-    expect(cats.has("auto-rookie-patch-autographs-201-242")).toBe(true);
+  });
+
+  // CF-BECKETT-A-RANGE-LABEL-LINE-IS-A-TABLE-OF-CONTENTS-NOT-A-HEADER
+  // (2026-09-19, follow-up). The line above stopped "Rookie Patch
+  // Autographs - #201-242" being READ AS SIGNED, but categoryFor still slugged
+  // its own -201-242 suffix into the category, and the CATEGORY was still
+  // wrong: those 1,000 rows (#1-100, e.g. #1 Kyler Murray) are Base Set's own
+  // veteran autograph run, not a rookie patch autograph product at #201-242 at
+  // all. "Rookies - #101-200" and "Rookie Patch Autographs - #201-242" are a
+  // table-of-contents PREVIEW Beckett prints once at the top of the Base
+  // sheet -- the real "Rookies" and "Rookie Patch Autographs" sections appear
+  // later with their own headers and their own cards. Run 35473622220
+  // REFUSED the live acquisition file for this among 7 unregistered-set-keys.
+  it("never mints a 'rookie-patch-autographs-201-242' category — the preview line names no section", () => {
+    const rows = convert("2024-Panini-Zenith-Football-Checklist.xlsx", "panini-zenith");
+    const cats = new Set(rows.map((r) => r.category));
+    expect(cats.has("auto-rookie-patch-autographs-201-242")).toBe(false);
+  });
+
+  it("Base Set's own veteran cards (#1, Kyler Murray) land on 'base', signed rows keep isAuto=true", () => {
+    const rows = convert("2024-Panini-Zenith-Football-Checklist.xlsx", "panini-zenith");
+    const murray = rows.filter((r) => r.category === "base" && r.cardNumber === "1");
+    expect(murray.length).toBeGreaterThan(0);
+    expect(murray.every((r) => r.player === "Kyler Murray")).toBe(true);
+    // The blank-parallel plain card is unsigned (Zenith's actual Base Set
+    // print); the tier-name/red-zone parallels of the SAME card are the
+    // veteran autograph insert riding as the section's own ladder — R67-shaped
+    // (a colour/tier rung is never a card-set key), not asserted further here.
+    const plain = murray.find((r) => r.parallel === "");
+    expect(plain?.isAuto).toBe("false");
+  });
+
+  it("the real, later 'Rookies' and 'Rookie Patch Autographs' sections are untouched by the preview-line fix", () => {
+    const rows = convert("2024-Panini-Zenith-Football-Checklist.xlsx", "panini-zenith");
+    const rpa = rows.filter((r) => r.category === "auto-rookie-patch-autographs");
+    expect(rpa.length).toBeGreaterThan(0);
+    // Its own numbers are #201-242, e.g. #201 Michael Penix Jr.
+    const penix = rpa.find((r) => r.cardNumber === "201" && r.parallel === "");
+    expect(penix?.player).toBe("Michael Penix Jr.");
+    expect(penix?.isAuto).toBe("true");
   });
 
   it("marks card #201 (Michael Penix Jr., Rookie Patch Autographs) as signed", () => {
@@ -250,5 +289,44 @@ describe("CF-BECKETT-CHECKLIST-IS-A-TITLE-ARTIFACT-NOT-A-NAME (2026-09-19)", () 
     ];
     const names = masterCardSetNames({ Master: withHeader });
     expect(names.has("z marquee")).toBe(true);
+  });
+});
+
+describe("CF-BECKETT-A-RANGE-LABEL-LINE-IS-A-TABLE-OF-CONTENTS-NOT-A-HEADER (2026-09-19)", () => {
+  const row = (cell: string) => [cell, "", "", "", ""];
+  const blank = () => ["", "", "", "", ""];
+
+  it("skips two range-labelled lines printed back-to-back — the real Zenith Base-sheet shape", () => {
+    const rows = [
+      row("Base Set"),
+      blank(),
+      row("238 cards."),
+      row("Rookies - #101-200"),
+      row("Rookie Patch Autographs - #201-242"),
+      blank(),
+      row("Parallels:"),
+    ];
+    const idx = rangePreviewLineIndices(rows);
+    expect(idx.has(3)).toBe(true);
+    expect(idx.has(4)).toBe(true);
+  });
+
+  it("does NOT skip a lone range-labelled header that is the sheet's only such line", () => {
+    // A section genuinely titled "<Name> - #NNN-NNN" with no sibling preview
+    // line beside it is not this shape — nothing in the corpus looks like
+    // this today, but the rule must not fire on a single occurrence.
+    const rows = [
+      row("Base Set"),
+      row("Something Else - #50-99"),
+      blank(),
+      ["1", "Player One", "Team", "", ""],
+    ];
+    const idx = rangePreviewLineIndices(rows);
+    expect(idx.size).toBe(0);
+  });
+
+  it("does not touch an ordinary section header with no range label", () => {
+    const rows = [row("Base Set"), row("Rookies"), row("Parallels:")];
+    expect(rangePreviewLineIndices(rows).size).toBe(0);
   });
 });

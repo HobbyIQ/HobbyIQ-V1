@@ -190,6 +190,81 @@ function stripChecklistSuffix(section, siblingSectionNames, masterNames) {
   return siblingsCarryIt ? bare : raw;
 }
 
+// CF-BECKETT-A-RANGE-LABEL-LINE-IS-A-TABLE-OF-CONTENTS-NOT-A-HEADER
+// (2026-09-19). 2024 Panini Zenith Football's Base sheet opens:
+//
+//     Base Set
+//     238 cards.
+//     Rookies - #101-200
+//     Rookie Patch Autographs - #201-242
+//     Parallels:
+//     No Huddle
+//     ...
+//     1  Kyler Murray  Arizona Cardinals
+//
+// "238 cards." is the count line for the WHOLE tab (100 + 100 + 38 = 238), and
+// the two lines under it are a PREVIEW of what the tab contains further down
+// -- Beckett prints them once, at the top, before the real "Rookies" section
+// (its own header, with its own cards, at row 122) and the real "Rookie Patch
+// Autographs" section (row 240). Neither preview line is followed by a single
+// card row anywhere near it; the very next content is the "Parallels:" ladder
+// and then card #1 Kyler Murray -- who is base-set inventory (#1-100, the
+// SAME 100 numbers as "Base Set"'s own range), not a rookie and not a patch
+// autograph. Every prior single-cell row closed a section, so the parser
+// (correctly, given the shape) treated "Rookie Patch Autographs - #201-242"
+// as the new header and filed Base Set's own veteran-autograph cards under
+// it. Independently corroborated against checklistinsider.com's 2024 Zenith
+// page: the real name of this 100-card set is "Base Autographs" (Kyler
+// Murray, Kirk Cousins, Michael Vick all listed there under that name with
+// the identical parallel ladder), never "Rookie Patch Autographs" of any
+// range -- so this is not a label the source ever meant to attach to these
+// cards at all, and the actual downstream category correction lives in the
+// package CSV/manifest (traced-to-source, per doctrine), not in a renamed
+// slug here.
+//
+// THE FIX IS NARROW: a single-cell row shaped "<name> - #NNN-NNN" is a
+// content-preview line, never a real header, WHEN it sits back-to-back with
+// another line of the identical shape (both lines announce ranges; a real
+// section header is never followed immediately by a second header of the
+// same "- #NNN-NNN" shape with no cards between). Skipping it leaves
+// whichever real section was already open (here, "Base Set") in force, so
+// the cards that follow land on their true anchor instead of stealing a
+// later section's name. Measured across every fixture xlsx in this repo:
+// this shape occurs in exactly one workbook, exactly these two consecutive
+// lines -- nothing else in the corpus has a bare range-labelled line
+// followed immediately by another one.
+const RANGE_PREVIEW_LINE = /^.+[–—-]\s*#\s*\d+\s*-\s*\d+$/;
+
+/** Row indices (within one sheet's `rows`) of range-preview lines: a
+ *  RANGE_PREVIEW_LINE header immediately adjacent (directly before OR after,
+ *  skipping only truly empty rows) to another RANGE_PREVIEW_LINE header. Two
+ *  such lines never sit back-to-back by accident -- a real section's range
+ *  label, if Beckett ever prints one over a section that actually has its
+ *  own cards, is not immediately followed by ANOTHER range label with zero
+ *  cards between, because that would mean the first "section" got no cards
+ *  at all. Built once per sheet, cheaply, from the same single-cell-header
+ *  test main()'s own pass uses (mirrors sheetSectionHeaderNames), so this
+ *  never disagrees with what main() treats as a header row. */
+function rangePreviewLineIndices(rows) {
+  const headerIdx = [];
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (!nonEmpty(row)) continue;
+    if (isCountLine(row)) continue;
+    if (nonEmpty(row) === 1 && row[0]) headerIdx.push(i);
+  }
+  const isPreview = (i) => RANGE_PREVIEW_LINE.test(String(rows[i][0]).trim());
+  const out = new Set();
+  for (let h = 0; h < headerIdx.length; h++) {
+    const i = headerIdx[h];
+    if (!isPreview(i)) continue;
+    const prevIsPreview = h > 0 && isPreview(headerIdx[h - 1]);
+    const nextIsPreview = h + 1 < headerIdx.length && isPreview(headerIdx[h + 1]);
+    if (prevIsPreview || nextIsPreview) out.add(i);
+  }
+  return out;
+}
+
 /** Every distinct value in the Master sheet's first ("Card Set") column,
  *  lower-cased, when the sheet exists and its header row is the expected
  *  shape. Returns an empty Set (never null) so a caller with no Master sheet
@@ -826,10 +901,18 @@ function main() {
     // stripChecklistSuffix can ask "do this sheet's siblings carry the same
     // suffix" without re-scanning the sheet per section.
     const siblingSectionNames = sheetSectionHeaderNames(rows);
+    // Range-preview lines ("Rookies - #101-200" printed back-to-back with
+    // "Rookie Patch Autographs - #201-242", announcing sections that appear
+    // later on the same sheet) -- computed once, same shape as
+    // siblingSectionNames, so it never disagrees with what this loop treats
+    // as a header row (see CF-BECKETT-A-RANGE-LABEL-LINE-IS-A-TABLE-OF-
+    // CONTENTS-NOT-A-HEADER above rangePreviewLineIndices).
+    const rangePreviewIdx = rangePreviewLineIndices(rows);
     // The ladder belongs to the section it sits under, and resets with it.
     let inLadder = false;
     let pendingLadder = [];
-    for (const row of rows) {
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+      const row = rows[rowIndex];
       if (!nonEmpty(row)) continue;
       if (isCountLine(row)) continue;
       // A single populated cell is a section header, the "Parallels:" marker,
@@ -840,6 +923,9 @@ function main() {
         if (LADDER_HEAD.test(cell)) { inLadder = true; pendingLadder = []; continue; }
         // A placeholder never names a section, in or out of a ladder.
         if (PLACEHOLDER.test(cell)) continue;
+        // A table-of-contents preview line names no section -- whatever
+        // section was already open (or not yet opened) stays in force.
+        if (rangePreviewIdx.has(rowIndex)) continue;
         if (inLadder) {
           const rung = parseRung(cell);
           if (rung) { pendingLadder.push(rung); continue; }
@@ -1106,4 +1192,5 @@ module.exports = {
   classifySections, rungName, categoryFor, PLAIN_SECTION, parseRung, LADDER_HEAD, isSupersetSheet, isCountLine,
   stripChecklistSuffix, masterCardSetNames, sheetSectionHeaderNames,
   normalizeRosterPlayer, rosterFoldAgainst,
+  rangePreviewLineIndices, RANGE_PREVIEW_LINE,
 };
