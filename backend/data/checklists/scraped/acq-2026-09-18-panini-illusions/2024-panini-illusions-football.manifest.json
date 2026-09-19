@@ -1,0 +1,13 @@
+{
+  "productKey": "2024-panini-illusions",
+  "sport": "football",
+  "year": 2024,
+  "setKey": "panini-illusions",
+  "setName": "2024 Panini Illusions Football",
+  "source": "checklistinsider",
+  "confidence": 0.9,
+  "provenance": "checklistinsider.com 2024 Panini Illusions Football -- staged to C:/tmp/ci/csv2 by the acquisition sweep, read 2026-09-18. 10,871 rows, 212 distinct parallel spellings, 8,223 rows carrying a print run.",
+  "sourceUrl": "https://www.checklistinsider.com/2024-panini-illusions-football",
+  "rowCount": 10871,
+  "parallelColumnAuthoritative": true
+}

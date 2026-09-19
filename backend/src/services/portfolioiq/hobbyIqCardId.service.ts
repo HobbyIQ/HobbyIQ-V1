@@ -864,6 +864,17 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // Same product family as Chronicles — pool together.
     [/panini-chronicled|panini-chronicles/, "panini-chronicles"],
     [/panini-phoenix/, "panini-phoenix"],
+    // 2024 PANINI ILLUSIONS NAMED INSERT SETS (R60/R38). ABOVE the
+    // `panini-illusions` catch-all on the next line, which is unanchored and
+    // therefore swallows every one of these -- measured, all five answered
+    // `panini-illusions` before this block existed. Same shape as the
+    // `panini-spectra-*` rules below: fully anchored, longest first, so a
+    // shorter sibling can never claim a longer one's rows.
+    [/(?:^|-)panini-illusions-rookie-reflections-dual-patch-autographs(?:-|$)/, "panini-illusions-rookie-reflections-dual-patch-autographs"],
+    [/(?:^|-)panini-illusions-immortalized-jersey-autographs(?:-|$)/, "panini-illusions-immortalized-jersey-autographs"],
+    [/(?:^|-)panini-illusions-illusionists-autographs(?:-|$)/, "panini-illusions-illusionists-autographs"],
+    [/(?:^|-)panini-illusions-mystique-autographs(?:-|$)/, "panini-illusions-mystique-autographs"],
+    [/(?:^|-)panini-illusions-trophy-collection(?:-|$)/, "panini-illusions-trophy-collection"],
     [/panini-illusions/, "panini-illusions"],
     [/panini-obsidian/, "panini-obsidian"],
     [/(?:^|-)panini-spectra-aspiring-patch-autographs(?:-|$)/, "panini-spectra-aspiring-patch-autographs"],
