@@ -34,10 +34,16 @@ const ZENITH_INSERTS = [
   "zoom-gold", "zoom-red",
 ];
 
-// Held out deliberately -- see productSetKeys.ts. Blank parallel column (so
-// the module's own strip rule leaves them unfolded) and a roster that is NOT
-// a clean subset of the merged rookie-patch-autographs pool.
-const HELD_OUT = ["rookie-patch-autographs-ice", "rookie-patch-autographs-white"];
+// RESOLVED (Drew, follow-up ruling 2026-09-19): Ice and White are PARALLELS
+// of the one 39-card Rookie Patch Autographs set (#201-242; Ice /50, White
+// 1/1), never keys. The earlier "held pending ruling" framing is retired --
+// see productSetKeys.ts's own comment for the researched answer. Both ride
+// rookie-patch-autographs's parallel axis, so neither is registered (a
+// parallel is never a setKey), and the fixture's Ice rows are renumbered to
+// the product's real 201-242 range below -- the 1-42 numbering the source
+// carried was sportscardchecklist's own colour-page renumbering artifact,
+// not this card set's real numbers.
+const NEVER_KEYS_PARALLELS_OF_RPA = ["rookie-patch-autographs-ice", "rookie-patch-autographs-white"];
 
 function rosterOf(rows: Array<{ cardNumber: string; player: string }>) {
   return new Set(
@@ -139,9 +145,29 @@ describe("Zenith insert keys", () => {
     expect(productParentOf("panini-zenith-contenders-optic-veteran-ticket-preview")).toBe("panini-zenith");
   });
 
-  it("held-out categories stay UNREGISTERED and UNFOLDED, pending Drew's ruling", () => {
-    for (const sub of HELD_OUT) {
-      expect(isProductSetKey(`panini-zenith-${sub}`), `${sub} must stay unregistered`).toBe(false);
+  it("Ice and White stay UNREGISTERED -- they are PARALLELS of rookie-patch-autographs, never keys", () => {
+    for (const sub of NEVER_KEYS_PARALLELS_OF_RPA) {
+      expect(isProductSetKey(`panini-zenith-${sub}`), `${sub} must never be a key -- it is a parallel`).toBe(false);
+    }
+  });
+
+  it("Ice #1 renumbers to #201 and matches the main Rookie Patch Autographs checklist at #201", () => {
+    const data = JSON.parse(fs.readFileSync(FIXTURE, "utf8"));
+    const rows = data.rows as Array<{ category: string; cardNumber: string; player: string }>;
+    const main = rows.filter((r) => r.category === "auto-rookie-patch-autographs");
+    const mainByNum = new Map(main.map((r) => [r.cardNumber, r.player]));
+    const ice = rows.filter((r) => r.category === "auto-rookie-patch-autographs-ice");
+    // The fixture is fixed below: Ice's numbers now read 201-242, the
+    // product's real range, not the 1-42 sportscardchecklist page-local
+    // renumbering the source carried.
+    const iceAt201 = ice.find((r) => r.cardNumber === "201");
+    expect(iceAt201, "Ice must carry #201 after the fixture fix").toBeDefined();
+    expect(iceAt201!.player).toBe("Michael Penix Jr.");
+    expect(mainByNum.get("201")).toBe("Michael Penix Jr.");
+    // No row anywhere in Ice should still carry the old 1-42 numbering.
+    for (const r of ice) {
+      const n = Number(r.cardNumber);
+      expect(n, `Ice #${r.cardNumber} must be renumbered into the 201-242 range`).toBeGreaterThanOrEqual(201);
     }
   });
 
