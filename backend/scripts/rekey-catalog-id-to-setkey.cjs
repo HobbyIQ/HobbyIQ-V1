@@ -127,9 +127,21 @@
  * REPORT-FIRST. BACKFILL_APPLY=true (not APPLY) gates every write, matching
  * the runner's own env name. REPORT prints scanned / would-move (by setKey,
  * by year, by source) / refused-by-reason with every id listed / sales that
- * would move / holdings affected / the reconcile line. APPLY verifies by
- * read: old id 404s, new id is live and checklist-sourced, and one sale
- * sample per 500 moved rows is checked on both cardId and hobbyiqCardId.
+ * would re-point or would relocate / holdings affected / the reconcile line.
+ * APPLY verifies by read: old id 404s, new id is live and checklist-sourced,
+ * and one sale sample per 500 moved rows is checked on both cardId and
+ * hobbyiqCardId.
+ *
+ * CF-REPORT-MUST-PREDICT-APPLY (2026-09-19, pilot follow-up). The pilot's own
+ * REPORT printed "sales relocated 0" while its APPLY, minutes later, relocated
+ * 1,192 -- a structural zero, not a forecast: moveCatalogRow only ran the
+ * `relocateSales` hook under `!dryRun`, so REPORT never reached it at all.
+ * Fixed at the source (moveCatalogRow now runs the hook under dryRun too,
+ * handing it `{ dryRun }`) rather than patched here: `relocatePartitionKeyedSales`
+ * already enumerated read-only under `!APPLY` (via `relocateSoldComp`'s own
+ * dryRun branch), it simply was never being called. Both `sales re-pointed`
+ * and `sales relocated` are now LIVE counts in REPORT, not deterministic ones
+ * -- see the note this script prints alongside them.
  *
  * BUDGET / RELAUNCH / SHARDING follow the sibling convention exactly:
  * lib/runner-budget.cjs (RUN_MINUTES / RESERVE_MS / VERIFY_MS,
@@ -487,11 +499,24 @@ async function main() {
   // to delete the old row when this returns `ok: false`, so an unrelocated
   // sale still has the OLD row to point at rather than nothing.
   //
+  // CF-REPORT-MUST-PREDICT-APPLY (2026-09-19). moveCatalogRow now calls this
+  // hook under `dryRun` too, via the third `{ dryRun }` argument -- it did
+  // not before, which is WHY the hockey pilot's REPORT printed "sales
+  // relocated 0" while its APPLY, minutes later, relocated 1,192: the hook
+  // was simply never reached in REPORT mode. Read `dryRun` off the argument
+  // moveCatalogRow hands in, not off this script's own `APPLY` flag, so the
+  // hook's own dry-run-ness always agrees with the caller that is invoking
+  // it. The query below (single-partition, at the OLD id) runs regardless --
+  // it is a read, never a write -- and `relocateSoldComp` already has its own
+  // read-only dryRun branch (guard check only, returns before the upsert), so
+  // passing `dryRun` through to it is enough: nothing is written or deleted
+  // in either mode by this function itself.
+  //
   // Returns { ok, failures } -- never throws -- so moveCatalogRow's own
   // try/catch around its hook call cannot mistake "some sales failed" for
   // "the whole move failed" (the catalog row and its graded-child cleanup are
   // still correct either way; only the delete is gated on this).
-  async function relocatePartitionKeyedSales(oldId, newId) {
+  async function relocatePartitionKeyedSales(oldId, newId, { dryRun } = { dryRun: !APPLY }) {
     let n = 0;
     let anyFailed = false;
     const localFailures = [];
@@ -499,12 +524,12 @@ async function main() {
       for (const row of rows) {
         const keep = { ...stripSystem(row), cardId: newId, hobbyiqCardId: newId, reslugedFrom: oldId, reslugedReason: "id follows its own setKey field (CF-THE-ID-FOLLOWS-ITS-OWN-SETKEY-FIELD)", reslugedAt: new Date().toISOString() };
         keep.contentHash = contentHashOf(keep);
-        const res = await relocateSoldComp(pool, { keep, drop: [{ id: row.id, cardId: oldId }], retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY });
+        const res = await relocateSoldComp(pool, { keep, drop: [{ id: row.id, cardId: oldId }], retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun });
         if (res.ok) {
           s.salesRelocated++; n++;
         } else {
           anyFailed = true;
-          const line = `sale relocate failed ${row.id}@${oldId} -> ${newId}: ${res.error}`;
+          const line = `sale relocate ${dryRun ? "would fail" : "failed"} ${row.id}@${oldId} -> ${newId}: ${res.error}`;
           localFailures.push(line);
         }
       }
@@ -578,7 +603,13 @@ async function main() {
               // BEFORE the old row is deleted. See relocateSales's own doc on
               // MoveCatalogRowOptions for why this must live inside that
               // function rather than being called before or after it.
-              relocateSales: (oldId, movedToId) => relocatePartitionKeyedSales(oldId, movedToId),
+              //
+              // CF-REPORT-MUST-PREDICT-APPLY: moveCatalogRow now runs this
+              // hook under dryRun too, handing back which mode it is in --
+              // read that off `ctx.dryRun` rather than this script's own
+              // `!APPLY`, so the hook always agrees with the caller that
+              // invoked it.
+              relocateSales: (oldId, movedToId, ctx) => relocatePartitionKeyedSales(oldId, movedToId, ctx),
               retry,
             });
             if (res.action === "refused") {
@@ -587,17 +618,23 @@ async function main() {
               return;
             }
             if (res.salesRelocated === false) {
-              // The catalog row moved and its graded children retired, but the
-              // caller's own partition-keyed sale relocation could not confirm
-              // every sale -- moveCatalogRow therefore KEPT the old row rather
-              // than deleting it (see its own doc). Counted as a failure, not
-              // a success: an operator must look at exactly which sales did
-              // not relocate before this row can be considered done.
+              // APPLY: the catalog row moved and its graded children retired,
+              // but the caller's own partition-keyed sale relocation could not
+              // confirm every sale -- moveCatalogRow therefore KEPT the old
+              // row rather than deleting it (see its own doc). Counted as a
+              // failure, not a success: an operator must look at exactly which
+              // sales did not relocate before this row can be considered done.
+              //
+              // REPORT (CF-REPORT-MUST-PREDICT-APPLY): the hook now runs
+              // read-only under dryRun too, so this branch can fire here as
+              // well -- a real prediction that an APPLY on this row would hit
+              // the same refusal, not a structural impossibility. Nothing was
+              // written or kept in either sense; only the label differs.
               s.failed++;
               s.salesRelocateFailed += (res.salesRelocateFailures ?? []).length || 1;
-              failures.push(`  FAILED sale relocation ${row.id} -> ${newId}: old row kept, not deleted. ${
-                (res.salesRelocateFailures ?? []).join("; ") || "(no detail returned)"
-              }`);
+              failures.push(`  ${APPLY ? "FAILED" : "WOULD FAIL"} sale relocation ${row.id} -> ${newId}: ${
+                APPLY ? "old row kept, not deleted." : "an APPLY would keep the old row, not delete it."
+              } ${(res.salesRelocateFailures ?? []).join("; ") || "(no detail returned)"}`);
               return;
             }
             s.moved++;
@@ -632,11 +669,19 @@ async function main() {
   console.log(`  failed                                       ${f(s.failed)}`);
   if (s.notReached) console.log(`  not reached                                   ${f(s.notReached)}`);
   console.log("");
-  console.log(`  sales re-pointed (patch, moveCatalogRow)   ${f(s.salesRepointed)}`);
-  console.log(`  sales relocated (re-key, partition-keyed)  ${f(s.salesRelocated)}`);
-  console.log(`  sales relocate failed                      ${f(s.salesRelocateFailed)}`);
+  console.log(`  sales ${APPLY ? "re-pointed" : "would re-point"} (patch, moveCatalogRow)   ${f(s.salesRepointed)}`);
+  console.log(`  sales ${APPLY ? "relocated" : "would relocate"} (re-key, partition-keyed)  ${f(s.salesRelocated)}`);
+  console.log(`  sales relocate ${APPLY ? "failed" : "would fail"}                      ${f(s.salesRelocateFailed)}`);
   console.log(`  graded children retired (parent's cascade) ${f(s.gradedChildrenRetired)}`);
   console.log(`  holdings re-pointed                        ${f(s.holdingsRepointed)}   (walked ${f(s.holdingsWalked)} holdings across ${f(s.holdingDocsWalked)} portfolio docs)`);
+  // CF-REPORT-MUST-PREDICT-APPLY (2026-09-19): both sale lines above are LIVE
+  // counts, not deterministic ones -- they read sold_comps at the moment this
+  // run executes, so a REPORT and an APPLY minutes apart can disagree by a few
+  // rows as new sales land in between. MOVED/REFUSED above are deterministic:
+  // they depend only on card_catalog and this run's own scope/target inputs.
+  console.log(`  (the two sale counters above are LIVE counts of sold_comps at run time -- they`);
+  console.log(`   can drift by a few between a REPORT and an APPLY run minutes apart; MOVED and`);
+  console.log(`   the REFUSED counts are deterministic, from card_catalog and this run's scope)`);
 
   if (bySetKey.size) {
     console.log(`\n  by setKey:`);

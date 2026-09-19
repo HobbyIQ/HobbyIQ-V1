@@ -274,6 +274,72 @@ describe("rekey-catalog-id-to-setkey -- REPORT writes nothing", () => {
     expect(r.led.catalogUpserts.length).toBe(0);
     expect(r.led.catalogDeletes.length).toBe(0);
   });
+
+  // CF-REPORT-MUST-PREDICT-APPLY (2026-09-19). The hockey pilot's own REPORT
+  // printed "sales relocated 0" while its APPLY, run minutes later, relocated
+  // 1,192 partition-keyed sales -- a structural zero (moveCatalogRow never
+  // invoked the relocateSales hook under dryRun), never a real forecast. This
+  // pins the fix end-to-end: a REPORT run against a partition-keyed sale
+  // (cardId === the old id) must count it under "sales would relocate" and
+  // still upsert/patch/delete NOTHING anywhere.
+  it("counts a partition-keyed sale as 'sales would relocate' and writes zero -- REPORT now predicts APPLY", () => {
+    const parent = UMBRELLA_ROW("12");
+    // Partitioned AT the old id (cardId === oldId) -- this is the population
+    // moveCatalogRow's own salesContainer patch cannot reach at all, and the
+    // one the pilot's REPORT structurally under-counted. It also happens to
+    // carry hobbyiqCardId === oldId (both addressing schemes can name the
+    // same sale, per CF-CARDHEDGE-DUAL-ID), so this row legitimately counts
+    // under BOTH "would re-point" (the hobbyiqCardId-keyed patch, which reads
+    // regardless of dryRun) and "would relocate" (this lane's own hook).
+    const saleRow = { id: "s2", cardId: OLD_ID("12"), hobbyiqCardId: OLD_ID("12"), price: 10, parallel: "Base", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2024-01-01" };
+    const r = drive(
+      { SCOPE: "hockey:2024", SET_KEYS: "upper-deck-extended-series" },
+      { catalog: [parent], sales: [saleRow], portfolio: [{ id: "p1", userId: "u1", holdings: {} }] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REPORT ONLY -- nothing is written/);
+    expect(r.out).toMatch(/sales would re-point \(patch, moveCatalogRow\)\s+1/);
+    expect(r.out).toMatch(/sales would relocate \(re-key, partition-keyed\)\s+1/);
+    // Nothing was written anywhere -- catalog, sales, or portfolio.
+    expect(r.led.catalogUpserts.length).toBe(0);
+    expect(r.led.catalogDeletes.length).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.led.salesPatches.length).toBe(0);
+    expect(r.led.portfolioPatches.length).toBe(0);
+  });
+
+  it("counts a hobbyiqCardId-keyed sale as 'sales would re-point' and writes zero", () => {
+    const parent = UMBRELLA_ROW("12");
+    const saleRow = { id: "s1", cardId: "pool-s1", hobbyiqCardId: OLD_ID("12"), price: 10 };
+    const r = drive(
+      { SCOPE: "hockey:2024", SET_KEYS: "upper-deck-extended-series" },
+      { catalog: [parent], sales: [saleRow], portfolio: [{ id: "p1", userId: "u1", holdings: {} }] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/sales would re-point \(patch, moveCatalogRow\)\s+1/);
+    expect(r.led.salesPatches.length).toBe(0);
+  });
+
+  it("a REPORT run's relocation-would-fail case is labelled WOULD FAIL, not FAILED, and still writes zero", () => {
+    const parent = UMBRELLA_ROW("12");
+    const saleRow = { id: "s-broken", cardId: OLD_ID("12"), hobbyiqCardId: OLD_ID("12"), price: 10, parallel: "Base", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2024-01-01" };
+    const r = drive(
+      { SCOPE: "hockey:2024", SET_KEYS: "upper-deck-extended-series" },
+      {
+        catalog: [parent], sales: [saleRow], portfolio: [{ id: "p1", userId: "u1", holdings: {} }],
+        failSalesUpsertForIds: ["s-broken"],
+      },
+    );
+    // relocateSoldComp's own dryRun branch returns before the upsert step, so
+    // FAIL_SALES_UPSERT_FOR_IDS never fires under REPORT -- there is no upsert
+    // to fail. This confirms the read-only path really is read-only: the
+    // deterministic-failure fixture is inert here, proving nothing this
+    // function does under dryRun can throw the way the APPLY path can.
+    expect(r.out).toMatch(/sales would relocate \(re-key, partition-keyed\)\s+1/);
+    expect(r.led.catalogDeletes.length).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
 });
 
 describe("rekey-catalog-id-to-setkey -- APPLY moves the row", () => {

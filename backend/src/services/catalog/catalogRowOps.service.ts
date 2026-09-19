@@ -158,24 +158,35 @@ export interface MoveCatalogRowOptions {
    * `relocateSales`, when supplied, is invoked INSIDE this function's own
    * ordered sequence -- after the survivor is written at `newSlug` and after
    * the ordinary `salesContainer` patch, but BEFORE graded children are
-   * retired and BEFORE the old row is deleted. It receives `(oldId, newSlug)`
-   * and must return `{ ok: boolean; failures?: readonly string[] }`: `ok` true
-   * means every sale this caller is responsible for relocating now points at
-   * `newSlug` (or there were none), verified by the caller's own read-back.
-   * `ok: false` REFUSES the deletion of the old row -- the survivor stays
-   * written (it already exists and sales can safely point at it), graded
+   * retired and BEFORE the old row is deleted. It receives `(oldId, newSlug,
+   * { dryRun })` and must return `{ ok: boolean; failures?: readonly string[] }`:
+   * `ok` true means every sale this caller is responsible for relocating now
+   * points at `newSlug` (or there were none), verified by the caller's own
+   * read-back. `ok: false` REFUSES the deletion of the old row -- the survivor
+   * stays written (it already exists and sales can safely point at it), graded
    * children are still retired (they are regenerable and unrelated to the
    * sales hazard), but the old row is kept so an incompletely-relocated sale
    * still has SOMETHING to point at rather than nothing. The failures are
    * carried back on the result (`salesRelocateFailures`) so the caller can
    * report them without re-deriving what went wrong.
    *
-   * Never called on a REHOME (the slug does not change) or when `dryRun` is
-   * true (nothing computed here should cause I/O in a caller's hook either --
-   * a caller that wants a dry-run preview of its own relocation is expected to
-   * read `dryRun` off this same options object itself).
+   * CF-REPORT-MUST-PREDICT-APPLY (2026-09-19, rekey-catalog-id-to-setkey hockey
+   * pilot follow-up). The hook now runs under `dryRun` too -- it did not
+   * before, and the lane's own `sales relocated` counter is the ONLY count
+   * that hook produces, so a REPORT run structurally printed 0 for it no
+   * matter how many sales the APPLY would actually relocate (verified: the
+   * pilot APPLY relocated 1,192 partition-keyed sales; its own REPORT, run
+   * minutes earlier, printed 0). That is not a forecast, it is a wiring gap.
+   * The third argument tells the hook which mode it is in: under `dryRun` it
+   * must not write or delete anything of its own, only ENUMERATE what it would
+   * relocate (a single-partition read, never a write) and return the same
+   * `{ ok, failures }` shape a real run would, so `ok` still gates the old
+   * row's delete exactly as before (irrelevant here, since nothing is deleted
+   * on a dryRun regardless -- see the delete step's own guard -- but the count
+   * this hook reports is real either way, not a structural zero). Still never
+   * called on a REHOME (the slug does not change, dry or not).
    */
-  relocateSales?: (oldId: string, newSlug: string) => Promise<{ ok: boolean; failures?: readonly string[] }>;
+  relocateSales?: (oldId: string, newSlug: string, ctx: { dryRun: boolean }) => Promise<{ ok: boolean; failures?: readonly string[] }>;
   retry?: CatalogOpsRetry;
 }
 
@@ -186,6 +197,10 @@ export interface MoveCatalogRowResult {
    *  and nothing corroborates either -- NOTHING WAS WRITTEN. */
   action: MoveCatalogRowAction;
   newSlug: string;
+  /** A LIVE count: the query behind this always runs (only the per-row patch
+   *  is skipped under `dryRun`), so a REPORT's number is real and can drift by
+   *  a few from a later APPLY's as new sales land in between -- never a
+   *  structural zero. */
   salesRepointed: number;
   gradedChildrenRetired: number;
   /** Whose fields now sit at newSlug. `null` on a noop and on a REFUSAL. */
@@ -222,12 +237,16 @@ export interface MoveCatalogRowResult {
   };
   /**
    * Set only when the caller supplied `relocateSales` and it ran (never on a
-   * rehome, never on `dryRun`). `true` means every sale it is responsible for
-   * now points at `newSlug`, verified by the caller's own read-back, or there
-   * were none. `false` means the old row was DELIBERATELY KEPT (never
-   * deleted) because the caller's hook could not confirm every sale moved --
-   * see `relocateSales`'s own doc for why the delete is refused rather than
-   * merely reported.
+   * rehome; on a `dryRun` the hook still runs, read-only, so this is a real
+   * prediction rather than an unset/false structural zero). `true` means
+   * every sale it is responsible for now points at `newSlug` (or would, under
+   * dryRun), verified by the caller's own read-back, or there were none.
+   * `false` means the old row was DELIBERATELY KEPT (never deleted) because
+   * the caller's hook could not confirm every sale moved -- see
+   * `relocateSales`'s own doc for why the delete is refused rather than
+   * merely reported. Under `dryRun` this is a LIVE count/verdict, not a
+   * deterministic one: it can drift by a few between a REPORT and a later
+   * APPLY as new sales land.
    */
   salesRelocated?: boolean;
   /** The hook's own failure list, carried back verbatim when
@@ -1244,18 +1263,27 @@ export async function moveCatalogRow(
   //     moving (sold_comps' /cardId), where a patch cannot reach every row and
   //     an out-of-band relocation run before or after this function reopens
   //     exactly the hazard this function's ordering exists to close. Never run
-  //     on a rehome (the slug did not change, so there is nothing to
-  //     relocate) or on a dryRun (no I/O this function causes should trigger
-  //     a caller's own writes either).
+  //     on a rehome (the slug did not change, so there is nothing to relocate).
+  //
+  //     CF-REPORT-MUST-PREDICT-APPLY: run under `dryRun` too, now -- the hook
+  //     is handed `{ dryRun }` so it can enumerate READ-ONLY rather than
+  //     skip entirely, and a REPORT's `salesRelocated` count is real, not a
+  //     structural zero (the pilot's own REPORT printed 0 while its APPLY,
+  //     minutes later, relocated 1,192). Nothing this function itself does is
+  //     gated on the hook's result under `dryRun` -- the delete below is
+  //     already skipped whenever `dryRun` is true, on its own condition.
   let salesRelocated: boolean | undefined;
   let salesRelocateFailures: readonly string[] | undefined;
-  if (!rehome && !dryRun && opts.relocateSales) {
-    const outcome = await opts.relocateSales(oldId, newSlug);
+  if (!rehome && opts.relocateSales) {
+    const outcome = await opts.relocateSales(oldId, newSlug, { dryRun });
     salesRelocated = outcome.ok === true;
     if (outcome.failures?.length) salesRelocateFailures = outcome.failures;
     if (!salesRelocated) {
-      decision += `; sale relocation did NOT complete -- the old row is KEPT (not deleted) so an `
-        + `unrelocated sale still has something to point at`;
+      decision += dryRun
+        ? `; sale relocation would NOT complete -- an APPLY would keep the old row (not delete it) so an `
+          + `unrelocated sale still has something to point at`
+        : `; sale relocation did NOT complete -- the old row is KEPT (not deleted) so an `
+          + `unrelocated sale still has something to point at`;
     }
   }
 
