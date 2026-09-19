@@ -346,6 +346,22 @@ export interface RecordSoldCompInput {
    *  because the census proved a convention picks the wrong side about a third
    *  of the time. A caller that merely inferred the sport must NOT set this. */
   sportAttestedBy?: string | null;
+  /**
+   * CF-A-ROW-SHOULD-NAME-ITS-WRITER (Fable, 2026-09-19). Which CALL SITE
+   * emitted this row, as a constant chosen by that call site.
+   *
+   * `source` names the VENDOR the data came from; it does not name the code
+   * that wrote it, and those are not the same question. When 320 `cardhedge`
+   * rows turned up with no sport, `source: "cardhedge"` narrowed the writer to
+   * "one of the ~46 callers of recordSoldComp", and pinning the real one took a
+   * grep across every `::`-joined id template in the repo — the id shape was
+   * the only fingerprint the row carried.
+   *
+   * A call-site constant makes that a single query. Optional, so no existing
+   * caller changes and no stored row is invalidated; absent means "written
+   * before this field existed, or by a caller that has not adopted it".
+   */
+  writerTag?: string | null;
   gradeCompany?: string | null;
   gradeValue?: number | null;
   /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
@@ -1482,7 +1498,12 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     parallelSlug: canonicalParallel?.slug ?? null,
     cardNumber: cardNumberFinal ?? null,
     isAuto: input.isAuto ?? false,
+    // CF-A-COMP-EMIT-KNOWS-THE-CARD-IT-ASKED-ABOUT (Fable, 2026-09-19).
+    // What the caller STATED, then the literal-word text heuristic. There is
+    // deliberately no third fallback here: see the note on
+    // `sportFromChecklistBackedKey` being ABSENT, below the input type.
     sport: input.sport ?? inferSportFromContext(input.setName, input.title, input.cardYear),
+    writerTag: input.writerTag ?? null,
     gradeCompany: input.gradeCompany ?? null,
     gradeValue: input.gradeValue ?? null,
     price: input.price,
