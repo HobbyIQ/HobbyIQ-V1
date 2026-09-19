@@ -1,0 +1,35 @@
+{
+  "scrapedAt": "2026-09-19T19:51:48.000Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/04/2026-Bowman-Mega-Box-Baseball-Checklist.xlsx",
+  "xlsxHttpStatus": 200,
+  "sha256": "f6cb282f08950dac76e4bc3f2b13c07f77ae4e8236679b565caf5059328cb4d4",
+  "source": "beckett-s3-2026-09-19",
+  "fetchDate": "2026-09-19",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Bowman Mega Box",
+  "productKey": "2026-bowman-mega-box",
+  "setKey": "bowman-mega",
+  "rowCount": 268,
+  "parallelColumnAuthoritative": true,
+  "readyToIngest": false,
+  "why": "R75 (Drew, 2026-09-19): TWO product keys from 2026, ONE before. This is the PLAIN 'Bowman Mega Box' product (May 2026 release; roster #1 Aaron Judge, #2 Yoshinobu Yamamoto, #9 Munetaka Murakami RC, #23 Ronald Acuna Jr., #25 Bobby Witt Jr., #52 Shohei Ohtani), distinct from the Sept 2026 'Bowman Chrome Mega Box' release under the SAME numbers but a DIFFERENT roster (see the sibling package acq-2026-09-19-beckett-bowman-chrome-mega-box-2026). CF-BOWMAN-MEGA-BOX-DISTINCT (2026-08-12) already made the mega-box line distinct from flagship Bowman Chrome; R75 extends it to split the mega-box line itself into two products starting 2026. setKey `bowman-mega` is the RULED_DISTINCT fixed point already declared in setKeyReconciliation.ts (line ~569) but is NOT YET a registered product in productSetKeys.ts -- that registration, plus the year-aware routing so titled 'Bowman Mega Box' sales/holdings resolve here instead of folding into bowman-chrome-mega-box, is PR B (held, moves the I9 derivation stamp).",
+  "crossedFileNote": "R75 investigation found this exact roster (Judge/Yamamoto/Murakami/Acuna/Witt/Ohtani) previously mis-filed under backend/data/checklists/scraped/2026-bowman-chrome-mega-box.csv with setKey `bowman-chrome-mega-box` -- the WRONG product's key on the RIGHT roster. That file is left in place (other scripts reference its filename) but its manifest is now marked superseded, pointing here. See ACQUISITION.manifest.json in this directory for the un-crossing writeup.",
+  "reproduce": {
+    "discoverCommand": "HEAD https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/04/2026-Bowman-Mega-Box-Baseball-Checklist.xlsx -> 200 OK, Last-Modified Mon, 13 Apr 2026 17:55:22 GMT, Content-Length 34091 (matches the ORIGINAL crossed scraped file's sourceUrl byte-for-byte; only the setKey/setName fields on that file's manifest were wrong, not the bytes or the roster)",
+    "convertCommand": "node backend/scripts/convertBeckettChecklistXlsx.cjs --xlsx 2026-bowman-mega-box-baseball.xlsx --year 2026 --set-key bowman-mega --set-name \"2026 Bowman Mega Box\" --sport baseball --out 2026-bowman-mega-box-baseball.csv --source-url \"https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/04/2026-Bowman-Mega-Box-Baseball-Checklist.xlsx\" --source-label beckett-s3-2026-09-19",
+    "converterOutput": "wrote 2026-bowman-mega-box-baseball.csv; rows=268 (deduped 0); by kind: {\"base\":120,\"auto\":83,\"insert\":65}; sections: 11 (anchors 2, parallels 2, own-cards 7); 2 PARALLEL folds (Mega Chrome Prospects - Image Variations -> Mega Chrome Prospects, Mega Chrome Base Cards - Image Variations -> Mega Chrome Base Cards, both parallel=\"Image Variation\"). Sheets: Base, Autographs, Inserts, Full Checklist (skipped, superset), Teams (skipped). No 'Topps Master Checklist' sheet present. No sheet produced 0 rows -- checked directly against raw <row> counts per sheet (Base 128, Autographs 91, Inserts 71 raw xml rows, all > 0)."
+  },
+  "rowsByCategory": {
+    "base": { "rows": 120, "note": "Base Set + Mega Chrome Base Cards / Mega Chrome Prospects sections, Image Variation parallel folded in." },
+    "auto": { "rows": 83, "categories": "Prospect Mega Autographs (60), Prospect Mega Autographs Image Variations (7), Rookie Mega Autographs (10), Rookie Mega Autographs Image Variations (6)." },
+    "insert": { "rows": 65, "categories": "Mega Bowman Sterling (15), Mega Electric Sluggers (25), Mega Futures (25)." }
+  },
+  "rosterVerified": {
+    "method": "Spot-checked cardNumber -> player against R75's stated roster.",
+    "matches": ["#1 Aaron Judge", "#2 Yoshinobu Yamamoto", "#9 Munetaka Murakami RC", "#23 Ronald Acuna Jr.", "#25 Bobby Witt Jr.", "#52 Shohei Ohtani"],
+    "allMatched": true
+  },
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, offline, run against this directory alone): 268 batch rows, 268 distinct ids, 0 collisions, 0 duplicatesFolded. See ACQUISITION.manifest.json for the full run output.",
+  "note": "STAGED, not ingested. readyToIngest is a human-review note only -- the real ingest lane (ingest-checklist-csv-to-catalog.cjs) does not read this field; the directory boundary is the actual gate (a human/workflow chooses which DIR to point the ingest at)."
+}

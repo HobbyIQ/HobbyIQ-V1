@@ -1,0 +1,37 @@
+{
+  "source": "beckett-s3-2026-09-19",
+  "acquiredAt": "2026-09-19",
+  "sport": "baseball",
+  "sourceFamily": "beckett",
+  "ruling": "R75 (Drew, 2026-09-19): TWO product keys from 2026, ONE before -- plain 'Bowman Mega Box' and 'Bowman Chrome Mega Box' are different products from 2026 onward.",
+  "directory": "acq-2026-09-19-beckett-bowman-chrome-mega-box-2026",
+  "readyToIngest": false,
+  "ingestNote": "PR A is data-only, un-crossing the two 2026 files. bowman-chrome-mega-box is already registered in productSetKeys.ts (family bowman-chrome, parent bowman-chrome) and unchanged by R75. The year-aware title routing so a 2026 title of the PLAIN 'Bowman Mega Box' stops folding here (2024/2025 both spellings still fold here, per the standing CF-BOWMAN-MEGA-BOX-DISTINCT / setKeyReconciliation RULED_ALIASES entries, which are unchanged) is PR B, HELD because it moves the I9 derivation stamp.",
+  "crossDefectFound": {
+    "what": "The committed backend/data/checklists/hand-fetched/2026-bowman-chrome-mega-box.json holds THIS roster (Griffin/Witt/Tatis/Young/Wetherholt/BCP- prospects -- the Chrome Mega Box) under top-level setKey `bowman-mega` (the WRONG key on the RIGHT roster, the mirror image of the scraped-CSV defect). Its sourceUrl is checklistinsider, not Beckett -- per the investigation's HARD RULE not to fetch checklistinsider.com, this package instead sources the Chrome Mega Box roster fresh from Beckett's own S3 file.",
+    "verifiedBy": "Bounded S3 HEAD probe for 2026-Bowman-Chrome-Mega-Box-Baseball-Checklist.xlsx across 2026/07 (403), 2026/08 (200 OK, Last-Modified Wed 19 Aug 2026 14:29:27 GMT), 2026/09 (403) -- a Sept-2026-release product publishing its checklist file in August is consistent with Beckett's usual pre-release lead time. Downloaded and converted with convertBeckettChecklistXlsx.cjs under --set-key bowman-chrome-mega-box; the roster (#1 Griffin, #5 Witt Jr., #23 Tatis Jr., #25 Cole Young, #52 Wetherholt, 66 BCP- rows) matches R75's stated Chrome Mega Box roster exactly, independently confirming the hand-fetched JSON's ROSTER (though not its setKey field or its checklistinsider source) was correct.",
+    "oldFileDisposition": "Left in place, not deleted. Its top-level setKey is annotated superseded for identity purposes -- it names the wrong product -- while the file itself (parallels/autoSeries templates already attached by attach-parallel-templates.cjs) is untouched pending a Drew decision on whether to delete or repurpose it."
+  },
+  "productsQueued": 1,
+  "productsStaged": 1,
+  "filesStaged": 1,
+  "rows": 265,
+  "products": [
+    {
+      "file": "2026-bowman-chrome-mega-box-baseball.csv",
+      "year": 2026,
+      "sport": "baseball",
+      "setKey": "bowman-chrome-mega-box",
+      "setName": "2026 Bowman Chrome Mega Box",
+      "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/08/2026-Bowman-Chrome-Mega-Box-Baseball-Checklist.xlsx",
+      "xlsxHttpStatus": 200,
+      "sha256": "07d2cd385aa8230929a0ec7b452dfe468610e191c6ba9aa244e01ef9f9710d2d",
+      "rows": 265,
+      "plannerVerdict": "pass",
+      "plannerDistinctIds": 265,
+      "plannerUnregistered": [],
+      "plannerCollisions": [],
+      "plannerDuplicatesFolded": 0
+    }
+  ]
+}

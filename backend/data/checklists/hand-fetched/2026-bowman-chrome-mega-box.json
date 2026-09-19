@@ -2,6 +2,8 @@
   "sport": "baseball",
   "year": 2026,
   "setKey": "bowman-mega",
+  "setKeySuperseded": true,
+  "setKeySupersededNote": "R75 (Drew, 2026-09-19): this file's ROSTER (Konnor Griffin #1, Bobby Witt Jr. #5, Fernando Tatis Jr. #23, Cole Young #25, JJ Wetherholt #52) is the CHROME Mega Box product, not the plain Bowman Mega Box that setKey `bowman-mega` names under R75. The correct key for this roster is `bowman-chrome-mega-box` (unchanged, already registered) -- this top-level setKey field was crossed with the OTHER 2026 file's field (backend/data/checklists/scraped/2026-bowman-chrome-mega-box.csv, which holds the Judge/Yamamoto roster that DOES belong under `bowman-mega`). Superseded by backend/data/checklists/scraped/acq-2026-09-19-beckett-bowman-chrome-mega-box-2026/ (Beckett S3 source, not checklistinsider). Left in place, not deleted or rewritten -- attach-parallel-templates.cjs references this filename and other tooling may read it; the field is annotated rather than changed so nothing that already ingested from this file silently re-derives.",
   "setName": "2026 Bowman Chrome Mega Box",
   "source": "checklistinsider",
   "sourceUrl": "https://www.checklistinsider.com/2026-bowman-chrome-mega-box-baseball",
