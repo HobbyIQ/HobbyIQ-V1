@@ -1,0 +1,17 @@
+{
+  "scrapedAt": "2026-09-19T12:00:00.000Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/05/2023-Topps-Chrome-Platinum-Anniversary-Baseball-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sha256": "4116955ab3443929ad735709068a0104d35446196ef401f90223afcbeaf970de",
+  "articleUrl": "https://www.beckett.com/news/2023-topps-chrome-platinum-anniversary-baseball-cards/",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Topps Chrome Platinum Anniversary",
+  "productKey": "2023-topps-chrome-platinum",
+  "setKey": "topps-chrome-platinum",
+  "rowCount": 14686,
+  "readyToIngest": false,
+  "note": "TARGET 4. The only committed file for this product-year, beckett-2023-topps-chrome-platinum-anniversary-baseball-image-variations-guide.csv, is scoped to insert-rookie-image-variations only (15 rows) -- an insert-only guide, not the base checklist. This file is the FULL card list: 12,525 base rows, 1,956 auto rows, 205 insert rows across 5 sections (1 anchor, 1 parallel section, 3 own-cards sections), including the plain Base Refractor ladder (Refractors/X-Fractors/Superfractors/Speckle/Rose Gold/Platinum Toile family/etc.) that the committed variations-only file never covered. Beckett xlsx are card-list-only (no print-run column); parallel is blank on the plain-Base row, so this stages the base-numbering gap this product's checklist was missing entirely, not just a color ladder.",
+  "anchorSectionNote": "The converter's own stdout names the Base anchor section 'Two different #105.' -- this is Beckett's OWN section-header text (a footnote on the source sheet, not a converter-detected collision): card #105 is a genuine multi-player card, Logan Allen/Jon Gray, and the repo's existing roster-fold convention (players joined '/') already merges it into one row correctly across all 24 of its parallel rungs. Verified directly: `awk -F',' '$2==\"105\"'` on the output CSV returns exactly one player pairing, 'Logan Allen/Jon Gray', on every rung from plain Refractors through Superfractor 1/1 -- no unresolved collision, no ruling needed.",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run read-only against this file): 14,686 batch rows, 14,686 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys."
+}
