@@ -70,9 +70,17 @@ const fs = require("node:fs");
 const LEDGER = ${JSON.stringify(ledger)};
 const FAIL_SALES_UPSERT_FOR_IDS = new Set(${JSON.stringify(failSalesUpsertForIds)});
 
+// PARTITION-AWARE for sold_comps ONLY (BLOCKER 2 fixture need, #2314 review):
+// keyed by "id::cardId" rather than bare "id", so two documents CAN share the
+// same document id at two different cardId partitions -- exactly the shape
+// a resident-at-the-destination collision requires. card_catalog and
+// portfolio stay keyed by bare id (their own tests never need two docs
+// sharing an id at different partitions).
+const salesKey = (id, cardId) => id + "::" + cardId;
+
 const state = {
   catalog: new Map(${JSON.stringify(catalog)}.map((d) => [d.id, d])),
-  sales: new Map(${JSON.stringify(sales)}.map((d) => [d.id, d])),
+  sales: new Map(${JSON.stringify(sales)}.map((d) => [salesKey(d.id, d.cardId), d])),
   portfolio: new Map(${JSON.stringify(portfolio)}.map((d) => [d.id, d])),
 };
 const led = { catalogUpserts: [], catalogDeletes: [], salesUpserts: [], salesPatches: [], salesDeletes: [], portfolioPatches: [] };
@@ -81,24 +89,25 @@ save();
 
 function notFound() { return Object.assign(new Error("not found"), { code: 404 }); }
 
-function makeContainer(name, store, onUpsert, onDelete, onPatch) {
+function makeContainer(name, store, onUpsert, onDelete, onPatch, keyOf) {
+  const key = keyOf || ((id) => id);
   return {
     item: (id, pk) => ({
       read: async () => {
-        const d = store.get(id);
+        const d = store.get(key(id, pk));
         if (!d) throw notFound();
         return { resource: structuredClone(d) };
       },
       patch: async (ops) => {
-        const d = store.get(id);
+        const d = store.get(key(id, pk));
         if (!d) throw notFound();
         for (const o of ops) { if (o.op === "set" || o.op === "add") d[o.path.slice(1)] = o.value; }
         if (onPatch) onPatch(id, ops);
         return { resource: structuredClone(d) };
       },
       delete: async () => {
-        if (!store.has(id)) throw notFound();
-        store.delete(id);
+        if (!store.has(key(id, pk))) throw notFound();
+        store.delete(key(id, pk));
         if (onDelete) onDelete(id);
         return {};
       },
@@ -108,7 +117,7 @@ function makeContainer(name, store, onUpsert, onDelete, onPatch) {
         if (name === "sold_comps" && FAIL_SALES_UPSERT_FOR_IDS.has(doc.id)) {
           throw new Error("simulated upsert failure for " + doc.id);
         }
-        store.set(doc.id, structuredClone(doc));
+        store.set(key(doc.id, doc.cardId), structuredClone(doc));
         if (onUpsert) onUpsert(doc);
         return { resource: structuredClone(doc) };
       },
@@ -145,7 +154,8 @@ const catalogContainer = makeContainer("card_catalog", state.catalog,
 const salesContainer = makeContainer("sold_comps", state.sales,
   (doc) => { led.salesUpserts.push(doc.id); save(); },
   (id) => { led.salesDeletes.push(id); save(); },
-  (id, ops) => { led.salesPatches.push({ id, ops }); save(); });
+  (id, ops) => { led.salesPatches.push({ id, ops }); save(); },
+  salesKey);
 const portfolioContainer = makeContainer("portfolio", state.portfolio,
   undefined, undefined,
   (id, ops) => { led.portfolioPatches.push({ id, ops }); save(); });
@@ -350,7 +360,7 @@ describe("repoint-sales-to-checklist-numbered -- refusals", () => {
     expect(r.led.salesUpserts.length).toBe(0);
   });
 
-  it("counts a short id that ALSO has a catalog twin, but does not touch card_catalog", () => {
+  it("counts a short id with a VENDOR/DERIVED catalog twin, but does not touch card_catalog, and still moves the sale", () => {
     const twin = { id: SHORT_ID, cardId: SHORT_ID, sport: "baseball", year: 2026, setKey: "topps", cardNumber: "20", parallelSlug: "gold", isAuto: false, printRun: null, source: "ingest-auto-seed" };
     const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
     const r = drive(
@@ -362,8 +372,134 @@ describe("repoint-sales-to-checklist-numbered -- refusals", () => {
     // The twin row itself is never touched: no catalog upsert/delete at all.
     expect(r.led.catalogUpserts.length).toBe(0);
     expect(r.led.catalogDeletes.length).toBe(0);
-    // The sale still moves -- this lane's whole job.
+    // A VENDOR/DERIVED twin does not veto -- the sale still moves.
     expect(r.led.salesUpserts).toContain("s1");
+  });
+
+  // ── BLOCKER 1 (review, 2026-09-19): a CHECKLIST row at the short id is a
+  // DIFFERENT, checklist-attested card (a partial print-run ladder), never a
+  // twin to move sales past. The whole target is refused.
+  describe("BLOCKER 1 -- a checklist-backed short id is a DIFFERENT card, never a twin", () => {
+    it("VETOES the whole target when the short id itself is CHECKLIST authority -- no sale under it is touched", () => {
+      const checklistShortIdRow = { id: SHORT_ID, cardId: SHORT_ID, sport: "baseball", year: 2026, setKey: "topps", cardNumber: "20", parallelSlug: "gold", isAuto: false, printRun: null, source: "checklistcenter-2026-08-30" };
+      const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+      const r = drive(
+        { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+        { catalog: [CHECKLIST_ROW(), checklistShortIdRow], sales: [sale], portfolio: PORTFOLIO_EMPTY },
+      );
+      expect(r.code).toBe(0);
+      expect(r.out).toMatch(/targets VETOED: short id is checklist-backed\s+1/);
+      expect(r.out).toMatch(/checklist-backed at the short id/);
+      // NOTHING touched: no sale moved, no catalog write.
+      expect(r.led.salesUpserts.length).toBe(0);
+      expect(r.led.salesDeletes.length).toBe(0);
+      expect(r.led.catalogUpserts.length).toBe(0);
+    });
+
+    it("REPORT and APPLY agree on the veto count (same fixture)", () => {
+      const checklistShortIdRow = { id: SHORT_ID, cardId: SHORT_ID, sport: "baseball", year: 2026, setKey: "topps", cardNumber: "20", parallelSlug: "gold", isAuto: false, printRun: null, source: "checklistcenter-2026-08-30" };
+      const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+      const fixture = { catalog: [CHECKLIST_ROW(), checklistShortIdRow], sales: [sale], portfolio: PORTFOLIO_EMPTY };
+      const report = drive({ SCOPE: "baseball:2026", SET_KEYS: "topps" }, fixture);
+      const apply = drive({ SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true" }, fixture);
+      expect(report.out).toMatch(/targets VETOED: short id is checklist-backed\s+1/);
+      expect(apply.out).toMatch(/targets VETOED: short id is checklist-backed\s+1/);
+    });
+  });
+});
+
+// ── BLOCKER 2 (review, 2026-09-19): relocateSoldComp's upsert is a BLIND
+// write at (sale.id, numberedId). Sale ids are `{source}::{externalId}` and
+// do not embed cardId, so the same id can already be resident at the
+// numbered partition. Same sale (by content hash) -> collapse; different
+// sale -> refuse, move nothing.
+describe("BLOCKER 2 -- a resident document already at the relocate destination", () => {
+  it("COLLAPSES when the SAME sale (by content hash) is already resident at the numbered id -- deletes the short-id copy, upserts nothing new", () => {
+    const shared = { id: "shared::sale::1", title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const shortIdCopy = { ...shared, cardId: SHORT_ID, hobbyiqCardId: SHORT_ID };
+    const resident = { ...shared, cardId: NUMBERED_ID, hobbyiqCardId: NUMBERED_ID };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [shortIdCopy, resident], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/COLLAPSED onto a resident \(same sale, by hash\)\s+1/);
+    // The short-id copy is deleted; the resident is NEVER upserted (nothing
+    // new is written at the destination -- it was already correct there).
+    expect(r.led.salesDeletes).toContain("shared::sale::1");
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("REFUSES (destination-collision) when a DIFFERENT sale occupies the numbered id -- moves NEITHER", () => {
+    const shortIdCopy = { id: "shared::sale::2", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    // Same id, but a DIFFERENT sale by content (different price/soldAt) --
+    // e.g. the ingest upgrade wrote this id fresh from a re-scrape and it is
+    // NOT the same transaction as the short-id copy.
+    const resident = { id: "shared::sale::2", cardId: NUMBERED_ID, hobbyiqCardId: NUMBERED_ID, title: "plain", sport: "baseball", price: 999, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-06-06" };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [shortIdCopy, resident], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED: destination collision\s+1/);
+    expect(r.out).toMatch(/destination-collision/);
+    // NEITHER sale is touched: the short-id copy stays, the resident stays.
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("proceeds with the ordinary relocate when NOTHING is resident at the destination", () => {
+    const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.led.salesDeletes).toContain("s1");
+  });
+});
+
+// ── SHOULD-FIX 3 (review, 2026-09-19): a title stating its print run in
+// PROSE ("Numbered to 50", "SN50", "1 of 1") is invisible to extractPrintRun's
+// slash-only reading and must still refuse -- absent beats wrong is this
+// rule's only safety net.
+describe("SHOULD-FIX 3 -- a prose print run refuses exactly like a slash one", () => {
+  it("REFUSES a sale whose title states a print run in PROSE with no slash at all", () => {
+    const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "2026 Topps Gold Numbered to 2026", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: title states a print run\s+1/);
+  });
+
+  it("does NOT refuse ordinary titles -- card numbers, grades, years", () => {
+    const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "2026 Topps #20 Gold PSA 10", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.led.salesUpserts).toContain("s1");
+  });
+});
+
+// ── SHOULD-FIX 4 (review, 2026-09-19): per-target query cost in the banner.
+describe("SHOULD-FIX 4 -- the banner reports hobbyiqCardId query cost", () => {
+  it("prints the query count and p50/p95 latency lines", () => {
+    const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps" },
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/hobbyiqCardId cross-partition queries issued\s+1/);
+    expect(r.out).toMatch(/p50 \d+ms\s+p95 \d+ms/);
   });
 });
 

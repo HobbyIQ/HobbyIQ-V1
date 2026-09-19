@@ -304,3 +304,112 @@ export function shardOfIdentity(identityKey: string, slots: number, sha1hex: (s:
   if (!Number.isFinite(slots) || slots <= 1) return 0;
   return parseInt(sha1hex(identityKey).slice(0, 8), 16) % slots;
 }
+
+/**
+ * CF-A-CHECKLIST-BACKED-SHORT-ID-IS-A-DIFFERENT-CARD (2026-09-19, review
+ * finding on #2314). Both `resolveChecklistNumberedIngestId` (the ingest-time
+ * upgrade, #2298) and repoint-sales-to-checklist-numbered.cjs (the stored-sale
+ * lane) turn "the catalog holds exactly one checklist-numbered row on this
+ * identity" into "a sale/slug at the SHORT (un-numbered) id should adopt that
+ * numbered id" -- and BOTH used to skip a step: neither ever asked whether the
+ * catalog ALSO holds a CHECKLIST-AUTHORITY row AT THE SHORT ID ITSELF.
+ *
+ * That row is not a stray vendor twin. A checklist can number only SOME of a
+ * parallel's print run ladder -- a partial print-run disclosure, or an
+ * unnumbered base card sitting beside a numbered short-print variation that
+ * happens to share this identity key (same sport/year/setKey/cardNumber/
+ * cleaned-parallel/auto) -- and when it does, the checklist itself is saying
+ * the un-numbered card is REAL and DISTINCT, not a twin waiting to fold. A
+ * caller that upgrades past it merges two checklist-attested cards into one
+ * pool.
+ *
+ * The twins fold (`decideChecklistNumberedFold` above) already has this
+ * exact veto for its own twin argument (`twinIsChecklist && !ghost ->
+ * "twin-is-checklist"`, :234). This function is the SAME veto, generalised so
+ * both the ingest upgrade and the stored-sale lane call ONE decision rather
+ * than each growing its own copy: the veto fires whenever the row occupying
+ * the SHORT id is itself checklist authority, full stop -- there is no ghost
+ * exemption here, because the ghost case (a no-auto row on an auto-by-
+ * definition card number) is a TRANSCRIPTION error the twins fold corrects
+ * ONLY when it also holds the print run; a short id with no print run of its
+ * own is never that shape.
+ *
+ * `shortIdRow` is undefined/null when nothing lives there (the overwhelming
+ * case -- proceed) or an object shaped like a catalog row when something
+ * does. Pass exactly what a point read at the short id returned, never a
+ * derived/synthetic row.
+ */
+export function shortIdChecklistVeto(
+  shortIdRow: Pick<IdentityRow, "source"> | null | undefined,
+  isChecklist: (source: string | null | undefined) => boolean,
+): { veto: true; reason: "short-id-is-checklist-backed" } | { veto: false } {
+  if (shortIdRow && isChecklist(shortIdRow.source)) {
+    return { veto: true, reason: "short-id-is-checklist-backed" };
+  }
+  return { veto: false };
+}
+
+/**
+ * CF-A-PROSE-PRINT-RUN-IS-STILL-A-STATED-RUN (2026-09-19, review finding on
+ * #2314, SHOULD-FIX 3). `extractPrintRun` (parseTitleIdentity.service.ts)
+ * reads only the slash forms -- `3/5`, `77/199`, `/199` -- so a title stating
+ * its print run in PROSE ("Numbered to 50", "SN50", "Serial Numbered 50",
+ * "#'d /50", "50 made", "1 of 1", "one of one") comes back with `printRun:
+ * null` from that parser. "Absent" is this whole rule's ONLY safety net
+ * against adopting a checklist row whose /N disagrees with what the title
+ * actually says -- both the ingest upgrade (#2298) and the stored-sale lane
+ * (repoint-sales-to-checklist-numbered.cjs) refuse SOLELY on "the title states
+ * a print run at all", per the shared #2298 rule (absent beats wrong,
+ * persistVendorSalesToPool.service.ts:1656). A prose-only run therefore slid
+ * through as "absent" and got upgraded/relocated exactly like a genuinely
+ * un-numbered sale -- the one case this whole mechanism exists to leave alone.
+ *
+ * DELIBERATELY NOT ADDED TO `extractPrintRun` ITSELF: that function is a
+ * DERIVATION_INPUTS entry (derivation-version.cjs) and changing its behaviour
+ * changes the derivation stamp for every stored row's hash, which this fix
+ * has no business doing -- this is a NARROW safety check for one caller's
+ * refusal gate, not a new capability for the live deriver's slug computation.
+ * Lives here, beside `shortIdChecklistVeto`, so both call sites -- the ingest
+ * upgrade and the stored-sale lane -- share ONE prose vocabulary instead of
+ * growing two.
+ *
+ * DELIBERATELY CONSERVATIVE, OVER-REFUSAL PREFERRED: this only ever ADDS
+ * refusals on top of `extractPrintRun`'s own slash-based answer (a caller
+ * ORs this with "printRun is non-null"), so a false positive here means a
+ * sale is LEFT ALONE rather than wrongly upgraded/relocated -- the safe
+ * direction for a rule whose entire job is "absent beats wrong". Measured
+ * 2026-09-19 against a 20,840-title production sample
+ * (collect-r32-export/all-would-move.jsonl, a different lane's export, reused
+ * here only as title corpus): 42 refusals (0.202%), zero false positives
+ * against ordinary card-number / grade / year / "1st Bowman" / "Top 100"
+ * phrasing -- every one of the 42 hits is a genuine serial-number mention
+ * ("Serial Numbered 30/99", "#d /249", "Serial /30", etc.), and every one of
+ * them ALSO carries a slash form `extractPrintRun` already catches on its
+ * own, so this measured sample happened to contain no NET-NEW refusal --
+ * the detector exists for the prose-ONLY title (no slash at all) that this
+ * sample did not happen to include, not because this sample proves the gap
+ * is empty.
+ */
+export function statesProsePrintRun(title: string | null | undefined): boolean {
+  const t = String(title ?? "");
+  if (!t) return false;
+  // "Numbered to 50" / "Numbered 50" -- digits directly after the word (an
+  // intervening word, e.g. "Numbered Card #12", is NOT a print-run claim).
+  if (/\bnumbere?d\s+(?:to\s+)?\d{1,4}\b/i.test(t)) return true;
+  // "SN50" / "SN 99" / "SN-25" -- the common serial-number shorthand. 2-4
+  // digits, immediately adjacent (optional space/hyphen only), so "SNL" and
+  // an "SN" abbreviation followed by an unrelated word never match.
+  if (/\bsn[\s-]?\d{2,4}\b/i.test(t)) return true;
+  // "Serial Numbered 50" / "Serial #24/25" / "Serial /30" -- a short window
+  // after the word "Serial" (12 characters), so an unrelated later number in
+  // a long title is never claimed.
+  if (/\bserial\b[^\d]{0,12}\d{1,4}\b/i.test(t)) return true;
+  // "#'d /50" / "#d/10" -- the apostrophe-d serial marker.
+  if (/#'?d\b/i.test(t)) return true;
+  // "50 made" / "Only 10 made".
+  if (/\b\d{1,4}\s+made\b/i.test(t)) return true;
+  // "1 of 1" / "one of one", spelled either way.
+  if (/\b1\s*of\s*1\b/i.test(t)) return true;
+  if (/\bone\s+of\s+one\b/i.test(t)) return true;
+  return false;
+}

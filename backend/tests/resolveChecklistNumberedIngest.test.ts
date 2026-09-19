@@ -136,6 +136,56 @@ describe("resolveChecklistNumberedIngestId -- the rule", () => {
   });
 });
 
+describe("CF-A-CHECKLIST-BACKED-SHORT-ID-IS-A-DIFFERENT-CARD (review finding on #2314): a checklist row AT the short id vetoes the upgrade", () => {
+  // BASE.slug is "hiq:baseball:2026:bowman:cpa-mh:refractor:auto" -- the
+  // exact short id this scenario plants a checklist row at.
+  const SHORT_ID_CHECKLIST_ROW: Row = {
+    id: BASE.slug,
+    source: "checklistcenter-2026-08-30",
+    setKey: "bowman",
+    parallelSlug: "refractor",
+    isAuto: true,
+    printRun: null, // no print run -- this IS the un-numbered checklist card
+  };
+
+  it("a checklist row at the short id itself -> VETO, unchanged (a partial ladder means the un-numbered card is real)", async () => {
+    const id = await resolveChecklistNumberedIngestId(BASE, ctx([CHECKLIST_ROW, SHORT_ID_CHECKLIST_ROW]));
+    expect(id).toBeNull();
+  });
+
+  it("the veto costs NO extra query -- it is decided from the same identity-cell result set", async () => {
+    let queries = 0;
+    const id = await resolveChecklistNumberedIngestId(
+      BASE,
+      ctx([CHECKLIST_ROW, SHORT_ID_CHECKLIST_ROW], { runQuery: (run) => { queries++; return run(); } }),
+    );
+    expect(id).toBeNull();
+    expect(queries).toBe(1);
+  });
+
+  it("a VENDOR/DERIVED row at the short id does NOT veto -- that is the ordinary twin the fold lane folds", async () => {
+    const vendorShortIdRow: Row = { ...SHORT_ID_CHECKLIST_ROW, source: "ingest-auto-seed" };
+    const id = await resolveChecklistNumberedIngestId(BASE, ctx([CHECKLIST_ROW, vendorShortIdRow]));
+    expect(id).toBe(CHECKLIST_ROW.id);
+  });
+
+  it("no row at the short id at all -> the ordinary upgrade proceeds", async () => {
+    const id = await resolveChecklistNumberedIngestId(BASE, ctx([CHECKLIST_ROW]));
+    expect(id).toBe(CHECKLIST_ROW.id);
+  });
+
+  it("the veto is cached as a negative -- a second sale of the same card is not re-asked", async () => {
+    let queries = 0;
+    const cache = newNumberedIngestCache();
+    const container = fakeContainer([CHECKLIST_ROW, SHORT_ID_CHECKLIST_ROW], { onQuery: () => { queries++; } });
+    const first = await resolveChecklistNumberedIngestId(BASE, { container, cache });
+    const second = await resolveChecklistNumberedIngestId(BASE, { container, cache });
+    expect(first).toBeNull();
+    expect(second).toBeNull();
+    expect(queries).toBe(1);
+  });
+});
+
 describe("the #2295-review cap bug: setKey is in the WHERE, so a wide fan-out never truncates the target product", () => {
   it("200 rows for the same card number across 10 products, target product's rows LAST in result order -> still resolves", async () => {
     // Card #1 in one year exists in dozens of products; without c.setKey in

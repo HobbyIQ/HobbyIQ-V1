@@ -98,6 +98,30 @@
  * string, breaker open, a timeout, a malformed row -- returns null and the
  * caller's derived slug stands. This is an upgrade, never a gate the write
  * can fail behind.
+ *
+ * ── A CHECKLIST ROW AT THE SHORT ID ITSELF IS A VETO, NOT A TWIN (2026-09-19
+ * review finding on #2314) ───────────────────────────────────────────────────
+ *
+ * This module used to decide purely from `pickChecklistNumberedTarget`'s
+ * `numbered` rows (checklist rows CARRYING a print run) and never asked
+ * whether the catalog ALSO holds a checklist-authority row AT the un-numbered
+ * slug it was about to upgrade past. A checklist can number only SOME of a
+ * parallel's ladder -- a partial print-run disclosure, or an un-numbered base
+ * card sitting beside a numbered short-print variation sharing this identity
+ * key -- and when it does, the checklist itself is attesting the un-numbered
+ * card is REAL, not a twin waiting to fold. Upgrading past it would have
+ * merged two checklist-attested cards into one pool.
+ *
+ * Fixed with `shortIdChecklistVeto` (foldTwinRuleChecklistNumbered.ts) -- the
+ * SAME veto `fold-checklist-numbered-twins.cjs`'s own `twinIsChecklist` gate
+ * already applies to its twin argument, generalised so this module and the
+ * fold share ONE decision. NO EXTRA QUERY: the identity-cell query below
+ * already filters on (sport, year, setKey, cardNumber, isAuto) -- the exact
+ * cell the short slug sits in -- so a checklist row occupying the short id
+ * (no print run, hence invisible to `pickChecklistNumberedTarget`'s own
+ * `numbered` filter) is ALREADY present in this call's `rows` whenever it
+ * exists; the veto reads that same result set rather than issuing a second
+ * point read.
  */
 
 import type { Container } from "@azure/cosmos";
@@ -106,6 +130,8 @@ import { catalogAuthorityOf } from "./catalogAuthority.service.js";
 import {
   identityKeyOf,
   pickChecklistNumberedTarget,
+  shortIdChecklistVeto,
+  statesProsePrintRun,
   DEFAULT_FORCE_AUTO_PREFIXES,
   type IdentityRow,
 } from "./foldTwinRuleChecklistNumbered.js";
@@ -186,6 +212,17 @@ export interface NumberedIngestUpgradeInput {
   /** The print run the TITLE or vendor stated, if any. Non-null here means
    *  `slug` already carries `:num-N` of its own -- see the guard below. */
   printRun?: number | null;
+  /**
+   * The sale's own RAW title, for `statesProsePrintRun` (SHOULD-FIX 3,
+   * #2314 review). `printRun` above is `extractPrintRun`'s slash-only
+   * answer; a title stating its run in PROSE ("Numbered to 50", "SN50",
+   * "1 of 1") comes back with `printRun: null` from that parser and would
+   * otherwise slide through this module's "absent beats wrong" gate as
+   * though it were genuinely un-numbered. Optional so existing callers
+   * (and the pinned tests below) that pass none keep behaving exactly as
+   * before -- this only ever ADDS a refusal on top of the slash answer.
+   */
+  title?: string | null;
 }
 
 export interface NumberedIngestUpgradeOpts {
@@ -241,6 +278,12 @@ export async function resolveChecklistNumberedIngestId(
   // ── skip gates: cost ZERO queries, checked before the cache and the
   // breaker so an unresolvable case never even reaches Cosmos. ─────────────
   if (slugHasPrintRun(input.slug)) return null;
+  // SHOULD-FIX 3 (#2314 review): a title stating its print run in PROSE
+  // ("Numbered to 50", "SN50", "1 of 1") has printRun: null from
+  // extractPrintRun's slash-only reading, so slugHasPrintRun above cannot
+  // see it. Same tier as that gate -- absent beats wrong, and prose is not
+  // absent. See statesProsePrintRun's own doc for the measured refusal rate.
+  if (statesProsePrintRun(input.title)) return null;
   if (String(input.sport ?? "").trim().toLowerCase() === "pokemon") return null;
   if (!input.cardNumber || !String(input.cardNumber).trim()) return null;
   const setKey = String(input.setKey ?? "").trim();
@@ -391,7 +434,21 @@ export async function resolveChecklistNumberedIngestId(
       .filter((r) => identityKeyOf(r, DEFAULT_FORCE_AUTO_PREFIXES) === wantKey);
 
     const picked = pickChecklistNumberedTarget(rows, isChecklist);
-    const resolvedId = "target" in picked ? picked.target.id : null;
+
+    // CF-A-CHECKLIST-BACKED-SHORT-ID-IS-A-DIFFERENT-CARD (review finding on
+    // #2314). This module's own query filters on (sport, year, setKey,
+    // cardNumber, isAuto) -- the SAME identity cell the derived short slug
+    // sits in -- so a checklist row occupying the short id itself (no print
+    // run, hence excluded from `pickChecklistNumberedTarget`'s own
+    // `numbered` filter) is ALREADY present in `rows` when it exists. No
+    // second query is needed: the veto is decided from data this call
+    // already fetched. See shortIdChecklistVeto's own header for why this
+    // row is a DIFFERENT CARD, never a twin to fold past -- a partial
+    // print-run ladder means the checklist itself attests the un-numbered
+    // card is real.
+    const shortIdRow = rows.find((r) => r.id === input.slug) ?? null;
+    const veto = shortIdChecklistVeto(shortIdRow, isChecklist);
+    const resolvedId = !veto.veto && "target" in picked ? picked.target.id : null;
 
     setCached(resolvedId);
     return resolvedId;

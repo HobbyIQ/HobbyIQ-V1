@@ -195,6 +195,16 @@ async function forEachPage(container, spec, onPage, pageSize = 1000) {
   } while (token);
 }
 
+/** SHOULD-FIX 4 (review, 2026-09-19): p50/p95 over a list of elapsed-ms
+ *  samples, for the banner's query-cost report. Sorts a copy; returns 0 for
+ *  an empty list rather than NaN, so the banner prints a number, not a gap. */
+function percentile(msValues, p) {
+  if (!msValues.length) return 0;
+  const sorted = [...msValues].sort((a, b) => a - b);
+  const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
+  return sorted[idx];
+}
+
 /** The candidate predicate for one (sport, year, setKey) cell: checklist rows
  *  carrying a `:num-` segment somewhere in the id (the trailing print-run
  *  segment; STARTSWITH is index-served and cheap, the exact `:num-\d+$` shape
@@ -265,6 +275,11 @@ function shortIdOf(id) {
  *        read out of the sale's OWN stored title, or null. Passed in rather
  *        than computed here so this function stays pure and the title parser
  *        is called exactly once per sale, at the call site.
+ * @param {boolean} [ctx.titleStatesProsePrintRun]  statesProsePrintRun's own
+ *        answer for the sale's title (SHOULD-FIX 3, #2314 review) -- catches
+ *        a print run stated in PROSE that extractPrintRun's slash-only
+ *        reading misses. ORed with `titlePrintRun` as the SAME refusal, not
+ *        a second rule.
  * @param {number|null} [ctx.targetPrintRun]  the checklist target's own /N,
  *        for the refusal message only.
  */
@@ -290,10 +305,17 @@ function decideSaleAction(sale, shape, ctx) {
   // the checklist's N) is left exactly where it is: either it was ingested
   // before #2298 existed and belongs to a DIFFERENT repair, or it is itself
   // evidence of a rival print run this identity's target does not carry.
-  if (titlePrintRun) {
+  //
+  // SHOULD-FIX 3 (#2314 review): `titlePrintRun` alone is `extractPrintRun`'s
+  // slash-only answer, which misses PROSE ("Numbered to 50", "SN50", "1 of
+  // 1") -- `titleStatesProsePrintRun` is the shared conservative detector
+  // (foldTwinRuleChecklistNumbered.ts, same one #2298's ingest upgrade now
+  // calls) ORed in here as the SAME refusal, not a second rule: "the title
+  // states a print run" is one question, answered by two readings of it.
+  if (titlePrintRun || ctx.titleStatesProsePrintRun) {
     return {
       action: "refuse", reason: "title-states-print-run",
-      detail: `title states /${titlePrintRun}${targetPrintRun && titlePrintRun !== targetPrintRun ? ` (checklist target is /${targetPrintRun})` : ""} -- absent beats wrong, left at ${shape === "cardId" ? saleCardId : saleHobbyiqCardId}`,
+      detail: `title states${titlePrintRun ? ` /${titlePrintRun}` : " a print run in prose"}${targetPrintRun && titlePrintRun && titlePrintRun !== targetPrintRun ? ` (checklist target is /${targetPrintRun})` : ""} -- absent beats wrong, left at ${shape === "cardId" ? saleCardId : saleHobbyiqCardId}`,
     };
   }
 
@@ -337,7 +359,7 @@ async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
   const {
-    identityKeyOf, pickChecklistNumberedTarget, printRunOf, DEFAULT_FORCE_AUTO_PREFIXES,
+    identityKeyOf, pickChecklistNumberedTarget, printRunOf, shortIdChecklistVeto, statesProsePrintRun, DEFAULT_FORCE_AUTO_PREFIXES,
   } = require(path.join(backend, "dist/services/catalog/foldTwinRuleChecklistNumbered.js"));
   const { parseListingIdentity } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
@@ -367,16 +389,35 @@ async function main() {
     catalogRowsScanned: 0, otherShard: 0,
     identityGroups: 0, uniqueNumberedTargets: 0, ambiguousRivalRuns: 0, noChecklistNumbered: 0,
     shortIdsExamined: 0, shortIdsWithCatalogTwin: 0,
+    // BLOCKER 1 (review, 2026-09-19): a checklist row AT the short id is a
+    // DIFFERENT card (a partial print-run ladder), never a twin to move past.
+    // The whole target -- every sale under it -- is refused when this fires.
+    targetsVetoedShortIdChecklistBacked: 0,
     salesFoundByCardId: 0, salesFoundByHobbyiqCardId: 0,
     salesRelocated: 0, salesPatched: 0,
-    refusedTitlePrintRun: 0, refusedSplitIdentity: 0, refusedGuardParked: 0,
+    // BLOCKER 2 (review, 2026-09-19): a resident document already sits at the
+    // relocate destination (sale ids are `{source}::{externalId}`, which does
+    // not embed cardId, so the same id can already exist at the numbered
+    // partition -- written there by #2298's own ingest upgrade on a
+    // re-scrape, or a prior partial run). Same sale (by content hash) ->
+    // collapse; different sale -> refuse, move nothing.
+    collapsedOntoResident: 0,
+    refusedTitlePrintRun: 0, refusedSplitIdentity: 0, refusedGuardParked: 0, refusedDestinationCollision: 0,
     salesFailed: 0, salesLeftAlone: 0,
     holdingsRepointed: 0, holdingsWalked: 0, holdingDocsWalked: 0,
     notReached: 0,
+    // SHOULD-FIX 4 (review, 2026-09-19): the cross-partition hobbyiqCardId
+    // query is the one whose cost scales with pool size rather than with the
+    // catalog's own bounded scan, so a REPORT pilot must show its true price
+    // before any wider scope is dispatched.
+    hobbyiqCardIdQueries: 0,
   };
+  const hobbyiqCardIdQueryMs = [];
   const bySetKey = new Map();
   const byYear = new Map();
-  const refusals = { "title-states-print-run": [], "split-identity": [], "guard-parked": [] };
+  const refusals = { "title-states-print-run": [], "split-identity": [], "guard-parked": [], "destination-collision": [] };
+  const vetoedTargets = [];
+  const collapsedExamples = [];
   const failures = [];
   const examples = [];
   const ambiguousExamples = [];
@@ -466,6 +507,43 @@ async function main() {
     } catch { return null; }
   }
 
+  /**
+   * BLOCKER 2 (review, 2026-09-19): does a document already sit at the
+   * RELOCATE destination `(sale.id, numberedId)`? Sale ids are
+   * `{source}::{externalId}` -- CF-ONE-WRITE-PATH-FOR-SOLD-COMPS's own doc,
+   * soldCompsStore.service.ts:636 -- and do NOT embed cardId, so the same id
+   * can already be resident at the numbered partition: written there by
+   * #2298's ingest upgrade on a re-scrape of the same listing, or by a prior
+   * partial run of this very lane. `relocateSoldComp`'s upsert is keyed on
+   * (id, cardId) and REPLACES whatever is there -- it has no idea a resident
+   * document is a DIFFERENT sale until this caller tells it so.
+   *
+   * Point read, not memoised: unlike the short-id twin check (one id, reused
+   * across every sale under a target), the destination address is
+   * PER-SALE (`sale.id` varies), so there is nothing to share across calls.
+   */
+  async function residentAt(saleId, cardId) {
+    try { return (await retry(() => pool.item(saleId, cardId).read())).resource ?? null; }
+    catch (e) { if (e?.code === 404 || e?.statusCode === 404) return null; throw e; }
+  }
+
+  /**
+   * Same sale, or a different one occupying the same address? "Same" is
+   * decided the way the rest of the pool decides it: contentHashOf
+   * (relocate-sold-comp.cjs, a mirror of soldCompsStore.computeContentHash --
+   * the repo's ONE cross-source dedup key: cardId, parallel, isAuto,
+   * gradeCompany, gradeValue, price-in-cents, sold-day). Comparing the
+   * RESIDENT's own hash against the hash the incoming sale WOULD carry once
+   * relocated (its own contentHash recomputed at the numbered cardId) is the
+   * same predicate the pre-write dedup and the cross-source dedup lane both
+   * already trust for "is this the same sale", not a new invented notion of
+   * sameness.
+   */
+  function isSameSale(resident, incomingAtNewAddress) {
+    if (!resident) return false;
+    return contentHashOf(resident) === contentHashOf(incomingAtNewAddress);
+  }
+
   for (const cell of SCOPE_CELLS) {
     if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
     const [sport, yearStr] = cell.split(":");
@@ -522,6 +600,24 @@ async function main() {
           if (twinExamples.length < 20) twinExamples.push(`  ${shortId}  [twin: ${twin.source}] -- the twins lane's job, not this one's`);
         }
 
+        // BLOCKER 1 (review, 2026-09-19): a CHECKLIST row at the short id is
+        // never a twin -- it is a DIFFERENT, checklist-attested card sharing
+        // this identity cell (a partial print-run ladder, or an un-numbered
+        // base card beside a numbered short-print). shortIdChecklistVeto is
+        // the SAME decision fold-checklist-numbered-twins.cjs's own
+        // `twinIsChecklist` gate applies and resolveChecklistNumberedIngestId
+        // (#2298) now applies at ingest time -- one shared function, reused
+        // here rather than a second copy. The WHOLE target is refused: no
+        // sale under this identity is touched.
+        const veto = shortIdChecklistVeto(twin, isChecklist);
+        if (veto.veto) {
+          s.targetsVetoedShortIdChecklistBacked++;
+          if (vetoedTargets.length < 20) {
+            vetoedTargets.push(`  ${shortId}  [${twin.source}] -- checklist-backed at the short id; the checklist's own ladder says this is a DIFFERENT card than ${numberedId}, not a twin. NOTHING touched.`);
+          }
+          continue;
+        }
+
         if (LIMIT && (s.salesRelocated + s.salesPatched) >= LIMIT) { s.notReached++; continue; }
 
         // ── shape 1: sales whose PARTITION KEY (cardId) IS the short id.
@@ -534,7 +630,8 @@ async function main() {
 
         for (const sale of cardIdRows) {
           const titlePrintRun = titlePrintRunOf(sale, shortId);
-          const plan = decideSaleAction(sale, "cardId", { shortId, numberedId, titlePrintRun, targetPrintRun: printRunOf(target) });
+          const titleStatesProsePrintRun = statesProsePrintRun(sale.title);
+          const plan = decideSaleAction(sale, "cardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, targetPrintRun: printRunOf(target) });
           if (plan.action === "refuse") {
             s.salesLeftAlone++;
             if (plan.reason === "title-states-print-run") s.refusedTitlePrintRun++;
@@ -546,6 +643,40 @@ async function main() {
           try {
             const keep = { ...stripSystem(sale), cardId: numberedId, hobbyiqCardId: numberedId, reslugedFrom: shortId, reslugedReason: "sale at the short (un-numbered) id follows the checklist's :num-N row (repoint-sales-to-checklist-numbered)", reslugedAt: new Date().toISOString() };
             keep.contentHash = contentHashOf(keep);
+
+            // BLOCKER 2 (review, 2026-09-19): relocateSoldComp's upsert is a
+            // BLIND write at (sale.id, numberedId) -- it replaces whatever is
+            // there. Sale ids do not embed cardId, so this exact id can
+            // already be resident at the numbered partition. Check BEFORE
+            // upserting, never after: an upsert that already happened cannot
+            // be un-overwritten.
+            const resident = await residentAt(sale.id, numberedId);
+            if (resident) {
+              if (isSameSale(resident, keep)) {
+                // The SAME sale is already at the destination (by content
+                // hash) -- this is a COLLAPSE, not a relocate: delete the
+                // short-id copy and keep the resident, never upsert a
+                // duplicate over it. relocateSoldComp itself already treats
+                // "the address already held a document" as `existedBefore`
+                // and its upsert would simply overwrite the resident with an
+                // identical-by-hash document, but a DIRECT delete-after-
+                // verify is more honest about what actually happened here:
+                // nothing about the kept document changes.
+                if (APPLY) await retry(() => pool.item(sale.id, shortId).delete());
+                s.collapsedOntoResident++;
+                if (collapsedExamples.length < 20) collapsedExamples.push(`  COLLAPSE ${sale.id}@${shortId} -- same sale already resident at ${numberedId}; short-id copy deleted`);
+                continue;
+              }
+              // A DIFFERENT sale already occupies the destination. Moving
+              // ours there would silently overwrite it (or, under the
+              // ordinary path below, get overwritten BY it depending on
+              // upsert timing) -- either way one sale is lost. Refuse, list
+              // both, move nothing.
+              s.refusedDestinationCollision++;
+              refusals["destination-collision"].push(`  ${sale.id}@${shortId} -> ${numberedId}: a DIFFERENT sale (by content hash) already resides at the destination; NEITHER moved -- resident price=${resident.price ?? "?"} soldAt=${resident.soldAt ?? "?"} vs incoming price=${sale.price ?? "?"} soldAt=${sale.soldAt ?? "?"}`);
+              continue;
+            }
+
             const res = await relocateSoldComp(pool, { keep, drop: [{ id: sale.id, cardId: shortId }], retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY });
             if (res.guard?.verdict === "park") {
               s.refusedGuardParked++;
@@ -568,16 +699,25 @@ async function main() {
 
         // ── shape 2: sales whose hobbyiqCardId names the short id but whose
         // OWN cardId is something else (a vendor partition) -- patch only.
+        // SHOULD-FIX 4 (review, 2026-09-19): this is the ONE cross-partition
+        // query this lane issues per target (the cardId-shape query above is
+        // partition-scoped; this one is not, since hobbyiqCardId is not the
+        // container's partition key) -- timed so a REPORT pilot shows its
+        // true cost before any wider scope is dispatched.
+        const hobbyiqQueryStarted = Date.now();
         const hobbyiqRows = [];
         await forEachPage(pool, { query: "SELECT * FROM c WHERE c.hobbyiqCardId = @s AND c.cardId != @s", parameters: [{ name: "@s", value: shortId }] }, async (page) => {
           for (const row of page) hobbyiqRows.push(row);
           return true;
         }, 200);
+        s.hobbyiqCardIdQueries++;
+        hobbyiqCardIdQueryMs.push(Date.now() - hobbyiqQueryStarted);
         s.salesFoundByHobbyiqCardId += hobbyiqRows.length;
 
         for (const sale of hobbyiqRows) {
           const titlePrintRun = titlePrintRunOf(sale, shortId);
-          const plan = decideSaleAction(sale, "hobbyiqCardId", { shortId, numberedId, titlePrintRun, targetPrintRun: printRunOf(target) });
+          const titleStatesProsePrintRun = statesProsePrintRun(sale.title);
+          const plan = decideSaleAction(sale, "hobbyiqCardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, targetPrintRun: printRunOf(target) });
           if (plan.action === "refuse") {
             s.salesLeftAlone++;
             if (plan.reason === "title-states-print-run") s.refusedTitlePrintRun++;
@@ -618,13 +758,16 @@ async function main() {
   console.log("");
   console.log(`short ids examined                ${f(s.shortIdsExamined)}`);
   console.log(`  short ids that ALSO have a catalog twin  ${f(s.shortIdsWithCatalogTwin)}   <- input for fold-checklist-numbered-twins.cjs (this lane never touches card_catalog)`);
+  console.log(`  targets VETOED: short id is checklist-backed ${f(s.targetsVetoedShortIdChecklistBacked)}   <- the short id is a DIFFERENT, checklist-attested card; NOTHING under it touched`);
   console.log("");
   console.log(`sales found by cardId (partition-keyed)        ${f(s.salesFoundByCardId)}`);
   console.log(`sales found by hobbyiqCardId (patch-shape)     ${f(s.salesFoundByHobbyiqCardId)}`);
   console.log(`  ${APPLY ? "RELOCATED" : "WOULD RELOCATE"}     ${f(s.salesRelocated)}`);
   console.log(`  ${APPLY ? "PATCHED" : "WOULD PATCH"}       ${f(s.salesPatched)}`);
+  console.log(`  COLLAPSED onto a resident (same sale, by hash)  ${f(s.collapsedOntoResident)}`);
   console.log(`  REFUSED: title states a print run   ${f(s.refusedTitlePrintRun)}   <- absent beats wrong (#2298's own rule)`);
   console.log(`  REFUSED: pre-existing split identity ${f(s.refusedSplitIdentity)}   <- cardId != hobbyiqCardId naming two different cards already; not this lane's to fix`);
+  console.log(`  REFUSED: destination collision       ${f(s.refusedDestinationCollision)}   <- a DIFFERENT sale already resides at the numbered address; neither moved`);
   console.log(`  REFUSED: guard parked (malformed key) ${f(s.refusedGuardParked)}`);
   console.log(`  failed                              ${f(s.salesFailed)}`);
   console.log(`  not reached                         ${f(s.notReached)}`);
@@ -634,10 +777,21 @@ async function main() {
   console.log(`        (catalogIdentityResolver.ts) unions the short id and its numbered twin at read`);
   console.log(`        time, so a holding not yet re-pointed here does not go dark.`);
 
+  // SHOULD-FIX 4 (review, 2026-09-19): query cost, so a REPORT pilot shows
+  // the price of a wider dispatch before it is asked for. The cardId-shape
+  // query above is partition-scoped (cheap, indexed on the container's own
+  // partition key); the hobbyiqCardId-shape query is the one cross-partition
+  // read this lane issues, once per target.
+  console.log("");
+  console.log(`  hobbyiqCardId cross-partition queries issued  ${f(s.hobbyiqCardIdQueries)}`);
+  console.log(`    p50 ${percentile(hobbyiqCardIdQueryMs, 50)}ms   p95 ${percentile(hobbyiqCardIdQueryMs, 95)}ms`);
+
   if (bySetKey.size) { console.log(`\n  by setKey:`); for (const [k, n] of [...bySetKey.entries()].sort((a, b) => b[1] - a[1])) console.log(`    ${String(n).padStart(9)}  ${k}`); }
   if (byYear.size) { console.log(`\n  by year:`); for (const [k, n] of [...byYear.entries()].sort()) console.log(`    ${String(n).padStart(9)}  ${k}`); }
   if (examples.length) { console.log(`\n  examples:`); for (const e of examples) console.log(e); }
   if (twinExamples.length) { console.log(`\n  short ids WITH a catalog twin (sample, ${f(s.shortIdsWithCatalogTwin)} total):`); for (const e of twinExamples) console.log(e); }
+  if (vetoedTargets.length) { console.log(`\n  VETOED targets -- short id is checklist-backed (sample, ${f(s.targetsVetoedShortIdChecklistBacked)} total):`); for (const e of vetoedTargets) console.log(e); }
+  if (collapsedExamples.length) { console.log(`\n  COLLAPSED onto a resident (sample, ${f(s.collapsedOntoResident)} total):`); for (const e of collapsedExamples) console.log(e); }
   if (ambiguousExamples.length) { console.log(`\n  RIVAL /N groups (sample, ${f(s.ambiguousRivalRuns)} total) -- never folded, a human rules on these:`); for (const e of ambiguousExamples) console.log(e); }
 
   for (const [reason, list] of Object.entries(refusals)) {
@@ -652,14 +806,20 @@ async function main() {
   }
 
   // ── CF-A-SALE-IS-NEVER-LOST reconciliation ---------------------------------
+  // `collapsedOntoResident` is counted with `written`: the short-id copy is
+  // RESOLVED (deleted once the resident is confirmed to be the same sale),
+  // even though the resident document itself was not created by this run.
+  // `refusedDestinationCollision` joins the other named refusals -- a
+  // DIFFERENT sale already at the destination is exactly the shape a refusal
+  // exists to report, never a write this lane may attempt.
   const salesBefore = s.salesFoundByCardId + s.salesFoundByHobbyiqCardId;
-  const written = s.salesRelocated + s.salesPatched;
-  const refused = s.refusedTitlePrintRun + s.refusedSplitIdentity + s.refusedGuardParked;
+  const written = s.salesRelocated + s.salesPatched + s.collapsedOntoResident;
+  const refused = s.refusedTitlePrintRun + s.refusedSplitIdentity + s.refusedGuardParked + s.refusedDestinationCollision;
   const left = salesBefore - written - refused - s.salesFailed;
   console.log("");
   console.log(`CF-A-SALE-IS-NEVER-LOST`);
   console.log(`  sales at short ids before   ${f(salesBefore)}`);
-  console.log(`  ${APPLY ? "=" : "would be ="} relocated ${f(s.salesRelocated)} + patched ${f(s.salesPatched)} + refused ${f(refused)} + failed ${f(s.salesFailed)} + left ${f(left)}`);
+  console.log(`  ${APPLY ? "=" : "would be ="} relocated ${f(s.salesRelocated)} + patched ${f(s.salesPatched)} + collapsed ${f(s.collapsedOntoResident)} + refused ${f(refused)} + failed ${f(s.salesFailed)} + left ${f(left)}`);
   const accountedFor = written + refused + s.salesFailed + left;
   if (accountedFor !== salesBefore) {
     console.error(`!! CF-A-SALE-IS-NEVER-LOST: accounted ${f(accountedFor)} != before ${f(salesBefore)}. A sale is unaccounted for. Exit 4.`);
