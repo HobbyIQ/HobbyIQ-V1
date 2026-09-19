@@ -181,12 +181,16 @@ describe("a count line is not a section", () => {
       "insert-15-cards", "insert-20-cards", "insert-100-cards",
       "auto-1-card", "auto-51-cards", "auto-87-cards",
     ]) expect(cats.has(wrong), wrong).toBe(false);
-    // ...and these are the names Beckett actually printed.
+    // ...and these are the names Beckett actually printed. The trailing
+    // "Checklist" Beckett's own section titles carry is stripped by
+    // CF-BECKETT-CHECKLIST-IS-A-TITLE-ARTIFACT-NOT-A-NAME (2026-09-19) --
+    // measured, not assumed: every one of this sheet's OTHER section headers
+    // carries the same suffix, so it names the PAGE, not the card set.
     for (const right of [
-      "insert-55-bowman-anime-checklist",
-      "insert-bowman-scouts-top-100-checklist",
-      "auto-chrome-prospect-autographs-checklist",
-      "auto-2024-bowman-ultimate-autograph-book-card-checklist",
+      "insert-55-bowman-anime",
+      "insert-bowman-scouts-top-100",
+      "auto-chrome-prospect-autographs",
+      "auto-2024-bowman-ultimate-autograph-book-card",
     ]) expect(cats.has(right), right).toBe(true);
     // Not one category may be named by a bare card count.
     for (const c of cats) expect(c, c).not.toMatch(/^(insert|auto)-\d+-cards?$/);

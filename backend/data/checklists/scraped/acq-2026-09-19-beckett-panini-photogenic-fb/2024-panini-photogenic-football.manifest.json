@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-09-19T01:46:31.738Z",
+  "scrapedAt": "2026-09-19T01:56:54.660Z",
   "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/01/2024-Panini-PhotoGenic-Football-Checklist.xlsx",
   "source": "beckett-s3-2026-09-19",
   "sport": "football",
@@ -26,122 +26,122 @@
     },
     {
       "sheet": "Autographs",
-      "section": "Base Autographs Checklist",
-      "category": "auto-base-autographs-checklist",
+      "section": "Base Autographs",
+      "category": "auto-base-autographs",
       "cards": 61,
       "role": "own-cards"
     },
     {
       "sheet": "Autographs",
-      "section": "Base Silver Autographs Checklist",
-      "category": "auto-base-silver-autographs-checklist",
+      "section": "Base Silver Autographs",
+      "category": "auto-base-silver-autographs",
       "cards": 49,
       "role": "parallel",
-      "anchor": "Autographs>Base Autographs Checklist",
+      "anchor": "Autographs>Base Autographs",
       "rung": "Silver"
     },
     {
       "sheet": "Autographs",
-      "section": "In the Action Autographs Checklist",
-      "category": "auto-in-the-action-autographs-checklist",
+      "section": "In the Action Autographs",
+      "category": "auto-in-the-action-autographs",
       "cards": 29,
       "role": "own-cards"
     },
     {
       "sheet": "Autographs",
-      "section": "Rookie Instants Signatures Checklist",
-      "category": "auto-rookie-instants-signatures-checklist",
+      "section": "Rookie Instants Signatures",
+      "category": "auto-rookie-instants-signatures",
       "cards": 20,
       "role": "own-cards"
     },
     {
       "sheet": "Autographs",
-      "section": "Rookie Photo Bomb Autographs Checklist",
-      "category": "auto-rookie-photo-bomb-autographs-checklist",
+      "section": "Rookie Photo Bomb Autographs",
+      "category": "auto-rookie-photo-bomb-autographs",
       "cards": 8,
       "role": "own-cards"
     },
     {
       "sheet": "Autographs",
-      "section": "Rookie Portrait Autographs Checklist",
-      "category": "auto-rookie-portrait-autographs-checklist",
+      "section": "Rookie Portrait Autographs",
+      "category": "auto-rookie-portrait-autographs",
       "cards": 36,
       "role": "own-cards"
     },
     {
       "sheet": "Autographs",
-      "section": "Snapshots Autographs Checklist",
-      "category": "auto-snapshots-autographs-checklist",
+      "section": "Snapshots Autographs",
+      "category": "auto-snapshots-autographs",
       "cards": 37,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "A Different View Checklist",
-      "category": "insert-a-different-view-checklist",
+      "section": "A Different View",
+      "category": "insert-a-different-view",
       "cards": 10,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "Avatars Checklist",
-      "category": "insert-avatars-checklist",
+      "section": "Avatars",
+      "category": "insert-avatars",
       "cards": 20,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "Draft Snapshots Checklist",
-      "category": "insert-draft-snapshots-checklist",
+      "section": "Draft Snapshots",
+      "category": "insert-draft-snapshots",
       "cards": 10,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "For the Cure Checklist",
-      "category": "insert-for-the-cure-checklist",
+      "section": "For the Cure",
+      "category": "insert-for-the-cure",
       "cards": 10,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "In-Motion Checklist",
-      "category": "insert-in-motion-checklist",
+      "section": "In-Motion",
+      "category": "insert-in-motion",
       "cards": 10,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "Progressions Checklist",
-      "category": "insert-progressions-checklist",
+      "section": "Progressions",
+      "category": "insert-progressions",
       "cards": 20,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "Rookie Introductions Checklist",
-      "category": "insert-rookie-introductions-checklist",
+      "section": "Rookie Introductions",
+      "category": "insert-rookie-introductions",
       "cards": 20,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "Rookie Pix Checklist",
-      "category": "insert-rookie-pix-checklist",
+      "section": "Rookie Pix",
+      "category": "insert-rookie-pix",
       "cards": 20,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "The Shoe Game Checklist",
-      "category": "insert-the-shoe-game-checklist",
+      "section": "The Shoe Game",
+      "category": "insert-the-shoe-game",
       "cards": 20,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "Troops Tribute Checklist",
-      "category": "insert-troops-tribute-checklist",
+      "section": "Troops Tribute",
+      "category": "insert-troops-tribute",
       "cards": 10,
       "role": "own-cards"
     }

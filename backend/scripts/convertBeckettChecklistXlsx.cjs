@@ -142,6 +142,97 @@ const slug = (s) => String(s || "").toLowerCase()
   .normalize("NFKD").replace(/[^\w\s-]/g, "")
   .replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 
+// CF-BECKETT-CHECKLIST-IS-A-TITLE-ARTIFACT-NOT-A-NAME (2026-09-19). Many
+// Beckett workbooks title every Autographs/Inserts/Memorabilia section header
+// "<Set Name> Checklist" -- "Z Marquee Checklist", "Zoom Blue Checklist" -- but
+// the word names the PAGE, not the card set. Left in, it rode straight into the
+// category slug and the minted parallel/insert-set-key text
+// (`z-marquee-checklist`), which is what a registered insert-set key would then
+// carry verbatim forever.
+//
+// MEASURED, NOT GUESSED, on both committed fixtures: 2024 Panini Zenith
+// Football's Master sheet lists the same card sets WITHOUT the suffix ("Z
+// Marquee", never "Z Marquee Checklist") for every single Autographs/Inserts/
+// Memorabilia section -- 27 of 27 checked -- while its Base sheet's own
+// sections ("Base Set", "Rookies", "Rookie Patch Autographs") carry no suffix
+// AT ALL on either sheet or Master. 2024 Panini Photogenic Football's ten
+// Inserts sections and eight Autographs sections show the identical split.
+//
+// So this strips a trailing " Checklist" only when BOTH hold:
+//   (a) Master's own Card Set column states the same name WITHOUT the suffix
+//       (the authority for what the card set is actually called), or, when no
+//       Master sheet exists or does not carry this section, when
+//   (b) at least one OTHER section on the SAME sheet also carries the exact
+//       same suffix -- a sheet-wide title convention, measured from that
+//       sheet's own other headers, never assumed from one section alone.
+//
+// This is why a genuine "Team Checklist" insert (a card literally named that,
+// no sibling on its sheet titled the same way, and Master -- if present --
+// stating the same full name including the word) is never touched: neither
+// gate fires for a section that is alone in carrying the word, and Master's
+// own spelling always wins when it disagrees.
+function stripChecklistSuffix(section, siblingSectionNames, masterNames) {
+  const raw = String(section || "").trim();
+  const m = /^(.*\S)\s+Checklist$/i.exec(raw);
+  if (!m) return raw;
+  const bare = m[1];
+  // Master is the authority when it has an opinion at all.
+  if (masterNames && masterNames.size) {
+    if (masterNames.has(bare.toLowerCase())) return bare;
+    if (masterNames.has(raw.toLowerCase())) return raw;
+    // Master exists but names neither form for this section -- fall through to
+    // the sheet-wide sibling signal rather than guess from Master's silence.
+  }
+  const siblingsCarryIt = (siblingSectionNames || []).some((other) => {
+    if (other === raw) return false;
+    return /\sChecklist$/i.test(String(other || "").trim());
+  });
+  return siblingsCarryIt ? bare : raw;
+}
+
+/** Every distinct value in the Master sheet's first ("Card Set") column,
+ *  lower-cased, when the sheet exists and its header row is the expected
+ *  shape. Returns an empty Set (never null) so a caller with no Master sheet
+ *  degrades to the sibling-suffix signal alone rather than special-casing
+ *  "no Master" at every call site. */
+function masterCardSetNames(sheets) {
+  const rows = sheets["Master"];
+  const out = new Set();
+  if (!rows || !rows.length) return out;
+  const header = (rows[0] || []).map((c) => String(c || "").trim().toLowerCase());
+  if (!/^card\s*set$/i.test(header[0] || "")) return out;
+  for (const r of rows.slice(1)) {
+    const name = String((r || [])[0] || "").trim();
+    if (name) out.add(name.toLowerCase());
+  }
+  return out;
+}
+
+/** Every single-cell header row on one sheet, in the shape stripChecklistSuffix
+ *  needs to test "do this sheet's OTHER sections carry the same suffix" --
+ *  built once per sheet, cheaply, from the same non-empty/non-ladder test
+ *  main()'s own pass uses, so this never disagrees with what main() treats as
+ *  a section header. */
+function sheetSectionHeaderNames(rows) {
+  const out = [];
+  let inLadder = false;
+  for (const row of rows) {
+    if (!nonEmpty(row)) continue;
+    if (isCountLine(row)) continue;
+    if (nonEmpty(row) === 1 && row[0]) {
+      const cell = String(row[0]).trim();
+      if (LADDER_HEAD.test(cell)) { inLadder = true; continue; }
+      if (PLACEHOLDER.test(cell)) continue;
+      if (inLadder) { if (!parseRung(cell)) continue; else continue; }
+      out.push(cell);
+      inLadder = false;
+      continue;
+    }
+    inLadder = false;
+  }
+  return out;
+}
+
 // Roster sheets repeat every card already listed elsewhere, grouped a second
 // way. Including them ingests each card two or three times. Beckett names this
 // sheet inconsistently across products ('Team Sets' in Bowman Chrome, 'Teams'
@@ -578,6 +669,11 @@ function parseRung(line) {
 function main() {
   const files = readZip(fs.readFileSync(path.resolve(XLSX)));
   const sheets = sheetsByName(files);
+  // Master, when present, is the authority on a card set's real name (see
+  // CF-BECKETT-CHECKLIST-IS-A-TITLE-ARTIFACT-NOT-A-NAME above); an empty Set
+  // when absent, so every call site below degrades to the sibling-suffix
+  // signal alone rather than branching on "is there a Master sheet".
+  const masterNames = masterCardSetNames(sheets);
 
   // ---- pass 1: read every row, remembering which section it came from -----
   const records = [];
@@ -585,6 +681,10 @@ function main() {
   for (const [name, rows] of Object.entries(sheets)) {
     if (isSupersetSheet(name)) continue;
     let section = name;
+    // Every OTHER header on this sheet, computed once, so
+    // stripChecklistSuffix can ask "do this sheet's siblings carry the same
+    // suffix" without re-scanning the sheet per section.
+    const siblingSectionNames = sheetSectionHeaderNames(rows);
     // The ladder belongs to the section it sits under, and resets with it.
     let inLadder = false;
     let pendingLadder = [];
@@ -622,7 +722,7 @@ function main() {
           // recoverable; the section-name theft was not.
           continue;
         }
-        section = cell;
+        section = stripChecklistSuffix(cell, siblingSectionNames, masterNames);
         inLadder = false;
         pendingLadder = [];
         continue;
@@ -766,4 +866,7 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { classifySections, rungName, categoryFor, PLAIN_SECTION, parseRung, LADDER_HEAD, isSupersetSheet, isCountLine };
+module.exports = {
+  classifySections, rungName, categoryFor, PLAIN_SECTION, parseRung, LADDER_HEAD, isSupersetSheet, isCountLine,
+  stripChecklistSuffix, masterCardSetNames, sheetSectionHeaderNames,
+};

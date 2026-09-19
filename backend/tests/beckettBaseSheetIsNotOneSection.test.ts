@@ -68,7 +68,7 @@ import * as path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { categoryFor } = require("../scripts/convertBeckettChecklistXlsx.cjs");
+const { categoryFor, stripChecklistSuffix, masterCardSetNames } = require("../scripts/convertBeckettChecklistXlsx.cjs");
 
 const CONVERTER = path.join(__dirname, "..", "scripts", "convertBeckettChecklistXlsx.cjs");
 const FIXTURES = path.join(__dirname, "fixtures", "beckett");
@@ -147,21 +147,24 @@ describe("2024 Panini Zenith Football converts without the false-anchor collapse
   it("does not fold the 17 genuinely distinct Inserts-sheet sections onto the Base sheet", () => {
     const rows = convert("2024-Panini-Zenith-Football-Checklist.xlsx", "panini-zenith");
     const cats = new Set(rows.map((r) => r.category));
+    // No trailing "-checklist": CF-BECKETT-CHECKLIST-IS-A-TITLE-ARTIFACT-NOT-A-NAME
+    // (2026-09-19) strips the word Beckett's own section titles append, measured
+    // against Master's un-suffixed spelling on every one of these names.
     for (const c of [
-      "insert-z-marquee-checklist", "insert-zoom-gold-checklist", "insert-zoom-red-checklist",
-      "insert-a-to-z-checklist", "insert-alphas-checklist", "insert-behind-the-numbers-checklist",
-      "insert-chalk-talk-checklist", "insert-first-look-checklist", "insert-idols-checklist",
-      "insert-splash-checklist", "insert-state-of-the-art-checklist", "insert-the-shield-checklist",
-      "insert-z-team-checklist", "insert-color-guard-checklist", "insert-turning-pro-memorabilia-checklist",
-      "insert-z-jersey-checklist", "insert-zoned-in-checklist",
+      "insert-z-marquee", "insert-zoom-gold", "insert-zoom-red",
+      "insert-a-to-z", "insert-alphas", "insert-behind-the-numbers",
+      "insert-chalk-talk", "insert-first-look", "insert-idols",
+      "insert-splash", "insert-state-of-the-art", "insert-the-shield",
+      "insert-z-team", "insert-color-guard", "insert-turning-pro-memorabilia",
+      "insert-z-jersey", "insert-zoned-in",
     ]) expect(cats.has(c), c).toBe(true);
   });
 
   it("keeps the genuine parallel folds — Z Summit Autographs colour rungs and the Variation pairing", () => {
     const rows = convert("2024-Panini-Zenith-Football-Checklist.xlsx", "panini-zenith");
-    const zSummitBlue = rows.filter((r) => r.category === "auto-z-summit-autographs-checklist" && r.parallel === "Blue");
+    const zSummitBlue = rows.filter((r) => r.category === "auto-z-summit-autographs" && r.parallel === "Blue");
     expect(zSummitBlue.length).toBeGreaterThan(0);
-    const variationRows = rows.filter((r) => r.category === "auto-contenders-optic-rookie-ticket-rps-preview-blue-checklist" && r.parallel === "Variation");
+    const variationRows = rows.filter((r) => r.category === "auto-contenders-optic-rookie-ticket-rps-preview-blue" && r.parallel === "Variation");
     expect(variationRows.length).toBeGreaterThan(0);
   });
 });
@@ -187,10 +190,10 @@ describe("2024 Panini Photogenic Football converts without the numeric-subset co
     const rows = convert("2024-Panini-PhotoGenic-Football-Checklist.xlsx", "panini-photogenic");
     const cats = new Set(rows.map((r) => r.category));
     for (const c of [
-      "insert-avatars-checklist", "insert-draft-snapshots-checklist", "insert-for-the-cure-checklist",
-      "insert-in-motion-checklist", "insert-progressions-checklist", "insert-rookie-introductions-checklist",
-      "insert-rookie-pix-checklist", "insert-the-shoe-game-checklist", "insert-troops-tribute-checklist",
-      "insert-a-different-view-checklist",
+      "insert-avatars", "insert-draft-snapshots", "insert-for-the-cure",
+      "insert-in-motion", "insert-progressions", "insert-rookie-introductions",
+      "insert-rookie-pix", "insert-the-shoe-game", "insert-troops-tribute",
+      "insert-a-different-view",
     ]) expect(cats.has(c), c).toBe(true);
     // None of these ten may appear as a parallel rung of "base" — that was
     // the false fold (a 100%-numeric-subset match on Base Set's own #1-100).
@@ -200,8 +203,52 @@ describe("2024 Panini Photogenic Football converts without the numeric-subset co
 
   it("keeps the one genuine fold — Base Silver Autographs is a rung on Base Autographs", () => {
     const rows = convert("2024-Panini-PhotoGenic-Football-Checklist.xlsx", "panini-photogenic");
-    const silverAutos = rows.filter((r) => r.category === "auto-base-autographs-checklist" && r.parallel === "Silver");
+    const silverAutos = rows.filter((r) => r.category === "auto-base-autographs" && r.parallel === "Silver");
     expect(silverAutos.length).toBeGreaterThan(0);
     for (const r of silverAutos) expect(r.isAuto).toBe("true");
+  });
+});
+
+describe("CF-BECKETT-CHECKLIST-IS-A-TITLE-ARTIFACT-NOT-A-NAME (2026-09-19)", () => {
+  it("strips the trailing 'Checklist' Master confirms is not part of the name", () => {
+    const masterNames = new Set(["z marquee", "base set"]);
+    expect(stripChecklistSuffix("Z Marquee Checklist", ["Zoom Gold Checklist"], masterNames)).toBe("Z Marquee");
+  });
+
+  it("strips it when Master is silent but every sibling section on the sheet carries it too", () => {
+    expect(stripChecklistSuffix("Something New Checklist", ["Zoom Gold Checklist", "Z Marquee Checklist"], new Set()))
+      .toBe("Something New");
+  });
+
+  it("never strips a lone 'Checklist' name with no corroborating signal", () => {
+    expect(stripChecklistSuffix("Team Checklist", ["Base Set", "Rookies"], new Set())).toBe("Team Checklist");
+  });
+
+  it("never strips when Master explicitly states the name INCLUDES the word", () => {
+    // A genuine card literally named "Team Checklist" -- Master is the
+    // authority and wins even though every sibling on the sheet also happens
+    // to carry the suffix.
+    expect(stripChecklistSuffix("Team Checklist", ["Base Set", "Rookies"], new Set(["team checklist"]))).toBe("Team Checklist");
+  });
+
+  it("leaves a name with no trailing 'Checklist' untouched", () => {
+    expect(stripChecklistSuffix("Base Set", ["Zoom Gold Checklist"], new Set(["z marquee"]))).toBe("Base Set");
+  });
+
+  it("reads Master's real, headerless-sheet shape and refuses to guess when it does not match", () => {
+    // 2024 Bowman's own Master sheet starts directly with data rows, no
+    // "Card Set" header at all -- masterCardSetNames must return empty here,
+    // never half-parse a shape it cannot confirm.
+    const noHeader = [["Base", "1", "Kodai Senga", "New York Mets", "", "", ""]];
+    expect(masterCardSetNames({ Master: noHeader }).size).toBe(0);
+  });
+
+  it("reads a real Card Set header when present", () => {
+    const withHeader = [
+      ["Card Set", "Card Number", "Athlete", "Team", "Sequence"],
+      ["Z Marquee", "1", "Caleb Williams", "Chicago Bears", ""],
+    ];
+    const names = masterCardSetNames({ Master: withHeader });
+    expect(names.has("z marquee")).toBe(true);
   });
 });
