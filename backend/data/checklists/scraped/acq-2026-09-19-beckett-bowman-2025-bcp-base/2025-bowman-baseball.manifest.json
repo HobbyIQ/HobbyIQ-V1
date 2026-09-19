@@ -1,0 +1,43 @@
+{
+  "scrapedAt": "2026-09-19T12:00:00.000Z",
+  "articleUrl": "https://www.beckett.com/news/2025-bowman-baseball-cards/",
+  "articleFetchNote": "beckett.com 302s to maintenance.beckett.com; BCP-22 = JJ Wetherholt cross-checked against the live article text via Wayback snapshot 20250416134907, which lists '...BCP-21 Slade Caldwell, Arizona Diamondbacks<br>BCP-22 JJ Wetherholt, St. Louis Cardinals...' verbatim.",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/04/2025-Bowman-Baseball-Checklist.xlsx",
+  "xlsxHttpStatus": 200,
+  "sha256": "d776dfdf4812110054eeafe74428a50e5d341e7370ad4ca457298f284556e03f",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Bowman",
+  "productKey": "2025-bowman",
+  "setKey": "bowman",
+  "rowCount": 400,
+  "readyToIngest": false,
+  "directorySplitNote": "SPLIT from the original combined package acq-2026-09-19-beckett-bowman-chrome-bcp-base/ (now deleted) after the runner's steward correctly refused it: that directory held TWO CSVs from two different setKeys/sources under one SOURCE env var and one DIR sweep, which ingest-checklist-csv-to-catalog.cjs cannot safely split apart (SOURCE is one value for the whole run; multiple call sites in ingest-universe-driver.cjs also do fs.readdirSync(dir).filter(csv) and take csvs[0]). This directory now holds exactly this ONE CSV, no sibling.",
+  "reproduce": {
+    "convertCommand": "node backend/scripts/convertBeckettChecklistXlsx.cjs --xlsx <path>/2025-bowman-baseball.xlsx --year 2025 --set-key bowman --set-name \"2025 Bowman\" --sport baseball --out 2025-bowman-baseball.raw.csv --source-url \"https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/04/2025-Bowman-Baseball-Checklist.xlsx\" --source-label beckett-s3-2026-09-19",
+    "converterOutput": "wrote 2025-bowman-baseball.raw.csv; rows=922 (deduped 0); by kind: {\"base\":400,\"auto\":281,\"insert\":241}; sections: 26 (anchors 5, parallels 1, own-cards 19); 1 AMBIGUOUS overlap flagged (Inserts > Etched in Glass Variations (20) overlaps Base>Base Set by 60% -- left as its own cards, in the dropped auto/insert scope, not staged here).",
+    "scopeFilterCommand": "awk -F',' 'NR==1 || $1==\"base\"' 2025-bowman-baseball.raw.csv > 2025-bowman-baseball.csv"
+  },
+  "rowsByCategory": {
+    "base_numberedBase": { "rows": 100, "note": "cardNumbers 1-100, the flagship Base set, plain (blank) parallel." },
+    "base_bpProspects": { "rows": 150, "note": "BP-1 through BP-150, the product's own plain-paper Bowman Prospects insert (NOT Chrome), plain (blank) parallel." },
+    "base_bcpProspects": { "rows": 150, "note": "BCP-1 through BCP-150 (see cardNumberRangeNote), the product's own Bowman Chrome Prospects insert (the Chrome-treated version of the SAME prospect pool as BP- -- verified BP-1 and BCP-1 are both Walker Jenkins), plain (blank) parallel." },
+    "total": 400,
+    "verifiedByDirectCount": "awk -F',' confirms exactly 100 plain-numbered + 150 BP- + 150 BCP- = 400, matching the file's own row count."
+  },
+  "cardNumberRangeNote": "BCP (and BP) range in this file is 1 through 150 (confirmed by direct inspection: min=1, max=150 among BCP-prefixed AND BP-prefixed rows) -- not BCP-152 as the article's own prose describes the Chrome Prospects checklist running (#BCP-1 through #BCP-152); this Beckett card-list xlsx simply may not carry the last 2 numbers, or they fall in a different section this converter run didn't capture. Not independently re-verified against the live page for the tail of the range this pass.",
+  "rowsDropped": {
+    "count": 522,
+    "categories": "281 auto-* rows (2025 Ultimate Autograph Book Card, Bowman Dual Autographs, Bowman Prospect Autographs, Chrome Prospect Autographs, Chrome Rookie Autographs, Hobby Stars Autographs, Retail Only, Retrofractor Autographs, Rockstar Rookies Autographs, Rookie of the Year Favorites Autographs, Very Important Prospects Autographs) + 241 insert-* rows (Anime, Bowman Scouts Top 100, Bowman Spotlights, Crystalized, Etched in Glass Variations, Greatness Loading, Hobby Stars, Retrofractors, Rockstar Rookies, Rookie of the Year Favorites, Very Important Prospects).",
+    "why": "None registered under bowman sub-keys; out of scope for this data-acquisition pass. Fully reproducible from the raw converter output via the scopeFilterCommand above -- nothing here is lost, just not staged."
+  },
+  "note": "ACQUISITION TARGET 1 (bare-numbered BCP prospects, BCP-1..BCP-152 range). classified-final.json's sample sale '2025 Bowman Chrome Prospects Baseball #BCP-22 Base' (setKey stamped bowman-chrome in the sale title, cardNumber bcp-22) and the analogous 2017 case '#BCP127 Base' (setKey bowman) both name a bare Base card at a BCP-prefixed number the catalog only carries under OTHER parallels (Superfractor for 2025; Silver/Blue/Red/Black/Green/Yellow/Printing Plates/Gold for 2017). Verified against this file: BCP-22 = JJ Wetherholt. This is the PAPER Bowman product's own Bowman Chrome Prospects insert; the DIFFERENT insert range BCP-153 through BCP-252 belongs to the 2025 Bowman CHROME product itself and is staged in a SEPARATE directory, acq-2026-09-19-beckett-bowman-chrome-2025-bcp-base/ -- the two ranges are non-overlapping subsets of the same BCP prefix inside two different registered setKeys (bowman vs bowman-chrome), never folded across, now also physically separated at the directory level per the steward's refusal.",
+  "beckettCardListOnly": "Beckett's xlsx is a card list (cardNumber + player), never a parallel/print-run column -- 'parallel' is blank on every row here by design. This stages the missing PLAIN BASE card at each BCP number; the colored-refractor ladder itself already exists in the catalog per classified-final.json's own notes (Superfractor for 2025 BCP-22; Silver/Blue/Red/Black/Green/Yellow/Printing Plates/Gold for 2017 BCP127) and is not restaged here to avoid a duplicate-source collision with whatever already carries those names.",
+  "newVsExisting": {
+    "method": "Every row in this file mints a blank-parallel (plain Base) row at a cardNumber the catalog already carries under a DIFFERENT (colored) parallel per classified-final.json's own note -- so by definition every (cardNumber, blank-parallel) cell this file writes is NEW versus committed data; the (cardNumber, coloredParallel) cells already in the catalog are UNCHANGED (not restaged here).",
+    "newCells": 400,
+    "existingCellsUnchanged": "not restaged -- see beckettCardListOnly note"
+  },
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run read-only against this file, re-run after the directory split): 400 batch rows, 400 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys."
+}
