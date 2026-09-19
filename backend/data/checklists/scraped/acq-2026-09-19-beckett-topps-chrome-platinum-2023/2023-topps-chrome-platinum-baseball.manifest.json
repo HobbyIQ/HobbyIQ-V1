@@ -1,0 +1,52 @@
+{
+  "scrapedAt": "2026-09-19T13:30:00.000Z",
+  "articleUrl": "https://www.beckett.com/news/2023-topps-chrome-platinum-anniversary-baseball-cards/",
+  "articleFetchNote": "beckett.com 302s to maintenance.beckett.com; the article's checklist text was cross-checked via Wayback snapshot 20251214064554 (see the football manifest for that pattern), not re-checked separately for this product this pass -- the xlsx itself is the primary source here.",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/05/2023-Topps-Chrome-Platinum-Anniversary-Baseball-Checklist.xlsx",
+  "xlsxHttpStatus": 200,
+  "sha256": "4116955ab3443929ad735709068a0104d35446196ef401f90223afcbeaf970de",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Topps Chrome Platinum Anniversary",
+  "productKey": "2023-topps-chrome-platinum",
+  "setKey": "topps-chrome-platinum",
+  "rowCount": 14686,
+  "readyToIngest": false,
+  "reproduce": {
+    "convertCommand": "node backend/scripts/convertBeckettChecklistXlsx.cjs --xlsx <path>/2023-topps-chrome-platinum-baseball.xlsx --year 2023 --set-key topps-chrome-platinum --set-name \"2023 Topps Chrome Platinum Anniversary\" --sport baseball --out 2023-topps-chrome-platinum-baseball.csv --source-url \"https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/05/2023-Topps-Chrome-Platinum-Anniversary-Baseball-Checklist.xlsx\" --source-label beckett-s3-2026-09-19",
+    "converterOutput": "wrote 2023-topps-chrome-platinum-baseball.csv; rows=14686 (deduped 0); by kind: {\"base\":12525,\"insert\":205,\"auto\":1956}; sections: 5 (anchors 1, parallels 1, own-cards 3); flagged: 'PARALLEL Variations > Image Variations (25) -> Base>Two different #105.' (Beckett's own section-header text, not a collision -- see anchorSectionNote below).",
+    "noPostProcessing": "Unlike the football/Bowman packages, this CSV is the converter's UNMODIFIED output -- no rows dropped, no filtering applied. All 14,686 rows are staged as produced."
+  },
+  "rowsByCategory": {
+    "base_blankParallel": 500,
+    "base_coloredParallel": 12025,
+    "auto-autographs-checklist": 1956,
+    "insert-packs-land-one-per-case": 200,
+    "insert-1954-topps-employees-checklist": 5,
+    "note": "base_blankParallel (500) is the plain Base card at every one of the product's 500 base numbers (#1-500, per the anchor section) -- the numbering gap this package closes. base_coloredParallel (12,025) is that same 500-card run across 24 distinct Refractor/Image-Variation names (Refractors, X-Fractors, Superfractors, Speckle, Rose Gold, the 7-way Platinum Toile family, Gold/Green/Orange/Red Wave, Black/Gold/Orange/Red plain, Image Variation)."
+  },
+  "newVsExisting": {
+    "committedFile": "backend/data/checklists/scraped/beckett-2023-topps-chrome-platinum-anniversary-baseball-image-variations-guide.csv (14 data rows, all category=insert-rookie-image-variations, e.g. 'Blue Hoodie Image Variation SP' at #2, 'Grey Jersey Image Variation SP' at #100)",
+    "method": "Diffed this package's cells against the ONE committed file that exists for this product-year, cell by cell (cardNumber + category/parallel concept).",
+    "base_blankParallel": { "newCells": 500, "existingCellsUnchanged": 0, "reason": "The committed file has no base/plain-Base rows at all -- every plain-Base cell here is new." },
+    "base_coloredParallel_refractorLadder": { "newCells": 11780, "existingCellsUnchanged": 0, "reason": "The committed file carries no Refractor/Platinum-Toile/etc. rows -- 500 cards x 23 non-Image-Variation colors, all new." },
+    "base_coloredParallel_imageVariation": {
+      "newCells": 25,
+      "existingCellsUnchanged": 0,
+      "partialOverlapFlagged": "This package's 25 'Image Variation' rows (cardNumbers 2,43,67,77,93,97,100,110,133,175,186,188,218,250,301,312,332,337,345,346,359,396,421,426,432) are NOT the same cell shape as the committed file's 14 rows -- the committed file names the SPECIFIC photo variant ('Blue Hoodie Image Variation SP', 'Bat Image Variation SP', etc.) while this Beckett source only says the generic 'Image Variation' with no photo-descriptor. All 14 of the committed file's card numbers are a SUBSET of this package's 25 numbers (2,100,110,133,175,218,312,337,345,346,396,421,426,432 all present in both). This is a specificity mismatch at the SAME (cardNumber, product) address, not a genuinely new cell nor a clean duplicate -- ingesting this package's generic 'Image Variation' rows for those 14 shared numbers would NOT overwrite the committed file's more-specific names (same-authority re-ingest does not overwrite existing fields per doctrine), but it also does not add anything at those 14 numbers; the 11 EXTRA numbers this package has that the committed file lacks (43,67,77,93,97,186,188,250,301,332,359) are genuinely new cells, just under the generic name rather than a specific photo descriptor -- Beckett's own checklist section for this product does not print the specific photo names for those 11, unlike the committed source which apparently sourced them from a fuller gallery."
+    },
+    "auto-autographs-checklist": { "newCells": 1956, "existingCellsUnchanged": 0, "reason": "No committed auto rows exist for this product-year." },
+    "insert-packs-land-one-per-case_and_1954-employees": { "newCells": 205, "existingCellsUnchanged": 0, "reason": "No committed insert rows other than the 14 rookie-image-variation rows exist." },
+    "totalNewCells": 14661,
+    "totalCellsWithSpecificityMismatchNotCounted": 14,
+    "conclusion": "This is overwhelmingly a genuine acquisition, not a re-upsert -- 14,661 of 14,686 rows (99.8%) address cells the catalog has never seen for this product-year. The only overlap is 14 Image Variation rows where this package's cell exists at the same address but under a less specific parallel name than the committed source; ingesting would not clobber the more specific names (upsertCatalogEntry does not overwrite existing fields on a same-authority re-ingest) but also would not improve them -- flagged for a human call on whether to drop those 14 rows before ingest or leave them as a no-op at those addresses."
+  },
+  "secondSourceConflictFound": {
+    "what": "backend/data/checklists/hand-fetched/parallels-2025-topps-chrome-platinum-baseball.json is a VOCABULARY-ONLY file (no card numbers, never wired to a manifest with a baseSet -- confirmed no 2023/2025/2026-topps-chrome-platinum-baseball.json manifest exists in that directory, so ingest-hand-fetched-checklists.cjs has never minted a row from it) explicitly marked appliesTo: ['2025-topps-chrome-platinum-baseball', '2023-topps-chrome-platinum-baseball (proxy)', '2026-topps-chrome-platinum-baseball (proxy)'].",
+    "conflict": "That vocabulary names a DIFFERENT parallel family than this Beckett source: 'Vibrations Refractor' (Blue/Green/Gold/Orange/Black/Red Vibrations Refractor, printRun 250/150/99/99/50/50/25/25/10/10/5/5, plus SuperFractor) versus this package's 'Platinum Toile' family (Cream/Black, Cream/Fuchsia Lava, Cream/Gold, Cream/Red, Cream/Rose Gold, White/Green, White/Orange Refractors) plus Speckle/Rose Gold/Topps Refractors/X-Fractors -- ZERO name overlap between the two vocabularies.",
+    "notResolved": "Not determined this pass whether 'Vibrations Refractor' is a genuinely different, real 2023/2025/2026-era rung this Beckett source simply doesn't carry (Beckett workbooks list card numbers only, not every rung a product publishes -- see 2026 Bowman Chrome Mega Box's Mojo rungs, absent from its own xlsx per an existing doctrine note), or a proxy-year naming drift (the vocab is sourced from the 2025 product and marked 'proxy' for 2023, and Topps has renamed Chrome Platinum's rung family across years before). Flagged for a human call; this package does not stage or reconcile the Vibrations Refractor names."
+  },
+  "anchorSectionNote": "The converter's own stdout names the Base anchor section 'Two different #105.' -- this is Beckett's OWN section-header text (a footnote on the source sheet, not a converter-detected collision): card #105 is a genuine multi-player card, Logan Allen/Jon Gray, and the repo's existing roster-fold convention (players joined '/') already merges it into one row correctly across all 24 of its parallel rungs. Verified directly: `awk -F',' '$2==\"105\"'` on the output CSV returns exactly one player pairing, 'Logan Allen/Jon Gray', on every rung from plain Refractors through Superfractor 1/1 -- no unresolved collision, no ruling needed.",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run read-only against this file): 14,686 batch rows, 14,686 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys."
+}
