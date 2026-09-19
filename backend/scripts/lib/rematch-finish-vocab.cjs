@@ -43,6 +43,33 @@
  * HAND_SPELLINGS -- the small list this module keeps for exactly the spellings
  * the corpus lacks, every entry traceable to a counterexample in the findings.
  *
+ * TWO READERS, TWO SOURCES -- DO NOT CONFUSE THEM (Drew, 2026-09-18)
+ *
+ * This module answers two questions that sound alike and are not:
+ *
+ *   1. IS THIS WORD A FINISH WORD?  (global, corpus-wide)
+ *      Reads `parallels[]` UNION `insertSets[]` names. A title saying
+ *      "Shadow" or "Framed" is naming a finish whichever list the corpus
+ *      files the name under -- the §3c insert split changed FILING, not what
+ *      the words mean. Served by `global`, `support`, `phrases`,
+ *      `isProductWord`, `titleNamesFinish`.
+ *
+ *   2. IS THIS A RUNG OF **THIS PRODUCT'S BASE CARD**?  (per product)
+ *      Reads `parallels[]` ONLY. An insert set is its own run of cards, so
+ *      it is never a rung of the base card -- that is the whole of §3c.
+ *      Served by `namesByProduct` / `checklistParallelNamesFor`,
+ *      `checklistListsRungPhrase`, and through them R31's phrase test,
+ *      `bareColourAliasFromChecklist` and checklist spelling adoption.
+ *
+ * The distinction was found the hard way: making the split move names out of
+ * `parallels[]` also removed their tokens from (1), and 3 genuine finish
+ * words (`framed`, `shadow`, `max`) silently stopped being finish words.
+ * `insertSetNamedInTitle` is a third, separate reader -- sport-scoped, and
+ * used only to REFUSE a move, never to admit one.
+ *
+ * tests/parallelReadersIgnoreInsertSets.test.ts pins reader (2) against
+ * drift; the union in (1) is asserted where the vocabulary is built.
+ *
  * THE HAND LIST IS SMALL AND IS NOT A SECOND VOCABULARY
  *
  * The corpus floor is 2020 (plus one 1984 product). Vintage parallels --
@@ -1136,6 +1163,43 @@ function buildVocabulary(corpusPath = CORPUS_PATH) {
       };
       add(is?.root);
       for (const child of is?.children ?? []) add(child);
+
+      // THE GLOBAL TOKEN VOCABULARY READS INSERT NAMES TOO (Drew, 2026-09-18).
+      //
+      // Two different questions, two different sources, and conflating them
+      // is what made this need a ruling:
+      //
+      //   "is this word a FINISH word?"        -> global, parallels + inserts
+      //   "is this a RUNG of THIS product?"    -> per-product, parallels ONLY
+      //
+      // When the insert-set split started moving names out of `parallels[]`,
+      // their tokens left the global vocabulary with them. Measured across the
+      // whole corpus: 524 tokens lost, of which exactly THREE are finish-class
+      // -- `framed`, `shadow`, `max`. None of the three is a base-ladder
+      // parallel anywhere in the sources; each exists only inside an insert
+      // set's name (Framed, Shadow Slide, Max).
+      //
+      // That is not a reason to drop them. A title that says "Shadow" is
+      // naming a finish whichever list the corpus files the name under -- the
+      // split changed FILING, not what the words mean. So the global token
+      // stream takes the union, and the six tests that depend on `max` being
+      // finish-class keep holding.
+      //
+      // WHAT DELIBERATELY DOES **NOT** READ THIS: `namesByProduct` (the
+      // per-product LADDER). R31's phrase test, `checklistListsRungPhrase`,
+      // `bareColourAliasFromChecklist` and spelling adoption all ask "is this
+      // a rung of this product's base card", and an insert set is NOT one --
+      // that is the entire point of §3c. Those stay `parallels[]`-only, and
+      // tests/parallelReadersIgnoreInsertSets.test.ts pins it.
+      for (const n of [is?.root, ...(is?.children ?? [])]) {
+        if (!n) continue;
+        // Counted for `vocabularyStats().parallelNames`, which is the
+        // diagnostic for "was a real corpus loaded". Now that the vocabulary
+        // is built from BOTH lists, the statistic has to count both or it
+        // reports a shrinking corpus every time the insert split improves.
+        nameCount++;
+        for (const t of nameTokens(n)) { bucket.add(t); seenHere.add(t); }
+      }
     }
     for (const par of p?.parallels ?? []) {
       const spellings = (par?.spellings ?? []).length ? par.spellings : [par?.name];
