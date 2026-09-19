@@ -1,9 +1,11 @@
 {
-  "scrapedAt": "2026-09-19T12:00:00.000Z",
-  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/12/2024-Donruss-Football-Checklist.xlsx",
-  "source": "beckett-s3-2026-09-19",
-  "sha256": "2bc1df86477c6bff78bcde35fac7e5af25aca33d4dd500952d6468d15151c767",
+  "scrapedAt": "2026-09-19T13:40:00.000Z",
   "articleUrl": "https://www.beckett.com/news/2024-donruss-football-cards/",
+  "articleFetchNote": "beckett.com 302s to maintenance.beckett.com; article text (card #327 = Caleb Williams) cross-checked via Wayback snapshot 20251214064554, http status 200 for that archived snapshot.",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/12/2024-Donruss-Football-Checklist.xlsx",
+  "xlsxHttpStatus": 200,
+  "sha256": "2bc1df86477c6bff78bcde35fac7e5af25aca33d4dd500952d6468d15151c767",
+  "source": "beckett-s3-2026-09-19",
   "sport": "football",
   "year": 2024,
   "setName": "2024 Panini Donruss",
@@ -11,14 +13,36 @@
   "setKey": "panini-donruss",
   "rowCount": 2900,
   "readyToIngest": false,
-  "scopeTrimmedToCategoryBase": "The raw conversion (6,369 rows) included auto-*/insert-* sections (Rated Rookies Autographs, Downtown!, Elite Series, Memorabilia, etc.) needing their own registration/fold decisions -- out of scope for this pass, dropped to keep this package to the plain-Base/Press-Proof-ladder acquisition target only (2,900 base-category rows: plain Base + 6 Press Proof rungs across the 400-card base set).",
-  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run read-only against this file): 2,900 batch rows, 2,900 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys.",
-  "note": "TARGET 5 (football, Panini Donruss). No committed checklist file previously existed for 2024 Panini Donruss under panini-donruss. classified-final.json's sample sale is '2024 Panini Donruss Football #327 Red Wave' -- verified #327 = Caleb Williams via this file (Base anchor lists #327 Caleb Williams, Chicago Bears; cross-checked against the live article text via Wayback snapshot 20251214064554, which lists '...326 Trey Benson, Arizona Cardinals<br>327 Caleb Williams, Chicago Bears<br>328 Ladd McConkey...' verbatim). This Beckett source's own Press Proof section (Silver/Gold/Black Press Proof + Die-Cut variants, /100 down to 1/1) is now staged for #327 alongside plain Base -- 'Red Wave' and 'Canva'/'Aqueous Test'/'Yellow Press Proof' named in classified-final.json's note are NOT present in this Beckett card-list source and are not invented here; they need a second source (cardboardconnection.com or checklistcenter.com) to confirm and stage, not done this pass.",
-  "beckettCardListOnly": "Beckett xlsx card-list convention: no print-run column on the base anchor sheet; print runs on this file's Press Proof section came from that section's own stated names ('Silver Press Proof', 'Gold Press Proof Die-Cut', etc.), which do carry runs printed in the source text.",
-  "convertedAmbiguities": "4 AMBIGUOUS overlaps flagged by the converter and left as own-cards (no ruling applied): Optic Rated Rookies Preview Autographs vs Rated Rookies Autographs (98.3%), Rated Rookies Autographs Orange/Purple vs Rated Rookies Autographs (98%/94.2%), The Elite Series Rookies Autographs vs The Rookies Autographs (80%) -- all in Autograph insert sections, unrelated to the #327 base/Press Proof gap this package targets.",
+  "reproduce": {
+    "convertCommand": "node backend/scripts/convertBeckettChecklistXlsx.cjs --xlsx <path>/2024-donruss-football.xlsx --year 2024 --set-key panini-donruss --set-name \"2024 Panini Donruss\" --sport football --out 2024-panini-donruss-football.raw.csv --source-url \"https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/12/2024-Donruss-Football-Checklist.xlsx\" --source-label beckett-s3-2026-09-19",
+    "converterOutput": "wrote 2024-panini-donruss-football.raw.csv; rows=6369 (deduped 795); by kind: {\"base\":2900,\"auto\":1393,\"insert\":2076}; sections: 79 (anchors 4, parallels 4, own-cards 67); 4 AMBIGUOUS overlaps flagged in Autograph insert sections (Optic Rated Rookies Preview Autographs vs Rated Rookies Autographs 98.3%; Rated Rookies Autographs Orange/Purple vs Rated Rookies Autographs 98%/94.2%; The Elite Series Rookies Autographs vs The Rookies Autographs 80%) -- all unrelated to the base/Press-Proof cells this package keeps.",
+    "scopeFilterCommand": "awk -F',' 'NR==1 || $1==\"base\"' 2024-panini-donruss-football.raw.csv > 2024-panini-donruss-football.csv",
+    "rowsDropped": "3,469 rows dropped by the scope filter: 1,393 auto-* rows (Rated Rookies Autographs and its color/preview variants, Elite Series Rookies Autographs, etc.) and 2,076 insert-* rows (Downtown!, Rookie Holiday Sweater, The Elite Series, etc.) -- none registered under panini-donruss sub-keys, out of scope for this pass. All fully reproducible from the raw converter output via the command above."
+  },
+  "note": "TARGET 5 (football, Panini Donruss). No committed checklist file previously existed for 2024 Panini Donruss under panini-donruss as a scraped CSV. classified-final.json's sample sale is '2024 Panini Donruss Football #327 Red Wave' -- verified #327 = Caleb Williams via this file, cross-checked against the live article text via Wayback (see articleFetchNote). This Beckett source's own Press Proof section (Silver/Gold/Black Press Proof + Die-Cut variants, /100 down to 1/1) is staged for every base card alongside plain Base -- 'Red Wave' and 'Canva'/'Aqueous Test' named in classified-final.json's note are NOT present in this Beckett card-list source and are not invented here.",
+  "secondSourceFoundAndAccountedFor": {
+    "what": "backend/data/checklists/hand-fetched/2024-panini-donruss-football.json (manifest, fetchedAt 2026-08-11, source=checklistinsider) + backend/data/checklists/hand-fetched/parallels-2024-panini-donruss-football.json (vocabulary, source=beckett+checklistinsider+cardboardconnection). This IS a wired manifest with a parallelsFile pointer -- ingest-hand-fetched-checklists.cjs would (or may already have) expanded it into catalog rows. NOT verified whether it was actually APPLY-run against Cosmos (no Cosmos access this pass, per hard rules) -- reported as 'committed and wireable', not 'confirmed live'.",
+    "baseSetRange": "The hand-fetched baseSet covers ONLY cardNumbers 1-300 (300 cards) -- confirmed by direct inspection, min=1 max=300. Card #327, the classified-final.json sample gap, is OUTSIDE this range entirely and not present in the hand-fetched file at all.",
+    "vocabularyOverlap": "The hand-fetched parallels file's baseParallels list is: Base, Aqueous Test, Canvas, No Name, Press Proof Blue/Green/Purple/Red/Yellow (all unnumbered), Season Stat Line /500, Press Proof Silver /100, Jersey Number /99, Press Proof Silver Die-Cut /75, Press Proof Gold /50, Press Proof Gold Die-Cut /25, Press Proof Black /10, Press Proof Black Die-Cut /1. Every one of this package's 7 parallels for cards 1-300 (blank Base + the 6 Press Proof/Die-Cut rungs) is ALREADY NAMED in that committed vocabulary, word-for-word (allowing for 'Black Press Proof' vs 'Press Proof Black' word order). 'Optic Preview Holo' is NOT in that vocabulary."
+  },
   "newVsExisting": {
-    "method": "No committed panini-donruss 2024 checklist existed before this package -- every (cardNumber, parallel) cell here is new, including plain Base at #327 (the sample gap) and its 6 Press Proof rungs.",
-    "newCells": 2900,
-    "existingCellsUnchanged": 0
-  }
+    "method": "Split by cardNumber range, since the committed hand-fetched vocabulary's own baseSet stops at #300 while this file's real base set runs to #400.",
+    "cards1to300_allParallels": {
+      "cells": 2100,
+      "newCells": 0,
+      "existingCellsAlreadyInCommittedVocab": 2100,
+      "note": "300 cards x 7 rungs (blank Base + 6 Press Proof/Die-Cut). Every rung name is already present in the committed, wired hand-fetched vocabulary for this exact product-year. IF that vocabulary was already expanded into catalog rows (not confirmed -- no Cosmos access), ingesting this package for cards 1-300 would be a RE-UPSERT of already-known cells, not new coverage. Per doctrine, a same-authority re-ingest does not overwrite existing fields, so re-ingesting these 2,100 cells would be a safe no-op at worst, not an acquisition."
+    },
+    "cards301to400_allParallels": {
+      "cells": 800,
+      "newCells": 800,
+      "existingCellsAlreadyInCommittedVocab": 0,
+      "note": "100 cards x 8 rungs (blank Base + 6 Press Proof/Die-Cut + Optic Preview Holo). The hand-fetched baseSet has NOTHING here -- these 100 cards, INCLUDING #327 (the actual sample gap, Caleb Williams), do not exist anywhere in the committed vocabulary or baseSet. This is the genuine acquisition this package delivers."
+    },
+    "totalNewCells": 800,
+    "totalCellsOverlappingCommittedVocab": 2100,
+    "conclusion": "Of this package's 2,900 rows, 800 (27.6%) close a genuine, previously-uncovered gap (cards #301-400, including the sample gap card #327) and 2,100 (72.4%) restate parallel names the committed hand-fetched vocabulary already carries for cards #1-300 -- whether or not that vocabulary has actually been expanded into catalog rows via APPLY, which was not checked this pass. RECOMMENDATION: keep the package (it closes the confirmed sample gap at #327 and cards 301-400 generally), but note for the merge decision that roughly three-quarters of its row count is a re-upsert against already-described parallel names, not new information -- the acquisition value is concentrated in the 800 cards-301-400 rows."
+  },
+  "convertedAmbiguities": "4 AMBIGUOUS overlaps flagged by the converter and left as own-cards (no ruling applied) -- see reproduce.converterOutput above. All in Autograph insert sections, unrelated to the #327 base/Press Proof gap this package targets, and none of these rows are staged in this package (dropped by the base-only scope filter).",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run read-only against this file): 2,900 batch rows, 2,900 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys."
 }
