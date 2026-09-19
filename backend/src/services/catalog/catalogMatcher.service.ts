@@ -33,6 +33,7 @@ import {
 import { productFamilyOf, productRefinementsOf, spellForEra } from "./productSetKeys.js";
 import { resolveIdentityToCatalogRow } from "./catalogIdentityResolver.js";
 import { isTierlessVariationSlug, normalizeVariationSlug, resolveTierlessVariationByUniqueness } from "./variationVocabulary.js";
+import { cleanPlayerName } from "../portfolioiq/cardCatalog.service.js";
 // The ONE grade-tier vocabulary. Shared with cardIdentityKey so the reader that
 // strips a grade and the writer that refuses to mint one cannot drift apart.
 import { GRADE_TIER_RE } from "../portfolioiq/cardIdentityKey.service.js";
@@ -1668,6 +1669,13 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
   if (TRUSTED_SOURCES.has(input.source)) {
     const now = new Date().toISOString();
     const parallelSlugField = slugify(components.parallel);
+    // CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME (2026-09-19, follow-up to
+    // #2294). This trusted-source seed path minted playerSlug straight off
+    // input.player, so a checklist string that still carried " RC" ("Jonah
+    // Tong RC") minted playerSlug "jonah-tong-rc" here even after #2294 fixed
+    // deriveCatalogEntry's own mint path. Cleaned once, used everywhere below
+    // so playerName / playerSlug / searchText / searchTokens agree.
+    const cleanedPlayer = input.player ? cleanPlayerName(input.player) : null;
     const seedDoc: Record<string, unknown> = {
       id: canonicalSlug,
       cardId: canonicalSlug,
@@ -1680,8 +1688,8 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
       parallelSlug: parallelSlugField,
       isAuto: components.isAuto,
       printRun: components.printRun ?? null,
-      playerName: input.player ?? null,
-      playerSlug: input.player ? slugify(input.player) : null,
+      playerName: cleanedPlayer ?? null,
+      playerSlug: cleanedPlayer ? slugify(cleanedPlayer) : null,
       vendorIds: input.sourceExternalId ? { [input.source]: input.sourceExternalId } : {},
       source: input.source,
       confidence: input.source === "checklist" ? 0.95 : input.source === "user-verified" ? 0.9 : isUserSource ? 0.6 : 0.85,
@@ -1695,11 +1703,11 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
         : "verified",
       observedAt: now,
       lastSeenAt: now,
-      searchText: [components.year, components.cardNumber, input.player ?? "", components.parallel].filter(Boolean).join(" ").toLowerCase(),
+      searchText: [components.year, components.cardNumber, cleanedPlayer ?? "", components.parallel].filter(Boolean).join(" ").toLowerCase(),
       searchTokens: Array.from(new Set([
         String(components.year),
         components.cardNumber.toLowerCase(),
-        ...(input.player ? input.player.toLowerCase().split(/\s+/) : []),
+        ...(cleanedPlayer ? cleanedPlayer.toLowerCase().split(/\s+/) : []),
         ...components.parallel.toLowerCase().split(/\s+/).filter(Boolean),
       ])),
     };

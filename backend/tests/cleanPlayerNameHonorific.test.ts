@@ -85,6 +85,13 @@ describe("the other bcp scraper agrees, so the picker sees ONE player", () => {
   /**
    * scrape-baseballcardpedia.cjs is a CLI script; its cleanPlayerName is read
    * out of the source and evaluated alone rather than importing the module.
+   *
+   * Since #2294's follow-up, the scraper's own cleanPlayerName delegates its
+   * generational-suffix-comma / RC-family half to the ONE canonical
+   * cleanPlayerName (via scripts/lib/player-name.cjs) rather than restating
+   * the regex a third time -- so the isolated eval needs that dependency
+   * injected. The REAL bridge is passed in (not a re-implementation), so this
+   * test still exercises exactly what the file calls at runtime.
    */
   const load = (): ((s: string) => string | null) => {
     const fs = require_("node:fs");
@@ -92,7 +99,10 @@ describe("the other bcp scraper agrees, so the picker sees ONE player", () => {
     const m = src.match(/function cleanPlayerName\(raw\) \{[\s\S]*?\n\}/);
     if (!m) throw new Error("cleanPlayerName not found in scrape-baseballcardpedia.cjs");
     // eslint-disable-next-line no-new-func
-    return new Function(`${m[0]}; return cleanPlayerName;`)();
+    return new Function(
+      "cleanPlayerNameCanonical",
+      `${m[0]}; return cleanPlayerName;`,
+    )(cleanPlayerName);
   };
 
   it("writes the same spelling as the ladders converter and the canonical cleaner", () => {

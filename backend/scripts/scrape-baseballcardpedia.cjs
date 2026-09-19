@@ -24,6 +24,15 @@ const path = require("path");
 const cheerio = require("cheerio");
 
 const { variationFinishOfSection } = require("./lib/variationSections.cjs");
+// CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME (2026-09-19, follow-up to
+// #2294). The canonical cleanPlayerName (RC-family + generational-suffix
+// comma), bridged the same dist-or-fallback way player-identity.cjs bridges
+// playerIdentityKey -- see scripts/lib/player-name.cjs. This scraper's own
+// cleanPlayerName below does MORE than that (trailing "(SP)"/team-name
+// parens, a "Series/Cards/Numbered" tail specific to BCP's page prose) and
+// keeps doing all of that; only the RC/comma-suffix half is now the ONE
+// shared answer instead of this file's own copy of it.
+const { cleanPlayerName: cleanPlayerNameCanonical } = require("./lib/player-name.cjs");
 const BCP_URL = process.env.BCP_URL;
 if (!BCP_URL) { console.error("BCP_URL required"); process.exit(2); }
 
@@ -105,16 +114,22 @@ function extractPlayersFromList($, list) {
 
 function cleanPlayerName(raw) {
   let s = String(raw || "").trim();
-  // Strip trailing metadata like "(SP)", "RC", team names in parens
+  // Strip trailing metadata like "(SP)", "(RC)", team names in parens. This
+  // already incidentally catches the PARENTHESISED rookie-marker shape
+  // ("Jonah Tong (RC)"); the canonical pass below is what catches the bare
+  // " RC" / " RC*" shape this local strip cannot see.
   s = s.replace(/\s*\([^)]+\)\s*$/, "").trim();
   s = s.replace(/,+$/, "").trim();
-  // CF-A-COMMA-BEFORE-JR-IS-NOT-A-TEAM (D33). This scraper wrote "Bobby Witt,
-  // Jr." while the ladders scraper wrote "Bobby Witt" for the same card off
-  // the same page, so the picker showed two players. Mirrors the canonical
-  // cleanPlayerName (cardCatalog.service.ts).
-  s = s.replace(/,\s+(Jr\.?|Sr\.?|I{2,3}|IV)$/i, " $1").trim();
-  // Strip "Series One" / "Cards X-Y" / "Numbered to..." tail
+  // Strip "Series One" / "Cards X-Y" / "Numbered to..." tail -- BCP-page
+  // prose, not a name shape the canonical cleaner has any business knowing.
   s = s.replace(/\s+(Series|Cards?|Numbered)\s+.*$/i, "").trim();
+  // CF-A-COMMA-BEFORE-JR-IS-NOT-A-TEAM (D33) and CF-A-ROOKIE-MARKER-IS-NOT-
+  // PART-OF-THE-NAME (#2294): the generational-suffix comma and the RC-family
+  // marker are the ONE canonical cleanPlayerName's job, not a second/third
+  // hand-copy of its regex. Applied LAST, after this scraper's own
+  // trailing-junk strips, so "Bobby Witt, Jr. (SP)" is trimmed to "Bobby
+  // Witt, Jr." by the parens strip above and THEN to "Bobby Witt Jr." here.
+  s = cleanPlayerNameCanonical(s);
   if (s.length < 2 || s.length > 80) return null;
   return s;
 }
