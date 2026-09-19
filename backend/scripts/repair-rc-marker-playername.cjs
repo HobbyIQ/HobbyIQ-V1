@@ -266,8 +266,15 @@ function planRepair(row, deps, family = FAMILY) {
     // R72: SP/SSP/UER can name a genuinely different CARD (short print, error
     // variation) -- flagged here so the caller lists it for human review
     // instead of trusting the cleaned name as proof the row is safe to patch
-    // like any other. RC/RR/DP/TC/tier-rc never carry this flag.
-    variant: family.variant === true,
+    // like any other. RC/RR/DP/TC/tier-rc never carry this flag. Checked TWO
+    // ways, defense in depth: the dispatched family's own declaration
+    // (family.variant -- what this RUN was scoped for) OR
+    // cleanPlayerName.CARD_VARIANT_MARKERS actually matching the row's own
+    // BEFORE text (what marker this ROW really carries, independent of which
+    // family's scan happened to find it -- a stub/edge-case candidate set
+    // could hand planRepair a row outside the dispatched family, and the
+    // review flag must not depend on that never happening).
+    variant: family.variant === true || deps.CARD_VARIANT_MARKERS.test(before),
     patch: {
       playerName: after,
       playerSlug,
@@ -313,10 +320,10 @@ async function main() {
 
   const { CosmosClient } = require("@azure/cosmos");
   const { rebuildSearchFields, patchCatalogRowFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
-  const { cleanPlayerName } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
+  const { cleanPlayerName, CARD_VARIANT_MARKERS } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
   const { slugify } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
-  const deps = { rebuildSearchFields, cleanPlayerName, slugify };
+  const deps = { rebuildSearchFields, cleanPlayerName, slugify, CARD_VARIANT_MARKERS };
 
   const client = new CosmosClient(conn);
   const db = client.database(process.env.COSMOS_DATABASE || "hobbyiq");

@@ -10,14 +10,14 @@
  * repairRcMarkerPlayerNameLane.test.ts against a stub Cosmos.
  */
 import { describe, expect, it } from "vitest";
-import { cleanPlayerName } from "../src/services/portfolioiq/cardCatalog.service";
+import { cleanPlayerName, CARD_VARIANT_MARKERS } from "../src/services/portfolioiq/cardCatalog.service";
 import { slugify } from "../src/services/portfolioiq/hobbyIqCardId.service";
 import { rebuildSearchFields } from "../src/services/catalog/catalogRowOps.service";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { planRepair, candidateSpec, INHERITED_SCOPES, CELL_RE, MARKER_FAMILIES } = require("../scripts/repair-rc-marker-playername.cjs");
 
-const deps = { cleanPlayerName, slugify, rebuildSearchFields };
+const deps = { cleanPlayerName, slugify, rebuildSearchFields, CARD_VARIANT_MARKERS };
 
 const baseRow = (over: Record<string, unknown> = {}) => ({
   id: "hiq:baseball:2026:topps:1:base:no-auto",
@@ -137,6 +137,20 @@ describe("R72 -- every non-rc marker family repairs its own shape, and ONLY its 
     const plan = planRepair(baseRow({ playerName: "Al Leiter RR", playerSlug: "al-leiter-rr" }), deps, MARKER_FAMILIES.rc);
     expect(plan.action).toBe("repair");
     expect(plan.after).toBe("Al Leiter");
+  });
+
+  it("the variant flag is defense-in-depth: an SP row is flagged even under a NON-variant family's dispatch", () => {
+    // family.variant answers "was this RUN scoped for a variant family";
+    // CARD_VARIANT_MARKERS.test(before) answers "does this ROW actually
+    // carry one, independent of the dispatch". planRepair ORs them so a
+    // stray SP/SSP/UER row that reaches planRepair under the wrong family
+    // (should not happen via a real Cosmos ENDSWITH scan, but the review
+    // flag must not depend on that) still gets listed rather than silently
+    // patched like an ordinary rc/rr/dp/tc row.
+    const plan = planRepair(baseRow({ playerName: "Jonah Tong SP", playerSlug: "jonah-tong-sp" }), deps, MARKER_FAMILIES.rc);
+    expect(plan.action).toBe("repair");
+    expect(plan.after).toBe("Jonah Tong");
+    expect(plan.variant).toBe(true);
   });
 });
 
