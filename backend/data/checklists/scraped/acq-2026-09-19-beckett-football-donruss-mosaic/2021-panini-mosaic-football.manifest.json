@@ -1,0 +1,24 @@
+{
+  "scrapedAt": "2026-09-19T12:00:00.000Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2022/01/2021-Panini-Mosaic-Football-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sha256": "8e0fb306709edab243f9324e7f79cc8b473472685252ecd7083da1e5849fde33",
+  "articleUrl": "https://www.beckett.com/news/2021-panini-mosaic-football-cards/",
+  "sport": "football",
+  "year": 2021,
+  "setName": "2021 Panini Mosaic",
+  "productKey": "2021-panini-mosaic",
+  "setKey": "panini-mosaic",
+  "rowCount": 4630,
+  "readyToIngest": false,
+  "scopeTrimmedToCategoryBase": "The raw conversion (7,624 rows) included auto-*/insert-* sections (Scripts autographs, HoloFame, Storm Chasers, Center Stage, etc.) needing their own registration/fold decisions -- out of scope for this pass, dropped to keep this package to the plain-Base ladder acquisition target only (4,630 base-category rows).",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run read-only against this file): 4,630 batch rows, 4,630 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys.",
+  "note": "TARGET 5 (football, Panini Mosaic). No committed checklist file previously existed for 2021 Panini Mosaic under panini-mosaic. classified-final.json's sample sale is '2021 Panini Mosaic Football #GM-6 Base' with other parallels reported as Nebula | Quick Pitch Black | Peacock | Quick Pitch Pink | Mosaic | Blue | Red and Yellow Fusion | White. COULD NOT CONFIRM 'GM-6' in this Beckett source or in a follow-up web search this pass -- no insert/section using a 'GM' card-number prefix was found in the Base/Variations/Autographs/Memorabilia/Inserts/Updates sheets of this file. This package stages the product's full base-numbering checklist (4,630 base rows across the Base/Rookies sub-ranges, plus 27 named inserts and their autograph counterparts) as a general 2021 Mosaic acquisition, but does NOT resolve the specific GM-6 sample row -- flagged as an open gap, not guessed.",
+  "openGap": "GM-6 card number unresolved. 'Quick Pitch' and 'Peacock' suggest a specific rookie/insert subset not covered by this file's sections; needs a second source (cardboardconnection.com 2021 Panini Mosaic set review, or checklistcenter.com) to identify the GM-prefixed insert before the specific gap can be closed.",
+  "convertedAmbiguities": "4 AMBIGUOUS overlaps flagged by the converter, left as own-cards (no ruling applied): Rookie Scripts vs Scripts (76.2%), Rookie Scripts Gold vs Scripts Gold (88.9%), Rookie Scripts Orange vs Scripts Orange (85.7%), Rookie Scripts Red Wave vs Scripts Red Wave (89.3%) -- all Autograph insert sections, unrelated to GM-6.",
+  "newVsExisting": {
+    "method": "No committed panini-mosaic 2021 checklist existed before this package -- every (cardNumber, parallel) cell here is new. Does not include the GM-6 cell itself, which is not present in this source.",
+    "newCells": 4630,
+    "existingCellsUnchanged": 0
+  }
+}

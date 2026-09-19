@@ -1,0 +1,24 @@
+{
+  "scrapedAt": "2026-09-19T12:00:00.000Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/12/2024-Donruss-Football-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sha256": "2bc1df86477c6bff78bcde35fac7e5af25aca33d4dd500952d6468d15151c767",
+  "articleUrl": "https://www.beckett.com/news/2024-donruss-football-cards/",
+  "sport": "football",
+  "year": 2024,
+  "setName": "2024 Panini Donruss",
+  "productKey": "2024-panini-donruss",
+  "setKey": "panini-donruss",
+  "rowCount": 2900,
+  "readyToIngest": false,
+  "scopeTrimmedToCategoryBase": "The raw conversion (6,369 rows) included auto-*/insert-* sections (Rated Rookies Autographs, Downtown!, Elite Series, Memorabilia, etc.) needing their own registration/fold decisions -- out of scope for this pass, dropped to keep this package to the plain-Base/Press-Proof-ladder acquisition target only (2,900 base-category rows: plain Base + 6 Press Proof rungs across the 400-card base set).",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run read-only against this file): 2,900 batch rows, 2,900 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys.",
+  "note": "TARGET 5 (football, Panini Donruss). No committed checklist file previously existed for 2024 Panini Donruss under panini-donruss. classified-final.json's sample sale is '2024 Panini Donruss Football #327 Red Wave' -- verified #327 = Caleb Williams via this file (Base anchor lists #327 Caleb Williams, Chicago Bears; cross-checked against the live article text via Wayback snapshot 20251214064554, which lists '...326 Trey Benson, Arizona Cardinals<br>327 Caleb Williams, Chicago Bears<br>328 Ladd McConkey...' verbatim). This Beckett source's own Press Proof section (Silver/Gold/Black Press Proof + Die-Cut variants, /100 down to 1/1) is now staged for #327 alongside plain Base -- 'Red Wave' and 'Canva'/'Aqueous Test'/'Yellow Press Proof' named in classified-final.json's note are NOT present in this Beckett card-list source and are not invented here; they need a second source (cardboardconnection.com or checklistcenter.com) to confirm and stage, not done this pass.",
+  "beckettCardListOnly": "Beckett xlsx card-list convention: no print-run column on the base anchor sheet; print runs on this file's Press Proof section came from that section's own stated names ('Silver Press Proof', 'Gold Press Proof Die-Cut', etc.), which do carry runs printed in the source text.",
+  "convertedAmbiguities": "4 AMBIGUOUS overlaps flagged by the converter and left as own-cards (no ruling applied): Optic Rated Rookies Preview Autographs vs Rated Rookies Autographs (98.3%), Rated Rookies Autographs Orange/Purple vs Rated Rookies Autographs (98%/94.2%), The Elite Series Rookies Autographs vs The Rookies Autographs (80%) -- all in Autograph insert sections, unrelated to the #327 base/Press Proof gap this package targets.",
+  "newVsExisting": {
+    "method": "No committed panini-donruss 2024 checklist existed before this package -- every (cardNumber, parallel) cell here is new, including plain Base at #327 (the sample gap) and its 6 Press Proof rungs.",
+    "newCells": 2900,
+    "existingCellsUnchanged": 0
+  }
+}
