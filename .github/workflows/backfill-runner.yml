@@ -211,6 +211,28 @@ on:
           # repair-rc-marker-playername's SET_KEYS. Both are REQUIRED, no
           # 'all' escape hatch.
           - rekey-catalog-id-to-setkey
+          # CF-THE-CHECKLIST-NUMBERED-ROW-IS-THE-IDENTITY, THE SALES HALF
+          # (2026-09-19). fold-checklist-numbered-twins.cjs (R1) drives from
+          # card_catalog and can only fold a CATALOG TWIN row onto the
+          # checklist's :num-N row -- a short id with NO catalog row at all
+          # is never read by that lane's pass 1 at all, so its sales,
+          # however many, are never reached. #2298
+          # (resolveChecklistNumberedIngestId) fixes this going forward, at
+          # ingest time, for FRESH sales only -- it has no effect on a sale
+          # already stored. This lane closes the STORED half: it still
+          # drives from card_catalog's checklist-numbered rows (bounded,
+          # never a sold_comps scan) but reaches directly into sold_comps at
+          # the SHORT id -- present as a catalog row or not -- and relocates
+          # (cardId partition-keyed) or patches (hobbyiqCardId only) every
+          # sale it finds there onto the checklist's numbered id. It never
+          # touches card_catalog itself (a short id WITH a catalog twin is
+          # reported as an input for fold-checklist-numbered-twins.cjs, not
+          # acted on here). SCOPE is sport:year cells (`scope`, e.g.
+          # baseball:2026); the target setKey list rides `titles` (e.g.
+          # topps), same convention as rekey-catalog-id-to-setkey. Both are
+          # REQUIRED, no 'all' escape hatch. The pilot dispatch is
+          # scope=baseball:2026 titles=topps.
+          - repoint-sales-to-checklist-numbered
           # CF-A-WRONG-IDENTITY-IS-NOT-A-MISSING-ONE (Drew, 2026-09-04, R2).
           # Re-derives the identity of holdings that HAVE one and have the
           # WRONG one -- the population `recheck-holding-identity`'s own sweep
@@ -1683,6 +1705,15 @@ jobs:
           # whole-source write that needs its own name
           # (feedback_a_whole_source_retire_needs_its_name). The pilot dispatch
           # is scope=hockey:2024,hockey:2025 titles=upper-deck-extended-series.
+          #
+          # repoint-sales-to-checklist-numbered (2026-09-19) reads BCP_TITLES
+          # as its REQUIRED comma-separated target-setKey list (SET_KEYS) --
+          # e.g. topps -- narrowing its required SCOPE=sport:year cells, same
+          # convention as rekey-catalog-id-to-setkey immediately above. Empty
+          # or a wildcard ('all', '*') is REFUSED (exit 2): this lane moves
+          # sold_comps rows onto a checklist's numbered id, so "every setKey"
+          # is a whole-source write that needs its own name. The pilot
+          # dispatch is scope=baseball:2026 titles=topps.
           USER_ID: ${{ inputs.script == 'rederive-holding-identity' && inputs.scope == 'user' && 'user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4' || '' }}
           SOURCES: ${{ inputs.sources }}
           # CF-A-SOURCE-THAT-CONTRADICTS-ITSELF-MINTS-NO-IDENTITIES (Drew,
@@ -3122,6 +3153,45 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${N:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rekey-catalog-id-to-setkey -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+
+      # This lane's whole point is the sales the CATALOG-side fold cannot
+      # reach (a short id with no catalog row), so a reviewer auditing which
+      # sales moved and why anything else was refused needs the full list,
+      # never a truncated sample -- same reason the checklist-numbered fold
+      # log and the id-follows-setkey-field rekey log above are both kept.
+      - name: Upload the repoint-sales-to-checklist-numbered log
+        if: ${{ always() && inputs.script == 'repoint-sales-to-checklist-numbered' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: repoint-sales-to-checklist-numbered-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the sales-to-checklist-numbered repoint until the scope is clean
+        # Stops at its own 110-minute budget and PRINTS its summary; a run killed
+        # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
+        # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
+        # re-run after a budget stop is idempotent by construction: a sale that
+        # already relocated or was patched no longer matches the short-id
+        # selection (its cardId/hobbyiqCardId is now the numbered id).
+        if: ${{ !cancelled() && inputs.script == 'repoint-sales-to-checklist-numbered' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: repoint-sales-to-checklist-numbered
+          preamble: |
+            R=$(grep -aoE "(RELOCATED|WOULD RELOCATE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            P=$(grep -aoE "(PATCHED|WOULD PATCH) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "relocated=${R:-0} patched=${P:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (relocated=${R:-0} patched=${P:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (relocated=${R:-0} patched=${P:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-to-checklist-numbered -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
       - name: Self-relaunch the isAuto-from-card-number repair until the slot is clean
         # Stops at its own 140-minute budget and PRINTS its summary; a run killed
