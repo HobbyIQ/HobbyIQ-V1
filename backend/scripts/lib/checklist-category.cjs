@@ -99,6 +99,41 @@ const DEFAULT_TIER_SUFFIXES = Object.freeze([
  */
 const UNREGISTERED_TIER_SUFFIXES = Object.freeze(["suite-level", "courtside"]);
 
+/**
+ * WORDS THAT NAME THE SIGNED SECTION, NOT A FINISH (Drew, 2026-09-19).
+ *
+ * AUTO IS ITS OWN AXIS. A slug is `...:red:auto` against `...:red:no-auto`;
+ * the signature is carried by `isAuto`, never spelled into the parallel. So
+ * under an `auto-` category the words below are the SECTION HEADING the
+ * manufacturer published, and must not reach the parallel axis:
+ *
+ *   auto-base-red-autographs        -> { parallel: "Red",       isAuto: true }
+ *   auto-base-autographs-no-huddle  -> { parallel: "No Huddle", isAuto: true }
+ *   auto-base-autographs            -> { parallel: null,        isAuto: true }
+ *
+ * MEASURED: wiring the ingest to `identityFieldsFromCategory` made 2024
+ * panini-photogenic football WORSE (841 -> 948 duplicate ids), because
+ * `auto-base-red-autographs` returned "Red Autographs" while its unsigned
+ * twin `insert-base-red` returned "Red". Two spellings of one rung is two
+ * pools for one ladder -- and the pair differs only in the auto axis, which
+ * is exactly what `isAuto` is for.
+ *
+ * STRIPPED ONLY UNDER AN `auto-` PREFIX, AND ONLY FROM THE BASE LADDER. An
+ * insert SET whose NAME contains one of these words keeps it whole:
+ * `insert-rookie-signatures` and `flashback-autographs` are set names, not
+ * parallels, and a set called Rookie Signatures does not become "Rookie".
+ */
+const AUTO_SECTION_WORDS = Object.freeze(["autographs", "autograph", "auto", "signatures", "signature"]);
+
+/** Drop the section words from an `auto-` base tail, wherever they sit. */
+function stripAutoSectionWords(variantSlug) {
+  const kept = String(variantSlug || "")
+    .split("-")
+    .filter(Boolean)
+    .filter((w) => !AUTO_SECTION_WORDS.includes(w));
+  return kept.join("-");
+}
+
 /** Slug -> the human spelling a parallel column would carry. */
 function humanise(slug) {
   return String(slug || "")
@@ -167,6 +202,13 @@ function readChecklistCategory(category, parallelText, opts = {}) {
         if (!tierKey || t.length > tierKey.length) { tierKey = t; rungSlug = variantCore.slice(t.length).replace(/^-/, ""); }
       }
     }
+    // A SIGNED SECTION'S NAME IS NOT A RUNG. Under an `auto-` prefix the
+    // words autographs/autograph/auto/signatures/signature name the section,
+    // and `isAuto` already carries that fact -- see AUTO_SECTION_WORDS. This
+    // runs AFTER the tier split so `auto-base-club-level-autographs` keeps
+    // its tier and loses only the section word.
+    if (baseLike.isAuto) rungSlug = stripAutoSectionWords(rungSlug);
+
     // THE ROW'S OWN PARALLEL TEXT WINS WHEN IT HAS ONE. Photogenic writes the
     // colour in BOTH places (`insert-base-black` + "Black"); Zenith writes it
     // only in the category. Preferring the stated text is what makes the two
@@ -470,6 +512,7 @@ module.exports = {
   insertSetsFromCategories,
   disambiguateSiblingCategories,
   DEFAULT_TIER_SUFFIXES,
+  AUTO_SECTION_WORDS,
   UNREGISTERED_TIER_SUFFIXES,
   humanise,
   slugify,
