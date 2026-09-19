@@ -466,6 +466,14 @@ function normalizeRosterPlayer(player) {
 function rosterFoldAgainst(sec, anchor) {
   let agree = 0, disagree = 0;
   const extra = [];
+  // No roster on either side means no evidence, not a crash: a caller that
+  // built a section descriptor from numbers alone (every classifySections
+  // unit test predating this fold, and any future one) gets "nothing shared,
+  // nothing agrees" -- the same answer classifySections's own numeric-only
+  // path already gives that shape when it has no roster to consult, so a
+  // missing roster degrades to the pre-existing behaviour rather than
+  // throwing partway through the second pass.
+  if (!sec.roster || !anchor.roster) return { agree: 0, disagree: 0, extra: [], shared: 0 };
   for (const [num, players] of sec.roster) {
     const anchorPlayers = anchor.roster.get(num);
     if (!anchorPlayers) { extra.push(num); continue; }
