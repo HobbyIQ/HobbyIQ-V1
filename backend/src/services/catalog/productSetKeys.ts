@@ -1486,6 +1486,95 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   ...["panini-select-concourse", "panini-select-premier-level",
     "panini-select-field-level"].map((k) =>
     P(k, { family: "panini-select", parent: "panini-select" })),
+  // R71 (owner, 2026-09-19): THE REST OF SELECT'S TIERS, SAME RULING (R53(ii)/
+  // R67), REGISTERED FOR THE PRODUCTS THE COMMITTED CHECKLIST DATA ACTUALLY
+  // SHOWS. Tiers differ by SPORT and by YEAR -- measured against the
+  // checklistinsider/hobbymonitor packages under backend/data/checklists and
+  // backend/data/checklist-parallel-names.json, not assumed from the name:
+  //
+  //   FOOTBALL 2024 (checklistinsider, confidence 0.9, 27,324 rows; manifest
+  //   provenance: "27,324 rows across the Concourse/Club Level/Suite Level/
+  //   Premier Level/Field Level tiers"). Five tiers, each its own disjoint
+  //   100-card block, zero shared numbers:
+  //     insert-base-concourse       #1-100
+  //     insert-base-premier-level   #101-200
+  //     insert-base-club-level      #201-300
+  //     insert-base-suite-level     #301-400
+  //     insert-base-field-level     #401-500
+  //   Concourse/Premier Level/Field Level were already registered above under
+  //   #2231; this adds the two the football checklist also carries, CLUB
+  //   LEVEL and SUITE LEVEL (see the R67 comment further down in this file,
+  //   "This file's base card ladders across five tiers", which already
+  //   names all five and says explicitly they are registered "under #2231" --
+  //   that comment is ahead of the actual table; this entry is what makes it
+  //   true). FOOTBALL 2018 (sportscardchecklist, 300 rows) independently
+  //   confirms Concourse/Premier Level/Field Level at #1-100/101-200/201-300,
+  //   zero overlap -- the same three tiers #2231 registered, one product-year
+  //   earlier, before Club Level and Suite Level existed as tiers.
+  //
+  //   BASKETBALL 2024 (hobbymonitor, 25,999 rows, `insert-base-*` categories
+  //   authoritative). FOUR tiers, each its own disjoint 100-card block, zero
+  //   shared numbers -- NOT the three this ruling's own text guessed
+  //   (Concourse/Premier Level/Courtside skips Mezzanine Level, which the
+  //   data carries):
+  //     insert-base-concourse        #1-100
+  //     insert-base-premier-level    #101-200
+  //     insert-base-courtside        #201-300
+  //     insert-base-mezzanine-level  #301-400
+  //   `Courtside` ALSO appears in the `panini-select-wnba` 2024/2025 blocks of
+  //   checklist-parallel-names.json, but there it is a named INSERT set
+  //   (`insertSets[].categories: ["insert-courtside"]`, alongside unrelated
+  //   inserts like "Crunch Time" and "Downtown"), not a base-card tier -- it
+  //   does not partition WNBA's numbering the way it partitions the flagship
+  //   basketball product. Not registered for WNBA; `panini-select-wnba` is
+  //   a separate, already-registered product key and this PR does not touch
+  //   it.
+  //
+  //   SOCCER / SELECT FIFA. `panini-select-fifa` is a real, checklist-backed
+  //   product (soccer 2023: 25 colour parallels / 7,006 seen; 2024: 34 colour
+  //   parallels / 9,708 seen, both in checklist-parallel-names.json) but had
+  //   NO product-set-key registration at all before this PR. Searched for
+  //   tier names the way this ruling names them (Terrace, Mezzanine, Field
+  //   Level, ...) across every committed checklist source
+  //   (backend/data/checklists/**, checklist-parallel-names.json, and the
+  //   whole backend/src + backend/scripts tree): NONE FOUND. FIFA's committed
+  //   data is colour-parallel vocabulary only, no base-card tier structure
+  //   like football's or basketball's. Per this ruling's own instruction not
+  //   to invent a tier the data does not show, FIFA gets its bare product key
+  //   ONLY -- no tier children -- until a real FIFA tier checklist is
+  //   acquired.
+  //
+  //   `spelled: true` (via `S`, not `P`, unlike the three keys above): the
+  //   prior PR's own comment on those three explains why P() alone is not
+  //   enough -- `productSetKeyForName` resolves by SPELLED name and answers
+  //   BEFORE the regex vocabulary in normalizeSetKey, so marking these
+  //   `spelled` makes them normalizeSetKey FIXED POINTS through the EXISTING
+  //   `productSetKeyForName` call, without adding a new regex to
+  //   hobbyIqCardId.service.ts (a DERIVATION_INPUTS file). This is the same
+  //   mechanism already used for every `panini-select-*` named insert
+  //   registered elsewhere in this file (`panini-select-signatures`,
+  //   `panini-select-alter-ego`, etc.) -- proven safe at that shape already.
+  //   It does NOT retrofit the three #2231 keys, which stay P() and keep
+  //   depending on their explicit regex; changing their mechanism is out of
+  //   this PR's scope.
+  S("panini-select-club-level", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-suite-level", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-courtside", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-mezzanine-level", { family: "panini-select", parent: "panini-select" }),
+  // `S`, not `P`: a bare P() entry only survives normalizeSetKey when the
+  // input string IS its own slug already (the identity fallback at the end
+  // of the function) -- it is NOT a real fixed point against a title with
+  // other words in it. Measured: with P(), "2023-24 Panini Select FIFA
+  // Mezzanine #124 Player" fell all the way through to bare `panini-select`
+  // (Mezzanine has no FIFA-tier registration -- see the comment above, no
+  // data names one), and even a plain "2023-24 Panini Select FIFA" title
+  // (no tier word) ALSO fell through to `panini-select` rather than
+  // `panini-select-fifa`, because productSetKeyForName never got a spelled
+  // name to run-match against. `S` fixes the second case: `panini-select-
+  // fifa` is now reachable from a real title the same way `panini-select-
+  // signatures` already is. It does not, and cannot, invent a tier reading —
+  // that is the separate title-reader gap this PR's NOTE calls out.
+  S("panini-select-fifa", { family: "panini-select", parent: "panini-select" }),
   // NBA HOOPS is a Panini product spelled by its CHECKLIST (Drew 2026-09-05).
   // It stays a child of `panini` — the family link is what lets the matcher
   // widen — but the KEY is the bare one, because `nba-hoops` holds 26,355
@@ -2165,13 +2254,21 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
    *     signed insert) via a substring match -- exactly the defect this
    *     registration fixes, verified by running normalizeSetKey.
    *
-   * TIERS ARE A SEPARATE OPEN QUESTION, NOT ANSWERED HERE. This file's base
-   * card ladders across five tiers -- Concourse, Club Level, Field Level,
-   * Premier Level, Suite Level -- each already registered as its own key
-   * under #2231 (see the block above naming panini-select-concourse etc.).
-   * No Courtside Level tier appears in THIS football file. Listed for the
-   * record, per instruction; nothing about the tiers is touched, folded, or
-   * turned into a NEW key in this PR.
+   * TIERS WERE A SEPARATE OPEN QUESTION AT THE TIME OF THIS COMMENT, NOT
+   * ANSWERED HERE. This file's base card ladders across five tiers --
+   * Concourse, Club Level, Field Level, Premier Level, Suite Level. At the
+   * time this PR (R67) landed, only three were registered, under #2231 (see
+   * the block above naming panini-select-concourse etc.); Club Level and
+   * Suite Level were NOT yet registered, and a test in this file pinned that
+   * gap open for Drew's ruling. R71 (owner, 2026-09-19) closed it -- all five
+   * are now registered (see the R71 block above, immediately after the
+   * #2231 one) -- so this comment's original claim that all five were
+   * "already registered ... under #2231" is corrected here rather than left
+   * to mislead the next reader. No Courtside Level tier appears in THIS
+   * football file (Courtside is a basketball tier, registered separately by
+   * R71 too). Nothing about the tiers is touched, folded, or renumbered by
+   * the R67 keys below; they remain what they always were, four named insert
+   * roots unrelated to the tier axis.
    */
   S("panini-select-2025-xrc", { family: "panini-select", parent: "panini-select" }),
   S("panini-select-prime-selections-signatures", { family: "panini-select", parent: "panini-select" }),
