@@ -178,7 +178,7 @@ function isAbortLikeError(err: unknown): boolean {
   const name = String((err as { name?: unknown })?.name ?? "");
   if (name === "AbortError" || name === "TimeoutError") return true;
   const message = String((err as { message?: unknown })?.message ?? "");
-  return /AbortError|TimeoutError|operation was aborted/i.test(message);
+  return /\bAbortError\b|\bTimeoutError\b|operation was aborted/i.test(message);
 }
 
 /**

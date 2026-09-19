@@ -265,6 +265,31 @@ interface CorpusIndex {
    * `productWordsFromTitle` reads when there is no setKey to suppress against.
    */
   setKeyWordSets: string[][];
+  /**
+   * `finishWords`, SPLIT BY SPORT (2026-09-19, R66 PR 2). The union vocabulary
+   * a leftover word is measured against on the PRODUCT-SCOPED path counts a
+   * word as finish evidence the moment ANY two products anywhere use it --
+   * sport included. "young" clears the floor once via THREE distinct Upper
+   * Deck HOCKEY brands (Young Guns / Young Guns Renewed / Outburst Retro
+   * Young Guns); a BASKETBALL Panini Prizm title stating "Trae Young" has
+   * nothing to do with any of them, and the union can't tell the two sports
+   * apart. Keyed by sport (`"basketball"`, `"hockey"`, ...), counted with the
+   * SAME `FINISH_WORD_PRODUCT_FLOOR` but only among that sport's own
+   * products -- see `productSportsForKey` for how a title's sport is known
+   * without the caller supplying one explicitly.
+   */
+  finishWordsBySport: Map<string, Set<string>>;
+  /**
+   * `(year, setKey)` -> every sport the corpus lists that exact product
+   * under. Most products answer with one sport; a name shared verbatim
+   * across sports the same year (`donruss`, `topps-chrome`, `panini-select`,
+   * ...) answers with more than one, and the leftover guard then takes the
+   * UNION of those sports' finish words rather than guessing which one --
+   * conservative, because widening coverage is the safe direction for a
+   * REFUSAL test (a wider union only makes the guard MORE likely to refuse,
+   * never less, matching its pre-existing behaviour on an ambiguous product).
+   */
+  productSportsForKey: Map<string, Set<string>>;
 }
 
 /**
@@ -274,6 +299,59 @@ interface CorpusIndex {
  * contaminants.
  */
 const FINISH_WORD_PRODUCT_FLOOR = 2;
+
+/**
+ * CF-A-SAME-PRODUCT-ACROSS-YEARS-IS-ONE-VOTE -- CONSIDERED AND DROPPED HERE
+ * (2026-09-19). `playerSegmentIsAPerson.ts` counts its frequency floor by
+ * BASE BRAND (`sport|setKey`, year dropped) rather than raw `sport|year|
+ * setKey`, because the same product repeating an insert name across years
+ * was inflating that module's floor. The identical dedup was tried here too
+ * and MEASURED:
+ *
+ *   - It does NOT close the "young"/"Young Guns" collision this PR's own
+ *     residual is about: Upper Deck hockey's Young Guns family spans THREE
+ *     genuinely distinct base brands (`hockey|upper-deck-series-1`,
+ *     `hockey|upper-deck-series-2`, `hockey|upper-deck-extended-series`),
+ *     not one product repeating across years, so "young" still clears
+ *     `FINISH_WORD_PRODUCT_FLOOR` after dedup either way.
+ *   - It DOES change behaviour with no playerName/context at all: on the
+ *     20,840-row R32 export it moved 81 rows Base -> named with zero
+ *     measured harm (e.g. "All Purpose"/"No Huddle Prizm" on Saquon Barkley
+ *     Prizm titles, "Terrace"/"Pink Prizm" on Panini Select FIFA, "Give and
+ *     Go"/"Mosaic Green" on Mosaic) -- all because a product line's insert
+ *     name repeating across corpus YEARS (`panini-select-fifa` 2023+2024
+ *     both carrying "Terrace"-family names, e.g.) was inflating the
+ *     cross-product floor exactly the way it inflated
+ *     `playerSegmentIsAPerson.ts`'s.
+ *   - It ALSO un-parked a pinned R55 row it should not have:
+ *     "2025-26 Donruss Road to World Cup PEDRO PORRO Signature Series Auto
+ *     Dragon 97/99" (soccer|2025|panini-donruss -- no such product exists
+ *     in the corpus). The word "cup" dropped from 2 raw-key products to 1
+ *     base brand (`hockey|2022|upper-deck-the-cup` and
+ *     `hockey|2023|upper-deck-the-cup` are the SAME product, "The Cup",
+ *     naming itself across two corpus years) and fell below the floor --
+ *     correctly, on its own terms -- but as a side effect the leftover
+ *     refusal no longer fired on "cup" ("World Cup" is a tournament name,
+ *     not a finish), which let the GLOBAL no-context index answer "Dragon"
+ *     with confidence for a product-YEAR that has no checklist of its own.
+ *     "Dragon" is a real bare parallel name on OTHER Donruss-family
+ *     products (`basketball|2025/2026|donruss-wnba`,
+ *     `football|2024/2025|donruss-optic`), so it may be right for this
+ *     card too -- but there is no checklist backing it for THIS product,
+ *     and R55's whole point is that an unverified global guess must not
+ *     replace a park. Loosening a pinned park on that basis is a call for
+ *     the reader PR (R66 PR 2), which can weigh a same-product/same-sport
+ *     global match differently than a cross-sport one -- not this corpus
+ *     follow-up.
+ *
+ * DROPPED, not shipped: `FINISH_WORD_PRODUCT_FLOOR` below is still counted
+ * by raw `sport|year|setKey` product-key membership, matching main and
+ * every commit on this PR before this measurement. `tests/
+ * r32SplitScopeR55.test.ts`'s pinned park count (49) is therefore
+ * unaffected by this file. The 81-row gain and the Dragon interaction are
+ * recorded in the PR body as a follow-up for whichever PR picks the dedup
+ * back up with R55-aware handling.
+ */
 
 let _index: CorpusIndex | null = null;
 let _loadFailed = false;
@@ -523,6 +601,15 @@ function loadCorpus(): void {
       // ladder stays clean. `wordProductsFromParallelsOnly` does NOT read
       // insertSets at all -- see the header above for why the leftover guard
       // needs the narrower count.
+      //
+      // MEMBERSHIP IS COUNTED BY RAW `sport|year|setKey` KEY, NOT BASE BRAND.
+      // A base-brand (year-dropped) dedup was tried and measured here -- see
+      // the comment above `FINISH_WORD_PRODUCT_FLOOR` -- and dropped from
+      // this PR: it does not close this PR's own "young" residual, it moves
+      // 81 no-context rows Base -> named with no measured harm (a real,
+      // separate improvement), but it also un-parks a pinned R55 row on an
+      // unverified GLOBAL cross-product guess, which is a call for the
+      // reader PR, not this corpus follow-up.
       const parNames = (product.parallels ?? []).map((x) => x.name ?? "");
       const insNames = (product.insertSets ?? []).flatMap((isSet) => [
         isSet.root ?? "",
@@ -570,6 +657,7 @@ function loadCorpus(): void {
     // domain(s) where it did. `Reverse Holo` stays a Pokemon finish and stops
     // being a sports one, with no hand list and no new gate.
     const isPokemonKey = (k: string): boolean => k.startsWith("pokemon|");
+    const sportOfKey = (k: string): string => k.split("|")[0] ?? "";
     const finishWords = new Set<string>();
     const pokemonFinishWords = new Set<string>();
     for (const [w, prods] of wordProducts) {
@@ -586,6 +674,42 @@ function loadCorpus(): void {
       let sports = 0;
       for (const k of prods) if (!isPokemonKey(k)) sports++;
       if (sports >= FINISH_WORD_PRODUCT_FLOOR) leftoverGuardFinishWords.add(w);
+    }
+    // `finishWords`, PER SPORT (2026-09-19, R66 PR 2) -- see
+    // CorpusIndex.finishWordsBySport's doc. Counted from the SAME
+    // `wordProducts` union (parallels + insertSets, matching `finishWords`
+    // itself) so a word's sport-scoped membership is exactly its
+    // contribution to the global union, just partitioned by sport rather
+    // than summed across all of them. Pokemon products are excluded from
+    // every sport bucket the same way `finishWords` excludes them from its
+    // own floor -- a sports title's leftover guard has no business reading
+    // Pokemon-only vocabulary regardless of which sport it is.
+    const finishWordsBySport = new Map<string, Set<string>>();
+    for (const [w, prods] of wordProducts) {
+      if (STOPWORDS.has(w)) continue;
+      const bySport = new Map<string, number>();
+      for (const k of prods) {
+        if (isPokemonKey(k)) continue;
+        const sp = sportOfKey(k);
+        bySport.set(sp, (bySport.get(sp) ?? 0) + 1);
+      }
+      for (const [sp, count] of bySport) {
+        if (count < FINISH_WORD_PRODUCT_FLOOR) continue;
+        let bucket = finishWordsBySport.get(sp);
+        if (!bucket) { bucket = new Set<string>(); finishWordsBySport.set(sp, bucket); }
+        bucket.add(w);
+      }
+    }
+    // `(year, setKey)` -> every sport the corpus lists that product under --
+    // see CorpusIndex.productSportsForKey's doc.
+    const productSportsForKey = new Map<string, Set<string>>();
+    for (const key of Object.keys(raw.products ?? {})) {
+      const parts = key.split("|");
+      const sp = parts[0] ?? "";
+      const productKey = `${parts[1] ?? ""}|${lower(parts[2] ?? "")}`;
+      let bucket = productSportsForKey.get(productKey);
+      if (!bucket) { bucket = new Set<string>(); productSportsForKey.set(productKey, bucket); }
+      bucket.add(sp);
     }
 
     // The corpus's setKeys, as word lists. A setKey of one word is skipped:
@@ -635,7 +759,7 @@ function loadCorpus(): void {
     for (const name of globalNames) words(name);
     _index = {
       byProduct, globalNames, productsPerName, finishWords, pokemonFinishWords,
-      leftoverGuardFinishWords, setKeyWordSets,
+      leftoverGuardFinishWords, setKeyWordSets, finishWordsBySport, productSportsForKey,
     };
   } catch {
     // The corpus is a build artifact copied into dist/. If it is absent this
@@ -645,7 +769,7 @@ function loadCorpus(): void {
     _index = {
       byProduct: new Map(), globalNames: new Set(), productsPerName: new Map(),
       finishWords: new Set(), pokemonFinishWords: new Set(), leftoverGuardFinishWords: new Set(),
-      setKeyWordSets: [],
+      setKeyWordSets: [], finishWordsBySport: new Map(), productSportsForKey: new Map(),
     };
   }
 }
@@ -983,6 +1107,78 @@ export interface StatedFinishContext {
    * which is #1937's five-spellings-one-card-line defect reintroduced.
    */
   pokemonSetKeyForResidue?: string | null;
+  /**
+   * CF-A-PLAYER-NAME-IS-NEVER-AN-UNSTATED-FINISH (2026-09-19, R66 PR 2
+   * follow-up). The player the CALLER already knows -- a parsed title
+   * player, a catalog `playerName`, whatever the call site resolved before
+   * ever reaching here. OPTIONAL, and read ONLY by the leftover-word
+   * refusal below: a token that lies inside this name is a person, not
+   * unexplained finish evidence, no matter how many unrelated products'
+   * insert sets happen to share the word.
+   *
+   * THE HAZARD IT CLOSES. "2024-25 Panini Prizm - Trae Young #84 Blue
+   * Sparkle Prizm /144" states "Blue Sparkle Prizm" in full, but Upper
+   * Deck's own "Young Guns" insert (an UNRELATED product) put "young" over
+   * the cross-product floor -- so the leftover guard saw an unexplained
+   * "young", refused the whole call, and the caller fell through to a
+   * later colour-only fallback that answered the strictly less specific
+   * "Blue". Same shape for "Chase Young" / Prizm's "Red Ice". Measured on
+   * the 20,840-row R32 export: 36 withCtx HARM rows / 22 distinct titles,
+   * 11 of them exactly this player-surname collision.
+   *
+   * WHY THIS IS SAFER THAN JUST EXCUSING "young" EVERYWHERE. A hand-listed
+   * exception is the shape that keeps failing here (the foil colour list,
+   * the closed ~90-word vocabulary) -- and "Young" the surname must not
+   * blanket-excuse "Young" the insert set where a title genuinely states
+   * it ("... Upper Deck ... Young Guns ..." with no player named Young
+   * anywhere in it). Scoping the exemption to the token RANGE this title's
+   * OWN player occupies means the guard still fires for every other
+   * title, including ones about a different Young-named insert.
+   *
+   * NEVER RESCUES A CANDIDATE, ONLY EXCUSES A LEFTOVER. This cannot change
+   * WHICH name wins -- `best` is chosen before this context is consulted --
+   * it only stops a player token from vetoing an answer that was already
+   * the longest checklist-stated candidate.
+   *
+   * WHEN ABSENT, BEHAVIOUR IS BYTE-IDENTICAL TO BEFORE THIS FIELD EXISTED.
+   * No production call site threads a player name in today -- the
+   * leftover guard runs exactly as it did before this field was added.
+   * Callers that resolve a player earlier in their own pipeline (or the
+   * R32-measurement harness, via `parseCardQuery`/`playerSegmentIsAPerson`)
+   * may pass it; nothing here requires them to.
+   */
+  playerName?: string | null;
+}
+
+/**
+ * A trailing rookie marker is punctuation on a name, not part of it -- the
+ * same rule `cleanPlayerName` (cardCatalog.service.ts) applies. Duplicated
+ * here rather than imported for the same reason `STOPWORDS`/`COLOUR_WORDS`
+ * are mirrors rather than imports elsewhere in this file: this module is
+ * deliberately dependency-light (no Cosmos, no catalog service), and
+ * `cardCatalog.service.ts` pulls in `@azure/cosmos` at module scope, which
+ * has no business loading for a pure title-parsing helper.
+ */
+const TRAILING_ROOKIE_MARKER_RE = /\s+(?:RC\*?|\(RC\))$/i;
+
+function stripTrailingRookieMarker(name: string): string {
+  let out = String(name ?? "").trim();
+  while (TRAILING_ROOKIE_MARKER_RE.test(out)) {
+    out = out.replace(TRAILING_ROOKIE_MARKER_RE, "").trim();
+  }
+  return out;
+}
+
+/**
+ * The whole, lowercased word tokens of the caller-supplied player name,
+ * after the same rookie-marker strip `cleanPlayerName` applies -- the
+ * leftover guard's player-span exemption reads this set, never the raw
+ * string, so "Young" matches whether the title spells it "Trae Young",
+ * "TRAE YOUNG RC", or "Trae Young (RC)".
+ */
+function playerNameWordSet(playerName: string | null | undefined): Set<string> {
+  const cleaned = stripTrailingRookieMarker(String(playerName ?? ""));
+  return new Set(words(cleaned));
 }
 
 /**
@@ -1033,6 +1229,11 @@ export function statedFinishFromChecklist(
   // parseTitleIdentity.test.ts's "an explicit Base in the title is never
   // overridden", which caught this.
   if (/\bbase\b/i.test(t)) return null;
+
+  // CF-A-PLAYER-NAME-IS-NEVER-AN-UNSTATED-FINISH: see StatedFinishContext's
+  // own docstring. Computed once, up front, from whatever the caller passed
+  // (nothing, when no caller supplies it -- see below).
+  const playerWords = playerNameWordSet(ctx.playerName);
 
   const own = productWords(ctx.setKey);
   // CF-A-SET-NAME-IS-NEVER-A-PARALLEL, THE TITLE HALF. Reached either because
@@ -1216,15 +1417,112 @@ export function statedFinishFromChecklist(
   // fall back on -- see loadCorpus's own measurement. `leftoverGuardFinishWords`
   // (parallels[]-only) is the no-context vocabulary for exactly this reason.
   //
-  // RESIDUAL, NOT CLOSED: a player surname that collides with an unrelated
-  // product's real insert-set name (Trae/Chase Young vs Upper Deck's "Young
-  // Guns") still costs a handful of PRODUCT-SCOPED titles -- 3 distinct
-  // titles / 8 rows on the export, all Young. Narrower than the no-context
-  // gap this PR closes, and the per-product-only floor tried above made the
-  // R55 case worse than this residual, so it is left open and flagged
-  // rather than "fixed" at a net cost. See the PR's own handback.
-  const isLeftoverFinishWord = (w: string): boolean =>
-    (productScoped ? index.finishWords : index.leftoverGuardFinishWords).has(w);
+  // THE UNION IS SCOPED TO THIS PRODUCT'S OWN SPORT(S) (2026-09-19, R66 PR 2).
+  //
+  // `index.finishWords` alone counts a word as evidence the moment it clears
+  // the floor ANYWHERE, sport included -- and a word can clear it entirely
+  // within ONE sport's own products. "young" clears `FINISH_WORD_PRODUCT_
+  // FLOOR` via THREE distinct Upper Deck HOCKEY brands (Young Guns / Young
+  // Guns Renewed / Outburst Retro Young Guns) and nothing else; a BASKETBALL
+  // Panini Prizm title stating "Trae Young" has no relationship to any of
+  // them, and the plain union can't tell the sports apart -- it refused
+  // "Blue Sparkle Prizm" for "young" being an unexplained leftover, when
+  // "young" is not vocabulary basketball's OWN checklists ever produced.
+  //
+  // `index.productSportsForKey` says which sport(s) the corpus lists THIS
+  // (year, setKey) product under -- usually one, sometimes several for a
+  // name shared verbatim the same year (`donruss`, `topps-chrome`,
+  // `panini-select`, ...). The UNION of those sports' own finish-word sets
+  // is used rather than picking one, because a wider vocabulary only makes
+  // this REFUSAL fire MORE, never less -- the safe direction when the exact
+  // sport is ambiguous, and no narrower than what an unambiguous product
+  // already got before this change.
+  //
+  // FALLS BACK TO THE PLAIN UNION when the product's sport(s) are unknown to
+  // this index (a (year, setKey) with no entry in `productSportsForKey`
+  // cannot happen for a `productScoped` call, since that requires
+  // `byProduct` to have matched the same key -- but the guard costs nothing
+  // and keeps this from ever narrowing to an empty set by construction).
+  const sportScopedFinishWords = ((): ReadonlySet<string> | null => {
+    if (!productScoped) return null;
+    const sports = index.productSportsForKey.get(`${year}|${setKey}`);
+    if (!sports || !sports.size) return null;
+    if (sports.size === 1) {
+      const only = index.finishWordsBySport.get([...sports][0]);
+      return only ?? new Set<string>();
+    }
+    const union = new Set<string>();
+    for (const sp of sports) {
+      const bucket = index.finishWordsBySport.get(sp);
+      if (bucket) for (const w of bucket) union.add(w);
+    }
+    return union;
+  })();
+  // MEASURED (2026-09-19, R66 PR 2, through the real production entry point
+  // `parseListingIdentity`, withCtx = `{vertical, hobbyiqCardId}` from each
+  // row's own `toCardId`): the Young/Young-Guns HARM bucket this PR's own
+  // handback documented (36 withCtx HARM rows / 22 distinct titles) is
+  // FULLY CLOSED by this same-sport scoping alone -- Young Guns is a
+  // HOCKEY-only insert family, every affected title is basketball, and
+  // "young" no longer clears the basketball-only floor. `playerName` above
+  // is not required for this bucket; it remains for a collision WITHIN one
+  // sport, which same-sport scoping cannot resolve by construction (the
+  // union it falls back to for a shared sport still contains the colliding
+  // word) -- no live example of that shape was found in this export, so it
+  // is documented as a theoretical gap the plumbing above closes IF one
+  // ever surfaces, not a currently measured harm.
+  //
+  // A DIFFERENT, NEWLY-MEASURED RESIDUAL: 4 withCtx rows / 2 distinct titles
+  // move from one real checklist name to a SHORTER real checklist name
+  // (never to Base -- HARM stays 0):
+  //
+  //   "2024 Panini Obsidian - Jonathon Brooks #23 Atomic Initials Purple
+  //    /50 (RC)" (baseball; `panini-obsidian` has no baseball corpus entry,
+  //    so this is the GLOBAL no-context candidate list merged from
+  //    basketball+football's `panini-obsidian` under `byProduct`'s
+  //    year|setKey key, sport-agnostic by design -- see byProduct's own
+  //    comment): "Purple FOTL" -> "Purple". THE MECHANISM: "Initials" is
+  //    basketball+football `panini-obsidian`'s OWN insert-line word,
+  //    attested once in EACH of those two sports and nowhere else --
+  //    exactly the "one product repeating itself, not real cross-product
+  //    vocabulary" shape CF-A-SAME-PRODUCT-ACROSS-YEARS-IS-ONE-VOTE names,
+  //    just repeating across SPORTS here instead of years. Scoped per sport,
+  //    "initials" (1 basketball product, 1 football product) no longer
+  //    clears `FINISH_WORD_PRODUCT_FLOOR` in EITHER sport alone, so it stops
+  //    refusing the candidate -- and `statedFinishFromChecklist` answers its
+  //    own bare "Purple" one step before the MORE careful, dedicated
+  //    `bareColourAliasFromChecklist.ts` (a separate reader, run later in
+  //    `parseTitleIdentity.service.ts`'s cascade, which correctly finds
+  //    "Purple FOTL" as the product's unique shortest Purple-built name) is
+  //    ever reached -- confirmed by calling `bareColourAliasFromChecklist`
+  //    directly with the same (year, setKey): it still returns "Purple
+  //    FOTL" today, unaffected by this file's change.
+  //   "2021 Panini Prizm Brandon Lowe Tier II Bronze Donut Circles /40 #192
+  //    Rays" (baseball; `2021|panini-prizm` maps to baseball ONLY, no
+  //    cross-sport merge): "Bronze Donut Circles Prizm" -> "Bronze Donut
+  //    Circles". THE MECHANISM: "Tier" is baseball `panini-prizm`'s OWN
+  //    insert-ladder word ("Tier II"), attested once in baseball 2024's
+  //    `panini-prizm` (a DIFFERENT year of the SAME setKey) and not
+  //    otherwise in baseball -- again a private, recurring-within-one-
+  //    product term rather than real vocabulary, and scoping to baseball
+  //    alone drops it below the floor the plain union let it clear via an
+  //    unrelated basketball WNBA product.
+  //
+  // NOT WIDENED FURTHER: both rows are a real, checklist-backed answer
+  // trading places with a DIFFERENT real, checklist-backed answer for the
+  // SAME card (never Base), and the shorter name comes from THIS module
+  // pre-empting a separate, more careful reader rather than from a wrong
+  // guess. Fixing it would mean either reordering readers in
+  // `parseTitleIdentity.service.ts` (a declared derivation-stamp input,
+  // out of this module's diff) or widening the sport-scoped floor back
+  // toward the plain union (which reopens the Young/Young-Guns bucket this
+  // change was written to close). Left as a reported residual rather than
+  // forced.
+  const isLeftoverFinishWord = (w: string): boolean => {
+    if (!productScoped) return index.leftoverGuardFinishWords.has(w);
+    if (sportScopedFinishWords) return sportScopedFinishWords.has(w);
+    return index.finishWords.has(w);
+  };
   // Is the answer an EXACT, whole, listed parallel name of THIS product, every
   // word of it witnessed in the title? That is the checklist itself saying the
   // rung exists and is spelled exactly so -- the only evidence strong enough to
@@ -1259,6 +1557,16 @@ export function statedFinishFromChecklist(
   const answered = new Set(words(best));
   for (const w of titleWordSet) {
     if (answered.has(w)) continue;
+    // CF-A-PLAYER-NAME-IS-NEVER-AN-UNSTATED-FINISH (2026-09-19). A leftover
+    // word inside the title's OWN recognised player-name span is a person,
+    // not evidence the seller stated a second, unnamed finish -- "young" in
+    // "Trae Young" is not proof of an unstated Upper Deck "Young Guns"
+    // insert. Checked first and unconditionally: unlike every guard below,
+    // this one does not depend on `own`/`elidable`/the finish vocabulary at
+    // all, because a name match is not a finish question in the first
+    // place. See StatedFinishContext.playerName for the full ruling; a
+    // no-op when the caller passed no player (the default everywhere today).
+    if (playerWords.has(w)) continue;
     if (!isLeftoverFinishWord(w)) continue;
     if (own.has(w)) continue;            // names the SET on this product
     // A STOCK WORD THE ANSWER DROPPED IS NOT A DROPPED FINISH (2026-09-13).
@@ -1583,7 +1891,7 @@ export function titleStatesAnUnconfirmedFinish(
   const index = _index;
   if (!index) return false;
   // The seller said Base. That is an answer, and it is theirs to give.
-  if (/base/i.test(t)) return false;
+  if (/\bbase\b/i.test(t)) return false;
   // A LOT STATES NO ONE CARD'S FINISH -- the same refusal every reader here
   // carries. The caller's isMultiCardLot already refuses these upstream; this
   // is the belt to that braces.

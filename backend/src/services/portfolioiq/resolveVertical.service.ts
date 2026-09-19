@@ -62,7 +62,7 @@ function provenSport(title: string): string | null {
   // FALLBACK. So the two-probe trick below can never confirm baseball, and a
   // title literally reading "1969 Topps Baseball" came back reason="defaulted".
   // That understates confidence badly, since baseball is the largest vertical.
-  if (/(baseball|mlb)/i.test(title)) return "baseball";
+  if (/\b(baseball|mlb)\b/i.test(title)) return "baseball";
   // Ask twice with different fallbacks. A real keyword match returns the same
   // sport both times; a fallback returns whatever we passed in. This avoids
   // duplicating the keyword table and drifting from it.

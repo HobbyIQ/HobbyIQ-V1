@@ -188,7 +188,47 @@ describe("R55 measured over the run's own 140 IMPROVE evidence rows", () => {
     return { sport: p[0], cardYear: Number(p[1]), setKey: p[2], cardNumber: p[3], parallel: p[4] };
   };
 
-  it("parks 49 of the 86 Base-destination rows, and keeps 37", () => {
+  // PIN UPDATED 2026-09-19 (R66 PR 2 follow-up, byte-corruption repair).
+  //
+  // `statedFinishFromChecklist.ts` carried TWO `/\bbase\b/i` regexes (this
+  // module's own "the seller said Base" refusal, and the reader's matching
+  // guard) written through a shell heredoc at some earlier point in this
+  // repo's history, which silently turned `\b` (word boundary) into a raw
+  // 0x08 backspace BYTE -- a regex requiring a literal backspace character
+  // around the word, which real listing titles never contain. Confirmed
+  // present on `main` and at every commit back to 0b1114a4, so this predates
+  // R66 entirely; `git grep -nP '\x08' -- backend/src backend/scripts`
+  // found it (and 5 other unrelated instances, fixed alongside it -- see
+  // this PR's own handback for the full list, none in a declared
+  // derivation-stamp-input file).
+  //
+  // THE EFFECT ON THIS PIN, MEASURED ROW BY ROW. Fixing the byte made "the
+  // seller said Base" (this file's own `titleStatesAnUnconfirmedFinish`,
+  // `if (/\bbase\b/i.test(t)) return false;`) match for the first time ever,
+  // and 3 of the 49 previously-parked rows literally state the word "Base"
+  // in their title:
+  //
+  //   "Lionel Messi 2025-26 Panini Donruss Road to FIFA World Cup Orange
+  //    Base /99 #154" -- the seller wrote "Base" outright; "Orange" here is
+  //    not this module's business to override once the seller has spoken,
+  //    per this file's own doctrine ("CF-NO-REFRACTOR-IS-A-BASE forbids
+  //    overriding them"). Un-parking it is the doctrine working correctly
+  //    for the first time, not a new gap.
+  //   "2025 Topps Chrome MLS - Base & Rookie Cards #1-200 - Pick Your
+  //    Card!" and "2024 Topps Chrome Football Base #1-200 (You Pick) -
+  //    Legends & Current Players" -- both ALSO say "Base" AND are lot
+  //    listings (#1-200, "Pick Your Card"/"You Pick") -- exactly the
+  //    already-documented "KNOWN GAP" category below, which is why the
+  //    second test's lot-shaped count grows from 4 to 6 rather than
+  //    shrinking: these two didn't stop being lot-shaped, they simply
+  //    moved from the (wrongly) parked bucket into the gap this file
+  //    already names.
+  //
+  // No row moved the OTHER direction (a real finish silently un-parked);
+  // verified by diffing the full 86-row park/no-park list before and after
+  // the byte fix and finding exactly these 3 flips, all onto an explicit
+  // seller "Base" statement.
+  it("parks 46 of the 86 Base-destination rows, and keeps 40", () => {
     let destBase = 0, parked = 0;
     for (const r of fixture.rows) {
       const dest = toSide(r.derived);
@@ -198,17 +238,24 @@ describe("R55 measured over the run's own 140 IMPROVE evidence rows", () => {
     }
     expect(fixture.rows.length).toBe(140);
     expect(destBase).toBe(86);
-    expect(parked).toBe(49);
-    expect(destBase - parked).toBe(37);
+    expect(parked).toBe(46);
+    expect(destBase - parked).toBe(40);
   });
 
-  it("KNOWN GAP: 4 lot listings still move, and R55 is not the rule for them", () => {
+  it("KNOWN GAP: 6 lot listings still move, and R55 is not the rule for them", () => {
     // Recorded rather than fixed. A lot states no single card's identity, so
     // these are wrong for a different reason than "the title names more than
     // the destination" -- the same `isMultiCardLot` refusal the parallel
     // readers carry, which this scope does not yet apply. Widening R55 to
     // cover them would be ruling on something Drew did not rule on; this test
     // is the record so the gap is visible rather than assumed closed.
+    //
+    // GREW FROM 4 TO 6 (2026-09-19, byte-corruption repair, see above): the
+    // 2 additional rows ("Topps Chrome MLS ... Pick Your Card!", "Topps
+    // Chrome Football ... (You Pick)") were ALREADY lot-shaped before this
+    // fix -- they were simply miscounted as "parked" because the seller's
+    // own "Base" statement in a lot title used to be invisible to the dead
+    // regex. They belong in this bucket, not the parked one.
     const lotShaped: string[] = [];
     for (const r of fixture.rows) {
       const dest = toSide(r.derived);
@@ -216,6 +263,6 @@ describe("R55 measured over the run's own 140 IMPROVE evidence rows", () => {
       if (titleStatesUnaccountedFinish(r.title, dest) === true) continue;
       if (/\blot\b|\bpick your card\b|#\d+-\d+|\bcomplete\b/i.test(r.title)) lotShaped.push(r.title);
     }
-    expect(lotShaped).toHaveLength(4);
+    expect(lotShaped).toHaveLength(6);
   });
 });
