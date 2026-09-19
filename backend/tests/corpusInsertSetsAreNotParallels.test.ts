@@ -60,24 +60,29 @@ maybe("the builder separates insert sets from parallels", () => {
   const optic = () => corpus!.products!["football|2024|donruss-optic"];
   const mosaic = () => corpus!.products!["basketball|2024|panini-mosaic"];
 
-  it("football|2024|donruss-optic: 178 rungs -> 48 parallels + 130 insert names", () => {
+  // R66 PR 1 (2026-09-19) added a CATEGORY-driven pass alongside this
+  // name-based split: `insertSetsFromCategories` for a bare category whose
+  // rows carry no parallel text at all, `bareSelfNamedInsertRoots` for one
+  // whose rows carry only a fold of the set's own name ("Illusionist" on
+  // `insert-illusionists`). Both read rows this test's name-based split never
+  // sees, so the totals below are LARGER than before that pass existed --
+  // see corpusCategoryBareInsertRoots.test.ts for what specifically grew and
+  // why growth, not shrinkage, is the correct direction here.
+  it("football|2024|donruss-optic: 47 parallels + 49 insert sets (201 names)", () => {
     const p = optic();
     expect(p).toBeTruthy();
     const moved = (p.insertSets ?? []).reduce((a, s) => a + s.children.length, 0);
-    expect(p.parallels!.length).toBe(48);
-    expect(p.insertSets!.length).toBe(26);
-    expect(moved).toBe(130);
-    // The BEFORE figure, reconstructed: what a single flat list would hold.
-    expect(p.parallels!.length + moved).toBe(178);
+    expect(p.parallels!.length).toBe(47);
+    expect(p.insertSets!.length).toBe(49);
+    expect(moved).toBe(201);
   });
 
-  it("basketball|2024|panini-mosaic: 420 rungs -> 181 parallels + 239 insert names", () => {
+  it("basketball|2024|panini-mosaic: 178 parallels + 68 insert sets (284 names)", () => {
     const p = mosaic();
     const moved = (p.insertSets ?? []).reduce((a, s) => a + s.children.length, 0);
-    expect(p.parallels!.length).toBe(181);
-    expect(p.insertSets!.length).toBe(34);
-    expect(moved).toBe(239);
-    expect(p.parallels!.length + moved).toBe(420);
+    expect(p.parallels!.length).toBe(178);
+    expect(p.insertSets!.length).toBe(68);
+    expect(moved).toBe(284);
   });
 
   it("the three R31 offenders leave parallels[] and land in insertSets[]", () => {
