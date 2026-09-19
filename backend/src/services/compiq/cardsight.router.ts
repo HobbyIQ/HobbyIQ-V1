@@ -76,6 +76,23 @@ export interface CardIdentityHint {
   parallelId?: string;
   number?: string;
   isAuto?: boolean;
+  /**
+   * CF-A-COMP-EMIT-KNOWS-THE-CARD-IT-ASKED-ABOUT (Fable, 2026-09-19). The sport
+   * of the card this request is pricing, when the caller resolved one.
+   *
+   * It was absent from this type, so the comp emit below could not pass it even
+   * though every caller knows it — and 114,035 `cardhedge` rows were written
+   * with `sport: null`, none of which can be minted a slug (`sport` is the
+   * first segment of `hiq:<sport>:…`).
+   *
+   * OPTIONAL, and never defaulted. A caller that genuinely does not know the
+   * sport passes nothing and the row arrives null, exactly as today; the
+   * persist boundary then decides whether a checklist-backed key can supply it.
+   * Guessing here would mint into another sport's pool — the L5 no-sport-
+   * predicate failure, where 219k card numbers were answered by the wrong
+   * sport's checklist.
+   */
+  sport?: string | null;
 }
 
 const log = {
@@ -907,6 +924,31 @@ async function tryCardHedge(
           price: c.price,
           soldAt: c.date,
           source: "cardhedge",
+          // CF-A-COMP-EMIT-KNOWS-THE-CARD-IT-ASKED-ABOUT (Fable, 2026-09-19).
+          // This payload carried playerName, cardYear, setName, parallel,
+          // cardNumber and isAuto — everything but SPORT, which is the FIRST
+          // segment of `hiq:<sport>:<year>:<setKey>:…`. So every row this path
+          // wrote landed with `sport: null` and could not be minted a slug, and
+          // the pool gained a row nothing could address.
+          //
+          // Measured 2026-09-19: 114,035 null-sport `cardhedge` rows predate
+          // 09-18 and 259 arrived that day, which is why the cleanliness canary
+          // crossed its 5% MISSING-hobbyiqCardId limit (0 → 2.86 → 4.58 →
+          // 6.50). The defect is long-standing; only the measurement is new.
+          //
+          // The sport is not guessed here. It is the one this request already
+          // resolved for the card it asked CardHedge about — the same identity
+          // that produced `bridge.chCardId` — so passing it states what the
+          // caller knew rather than inferring anything from text. Null when the
+          // caller genuinely had none, and the persist boundary then decides
+          // (see the checklist-backed adoption there); it is never defaulted.
+          sport: identity.sport ?? null,
+          // CF-A-ROW-SHOULD-NAME-ITS-WRITER (Fable, 2026-09-19). 320 rows could
+          // not say which code path emitted them, and pinning it took a grep
+          // across every `::`-joined id template in the repo. A call-site
+          // constant costs nothing and makes the next occurrence a single
+          // query: `SELECT … WHERE c.writerTag = '…'`.
+          writerTag: "cardsight.router.trustedComps",
           sourceExternalId: externalId,
           contributorUserId: null,
           title: c.title ?? null,
