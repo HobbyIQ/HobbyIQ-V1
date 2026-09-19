@@ -229,18 +229,37 @@ interface CorpusIndex {
   /** How many distinct products list this exact (lowercased) name. */
   productsPerName: Map<string, number>;
   /**
-   * THE WORDS PARALLEL NAMES ARE BUILT FROM -- the leftover test's vocabulary.
+   * THE WORDS PARALLEL NAMES ARE BUILT FROM -- `titleStatesAnUnconfirmedFinish`'s
+   * vocabulary ONLY as of 2026-09-19 (see loadCorpus's header for why the
+   * leftover test inside `statedFinishFromChecklist` now reads
+   * `leftoverGuardFinishWords` instead, a narrower set).
    *
    * Harvested from the corpus rather than listed, and gated by the same
    * frequency floor `playerSegmentIsAPerson.ts` uses for the same hazard: the
    * corpus contains player-named inserts (`Ken Griffey Jr. "The Kid"`), so a
    * naive harvest would put `griffey` into the vocabulary and then refuse every
    * Griffey title as "stating a finish we did not answer". Every real finish
-   * word recurs across products; a person's name appears once.
+   * word recurs across products; a person's name appears once. Reads the
+   * UNION of parallels + insertSets -- see loadCorpus for why this consumer
+   * wants that and the leftover guard does not.
    */
   finishWords: Set<string>;
   /** The same floor, counted among POKEMON products only -- see loadCorpus. */
   pokemonFinishWords: Set<string>;
+  /**
+   * THE LEFTOVER GUARD'S OWN VOCABULARY (2026-09-19). Read ONLY by the
+   * "did my answer drop a finish word the title states" refusal inside
+   * `statedFinishFromChecklist` -- counted from `parallels[]` ALONE, never
+   * insertSets, because a REFUSAL is the wrong direction to be generous in:
+   * an insert set's own name (Topps Heritage's "2023 Heritage Classic
+   * Fabrics", Zenith's "Zoom Blue", Upper Deck's "Young Guns") is not a
+   * finish word, and treating it as one made the reader refuse Topps
+   * Heritage's "Deckle Edge", Zenith's "Spokes", and (independently) a
+   * PLAYER SURNAME ("Chase Young"/"Trae Young") that happens to share a word
+   * with an unrelated product's real insert set. See loadCorpus's full
+   * measurement.
+   */
+  leftoverGuardFinishWords: Set<string>;
   /**
    * Every setKey in the corpus, as its word list -- the evidence
    * `productWordsFromTitle` reads when there is no setKey to suppress against.
@@ -437,21 +456,58 @@ function loadCorpus(): void {
     const raw = JSON.parse(text) as ParallelCorpus;
     // Pass 1: how many distinct PRODUCTS is each word seen in? The floor below
     // is what separates finish vocabulary from a player-named insert.
+    //
+    // TWO COUNTS, NOT ONE (2026-09-19, R66 PR 1 follow-up).
+    //
+    // `wordProducts` (union: parallels + insertSets) feeds `finishWords`,
+    // read by `titleStatesAnUnconfirmedFinish` ONLY -- a POSITIVE, permissive
+    // question ("did the seller state SOME finish evidence") whose own
+    // docstring says a false positive there is cheap: it just withholds a row
+    // that could have been derived. R55 needed the union for exactly this --
+    // see below.
+    //
+    // `wordProductsFromParallelsOnly` feeds `leftoverGuardFinishWords`, read
+    // ONLY by the leftover-word REFUSAL inside `statedFinishFromChecklist`
+    // itself (a NEGATIVE question: "did my chosen answer drop a finish word
+    // the title states", and answering yes there means the whole call
+    // returns null and the caller keeps "Base"). That refusal must not fire
+    // on a word whose only evidence is an INSERT SET'S OWN NAME -- an insert
+    // set name is not a finish, the same ruling R66/PR1 applies at the
+    // corpus-builder layer, applied here at this reader's OTHER consumer of
+    // the same corpus.
+    //
+    // MEASURED (R66 PR 1, 2026-09-19): wiring bare insert roots into
+    // insertSets[] gave `hockey|2024|sp-game-used` a genuinely real,
+    // previously-invisible insert set, "2023 Heritage Classic Fabrics" --
+    // and the union counted "heritage" into >=2 products, so with no setKey
+    // context "heritage" stopped being excused as Topps Heritage's OWN
+    // product word and 33 titles in a 20,840-row export lost their real
+    // parallel to this exact leftover-refusal, "Deckle Edge"/"Dark Gray
+    // Bordered" -> "Base" among them. A second case, `panini-zenith`'s new
+    // "Zoom Blue/Gold/Red" insert roots, promoted "zoom" the same way and
+    // broke "Spokes"/"Red Lightning" on Zenith Zoom titles. A third,
+    // upper-deck hockey's "Young Guns" insert (also newly visible), promoted
+    // "young" and broke "Chase Young"/"Trae Young" Prizm titles -- a PLAYER
+    // NAME colliding with an unrelated product's real insert name, which no
+    // product-key list could have caught (see the "Griffey" hazard already
+    // documented on `finishWords` above: recurrence across products was
+    // supposed to be evidence the word ISN'T a person's name, and it fails
+    // here because Young Guns and "Young" the surname are both real and both
+    // recur).
+    //
+    // Counting the LEFTOVER guard's floor from parallels[] alone removes all
+    // three -- an insert set's root/children are its own name, never a base
+    // rung, so they were never evidence for "this is a distinguishing finish
+    // WORD a specific answer must carry" in the first place. Verified this
+    // does not cost the words the leftover guard has to keep working:
+    // chrome/refractor/prizm/sapphire/gold/silver/wave/holo all clear the
+    // PARALLELS-only floor too (every one of them is also a literal base
+    // parallel name on >=2 products), so the guard's real job -- catching
+    // "Aqua Crackle Foil" answered as "Aqua Foil" when the title also says
+    // "Crackle" -- is unaffected.
     const wordProducts = new Map<string, Set<string>>();
+    const wordProductsFromParallelsOnly = new Map<string, Set<string>>();
     for (const [key, product] of Object.entries(raw.products ?? {})) {
-      // THE FINISH-WORD VOCABULARY TAKES THE UNION (Drew, 2026-09-18).
-      //
-      // Two questions, two sources -- see rematch-finish-vocab's header:
-      //
-      //   is this word a FINISH WORD?      global, parallels + insertSets
-      //   is this a RUNG of this product?  per product, parallels ONLY
-      //
-      // `wordProducts` feeds `finishWords`, which is the FIRST question:
-      // `titleStatesAnUnconfirmedFinish` asks only whether the seller stated
-      // finish evidence at all, never which rung it is. The per-product
-      // ladder below (`byProduct` / `globalNames`) is the second question and
-      // deliberately still reads `parallels[]` alone.
-      //
       // MEASURED when the insert split started moving names: R55 stopped
       // parking 4 of its 49 rows, because the only finish evidence in their
       // titles was a word that had moved into an insert name --
@@ -462,16 +518,28 @@ function loadCorpus(): void {
       //   "2025 TOPPS MARVEL X-MEN FINEST '97 RISE ... JUBILEE #63"
       //
       // Every one of those titles DOES state finish evidence; the corpus
-      // simply files the name under insertSets now. Reading both keeps the
-      // evidence test honest while the ladder stays clean.
-      const namesForVocabulary = [
-        ...(product.parallels ?? []).map((x) => x.name ?? ""),
-        ...(product.insertSets ?? []).flatMap((isSet) => [
-          isSet.root ?? "",
-          ...((isSet.children ?? []) as string[]),
-        ]),
-      ];
-      for (const nm of namesForVocabulary) {
+      // simply files the name under insertSets now. Reading both keeps that
+      // evidence test (finishWords, via `wordProducts`) honest while the
+      // ladder stays clean. `wordProductsFromParallelsOnly` does NOT read
+      // insertSets at all -- see the header above for why the leftover guard
+      // needs the narrower count.
+      const parNames = (product.parallels ?? []).map((x) => x.name ?? "");
+      const insNames = (product.insertSets ?? []).flatMap((isSet) => [
+        isSet.root ?? "",
+        ...((isSet.children ?? []) as string[]),
+      ]);
+      for (const nm of parNames) {
+        for (const w of new Set(normaliseName(nm ?? "").split(" ").filter(Boolean))) {
+          if (w.length < 3 || /^\d+$/.test(w)) continue;
+          let s = wordProducts.get(w);
+          if (!s) { s = new Set<string>(); wordProducts.set(w, s); }
+          s.add(key);
+          let po = wordProductsFromParallelsOnly.get(w);
+          if (!po) { po = new Set<string>(); wordProductsFromParallelsOnly.set(w, po); }
+          po.add(key);
+        }
+      }
+      for (const nm of insNames) {
         for (const w of new Set(normaliseName(nm ?? "").split(" ").filter(Boolean))) {
           if (w.length < 3 || /^\d+$/.test(w)) continue;
           let s = wordProducts.get(w);
@@ -510,6 +578,14 @@ function loadCorpus(): void {
       for (const k of prods) (isPokemonKey(k) ? pokemon++ : sports++);
       if (sports >= FINISH_WORD_PRODUCT_FLOOR) finishWords.add(w);
       if (pokemon >= FINISH_WORD_PRODUCT_FLOOR) pokemonFinishWords.add(w);
+    }
+    // THE LEFTOVER GUARD'S OWN, NARROWER VOCABULARY -- see the header above.
+    const leftoverGuardFinishWords = new Set<string>();
+    for (const [w, prods] of wordProductsFromParallelsOnly) {
+      if (STOPWORDS.has(w)) continue;
+      let sports = 0;
+      for (const k of prods) if (!isPokemonKey(k)) sports++;
+      if (sports >= FINISH_WORD_PRODUCT_FLOOR) leftoverGuardFinishWords.add(w);
     }
 
     // The corpus's setKeys, as word lists. A setKey of one word is skipped:
@@ -557,13 +633,20 @@ function loadCorpus(): void {
     // `globalNames` is the de-duplicated set of every usable name across all
     // 627 products, so this loop is the whole index and costs one pass.
     for (const name of globalNames) words(name);
-    _index = { byProduct, globalNames, productsPerName, finishWords, pokemonFinishWords, setKeyWordSets };
+    _index = {
+      byProduct, globalNames, productsPerName, finishWords, pokemonFinishWords,
+      leftoverGuardFinishWords, setKeyWordSets,
+    };
   } catch {
     // The corpus is a build artifact copied into dist/. If it is absent this
     // module answers null for everything and the caller keeps "Base" -- the
     // pre-existing behaviour. Degrade, never throw.
     _loadFailed = true;
-    _index = { byProduct: new Map(), globalNames: new Set(), productsPerName: new Map(), finishWords: new Set(), pokemonFinishWords: new Set(), setKeyWordSets: [] };
+    _index = {
+      byProduct: new Map(), globalNames: new Set(), productsPerName: new Map(),
+      finishWords: new Set(), pokemonFinishWords: new Set(), leftoverGuardFinishWords: new Set(),
+      setKeyWordSets: [],
+    };
   }
 }
 
@@ -1104,9 +1187,44 @@ export function statedFinishFromChecklist(
   // "Base" -- absent beats wrong, and the row stays exactly where it is.
   //
   // Leftovers are measured against the finish vocabulary the corpus itself
-  // supplies (`_index.finishWords`), so this stays checklist-derived: a word is
-  // a finish word here only because some checklist parallel name is built from
-  // it.
+  // supplies, so this stays checklist-derived: a word is a finish word here
+  // only because some checklist parallel name is built from it.
+  //
+  // WHICH VOCABULARY DEPENDS ON WHETHER THE PRODUCT IS KNOWN (2026-09-19).
+  // Product-scoped, an insert-set name IS relevant leftover evidence: "2025
+  // Panini Phoenix ... Archetype ... #1" states Phoenix's OWN "Archetype"
+  // insert, and refusing "Phoenix" (the base rung) for dropping it is
+  // correct -- the card is the insert, not the base. R55 (2026-09-18) needed
+  // exactly this: "2024 Panini Photogenic Michael Vick In the Action Auto
+  // #IAA-MVI" and 3 more titles state finish evidence only via a word that
+  // moved into insertSets, and the union (not a per-product-only slice) is
+  // what the R55 fix measured and fixed -- restricting to THIS product's
+  // OWN insertSets alone was TRIED and MEASURED WORSE: 233 titles lost
+  // their real parallel on the 20,840-row export (was 36), because most
+  // product-scoped titles need the union's broader R55-style coverage far
+  // more often than they hit a cross-product collision. So `finishWords`
+  // (the union) stays the vocabulary whenever `own` can exclude the
+  // product's own set words, i.e. `productScoped`.
+  //
+  // With NO product context, the union is the wrong vocabulary: a word whose
+  // ONLY evidence is an INSERT SET'S NAME on some OTHER, unrelated product
+  // (Topps Heritage's own brand word "heritage" promoted by Upper Deck
+  // hockey's "2023 Heritage Classic Fabrics"; Zenith's "Zoom" promoted by
+  // its own Zoom Blue/Gold/Red roots; a PLAYER SURNAME "Young" promoted by
+  // Upper Deck's "Young Guns") has nothing to do with THIS title's product,
+  // and refusing on it cost 33 titles their real parallel with no setKey to
+  // fall back on -- see loadCorpus's own measurement. `leftoverGuardFinishWords`
+  // (parallels[]-only) is the no-context vocabulary for exactly this reason.
+  //
+  // RESIDUAL, NOT CLOSED: a player surname that collides with an unrelated
+  // product's real insert-set name (Trae/Chase Young vs Upper Deck's "Young
+  // Guns") still costs a handful of PRODUCT-SCOPED titles -- 3 distinct
+  // titles / 8 rows on the export, all Young. Narrower than the no-context
+  // gap this PR closes, and the per-product-only floor tried above made the
+  // R55 case worse than this residual, so it is left open and flagged
+  // rather than "fixed" at a net cost. See the PR's own handback.
+  const isLeftoverFinishWord = (w: string): boolean =>
+    (productScoped ? index.finishWords : index.leftoverGuardFinishWords).has(w);
   // Is the answer an EXACT, whole, listed parallel name of THIS product, every
   // word of it witnessed in the title? That is the checklist itself saying the
   // rung exists and is spelled exactly so -- the only evidence strong enough to
@@ -1141,7 +1259,7 @@ export function statedFinishFromChecklist(
   const answered = new Set(words(best));
   for (const w of titleWordSet) {
     if (answered.has(w)) continue;
-    if (!index.finishWords.has(w)) continue;
+    if (!isLeftoverFinishWord(w)) continue;
     if (own.has(w)) continue;            // names the SET on this product
     // A STOCK WORD THE ANSWER DROPPED IS NOT A DROPPED FINISH (2026-09-13).
     // The answer below deliberately omits this product's stock words, so a
@@ -1150,7 +1268,7 @@ export function statedFinishFromChecklist(
     // words. A word on ~all of this product's parallel names cannot tell two
     // of its rungs apart, so its absence is never evidence of a sibling card.
     // Narrow on purpose: `own` and `elidable` are both measured, never a list.
-    if (elidable.has(w) && !own.has(w) && index.finishWords.has(w)) continue;
+    if (elidable.has(w) && !own.has(w) && isLeftoverFinishWord(w)) continue;
     // A SPORT NAME IS NOT AN UNEXPLAINED FINISH WORD (2026-09-13). Some
     // products name a parallel after a sport ("Basketball Prizms"), so the
     // corpus-derived finish vocabulary CONTAINS "basketball" -- and every

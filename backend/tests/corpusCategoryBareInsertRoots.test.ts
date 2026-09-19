@@ -164,4 +164,69 @@ maybe("bare insert roots enter insertSets[] from the category column", () => {
       }
     }
   });
+
+  // MEASURED REGRESSION, FOUND AND FIXED 2026-09-19 (against the R32 export
+  // with the CORRECT per-title setKey, not the no-context path the tests
+  // above pin). football|2025|panini-certified carries a bare
+  // `insert-mirror` category with "Mirror" on every row -- folds to itself,
+  // has siblings (`insert-mirror-black`) -- the exact Illusionists shape.
+  // But this product's checklist ALSO lists "Mirror Black", "Mirror Gold",
+  // ... as ordinary parallels[] names under separately-labelled colour
+  // categories: "Mirror" here is a FINISH FAMILY name (the same relationship
+  // "Prizm" has to "Silver Prizm"), not a proper noun an insert set is named
+  // after. Rooting it swallowed the real, distinct "Mirror" /399 base rung
+  // into an insert set and broke the reader: "2025 Panini Certified #1 ...
+  // Mirror #/399" stopped answering "Mirror".
+  it("Mirror is a finish family on panini-certified, not a self-named insert set", () => {
+    const p = corpus!.products!["football|2025|panini-certified"];
+    expect(p).toBeTruthy();
+    const names = new Set(p.parallels!.map((x) => lower(String(x.name))));
+    expect(names.has("mirror"), "the bare /399 Mirror rung must stay a parallel").toBe(true);
+    expect(names.has("mirror black"), "Mirror Black must stay a parallel").toBe(true);
+    expect(names.has("mirror gold"), "Mirror Gold must stay a parallel").toBe(true);
+    // A "mirror"-keyed insertSets entry MAY exist (the name-based split's own
+    // "Mirror Signatures" -- a genuinely distinct autographed insert whose
+    // shortened rootKey happens to be "mirror"), but its DISPLAY root must
+    // never be the bare word "Mirror" itself -- that would be the
+    // self-naming bug this test guards against.
+    for (const s of p.insertSets ?? []) {
+      if (s.rootKey !== "mirror") continue;
+      expect(lower(s.root), "no insertSets entry may be bare 'Mirror'").not.toBe("mirror");
+    }
+  });
+
+  it("a bare colour word is never a self-naming root, even with real source noise", () => {
+    // hockey|2022|upper-deck-premier's `insert-gold` category carries
+    // "Gold //" (unstripped print-run glue) on every row -- folds to "gold"
+    // exactly, has siblings (`insert-gold-legends`). Without the guard this
+    // deleted "Gold //" (seen 265 times, its own /65 print run, distinct
+    // from the plain "Gold" /10 rung already in parallels) with nowhere for
+    // it to land.
+    const p = corpus!.products!["hockey|2022|upper-deck-premier"];
+    expect(p).toBeTruthy();
+    const names = new Set(p.parallels!.map((x) => lower(String(x.name))));
+    expect(names.has("gold //"), "Gold // must survive as its own parallel").toBe(true);
+    expect(names.has("gold"), "the plain Gold rung must be untouched").toBe(true);
+    const bareGoldRoot = (p.insertSets ?? []).find((s) => s.rootKey === "gold");
+    expect(bareGoldRoot, "no bare Gold root should exist").toBeUndefined();
+  });
+
+  it("a root ending in -parallel/-variant is a finish, not a set naming itself", () => {
+    // hockey|2025|flair labels its entire base finish ladder with
+    // `insert-<name>-parallel` categories. Corpus-wide 1,013 bare categories
+    // share this shape (O-Pee-Chee, Parkhurst, Upper Deck) -- structural,
+    // not one product's quirk.
+    const p = corpus!.products!["hockey|2025|flair"];
+    expect(p).toBeTruthy();
+    const names = new Set(p.parallels!.map((x) => lower(String(x.name))));
+    for (const n of ["spectrum parallel", "blue ice parallel", "printing plates parallel", "auto parallel"]) {
+      expect(names.has(n), `${n} must remain a parallel`).toBe(true);
+    }
+    // The product's genuine insert sets (blank-parallel, name-based) are
+    // untouched by the guard.
+    const rootKeys = new Set((p.insertSets ?? []).map((s) => s.rootKey));
+    for (const n of ["flair for the dramatic", "hot hues", "rare breed", "scoring power", "trophy room"]) {
+      expect(rootKeys.has(n), `${n} must still be a real insert set`).toBe(true);
+    }
+  });
 });

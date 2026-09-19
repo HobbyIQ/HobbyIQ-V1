@@ -1,5 +1,5 @@
 {
- "builtAt": "2026-09-19T13:42:52.280Z",
+ "builtAt": "2026-09-19T14:36:15.378Z",
  "sources": [
   "C:/tmp/beckett-bulk",
   "C:/tmp/ci/csv2",
@@ -8,7 +8,7 @@
   "C:/tmp/hiq-acq-1658/backend/data/checklists/tcgdex-ja-modern"
  ],
  "productCount": 660,
- "parallelNameCount": 15942,
+ "parallelNameCount": 16007,
  "products": {
  "baseball|1984|topps": {
   "sport": "baseball",
@@ -556,6 +556,15 @@
     ]
    },
    {
+    "name": "Mantle Collection",
+    "printRun": null,
+    "odds": null,
+    "seen": 20,
+    "spellings": [
+     "Mantle Collection"
+    ]
+   },
+   {
     "name": "Mantle Collection Bat Relics",
     "printRun": null,
     "odds": null,
@@ -635,16 +644,6 @@
     "spellings": [
      "Team Topps Autographs"
     ]
-   }
-  ],
-  "insertSets": [
-   {
-    "root": "Mantle Collection",
-    "rootKey": "mantle collection",
-    "children": [
-     "Mantle Collection"
-    ],
-    "categories": []
    }
   ],
   "suspectInsertRoots": [
@@ -52154,12 +52153,30 @@
     ]
    },
    {
+    "name": "Rookie Phenom",
+    "printRun": null,
+    "odds": null,
+    "seen": 20,
+    "spellings": [
+     "Rookie Phenom"
+    ]
+   },
+   {
     "name": "Rookie Phenom Hot Pack",
     "printRun": null,
     "odds": null,
     "seen": 20,
     "spellings": [
      "Rookie Phenom Hot Pack"
+    ]
+   },
+   {
+    "name": "Total O",
+    "printRun": null,
+    "odds": null,
+    "seen": 20,
+    "spellings": [
+     "Total O"
     ]
    },
    {
@@ -52206,24 +52223,6 @@
     "spellings": [
      "Nba All Stars"
     ]
-   }
-  ],
-  "insertSets": [
-   {
-    "root": "Rookie Phenom",
-    "rootKey": "rookie phenom",
-    "children": [
-     "Rookie Phenom"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Total O",
-    "rootKey": "total o",
-    "children": [
-     "Total O"
-    ],
-    "categories": []
    }
   ],
   "suspectInsertRoots": [
@@ -63853,6 +63852,15 @@
     ]
    },
    {
+    "name": "Kaboom",
+    "printRun": null,
+    "odds": null,
+    "seen": 25,
+    "spellings": [
+     "Kaboom"
+    ]
+   },
+   {
     "name": "Kaboom Gold",
     "printRun": 10,
     "odds": null,
@@ -63904,6 +63912,15 @@
     "seen": 25,
     "spellings": [
      "Pillars of the Game Red"
+    ]
+   },
+   {
+    "name": "Sno Globe",
+    "printRun": 99,
+    "odds": null,
+    "seen": 25,
+    "spellings": [
+     "Sno Globe"
     ]
    },
    {
@@ -64024,6 +64041,15 @@
     ]
    },
    {
+    "name": "Test of Time",
+    "printRun": 99,
+    "odds": null,
+    "seen": 17,
+    "spellings": [
+     "Test of Time"
+    ]
+   },
+   {
     "name": "Test of Time Gold",
     "printRun": 10,
     "odds": null,
@@ -64060,6 +64086,15 @@
     ]
    },
    {
+    "name": "Hand Crafted",
+    "printRun": 99,
+    "odds": null,
+    "seen": 15,
+    "spellings": [
+     "Hand Crafted"
+    ]
+   },
+   {
     "name": "Hand Crafted Gold",
     "printRun": 10,
     "odds": null,
@@ -64093,6 +64128,15 @@
     "seen": 15,
     "spellings": [
      "Hand Crafted Red"
+    ]
+   },
+   {
+    "name": "Monarch Memorabilia",
+    "printRun": null,
+    "odds": null,
+    "seen": 10,
+    "spellings": [
+     "Monarch Memorabilia"
     ]
    },
    {
@@ -64133,26 +64177,10 @@
     "categories": []
    },
    {
-    "root": "Hand Crafted",
-    "rootKey": "hand crafted",
-    "children": [
-     "Hand Crafted"
-    ],
-    "categories": []
-   },
-   {
     "root": "Heirs To The Throne",
     "rootKey": "heirs to the throne",
     "children": [
      "Heirs To The Throne"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Kaboom",
-    "rootKey": "kaboom",
-    "children": [
-     "Kaboom"
     ],
     "categories": []
    },
@@ -64173,14 +64201,6 @@
     "categories": []
    },
    {
-    "root": "Monarch Memorabilia",
-    "rootKey": "monarch memorabilia",
-    "children": [
-     "Monarch Memorabilia"
-    ],
-    "categories": []
-   },
-   {
     "root": "Pillars Of The Game",
     "rootKey": "pillars of the game",
     "children": [
@@ -64193,22 +64213,6 @@
     "rootKey": "silhouettes",
     "children": [
      "Silhouettes"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Sno Globe",
-    "rootKey": "sno globe",
-    "children": [
-     "Sno Globe"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Test Of Time",
-    "rootKey": "test of time",
-    "children": [
-     "Test Of Time"
     ],
     "categories": []
    },
@@ -88157,6 +88161,15 @@
     ]
    },
    {
+    "name": "25th Anniversary",
+    "printRun": 99,
+    "odds": null,
+    "seen": 25,
+    "spellings": [
+     "25th Anniversary"
+    ]
+   },
+   {
     "name": "25th Anniversary Gold",
     "printRun": 10,
     "odds": null,
@@ -88193,6 +88206,15 @@
     ]
    },
    {
+    "name": "Kaboom",
+    "printRun": null,
+    "odds": null,
+    "seen": 25,
+    "spellings": [
+     "Kaboom"
+    ]
+   },
+   {
     "name": "Kaboom Black",
     "printRun": 1,
     "odds": null,
@@ -88226,6 +88248,15 @@
     "seen": 25,
     "spellings": [
      "Kings Court Jersey Auto Super Prime"
+    ]
+   },
+   {
+    "name": "Sno Globe",
+    "printRun": 99,
+    "odds": null,
+    "seen": 25,
+    "spellings": [
+     "Sno Globe"
     ]
    },
    {
@@ -88328,6 +88359,15 @@
     ]
    },
    {
+    "name": "Test of Time",
+    "printRun": 99,
+    "odds": null,
+    "seen": 20,
+    "spellings": [
+     "Test of Time"
+    ]
+   },
+   {
     "name": "Test of Time Gold",
     "printRun": 10,
     "odds": null,
@@ -88382,6 +88422,15 @@
     ]
    },
    {
+    "name": "Hand Crafted",
+    "printRun": 99,
+    "odds": null,
+    "seen": 10,
+    "spellings": [
+     "Hand Crafted"
+    ]
+   },
+   {
     "name": "Hand Crafted Gold",
     "printRun": 10,
     "odds": null,
@@ -88415,6 +88464,15 @@
     "seen": 10,
     "spellings": [
      "Hand Crafted Red"
+    ]
+   },
+   {
+    "name": "Monarch Memorabilia",
+    "printRun": null,
+    "odds": null,
+    "seen": 10,
+    "spellings": [
+     "Monarch Memorabilia"
     ]
    },
    {
@@ -88465,14 +88523,6 @@
   ],
   "insertSets": [
    {
-    "root": "25th Anniversary",
-    "rootKey": "25th anniversary",
-    "children": [
-     "25th Anniversary"
-    ],
-    "categories": []
-   },
-   {
     "root": "Coat Of Arms",
     "rootKey": "coat of arms",
     "children": [
@@ -88481,26 +88531,10 @@
     "categories": []
    },
    {
-    "root": "Hand Crafted",
-    "rootKey": "hand crafted",
-    "children": [
-     "Hand Crafted"
-    ],
-    "categories": []
-   },
-   {
     "root": "Heirs To The Throne",
     "rootKey": "heirs to the throne",
     "children": [
      "Heirs To The Throne"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Kaboom",
-    "rootKey": "kaboom",
-    "children": [
-     "Kaboom"
     ],
     "categories": []
    },
@@ -88521,14 +88555,6 @@
     "categories": []
    },
    {
-    "root": "Monarch Memorabilia",
-    "rootKey": "monarch memorabilia",
-    "children": [
-     "Monarch Memorabilia"
-    ],
-    "categories": []
-   },
-   {
     "root": "Pillars Of The Game",
     "rootKey": "pillars of the game",
     "children": [
@@ -88541,22 +88567,6 @@
     "rootKey": "silhouettes",
     "children": [
      "Silhouettes"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Sno Globe",
-    "rootKey": "sno globe",
-    "children": [
-     "Sno Globe"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Test Of Time",
-    "rootKey": "test of time",
-    "children": [
-     "Test Of Time"
     ],
     "categories": []
    }
@@ -147349,6 +147359,15 @@
     ]
    },
    {
+    "name": "Elite",
+    "printRun": 1,
+    "odds": null,
+    "seen": 200,
+    "spellings": [
+     "Elite"
+    ]
+   },
+   {
     "name": "FOTL Pink",
     "printRun": 13,
     "odds": null,
@@ -147457,6 +147476,15 @@
     ]
    },
    {
+    "name": "1992 Elite",
+    "printRun": null,
+    "odds": null,
+    "seen": 50,
+    "spellings": [
+     "1992 Elite"
+    ]
+   },
+   {
     "name": "1992 Elite Aspirations Die-Cut",
     "printRun": 99,
     "odds": null,
@@ -147535,6 +147563,15 @@
     "seen": 42,
     "spellings": [
      "Pen Pals Black Gold Ink"
+    ]
+   },
+   {
+    "name": "Spellbound",
+    "printRun": 349,
+    "odds": null,
+    "seen": 40,
+    "spellings": [
+     "Spellbound"
     ]
    },
    {
@@ -147664,6 +147701,15 @@
     ]
    },
    {
+    "name": "Ath-Elite",
+    "printRun": null,
+    "odds": null,
+    "seen": 25,
+    "spellings": [
+     "Ath-Elite"
+    ]
+   },
+   {
     "name": "Ath-Elite Green",
     "printRun": null,
     "odds": null,
@@ -147679,6 +147725,15 @@
     "seen": 25,
     "spellings": [
      "Ath-Elite Pink"
+    ]
+   },
+   {
+    "name": "Full Throttle",
+    "printRun": 349,
+    "odds": null,
+    "seen": 25,
+    "spellings": [
+     "Full Throttle"
     ]
    },
    {
@@ -147799,6 +147854,15 @@
     ]
    },
    {
+    "name": "Elite Deck",
+    "printRun": null,
+    "odds": null,
+    "seen": 20,
+    "spellings": [
+     "Elite Deck"
+    ]
+   },
+   {
     "name": "Elite Deck Black",
     "printRun": 1,
     "odds": null,
@@ -147832,6 +147896,15 @@
     "seen": 20,
     "spellings": [
      "Elite Deck Orange"
+    ]
+   },
+   {
+    "name": "Extra Edition",
+    "printRun": null,
+    "odds": null,
+    "seen": 20,
+    "spellings": [
+     "Extra Edition"
     ]
    },
    {
@@ -147877,6 +147950,15 @@
     "seen": 20,
     "spellings": [
      "Influential Jerseys Prime"
+    ]
+   },
+   {
+    "name": "Rookie on Deck",
+    "printRun": null,
+    "odds": null,
+    "seen": 20,
+    "spellings": [
+     "Rookie on Deck"
     ]
    },
    {
@@ -147943,6 +148025,15 @@
     ]
    },
    {
+    "name": "MVPBound",
+    "printRun": null,
+    "odds": null,
+    "seen": 18,
+    "spellings": [
+     "MVPBound"
+    ]
+   },
+   {
     "name": "MVPBound Green",
     "printRun": null,
     "odds": null,
@@ -147958,6 +148049,15 @@
     "seen": 18,
     "spellings": [
      "MVPBound Pink"
+    ]
+   },
+   {
+    "name": "GOATBound",
+    "printRun": null,
+    "odds": null,
+    "seen": 17,
+    "spellings": [
+     "GOATBound"
     ]
    },
    {
@@ -147979,6 +148079,15 @@
     ]
    },
    {
+    "name": "LombardiBound",
+    "printRun": null,
+    "odds": null,
+    "seen": 16,
+    "spellings": [
+     "LombardiBound"
+    ]
+   },
+   {
     "name": "LombardiBound Green",
     "printRun": null,
     "odds": null,
@@ -147997,6 +148106,15 @@
     ]
    },
    {
+    "name": "Elite Coverage",
+    "printRun": 500,
+    "odds": null,
+    "seen": 15,
+    "spellings": [
+     "Elite Coverage"
+    ]
+   },
+   {
     "name": "Elite Coverage Prime",
     "printRun": 49,
     "odds": null,
@@ -148012,6 +148130,15 @@
     "seen": 15,
     "spellings": [
      "Epic Materials Prime"
+    ]
+   },
+   {
+    "name": "High Life",
+    "printRun": null,
+    "odds": null,
+    "seen": 15,
+    "spellings": [
+     "High Life"
     ]
    },
    {
@@ -148060,6 +148187,15 @@
     ]
    },
    {
+    "name": "Rookie Elitist",
+    "printRun": null,
+    "odds": null,
+    "seen": 15,
+    "spellings": [
+     "Rookie Elitist"
+    ]
+   },
+   {
     "name": "Rookie Elitist Black",
     "printRun": 1,
     "odds": null,
@@ -148093,6 +148229,15 @@
     "seen": 15,
     "spellings": [
      "Rookie Elitist Orange"
+    ]
+   },
+   {
+    "name": "The Elite",
+    "printRun": 349,
+    "odds": null,
+    "seen": 15,
+    "spellings": [
+     "The Elite"
     ]
    },
    {
@@ -148168,6 +148313,15 @@
     ]
    },
    {
+    "name": "Elitist",
+    "printRun": null,
+    "odds": null,
+    "seen": 10,
+    "spellings": [
+     "Elitist"
+    ]
+   },
+   {
     "name": "Elitist Black",
     "printRun": 1,
     "odds": null,
@@ -148201,6 +148355,15 @@
     "seen": 10,
     "spellings": [
      "Elitist Orange"
+    ]
+   },
+   {
+    "name": "Field Vision",
+    "printRun": 349,
+    "odds": null,
+    "seen": 10,
+    "spellings": [
+     "Field Vision"
     ]
    },
    {
@@ -148476,14 +148639,6 @@
   ],
   "insertSets": [
    {
-    "root": "1992 Elite",
-    "rootKey": "1992 elite",
-    "children": [
-     "1992 Elite"
-    ],
-    "categories": []
-   },
-   {
     "root": "1992 Elite Rookies",
     "rootKey": "1992 elite rookies",
     "children": [
@@ -148516,50 +148671,10 @@
     "categories": []
    },
    {
-    "root": "Ath Elite",
-    "rootKey": "ath elite",
-    "children": [
-     "Ath Elite"
-    ],
-    "categories": []
-   },
-   {
     "root": "Back To The Future Signatures",
     "rootKey": "back to the future signatures",
     "children": [
      "Back To The Future Signatures"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Elite",
-    "rootKey": "elite",
-    "children": [
-     "Elite"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Elite Coverage",
-    "rootKey": "elite coverage",
-    "children": [
-     "Elite Coverage"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Elite Deck",
-    "rootKey": "elite deck",
-    "children": [
-     "Elite Deck"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Elitist",
-    "rootKey": "elitist",
-    "children": [
-     "Elitist"
     ],
     "categories": []
    },
@@ -148580,50 +148695,10 @@
     "categories": []
    },
    {
-    "root": "Extra Edition",
-    "rootKey": "extra edition",
-    "children": [
-     "Extra Edition"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Field Vision",
-    "rootKey": "field vision",
-    "children": [
-     "Field Vision"
-    ],
-    "categories": []
-   },
-   {
     "root": "First Class",
     "rootKey": "first class",
     "children": [
      "First Class"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Full Throttle",
-    "rootKey": "full throttle",
-    "children": [
-     "Full Throttle"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Goatbound",
-    "rootKey": "goatbound",
-    "children": [
-     "Goatbound"
-    ],
-    "categories": []
-   },
-   {
-    "root": "High Life",
-    "rootKey": "high life",
-    "children": [
-     "High Life"
     ],
     "categories": []
    },
@@ -148640,22 +148715,6 @@
     "rootKey": "influential jerseys",
     "children": [
      "Influential Jerseys"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Lombardibound",
-    "rootKey": "lombardibound",
-    "children": [
-     "Lombardibound"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Mvpbound",
-    "rootKey": "mvpbound",
-    "children": [
-     "Mvpbound"
     ],
     "categories": []
    },
@@ -148692,22 +148751,6 @@
     "categories": []
    },
    {
-    "root": "Rookie Elitist",
-    "rootKey": "rookie elitist",
-    "children": [
-     "Rookie Elitist"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Rookie On Deck",
-    "rootKey": "rookie on deck",
-    "children": [
-     "Rookie On Deck"
-    ],
-    "categories": []
-   },
-   {
     "root": "Rookies",
     "rootKey": "rookies",
     "children": [
@@ -148735,14 +148778,6 @@
     "categories": []
    },
    {
-    "root": "Spellbound",
-    "rootKey": "spellbound",
-    "children": [
-     "Spellbound"
-    ],
-    "categories": []
-   },
-   {
     "root": "Status",
     "rootKey": "status",
     "children": [
@@ -148755,14 +148790,6 @@
     "rootKey": "team lineage signatures",
     "children": [
      "Team Lineage Signatures"
-    ],
-    "categories": []
-   },
-   {
-    "root": "The Elite",
-    "rootKey": "the elite",
-    "children": [
-     "The Elite"
     ],
     "categories": []
    },
@@ -152245,6 +152272,24 @@
   "setKey": "panini-certified",
   "parallels": [
    {
+    "name": "Mirror",
+    "printRun": 350,
+    "odds": null,
+    "seen": 300,
+    "spellings": [
+     "Mirror"
+    ]
+   },
+   {
+    "name": "Mirror Black",
+    "printRun": 1,
+    "odds": null,
+    "seen": 300,
+    "spellings": [
+     "Mirror Black"
+    ]
+   },
+   {
     "name": "Mirror Black FOTL",
     "printRun": 1,
     "odds": null,
@@ -152272,12 +152317,30 @@
     ]
    },
    {
+    "name": "Mirror Gold",
+    "printRun": 25,
+    "odds": null,
+    "seen": 300,
+    "spellings": [
+     "Mirror Gold"
+    ]
+   },
+   {
     "name": "Mirror Gold FOTL",
     "printRun": 15,
     "odds": null,
     "seen": 300,
     "spellings": [
      "Mirror Gold FOTL"
+    ]
+   },
+   {
+    "name": "Mirror Green",
+    "printRun": 5,
+    "odds": null,
+    "seen": 300,
+    "spellings": [
+     "Mirror Green"
     ]
    },
    {
@@ -152308,6 +152371,15 @@
     ]
    },
    {
+    "name": "Mirror Purple",
+    "printRun": 15,
+    "odds": null,
+    "seen": 300,
+    "spellings": [
+     "Mirror Purple"
+    ]
+   },
+   {
     "name": "Mirror Purple FOTL",
     "printRun": 10,
     "odds": null,
@@ -152323,6 +152395,15 @@
     "seen": 300,
     "spellings": [
      "Mirror Red"
+    ]
+   },
+   {
+    "name": "Mirror Teal",
+    "printRun": 50,
+    "odds": null,
+    "seen": 300,
+    "spellings": [
+     "Mirror Teal"
     ]
    },
    {
@@ -152846,10 +152927,9 @@
     ]
    },
    {
-    "root": "Mirror",
+    "root": "Mirror Signatures",
     "rootKey": "mirror",
     "children": [
-     "Mirror",
      "Mirror Signature",
      "Mirror Signatures Black",
      "Mirror Signatures Blue",
@@ -152877,50 +152957,10 @@
     ]
    },
    {
-    "root": "Mirror Black",
-    "rootKey": "mirror black",
-    "children": [
-     "Mirror Black"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Mirror Gold",
-    "rootKey": "mirror gold",
-    "children": [
-     "Mirror Gold"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Mirror Green",
-    "rootKey": "mirror green",
-    "children": [
-     "Mirror Green"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Mirror Purple",
-    "rootKey": "mirror purple",
-    "children": [
-     "Mirror Purple"
-    ],
-    "categories": []
-   },
-   {
     "root": "Mirror Signatures",
     "rootKey": "mirror signatures",
     "children": [
      "Mirror Signatures"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Mirror Teal",
-    "rootKey": "mirror teal",
-    "children": [
-     "Mirror Teal"
     ],
     "categories": []
    },
@@ -187142,6 +187182,24 @@
   "setKey": "panini-certified",
   "parallels": [
    {
+    "name": "Mirror",
+    "printRun": 399,
+    "odds": null,
+    "seen": 300,
+    "spellings": [
+     "Mirror"
+    ]
+   },
+   {
+    "name": "Mirror Black",
+    "printRun": 1,
+    "odds": null,
+    "seen": 300,
+    "spellings": [
+     "Mirror Black"
+    ]
+   },
+   {
     "name": "Mirror Black FOTL",
     "printRun": 1,
     "odds": null,
@@ -187166,6 +187224,15 @@
     "seen": 300,
     "spellings": [
      "Mirror Bronze FOTL"
+    ]
+   },
+   {
+    "name": "Mirror Gold",
+    "printRun": 10,
+    "odds": null,
+    "seen": 300,
+    "spellings": [
+     "Mirror Gold"
     ]
    },
    {
@@ -187710,10 +187777,9 @@
     ]
    },
    {
-    "root": "Mirror",
+    "root": "Mirror Signatures",
     "rootKey": "mirror",
     "children": [
-     "Mirror",
      "Mirror Signature",
      "Mirror Signatures Black",
      "Mirror Signatures Blue",
@@ -187735,22 +187801,6 @@
      "insert-mirror-signatures-red",
      "insert-mirror-signatures-teal"
     ]
-   },
-   {
-    "root": "Mirror Black",
-    "rootKey": "mirror black",
-    "children": [
-     "Mirror Black"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Mirror Gold",
-    "rootKey": "mirror gold",
-    "children": [
-     "Mirror Gold"
-    ],
-    "categories": []
    },
    {
     "root": "Mirror Signatures",
@@ -213968,6 +214018,15 @@
     ]
    },
    {
+    "name": "Future",
+    "printRun": null,
+    "odds": null,
+    "seen": 25,
+    "spellings": [
+     "Future"
+    ]
+   },
+   {
     "name": "Impact",
     "printRun": 149,
     "odds": null,
@@ -214015,43 +214074,162 @@
   ],
   "insertSets": [
    {
-    "root": "Futures",
-    "rootKey": "futures",
+    "root": "Futures Blue Astro",
+    "rootKey": "futures blue astro",
     "children": [
-     "Futures",
-     "Futures Blue Astro",
-     "Futures Blue Cosmo",
-     "Futures Blue Storm",
-     "Futures Blue Swirl",
-     "Futures Green Astro",
-     "Futures Green Cosmo",
-     "Futures Green Storm",
-     "Futures Green Swirl",
-     "Futures Purple Astro",
-     "Futures Purple Cosmo",
-     "Futures Purple Storm",
-     "Futures Purple Swirl",
-     "Futures Red Astro",
-     "Futures Red Cosmo",
-     "Futures Red Storm",
+     "Futures Blue Astro"
+    ],
+    "categories": [
+     "insert-futures-blue-astro"
+    ]
+   },
+   {
+    "root": "Futures Blue Cosmo",
+    "rootKey": "futures blue cosmo",
+    "children": [
+     "Futures Blue Cosmo"
+    ],
+    "categories": [
+     "insert-futures-blue-cosmo"
+    ]
+   },
+   {
+    "root": "Futures Blue Storm",
+    "rootKey": "futures blue storm",
+    "children": [
+     "Futures Blue Storm"
+    ],
+    "categories": [
+     "insert-futures-blue-storm"
+    ]
+   },
+   {
+    "root": "Futures Blue Swirl",
+    "rootKey": "futures blue swirl",
+    "children": [
+     "Futures Blue Swirl"
+    ],
+    "categories": [
+     "insert-futures-blue-swirl"
+    ]
+   },
+   {
+    "root": "Futures Green Astro",
+    "rootKey": "futures green astro",
+    "children": [
+     "Futures Green Astro"
+    ],
+    "categories": [
+     "insert-futures-green-astro"
+    ]
+   },
+   {
+    "root": "Futures Green Cosmo",
+    "rootKey": "futures green cosmo",
+    "children": [
+     "Futures Green Cosmo"
+    ],
+    "categories": [
+     "insert-futures-green-cosmo"
+    ]
+   },
+   {
+    "root": "Futures Green Storm",
+    "rootKey": "futures green storm",
+    "children": [
+     "Futures Green Storm"
+    ],
+    "categories": [
+     "insert-futures-green-storm"
+    ]
+   },
+   {
+    "root": "Futures Green Swirl",
+    "rootKey": "futures green swirl",
+    "children": [
+     "Futures Green Swirl"
+    ],
+    "categories": [
+     "insert-futures-green-swirl"
+    ]
+   },
+   {
+    "root": "Futures Purple Astro",
+    "rootKey": "futures purple astro",
+    "children": [
+     "Futures Purple Astro"
+    ],
+    "categories": [
+     "insert-futures-purple-astro"
+    ]
+   },
+   {
+    "root": "Futures Purple Cosmo",
+    "rootKey": "futures purple cosmo",
+    "children": [
+     "Futures Purple Cosmo"
+    ],
+    "categories": [
+     "insert-futures-purple-cosmo"
+    ]
+   },
+   {
+    "root": "Futures Purple Storm",
+    "rootKey": "futures purple storm",
+    "children": [
+     "Futures Purple Storm"
+    ],
+    "categories": [
+     "insert-futures-purple-storm"
+    ]
+   },
+   {
+    "root": "Futures Purple Swirl",
+    "rootKey": "futures purple swirl",
+    "children": [
+     "Futures Purple Swirl"
+    ],
+    "categories": [
+     "insert-futures-purple-swirl"
+    ]
+   },
+   {
+    "root": "Futures Red Astro",
+    "rootKey": "futures red astro",
+    "children": [
+     "Futures Red Astro"
+    ],
+    "categories": [
+     "insert-futures-red-astro"
+    ]
+   },
+   {
+    "root": "Futures Red Cosmo",
+    "rootKey": "futures red cosmo",
+    "children": [
+     "Futures Red Cosmo"
+    ],
+    "categories": [
+     "insert-futures-red-cosmo"
+    ]
+   },
+   {
+    "root": "Futures Red Storm",
+    "rootKey": "futures red storm",
+    "children": [
+     "Futures Red Storm"
+    ],
+    "categories": [
+     "insert-futures-red-storm"
+    ]
+   },
+   {
+    "root": "Futures Red Swirl",
+    "rootKey": "futures red swirl",
+    "children": [
      "Futures Red Swirl"
     ],
     "categories": [
-     "insert-futures-blue-astro",
-     "insert-futures-blue-cosmo",
-     "insert-futures-blue-storm",
-     "insert-futures-blue-swirl",
-     "insert-futures-green-astro",
-     "insert-futures-green-cosmo",
-     "insert-futures-green-storm",
-     "insert-futures-green-swirl",
-     "insert-futures-purple-astro",
-     "insert-futures-purple-cosmo",
-     "insert-futures-purple-storm",
-     "insert-futures-purple-swirl",
-     "insert-futures-red-astro",
-     "insert-futures-red-cosmo",
-     "insert-futures-red-storm",
      "insert-futures-red-swirl"
     ]
    },
@@ -220516,6 +220694,15 @@
     ]
    },
    {
+    "name": "Jersey //",
+    "printRun": null,
+    "odds": null,
+    "seen": 89,
+    "spellings": [
+     "Jersey //"
+    ]
+   },
+   {
     "name": "View 2022-23 UD Premier NHL autographs on eBay.",
     "printRun": null,
     "odds": null,
@@ -220624,6 +220811,15 @@
     ]
    },
    {
+    "name": "2020 Update Platinum Blue Spectrum Auto //",
+    "printRun": 1,
+    "odds": null,
+    "seen": 1,
+    "spellings": [
+     "2020 Update Platinum Blue Spectrum Auto //"
+    ]
+   },
+   {
     "name": "2021 Update",
     "printRun": 35,
     "odds": null,
@@ -220668,14 +220864,6 @@
     "children": [
      "2020 Update Acetate Rookie Auto Patch Horizontal",
      "2020 Update Acetate Rookie Auto Patch Horizontal Gold //"
-    ],
-    "categories": []
-   },
-   {
-    "root": "2020 Update Platinum Blue Spectrum Auto",
-    "rootKey": "2020 update platinum blue spectrum auto",
-    "children": [
-     "2020 Update Platinum Blue Spectrum Auto"
     ],
     "categories": []
    },
@@ -220761,14 +220949,6 @@
      "Horizontal Acetate Rookie Auto Patch",
      "Horizontal Acetate Rookie Auto Patch Gold //",
      "Horizontal Acetate Rookie Auto Patch Platinum //"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Jersey",
-    "rootKey": "jersey",
-    "children": [
-     "Jersey"
     ],
     "categories": []
    },
@@ -221344,6 +221524,51 @@
     "spellings": [
      "2021-22 The Cup Update Auto Patch"
     ]
+   },
+   {
+    "name": "2021-22 The Cup Update Black Foil Parallel Auto",
+    "printRun": 1,
+    "odds": null,
+    "seen": 1,
+    "spellings": [
+     "2021-22 The Cup Update Black Foil Parallel Auto"
+    ]
+   },
+   {
+    "name": "2021-22 The Cup Update Gold Foil Parallel Auto",
+    "printRun": 8,
+    "odds": null,
+    "seen": 1,
+    "spellings": [
+     "2021-22 The Cup Update Gold Foil Parallel Auto"
+    ]
+   },
+   {
+    "name": "Black Foil Parallel Auto",
+    "printRun": 1,
+    "odds": null,
+    "seen": 1,
+    "spellings": [
+     "Black Foil Parallel Auto"
+    ]
+   },
+   {
+    "name": "Gold Foil Parallel Auto",
+    "printRun": 8,
+    "odds": null,
+    "seen": 1,
+    "spellings": [
+     "Gold Foil Parallel Auto"
+    ]
+   },
+   {
+    "name": "Red Foil Parallel Auto",
+    "printRun": 4,
+    "odds": null,
+    "seen": 1,
+    "spellings": [
+     "Red Foil Parallel Auto"
+    ]
    }
   ],
   "insertSets": [
@@ -221402,14 +221627,6 @@
     "categories": []
    },
    {
-    "root": "2021 22 The Cup Update Black Foil Parallel Auto",
-    "rootKey": "2021 22 the cup update black foil parallel auto",
-    "children": [
-     "2021 22 The Cup Update Black Foil Parallel Auto"
-    ],
-    "categories": []
-   },
-   {
     "root": "2021 22 The Cup Update Dual Auto Rookie Marks",
     "rootKey": "2021 22 the cup update dual auto rookie marks",
     "children": [
@@ -221423,14 +221640,6 @@
     "rootKey": "2021 22 the cup update dual sided printing plates parallel auto",
     "children": [
      "2021 22 The Cup Update Dual Sided Printing Plates Parallel Auto"
-    ],
-    "categories": []
-   },
-   {
-    "root": "2021 22 The Cup Update Gold Foil Parallel Auto",
-    "rootKey": "2021 22 the cup update gold foil parallel auto",
-    "children": [
-     "2021 22 The Cup Update Gold Foil Parallel Auto"
     ],
     "categories": []
    },
@@ -221480,14 +221689,6 @@
     "categories": []
    },
    {
-    "root": "Black Foil Parallel Auto",
-    "rootKey": "black foil parallel auto",
-    "children": [
-     "Black Foil Parallel Auto"
-    ],
-    "categories": []
-   },
-   {
     "root": "Dual Auto Rookie Marks",
     "rootKey": "dual auto rookie marks",
     "children": [
@@ -221506,27 +221707,11 @@
     "categories": []
    },
    {
-    "root": "Gold Foil Parallel Auto",
-    "rootKey": "gold foil parallel auto",
-    "children": [
-     "Gold Foil Parallel Auto"
-    ],
-    "categories": []
-   },
-   {
     "root": "Inked Impressions",
     "rootKey": "inked impressions",
     "children": [
      "Inked Impressions",
      "Inked Impressions Black Parallel"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Red Foil Parallel Auto",
-    "rootKey": "red foil parallel auto",
-    "children": [
-     "Red Foil Parallel Auto"
     ],
     "categories": []
    },
@@ -229770,6 +229955,33 @@
     ]
    },
    {
+    "name": "Black Foil Parallel Auto",
+    "printRun": 1,
+    "odds": null,
+    "seen": 6,
+    "spellings": [
+     "Black Foil Parallel Auto"
+    ]
+   },
+   {
+    "name": "Red Foil Parallel Auto",
+    "printRun": 4,
+    "odds": null,
+    "seen": 6,
+    "spellings": [
+     "Red Foil Parallel Auto"
+    ]
+   },
+   {
+    "name": "Gold Foil Parallel Auto",
+    "printRun": 8,
+    "odds": null,
+    "seen": 5,
+    "spellings": [
+     "Gold Foil Parallel Auto"
+    ]
+   },
+   {
     "name": "Rainbow Parallel",
     "printRun": 5,
     "odds": null,
@@ -229857,6 +230069,33 @@
     "seen": 2,
     "spellings": [
      "2020-21 The Cup Update Dual-Sided Printing Plates Parallel Auto Patch"
+    ]
+   },
+   {
+    "name": "2022-23 The Cup Update Black Foil Parallel Auto",
+    "printRun": 1,
+    "odds": null,
+    "seen": 2,
+    "spellings": [
+     "2022-23 The Cup Update Black Foil Parallel Auto"
+    ]
+   },
+   {
+    "name": "2022-23 The Cup Update Gold Foil Parallel Auto",
+    "printRun": 8,
+    "odds": null,
+    "seen": 2,
+    "spellings": [
+     "2022-23 The Cup Update Gold Foil Parallel Auto"
+    ]
+   },
+   {
+    "name": "2022-23 The Cup Update Red Foil Parallel Auto",
+    "printRun": 4,
+    "odds": null,
+    "seen": 2,
+    "spellings": [
+     "2022-23 The Cup Update Red Foil Parallel Auto"
     ]
    },
    {
@@ -229996,14 +230235,6 @@
     "categories": []
    },
    {
-    "root": "2022 23 The Cup Update Black Foil Parallel Auto",
-    "rootKey": "2022 23 the cup update black foil parallel auto",
-    "children": [
-     "2022 23 The Cup Update Black Foil Parallel Auto"
-    ],
-    "categories": []
-   },
-   {
     "root": "2022 23 The Cup Update Championship Reflections",
     "rootKey": "2022 23 the cup update championship reflections",
     "children": [
@@ -230018,22 +230249,6 @@
     "children": [
      "2022 23 The Cup Update Dual Auto Rookie Marks",
      "2022 23 The Cup Update Dual Auto Rookie Marks Black Parallel"
-    ],
-    "categories": []
-   },
-   {
-    "root": "2022 23 The Cup Update Gold Foil Parallel Auto",
-    "rootKey": "2022 23 the cup update gold foil parallel auto",
-    "children": [
-     "2022 23 The Cup Update Gold Foil Parallel Auto"
-    ],
-    "categories": []
-   },
-   {
-    "root": "2022 23 The Cup Update Red Foil Parallel Auto",
-    "rootKey": "2022 23 the cup update red foil parallel auto",
-    "children": [
-     "2022 23 The Cup Update Red Foil Parallel Auto"
     ],
     "categories": []
    },
@@ -230076,14 +230291,6 @@
     "categories": []
    },
    {
-    "root": "Black Foil Parallel Auto",
-    "rootKey": "black foil parallel auto",
-    "children": [
-     "Black Foil Parallel Auto"
-    ],
-    "categories": []
-   },
-   {
     "root": "Dual Auto Rookie Marks",
     "rootKey": "dual auto rookie marks",
     "children": [
@@ -230098,22 +230305,6 @@
     "children": [
      "Foundations Quad Jersey",
      "Foundations Quad Jersey Auto Parallel"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Gold Foil Parallel Auto",
-    "rootKey": "gold foil parallel auto",
-    "children": [
-     "Gold Foil Parallel Auto"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Red Foil Parallel Auto",
-    "rootKey": "red foil parallel auto",
-    "children": [
-     "Red Foil Parallel Auto"
     ],
     "categories": []
    },
@@ -241063,6 +241254,33 @@
     ]
    },
    {
+    "name": "Black Foil Parallel Auto",
+    "printRun": 1,
+    "odds": null,
+    "seen": 5,
+    "spellings": [
+     "Black Foil Parallel Auto"
+    ]
+   },
+   {
+    "name": "Gold Foil Parallel Auto",
+    "printRun": 8,
+    "odds": null,
+    "seen": 5,
+    "spellings": [
+     "Gold Foil Parallel Auto"
+    ]
+   },
+   {
+    "name": "Red Foil Parallel Auto",
+    "printRun": 4,
+    "odds": null,
+    "seen": 5,
+    "spellings": [
+     "Red Foil Parallel Auto"
+    ]
+   },
+   {
     "name": "2021-22 Update Black Foil Variation Auto",
     "printRun": 1,
     "odds": null,
@@ -241162,6 +241380,15 @@
     ]
    },
    {
+    "name": "2023-24 Update Gold Foil Parallel Auto",
+    "printRun": 8,
+    "odds": null,
+    "seen": 2,
+    "spellings": [
+     "2023-24 Update Gold Foil Parallel Auto"
+    ]
+   },
+   {
     "name": "Gold",
     "printRun": 1,
     "odds": null,
@@ -241231,6 +241458,24 @@
     "seen": 1,
     "spellings": [
      "2022-23 Update Black Parallel"
+    ]
+   },
+   {
+    "name": "2023-24 Update Black Foil Parallel Auto",
+    "printRun": 1,
+    "odds": null,
+    "seen": 1,
+    "spellings": [
+     "2023-24 Update Black Foil Parallel Auto"
+    ]
+   },
+   {
+    "name": "2023-24 Update Red Foil Parallel Auto",
+    "printRun": 4,
+    "odds": null,
+    "seen": 1,
+    "spellings": [
+     "2023-24 Update Red Foil Parallel Auto"
     ]
    },
    {
@@ -241334,35 +241579,11 @@
     "categories": []
    },
    {
-    "root": "2023 24 Update Black Foil Parallel Auto",
-    "rootKey": "2023 24 update black foil parallel auto",
-    "children": [
-     "2023 24 Update Black Foil Parallel Auto"
-    ],
-    "categories": []
-   },
-   {
     "root": "2023 24 Update Dual Auto Rookie Marks",
     "rootKey": "2023 24 update dual auto rookie marks",
     "children": [
      "2023 24 Update Dual Auto Rookie Marks",
      "2023 24 Update Dual Auto Rookie Marks Gold Parallel"
-    ],
-    "categories": []
-   },
-   {
-    "root": "2023 24 Update Gold Foil Parallel Auto",
-    "rootKey": "2023 24 update gold foil parallel auto",
-    "children": [
-     "2023 24 Update Gold Foil Parallel Auto"
-    ],
-    "categories": []
-   },
-   {
-    "root": "2023 24 Update Red Foil Parallel Auto",
-    "rootKey": "2023 24 update red foil parallel auto",
-    "children": [
-     "2023 24 Update Red Foil Parallel Auto"
     ],
     "categories": []
    },
@@ -241412,14 +241633,6 @@
     "categories": []
    },
    {
-    "root": "Black Foil Parallel Auto",
-    "rootKey": "black foil parallel auto",
-    "children": [
-     "Black Foil Parallel Auto"
-    ],
-    "categories": []
-   },
-   {
     "root": "Black Foil Variation Auto",
     "rootKey": "black foil variation auto",
     "children": [
@@ -241433,14 +241646,6 @@
     "children": [
      "Dual Auto Rookie Marks",
      "Dual Auto Rookie Marks Gold Parallel"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Gold Foil Parallel Auto",
-    "rootKey": "gold foil parallel auto",
-    "children": [
-     "Gold Foil Parallel Auto"
     ],
     "categories": []
    },
@@ -241476,14 +241681,6 @@
     "children": [
      "Logomarks",
      "Logomarks Auto Patch"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Red Foil Parallel Auto",
-    "rootKey": "red foil parallel auto",
-    "children": [
-     "Red Foil Parallel Auto"
     ],
     "categories": []
    },
@@ -248383,6 +248580,15 @@
     ]
    },
    {
+    "name": "Outburst",
+    "printRun": null,
+    "odds": null,
+    "seen": 284,
+    "spellings": [
+     "Outburst"
+    ]
+   },
+   {
     "name": "Red Parallel",
     "printRun": 25,
     "odds": null,
@@ -248544,22 +248750,44 @@
     "categories": []
    },
    {
-    "root": "Outburst",
-    "rootKey": "outburst",
+    "root": "Outburst Gold Parallel",
+    "rootKey": "outburst gold parallel",
     "children": [
-     "Outburst",
-     "Outburst Gold Parallel",
-     "Outburst Parallel",
-     "Outburst Red Parallel",
+     "Outburst Gold Parallel"
+    ],
+    "categories": [
+     "insert-outburst-gold-parallel"
+    ]
+   },
+   {
+    "root": "Outburst Parallel",
+    "rootKey": "outburst parallel",
+    "children": [
+     "Outburst Parallel"
+    ],
+    "categories": [
+     "insert-outburst-parallel"
+    ]
+   },
+   {
+    "root": "Outburst Red Parallel",
+    "rootKey": "outburst red parallel",
+    "children": [
+     "Outburst Red Parallel"
+    ],
+    "categories": [
+     "insert-outburst-red-parallel"
+    ]
+   },
+   {
+    "root": "Outburst Retro Young Guns",
+    "rootKey": "outburst retro young guns",
+    "children": [
      "Outburst Retro Young Guns",
      "Outburst Retro Young Guns Gold Parallel",
      "Outburst Retro Young Guns Red Parallel"
     ],
-    "categories": [
-     "insert-outburst-gold-parallel",
-     "insert-outburst-parallel",
-     "insert-outburst-red-parallel"
-    ]
+    "categories": []
    },
    {
     "root": "Playoff Variation",
@@ -259053,6 +259281,15 @@
     ]
    },
    {
+    "name": "Magnificent Memorabilia",
+    "printRun": 65,
+    "odds": null,
+    "seen": 22,
+    "spellings": [
+     "Magnificent Memorabilia"
+    ]
+   },
+   {
     "name": "Magnificent Memorabilia Gold",
     "printRun": 10,
     "odds": null,
@@ -259098,6 +259335,15 @@
     ]
    },
    {
+    "name": "Remarkable Memorabilia",
+    "printRun": 65,
+    "odds": null,
+    "seen": 21,
+    "spellings": [
+     "Remarkable Memorabilia"
+    ]
+   },
+   {
     "name": "Remarkable Memorabilia Gold",
     "printRun": 10,
     "odds": null,
@@ -259140,6 +259386,15 @@
     "seen": 21,
     "spellings": [
      "Remarkable Memorabilia Silver"
+    ]
+   },
+   {
+    "name": "Brilliance",
+    "printRun": 65,
+    "odds": null,
+    "seen": 20,
+    "spellings": [
+     "Brilliance"
     ]
    },
    {
@@ -259458,6 +259713,15 @@
     ]
    },
    {
+    "name": "Boot Memorabilia",
+    "printRun": 8,
+    "odds": null,
+    "seen": 5,
+    "spellings": [
+     "Boot Memorabilia"
+    ]
+   },
+   {
     "name": "Boot Memorabilia Sapphire",
     "printRun": 5,
     "odds": null,
@@ -259505,26 +259769,10 @@
   ],
   "insertSets": [
    {
-    "root": "Boot Memorabilia",
-    "rootKey": "boot memorabilia",
-    "children": [
-     "Boot Memorabilia"
-    ],
-    "categories": []
-   },
-   {
     "root": "Boot Signatures",
     "rootKey": "boot signatures",
     "children": [
      "Boot Signatures"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Brilliance",
-    "rootKey": "brilliance",
-    "children": [
-     "Brilliance"
     ],
     "categories": []
    },
@@ -259634,14 +259882,6 @@
     "categories": []
    },
    {
-    "root": "Magnificent Memorabilia",
-    "rootKey": "magnificent memorabilia",
-    "children": [
-     "Magnificent Memorabilia"
-    ],
-    "categories": []
-   },
-   {
     "root": "Modern Marks",
     "rootKey": "modern marks",
     "children": [
@@ -259667,14 +259907,6 @@
     "rootKey": "patch trios",
     "children": [
      "Patch Trios"
-    ],
-    "categories": []
-   },
-   {
-    "root": "Remarkable Memorabilia",
-    "rootKey": "remarkable memorabilia",
-    "children": [
-     "Remarkable Memorabilia"
     ],
     "categories": []
    },

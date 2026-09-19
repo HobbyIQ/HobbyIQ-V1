@@ -145,14 +145,22 @@ maybe("the overlay survives a regenerate", () => {
     expect(ag!.source).toMatch(/baseballcardpedia|checklistcenter/);
   });
 
+  // EXPLICIT TIMEOUT, NOT A SILENT FLAKE (2026-09-19). `build()` spawns the
+  // full builder over every CSV in C:/tmp/ci/csv2 (5.3M+ rows) -- measured at
+  // ~20s per invocation on this machine, PRE-EXISTING on main (checked
+  // directly: main's unmodified builder against the same single directory
+  // takes the same ~20s; this PR did not make the per-row parse slower). The
+  // default 30s test timeout leaves too little margin when several vitest
+  // files run in parallel and compete for CPU, so it is raised here rather
+  // than left to fail intermittently in CI.
   it("WITHOUT the overlay a regenerate loses all three -- the risk, measured", () => {
     expect(minis(build("/nonexistent-overlay.json")).length).toBe(0);
-  });
+  }, 60000);
 
   it("WITH the overlay all three survive, carrying their provenance", () => {
     const m = minis(build(OVERLAY));
     expect(m.map((x) => String(x.name)).sort())
       .toEqual(["Mini Black", "Mini Black Border", "Mini Gold Border"]);
     expect(m.every((x) => x.overlay)).toBe(true);
-  });
+  }, 60000);
 });

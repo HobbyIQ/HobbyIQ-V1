@@ -216,13 +216,37 @@ const PLAIN_COLOR_WORDS = new Set([
  * not here. `isProductWord` is per (year, setKey); the corpus has no title to
  * judge against.
  *
+ * A ROOT THAT IS ALSO THIS PRODUCT'S OWN FINISH-FAMILY PREFIX IS NOT AN
+ * INSERT SET, EVEN THOUGH ITS BARE CATEGORY FOLDS TO ITSELF (2026-09-19,
+ * found measuring R66 PR 1 against the R32 export with the correct
+ * per-title setKey). `football|2025|panini-certified` carries a bare
+ * `insert-mirror` category with "Mirror" on every row -- folds to itself,
+ * has siblings (`insert-mirror-black`, `insert-mirror-gold`) -- exactly the
+ * Illusionists shape. But this product's checklist ALSO lists "Mirror
+ * Black", "Mirror Gold", ... as ordinary `parallels[]` names (under
+ * differently-labelled sibling categories that spell the colour in the
+ * column, not just the slug): "Mirror" here is the FINISH FAMILY name of a
+ * real base rung, the same relationship "Prizm" has to "Silver Prizm", not
+ * a proper noun an insert set is named after. Rooting it swallowed the
+ * plain "Mirror" parallel (/399) into an insert set and broke the reader:
+ * "2025 Panini Certified #1 ... Mirror #/399" stopped answering "Mirror"
+ * and fell to "Base". The test that distinguishes them: a genuine insert
+ * set (Illusionists, Z Marquee) has ZERO of its own "<root> <colour>"
+ * combinations already sitting in `parallels[]` -- every one of its
+ * children came from an insert-only category. "Mirror" fails that test on
+ * this product; "Illusionists" and "Z Marquee" pass it on theirs.
+ *
  * @param {Array<{category: string, parallel: string}>} rows one product's rows
+ * @param {Array<{name: string}>} [existingParallels] this product's OWN
+ *   `parallels[]` as the name-based split already has them -- read ONLY to
+ *   ask "does `<root> <word>` already exist as a real parallel", never
+ *   written to.
  * @returns {{ sets: Array<{root: string, children: string[]}>, selfNames: Set<string> }}
  *   `selfNames` is the parallel text (lowercased, e.g. "illusionist") that
  *   named the set rather than a rung -- the caller drops these out of
  *   `parallels[]` so the set's own name stops posing as a base parallel.
  */
-function bareSelfNamedInsertRoots(rows) {
+function bareSelfNamedInsertRoots(rows, existingParallels) {
   const byCat = new Map();
   for (const r of rows ?? []) {
     const cat = String(r?.category ?? "").trim().toLowerCase();
@@ -233,6 +257,7 @@ function bareSelfNamedInsertRoots(rows) {
     const stated = String(r?.parallel ?? "").trim();
     if (stated) byCat.get(cat).add(stated);
   }
+  const parallelNamesLower = new Set((existingParallels ?? []).map((e) => normForRoot(e.name)));
   const sets = [];
   const selfNames = new Set();
   for (const [cat, pars] of byCat) {
@@ -269,6 +294,23 @@ function bareSelfNamedInsertRoots(rows) {
     if (PLAIN_COLOR_WORDS.has(rootFold)) continue;
     const hasSibling = [...byCat.keys()].some((c) => c !== cat && c.startsWith(cat + "-"));
     if (!hasSibling) continue;          // no ladder under it -- nothing to root
+    // A ROOT THAT IS ALSO THIS PRODUCT'S OWN FINISH-FAMILY PREFIX IS NOT AN
+    // INSERT SET -- see this function's header (the "Mirror" measurement).
+    // If ANY "<root> <word>" combination is already a real parallel of this
+    // SAME product, the root names a finish family, not a proper-noun set,
+    // and is left where it already correctly sits.
+    //
+    // EXCLUDES THIS CATEGORY'S OWN SELF-NAMING VALUES from the comparison --
+    // `pars` IS "Illusionist", which folds to the same `rootFold` as
+    // "Illusionists" and would otherwise flag itself as the finish-family
+    // evidence that refuses it. The test asks about OTHER parallels, never
+    // the very text this pass is about to reclassify.
+    const foldedPars = new Set([...pars].map((v) => foldedPhrase(v)));
+    const rootIsFinishFamilyPrefix = [...parallelNamesLower].some((n) => {
+      if (foldedPars.has(foldedPhrase(n))) return false;
+      return n === rootFold || n.startsWith(rootFold + " ");
+    });
+    if (rootIsFinishFamilyPrefix) continue;
     for (const v of pars) selfNames.add(v.toLowerCase());
     // Children come from the OTHER halves of the split: whatever
     // `insertSetsFromCategories` or the name-based splitter already found
@@ -716,7 +758,7 @@ function main() {
     // why that map exists alongside `bucket`.
     const categoryRows = categoryRowsByProduct.get(pk) ?? [];
     const blankRootSets = insertSetsFromCategories(categoryRows);
-    const selfNamed = bareSelfNamedInsertRoots(categoryRows);
+    const selfNamed = bareSelfNamedInsertRoots(categoryRows, split.parallels);
     const categoryRoots = [...blankRootSets, ...selfNamed.sets];
 
     // MERGE ON THE SAME "EXTENDS" TEST `splitInsertSets` already uses for its
