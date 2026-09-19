@@ -891,15 +891,67 @@ function main() {
           roster: new Map(),
           // Whatever "Parallels:" block preceded this section's first card.
           ladder: pendingLadder,
+          lastRecordIndex: -1,
         });
       }
       const sec = sections.get(key);
+      // CF-BECKETT-A-LEAGUE-LEADERS-CARD-IS-ONE-ROW (2026-09-19). Beckett
+      // lists a multi-player card (League Leaders, a dual/triple/quad-player
+      // insert) as SEVERAL CONSECUTIVE ROWS under the SAME card number, one
+      // per player -- ['11', 'Pete Alonso'], ['11', 'Kyle Schwarber'], ['11',
+      // 'Juan Soto'] -- never one row with the roster already joined. Reading
+      // each as its own card minted the SAME id three times
+      // (hiq:baseball:2026:topps:11:base:no-auto) for three different real
+      // people, which `lib/insert-set-key.cjs`'s id-collision guard correctly
+      // refuses the whole file over -- measured on 2026 Topps Series 1
+      // Baseball: 10 numbers (11, 38, 84, 117, 130, 151, 203, 204, 211, 327),
+      // 3 players each, 60 raw rows fighting for 20 addresses.
+      //
+      // The repo's own convention for a multi-player card is ALREADY a single
+      // row with players joined "/" in source order (measured on committed
+      // CSVs: `base,152,,false,,Alan Benes/Andy Benes` in
+      // 1996-sp-baseball.csv; `insert-league-leaders,1,,false,,Mike
+      // Bossy/Marcel Dionne/Guy Lafleur` in 1979-80-o-pee-chee-hockey.csv) --
+      // this reproduces that shape rather than inventing a new one.
+      //
+      // MERGE ONLY WHEN NOTHING ELSE COULD DISAGREE. At this point in pass 1
+      // the only card-level fields read yet are cardNumber and player --
+      // parallel/isAuto/printRun are decided later in pass 2/3 from the
+      // SECTION, not the row, so two rows in one section with the same
+      // number are by construction already identical on every field this
+      // pass could disagree on. The merge is keyed on (section, cardNumber)
+      // and requires the PRIOR row read in this exact section to be the
+      // immediately preceding record -- Beckett's own layout groups a
+      // multi-player card's rows consecutively, and requiring adjacency
+      // (not just "same section, same number, anywhere") is deliberately
+      // conservative: two truly separate mentions of the same number
+      // elsewhere in a section (a genuine checklist error, R30's own
+      // same-numbered-different-card shape) must NOT silently merge, and
+      // stay a collision for the guard to refuse exactly as before. The repo
+      // has no team column in the checklist-csv-contract (`docs/reference/
+      // checklist-csv-contract.md` lists category/cardNumber/parallel/
+      // isAuto/printRun/player[, parallelNote, rarity], nothing else), so
+      // Beckett's own team cell (row[2]) is read but never joined or
+      // emitted here -- there is no column for it to join into.
       const num = cardNumber.toUpperCase();
+      const priorIdx = sec.lastRecordIndex;
+      const prior = priorIdx >= 0 ? records[priorIdx] : null;
+      if (prior && prior.sectionKey === key && String(prior.cardNumber).toUpperCase() === num) {
+        prior.player = prior.player + "/" + player;
+        // The roster a card states is now the JOINED name, matching what
+        // pass 3 will actually emit -- classifySections's roster fold must
+        // compare against the same string the CSV carries, never the
+        // pre-merge single name.
+        sec.roster.get(num).clear();
+        sec.roster.get(num).add(normalizeRosterPlayer(prior.player));
+        continue;
+      }
       sec.numbers.add(num);
       sec.cards++;
       if (!sec.roster.has(num)) sec.roster.set(num, new Set());
       sec.roster.get(num).add(normalizeRosterPlayer(player));
       records.push({ sectionKey: key, cardNumber: cardNumber, player: player });
+      sec.lastRecordIndex = records.length - 1;
     }
   }
 
@@ -940,7 +992,12 @@ function main() {
     // contract has no rookie/RC column, so none is invented here; the flag is
     // simply not carried into the emitted `player` field. A future column for
     // it is a separate decision, not silently reconstructable from this CSV.
-    const emitPlayer = rec.player.replace(/\s+RC$/i, "");
+    //
+    // Stripped PER PLAYER, not just at the tail of the whole field: a merged
+    // League Leaders row (CF-BECKETT-A-LEAGUE-LEADERS-CARD-IS-ONE-ROW) can
+    // read "Jonah Tong RC/Someone Else", and a tail-only strip would miss the
+    // flag entirely because "Someone Else" is now the last segment.
+    const emitPlayer = rec.player.split("/").map((p) => p.replace(/\s+RC$/i, "")).join("/");
     // The plain card. Parallel stays BLANK, never "Base" — normalizeParallel()
     // already reads "" as the base tier, so the blank lies about nothing.
     out.push({
