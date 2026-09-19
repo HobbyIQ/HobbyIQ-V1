@@ -128,12 +128,27 @@
  * BUDGET / RELAUNCH / SHARDING follow the sibling convention exactly:
  * lib/runner-budget.cjs and lib/runner-shard-scope.cjs. A relocated sale no
  * longer matches the short-id selection, so a re-run after a budget stop is
- * idempotent by construction.
+ * idempotent by construction -- see processTarget's own header comment for
+ * why that stays true under concurrency too (a relaunch re-derives targets
+ * from card_catalog; an already-moved sale is simply absent from the next
+ * run's shortId query, whichever worker would have claimed it).
+ *
+ * CONCURRENCY (review, 2026-09-19): the per-target body (a partition-scoped
+ * cardId query + the ONE cross-partition hobbyiqCardId query + decide + write
+ * + holdings repoint) runs through a bounded worker pool, not the one-at-a-
+ * time serial loop this lane shipped with -- see processTarget's own header
+ * comment for the proof that concurrent targets cannot collide (disjoint
+ * destination ids by construction, disjoint sale reads by field) and for how
+ * the budget stop, the reconciliation counters and the REPORT==APPLY parity
+ * all stay exact under it. Read env, same as before: CONCURRENCY or
+ * BACKFILL_CONCURRENCY (the runner's own `inputs.concurrency` -- no workflow
+ * change needed).
  *
  * Env: COSMOS_CONNECTION_STRING; BACKFILL_APPLY=true / APPLY=true to write;
  *      SCOPE required (sport:year cells, comma list); SET_KEYS required
  *      (comma list, no 'all'/'*'); SLOT/SLOTS (sha1(id) shards, opt-in via
- *      SHARD=true for slot 0); CONCURRENCY=8; RUN_MINUTES=110; LIMIT=0.
+ *      SHARD=true for slot 0); CONCURRENCY=8 (or BACKFILL_CONCURRENCY, the
+ *      runner's own input name); RUN_MINUTES=110; LIMIT=0.
  * Requires dist/ (foldTwinRuleChecklistNumbered, catalogAuthority,
  * parseTitleIdentity, writeReconciliation).
  */
@@ -153,7 +168,13 @@ const csv = (v) => String(v ?? "").split(",").map((x) => x.trim()).filter(Boolea
 
 const STARTED = Date.now();
 const CLOCK = budget({ minutes: 110, reserveMs: 90 * 1000, verifyMs: 5 * 60 * 1000, startedAt: STARTED });
-const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 8));
+// CONCURRENCY (review, 2026-09-19): capped at 32 -- the runner's own default
+// fan-out width for this container's autoscale (40k RU, same ceiling
+// explodeCatalogGrades.cjs's grade-explode.yml dispatch already uses) -- so a
+// stray operator-typed value (e.g. a fat-fingered 320) cannot fan this lane
+// out past what the container was ever measured to sustain. Sibling lanes'
+// own CLASSIFY_CONCURRENCY caps the same way (`Math.min(32, ...)`).
+const CONCURRENCY = Math.min(32, Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 8)));
 const LIMIT = Number(process.env.LIMIT || 0);
 
 const SHARD_SCOPE = runnerShardScope({ label: "repoint-sales-to-checklist-numbered" });
@@ -173,6 +194,20 @@ const WILDCARDS = new Set(["", "all", "*"]);
 const RAW_SET_KEYS = csv(process.env.SET_KEYS || process.env.BCP_TITLES).map(lower);
 const SET_KEYS = RAW_SET_KEYS.filter((k) => !WILDCARDS.has(k));
 
+// CONCURRENCY (review, 2026-09-19): under bounded parallelism several workers
+// can be throttled at once, so the jittered backoff is widened here (full
+// jitter rather than a bare exponential sleep) to avoid every worker waking
+// on the same tick and re-hammering the container in lockstep.
+//
+// `THROTTLE_COUNT` is a single module-level counter rather than a callback
+// threaded through every call site (forEachPage, relocateSoldComp's own
+// `retry` option, the point reads in this file): every one of those already
+// calls this SAME `retry`, so counting inside it once is the whole banner
+// signal `main()` needs, with no plumbing change to any call site's
+// signature. Reset per process -- this script is one-shot per invocation
+// (spawned fresh by the runner, and by every test in the lane's suite), so
+// there is no cross-run state to leak.
+let THROTTLE_COUNT = 0;
 const retry = async (fn, tries = 8) => {
   let wait = 500;
   for (let a = 0; ; a++) {
@@ -180,7 +215,13 @@ const retry = async (fn, tries = 8) => {
     catch (e) {
       const msg = String(e?.message ?? e);
       if (!/request rate|429|ETIMEDOUT|ECONNRESET|503|Request timed out/i.test(msg) || a >= tries) throw e;
-      await new Promise((r) => setTimeout(r, wait)); wait = Math.min(wait * 2, 15000);
+      THROTTLE_COUNT++;
+      // Full jitter (0..wait), not a bare sleep(wait): a fixed backoff lets
+      // every concurrent worker that got throttled on the same tick retry on
+      // the same tick too, which is the thundering-herd shape this widening
+      // exists to avoid under CONCURRENCY > 1.
+      await new Promise((r) => setTimeout(r, Math.random() * wait));
+      wait = Math.min(wait * 2, 15000);
     }
   }
 };
@@ -411,6 +452,10 @@ async function main() {
     // catalog's own bounded scan, so a REPORT pilot must show its true price
     // before any wider scope is dispatched.
     hobbyiqCardIdQueries: 0,
+    // CONCURRENCY (review, 2026-09-19): every retryable 429/503/timeout hit
+    // across every worker, so a wider CONCURRENCY dispatch shows its own
+    // throttle cost in the banner rather than only in the retry backoff.
+    throttled: 0,
   };
   const hobbyiqCardIdQueryMs = [];
   const bySetKey = new Map();
@@ -481,15 +526,33 @@ async function main() {
   }
 
   /** Does a catalog row already live at the short id? Point read, memoised --
-   *  this lane never touches it, only reports it (the twins lane's job). */
+   *  this lane never touches it, only reports it (the twins lane's job).
+   *
+   *  CONCURRENCY (review, 2026-09-19): the cache stores the in-flight PROMISE,
+   *  not the resolved value -- set into the Map SYNCHRONOUSLY, before the
+   *  first `await`. Every concurrent target's shortId is already provably
+   *  unique (see processTarget's own header comment: distinct identity groups
+   *  produce distinct target ids, hence distinct shortIds), so today no two
+   *  workers ever call this with the SAME shortId and there is no live TOCTOU
+   *  to close. This is nonetheless made promise-safe rather than
+   *  value-safe: a value-cached version has a window between "await the
+   *  Cosmos read" and "store the result" during which a second caller for the
+   *  SAME key would see a cache miss and issue its own read -- a real
+   *  double-read (and, if this cache is ever reused for a write-through
+   *  value, a double-write) if a future caller ever legitimately re-enters
+   *  the same shortId mid-flight. Caching the promise closes that window by
+   *  construction: the second caller awaits the FIRST caller's in-flight
+   *  request instead of starting a new one. */
   const twinCache = new Map();
   async function catalogTwinAt(shortId) {
     if (twinCache.has(shortId)) return twinCache.get(shortId);
-    let row = null;
-    try { row = (await retry(() => cat.item(shortId, shortId).read())).resource ?? null; }
-    catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) throw e; }
-    twinCache.set(shortId, row);
-    return row;
+    const p = (async () => {
+      try { return (await retry(() => cat.item(shortId, shortId).read())).resource ?? null; }
+      catch (e) { if (e?.code === 404 || e?.statusCode === 404) return null; throw e; }
+    })();
+    twinCache.set(shortId, p);
+    try { return await p; }
+    catch (e) { twinCache.delete(shortId); throw e; } // a real failure must not poison the cache for a retry
   }
 
   /** The title/print-run signal for one sale, computed exactly once per sale
@@ -544,6 +607,276 @@ async function main() {
     return contentHashOf(resident) === contentHashOf(incomingAtNewAddress);
   }
 
+  /**
+   * CONCURRENCY (review, 2026-09-19). Production run 35466486414 spent 86 of
+   * its 110-minute budget on 12,321 SERIAL cross-partition hobbyiqCardId
+   * queries (p50 417ms) and wrote only 2,185 of 16,409 targets -- the whole
+   * per-target body below (catalog-twin point read, the cardId-shape query,
+   * the cross-partition hobbyiqCardId-shape query, every sale's decide+write,
+   * and the holdings repoint) ran ONE TARGET AT A TIME even though nothing
+   * about it depends on another target's outcome. This function is that
+   * per-target body, unchanged in DECISION -- same decideSaleAction, same
+   * vetoes, same destination-collision handling, same guard, same
+   * verify-by-read -- extracted so a bounded pool of workers (below) can run
+   * several targets' bodies concurrently instead of the old serial `for`.
+   *
+   * WHY CONCURRENT TARGETS CANNOT COLLIDE (proven, not just hoped):
+   *
+   *   HAZARD 1 -- two targets writing the SAME destination id. `groups` is
+   *   keyed by `identityKeyOf` (sport|year|setKey|cardNumber|cleaned-
+   *   parallel|auto[|sub]), and `pickChecklistNumberedTarget` picks AT MOST
+   *   ONE checklist row per group -- so two DIFFERENT groups can only ever
+   *   produce two DIFFERENT `target.id` strings (they differ in at least one
+   *   of those identity fields, which is exactly what makes the ids differ),
+   *   and `shortIdOf` is a pure, deterministic strip of one target's own id.
+   *   Two concurrent workers therefore operate on two DISJOINT (shortId,
+   *   numberedId) address pairs by construction -- there is no shared
+   *   destination to serialise around. Pinned by the "two targets in the
+   *   same setKey never share a shortId" test below (distinct catalog rows,
+   *   distinct cardNumbers, run at CONCURRENCY=16, asserts both relocate to
+   *   their OWN numbered id and neither's sale count leaks into the other).
+   *
+   *   HAZARD 2 -- the same SALE reachable from two targets. A sale document
+   *   lives at exactly one (id, cardId) address. This lane finds it either by
+   *   `c.cardId = @shortId` (shape 1) or `c.hobbyiqCardId = @shortId AND
+   *   c.cardId != @shortId` (shape 2) for ONE target's shortId -- and HAZARD
+   *   1 already establishes every concurrent target's shortId is unique. A
+   *   sale whose cardId is short id A can only be found by target A's shape-1
+   *   query; the SAME document could only ALSO surface under target B if its
+   *   hobbyiqCardId equalled B's shortId too, which would require the sale to
+   *   carry two different short-id-shaped values across two fields it does
+   *   not have a THIRD field for -- shape 1 and shape 2 within ONE target's
+   *   own two queries can never double-count the same document either,
+   *   because shape 2 explicitly excludes `c.cardId = @s`. So the read sets
+   *   across concurrent workers are disjoint by field, not merely by luck.
+   *
+   *   HAZARD 3 -- 429s under higher parallelism. Every I/O call in this
+   *   function already goes through the shared `retry()` (now counted via
+   *   `THROTTLE_COUNT`, surfaced in the banner as `throttled`) with full
+   *   jitter on the backoff rather than a bare exponential sleep, so workers
+   *   throttled on the same tick do not all wake and retry in lockstep.
+   *
+   *   HAZARD 4 -- per-cell caches shared across workers. `catalogTwinAt`
+   *   memoises the twin-catalog point read by shortId; since HAZARD 1
+   *   guarantees every concurrent target's shortId is unique, no two workers
+   *   ever contend for the SAME cache key, but the cache is still made
+   *   promise-safe below (the in-flight PROMISE is stored, not just the
+   *   resolved value) so a hypothetical future caller that re-enters the same
+   *   shortId mid-flight cannot double-read/double-write; today it is a
+   *   defensive property, not a live race. `holdingsIndex` is looked up and
+   *   deleted by `oldId` (= shortId) inside `repointHoldings` -- same
+   *   uniqueness guarantee, same disjoint keys.
+   *
+   * `LIMIT`, the example-list caps and `bySetKey`/`byYear` bumps are plain
+   * counters/array pushes: JS never interleaves two synchronous statements on
+   * one thread, so `s.x++` and `.push()` are safe under `Promise.all` exactly
+   * as they were safe under the old `for` loop's own awaits. What changes is
+   * PRINT ORDER, not correctness -- every sample list is sorted before it is
+   * printed (see the sort calls at print time) so REPORT and APPLY runs, and
+   * two runs at different CONCURRENCY values, produce byte-identical banners
+   * modulo the counts and rows that actually differ.
+   */
+  async function processTarget(rows, ctx) {
+    const { sport, year, setKey } = ctx;
+    if (CLOCK.outOfClock()) { stoppedAtBudget = true; s.notReached++; return; }
+    const picked = pickChecklistNumberedTarget(rows, isChecklist);
+    if ("skip" in picked) {
+      if (picked.skip === "ambiguous") {
+        s.ambiguousRivalRuns++;
+        if (ambiguousExamples.length < 20) {
+          ambiguousExamples.push(`  AMBIGUOUS ${rows.map((r) => `${r.id} /${printRunOf(r)}`).join(" vs ")}`);
+        }
+      } else {
+        s.noChecklistNumbered++;
+      }
+      return;
+    }
+    const target = picked.target;
+    s.uniqueNumberedTargets++;
+
+    const numberedId = target.id;
+    const shortId = shortIdOf(numberedId);
+    if (!shortId) { s.notReached++; return; } // defensive; candidateSpec + hasTrailingPrintRun already guarantee this
+    s.shortIdsExamined++;
+
+    // ── does a catalog twin already exist at the short id? Report only:
+    // this lane never touches card_catalog. Input for the twins lane.
+    const twin = await catalogTwinAt(shortId);
+    if (twin) {
+      s.shortIdsWithCatalogTwin++;
+      if (twinExamples.length < 20) twinExamples.push(`  ${shortId}  [twin: ${twin.source}] -- the twins lane's job, not this one's`);
+    }
+
+    // BLOCKER 1 (review, 2026-09-19): a CHECKLIST row at the short id is
+    // never a twin -- it is a DIFFERENT, checklist-attested card sharing
+    // this identity cell (a partial print-run ladder, or an un-numbered
+    // base card beside a numbered short-print). shortIdChecklistVeto is
+    // the SAME decision fold-checklist-numbered-twins.cjs's own
+    // `twinIsChecklist` gate applies and resolveChecklistNumberedIngestId
+    // (#2298) now applies at ingest time -- one shared function, reused
+    // here rather than a second copy. The WHOLE target is refused: no
+    // sale under this identity is touched.
+    const veto = shortIdChecklistVeto(twin, isChecklist);
+    if (veto.veto) {
+      s.targetsVetoedShortIdChecklistBacked++;
+      if (vetoedTargets.length < 20) {
+        vetoedTargets.push(`  ${shortId}  [${twin.source}] -- checklist-backed at the short id; the checklist's own ladder says this is a DIFFERENT card than ${numberedId}, not a twin. NOTHING touched.`);
+      }
+      return;
+    }
+
+    if (LIMIT && (s.salesRelocated + s.salesPatched) >= LIMIT) { s.notReached++; return; }
+
+    // ── shape 1: sales whose PARTITION KEY (cardId) IS the short id.
+    const cardIdRows = [];
+    await forEachPage(pool, { query: "SELECT * FROM c WHERE c.cardId = @s", parameters: [{ name: "@s", value: shortId }] }, async (page) => {
+      for (const row of page) cardIdRows.push(row);
+      return true;
+    }, 200);
+    s.salesFoundByCardId += cardIdRows.length;
+
+    for (const sale of cardIdRows) {
+      const titlePrintRun = titlePrintRunOf(sale, shortId);
+      const titleStatesProsePrintRun = statesProsePrintRun(sale.title);
+      const plan = decideSaleAction(sale, "cardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, targetPrintRun: printRunOf(target) });
+      if (plan.action === "refuse") {
+        s.salesLeftAlone++;
+        if (plan.reason === "title-states-print-run") s.refusedTitlePrintRun++;
+        else s.refusedSplitIdentity++;
+        const list = refusals[plan.reason];
+        if (list) list.push(`  ${sale.id}@${sale.cardId}: ${plan.detail}`);
+        continue;
+      }
+      try {
+        const keep = { ...stripSystem(sale), cardId: numberedId, hobbyiqCardId: numberedId, reslugedFrom: shortId, reslugedReason: "sale at the short (un-numbered) id follows the checklist's :num-N row (repoint-sales-to-checklist-numbered)", reslugedAt: new Date().toISOString() };
+        keep.contentHash = contentHashOf(keep);
+
+        // BLOCKER 2 (review, 2026-09-19): relocateSoldComp's upsert is a
+        // BLIND write at (sale.id, numberedId) -- it replaces whatever is
+        // there. Sale ids do not embed cardId, so this exact id can
+        // already be resident at the numbered partition. Check BEFORE
+        // upserting, never after: an upsert that already happened cannot
+        // be un-overwritten.
+        const resident = await residentAt(sale.id, numberedId);
+        if (resident) {
+          if (isSameSale(resident, keep)) {
+            // The SAME sale is already at the destination (by content
+            // hash) -- this is a COLLAPSE, not a relocate: delete the
+            // short-id copy and keep the resident, never upsert a
+            // duplicate over it. relocateSoldComp itself already treats
+            // "the address already held a document" as `existedBefore`
+            // and its upsert would simply overwrite the resident with an
+            // identical-by-hash document, but a DIRECT delete-after-
+            // verify is more honest about what actually happened here:
+            // nothing about the kept document changes.
+            if (APPLY) await retry(() => pool.item(sale.id, shortId).delete());
+            s.collapsedOntoResident++;
+            if (collapsedExamples.length < 20) collapsedExamples.push(`  COLLAPSE ${sale.id}@${shortId} -- same sale already resident at ${numberedId}; short-id copy deleted`);
+            continue;
+          }
+          // A DIFFERENT sale already occupies the destination. Moving
+          // ours there would silently overwrite it (or, under the
+          // ordinary path below, get overwritten BY it depending on
+          // upsert timing) -- either way one sale is lost. Refuse, list
+          // both, move nothing.
+          s.refusedDestinationCollision++;
+          refusals["destination-collision"].push(`  ${sale.id}@${shortId} -> ${numberedId}: a DIFFERENT sale (by content hash) already resides at the destination; NEITHER moved -- resident price=${resident.price ?? "?"} soldAt=${resident.soldAt ?? "?"} vs incoming price=${sale.price ?? "?"} soldAt=${sale.soldAt ?? "?"}`);
+          continue;
+        }
+
+        const res = await relocateSoldComp(pool, { keep, drop: [{ id: sale.id, cardId: shortId }], retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY });
+        if (res.guard?.verdict === "park") {
+          s.refusedGuardParked++;
+          refusals["guard-parked"].push(`  ${sale.id}@${shortId}: ${res.error ?? res.guard.reason}`);
+          continue;
+        }
+        if (!res.ok && res.stage !== "dry-run") {
+          s.salesFailed++;
+          failures.push(`  FAILED relocate ${sale.id}@${shortId} -> ${numberedId}: ${res.error ?? "unknown"}`);
+          continue;
+        }
+        s.salesRelocated++;
+        bump(bySetKey, setKey); bump(byYear, String(year));
+        if (examples.length < 24) examples.push(`  RELOCATE ${sale.id}@${shortId} -> ${numberedId}`);
+      } catch (e) {
+        s.salesFailed++;
+        failures.push(`  FAILED relocate ${sale.id}@${shortId} -> ${numberedId}: ${String(e?.stack ?? e?.message ?? e)}`);
+      }
+    }
+
+    // ── shape 2: sales whose hobbyiqCardId names the short id but whose
+    // OWN cardId is something else (a vendor partition) -- patch only.
+    // SHOULD-FIX 4 (review, 2026-09-19): this is the ONE cross-partition
+    // query this lane issues per target (the cardId-shape query above is
+    // partition-scoped; this one is not, since hobbyiqCardId is not the
+    // container's partition key) -- timed so a REPORT pilot shows its
+    // true cost before any wider scope is dispatched.
+    const hobbyiqQueryStarted = Date.now();
+    const hobbyiqRows = [];
+    await forEachPage(pool, { query: "SELECT * FROM c WHERE c.hobbyiqCardId = @s AND c.cardId != @s", parameters: [{ name: "@s", value: shortId }] }, async (page) => {
+      for (const row of page) hobbyiqRows.push(row);
+      return true;
+    }, 200);
+    s.hobbyiqCardIdQueries++;
+    hobbyiqCardIdQueryMs.push(Date.now() - hobbyiqQueryStarted);
+    s.salesFoundByHobbyiqCardId += hobbyiqRows.length;
+
+    for (const sale of hobbyiqRows) {
+      const titlePrintRun = titlePrintRunOf(sale, shortId);
+      const titleStatesProsePrintRun = statesProsePrintRun(sale.title);
+      const plan = decideSaleAction(sale, "hobbyiqCardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, targetPrintRun: printRunOf(target) });
+      if (plan.action === "refuse") {
+        s.salesLeftAlone++;
+        if (plan.reason === "title-states-print-run") s.refusedTitlePrintRun++;
+        else s.refusedSplitIdentity++;
+        const list = refusals[plan.reason];
+        if (list) list.push(`  ${sale.id}@${sale.cardId} (hobbyiqCardId=${shortId}): ${plan.detail}`);
+        continue;
+      }
+      try {
+        if (APPLY) {
+          await retry(() => pool.item(sale.id, sale.cardId).patch([
+            { op: "set", path: "/hobbyiqCardId", value: numberedId },
+            { op: "set", path: "/reslugedFrom", value: shortId },
+            { op: "set", path: "/reslugedReason", value: "sale at the short (un-numbered) id follows the checklist's :num-N row (repoint-sales-to-checklist-numbered)" },
+            { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
+          ]));
+        }
+        s.salesPatched++;
+        bump(bySetKey, setKey); bump(byYear, String(year));
+        if (examples.length < 24) examples.push(`  PATCH ${sale.id}@${sale.cardId} hobbyiqCardId ${shortId} -> ${numberedId}`);
+      } catch (e) {
+        s.salesFailed++;
+        failures.push(`  FAILED patch ${sale.id}@${sale.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
+      }
+    }
+
+    await repointHoldings(shortId, numberedId);
+  }
+
+  /**
+   * Run every target in `targets` through `processTarget` with at most
+   * CONCURRENCY in flight at once -- the same shared-cursor worker-pool
+   * idiom rematch-sold-comps.cjs already uses (`let idx = 0; const worker =
+   * async () => { while (idx < list.length) { const my = idx++; ... } };
+   * Promise.all(Array.from({length}, worker))`), reused rather than a new
+   * shape invented for this lane. Each worker CLAIMS its index (`idx++`)
+   * BEFORE doing anything else, so every target is claimed by EXACTLY ONE
+   * worker with no gaps and no double-claims regardless of how many workers
+   * are racing -- there is nothing here for two workers to contend over.
+   */
+  async function runTargetsPool(targets, ctx) {
+    let idx = 0;
+    const worker = async () => {
+      while (idx < targets.length) {
+        const my = idx++;
+        await processTarget(targets[my], ctx);
+      }
+    };
+    const lanes = Math.min(CONCURRENCY, Math.max(targets.length, 1));
+    await Promise.all(Array.from({ length: lanes }, worker));
+  }
+
   for (const cell of SCOPE_CELLS) {
     if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
     const [sport, yearStr] = cell.split(":");
@@ -570,182 +903,17 @@ async function main() {
 
       s.identityGroups += groups.size;
 
-      for (const [, rows] of groups) {
-        if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
-        const picked = pickChecklistNumberedTarget(rows, isChecklist);
-        if ("skip" in picked) {
-          if (picked.skip === "ambiguous") {
-            s.ambiguousRivalRuns++;
-            if (ambiguousExamples.length < 20) {
-              ambiguousExamples.push(`  AMBIGUOUS ${rows.map((r) => `${r.id} /${printRunOf(r)}`).join(" vs ")}`);
-            }
-          } else {
-            s.noChecklistNumbered++;
-          }
-          continue;
-        }
-        const target = picked.target;
-        s.uniqueNumberedTargets++;
-
-        const numberedId = target.id;
-        const shortId = shortIdOf(numberedId);
-        if (!shortId) { s.notReached++; continue; } // defensive; candidateSpec + hasTrailingPrintRun already guarantee this
-        s.shortIdsExamined++;
-
-        // ── does a catalog twin already exist at the short id? Report only:
-        // this lane never touches card_catalog. Input for the twins lane.
-        const twin = await catalogTwinAt(shortId);
-        if (twin) {
-          s.shortIdsWithCatalogTwin++;
-          if (twinExamples.length < 20) twinExamples.push(`  ${shortId}  [twin: ${twin.source}] -- the twins lane's job, not this one's`);
-        }
-
-        // BLOCKER 1 (review, 2026-09-19): a CHECKLIST row at the short id is
-        // never a twin -- it is a DIFFERENT, checklist-attested card sharing
-        // this identity cell (a partial print-run ladder, or an un-numbered
-        // base card beside a numbered short-print). shortIdChecklistVeto is
-        // the SAME decision fold-checklist-numbered-twins.cjs's own
-        // `twinIsChecklist` gate applies and resolveChecklistNumberedIngestId
-        // (#2298) now applies at ingest time -- one shared function, reused
-        // here rather than a second copy. The WHOLE target is refused: no
-        // sale under this identity is touched.
-        const veto = shortIdChecklistVeto(twin, isChecklist);
-        if (veto.veto) {
-          s.targetsVetoedShortIdChecklistBacked++;
-          if (vetoedTargets.length < 20) {
-            vetoedTargets.push(`  ${shortId}  [${twin.source}] -- checklist-backed at the short id; the checklist's own ladder says this is a DIFFERENT card than ${numberedId}, not a twin. NOTHING touched.`);
-          }
-          continue;
-        }
-
-        if (LIMIT && (s.salesRelocated + s.salesPatched) >= LIMIT) { s.notReached++; continue; }
-
-        // ── shape 1: sales whose PARTITION KEY (cardId) IS the short id.
-        const cardIdRows = [];
-        await forEachPage(pool, { query: "SELECT * FROM c WHERE c.cardId = @s", parameters: [{ name: "@s", value: shortId }] }, async (page) => {
-          for (const row of page) cardIdRows.push(row);
-          return true;
-        }, 200);
-        s.salesFoundByCardId += cardIdRows.length;
-
-        for (const sale of cardIdRows) {
-          const titlePrintRun = titlePrintRunOf(sale, shortId);
-          const titleStatesProsePrintRun = statesProsePrintRun(sale.title);
-          const plan = decideSaleAction(sale, "cardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, targetPrintRun: printRunOf(target) });
-          if (plan.action === "refuse") {
-            s.salesLeftAlone++;
-            if (plan.reason === "title-states-print-run") s.refusedTitlePrintRun++;
-            else s.refusedSplitIdentity++;
-            const list = refusals[plan.reason];
-            if (list) list.push(`  ${sale.id}@${sale.cardId}: ${plan.detail}`);
-            continue;
-          }
-          try {
-            const keep = { ...stripSystem(sale), cardId: numberedId, hobbyiqCardId: numberedId, reslugedFrom: shortId, reslugedReason: "sale at the short (un-numbered) id follows the checklist's :num-N row (repoint-sales-to-checklist-numbered)", reslugedAt: new Date().toISOString() };
-            keep.contentHash = contentHashOf(keep);
-
-            // BLOCKER 2 (review, 2026-09-19): relocateSoldComp's upsert is a
-            // BLIND write at (sale.id, numberedId) -- it replaces whatever is
-            // there. Sale ids do not embed cardId, so this exact id can
-            // already be resident at the numbered partition. Check BEFORE
-            // upserting, never after: an upsert that already happened cannot
-            // be un-overwritten.
-            const resident = await residentAt(sale.id, numberedId);
-            if (resident) {
-              if (isSameSale(resident, keep)) {
-                // The SAME sale is already at the destination (by content
-                // hash) -- this is a COLLAPSE, not a relocate: delete the
-                // short-id copy and keep the resident, never upsert a
-                // duplicate over it. relocateSoldComp itself already treats
-                // "the address already held a document" as `existedBefore`
-                // and its upsert would simply overwrite the resident with an
-                // identical-by-hash document, but a DIRECT delete-after-
-                // verify is more honest about what actually happened here:
-                // nothing about the kept document changes.
-                if (APPLY) await retry(() => pool.item(sale.id, shortId).delete());
-                s.collapsedOntoResident++;
-                if (collapsedExamples.length < 20) collapsedExamples.push(`  COLLAPSE ${sale.id}@${shortId} -- same sale already resident at ${numberedId}; short-id copy deleted`);
-                continue;
-              }
-              // A DIFFERENT sale already occupies the destination. Moving
-              // ours there would silently overwrite it (or, under the
-              // ordinary path below, get overwritten BY it depending on
-              // upsert timing) -- either way one sale is lost. Refuse, list
-              // both, move nothing.
-              s.refusedDestinationCollision++;
-              refusals["destination-collision"].push(`  ${sale.id}@${shortId} -> ${numberedId}: a DIFFERENT sale (by content hash) already resides at the destination; NEITHER moved -- resident price=${resident.price ?? "?"} soldAt=${resident.soldAt ?? "?"} vs incoming price=${sale.price ?? "?"} soldAt=${sale.soldAt ?? "?"}`);
-              continue;
-            }
-
-            const res = await relocateSoldComp(pool, { keep, drop: [{ id: sale.id, cardId: shortId }], retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY });
-            if (res.guard?.verdict === "park") {
-              s.refusedGuardParked++;
-              refusals["guard-parked"].push(`  ${sale.id}@${shortId}: ${res.error ?? res.guard.reason}`);
-              continue;
-            }
-            if (!res.ok && res.stage !== "dry-run") {
-              s.salesFailed++;
-              failures.push(`  FAILED relocate ${sale.id}@${shortId} -> ${numberedId}: ${res.error ?? "unknown"}`);
-              continue;
-            }
-            s.salesRelocated++;
-            bump(bySetKey, setKey); bump(byYear, String(year));
-            if (examples.length < 24) examples.push(`  RELOCATE ${sale.id}@${shortId} -> ${numberedId}`);
-          } catch (e) {
-            s.salesFailed++;
-            failures.push(`  FAILED relocate ${sale.id}@${shortId} -> ${numberedId}: ${String(e?.stack ?? e?.message ?? e)}`);
-          }
-        }
-
-        // ── shape 2: sales whose hobbyiqCardId names the short id but whose
-        // OWN cardId is something else (a vendor partition) -- patch only.
-        // SHOULD-FIX 4 (review, 2026-09-19): this is the ONE cross-partition
-        // query this lane issues per target (the cardId-shape query above is
-        // partition-scoped; this one is not, since hobbyiqCardId is not the
-        // container's partition key) -- timed so a REPORT pilot shows its
-        // true cost before any wider scope is dispatched.
-        const hobbyiqQueryStarted = Date.now();
-        const hobbyiqRows = [];
-        await forEachPage(pool, { query: "SELECT * FROM c WHERE c.hobbyiqCardId = @s AND c.cardId != @s", parameters: [{ name: "@s", value: shortId }] }, async (page) => {
-          for (const row of page) hobbyiqRows.push(row);
-          return true;
-        }, 200);
-        s.hobbyiqCardIdQueries++;
-        hobbyiqCardIdQueryMs.push(Date.now() - hobbyiqQueryStarted);
-        s.salesFoundByHobbyiqCardId += hobbyiqRows.length;
-
-        for (const sale of hobbyiqRows) {
-          const titlePrintRun = titlePrintRunOf(sale, shortId);
-          const titleStatesProsePrintRun = statesProsePrintRun(sale.title);
-          const plan = decideSaleAction(sale, "hobbyiqCardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, targetPrintRun: printRunOf(target) });
-          if (plan.action === "refuse") {
-            s.salesLeftAlone++;
-            if (plan.reason === "title-states-print-run") s.refusedTitlePrintRun++;
-            else s.refusedSplitIdentity++;
-            const list = refusals[plan.reason];
-            if (list) list.push(`  ${sale.id}@${sale.cardId} (hobbyiqCardId=${shortId}): ${plan.detail}`);
-            continue;
-          }
-          try {
-            if (APPLY) {
-              await retry(() => pool.item(sale.id, sale.cardId).patch([
-                { op: "set", path: "/hobbyiqCardId", value: numberedId },
-                { op: "set", path: "/reslugedFrom", value: shortId },
-                { op: "set", path: "/reslugedReason", value: "sale at the short (un-numbered) id follows the checklist's :num-N row (repoint-sales-to-checklist-numbered)" },
-                { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
-              ]));
-            }
-            s.salesPatched++;
-            bump(bySetKey, setKey); bump(byYear, String(year));
-            if (examples.length < 24) examples.push(`  PATCH ${sale.id}@${sale.cardId} hobbyiqCardId ${shortId} -> ${numberedId}`);
-          } catch (e) {
-            s.salesFailed++;
-            failures.push(`  FAILED patch ${sale.id}@${sale.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
-          }
-        }
-
-        await repointHoldings(shortId, numberedId);
-      }
+      // ── THE BOUNDED-CONCURRENCY POOL (review, 2026-09-19) ─────────────────
+      // Every group's target is independent of every other group's (see
+      // processTarget's own header comment for the proof), so this setKey's
+      // groups run through the shared-cursor worker pool instead of a serial
+      // `for`. A budget stop is honoured INSIDE processTarget (checked before
+      // any I/O for that target, exactly where the old serial loop checked
+      // it), so in-flight targets still finish and only targets not yet
+      // claimed are left unclaimed -- matching the old loop's own
+      // claim-before-check discipline, just with up to CONCURRENCY claims
+      // outstanding at once instead of one.
+      await runTargetsPool([...groups.values()], { sport, year, setKey });
     }
   }
 
@@ -786,23 +954,37 @@ async function main() {
   console.log(`  hobbyiqCardId cross-partition queries issued  ${f(s.hobbyiqCardIdQueries)}`);
   console.log(`    p50 ${percentile(hobbyiqCardIdQueryMs, 50)}ms   p95 ${percentile(hobbyiqCardIdQueryMs, 95)}ms`);
 
-  if (bySetKey.size) { console.log(`\n  by setKey:`); for (const [k, n] of [...bySetKey.entries()].sort((a, b) => b[1] - a[1])) console.log(`    ${String(n).padStart(9)}  ${k}`); }
+  // CONCURRENCY (review, 2026-09-19): read ONCE, after every worker has
+  // finished (the outer targets loop has already been awaited by this line),
+  // so this is the whole run's throttle count, not a snapshot mid-flight.
+  s.throttled = THROTTLE_COUNT;
+  console.log(`  throttled (429/503/timeout retries across all workers)  ${f(s.throttled)}   <- concurrency ${CONCURRENCY}`);
+
+  // CONCURRENCY (review, 2026-09-19): every sample/refusal/failure list below
+  // is filled by workers running in whatever order they happen to finish, so
+  // PRINT ORDER is no longer the order targets/sales were claimed. Sorted
+  // (plain string sort, stable and deterministic) immediately before
+  // printing so two runs -- REPORT vs APPLY, or CONCURRENCY=1 vs 16 -- print
+  // the SAME lines in the SAME order for the same fixture; only the counts
+  // and the set of lines are meaningful, never the order they arrived in.
+  const sorted = (arr) => [...arr].sort();
+  if (bySetKey.size) { console.log(`\n  by setKey:`); for (const [k, n] of [...bySetKey.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) console.log(`    ${String(n).padStart(9)}  ${k}`); }
   if (byYear.size) { console.log(`\n  by year:`); for (const [k, n] of [...byYear.entries()].sort()) console.log(`    ${String(n).padStart(9)}  ${k}`); }
-  if (examples.length) { console.log(`\n  examples:`); for (const e of examples) console.log(e); }
-  if (twinExamples.length) { console.log(`\n  short ids WITH a catalog twin (sample, ${f(s.shortIdsWithCatalogTwin)} total):`); for (const e of twinExamples) console.log(e); }
-  if (vetoedTargets.length) { console.log(`\n  VETOED targets -- short id is checklist-backed (sample, ${f(s.targetsVetoedShortIdChecklistBacked)} total):`); for (const e of vetoedTargets) console.log(e); }
-  if (collapsedExamples.length) { console.log(`\n  COLLAPSED onto a resident (sample, ${f(s.collapsedOntoResident)} total):`); for (const e of collapsedExamples) console.log(e); }
-  if (ambiguousExamples.length) { console.log(`\n  RIVAL /N groups (sample, ${f(s.ambiguousRivalRuns)} total) -- never folded, a human rules on these:`); for (const e of ambiguousExamples) console.log(e); }
+  if (examples.length) { console.log(`\n  examples:`); for (const e of sorted(examples)) console.log(e); }
+  if (twinExamples.length) { console.log(`\n  short ids WITH a catalog twin (sample, ${f(s.shortIdsWithCatalogTwin)} total):`); for (const e of sorted(twinExamples)) console.log(e); }
+  if (vetoedTargets.length) { console.log(`\n  VETOED targets -- short id is checklist-backed (sample, ${f(s.targetsVetoedShortIdChecklistBacked)} total):`); for (const e of sorted(vetoedTargets)) console.log(e); }
+  if (collapsedExamples.length) { console.log(`\n  COLLAPSED onto a resident (sample, ${f(s.collapsedOntoResident)} total):`); for (const e of sorted(collapsedExamples)) console.log(e); }
+  if (ambiguousExamples.length) { console.log(`\n  RIVAL /N groups (sample, ${f(s.ambiguousRivalRuns)} total) -- never folded, a human rules on these:`); for (const e of sorted(ambiguousExamples)) console.log(e); }
 
   for (const [reason, list] of Object.entries(refusals)) {
     if (list.length) {
       console.log(`\n  REFUSED (${reason}), every one listed (${f(list.length)}):`);
-      for (const l of list) console.log(l);
+      for (const l of sorted(list)) console.log(l);
     }
   }
   if (failures.length) {
     console.log(`\n  FAILURES (${f(failures.length)}):`);
-    for (const fl of failures) console.log(fl);
+    for (const fl of sorted(failures)) console.log(fl);
   }
 
   // ── CF-A-SALE-IS-NEVER-LOST reconciliation ---------------------------------
