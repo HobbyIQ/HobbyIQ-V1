@@ -319,7 +319,7 @@ function identityTuple(r) {
     String(r?.parallel ?? "").trim().toLowerCase(),
     String(r?.isAuto ?? "") === "true" ? "auto" : "no-auto",
     String(r?.printRun ?? "").trim(),
-  ].join(" ");
+  ].join(" ");
 }
 
 /**
@@ -348,9 +348,30 @@ function identityTuple(r) {
  * exactly as before. Two players at one number is the defect; one player
  * written twice is a typo.
  *
+ * BUT `category` CANNOT BE IGNORED OUTRIGHT -- it is also the ONLY field that
+ * says which SUBSET a row belongs to, and `subsetsToSeparate` (below) reuses
+ * this function to find same-numbered subsets by asking "what collides on the
+ * plain product key?". A base card and a same-numbered NAMED SUBSET can share
+ * every one of the five identity fields by coincidence -- same player, same
+ * number, blank parallel, no auto, no print run -- and that is not a source
+ * spelling one card twice, it is R30's own defect: two different cards
+ * fighting for one address. Folding it here would hide the collision from the
+ * one guard that exists to catch it (measured on the cbc shape: a base set and
+ * College Penmanship both numbered 1-3 silently lost the subset's three rows).
+ * So the fold requires the SAME EFFECTIVE SUBSET too -- `subsetSlugFor`,
+ * through any rung fold, since a rung and its root are one subset by
+ * construction -- and only degenerates to "ignore category" when the category
+ * spellings the source used both name the SAME subset, exactly the Photogenic
+ * shape (`base` and `insert-base-black` both read as base, per
+ * `categorySubsetSlug`).
+ *
+ * `foldRungs` is optional -- omitted, a rung and its own colour spelling are
+ * not folded together here, which only makes the guard MORE conservative
+ * (fewer folds, more refusals), never less safe.
+ *
  * -> { ids, collisions, unslugable, duplicatesFolded }
  */
-function idCollisions(rows, computeId) {
+function idCollisions(rows, computeId, foldRungs) {
   const byId = new Map();
   let unslugable = 0;
   for (const r of rows) {
@@ -360,14 +381,20 @@ function idCollisions(rows, computeId) {
     if (!byId.has(id)) byId.set(id, []);
     byId.get(id).push(r);
   }
+  const effectiveSubsetOf = (r) => {
+    const slug = subsetSlugFor({ category: r?.category, parallel: r?.parallel, subsetName: r?.subsetName });
+    return slug && foldRungs && foldRungs.has(slug) ? foldRungs.get(slug).root : slug;
+  };
   const collisions = [];
   let duplicatesFolded = 0;
   for (const [id, group] of byId) {
     if (group.length < 2) continue;
     const tuples = new Set(group.map(identityTuple));
-    if (tuples.size === 1) {
-      // One card, written N times. Keep one; the rest are the source's own
-      // duplication and are counted, never silently dropped.
+    const subsets = new Set(group.map(effectiveSubsetOf));
+    if (tuples.size === 1 && subsets.size === 1) {
+      // One card, written N times under spellings that all name the SAME
+      // subset. Keep one; the rest are the source's own duplication and are
+      // counted, never silently dropped.
       duplicatesFolded += group.length - 1;
       byId.set(id, [group[0]]);
       continue;
@@ -406,7 +433,7 @@ function subsetsToSeparate(rows, productSetKey, computeId, foldRungs) {
     ...r,
     setKey: productSetKey,
     parallel: parallelForRow({ category: r.category, parallel: r.parallel, subsetName: r.subsetName, foldRungs }),
-  }));
+  }), foldRungs);
   const separate = new Set();
   for (const c of collisions) {
     const slugs = new Set(c.rows.map((r) => {
@@ -901,7 +928,7 @@ function planFile({ rows, productSetKey, computeId, normalize, separate: given, 
   const keys = insertSetKeysOf(rows, productSetKey, separate, foldRungs);
   const unregistered = unregisteredKeys(keys, normalize);
   const finalId = finalIdFor({ productSetKey, separate, foldRungs }, computeId);
-  const { ids, collisions, unslugable, duplicatesFolded } = idCollisions(rows, finalId);
+  const { ids, collisions, unslugable, duplicatesFolded } = idCollisions(rows, finalId, foldRungs);
   // ORDER IS LOAD-BEARING: an unregistered key is reported even when the
   // separation it would perform already removes every collision, because
   // writing to a key that folds elsewhere is the worse outcome of the two.
