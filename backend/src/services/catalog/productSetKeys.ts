@@ -1978,6 +1978,71 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   S("panini-select-starcade", { family: "panini-select", parent: "panini-select" }),
   S("panini-select-sparks", { family: "panini-select", parent: "panini-select" }),
 
+  /**
+   * R67 (Drew, ruling round of 2026-09-19): 2024 PANINI SELECT FOOTBALL --
+   * FOUR MORE NAMED INSERT ROOTS THE R60 GUARD DID NOT NEED.
+   *
+   * The 33 above were measured against this exact file to clear a genuine id
+   * COLLISION (base's own tiers already have disjoint number ranges, so this
+   * product never collides the way Zenith did -- registration alone clears
+   * the whole file, REFUSED 0). This batch answers R67's separate question --
+   * a named insert prices in its own pool -- for roots the module's own
+   * prefix-based fold could not connect on its own, same method as
+   * Illusions: the colour word sits in the MIDDLE of the category name
+   * (`2025-XRC-BLACK-Prizm`, not a trailing suffix), and the parallel column
+   * is blank on the plain tier, so `categorySubsetSlug`'s suffix-strip has
+   * nothing to strip against.
+   *
+   *   panini-select-2025-xrc (4 spellings -> 1 root): plain + black/gold/
+   *     tie-dye Prizm, exact roster subsets of the plain 20-card checklist.
+   *     Distinct from the ALREADY-REGISTERED `panini-select-2025-xrc-
+   *     mystery-autograph`, which is the SIGNED sibling -- same "tail says
+   *     SIGNED" rule as every other product, unaffected by the shared
+   *     "2025-xrc" name fragment.
+   *
+   *   panini-select-prime-selections-signatures (9 spellings -> 1 root):
+   *     Prizm/Black Prizm (x4 tag variants)/Gold Prizm/Green Prizm/Neon
+   *     Orange Pulsar Prizm/Tie-Dye Prizm Signatures. Zero disagreement on
+   *     every shared number across all nine -- the size differences (34-42
+   *     rows) are real short-print scarcity per colour/tag, the same shape
+   *     Zenith's Rookie Patch Autographs measured, not different checklists.
+   *
+   * TWO REDEMPTION ROOTS, BOTH OWN-KEY, NEITHER A RUNG OF ITS NON-REDEMPTION
+   * SIBLING. A "redemption" card physically occupies the SAME numbered slot
+   * as the real card it stands in for -- `insert-2025-xrc-prizm-redemption`
+   * reuses #501-520, exactly the non-redemption insert's own numbers -- but
+   * the source spells the player as a POSITION SLOT ("QB1", "QB2", ...,
+   * "XRCAuto1") rather than a real name, so EVERY shared number disagrees on
+   * player. That is the R30/R67 defect a colour rung can never be: same
+   * number, different card, and the roster rule's own "zero disagreement"
+   * requirement is exactly what stops it from folding. Drew's ruling: these
+   * are their own product, not a rung of `2025-xrc` or
+   * `2025-xrc-mystery-autograph` respectively.
+   *
+   *   panini-select-2025-xrc-redemption (4 spellings -> 1 root): Redemption/
+   *     Black Prizm Redemption/Gold Prizm Redemption/Tie-Dye Redemption, all
+   *     twenty QB/RB/WR/TE/DEF placeholder slots, zero disagreement --
+   *     colour rungs of EACH OTHER, never of the real-player `2025-xrc`.
+   *   panini-select-2025-xrc-mystery-autograph-redemption (4 spellings -> 1
+   *     root): the signed sibling's placeholder redemption, same shape,
+   *     five XRCAuto slots. MEASURED BEFORE REGISTERING: this key currently
+   *     COLLAPSES ONTO `panini-select-2025-xrc-mystery-autograph` (the real
+   *     signed insert) via a substring match -- exactly the defect this
+   *     registration fixes, verified by running normalizeSetKey.
+   *
+   * TIERS ARE A SEPARATE OPEN QUESTION, NOT ANSWERED HERE. This file's base
+   * card ladders across five tiers -- Concourse, Club Level, Field Level,
+   * Premier Level, Suite Level -- each already registered as its own key
+   * under #2231 (see the block above naming panini-select-concourse etc.).
+   * No Courtside Level tier appears in THIS football file. Listed for the
+   * record, per instruction; nothing about the tiers is touched, folded, or
+   * turned into a NEW key in this PR.
+   */
+  S("panini-select-2025-xrc", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-prime-selections-signatures", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-2025-xrc-redemption", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-2025-xrc-mystery-autograph-redemption", { family: "panini-select", parent: "panini-select" }),
+
   // -- Fleer / Skybox / Pinnacle / Score / vintage ----------------------------
   P("fleer"),
   ...["fleer-stickers", "fleer-tradition", "fleer-update", "fleer-metal-universe"].map((k) => P(k, { parent: "fleer" })),
