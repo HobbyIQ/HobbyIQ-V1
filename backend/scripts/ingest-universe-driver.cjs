@@ -3608,7 +3608,7 @@ if (require.main !== module) return;
       // so the beckett downloader's 9 was recognised and every OTHER child's was
       // not. The sportscardchecklist zero-row refusal exits 9 and fell through to
       // `failed` -- our pipe broke -- when the host had simply not served us.
-      const isGone = /HTTP 40[34]|ENOTFOUND|exit(ed)?\s+(?:with\s+)?(?:code\s+)?9\b|workbook empty or unreachable/i.test(msg);
+      const isGone = /HTTP 40[34]|ENOTFOUND|exit(ed)?\s+(?:with\s+)?(?:code\s+)?9|workbook empty or unreachable/i.test(msg);
       // The acquisition itself says when the SOURCE answered "nothing here".
       // That is a verdict about the set, never a symptom of a broken lane.
       // A LANE BACKOFF OUTRANKS EVERY OTHER READING. The host answered, so the

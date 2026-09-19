@@ -61,8 +61,8 @@ function foldSubsetText(raw) {
  * nav and turns into a category, and the heading text then rides along into
  * subsetName. The scraper's own classifier is where this is visible:
  *
- *     else if (/\bbase\s*set\b/.test(joined)) category = "base";
- *     else if (/\binserts?\b/.test(joined))   category = `insert-${slugify(leaf)}`;
+ *     else if (/base\s*set/.test(joined)) category = "base";
+ *     else if (/inserts?/.test(joined))   category = `insert-${slugify(leaf)}`;
  *
  * When a page gives each insert its own heading, `leaf` is that insert's real
  * name ("Sheer Dominance") and the subsetName is a genuine claim. When the
@@ -108,7 +108,7 @@ const SECTION_HEADING_LABELS = new Set([
   // The undifferentiated insert section. `category: insert-${slugify(leaf)}`
   // where the leaf IS the section word, so the subsetName is the heading
   // itself rather than an insert's name. These are the scraper's sibling
-  // spellings of one heading -- see the /\binserts?\b/ branch above.
+  // spellings of one heading -- see the /inserts?/ branch above.
   "insert",
   "inserts",
   "insert sets",

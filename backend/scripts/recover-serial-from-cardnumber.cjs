@@ -47,7 +47,7 @@
  *
  * A dry run over 21,168 rows proposed 2,337 writes, and the first eight
  * sampled were ALL Pokemon: "Blitzle (40) - Black and White - Normal" carries
- * no TCG word at all, and \bholo\b does not match "Holofoil".
+ * no TCG word at all, and holo does not match "Holofoil".
  *
  * The damage would be bounded -- printRun only, never cardNumber, never the
  * slug -- but it would still write a Pokemon SET SIZE into a print run.
