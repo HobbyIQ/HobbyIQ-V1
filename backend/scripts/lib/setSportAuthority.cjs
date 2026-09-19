@@ -35,6 +35,27 @@
  *
  * MIN_OTHER is ABSOLUTE, not a ratio: 4% of a large set is thousands of real
  * cards, and a ratio gate lets them through.
+ *
+ * ── R76 (Drew, 2026-09-19): THE VETO WAS FIVE SUBSTRING WORDS ───────────────
+ *
+ * From 2026-08-20 to 2026-09-19 the title veto below tested only whether the
+ * title contained the LITERAL STRING "baseball" / "football" / "basketball" /
+ * "hockey" / "soccer" (SPORT_WORDS, kept below for the record and for any
+ * caller still reading it directly). A title almost never spells its own
+ * sport that way -- it names a TEAM ("Chicago Bulls"), a LEAGUE ("NBA"), or a
+ * position ("point guard") -- so this veto fired on roughly 11% of titles and
+ * NEVER on the other 89%, including every one of the 183,248 comps this
+ * repair moved. A read-only census then judged 69,598 of those moves WRONG:
+ * the title named the pre-repair sport's team/league and the veto never saw
+ * it, because none of those titles contain the word "basketball" itself.
+ *
+ * The veto now asks `sportEvidence` (sport-title-evidence.cjs) the SAME
+ * question with a real gazetteer -- word-boundary matched team/league/
+ * position evidence, not five substring nouns -- and is the SAME module the
+ * restore lane (revert-set-sport-repair.cjs) uses to judge which of the
+ * 69,598 wrongly-flipped comps to put back. One rule, two call sites, so this
+ * file's veto and the restore lane's verdict can never drift the way the
+ * five-word list and the census's own gazetteer already drifted once.
  */
 
 /** Absolute count of catalog rows in OTHER sports that makes a setKey a
@@ -43,7 +64,12 @@ const MIN_OTHER = 200;
 const MIN_CHECKLIST = 20;
 const DOMINANCE = 0.95;
 
+/** Retained for any caller that still reads it directly (e.g. a report that
+ *  quotes "the veto used to test these five words"). `judgeComp` itself no
+ *  longer reads this -- see the R76 note above. */
 const SPORT_WORDS = ["baseball", "football", "basketball", "hockey", "soccer"];
+
+const { sportEvidence } = require("./sport-title-evidence.cjs");
 
 /**
  * Build the (year, setKey) -> sport authority map.
@@ -97,19 +123,27 @@ function buildAuthority(checklistCounts, allCounts, opts = {}) {
  * hiq:baseball:2024:panini-donruss carried baseball 424, soccer 32, football 0
  * while the set-level rule wanted every one moved to football.
  *
- * It is high-precision and low-recall — only ~11% of titles name a sport — so
- * it can STOP a repair but must never drive one. That asymmetry is deliberate.
+ * R76: the veto now reads `sportEvidence(title).sports` -- a gazetteer of
+ * teams, leagues and positions, word-boundary matched -- in place of the
+ * five literal SPORT_WORDS substrings. It is still high-precision and
+ * low-recall by construction (most titles name no team or league at all),
+ * so it can STOP a repair but must never drive one. That asymmetry is
+ * unchanged; only what counts as "the title names a sport" has grown a real
+ * vocabulary. `sports.size > 1` (an ambiguous multi-league word, or a title
+ * that genuinely names two sports) is treated the same as "no single verdict
+ * to veto with" -- the repair proceeds on the set-level authority, exactly
+ * as it did when SPORT_WORDS found zero or two-plus hits.
  */
 function judgeComp({ slugSport, year, setKey, title }, authority) {
   const truth = authority.get(`${year}|${setKey}`);
   if (!truth) return { verdict: "no-authority" };
   if (truth === slugSport) return { verdict: "agree" };
 
-  const t = String(title || "").toLowerCase();
-  const named = SPORT_WORDS.filter((s) => t.includes(s));
-  if (named.length === 1) {
-    if (named[0] === slugSport) return { verdict: "vetoed-title-backs-slug" };
-    if (named[0] !== truth) return { verdict: "vetoed-title-backs-neither", named: named[0] };
+  const { sports } = sportEvidence(title);
+  if (sports.size === 1) {
+    const named = [...sports][0];
+    if (named === slugSport) return { verdict: "vetoed-title-backs-slug" };
+    if (named !== truth) return { verdict: "vetoed-title-backs-neither", named };
   }
   return { verdict: "contradict", from: slugSport, to: truth };
 }

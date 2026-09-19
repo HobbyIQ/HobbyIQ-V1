@@ -1,0 +1,44 @@
+[
+ {
+  "id": "tca-ebay::168576096718",
+  "title": "ACE 10 Mega Charizard x EX 125/094 Phantasmal Flames - PERFECT Sub Grades",
+  "cardId": "hiq:hockey:2025:phantasmal-flames:125094:mojo-refractor:no-auto:num-94",
+  "reason": "phantasmal"
+ },
+ {
+  "id": "tca-ebay::307079114175",
+  "title": "Wizards of the Coast 2000 Team Rocket Psyduck 65/82 CGC 9 1st Ed ENG",
+  "cardId": "hiq:basketball:2000:team-rocket:6582:base:no-auto:num-82",
+  "reason": "WoC"
+ },
+ {
+  "id": "tca-ebay::goldin_202107-1820-0000-1d0dd408-feba-2125-90a6-b0c6aec80654",
+  "title": "2018-19 Topps Chrome UEFA Champions League Lightning Strike #LS-CR Cristiano Ronaldo (#1/1) - BGS MINT 9",
+  "cardId": "hiq:hockey:2018:topps-chrome:ls-cr:base:no-auto:num-1",
+  "reason": "ronaldo-mbappe"
+ },
+ {
+  "id": "tca-ebay::318669158839",
+  "title": "2025-26 Panini Obsidian Nwankwo Kanu LIGHTNING STRIKE AUTO 82/149 LS-NK AFC AJAX",
+  "cardId": "hiq:hockey:2025:panini-obsidian:82149:base:auto:num-149",
+  "reason": "kanu"
+ },
+ {
+  "id": "tca-ebay::366486770799",
+  "title": "Mistys Gyarados Holo Rare Gym Challenge Wizards Of The Coast 13/132 Unlimited MP",
+  "cardId": "hiq:basketball:2000:gym-challenge:13132:base:no-auto:num-132",
+  "reason": "WoC"
+ },
+ {
+  "id": "tca-ebay::358851208000",
+  "title": "Wizards of the Coast Kabutops 9/62 Fossil Holo Rare Stage 2 60 HP EN 1999",
+  "cardId": "hiq:basketball:1999:fossil:962:base:no-auto:num-62",
+  "reason": "WoC"
+ },
+ {
+  "id": "tca-ebay::goldin_202107-1820-0000-85468ea9-5057-af57-174b-4d172cedc3f7",
+  "title": "2018 Topps Chrome UEFA Champions League Lightning Strike Gold #LSKM Kylian Mbappe (#01/50) - PSA GEM MT 10",
+  "cardId": "hiq:hockey:2018:topps-chrome:01:gold-refractor:no-auto:num-50",
+  "reason": "ronaldo-mbappe"
+ }
+]
