@@ -1020,6 +1020,30 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // (`panini-contenders-optic-<insert>`), measured the same way the 53 Optic
   // keys were.
   P("panini-contenders-optic", { family: "panini-contenders", parent: "panini-contenders" }),
+  // R67 (Drew, 2026-09-19): A NAMED INSERT SET IS ITS OWN PRODUCT KEY.
+  //
+  // aBrandSubstringIsNotAProduct.test.ts anchored two rules that would
+  // otherwise fold these three keys onto a DIFFERENT manufacturer's product
+  // (`topps-tribute`, `panini-contenders-optic`) purely on an unanchored
+  // substring match. Anchoring alone only stops the WRONG fold; the vocabulary
+  // still emits the key, so productFamilyIsATable's wholeness check refuses
+  // until the table knows it too (productEntry(k) for every
+  // vocabularyDestinations() key).
+  //
+  //   panini-photogenic-troops-tribute
+  //     2024 Panini Photogenic's own insert, "Troops Tribute" -- named after
+  //     the checklist, not a Topps release. No parent registered: Photogenic
+  //     itself is not yet in this table (it already normalizes to itself via
+  //     the corpus fallback), and R67 asks for exactly this key, nothing more.
+  //   panini-zenith-contenders-optic-rookie-ticket-rps-preview
+  //   panini-zenith-contenders-optic-rookie-ticket-variation-rps-preview
+  //     2024 Panini Zenith's own inserts previewing another product's Rookie
+  //     Ticket RPS parallel -- the name quotes Contenders Optic, the checklist
+  //     is Zenith's. Nested under panini-zenith, which this table already
+  //     registers (family "panini", parent "panini").
+  S("panini-photogenic-troops-tribute"),
+  S("panini-zenith-contenders-optic-rookie-ticket-rps-preview", { parent: "panini-zenith" }),
+  S("panini-zenith-contenders-optic-rookie-ticket-variation-rps-preview", { parent: "panini-zenith" }),
   // R53(ii) (Drew, 2026-09-15): SELECT'S TIERS ARE THEIR OWN CARD SETS.
   //
   // Panini Select prints its base set in named tiers -- Concourse, Premier

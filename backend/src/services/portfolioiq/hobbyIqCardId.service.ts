@@ -679,6 +679,20 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // CF-TOPPS-PRODUCT-LINES (Drew, 2026-07-29). Full Topps taxonomy.
     [/topps-transcendent/, "topps-transcendent"],
     [/topps-dynasty/, "topps-dynasty"],
+    // CF-A-BRAND-SUBSTRING-IS-NOT-A-PRODUCT (R67 prerequisite, 2026-09-19).
+    //
+    // `[/topps-tribute/]` below is an UNANCHORED substring, so any key that
+    // merely CONTAINS those letters answers Topps Tribute. 2024 Panini
+    // Photogenic has an insert set called "Troops Tribute", and every key R67
+    // would mint for it -- `panini-photogenic-troops-tribute` and its eight
+    // colour children -- currently folds onto `topps-tribute`: a different
+    // manufacturer's product, in a different sport, measured.
+    //
+    // The anchored rule goes ABOVE, exactly as every specialization does, so
+    // the fold can never be reached. `topps-tribute` itself is untouched --
+    // pinned by test, because a guard that fixes one product by breaking
+    // another is not a fix.
+    [/(?:^|-)panini-photogenic-troops-tribute(?:-|$)/, "panini-photogenic-troops-tribute"],
     [/topps-tribute/, "topps-tribute"],
     [/topps-inception/, "topps-inception"],
     [/topps-definitive/, "topps-definitive"],
@@ -891,6 +905,20 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // in productSetKeys was not enough on its own, because
     // productSetKeyForName resolves by SPELLED name and the catch-all answers
     // first for anything it does not name.
+    // CF-A-BRAND-SUBSTRING-IS-NOT-A-PRODUCT (R67 prerequisite, 2026-09-19).
+    //
+    // The Contenders Optic rule below is anchored at its own edges but matches
+    // the phrase ANYWHERE in a key, which is right for `playoff-contenders-optic`
+    // and wrong for a key that merely mentions it. 2024 Panini Zenith carries
+    // two insert sets whose own names quote the other product -- "Contenders
+    // Optic Rookie Ticket RPS Preview" and its Variation sibling -- and all six
+    // R67 keys for them fold onto `panini-contenders-optic`, measured.
+    //
+    // A Zenith card is not a Contenders card because Zenith printed a preview
+    // of one. Longest first, so the Variation sibling cannot be claimed by the
+    // shorter rule; `panini-contenders-optic` itself is untouched, pinned.
+    [/(?:^|-)panini-zenith-contenders-optic-rookie-ticket-variation-rps-preview(?:-|$)/, "panini-zenith-contenders-optic-rookie-ticket-variation-rps-preview"],
+    [/(?:^|-)panini-zenith-contenders-optic-rookie-ticket-rps-preview(?:-|$)/, "panini-zenith-contenders-optic-rookie-ticket-rps-preview"],
     [/(?:^|-)(?:panini-|playoff-)?contenders-optic(?:-|$)/, "panini-contenders-optic"],
     [/panini-contenders/, "panini-contenders"],
     [/panini-immaculate/, "panini-immaculate"],
