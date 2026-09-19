@@ -938,9 +938,12 @@ async function main() {
         plan = planRowChecklistEvidence(doc, checklistVerdict);
         // review MEDIUM (2026-09-19): stash for the REPORT-artifact pilot
         // list below -- a restore whose currentMatch was "no-row" restored
-        // on ABSENCE, not a disagreeing checklist row. Set only on the plan
-        // object this row produced, never leaked across rows.
-        if (plan.action === "restore" || plan.action === "patch" || plan.action === "relocate") {
+        // on ABSENCE, not a disagreeing checklist row. planRowChecklistEvidence
+        // only ever returns "patch" or "relocate" for a restore verdict
+        // (never the literal string "restore") -- both write shapes are
+        // covered here. Set only on the plan object this row produced, never
+        // leaked across rows.
+        if (plan.action === "patch" || plan.action === "relocate") {
           plan.__currentMatchWasNoRow = currentMatchForRow === "no-row";
         }
       }
