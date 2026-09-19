@@ -1,0 +1,38 @@
+{
+ "generatedAt": "2026-09-19",
+ "reportOnly": "THIS IS NOT A RELOCATION LIST. `entries` is empty on purpose. relocate-pool-rows-by-list.cjs refuses a list with zero entries, so this file cannot accidentally run anything. It is the GENERATOR SPEC a steward with Cosmos access runs to PRODUCE the real list — the bounded, read-only query below, plus the proven (fromCardId-prefix -> toCardId-prefix) pair and its evidence. No sale id is invented anywhere in this file.",
+ "whyASpecAndNotAList": "Exactly the same reason as the JA Gym 1 spec in this same directory: relocate-pool-rows-by-list needs a concrete {id, fromCardId} per sale, sold_comps is partitioned on the full /cardId string, and the individual sale ids under `hiq:soccer:2023:panini-obsidian:6:white:*` are Cosmos-only data this session cannot read (no COSMOS_CONNECTION_STRING; no Cosmos/az access per the HALT rules for this task).",
+ "ruling": "R46 (Drew, cited by this task): a bare colour parallel equals the suffixed rung when the product's own checklist carries exactly one candidate for that colour. This is the RETROACTIVE, stored-data analog of the forward-parsing rule already live in src/services/portfolioiq/bareColourAliasFromChecklist.ts (CF-A-BARE-COLOUR-IS-WHATEVER-ITS-OWN-CHECKLIST-SAYS, 2026-09-13), which resolves a bare colour word in a NEW title against the product's own checklist at parse time. R46 states the same doctrine for sales that were ALREADY STORED with `parallel: \"White\"` before that forward rule existed (or before its corpus covered this product), and therefore never got the checklist-informed answer.",
+ "finding": "2023 Panini Obsidian (soccer) #6: sales are stored with `parallel: \"White\"` (or a `hobbyiqCardId`/`cardId` segment of `white`), a bare colour with no finish word. Checked against the committed parallel corpus (data/checklist-parallel-names.json, key `soccer|2023|panini-obsidian`): the product's flat `parallels[]` list has no bare 'White' rung — its only white-family BASE parallel is the qualified 'Electric Etch White Pulsar' — but the product's `insertSets[]` list carries exactly one entry whose root is a bare colour-adjacent name built from White: `{\"root\": \"White Night\", \"rootKey\": \"white night\", \"children\": [\"White Night\"], \"categories\": [\"insert-white-night\"]}`. No other parallel or insert-set name in this product's corpus entry contains the word 'white' or 'White' at all (checked every one of the 18 base parallels and all 19 insert-set roots). White Night is therefore the exactly-one candidate the ruling requires.",
+ "whyThisIsNotTheGenericBareColourReader": "bareColourAliasFromChecklist.ts's own colourMapForProduct() only scans the FLAT `parallels[]` array (base-tier rungs), never `insertSets[]` — by design, since an insert-set root is a different vocabulary axis (a named insert line, not a parallel finish) and the module's doctrine is deliberately narrow. This ruling (R46) is therefore NOT simply 'the existing reader will already catch this on the next parse' — the existing reader would still answer null for this product's 'White' today, because its corpus lookup never reaches insertSets. R46 is a scoped, human-ruled exception for this one product/colour pair, backed by the same 'exactly one candidate' evidentiary bar bareColourAliasFromChecklist already applies to its own (narrower) corpus slice — not an automatic extension of that module's runtime behaviour.",
+ "theProvenPair": {
+  "fromCardIdPrefix": "hiq:soccer:2023:panini-obsidian:6:white:",
+  "toCardIdPrefix": "hiq:soccer:2023:panini-obsidian:6:white-night:",
+  "evidence": "data/checklist-parallel-names.json products['soccer|2023|panini-obsidian'].insertSets contains exactly one White-family entry (root 'White Night', category 'insert-white-night'); no other parallel or insert-set name in the same product entry contains the word 'white'. Card #6 is the task-cited example; the underlying pair generalises to every card number in this product carrying a bare 'white' parallel token, per stepsToConfirm below."
+ },
+ "stepsToConfirmBeforeGenerating": [
+  "Point-read card_catalog for sport=soccer, year=2023, setKey=panini-obsidian, cardNumber=6, parallel spellings containing 'white' — confirm the ONLY matching catalog row's parallel field is literally 'White Night' (or a normalized form of it), matching the corpus evidence above.",
+  "Confirm the auto/no-auto and printRun segments of the destination slug from that same catalog row — this spec assumes they carry over unchanged from the source sale (only the parallel segment moves), per the standing doctrine that a relocation list changes ONLY the ruled axis.",
+  "Widen the census beyond card #6 ONLY if the steward confirms every other panini-obsidian 2023 soccer card number with a bare 'white' sale also has exactly one White-family catalog candidate — do not assume card #6's answer generalises without checking, since a different card COULD in principle carry a second white-family parallel this corpus snapshot does not show (e.g. a later-added insert)."
+ ],
+ "generatorQuery": {
+  "container": "sold_comps",
+  "partitionKey": "/cardId",
+  "sql": "SELECT c.id, c.cardId, c.hobbyiqCardId, c.setKey, c.setName, c.title, c.parallel, c.cardNumber, c.year, c.price, c.soldAt, c.source, c.identityUnverified, c.flaggedWrong FROM c WHERE (STARTSWITH(c.cardId, 'hiq:soccer:2023:panini-obsidian:6:white:') OR STARTSWITH(c.hobbyiqCardId, 'hiq:soccer:2023:panini-obsidian:6:white:'))",
+  "pagedAs": "maxItemCount ~2000, loop on hasMoreResults(), same retry/backoff pattern as scripts/census/ja-vintage-key-census.cjs",
+  "guardAgainstOverreach": "the filter is scoped to the exact card #6 address, not a product-wide STARTSWITH(..., 'hiq:soccer:2023:panini-obsidian:') sweep — a wider scan would need the per-card-number confirmation in stepsToConfirmBeforeGenerating run first for every number it would touch."
+ },
+ "shapeEachEntry": {
+  "relocate": "when the row's OWN cardId (partition) carries the `:white:` segment — build toCardId by swapping only the parallel segment (index 4 of the `hiq:sport:year:setKey:cardNumber:parallel:auto[:num-N]` slug) to `white-night`, keep every other segment identical, mirroring withSetKey() in scripts/census/ja-vintage-key-census.cjs but on the parallel axis instead of the setKey axis — 'a relocation list changes ONLY the ruled axis'.",
+  "repoint": "when the row's cardId is an opaque vendor id and only hobbyiqCardId carries the `:white:` segment — patch hobbyiqCardId in place to the same swapped address; run guardSoldCompDoc first, as relocate-pool-rows-by-list's REPOINT branch requires.",
+  "writeTheList": "Emit data/pool-relocations/<date>-r46-panini-obsidian-white-night-NNN.json in the shape relocate-pool-rows-by-list.cjs reads: {generatedAt, forLane, ruling, reportOnlyUntil, finding, rulings: [...], census: {...}, entries: [{id, fromCardId, toCardId | repointHobbyiqCardId, price, evidence}, ...]}."
+ },
+ "provenance": {
+  "measuredAt": "2026-09-19",
+  "database": "hobbyiq",
+  "readOnly": true,
+  "writes": "none — no Cosmos access in this session, no runner dispatch, no apply",
+  "connectionString": "NOT available in this session; a steward running the generator query must source COSMOS_CONNECTION_STRING via `az webapp config appsettings list --name HobbyIQ3 --resource-group rg-hobbyiq-dev` piped directly into env, per repo convention — never written to disk or echoed.",
+  "corpusFileRead": "backend/data/checklist-parallel-names.json, product key soccer|2023|panini-obsidian, read in full (18 parallels, 19 insertSets) to establish the exactly-one-candidate claim."
+ }
+}

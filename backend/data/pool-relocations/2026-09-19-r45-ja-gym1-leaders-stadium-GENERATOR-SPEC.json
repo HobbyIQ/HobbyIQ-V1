@@ -1,0 +1,59 @@
+{
+ "generatedAt": "2026-09-19",
+ "reportOnly": "THIS IS NOT A RELOCATION LIST. `entries` is empty on purpose. relocate-pool-rows-by-list.cjs refuses a list with zero entries (FATAL: names no entries), so this file cannot accidentally run anything. It is the GENERATOR SPEC a steward with Cosmos access runs to PRODUCE the real list — the two bounded, read-only queries below, plus the two proven (fromCardId-prefix -> toCardId-prefix) pairs and their evidence. No sale id is invented anywhere in this file.",
+ "whyASpecAndNotAList": "relocate-pool-rows-by-list requires a concrete {id, fromCardId} per sale (it does a point read at pool.item(id, from) before writing anything — see scripts/relocate-pool-rows-by-list.cjs:237). sold_comps is partitioned on the FULL /cardId string (sport:year:setKey:cardNumber:parallel:auto[:num-N]), so every distinct card under a setKey is its own partition and the individual sale document ids within each partition are not derivable from anything committed in this repo — they only exist in Cosmos. This session has no COSMOS_CONNECTION_STRING (HALT rule: no Cosmos, no az, no secrets), so the census that would emit real ids cannot be run here. Writing a list with fabricated ids would violate 'do not invent sale ids' and could be mistaken for a reviewed, runnable file — a spec with zero entries is the safe artifact.",
+ "finding": "1998 Pokemon Japanese Gym 1 (\"Leaders' Stadium\", tcgdex-ja source PMCG5, 96 cards) sales are filed at the UNREGISTERED slug family `hiq:pokemon:1998:japanese-leaders-stadium-gym-1:<cardNumber>:...`, which is not the JAPANESE_POKEMON_SET_ALIASES key (`leaders-x27-stadium`) and not the ruled destination either. The checklist-backed catalog rows for this product live under `japanese-gym-booster-1-leaders-stadium` (source tcgdex-ja), per two examples cited: card #125 and card #25. Every sale that stays on the unregistered slug is invisible to those catalog rows and prices nothing.",
+ "crossCheckAgainstTheStandingRuling": {
+  "warning": "Read this before dispatching. There are TWO different destinations in play for 'Japanese Gym 1' sales in this repo, and a steward must confirm which one the cited catalog rows actually are before generating the list.",
+  "r5RulingDestination": "CF-THE-JAPANESE-SET-GETS-ITS-OWN-KEY (R5, japaneseVintageSetKeyRuling.ts) already rules the bare-code Japanese Gym Heroes print onto `ja-gym1` (japaneseVintageKeyRewrites()['gym1'] === 'ja-gym1', confirmed against dist/services/catalog/japaneseVintageSetKeyRuling.js on this branch). A real R5 repoint already moved at least one such sale: data/pool-relocations/2026-09-07-ja-vintage-pool-repoint-10.json contains `hiq:pokemon:2000:gym1:player-mistys-tentacruel:base:no-auto -> hiq:pokemon:2000:ja-gym1:player-mistys-tentacruel:base:no-auto`.",
+  "thisFindingsDestination": "The task's own catalog evidence names `japanese-gym-booster-1-leaders-stadium` — a different, longer setKey string than `ja-gym1` — as where the checklist-backed rows for cards #125 and #25 actually live. That string appears nowhere in this repo (checked: japanesePokemonAliases.ts, pokemonSetCodes.ts, japaneseVintageSetKeyRuling.ts, tcgdex-ja-source-id-map.cjs, and a full-repo grep), which is expected — card_catalog rows are Cosmos-only and not mirrored here — but it means this repo cannot independently confirm from committed data whether `japanese-gym-booster-1-leaders-stadium` is (a) the SAME product R5 already addresses at `ja-gym1` under a since-renamed catalog key, or (b) a genuinely distinct catalog entry (e.g. a booster-box-specific listing) that R5's sweep never reached because R5 only ever emitted `ja-gym1`.",
+  "stepZeroForTheSteward": "Before running the generator queries below, point-read card_catalog for both candidate setKeys (`ja-gym1` and `japanese-gym-booster-1-leaders-stadium`) at cardNumber 125 and 25. If both keys return a live row for the same card, this is case (a): the destination in this file's rulings must be corrected to `ja-gym1` (and the 2026-09-07 repoint file above should be checked for whether it already covered these same sales). If only `japanese-gym-booster-1-leaders-stadium` returns rows, proceed with this spec as written."
+ },
+ "rulings": [
+  "R45 (proposed, pending the step-zero check above): a sold_comps row addressed under the unregistered `japanese-leaders-stadium-gym-1` family, for a card number the checklist-backed `japanese-gym-booster-1-leaders-stadium` catalog product (source tcgdex-ja) carries, re-keys onto that catalog product's address — same doctrine as R41/R5: only where the destination is checklist-backed, never forced.",
+  "THE NUMBER SEGMENT IS KEPT (CF-N/M doctrine, #1938/#1948 reaffirmed) — the Japanese print carries the same card number as the checklist row; only the setKey segment changes.",
+  "TWO SHAPES, as in R34/R35/R39/R41: a slug-shaped cardId (partition literally carries `japanese-leaders-stadium-gym-1`) is RELOCATE; an opaque vendor cardId (e.g. a CardHedge/eBay id) whose hobbyiqCardId carries the wrong slug is REPOINT.",
+  "SPLIT-IDENTITY ROWS ARE EXCLUDED, as in every prior round: where cardId and hobbyiqCardId disagree on vertical or set code, the row is left for the split-identity lane, not force-repointed here."
+ ],
+ "theTwoProvenPairs": [
+  {
+   "example": "#125",
+   "fromCardIdPrefix": "hiq:pokemon:1998:japanese-leaders-stadium-gym-1:125:",
+   "toCardIdPrefix": "hiq:pokemon:1998:japanese-gym-booster-1-leaders-stadium:125:",
+   "evidence": "sales sit at the unregistered slug; checklist-backed catalog row for card #125 (source tcgdex-ja) lives at japanese-gym-booster-1-leaders-stadium — task-provided, not independently verifiable from committed data (see crossCheckAgainstTheStandingRuling above)."
+  },
+  {
+   "example": "#25",
+   "fromCardIdPrefix": "hiq:pokemon:1998:japanese-leaders-stadium-gym-1:25:",
+   "toCardIdPrefix": "hiq:pokemon:1998:japanese-gym-booster-1-leaders-stadium:25:",
+   "evidence": "same as #125."
+  }
+ ],
+ "generatorQueries": {
+  "container": "sold_comps",
+  "partitionKey": "/cardId",
+  "note": "Both queries are filtered (STARTSWITH) cross-partition reads scoped to one setKey segment, the same shape scripts/census/ja-vintage-key-census.cjs already uses for R5 (never a bare cross-partition COUNT). They are bounded by the rarity of this product, not by partition — a Cosmos partition key is the exact cardId string, so there is no single partition that holds every card number for one setKey.",
+  "step1_censusTheSourceRows": {
+   "sql": "SELECT c.id, c.cardId, c.hobbyiqCardId, c.setKey, c.setName, c.title, c.cardNumber, c.year, c.price, c.soldAt, c.source, c.identityUnverified, c.flaggedWrong FROM c WHERE STARTSWITH(c.cardId, 'hiq:pokemon:1998:japanese-leaders-stadium-gym-1:') OR STARTSWITH(c.hobbyiqCardId, 'hiq:pokemon:1998:japanese-leaders-stadium-gym-1:')",
+   "pagedAs": "maxItemCount ~2000, loop on hasMoreResults(), matching the retry/backoff pattern in scripts/census/ja-vintage-key-census.cjs"
+  },
+  "step2_confirmEachCardNumberIsChecklistBacked": {
+   "sql": "SELECT c.id, c.cardNumber, c.player, c.playerName, c.source FROM c WHERE c.sport = 'pokemon' AND c.setKey = 'japanese-gym-booster-1-leaders-stadium'",
+   "container": "card_catalog",
+   "why": "R41's own rule: only re-key onto a destination cell that is checklist-backed. A sale for a cardNumber absent from this result is left alone (leftAlone.destinationNotBacked), not force-moved."
+  },
+  "step3_shapeEachEntry": {
+   "relocate": "when the row's OWN cardId (partition) carries `japanese-leaders-stadium-gym-1` — build toCardId by swapping only the setKey segment (index 3) to `japanese-gym-booster-1-leaders-stadium`, keep cardNumber/parallel/auto identical, per withSetKey() in scripts/census/ja-vintage-key-census.cjs:88.",
+   "repoint": "when the row's cardId is an opaque vendor id (CardHedge/eBay) and only hobbyiqCardId carries the unregistered slug — patch hobbyiqCardId in place to the same swapped address; run guardSoldCompDoc first, exactly as relocate-pool-rows-by-list's REPOINT branch already does.",
+   "excludeCrossIdentity": "if cardId and hobbyiqCardId disagree on vertical or setKey outside this pair, exclude with a reason rather than guess (matches R41's crossIdentity exclusion)."
+  },
+  "step4_writeTheList": "Emit data/pool-relocations/<date>-r45-ja-gym1-leaders-stadium-NNN.json in the exact shape relocate-pool-rows-by-list.cjs reads: {generatedAt, forLane: 'relocate-pool-rows-by-list.cjs', ruling, reportOnlyUntil, finding, rulings: [...], census: {...}, entries: [{id, fromCardId, toCardId | repointHobbyiqCardId, price, evidence}, ...]}, chunked at MAX_PER_FILE (2000) as ja-vintage-key-census.cjs does."
+ },
+ "provenance": {
+  "measuredAt": "2026-09-19",
+  "database": "hobbyiq",
+  "readOnly": true,
+  "writes": "none — no Cosmos access in this session, no runner dispatch, no apply",
+  "connectionString": "NOT available in this session; a steward running the generator queries must source COSMOS_CONNECTION_STRING via `az webapp config appsettings list --name HobbyIQ3 --resource-group rg-hobbyiq-dev` piped directly into env, per repo convention — never written to disk or echoed."
+ }
+}
