@@ -225,7 +225,45 @@ function categoryFor(sheetName, section) {
   // fetchHobbyMonitorChecklist.cjs, the lane that reads its relics correctly,
   // already emits them. What was missing was never a field; it was the section
   // name, which the count-line and ladder defects below were deleting.
-  if (/^base\b|^prospects?\b/i.test(sheet)) return "base";
+  //
+  // CF-BECKETT-BASE-SHEET-IS-NOT-ONE-SECTION (2026-09-19). The line above
+  // tested the SHEET only, so it returned "base" for EVERY section printed on
+  // a tab named Base/Prospects, including subsets that are their own distinct
+  // card run and share the tab only because Beckett put them there — 2024
+  // Panini Zenith Football's Base tab carries three: "Base Set" (#1-100),
+  // "Rookies" (#101-200), and "Rookie Patch Autographs" (#201-242, SIGNED).
+  // categoryFor("Base", "Rookie Patch Autographs - #201-242") returned "base",
+  // which in classifySections makes the section an explicitAnchor — bypassing
+  // the extendsName title-containment guard entirely — AND sets isAuto=false
+  // on 100 cards Beckett's own Master sheet lists as autographed. This is the
+  // exact "categoryFor returned base for everything on the sheet" collapse
+  // CF-EVERY-INGEST-USES-THE-ONE-FORMAT (2026-08-26) documented for
+  // checklistinsider, now found natively in this converter: a sheet name is
+  // not a section.
+  //
+  // A whitelist of "what the plain run is called" is the wrong shape of fix —
+  // tried first, and it broke 2026 Topps Tier One, whose plain run is spelled
+  // "Base - Tier 1" / "Base - Tier 2" / "Base - Tier 3" (a tier-numbered
+  // three-way split with no single canonical name at all). Guessing every
+  // spelling a publisher might use for "this is the plain run" is the same
+  // unbounded-whitelist trap PLAIN_SECTION's own history already warns about.
+  //
+  // The one thing that is NEVER true of a plain, unsigned base/rookie/prospect
+  // run — on any Beckett workbook seen so far — is that its own section name
+  // says SIGNED. That is the one bit of section-name evidence this file can
+  // trust without a whitelist, and it is also the only bit whose absence
+  // caused real harm (isAuto=false on signed cards). So: stay permissive for
+  // every section on a Base/Prospects sheet EXCEPT one that names itself
+  // Autograph/Signed — that one is never the plain run, however plain its
+  // sheet's name is, and falls through to auto-<subset> below instead.
+  const sectionNorm = String(section || "").trim();
+  const looksSigned = /\bautograph|\bautographed\b|\bsign(ed|atures?)\b/i.test(sectionNorm);
+  if (/^base\b|^prospects?\b/i.test(sheet) && !looksSigned) return "base";
+  // A section on the Base/Prospects sheet that says SIGNED in its own name
+  // (Rookie Patch Autographs, Autographed Rookies, ...) is an auto subset that
+  // merely shares the tab with the plain run — never file it as "insert-" just
+  // because its SHEET's own name doesn't happen to say "Autograph" too.
+  if (looksSigned) return "auto-" + s;
   // Signed when the SHEET says signed. Autographed Relics is an autograph sheet
   // that happens to carry a swatch; the signature is what sets isAuto.
   if (/\bautograph|\bautographed\b|\bsign(ed|atures?)\b/i.test(sheet)) return "auto-" + s;
