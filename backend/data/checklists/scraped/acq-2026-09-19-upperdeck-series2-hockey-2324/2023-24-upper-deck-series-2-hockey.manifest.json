@@ -1,0 +1,1012 @@
+{
+  "source": "upperdeck-2026-09-19",
+  "sourceUrl": "https://upperdeck.com/checklist/2023-24-upper-deck-series-2-checklist/",
+  "sourceHtmlSha256": "363110834def16568d4780270eda7e627c708075a5803de412254f721f5b4a60",
+  "fetchedAt": "2026-09-19",
+  "sport": "hockey",
+  "year": 2023,
+  "setName": "2023-24 Upper Deck Series 2 Hockey",
+  "productKey": "2023-24-upper-deck-series-2-hockey",
+  "setKey": "upper-deck-series-2",
+  "rowCount": 4400,
+  "parallelColumnAuthoritative": true,
+  "readyToIngest": false,
+  "readyToIngestNote": "Documentation only -- ingest-checklist-csv-to-catalog.cjs and ingest-scraped-checklist.cjs do not read this field; the real gate is that this directory sits under backend/data/checklists/scraped/ where a human/workflow chooses which directories to point DIR at.",
+  "gapThisFills": "2023-24 Upper Deck Series 2 Hockey had NO staged checklist anywhere in the repo before this package (checked backend/data/checklists for every upper-deck*hockey* file first: acq-2026-09-13-cbc and acq-2026-09-14-cardboardconnection carry 2019-20 through 2024-25 Series 1 and several years of Series 2, but 2023-24 Series 2 specifically was absent). Cardboard Connection's own page for this product (https://www.cardboardconnection.com/2023-24-upper-deck-series-2-hockey-cards) states outright 'The checklist will be added as soon as it is available' -- no xlsx was ever published there for this year, confirmed by WebFetch, not guessed. Beckett's S3 origin (2024/02/2023-24-Upper-Deck-Series-2-Hockey-Checklist.xlsx, HTTP 200) DOES have a file, but its Inserts sheet carries the same odds-line-before-'Parallels:' layout defect documented in the 2022-23 Extended Series package's sibling manifest -- confirmed by direct inspection of its 'Inserts' sheet (row 3 is an unstated-odds prose line, e.g. '1:3.3 WalMart Mega pack.', sitting BEFORE the 'Parallels:' marker line, which convertBeckettChecklistXlsx.cjs's current section-header logic has no isCountLine-style exemption for and would mint as the section's name in place of the real insert title) -- so Beckett was not used for this package, matching what happened when it WAS tried and rejected for 2022-23 Extended Series. Fell through to source #3, upperdeck.com's own checklist page, which publishes the full table as static server-rendered HTML (a <table class=\"csv-table\"> with all 4,400 rows already in the page's raw bytes -- verified this is NOT an AJAX/DataTables fetch: curl with no JS execution returns the complete table).",
+  "converterNote": "No existing repo script reads upperdeck.com's own HTML checklist table shape (distinct from both convertBeckettChecklistXlsx.cjs's multi-sheet xlsx and convertCardboardConnectionXlsx.cjs's flat cconnect xlsx). A one-off parser was written for this build only (not committed -- lives in this builder's scratch directory, not backend/scripts/) that: (1) extracts the <table class=\"csv-table\"> block, (2) reads the <thead> to map column names to indices rather than assuming position (this product's table header reads 'Tech' where the sibling 2024-25 Extended Series page reads 'Mem/Tech' -- confirmed by direct inspection, not assumed), (3) groups rows by the table's own 'Set Name' cell, (4) determines which Set Name groups are PARALLELS of one another by comparing their (cardNumber -> player) maps for EXACT equality (same size, same content) rather than by string-matching the section title -- the same R67 contract as the CBC package, applied programmatically instead of by hand. If a future package needs the same source again, this logic belongs in its own committed script rather than being re-derived per package.",
+  "keysNeeded": [
+    {
+      "setKey": "upper-deck-series-2-pcs",
+      "rows": 105,
+      "registered": true,
+      "registeredNote": "Registered 2026-09-19 in backend/src/services/catalog/productSetKeys.ts, nested under upper-deck-series-2 (family + parent). Pinned by tests/upperDeckSeries2PcsPopulationCountAreFixedPoints.test.ts.",
+      "note": "\"PC's\" insert (Prospect/Combine-style, unclear expansion from the page alone -- Drew's ruling still open on the DISPLAY name only, not the key), cardNumbers PC-1 through PC-35, 3 rungs (PC's / Sparkle Parallel / Gold Sparkle Parallel) x 35 cards. Player at #PC-31 is Filip Forsberg."
+    },
+    {
+      "setKey": "upper-deck-series-2-population-count-1000",
+      "rows": 210,
+      "registered": true,
+      "registeredNote": "Registered 2026-09-19 in backend/src/services/catalog/productSetKeys.ts, nested under upper-deck-series-2 (family + parent), with a names alias upper-deck-series-2-population-count. Pinned by tests/upperDeckSeries2PcsPopulationCountAreFixedPoints.test.ts.",
+      "note": "\"Population Count 1000\" insert, cardNumbers PC-31 through PC-60 (announced print run of 1,000, stepping down through 500/100/50/25/10/1 parallels), 7 rungs x 30 cards. Player at #PC-31 is Connor McDavid -- collides with PC's #PC-31 (Filip Forsberg) on the raw card number alone; the two are unrelated products."
+    }
+  ],
+  "sectionsReport": [
+    {
+      "category": "base-set",
+      "anchorSection": "Base Set",
+      "cardRange": "251-450",
+      "cards": 200,
+      "parallels": [
+        "Deluxe",
+        "Outburst",
+        "Clear Cut",
+        "Exclusives",
+        "High Gloss",
+        "Outburst Red",
+        "Outburst Gold"
+      ]
+    },
+    {
+      "category": "base-set-young-guns",
+      "anchorSection": "Base Set - Young Guns",
+      "cardRange": "451-500",
+      "cards": 50,
+      "parallels": [
+        "Deluxe",
+        "Outburst",
+        "Clear Cut",
+        "Exclusives",
+        "High Gloss",
+        "Outburst Red",
+        "Outburst Gold",
+        "Oversized (14-card subset fold, see r67RosterFold.perSectionEvidence)"
+      ]
+    },
+    {
+      "category": "1994-95-rookie-die-cut",
+      "anchorSection": "1994-95 Rookie Die-Cut",
+      "cardRange": "RDT-11..RDT-20",
+      "cards": 10,
+      "parallels": [
+        "Red"
+      ]
+    },
+    {
+      "category": "2023-24-rookie-commemorative-class",
+      "anchorSection": "2023-24 Rookie Commemorative Class",
+      "cardRange": "RC-16..RC-30",
+      "cards": 15,
+      "parallels": [
+        "Red"
+      ]
+    },
+    {
+      "category": "day-with-the-cup",
+      "anchorSection": "Day With The Cup",
+      "cardRange": "DC1-DC12",
+      "cards": 12,
+      "parallels": [],
+      "note": "own-cards, singleton"
+    },
+    {
+      "category": "dazzlers-blue",
+      "anchorSection": "Dazzlers Blue",
+      "cardRange": "DZ-51..DZ-100",
+      "cards": 50,
+      "parallels": [
+        "Orange",
+        "Green",
+        "Pink",
+        "Red",
+        "Black",
+        "Printing Plates"
+      ]
+    },
+    {
+      "category": "deep-roots",
+      "anchorSection": "Deep Roots",
+      "cardRange": "DR-1..DR-50",
+      "cards": 50,
+      "parallels": [
+        "Purple"
+      ]
+    },
+    {
+      "category": "director-of-boards",
+      "anchorSection": "Director of Boards",
+      "cardRange": "DB-1..DB-15",
+      "cards": 15,
+      "parallels": [
+        "Sparkle",
+        "Gold Sparkle"
+      ]
+    },
+    {
+      "category": "ecliptic",
+      "anchorSection": "Ecliptic",
+      "cardRange": "EC-1..EC-20",
+      "cards": 20,
+      "parallels": [
+        "Sparkle",
+        "Gold Sparkle"
+      ]
+    },
+    {
+      "category": "fluoresence-red",
+      "anchorSection": "Fluoresence Red",
+      "cardRange": "F-1..F-50",
+      "cards": 50,
+      "parallels": [
+        "Gold",
+        "Blue",
+        "Pink",
+        "Green"
+      ],
+      "note": "source spells the anchor 'Fluoresence' and the parallels 'Fluorescence' -- kept exactly as the source states each, not normalised"
+    },
+    {
+      "category": "glaring",
+      "anchorSection": "Glaring",
+      "cardRange": "GL-1..GL-18",
+      "cards": 18,
+      "parallels": [
+        "Gold",
+        "Printing Plates"
+      ]
+    },
+    {
+      "category": "highlighters-yellow",
+      "anchorSection": "Highlighters Yellow",
+      "cardRange": "HL-1..HL-25",
+      "cards": 25,
+      "parallels": [
+        "Orange",
+        "Pink",
+        "Green"
+      ]
+    },
+    {
+      "category": "honor-roll",
+      "anchorSection": "Honor Roll",
+      "cardRange": "HR36..HR70",
+      "cards": 35,
+      "parallels": [
+        "Red",
+        "Silver",
+        "Gold",
+        "Printing Plates"
+      ]
+    },
+    {
+      "category": "instinctive",
+      "anchorSection": "Instinctive",
+      "cardRange": "IN-1..IN-30",
+      "cards": 30,
+      "parallels": [
+        "Sparkle",
+        "Gold Sparkle"
+      ]
+    },
+    {
+      "category": "monster-season",
+      "anchorSection": "Monster Season",
+      "cardRange": "MS-1..MS-82",
+      "cards": 82,
+      "parallels": [
+        "Gold"
+      ]
+    },
+    {
+      "category": "o-pee-chee-glossy",
+      "anchorSection": "O-Pee-Chee Glossy",
+      "cardRange": "R-26..R-50",
+      "cards": 25,
+      "parallels": [
+        "Gold"
+      ]
+    },
+    {
+      "category": "pcs",
+      "anchorSection": "PC's",
+      "cardRange": "PC-1..PC-35",
+      "cards": 35,
+      "parallels": [
+        "Sparkle",
+        "Gold Sparkle"
+      ],
+      "note": "category renamed pc-s -> pcs (2026-09-19, post-registration): slugify() strips the apostrophe in \"PC's\" outright rather than turning it into a hyphen, so a real sale title reads this insert's segment as \"pcs\" (one token), never \"pc-s\" (two). The registered key upper-deck-series-2-pcs is spelled to match. UNREGISTERED before the registration PR landed -- see keysNeeded and r67RosterFold.genuineCollisionFound; now registered, see status."
+    },
+    {
+      "category": "population-count-1000",
+      "anchorSection": "Population Count 1000",
+      "cardRange": "PC-31..PC-60",
+      "cards": 30,
+      "parallels": [
+        "500",
+        "100",
+        "50",
+        "25",
+        "10",
+        "1"
+      ],
+      "note": "Registered 2026-09-19 as upper-deck-series-2-population-count-1000, nested under upper-deck-series-2 -- see keysNeeded and r67RosterFold.genuineCollisionFound. Was the R67 collision with pcs before registration."
+    },
+    {
+      "category": "ud-canvas",
+      "anchorSection": "UD Canvas",
+      "cardRange": "C121-C210",
+      "cards": 90,
+      "parallels": [
+        "Black and White",
+        "Printing Plates"
+      ]
+    },
+    {
+      "category": "ud-canvas-young-guns",
+      "anchorSection": "UD Canvas - Young Guns",
+      "cardRange": "C211-C240",
+      "cards": 30,
+      "parallels": [
+        "Black and White",
+        "Printing Plates"
+      ]
+    },
+    {
+      "category": "ud-canvas-retired",
+      "anchorSection": "UD Canvas - Retired",
+      "cardRange": "C241-C255",
+      "cards": 15,
+      "parallels": [
+        "Black and White",
+        "Printing Plates"
+      ]
+    },
+    {
+      "category": "ud-canvas-program-of-excellence",
+      "anchorSection": "UD Canvas - Program of Excellence",
+      "cardRange": "C256-C270",
+      "cards": 15,
+      "parallels": [
+        "Black and White",
+        "Printing Plates"
+      ]
+    },
+    {
+      "category": "ud-canvas-signatures",
+      "anchorSection": "UD Canvas Signatures",
+      "cards": 1,
+      "parallels": [],
+      "note": "own-cards, singleton, the file's only auto row (#CA-RN Luc Robitaille/Bernie Nicholls)"
+    },
+    {
+      "category": "ud-portraits",
+      "anchorSection": "UD Portraits",
+      "cardRange": "P31-P60",
+      "cards": 30,
+      "parallels": [
+        "Silver Frame",
+        "Red Frame",
+        "Printing Plates"
+      ]
+    }
+  ],
+  "markersSeenNotStripped": [
+    "CL (dual-player Checklist card marker, e.g. 'Connor Bedard/Leo Carlsson CL' -- a real card-type flag, left exactly as the source states it, same convention as the 2022-23 Extended Series package)"
+  ],
+  "status": "REGISTERED, still not ingested",
+  "holdReason": "RESOLVED 2026-09-19: upper-deck-series-2-pcs and upper-deck-series-2-population-count-1000 are now registered in productSetKeys.ts (nested under upper-deck-series-2), in their own PR against backend/src with a fixed-point test (tests/upperDeckSeries2PcsPopulationCountAreFixedPoints.test.ts). The staged CSV's category for the first insert was renamed pc-s -> pcs to match how slugify() actually reads \"PC's\" from a real sale title (apostrophe dropped, not hyphenated) -- see keysNeeded and the pcs sectionsReport entry's note. planStagedDirectory now PASSES: verdict 'pass', 4,400 distinct ids, 0 collisions, 0 unregistered keys (re-run after both the registration and the category rename landed). This package is still documentation only -- readyToIngest stays false pending the orchestrator's report-only run and explicit go, per this build's hard rules; nothing here changes that gate.",
+  "r67RosterFold": {
+    "rule": "Two Set Name groups fold into one category (anchor + parallel column) only when their (cardNumber -> player) maps agree on every shared number -- exact match for same-size groups, clean SUBSET match (0 disagree, 0 missing) for a smaller group against a larger anchor.",
+    "perSectionEvidence": [
+      {
+        "sourceSection": "Clear Cut Parallel",
+        "anchorSection": "Base Set",
+        "foldedAs": "Clear Cut",
+        "rows": 200,
+        "sharedWithAnchor": 200,
+        "agree": 200,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Deluxe Parallel",
+        "anchorSection": "Base Set",
+        "foldedAs": "Deluxe",
+        "rows": 200,
+        "sharedWithAnchor": 200,
+        "agree": 200,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Exclusives Parallel",
+        "anchorSection": "Base Set",
+        "foldedAs": "Exclusives",
+        "rows": 200,
+        "sharedWithAnchor": 200,
+        "agree": 200,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "High Gloss Parallel",
+        "anchorSection": "Base Set",
+        "foldedAs": "High Gloss",
+        "rows": 200,
+        "sharedWithAnchor": 200,
+        "agree": 200,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Outburst Parallel",
+        "anchorSection": "Base Set",
+        "foldedAs": "Outburst",
+        "rows": 200,
+        "sharedWithAnchor": 200,
+        "agree": 200,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Outburst Red Parallel",
+        "anchorSection": "Base Set",
+        "foldedAs": "Outburst Red",
+        "rows": 200,
+        "sharedWithAnchor": 200,
+        "agree": 200,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Outburst Gold Parallel",
+        "anchorSection": "Base Set",
+        "foldedAs": "Outburst Gold",
+        "rows": 200,
+        "sharedWithAnchor": 200,
+        "agree": 200,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Clear Cut Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "Clear Cut",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Deluxe Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "Deluxe",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Exclusives Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "Exclusives",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "High Gloss Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "High Gloss",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Outburst Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "Outburst",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Outburst Red Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "Outburst Red",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Outburst Gold Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "Outburst Gold",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "1994-95 Rookie Die-Cut Red Parallel",
+        "anchorSection": "1994-95 Rookie Die-Cut",
+        "foldedAs": "Red",
+        "rows": 10,
+        "sharedWithAnchor": 10,
+        "agree": 10,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2023-24 Rookie Commemorative Class Red Parallel",
+        "anchorSection": "2023-24 Rookie Commemorative Class",
+        "foldedAs": "Red",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Dazzlers Orange Parallel",
+        "anchorSection": "Dazzlers Blue",
+        "foldedAs": "Orange",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Dazzlers Green Parallel",
+        "anchorSection": "Dazzlers Blue",
+        "foldedAs": "Green",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Dazzlers Pink Parallel",
+        "anchorSection": "Dazzlers Blue",
+        "foldedAs": "Pink",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Dazzlers Red Parallel",
+        "anchorSection": "Dazzlers Blue",
+        "foldedAs": "Red",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Dazzlers Black Parallel",
+        "anchorSection": "Dazzlers Blue",
+        "foldedAs": "Black",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Dazzlers Printing Plates Parallel",
+        "anchorSection": "Dazzlers Blue",
+        "foldedAs": "Printing Plates",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Deep Roots Purple Parallel",
+        "anchorSection": "Deep Roots",
+        "foldedAs": "Purple",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Director of Boards Sparkle Parallel",
+        "anchorSection": "Director of Boards",
+        "foldedAs": "Sparkle",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Director of Boards Gold Sparkle Parallel",
+        "anchorSection": "Director of Boards",
+        "foldedAs": "Gold Sparkle",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Ecliptic Sparkle Parallel",
+        "anchorSection": "Ecliptic",
+        "foldedAs": "Sparkle",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Ecliptic Gold Sparkle Parallel",
+        "anchorSection": "Ecliptic",
+        "foldedAs": "Gold Sparkle",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Fluorescence Gold Parallel",
+        "anchorSection": "Fluoresence Red",
+        "foldedAs": "Gold",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Fluorescence Blue Parallel",
+        "anchorSection": "Fluoresence Red",
+        "foldedAs": "Blue",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Fluorescence Pink Parallel",
+        "anchorSection": "Fluoresence Red",
+        "foldedAs": "Pink",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Fluorescence Green Parallel",
+        "anchorSection": "Fluoresence Red",
+        "foldedAs": "Green",
+        "rows": 50,
+        "sharedWithAnchor": 50,
+        "agree": 50,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Glaring Gold Parallel",
+        "anchorSection": "Glaring",
+        "foldedAs": "Gold",
+        "rows": 18,
+        "sharedWithAnchor": 18,
+        "agree": 18,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Glaring Printing Plates Parallel",
+        "anchorSection": "Glaring",
+        "foldedAs": "Printing Plates",
+        "rows": 18,
+        "sharedWithAnchor": 18,
+        "agree": 18,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Highlighters Orange Parallel",
+        "anchorSection": "Highlighters Yellow",
+        "foldedAs": "Orange",
+        "rows": 25,
+        "sharedWithAnchor": 25,
+        "agree": 25,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Highlighters Pink Parallel",
+        "anchorSection": "Highlighters Yellow",
+        "foldedAs": "Pink",
+        "rows": 25,
+        "sharedWithAnchor": 25,
+        "agree": 25,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Highlighters Green Parallel",
+        "anchorSection": "Highlighters Yellow",
+        "foldedAs": "Green",
+        "rows": 25,
+        "sharedWithAnchor": 25,
+        "agree": 25,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Honor Roll Red Parallel",
+        "anchorSection": "Honor Roll",
+        "foldedAs": "Red",
+        "rows": 35,
+        "sharedWithAnchor": 35,
+        "agree": 35,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Honor Roll Silver Parallel",
+        "anchorSection": "Honor Roll",
+        "foldedAs": "Silver",
+        "rows": 35,
+        "sharedWithAnchor": 35,
+        "agree": 35,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Honor Roll Gold Parallel",
+        "anchorSection": "Honor Roll",
+        "foldedAs": "Gold",
+        "rows": 35,
+        "sharedWithAnchor": 35,
+        "agree": 35,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Honor Roll Printing Plates Parallel",
+        "anchorSection": "Honor Roll",
+        "foldedAs": "Printing Plates",
+        "rows": 35,
+        "sharedWithAnchor": 35,
+        "agree": 35,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Instinctive Sparkle Parallel",
+        "anchorSection": "Instinctive",
+        "foldedAs": "Sparkle",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Instinctive Gold Sparkle Parallel",
+        "anchorSection": "Instinctive",
+        "foldedAs": "Gold Sparkle",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Monster Season Gold Parallel",
+        "anchorSection": "Monster Season",
+        "foldedAs": "Gold",
+        "rows": 82,
+        "sharedWithAnchor": 82,
+        "agree": 82,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "O-Pee-Chee Glossy Gold Parallel",
+        "anchorSection": "O-Pee-Chee Glossy",
+        "foldedAs": "Gold",
+        "rows": 25,
+        "sharedWithAnchor": 25,
+        "agree": 25,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "PC's Sparkle Parallel",
+        "anchorSection": "PC's",
+        "foldedAs": "Sparkle",
+        "rows": 35,
+        "sharedWithAnchor": 35,
+        "agree": 35,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "PC's Gold Sparkle Parallel",
+        "anchorSection": "PC's",
+        "foldedAs": "Gold Sparkle",
+        "rows": 35,
+        "sharedWithAnchor": 35,
+        "agree": 35,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Population Count 500 Parallel",
+        "anchorSection": "Population Count 1000",
+        "foldedAs": "500",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Population Count 100 Parallel",
+        "anchorSection": "Population Count 1000",
+        "foldedAs": "100",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Population Count 50 Parallel",
+        "anchorSection": "Population Count 1000",
+        "foldedAs": "50",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Population Count 25 Parallel",
+        "anchorSection": "Population Count 1000",
+        "foldedAs": "25",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Population Count 10 Parallel",
+        "anchorSection": "Population Count 1000",
+        "foldedAs": "10",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Population Count 1 Parallel",
+        "anchorSection": "Population Count 1000",
+        "foldedAs": "1",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Black and White Parallel",
+        "anchorSection": "UD Canvas",
+        "foldedAs": "Black and White",
+        "rows": 90,
+        "sharedWithAnchor": 90,
+        "agree": 90,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Printing Plates Parallel",
+        "anchorSection": "UD Canvas",
+        "foldedAs": "Printing Plates",
+        "rows": 90,
+        "sharedWithAnchor": 90,
+        "agree": 90,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Black and White Parallel - Young Guns",
+        "anchorSection": "UD Canvas - Young Guns",
+        "foldedAs": "Black and White",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Printing Plates Parallel - Young Guns",
+        "anchorSection": "UD Canvas - Young Guns",
+        "foldedAs": "Printing Plates",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Black and White Parallel - Retired",
+        "anchorSection": "UD Canvas - Retired",
+        "foldedAs": "Black and White",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Printing Plates Parallel - Retired",
+        "anchorSection": "UD Canvas - Retired",
+        "foldedAs": "Printing Plates",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Black and White Parallel - Program of Excellence",
+        "anchorSection": "UD Canvas - Program of Excellence",
+        "foldedAs": "Black and White",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Printing Plates Parallel - Program of Excellence",
+        "anchorSection": "UD Canvas - Program of Excellence",
+        "foldedAs": "Printing Plates",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Portraits Silver Frame Parallel",
+        "anchorSection": "UD Portraits",
+        "foldedAs": "Silver Frame",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Portraits Red Frame Parallel",
+        "anchorSection": "UD Portraits",
+        "foldedAs": "Red Frame",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Portraits Printing Plates Parallel",
+        "anchorSection": "UD Portraits",
+        "foldedAs": "Printing Plates",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Oversized Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "Oversized",
+        "rows": 14,
+        "sharedWithAnchor": 14,
+        "agree": 14,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      }
+    ],
+    "genuineCollisionFound": "\"PC's\" (cardNumbers PC-1..PC-35, e.g. #PC-31 Filip Forsberg) and \"Population Count 1000\" (cardNumbers PC-31..PC-60, e.g. #PC-31 Connor McDavid) are TWO DIFFERENT PRODUCTS that share the PC- number prefix by coincidence and OVERLAP on PC-31 through PC-35 with DIFFERENT PLAYERS at the same number. This is the R67 'different players/own numbering' branch: each needs its OWN registered productSetKey, not a fold. REGISTERED 2026-09-19 as upper-deck-series-2-pcs and upper-deck-series-2-population-count-1000 (see keysNeeded) -- planStagedDirectory now PASSES on this file (0 collisions, 0 unregistered keys)."
+  },
+  "rcSuffixStripped": {
+    "count": 0,
+    "note": "upperdeck.com's own table carries rookie status in a separate 'Rookie' column, never appended to the player field. 0 rows required stripping (every player cell scanned for a trailing ' RC' / ' RC*' / ' (RC)' pattern -- none found)."
+  }
+}

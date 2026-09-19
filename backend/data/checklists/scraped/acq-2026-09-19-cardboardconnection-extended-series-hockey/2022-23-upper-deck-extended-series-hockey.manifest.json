@@ -1,0 +1,1353 @@
+{
+  "source": "cardboardconnection-2026-09-19",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-23-upper-deck-extended-series-hockey-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2023/05/2022-23-Upper-Deck-Extended-Series-Hockey-checklist-Excel-spreadsheet.xlsx",
+  "xlsxSha256": "0af813c86238a99be2caa294410b0c7ae68ecbcff26ada44b07eda7a41d2399c",
+  "fetchedAt": "2026-09-19",
+  "sport": "hockey",
+  "year": 2022,
+  "setName": "2022-23 Upper Deck Extended Series Hockey",
+  "productKey": "2022-23-upper-deck-extended-series-hockey",
+  "setKey": "upper-deck-extended-series",
+  "rowCount": 3089,
+  "autoCount": 914,
+  "printRunCount": 0,
+  "distinctParallels": 17,
+  "parallelColumnAuthoritative": true,
+  "readyToIngest": false,
+  "readyToIngestNote": "Documentation only -- ingest-checklist-csv-to-catalog.cjs and ingest-scraped-checklist.cjs do not read this field; the real gate is that this directory sits under backend/data/checklists/scraped/ where a human/workflow chooses which directories to point DIR at.",
+  "stagedNote": "STAGED, not ingested. planStagedDirectory (backend/scripts/ingest-checklist-csv-to-catalog.cjs's real, read-only, no-Cosmos planner) PASSES on this file: verdict 'pass', 3,089 batch rows, 3,089 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys. setKey upper-deck-extended-series was already registered in productSetKeys.ts (D39, 2026-08-31 ruling) before this package existed -- the gap was that no checklist rows had ever been staged under it, not a missing key. No new productSetKeys registrations were needed for this package. Every genuinely independent named insert (Black Diamond Dominance, Champs Rookies, Clear Dominance, Day with the Cup, Dazzlers Blue, Holo GrFx, HoloGrFx Future Fame, Smooth Grooves, UD Canvas, 1997 Collectors Choice Commemorative, 1997-98 SPx Retro, 1999-00 Upper Deck Retro History Class, 2006-07 Black Diamond Retro, 2007-08 Upper Deck Retro) carries its OWN card-number range with zero overlap against Base Set's #501-700 -- these are 'own-cards' by inspection, no rung to fold.",
+  "rcSuffixStripped": {
+    "rule": "cardboardconnection's own convertCardboardConnectionXlsx.cjs (current main, 2026-09-19) APPENDS ' RC' to the player field for a rookie card (its own convention, opposite of this package's contract). Every ' RC' suffix was stripped from the player cell after conversion, per this build's instruction that the player cell must not carry a rookie marker.",
+    "measured": "914 of 3,089 rows carried the suffix pre-strip (matches autoCount exactly -- every rookie row in this product is also an auto row: Young Guns and 1st Round Rookies subsets, base and every parallel rung).",
+    "otherMarkersSeenNotStripped": [
+      "CL (a Checklist/dual-player checklist card marker, e.g. 'Matthew Tkachuk/Nino Niederreiter CL' on cardNumbers 699-700 and Young Guns #730 -- a real card-type flag, not a rookie marker, left exactly as the source states it)"
+    ]
+  },
+  "layout": "ud",
+  "rungRule": "measured: a section whose (cardNumber -> player) mapping reproduces another section's is a rung of it.",
+  "sectionsBlocked": 0,
+  "blockedSectionTitles": [],
+  "parallelVocabulary": [
+    "Black",
+    "Bronze",
+    "Clear Cut",
+    "Dazzlers Green",
+    "Dazzlers Orange",
+    "Dazzlers Pink",
+    "Emerald",
+    "Exclusive",
+    "Exclusives",
+    "French Variation",
+    "Gold",
+    "Gold Spectrum",
+    "High Gloss",
+    "Level 1",
+    "Level 2",
+    "Printing Plate",
+    "Sapphire"
+  ],
+  "sectionsReport": [
+    {
+      "section": "Base Set",
+      "category": "base-set",
+      "parallel": "",
+      "cards": 153,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Set - All-Star Team",
+      "category": "base-set--all-star-team",
+      "parallel": "",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Set - Checklist",
+      "category": "base-set--checklist",
+      "parallel": "",
+      "cards": 2,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Set - Young Guns",
+      "category": "base-set--young-gun",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "Base Set - 1st Round Rookies",
+      "category": "base-set--1st-round-rookie",
+      "parallel": "",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Parallel",
+      "category": "base-set",
+      "parallel": "Clear Cut",
+      "cards": 153,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Parallel - All-Star Team",
+      "category": "clear-cut--all-star-team",
+      "parallel": "",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Parallel - Checklist",
+      "category": "clear-cut--checklist",
+      "parallel": "",
+      "cards": 2,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Parallel - Young Guns",
+      "category": "clear-cut--young-gun",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Parallel - 1st Round Rookies",
+      "category": "clear-cut--1st-round-rookie",
+      "parallel": "",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 0
+    },
+    {
+      "section": "Exclusives Parallel",
+      "category": "base-set",
+      "parallel": "Exclusives",
+      "cards": 153,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Exclusives Parallel - All-Star Team",
+      "category": "exclusives--all-star-team",
+      "parallel": "",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Exclusives Parallel - Checklist",
+      "category": "exclusives--checklist",
+      "parallel": "",
+      "cards": 2,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Exclusives Parallel - Young Guns",
+      "category": "exclusives--young-gun",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "Exclusives Parallel - 1st Round Rookies",
+      "category": "exclusives--1st-round-rookie",
+      "parallel": "",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 0
+    },
+    {
+      "section": "French Variation Parallel",
+      "category": "base-set",
+      "parallel": "French Variation",
+      "cards": 153,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "French Variation Parallel - All-Star Team",
+      "category": "french-variation--all-star-team",
+      "parallel": "",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "French Variation Parallel - Checklist",
+      "category": "french-variation--checklist",
+      "parallel": "",
+      "cards": 2,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "French Variation Parallel - Young Guns",
+      "category": "french-variation--young-gun",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "French Variation Parallel - 1st Round Rookies",
+      "category": "french-variation--1st-round-rookie",
+      "parallel": "",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 0
+    },
+    {
+      "section": "High Gloss Parallel",
+      "category": "base-set",
+      "parallel": "High Gloss",
+      "cards": 153,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "High Gloss Parallel - All-Star Team",
+      "category": "high-gloss--all-star-team",
+      "parallel": "",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "High Gloss Parallel - Checklist",
+      "category": "high-gloss--checklist",
+      "parallel": "",
+      "cards": 2,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "High Gloss Parallel - Young Guns",
+      "category": "high-gloss--young-gun",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "High Gloss Parallel - 1st Round Rookies",
+      "category": "high-gloss--1st-round-rookie",
+      "parallel": "",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 0
+    },
+    {
+      "section": "1997 Collectors Choice Commemorative - Tier 1",
+      "category": "1997-collectors-choice-commemorative--tier-1",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "1997 Collectors Choice Commemorative - Tier 2",
+      "category": "1997-collectors-choice-commemorative--tier-2",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "1997 Collectors Choice Commemorative - Tier 3",
+      "category": "1997-collectors-choice-commemorative--tier-3",
+      "parallel": "",
+      "cards": 15,
+      "auto": 15,
+      "printRun": 0
+    },
+    {
+      "section": "1997-98 SPx Retro",
+      "category": "1997-98-spx-retro",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "1997-98 SPx Retro - Rookies",
+      "category": "1997-98-spx-retro--rookie",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "1997-98 SPx Retro Bronze Parallel",
+      "category": "1997-98-spx-retro",
+      "parallel": "Bronze",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "1997-98 SPx Retro Bronze Parallel - Rookies",
+      "category": "1997-98-spx-retro-bronze--rookie",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "1997-98 SPx Retro Gold Parallel",
+      "category": "1997-98-spx-retro",
+      "parallel": "Gold",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "1997-98 SPx Retro Gold Parallel - Rookies",
+      "category": "1997-98-spx-retro-gold--rookie",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "1999-00 Upper Deck Retro History Class - Rookies",
+      "category": "1999-00-upper-deck-retro-history-class--rookie",
+      "parallel": "",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 0
+    },
+    {
+      "section": "1999-00 Upper Deck Retro History Class",
+      "category": "1999-00-upper-deck-retro-history-class",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "1999-00 Upper Deck Retro History Class Level 1 Parallel - Rookies",
+      "category": "1999-00-upper-deck-retro-history-class-level-1--rookie",
+      "parallel": "",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 0
+    },
+    {
+      "section": "1999-00 Upper Deck Retro History Class Level 1 Parallel",
+      "category": "1999-00-upper-deck-retro-history-class",
+      "parallel": "Level 1",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "1999-00 Upper Deck Retro History Class Level 2 Parallel - Rookies",
+      "category": "1999-00-upper-deck-retro-history-class-level-2--rookie",
+      "parallel": "",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 0
+    },
+    {
+      "section": "1999-00 Upper Deck Retro History Class Level 2 Parallel",
+      "category": "1999-00-upper-deck-retro-history-class",
+      "parallel": "Level 2",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro - 1 Star",
+      "category": "2006-07-black-diamond-retro--1-star",
+      "parallel": "",
+      "cards": 7,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro - 1 Star Rookie",
+      "category": "2006-07-black-diamond-retro--1-star-rookie",
+      "parallel": "",
+      "cards": 7,
+      "auto": 7,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro - 2 Star",
+      "category": "2006-07-black-diamond-retro--2-star",
+      "parallel": "",
+      "cards": 7,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro - 2 Star Rookie",
+      "category": "2006-07-black-diamond-retro--2-star-rookie",
+      "parallel": "",
+      "cards": 7,
+      "auto": 7,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro - 3 Star",
+      "category": "2006-07-black-diamond-retro--3-star",
+      "parallel": "",
+      "cards": 6,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro - 3 Star Rookie",
+      "category": "2006-07-black-diamond-retro--3-star-rookie",
+      "parallel": "",
+      "cards": 6,
+      "auto": 6,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro - 4 Star",
+      "category": "2006-07-black-diamond-retro--4-star",
+      "parallel": "",
+      "cards": 3,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro - 4 Star Rookie",
+      "category": "2006-07-black-diamond-retro--4-star-rookie",
+      "parallel": "",
+      "cards": 3,
+      "auto": 3,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Ruby Parallel - 1 Star",
+      "category": "2006-07-black-diamond-retro-ruby--1-star",
+      "parallel": "",
+      "cards": 7,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Ruby Parallel - 1 Star Rookie",
+      "category": "2006-07-black-diamond-retro-ruby--1-star-rookie",
+      "parallel": "",
+      "cards": 7,
+      "auto": 7,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Ruby Parallel - 2 Star",
+      "category": "2006-07-black-diamond-retro-ruby--2-star",
+      "parallel": "",
+      "cards": 7,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Ruby Parallel - 2 Star Rookie",
+      "category": "2006-07-black-diamond-retro-ruby--2-star-rookie",
+      "parallel": "",
+      "cards": 7,
+      "auto": 7,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Ruby Parallel - 3 Star",
+      "category": "2006-07-black-diamond-retro-ruby--3-star",
+      "parallel": "",
+      "cards": 6,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Ruby Parallel - 3 Star Rookie",
+      "category": "2006-07-black-diamond-retro-ruby--3-star-rookie",
+      "parallel": "",
+      "cards": 6,
+      "auto": 6,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Ruby Parallel - 4 Star",
+      "category": "2006-07-black-diamond-retro-ruby--4-star",
+      "parallel": "",
+      "cards": 3,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Ruby Parallel - 4 Star Rookie",
+      "category": "2006-07-black-diamond-retro-ruby--4-star-rookie",
+      "parallel": "",
+      "cards": 3,
+      "auto": 3,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Emerald Auto Parallel - 1 Star",
+      "category": "2006-07-black-diamond-retro-emerald-auto--1-star",
+      "parallel": "",
+      "cards": 6,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Emerald Auto Parallel - 1 Star Rookie",
+      "category": "2006-07-black-diamond-retro-emerald-auto--1-star-rookie",
+      "parallel": "",
+      "cards": 1,
+      "auto": 1,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Emerald Auto Parallel - 2 Star",
+      "category": "2006-07-black-diamond-retro-emerald-auto--2-star",
+      "parallel": "",
+      "cards": 3,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Emerald Auto Parallel - 2 Star Rookie",
+      "category": "2006-07-black-diamond-retro-emerald-auto--2-star-rookie",
+      "parallel": "",
+      "cards": 1,
+      "auto": 1,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Emerald Auto Parallel - 3 Star",
+      "category": "2006-07-black-diamond-retro-emerald-auto--3-star",
+      "parallel": "",
+      "cards": 2,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Emerald Auto Parallel - 3 Star Rookie",
+      "category": "2006-07-black-diamond-retro-emerald-auto--3-star-rookie",
+      "parallel": "",
+      "cards": 5,
+      "auto": 5,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Emerald Auto Parallel - 4 Star",
+      "category": "2006-07-black-diamond-retro-emerald-auto--4-star",
+      "parallel": "",
+      "cards": 3,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2006-07 Black Diamond Retro Emerald Auto Parallel - 4 Star Rookie",
+      "category": "2006-07-black-diamond-retro-emerald-auto--4-star-rookie",
+      "parallel": "",
+      "cards": 3,
+      "auto": 3,
+      "printRun": 0
+    },
+    {
+      "section": "2007-08 Upper Deck Retro",
+      "category": "2007-08-upper-deck-retro",
+      "parallel": "",
+      "cards": 75,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2007-08 Upper Deck Retro - Young Guns",
+      "category": "2007-08-upper-deck-retro--young-gun",
+      "parallel": "",
+      "cards": 25,
+      "auto": 25,
+      "printRun": 0
+    },
+    {
+      "section": "2007-08 Upper Deck Retro Exclusives Parallel",
+      "category": "2007-08-upper-deck-retro",
+      "parallel": "Exclusive",
+      "cards": 75,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2007-08 Upper Deck Retro Exclusives Parallel - Young Guns",
+      "category": "2007-08-upper-deck-retro-exclusive--young-guns",
+      "parallel": "",
+      "cards": 25,
+      "auto": 25,
+      "printRun": 0
+    },
+    {
+      "section": "2007-08 Upper Deck Retro High Gloss Parallel",
+      "category": "2007-08-upper-deck-retro",
+      "parallel": "High Gloss",
+      "cards": 75,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2007-08 Upper Deck Retro High Gloss Parallel - Young Guns",
+      "category": "2007-08-upper-deck-retro-high-gloss--young-gun",
+      "parallel": "",
+      "cards": 25,
+      "auto": 25,
+      "printRun": 0
+    },
+    {
+      "section": "2007-08 Upper Deck Retro Printing Plates Parallel",
+      "category": "2007-08-upper-deck-retro",
+      "parallel": "Printing Plate",
+      "cards": 75,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2007-08 Upper Deck Retro Printing Plates Parallel - Young Guns",
+      "category": "2007-08-upper-deck-retro-printing-plate--young-guns",
+      "parallel": "",
+      "cards": 25,
+      "auto": 25,
+      "printRun": 0
+    },
+    {
+      "section": "Black Diamond Dominance",
+      "category": "black-diamond-dominance",
+      "parallel": "",
+      "cards": 50,
+      "auto": 20,
+      "printRun": 0
+    },
+    {
+      "section": "Black Diamond Dominance Emerald Parallel",
+      "category": "black-diamond-dominance",
+      "parallel": "Emerald",
+      "cards": 50,
+      "auto": 20,
+      "printRun": 0
+    },
+    {
+      "section": "Champs Rookies",
+      "category": "champs-rookies",
+      "parallel": "",
+      "cards": 18,
+      "auto": 18,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Dominance",
+      "category": "clear-dominance",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Dominance Gold Spectrum Parallel",
+      "category": "clear-dominance",
+      "parallel": "Gold Spectrum",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Day with the Cup",
+      "category": "day-with-the-cup",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Blue",
+      "category": "dazzlers-blue",
+      "parallel": "",
+      "cards": 50,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Green Parallel",
+      "category": "dazzlers-blue",
+      "parallel": "Dazzlers Green",
+      "cards": 50,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Orange Parallel",
+      "category": "dazzlers-blue",
+      "parallel": "Dazzlers Orange",
+      "cards": 50,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Pink Parallel",
+      "category": "dazzlers-blue",
+      "parallel": "Dazzlers Pink",
+      "cards": 50,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "Holo GrFx",
+      "category": "holo-grfx",
+      "parallel": "",
+      "cards": 15,
+      "auto": 15,
+      "printRun": 0
+    },
+    {
+      "section": "Holo GrFx Gold Parallel",
+      "category": "holo-grfx",
+      "parallel": "Gold",
+      "cards": 15,
+      "auto": 15,
+      "printRun": 0
+    },
+    {
+      "section": "HoloGrFx Future Fame",
+      "category": "hologrfx-future-fame",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Smooth Grooves",
+      "category": "smooth-grooves",
+      "parallel": "",
+      "cards": 40,
+      "auto": 15,
+      "printRun": 0
+    },
+    {
+      "section": "Smooth Grooves Sapphire Parallel",
+      "category": "smooth-grooves",
+      "parallel": "Sapphire",
+      "cards": 40,
+      "auto": 15,
+      "printRun": 0
+    },
+    {
+      "section": "Smooth Grooves Gold Spectrum Parallel",
+      "category": "smooth-grooves",
+      "parallel": "Gold Spectrum",
+      "cards": 40,
+      "auto": 15,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas",
+      "category": "ud-canvas",
+      "parallel": "",
+      "cards": 90,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas - Young Guns",
+      "category": "ud-canvas--young-gun",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas - Legends",
+      "category": "ud-canvas--legend",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas - All-Star Weekend",
+      "category": "ud-canvas--all-star-weekend",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Black Parallel",
+      "category": "ud-canvas",
+      "parallel": "Black",
+      "cards": 90,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Black Parallel - Young Guns",
+      "category": "ud-canvas-black--young-gun",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Black Parallel - Legends",
+      "category": "ud-canvas-black--legend",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Black Parallel - All-Star Weekend",
+      "category": "ud-canvas-black--all-star-weekend",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Printing Plates Parallel",
+      "category": "ud-canvas",
+      "parallel": "Printing Plate",
+      "cards": 90,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Printing Plates Parallel - Young Guns",
+      "category": "ud-canvas-printing-plate--young-guns",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Printing Plates Parallel - Legends",
+      "category": "ud-canvas-printing-plate--legends",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Printing Plates Parallel - All-Star Weekend",
+      "category": "ud-canvas-printing-plate--all-star-weekend",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    }
+  ],
+  "r67RosterFold": {
+    "rule": "convertCardboardConnectionXlsx.cjs correctly separates a PRODUCT-LEVEL parallel from its anchor (base-set + parallel=Clear Cut, etc.) but, as staged straight from the converter, left every SUBSET-level parallel (a colour/finish rung applied to the All-Star Team, Young Guns, 1st Round Rookies, Checklist, or a retro insert's own Rookie/tier split) as its OWN category instead of a parallel row against that subset's anchor. planStagedDirectory correctly refused the as-converted file on exactly these 59 categories (reason: unregistered-set-keys) rather than silently minting 59 new keys. Per R67 (same (cardNumber -> player) map on every shared number is a PARALLEL, not a named set), each flagged category was compared directly against its anchor section from the source xlsx (normalised players: split '/', trim, lowercase, sort). 45 of 59 matched cleanly and were folded (perSectionEvidence below); the remaining 14 were the ANCHOR-level categories themselves (base-set--all-star-team, base-set--checklist, etc. -- the fold DESTINATION, never flagged as unregistered by the planner in the first place, so not part of this table).",
+    "perSectionEvidence": [
+      {
+        "sourceSection": "Clear Cut Parallel - All-Star Team",
+        "anchorSection": "Base Set - All-Star Team",
+        "foldedAs": "Clear Cut",
+        "rows": 45,
+        "sharedWithAnchor": 45,
+        "agree": 45,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Clear Cut Parallel - Checklist",
+        "anchorSection": "Base Set - Checklist",
+        "foldedAs": "Clear Cut",
+        "rows": 2,
+        "sharedWithAnchor": 2,
+        "agree": 2,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Clear Cut Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "Clear Cut",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Clear Cut Parallel - 1st Round Rookies",
+        "anchorSection": "Base Set - 1st Round Rookies",
+        "foldedAs": "Clear Cut",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Exclusives Parallel - All-Star Team",
+        "anchorSection": "Base Set - All-Star Team",
+        "foldedAs": "Exclusives",
+        "rows": 45,
+        "sharedWithAnchor": 45,
+        "agree": 45,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Exclusives Parallel - Checklist",
+        "anchorSection": "Base Set - Checklist",
+        "foldedAs": "Exclusives",
+        "rows": 2,
+        "sharedWithAnchor": 2,
+        "agree": 2,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Exclusives Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "Exclusives",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "Exclusives Parallel - 1st Round Rookies",
+        "anchorSection": "Base Set - 1st Round Rookies",
+        "foldedAs": "Exclusives",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "French Variation Parallel - All-Star Team",
+        "anchorSection": "Base Set - All-Star Team",
+        "foldedAs": "French Variation",
+        "rows": 45,
+        "sharedWithAnchor": 45,
+        "agree": 45,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "French Variation Parallel - Checklist",
+        "anchorSection": "Base Set - Checklist",
+        "foldedAs": "French Variation",
+        "rows": 2,
+        "sharedWithAnchor": 2,
+        "agree": 2,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "French Variation Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "French Variation",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "French Variation Parallel - 1st Round Rookies",
+        "anchorSection": "Base Set - 1st Round Rookies",
+        "foldedAs": "French Variation",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "High Gloss Parallel - All-Star Team",
+        "anchorSection": "Base Set - All-Star Team",
+        "foldedAs": "High Gloss",
+        "rows": 45,
+        "sharedWithAnchor": 45,
+        "agree": 45,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "High Gloss Parallel - Checklist",
+        "anchorSection": "Base Set - Checklist",
+        "foldedAs": "High Gloss",
+        "rows": 2,
+        "sharedWithAnchor": 2,
+        "agree": 2,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "High Gloss Parallel - Young Guns",
+        "anchorSection": "Base Set - Young Guns",
+        "foldedAs": "High Gloss",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "High Gloss Parallel - 1st Round Rookies",
+        "anchorSection": "Base Set - 1st Round Rookies",
+        "foldedAs": "High Gloss",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "1997-98 SPx Retro Bronze Parallel - Rookies",
+        "anchorSection": "1997-98 SPx Retro - Rookies",
+        "foldedAs": "Bronze",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "1997-98 SPx Retro Gold Parallel - Rookies",
+        "anchorSection": "1997-98 SPx Retro - Rookies",
+        "foldedAs": "Gold",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "1999-00 Upper Deck Retro History Class Level 1 Parallel - Rookies",
+        "anchorSection": "1999-00 Upper Deck Retro History Class - Rookies",
+        "foldedAs": "Level 1",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "1999-00 Upper Deck Retro History Class Level 2 Parallel - Rookies",
+        "anchorSection": "1999-00 Upper Deck Retro History Class - Rookies",
+        "foldedAs": "Level 2",
+        "rows": 20,
+        "sharedWithAnchor": 20,
+        "agree": 20,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 1 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 1 Star",
+        "foldedAs": "Ruby",
+        "rows": 7,
+        "sharedWithAnchor": 7,
+        "agree": 7,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 1 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 1 Star Rookie",
+        "foldedAs": "Ruby",
+        "rows": 7,
+        "sharedWithAnchor": 7,
+        "agree": 7,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 2 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 2 Star",
+        "foldedAs": "Ruby",
+        "rows": 7,
+        "sharedWithAnchor": 7,
+        "agree": 7,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 2 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 2 Star Rookie",
+        "foldedAs": "Ruby",
+        "rows": 7,
+        "sharedWithAnchor": 7,
+        "agree": 7,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 3 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 3 Star",
+        "foldedAs": "Ruby",
+        "rows": 6,
+        "sharedWithAnchor": 6,
+        "agree": 6,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 3 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 3 Star Rookie",
+        "foldedAs": "Ruby",
+        "rows": 6,
+        "sharedWithAnchor": 6,
+        "agree": 6,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 4 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 4 Star",
+        "foldedAs": "Ruby",
+        "rows": 3,
+        "sharedWithAnchor": 3,
+        "agree": 3,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Ruby Parallel - 4 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 4 Star Rookie",
+        "foldedAs": "Ruby",
+        "rows": 3,
+        "sharedWithAnchor": 3,
+        "agree": 3,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 1 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 1 Star",
+        "foldedAs": "Emerald Auto",
+        "rows": 6,
+        "sharedWithAnchor": 6,
+        "agree": 6,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 1 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 1 Star Rookie",
+        "foldedAs": "Emerald Auto",
+        "rows": 1,
+        "sharedWithAnchor": 1,
+        "agree": 1,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 2 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 2 Star",
+        "foldedAs": "Emerald Auto",
+        "rows": 3,
+        "sharedWithAnchor": 3,
+        "agree": 3,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 2 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 2 Star Rookie",
+        "foldedAs": "Emerald Auto",
+        "rows": 1,
+        "sharedWithAnchor": 1,
+        "agree": 1,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 3 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 3 Star",
+        "foldedAs": "Emerald Auto",
+        "rows": 2,
+        "sharedWithAnchor": 2,
+        "agree": 2,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 3 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 3 Star Rookie",
+        "foldedAs": "Emerald Auto",
+        "rows": 5,
+        "sharedWithAnchor": 5,
+        "agree": 5,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 4 Star",
+        "anchorSection": "2006-07 Black Diamond Retro - 4 Star",
+        "foldedAs": "Emerald Auto",
+        "rows": 3,
+        "sharedWithAnchor": 3,
+        "agree": 3,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2006-07 Black Diamond Retro Emerald Auto Parallel - 4 Star Rookie",
+        "anchorSection": "2006-07 Black Diamond Retro - 4 Star Rookie",
+        "foldedAs": "Emerald Auto",
+        "rows": 3,
+        "sharedWithAnchor": 3,
+        "agree": 3,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2007-08 Upper Deck Retro Exclusives Parallel - Young Guns",
+        "anchorSection": "2007-08 Upper Deck Retro - Young Guns",
+        "foldedAs": "Exclusive",
+        "rows": 25,
+        "sharedWithAnchor": 25,
+        "agree": 25,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2007-08 Upper Deck Retro High Gloss Parallel - Young Guns",
+        "anchorSection": "2007-08 Upper Deck Retro - Young Guns",
+        "foldedAs": "High Gloss",
+        "rows": 25,
+        "sharedWithAnchor": 25,
+        "agree": 25,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "2007-08 Upper Deck Retro Printing Plates Parallel - Young Guns",
+        "anchorSection": "2007-08 Upper Deck Retro - Young Guns",
+        "foldedAs": "Printing Plate",
+        "rows": 25,
+        "sharedWithAnchor": 25,
+        "agree": 25,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Black Parallel - Young Guns",
+        "anchorSection": "UD Canvas - Young Guns",
+        "foldedAs": "Black",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Black Parallel - Legends",
+        "anchorSection": "UD Canvas - Legends",
+        "foldedAs": "Black",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Black Parallel - All-Star Weekend",
+        "anchorSection": "UD Canvas - All-Star Weekend",
+        "foldedAs": "Black",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Printing Plates Parallel - All-Star Weekend",
+        "anchorSection": "UD Canvas - All-Star Weekend",
+        "foldedAs": "Printing Plate",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Printing Plates Parallel - Young Guns",
+        "anchorSection": "UD Canvas - Young Guns",
+        "foldedAs": "Printing Plate",
+        "rows": 30,
+        "sharedWithAnchor": 30,
+        "agree": 30,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      },
+      {
+        "sourceSection": "UD Canvas Printing Plates Parallel - Legends",
+        "anchorSection": "UD Canvas - Legends",
+        "foldedAs": "Printing Plate",
+        "rows": 15,
+        "sharedWithAnchor": 15,
+        "agree": 15,
+        "disagree": 0,
+        "ownNumbering": 0,
+        "verdict": "folded -- clean subset"
+      }
+    ],
+    "noRegistrationNeeded": "Every flagged category resolved to a clean fold (0 disagree, 0 ownNumbering across all 45). No entries were added to backend/src/services/catalog/productSetKeys.ts for this package."
+  }
+}
