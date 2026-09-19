@@ -35,7 +35,7 @@ function realRows(file: string): Array<{ category: string; parallel: string }> {
   const fs = require_("node:fs") as typeof import("node:fs");
   const raw = fs.readFileSync(
     path.join(backend, "tests", "fixtures", "checklist-category", file), "utf8");
-  return JSON.parse(raw).rows as Array<{ category: string; parallel: string }>;
+  return JSON.parse(raw).rows as Array<{ category: string; parallel: string; cardNumber?: string; player?: string }>;
 }
 
 describe("(a) insert-base* is the BASE card, and the tail is the parallel", () => {
@@ -250,10 +250,19 @@ describe("insertSetsFromCategories — the root the parallel column omits", () =
 describe("disambiguateSiblingCategories — when the column cannot tell them apart", () => {
   const resolved = () => disambiguateSiblingCategories(realRows("zenith-2024-fb-categories.json"));
 
-  it("resolves a real colour collision the parallel column leaves blank", () => {
+  it("REFUSES Zoom — three sets sharing a numbering scheme, not one set in three colours", () => {
+    // THIS TEST USED TO ASSERT THE OPPOSITE, and was wrong. Zenith's
+    // insert-zoom-{blue,red,gold} hold DIFFERENT PLAYERS at the same number
+    // (#1 is Josh Allen / Mahomes / Tua), so promoting the tails would mint one
+    // id for three players. The roster precondition now refuses the group.
     const m = resolved();
-    expect(m.get("insert-zoom-blue")).toBe("Blue");
-    expect(m.get("insert-zoom-red")).toBe("Red");
+    expect([...m.keys()].some((k) => k.startsWith("insert-zoom"))).toBe(false);
+  });
+
+  it("still resolves a group whose siblings share an identical roster", () => {
+    const m = resolved();
+    expect(m.get("insert-rookies-red-zone-blue")).toBe("Blue");
+    expect(m.get("insert-rookies-red-zone-white")).toBe("White");
   });
 
   it("REFUSES the Variation group, because `green` is not attested on this product", () => {
@@ -288,5 +297,133 @@ describe("disambiguateSiblingCategories — when the column cannot tell them apa
     const m = resolved();
     expect(m.has("insert-base-red-zone-blue")).toBe(false);
     expect(readChecklistCategory("insert-base-red-zone-blue", "").parallel).toBe("Red Zone Blue");
+  });
+});
+
+describe("a tier name the NUMBERS contradict is a conflict, not a correction", () => {
+  // MEASURED on 2024-25 panini-select basketball:
+  //
+  //   insert-base-set-concourse                       #1-100    (#1 Holmgren)
+  //   insert-base-set-premier-level                   #101-200
+  //   insert-base-set-courtside                       #201-300
+  //   insert-base-set-courtside-green-tectonic-prizms #1-100    (#1 Holmgren)
+  //
+  // The last carries COURTSIDE's name over CONCOURSE's roster and range. Its
+  // parallel column is blank, so it collapses to plain `base` and collides on
+  // 100 ids.
+  const RANGES = { concourse: [1, 100], "premier-level": [101, 200], courtside: [201, 300] };
+
+  it("reports the contradiction and names what the range says instead", () => {
+    const r = readChecklistCategory(
+      "insert-base-set-courtside-green-tectonic-prizms", "",
+      { tierRanges: RANGES, cardNumber: 1 },
+    );
+    expect(r.conflict).toMatchObject({
+      reason: "tier-name-contradicts-card-number",
+      statedTier: "courtside",
+      cardNumber: 1,
+      rangeSays: "concourse",
+    });
+  });
+
+  it("does NOT re-assign the card — one observed row is not a rule", () => {
+    // Swept all 1,236 tier-suffixed categories in every Select file: this is
+    // the ONLY one whose numbers contradict its tier name. Auto-correcting on
+    // a single case would be re-filing a card to a DIFFERENT PRODUCT on an
+    // inference, which is the expensive direction to be wrong in. The caller
+    // refuses the category by name instead.
+    const r = readChecklistCategory(
+      "insert-base-set-courtside-green-tectonic-prizms", "",
+      { tierRanges: RANGES, cardNumber: 1 },
+    );
+    expect(r.tierKey, "the STATED tier is reported unchanged").toBe("courtside");
+  });
+
+  it("a legitimate tier row in its own range reports no conflict", () => {
+    const r = readChecklistCategory("insert-base-set-courtside", "", { tierRanges: RANGES, cardNumber: 250 });
+    expect(r.tierKey).toBe("courtside");
+    expect(r.conflict).toBeNull();
+  });
+
+  it("tierRanges is OPTIONAL — a caller that cannot supply it gets today's answer", () => {
+    // The corpus builder reads names, not numbers. It must be no worse off.
+    const r = readChecklistCategory("insert-base-set-courtside-green-tectonic-prizms", "");
+    expect(r.conflict).toBeNull();
+    expect(r.tierKey).toBe("courtside");
+  });
+
+  it("`insert-base-set-<x>` is the same as `insert-base-<x>` — 113 files spell it so", () => {
+    // 167,474 rows carry the extra `set-` segment. Without handling it the
+    // tier match fails on every one, filing "Set Courtside" as a PARALLEL of
+    // the flagship instead of naming the Courtside product.
+    expect(readChecklistCategory("insert-base-set-concourse", "").tierKey).toBe("concourse");
+    expect(readChecklistCategory("insert-base-concourse", "").tierKey).toBe("concourse");
+    expect(readChecklistCategory("insert-base-set-all-stars", "").parallel).toBe("All Stars");
+  });
+
+  it("courtside is a real tier the registry lacks — named and flagged", () => {
+    // Same shape as suite-level. ACQUISITION: `panini-select-courtside`.
+    const r = readChecklistCategory("insert-base-set-courtside", "");
+    expect(r.tierKey).toBe("courtside");
+    expect(r.tierIsRegistered).toBe(false);
+  });
+});
+
+describe("a colour of ONE card, not three cards — the roster decides", () => {
+  // Found by the acquisition researcher on clean main. Clauses 1-3 of
+  // disambiguateSiblingCategories only ask whether the COLUMN distinguishes
+  // siblings; they never ask whether the CARDS do.
+  //
+  // 2024 panini-zenith football:
+  //
+  //   insert-zoom-blue  #1 Josh Allen   #2 Jared Goff   #3 Dak Prescott
+  //   insert-zoom-red   #1 Mahomes II   #2 Jalen Hurts  #3 Joe Burrow
+  //   insert-zoom-gold  #1 Tua          #2 Brock Purdy  #3 Jordan Love
+  //
+  // Zoom is THREE SETS sharing a numbering scheme, not one set in three
+  // colours. Promoting the tails would mint ONE id for three players --
+  // CF-ONE-CARD-ONE-ROW-ONE-POOL in reverse.
+
+  it("REFUSES a group whose siblings hold different players at the same number", () => {
+    const m = disambiguateSiblingCategories([
+      { category: "insert-zoom-blue", parallel: "", cardNumber: "1", player: "Josh Allen" },
+      { category: "insert-zoom-red", parallel: "", cardNumber: "1", player: "Patrick Mahomes II" },
+      { category: "insert-zoom-gold", parallel: "", cardNumber: "1", player: "Tua Tagovailoa" },
+      { category: "insert-x", parallel: "Blue", cardNumber: "9", player: "A" },
+      { category: "insert-x", parallel: "Red", cardNumber: "9", player: "A" },
+      { category: "insert-x", parallel: "Gold", cardNumber: "9", player: "A" },
+    ]);
+    expect([...m.keys()].some((k) => k.startsWith("insert-zoom"))).toBe(false);
+  });
+
+  it("KEEPS a group whose siblings share an identical roster", () => {
+    // The mirror, and the reason this is a precondition rather than a ban:
+    // Zenith's `insert-rookies-red-zone-{blue,gold,red,white}` really are one
+    // set in four colours, and they must still resolve.
+    const roster = [
+      { n: "1", p: "Caleb Williams" }, { n: "2", p: "Jayden Daniels" },
+    ];
+    const rows = [];
+    for (const c of ["blue", "gold", "red", "white"]) {
+      for (const r of roster) {
+        rows.push({ category: `insert-rookies-red-zone-${c}`, parallel: "", cardNumber: r.n, player: r.p });
+      }
+      rows.push({ category: "insert-attest", parallel: c.charAt(0).toUpperCase() + c.slice(1), cardNumber: "99", player: "x" });
+    }
+    const m = disambiguateSiblingCategories(rows);
+    expect(m.get("insert-rookies-red-zone-blue")).toBe("Blue");
+    expect(m.get("insert-rookies-red-zone-white")).toBe("White");
+  });
+
+  it("a caller that supplies NO roster gets nothing — absent beats wrong", () => {
+    // The old answer without a roster is exactly the defect, so refusing is
+    // the safe default rather than falling back to it.
+    const m = disambiguateSiblingCategories([
+      { category: "insert-zoom-blue", parallel: "" },
+      { category: "insert-zoom-red", parallel: "" },
+      { category: "insert-x", parallel: "Blue" },
+      { category: "insert-x", parallel: "Red" },
+    ]);
+    expect(m.size).toBe(0);
   });
 });

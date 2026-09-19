@@ -87,6 +87,9 @@ const DEFAULT_TIER_SUFFIXES = Object.freeze([
   // address from it until the key is registered, and the caller sees a
   // tierKey it cannot resolve rather than a plausible-looking rung.
   "suite-level",
+  // 2024-25 panini-select BASKETBALL, #201-300. Same shape as suite-level:
+  // a real tier holding its own disjoint range, not yet registered.
+  "courtside",
 ]);
 
 /**
@@ -94,7 +97,7 @@ const DEFAULT_TIER_SUFFIXES = Object.freeze([
  * building an address must refuse these rather than guess a key -- they are
  * an acquisition item, and this list is how the helper says so out loud.
  */
-const UNREGISTERED_TIER_SUFFIXES = Object.freeze(["suite-level"]);
+const UNREGISTERED_TIER_SUFFIXES = Object.freeze(["suite-level", "courtside"]);
 
 /** Slug -> the human spelling a parallel column would carry. */
 function humanise(slug) {
@@ -128,7 +131,7 @@ function readChecklistCategory(category, parallelText, opts = {}) {
   const raw = String(category || "").trim().toLowerCase();
   const stated = String(parallelText || "").trim();
   const tiers = opts.tierSuffixes ?? DEFAULT_TIER_SUFFIXES;
-  const none = { kind: "unknown", parallel: stated || null, tierKey: null, isAuto: false, insertRoot: null };
+  const none = { kind: "unknown", parallel: stated || null, tierKey: null, isAuto: false, insertRoot: null, conflict: null };
   if (!raw) return none;
 
   const dash = raw.indexOf("-");
@@ -152,10 +155,16 @@ function readChecklistCategory(category, parallelText, opts = {}) {
     // (c) A TIER IS A PRODUCT, NOT A RUNG. Longest match wins so
     // `club-level-black-and-blue-prizm-shock` resolves to `club-level` and
     // keeps the rest as the parallel.
-    let tierKey = null, rungSlug = variant;
+    // `insert-base-set-<x>` IS THE SAME THING AS `insert-base-<x>`. 113 source
+    // files and 167,474 rows spell it with the extra `set-` segment ("the base
+    // SET"), and without this the tier match fails on every one of them --
+    // `insert-base-set-courtside` would file "Set Courtside" as a PARALLEL of
+    // the flagship instead of naming the Courtside product.
+    let variantCore = variant.startsWith("set-") ? variant.slice(4) : variant;
+    let tierKey = null, rungSlug = variantCore;
     for (const t of tiers) {
-      if (variant === t || variant.startsWith(t + "-")) {
-        if (!tierKey || t.length > tierKey.length) { tierKey = t; rungSlug = variant.slice(t.length).replace(/^-/, ""); }
+      if (variantCore === t || variantCore.startsWith(t + "-")) {
+        if (!tierKey || t.length > tierKey.length) { tierKey = t; rungSlug = variantCore.slice(t.length).replace(/^-/, ""); }
       }
     }
     // THE ROW'S OWN PARALLEL TEXT WINS WHEN IT HAS ONE. Photogenic writes the
@@ -165,6 +174,50 @@ function readChecklistCategory(category, parallelText, opts = {}) {
     // same card+parallel described twice becomes ONE row, not a refusal.
     const parallel = stated || (rungSlug ? humanise(rungSlug) : null);
     const tierSlug = tierKey ? slugify(tierKey) : null;
+
+    // A TIER NAME THE NUMBERS CONTRADICT IS A CONFLICT, NOT A CORRECTION
+    // (2026-09-19).
+    //
+    // MEASURED on 2024-25 panini-select basketball:
+    //
+    //   insert-base-set-concourse                       #1-100    (#1 Holmgren)
+    //   insert-base-set-premier-level                   #101-200
+    //   insert-base-set-courtside                       #201-300
+    //   insert-base-set-courtside-green-tectonic-prizms #1-100    (#1 Holmgren)
+    //
+    // The last one carries COURTSIDE's name over CONCOURSE's roster and
+    // number range -- a Concourse parallel mislabelled at the source. Its
+    // parallel column is blank, so it collapses to plain `base` and collides
+    // on 100 ids.
+    //
+    // WHY REPORT RATHER THAN RE-ASSIGN. Swept all 1,236 tier-suffixed
+    // categories in every Select file: this is the ONLY one whose numbers
+    // contradict its tier name. A rule built to auto-correct a single
+    // observed row is a rule with no evidence behind it, and re-assigning a
+    // card to a DIFFERENT PRODUCT on an inference is the expensive direction
+    // to be wrong in. So the caller is told the two facts disagree and
+    // refuses the category by name -- visible, recoverable, and it becomes a
+    // source-correction item rather than a silent re-file.
+    //
+    // `tierRanges` is OPTIONAL. A caller that cannot supply it (the corpus
+    // builder reads names, not numbers) gets exactly today's answer.
+    let conflict = null;
+    if (tierSlug && opts.tierRanges && Number.isFinite(Number(opts.cardNumber))) {
+      const n = Number(opts.cardNumber);
+      const own = opts.tierRanges[tierSlug];
+      if (Array.isArray(own) && (n < own[0] || n > own[1])) {
+        const owner = Object.entries(opts.tierRanges)
+          .find(([, r]) => Array.isArray(r) && n >= r[0] && n <= r[1]);
+        conflict = {
+          reason: "tier-name-contradicts-card-number",
+          statedTier: tierSlug,
+          cardNumber: n,
+          statedTierRange: own,
+          rangeSays: owner ? owner[0] : null,
+        };
+      }
+    }
+
     return {
       kind: baseLike.isAuto ? "auto" : "base",
       parallel,
@@ -175,6 +228,9 @@ function readChecklistCategory(category, parallelText, opts = {}) {
       tierIsRegistered: tierSlug ? !UNREGISTERED_TIER_SUFFIXES.includes(tierSlug) : null,
       isAuto: baseLike.isAuto,
       insertRoot: null,
+      // Non-null means the source contradicts itself and the caller must
+      // REFUSE this category rather than file the row either way.
+      conflict,
     };
   }
 
@@ -184,12 +240,12 @@ function readChecklistCategory(category, parallelText, opts = {}) {
     // parallel text out of it -- see the header for the measurement that
     // killed that idea. A caller wanting children keyed to this root matches
     // on the root itself.
-    return { kind: "insert", parallel: stated || null, tierKey: null, isAuto: false, insertRoot: tail || null };
+    return { kind: "insert", parallel: stated || null, tierKey: null, isAuto: false, insertRoot: tail || null, conflict: null };
   }
 
   // --- a signed insert / subset --------------------------------------------
   if (prefix === "auto") {
-    return { kind: "auto", parallel: stated || null, tierKey: null, isAuto: true, insertRoot: tail || null };
+    return { kind: "auto", parallel: stated || null, tierKey: null, isAuto: true, insertRoot: tail || null, conflict: null };
   }
 
   return none;
@@ -307,11 +363,13 @@ function insertSetsFromCategories(rows) {
  * The promoted parallel KEEPS the column's own text when it had one: "Variation
  * Blue", not "Blue" -- the column said Variation and that is still true.
  *
- * @param {Array<{category: string, parallel: string}>} rows one product's rows
+ * @param {Array<{category: string, parallel: string, cardNumber?: string|number, player?: string}>} rows one product's rows. `cardNumber` and `player` are
+ *   REQUIRED for the roster precondition; without them nothing is promoted.
  * @returns {Map<string, string>} category -> the parallel it should state
  */
 function disambiguateSiblingCategories(rows) {
   const valuesByCat = new Map();
+  const rosterByCat = new Map();   // category -> (cardNumber -> player)
   const attested = new Set();
   for (const r of rows ?? []) {
     const cat = String(r?.category ?? "").trim().toLowerCase();
@@ -320,7 +378,21 @@ function disambiguateSiblingCategories(rows) {
     if (!cat) continue;
     if (!valuesByCat.has(cat)) valuesByCat.set(cat, new Set());
     valuesByCat.get(cat).add(par);
+    // THE ROSTER IS THE FACT THAT DECIDES -- see the precondition below.
+    const num = String(r?.cardNumber ?? r?.num ?? "").trim();
+    const player = String(r?.player ?? "").trim();
+    if (num) {
+      if (!rosterByCat.has(cat)) rosterByCat.set(cat, new Map());
+      rosterByCat.get(cat).set(num, player);
+    }
   }
+  /** A category's number->player map, as a comparable string. */
+  const rosterKey = (cat) => {
+    const m = rosterByCat.get(cat);
+    if (!m || !m.size) return null;
+    return [...m.entries()].sort((x, y) => (x[0] < y[0] ? -1 : 1))
+      .map(([n, pl]) => `${n}=${pl.toLowerCase()}`).join("|");
+  };
 
   // Group categories by their root (everything up to the final segment).
   const byRoot = new Map();
@@ -352,6 +424,36 @@ function disambiguateSiblingCategories(rows) {
     // (3) every differing tail must be an attested parallel word.
     const tails = cats.map((c) => c.slice(root.length + 1));
     if (tails.some((t) => !t || !attested.has(slugify(t)))) continue;
+
+    // (4) THE ROSTER MUST AGREE. A COLOUR OF ONE CARD, NOT THREE CARDS.
+    //
+    // Found by the acquisition researcher on clean main, and it is the
+    // difference between a parallel and a distinct card. Clauses 1-3 only ask
+    // whether the COLUMN distinguishes siblings; they never ask whether the
+    // CARDS do. On 2024 panini-zenith football:
+    //
+    //   insert-zoom-blue  #1 Josh Allen   #2 Jared Goff    #3 Dak Prescott
+    //   insert-zoom-red   #1 Mahomes II   #2 Jalen Hurts   #3 Joe Burrow
+    //   insert-zoom-gold  #1 Tua          #2 Brock Purdy   #3 Jordan Love
+    //
+    // Zoom is THREE SETS that share a numbering scheme, not one set in three
+    // colours -- and promoting the tails would mint ONE id for three players,
+    // which is CF-ONE-CARD-ONE-ROW-ONE-POOL in reverse.
+    //
+    // The test is the #2208 roster test: identical number->player map across
+    // every sibling means one set (the tails are parallels); ANY difference
+    // means separate sets and the group is refused by name.
+    //
+    // MEASURED on Zenith, this keeps the right answer and drops the wrong
+    // one: `insert-rookies-red-zone-{blue,gold,red,white}` share an identical
+    // roster and stay, `insert-zoom-*` does not and goes.
+    //
+    // A caller that supplies no roster (no cardNumber/player on its rows)
+    // gets NOTHING rather than the old answer: absent beats wrong, and the
+    // old answer is the defect.
+    const keys = cats.map(rosterKey);
+    if (keys.some((k) => k === null)) continue;          // unknowable -> refuse
+    if (new Set(keys).size !== 1) continue;              // different cards -> refuse
 
     const stated = [...nonBlank][0] ?? "";
     for (const c of cats) {
