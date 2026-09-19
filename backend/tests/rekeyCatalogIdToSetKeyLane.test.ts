@@ -450,6 +450,106 @@ describe("rekey-catalog-id-to-setkey -- APPLY moves the row", () => {
   });
 });
 
+describe("rekey-catalog-id-to-setkey -- unnumbered-no-player refusal (run 35459648728 follow-up)", () => {
+  // CF-CATCH-THE-REFUSAL-BEFORE-THE-MOVER. The hockey pilot's own FAILURE row,
+  // reproduced end-to-end: an unnumbered (`nno`) catalog row whose id would be
+  // UNDERIVABLE under moveCatalogRow's idFollowsOwnSetKeyField. This must now
+  // be a named REFUSAL, not a thrown exception -- and the run must exit 0 when
+  // it is the only non-move in scope, so a later link's self-relaunch is never
+  // withheld by a row this lane cannot safely move.
+  it("refuses (unnumbered-no-player) the pilot's exact failing row and exits 0 when it is the only non-move", () => {
+    const nnoRow = UMBRELLA_ROW("nno", { cardNumber: "nno", playerName: "Clear Cut Checklist" });
+    const r = drive(
+      { SCOPE: "hockey:2024", SET_KEYS: "upper-deck-extended-series", BACKFILL_APPLY: "true" },
+      { catalog: [nnoRow], portfolio: [{ id: "p1", userId: "u1", holdings: {} }] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED: unnumbered, no player to identify it \d*\s*1/);
+    expect(r.out).toMatch(/REFUSED \(unnumbered-no-player\)/);
+    expect(r.out).not.toMatch(/FAILURES/);
+    expect(r.led.catalogUpserts.length).toBe(0);
+    expect(r.led.catalogDeletes.length).toBe(0);
+  });
+
+  // Confirms the refusal fires even when the row's playerName names a real
+  // person -- deriveCatalogEntry does not thread playerName through to
+  // computeHobbyIqCardId today (measured against the real dist; see
+  // isUnnumberedNoPlayerRow's own doc), so EVERY unnumbered cardNumber is
+  // UNDERIVABLE via this path right now, not only the ones with no person in
+  // the playerName field. Refusing the wider set is the safe direction: a
+  // REPORT still flags it for a human, where a thrown row would abort the
+  // rest of the scope.
+  it("refuses (unnumbered-no-player) even when playerName names a real person, matching moveCatalogRow's actual behaviour today", () => {
+    const nnoRow = UMBRELLA_ROW("nno2", { id: OLD_ID("nno2").replace(":nno2:", ":nno:"), cardId: OLD_ID("nno2").replace(":nno2:", ":nno:"), hobbyiqCardId: OLD_ID("nno2").replace(":nno2:", ":nno:"), cardNumber: "nno", playerName: "Connor Bedard" });
+    const r = drive(
+      { SCOPE: "hockey:2024", SET_KEYS: "upper-deck-extended-series", BACKFILL_APPLY: "true" },
+      { catalog: [nnoRow], portfolio: [{ id: "p1", userId: "u1", holdings: {} }] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED \(unnumbered-no-player\)/);
+    expect(r.led.catalogDeletes.length).toBe(0);
+  });
+
+  it("planRow: refuses unnumbered-no-player directly, given the injected predicate", () => {
+    const { planRow } = require(LANE);
+    const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+    const { productSetKeys, productParentOf } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
+    const deps = {
+      catalogAuthorityOf, registeredSetKeys: new Set(productSetKeys()),
+      expectedIdSegment: productParentOf("upper-deck-extended-series"),
+      isUnnumberedNoPlayerRow: () => true,
+    };
+    const row = {
+      id: OLD_ID("nno").replace(":nno:", ":nno:"), cardId: OLD_ID("nno"),
+      setKey: "upper-deck-extended-series", source: "checklistinsider-2026-08-27",
+      cardNumber: "nno", playerName: "Clear Cut Checklist",
+    };
+    const plan = planRow(row, deps);
+    expect(plan.action).toBe("refuse");
+    expect(plan.reason).toBe("unnumbered-no-player");
+    expect(plan.detail).toMatch(/UNDERIVABLE/);
+  });
+
+  it("planRow: without deps.isUnnumberedNoPlayerRow (opt-in), an nno row is not refused for this reason -- it proceeds to 'move' the same as any other row", () => {
+    const { planRow } = require(LANE);
+    const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+    const { productSetKeys, productParentOf } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
+    const deps = {
+      catalogAuthorityOf, registeredSetKeys: new Set(productSetKeys()),
+      expectedIdSegment: productParentOf("upper-deck-extended-series"),
+    };
+    const row = {
+      id: OLD_ID("nno"), cardId: OLD_ID("nno"),
+      setKey: "upper-deck-extended-series", source: "checklistinsider-2026-08-27",
+      cardNumber: "nno", playerName: "Clear Cut Checklist",
+    };
+    const plan = planRow(row, deps);
+    expect(plan.action).toBe("move");
+  });
+
+  // A genuinely unexpected error (anything moveCatalogRow throws that is NOT
+  // this shape) must still fail the row and the run -- the pre-check is
+  // narrowly scoped to the one UNDERIVABLE-identity shape it names, never a
+  // blanket "swallow whatever moveCatalogRow throws".
+  it("a genuinely unexpected moveCatalogRow error still counts as FAILED and exits non-zero", () => {
+    const parent = UMBRELLA_ROW("12");
+    const saleRow = { id: "s-broken", cardId: OLD_ID("12"), hobbyiqCardId: OLD_ID("12"), price: 10, parallel: "Base", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2024-01-01" };
+    const r = drive(
+      { SCOPE: "hockey:2024", SET_KEYS: "upper-deck-extended-series", BACKFILL_APPLY: "true" },
+      {
+        catalog: [parent], sales: [saleRow], portfolio: [{ id: "p1", userId: "u1", holdings: {} }],
+        // Same fixture the existing BLOCKER-1 test uses to force a real
+        // exception out of the relocation primitive -- deterministic, and
+        // not the unnumbered-no-player shape at all (this row is numbered).
+        failSalesUpsertForIds: ["s-broken"],
+      },
+    );
+    expect(r.code).not.toBe(0);
+    expect(r.out).toMatch(/FAILED sale relocation/);
+    expect(r.out).not.toMatch(/unnumbered-no-player/);
+  });
+});
+
 describe("rekey-catalog-id-to-setkey -- refusals, listed by reason", () => {
   it("refuses target-exists (a fold, out of scope) and writes nothing for that row", () => {
     const parent = UMBRELLA_ROW("12");
@@ -566,6 +666,38 @@ describe("rekey-catalog-id-to-setkey -- reconcile balances", () => {
     expect(m).toBeTruthy();
     const [, intended, written, skipped, failed] = (m as RegExpMatchArray).map((x) => Number(String(x).replace(/,/g, "")));
     expect(intended).toBe(written + skipped + failed);
+  });
+
+  // Every skipped row must land in a printed bucket -- REPORT-MODE and
+  // APPLY-mode reconcile must still agree on counts once an
+  // unnumbered-no-player refusal is in the mix (it counts under `skipped`,
+  // same as every other named refusal).
+  it("REPORT and APPLY agree on counts with an unnumbered-no-player row in scope, and every skipped row is printed under a named bucket", () => {
+    const catalog = [
+      UMBRELLA_ROW("18"),
+      UMBRELLA_ROW("nno3", { id: OLD_ID("nno3").replace(":nno3:", ":nno:"), cardId: OLD_ID("nno3").replace(":nno3:", ":nno:"), hobbyiqCardId: OLD_ID("nno3").replace(":nno3:", ":nno:"), cardNumber: "nno", playerName: "Clear Cut Checklist" }),
+      UMBRELLA_ROW("19", { source: "cardhedge" }),
+    ];
+    const portfolio = [{ id: "p1", userId: "u1", holdings: {} }];
+
+    const report = drive({ SCOPE: "hockey:2024", SET_KEYS: "upper-deck-extended-series" }, { catalog, portfolio });
+    const apply = drive({ SCOPE: "hockey:2024", SET_KEYS: "upper-deck-extended-series", BACKFILL_APPLY: "true" }, { catalog, portfolio });
+
+    for (const r of [report, apply]) {
+      expect(r.code).toBe(0);
+      const m = r.out.match(/reconciled: intended ([\d,]+) = written ([\d,]+) \+ skipped ([\d,]+) \+ failed ([\d,]+)\s+\[residual ([\d,-]+)\]/);
+      expect(m).toBeTruthy();
+      const [, intended, written, skipped, failed, residual] = (m as RegExpMatchArray).map((x) => Number(String(x).replace(/,/g, "")));
+      expect(intended).toBe(3);
+      expect(written).toBe(1); // only UMBRELLA_ROW("18") is a genuine move
+      expect(skipped).toBe(2); // the nno row (unnumbered-no-player) + the cardhedge row (not-checklist-authority)
+      expect(failed).toBe(0);
+      expect(residual).toBe(0);
+      expect(r.out).toMatch(/REFUSED: unnumbered, no player to identify it\s+1/);
+      expect(r.out).toMatch(/REFUSED: not checklist authority\s+1/);
+    }
+    expect(report.out).toMatch(/WOULD MOVE\s+1/);
+    expect(apply.out).toMatch(/MOVED 1/);
   });
 });
 
