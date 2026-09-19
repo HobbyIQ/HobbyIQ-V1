@@ -363,11 +363,13 @@ function insertSetsFromCategories(rows) {
  * The promoted parallel KEEPS the column's own text when it had one: "Variation
  * Blue", not "Blue" -- the column said Variation and that is still true.
  *
- * @param {Array<{category: string, parallel: string}>} rows one product's rows
+ * @param {Array<{category: string, parallel: string, cardNumber?: string|number, player?: string}>} rows one product's rows. `cardNumber` and `player` are
+ *   REQUIRED for the roster precondition; without them nothing is promoted.
  * @returns {Map<string, string>} category -> the parallel it should state
  */
 function disambiguateSiblingCategories(rows) {
   const valuesByCat = new Map();
+  const rosterByCat = new Map();   // category -> (cardNumber -> player)
   const attested = new Set();
   for (const r of rows ?? []) {
     const cat = String(r?.category ?? "").trim().toLowerCase();
@@ -376,7 +378,21 @@ function disambiguateSiblingCategories(rows) {
     if (!cat) continue;
     if (!valuesByCat.has(cat)) valuesByCat.set(cat, new Set());
     valuesByCat.get(cat).add(par);
+    // THE ROSTER IS THE FACT THAT DECIDES -- see the precondition below.
+    const num = String(r?.cardNumber ?? r?.num ?? "").trim();
+    const player = String(r?.player ?? "").trim();
+    if (num) {
+      if (!rosterByCat.has(cat)) rosterByCat.set(cat, new Map());
+      rosterByCat.get(cat).set(num, player);
+    }
   }
+  /** A category's number->player map, as a comparable string. */
+  const rosterKey = (cat) => {
+    const m = rosterByCat.get(cat);
+    if (!m || !m.size) return null;
+    return [...m.entries()].sort((x, y) => (x[0] < y[0] ? -1 : 1))
+      .map(([n, pl]) => `${n}=${pl.toLowerCase()}`).join("|");
+  };
 
   // Group categories by their root (everything up to the final segment).
   const byRoot = new Map();
@@ -408,6 +424,36 @@ function disambiguateSiblingCategories(rows) {
     // (3) every differing tail must be an attested parallel word.
     const tails = cats.map((c) => c.slice(root.length + 1));
     if (tails.some((t) => !t || !attested.has(slugify(t)))) continue;
+
+    // (4) THE ROSTER MUST AGREE. A COLOUR OF ONE CARD, NOT THREE CARDS.
+    //
+    // Found by the acquisition researcher on clean main, and it is the
+    // difference between a parallel and a distinct card. Clauses 1-3 only ask
+    // whether the COLUMN distinguishes siblings; they never ask whether the
+    // CARDS do. On 2024 panini-zenith football:
+    //
+    //   insert-zoom-blue  #1 Josh Allen   #2 Jared Goff    #3 Dak Prescott
+    //   insert-zoom-red   #1 Mahomes II   #2 Jalen Hurts   #3 Joe Burrow
+    //   insert-zoom-gold  #1 Tua          #2 Brock Purdy   #3 Jordan Love
+    //
+    // Zoom is THREE SETS that share a numbering scheme, not one set in three
+    // colours -- and promoting the tails would mint ONE id for three players,
+    // which is CF-ONE-CARD-ONE-ROW-ONE-POOL in reverse.
+    //
+    // The test is the #2208 roster test: identical number->player map across
+    // every sibling means one set (the tails are parallels); ANY difference
+    // means separate sets and the group is refused by name.
+    //
+    // MEASURED on Zenith, this keeps the right answer and drops the wrong
+    // one: `insert-rookies-red-zone-{blue,gold,red,white}` share an identical
+    // roster and stay, `insert-zoom-*` does not and goes.
+    //
+    // A caller that supplies no roster (no cardNumber/player on its rows)
+    // gets NOTHING rather than the old answer: absent beats wrong, and the
+    // old answer is the defect.
+    const keys = cats.map(rosterKey);
+    if (keys.some((k) => k === null)) continue;          // unknowable -> refuse
+    if (new Set(keys).size !== 1) continue;              // different cards -> refuse
 
     const stated = [...nonBlank][0] ?? "";
     for (const c of cats) {

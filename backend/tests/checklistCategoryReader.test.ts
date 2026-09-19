@@ -35,7 +35,7 @@ function realRows(file: string): Array<{ category: string; parallel: string }> {
   const fs = require_("node:fs") as typeof import("node:fs");
   const raw = fs.readFileSync(
     path.join(backend, "tests", "fixtures", "checklist-category", file), "utf8");
-  return JSON.parse(raw).rows as Array<{ category: string; parallel: string }>;
+  return JSON.parse(raw).rows as Array<{ category: string; parallel: string; cardNumber?: string; player?: string }>;
 }
 
 describe("(a) insert-base* is the BASE card, and the tail is the parallel", () => {
@@ -250,10 +250,19 @@ describe("insertSetsFromCategories — the root the parallel column omits", () =
 describe("disambiguateSiblingCategories — when the column cannot tell them apart", () => {
   const resolved = () => disambiguateSiblingCategories(realRows("zenith-2024-fb-categories.json"));
 
-  it("resolves a real colour collision the parallel column leaves blank", () => {
+  it("REFUSES Zoom — three sets sharing a numbering scheme, not one set in three colours", () => {
+    // THIS TEST USED TO ASSERT THE OPPOSITE, and was wrong. Zenith's
+    // insert-zoom-{blue,red,gold} hold DIFFERENT PLAYERS at the same number
+    // (#1 is Josh Allen / Mahomes / Tua), so promoting the tails would mint one
+    // id for three players. The roster precondition now refuses the group.
     const m = resolved();
-    expect(m.get("insert-zoom-blue")).toBe("Blue");
-    expect(m.get("insert-zoom-red")).toBe("Red");
+    expect([...m.keys()].some((k) => k.startsWith("insert-zoom"))).toBe(false);
+  });
+
+  it("still resolves a group whose siblings share an identical roster", () => {
+    const m = resolved();
+    expect(m.get("insert-rookies-red-zone-blue")).toBe("Blue");
+    expect(m.get("insert-rookies-red-zone-white")).toBe("White");
   });
 
   it("REFUSES the Variation group, because `green` is not attested on this product", () => {
@@ -357,5 +366,64 @@ describe("a tier name the NUMBERS contradict is a conflict, not a correction", (
     const r = readChecklistCategory("insert-base-set-courtside", "");
     expect(r.tierKey).toBe("courtside");
     expect(r.tierIsRegistered).toBe(false);
+  });
+});
+
+describe("a colour of ONE card, not three cards — the roster decides", () => {
+  // Found by the acquisition researcher on clean main. Clauses 1-3 of
+  // disambiguateSiblingCategories only ask whether the COLUMN distinguishes
+  // siblings; they never ask whether the CARDS do.
+  //
+  // 2024 panini-zenith football:
+  //
+  //   insert-zoom-blue  #1 Josh Allen   #2 Jared Goff   #3 Dak Prescott
+  //   insert-zoom-red   #1 Mahomes II   #2 Jalen Hurts  #3 Joe Burrow
+  //   insert-zoom-gold  #1 Tua          #2 Brock Purdy  #3 Jordan Love
+  //
+  // Zoom is THREE SETS sharing a numbering scheme, not one set in three
+  // colours. Promoting the tails would mint ONE id for three players --
+  // CF-ONE-CARD-ONE-ROW-ONE-POOL in reverse.
+
+  it("REFUSES a group whose siblings hold different players at the same number", () => {
+    const m = disambiguateSiblingCategories([
+      { category: "insert-zoom-blue", parallel: "", cardNumber: "1", player: "Josh Allen" },
+      { category: "insert-zoom-red", parallel: "", cardNumber: "1", player: "Patrick Mahomes II" },
+      { category: "insert-zoom-gold", parallel: "", cardNumber: "1", player: "Tua Tagovailoa" },
+      { category: "insert-x", parallel: "Blue", cardNumber: "9", player: "A" },
+      { category: "insert-x", parallel: "Red", cardNumber: "9", player: "A" },
+      { category: "insert-x", parallel: "Gold", cardNumber: "9", player: "A" },
+    ]);
+    expect([...m.keys()].some((k) => k.startsWith("insert-zoom"))).toBe(false);
+  });
+
+  it("KEEPS a group whose siblings share an identical roster", () => {
+    // The mirror, and the reason this is a precondition rather than a ban:
+    // Zenith's `insert-rookies-red-zone-{blue,gold,red,white}` really are one
+    // set in four colours, and they must still resolve.
+    const roster = [
+      { n: "1", p: "Caleb Williams" }, { n: "2", p: "Jayden Daniels" },
+    ];
+    const rows = [];
+    for (const c of ["blue", "gold", "red", "white"]) {
+      for (const r of roster) {
+        rows.push({ category: `insert-rookies-red-zone-${c}`, parallel: "", cardNumber: r.n, player: r.p });
+      }
+      rows.push({ category: "insert-attest", parallel: c.charAt(0).toUpperCase() + c.slice(1), cardNumber: "99", player: "x" });
+    }
+    const m = disambiguateSiblingCategories(rows);
+    expect(m.get("insert-rookies-red-zone-blue")).toBe("Blue");
+    expect(m.get("insert-rookies-red-zone-white")).toBe("White");
+  });
+
+  it("a caller that supplies NO roster gets nothing — absent beats wrong", () => {
+    // The old answer without a roster is exactly the defect, so refusing is
+    // the safe default rather than falling back to it.
+    const m = disambiguateSiblingCategories([
+      { category: "insert-zoom-blue", parallel: "" },
+      { category: "insert-zoom-red", parallel: "" },
+      { category: "insert-x", parallel: "Blue" },
+      { category: "insert-x", parallel: "Red" },
+    ]);
+    expect(m.size).toBe(0);
   });
 });
