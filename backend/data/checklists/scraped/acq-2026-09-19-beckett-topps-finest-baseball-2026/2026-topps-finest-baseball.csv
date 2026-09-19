@@ -1,0 +1,880 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,,false,,Jac Caglianone
+base,2,,false,,Jacob Wilson
+base,3,,false,,Tatsuya Imai
+base,4,,false,,Ketel Marte
+base,5,,false,,Munetaka Murakami
+base,6,,false,,Konnor Griffin
+base,7,,false,,Bobby Witt Jr.
+base,8,,false,,Jose Altuve
+base,9,,false,,Justin Crawford
+base,10,,false,,Paul Skenes
+base,11,,false,,Roki Sasaki
+base,12,,false,,Max Fried
+base,13,,false,,Julio Rodriguez
+base,14,,false,,Kyle Tucker
+base,15,,false,,JJ Wetherholt
+base,16,,false,,Samuel Basallo
+base,17,,false,,Corbin Carroll
+base,18,,false,,Juan Soto
+base,19,,false,,Rafael Devers
+base,20,,false,,Jhostynxon Garcia
+base,21,,false,,Jacob deGrom
+base,22,,false,,Ronald Acuna Jr.
+base,23,,false,,Christian Moore
+base,24,,false,,Carson Williams
+base,25,,false,,Byron Buxton
+base,26,,false,,Yoshinobu Yamamoto
+base,27,,false,,Fernando Tatis Jr.
+base,28,,false,,Matt Olson
+base,29,,false,,Garrett Crochet
+base,30,,false,,Colson Montgomery
+base,31,,false,,Trea Turner
+base,32,,false,,Giancarlo Stanton
+base,33,,false,,Cal Raleigh
+base,34,,false,,Kazuma Okamoto
+base,35,,false,,Chase DeLauter
+base,36,,false,,Bo Bichette
+base,37,,false,,Brandon Sproat
+base,38,,false,,Zach Neto
+base,39,,false,,Sal Stewart
+base,40,,false,,Dylan Crews
+base,41,,false,,Manny Machado
+base,42,,false,,Carlos Correa
+base,43,,false,,Joe Ryan
+base,44,,false,,Drake Baldwin
+base,45,,false,,Mookie Betts
+base,46,,false,,Oneil Cruz
+base,47,,false,,Junior Caminero
+base,48,,false,,Justin Verlander
+base,49,,false,,Christian Yelich
+base,50,,false,,Shohei Ohtani
+base,51,,false,,Gunnar Henderson
+base,52,,false,,Roman Anthony
+base,53,,false,,Drew Gilbert
+base,54,,false,,Kyle Teel
+base,55,,false,,Tarik Skubal
+base,56,,false,,Connelly Early
+base,57,,false,,Cole Young
+base,58,,false,,Mike Trout
+base,59,,false,,Carson Benge
+base,60,,false,,Alex Bregman
+base,61,,false,,Jose Ramirez
+base,62,,false,,Nolan McLean
+base,63,,false,,Corey Seager
+base,64,,false,,Pete Alonso
+base,65,,false,,Jung Hoo Lee
+base,66,,false,,Jackson Chourio
+base,67,,false,,Wyatt Langford
+base,68,,false,,Francisco Lindor
+base,69,,false,,Elly De La Cruz
+base,70,,false,,Jackson Merrill
+base,71,,false,,Pete Crow-Armstrong
+base,72,,false,,Jonah Tong
+base,73,,false,,Bryce Harper
+base,74,,false,,Kevin McGonigle
+base,75,,false,,Colby Thomas
+base,76,,false,,Chase Burns
+base,77,,false,,Nolan Arenado
+base,78,,false,,Josh Naylor
+base,79,,false,,Owen Caissie
+base,80,,false,,Brady House
+base,81,,false,,Sandy Alcantara
+base,82,,false,,Jacob Misiorowski
+base,83,,false,,James Wood
+base,84,,false,,Masyn Winn
+base,85,,false,,Dylan Beavers
+base,86,,false,,Andrew Painter
+base,87,,false,,Kyle Karros
+base,88,,false,,Nick Kurtz
+base,89,,false,,Cam Schlittler
+base,90,,false,,Bubba Chandler
+base,91,,false,,Kyle Schwarber
+base,92,,false,,Yordan Alvarez
+base,93,,false,,Harry Ford
+base,94,,false,,Cade Horton
+base,95,,false,,Salvador Perez
+base,96,,false,,Trey Yesavage
+base,97,,false,,George Springer
+base,98,,false,,Bryce Eldridge
+base,99,,false,,Aaron Judge
+base,100,,false,,Vladimir Guerrero Jr.
+base,101,,false,,Jac Caglianone
+base,102,,false,,Bryce Harper
+base,103,,false,,Jeferson Quero
+base,104,,false,,Jackson Holliday
+base,105,,false,,Roman Anthony
+base,106,,false,,Nico Hoerner
+base,107,,false,,Bobby Witt Jr.
+base,108,,false,,Riley Greene
+base,109,,false,,Dylan Cease
+base,110,,false,,Paul Skenes
+base,111,,false,,Matt Chapman
+base,112,,false,,Jose Altuve
+base,113,,false,,Xander Bogaerts
+base,114,,false,,Mike Trout
+base,115,,false,,Nolan McLean
+base,116,,false,,Carson Benge
+base,117,,false,,Edgar Quero
+base,118,,false,,Rafael Devers
+base,119,,false,,Juan Soto
+base,120,,false,,Yoshinobu Yamamoto
+base,121,,false,,Corbin Burnes
+base,122,,false,,Salvador Perez
+base,123,,false,,Justin Crawford
+base,124,,false,,Carter Jensen
+base,125,,false,,Byron Buxton
+base,126,,false,,Brent Rooker
+base,127,,false,,JJ Wetherholt
+base,128,,false,,Ozzie Albies
+base,129,,false,,Mookie Betts
+base,130,,false,,Julio Rodriguez
+base,131,,false,,Luke Keaschall
+base,132,,false,,Steven Kwan
+base,133,,false,,Denzer Guzman
+base,134,,false,,Jonah Tong
+base,135,,false,,Deyvison De Los Santos
+base,136,,false,,Trey Yesavage
+base,137,,false,,Chris Sale
+base,138,,false,,Bryce Eldridge
+base,139,,false,,Konnor Griffin
+base,140,,false,,Brice Matthews
+base,141,,false,,C.J. Kayfus
+base,142,,false,,Payton Tolle
+base,143,,false,,Jakob Marsee
+base,144,,false,,Luis Morales
+base,145,,false,,Munetaka Murakami
+base,146,,false,,Yordan Alvarez
+base,147,,false,,Kevin McGonigle
+base,148,,false,,MacKenzie Gore
+base,149,,false,,Geraldo Perdomo
+base,150,,false,,Shohei Ohtani
+base,151,,false,,Bryan Reynolds
+base,152,,false,,Ryan Ritter
+base,153,,false,,Corbin Carroll
+base,154,,false,,Ian Seymour
+base,155,,false,,Hunter Goodman
+base,156,,false,,Randy Arozarena
+base,157,,false,,Fernando Tatis Jr.
+base,158,,false,,Mason Miller
+base,159,,false,,Francisco Lindor
+base,160,,false,,Zack Wheeler
+base,161,,false,,Cody Bellinger
+base,162,,false,,Elly De La Cruz
+base,163,,false,,Freddie Freeman
+base,164,,false,,James Wood
+base,165,,false,,Logan Gilbert
+base,166,,false,,Samuel Basallo
+base,167,,false,,Cal Raleigh
+base,168,,false,,Jo Adell
+base,169,,false,,Hunter Greene
+base,170,,false,,Colson Montgomery
+base,171,,false,,CJ Abrams
+base,172,,false,,Logan Webb
+base,173,,false,,Jonathan Aranda
+base,174,,false,,Masyn Winn
+base,175,,false,,Jackson Chourio
+base,176,,false,,Nick Kurtz
+base,177,,false,,Hunter Barco
+base,178,,false,,Wyatt Langford
+base,179,,false,,Sal Stewart
+base,180,,false,,Tarik Skubal
+base,181,,false,,Jazz Chisholm Jr.
+base,182,,false,,Bubba Chandler
+base,183,,false,,Gunnar Henderson
+base,184,,false,,Jimmy Crooks
+base,185,,false,,Freddy Peralta
+base,186,,false,,Brice Turang
+base,187,,false,,Ronald Acuna Jr.
+base,188,,false,,Shota Imanaga
+base,189,,false,,Pete Crow-Armstrong
+base,190,,false,,Junior Caminero
+base,191,,false,,Gerrit Cole
+base,192,,false,,Otto Kemp
+base,193,,false,,Kyle Teel
+base,194,,false,,Chase Burns
+base,195,,false,,Jose Corniell
+base,196,,false,,Jacob Misiorowski
+base,197,,false,,Alejandro Kirk
+base,198,,false,,Jose Ramirez
+base,199,,false,,Aaron Judge
+base,200,,false,,Vladimir Guerrero Jr.
+base,201,,false,,Jac Caglianone
+base,202,,false,,Ketel Marte
+base,203,,false,,Nathan Eovaldi
+base,204,,false,,Luis Robert Jr.
+base,205,,false,,Framber Valdez
+base,206,,false,,Roman Anthony
+base,207,,false,,Bobby Witt Jr.
+base,208,,false,,Cal Raleigh
+base,209,,false,,Jose Altuve
+base,210,,false,,Paul Skenes
+base,211,,false,,Bryce Eldridge
+base,212,,false,,Carlos Rodon
+base,213,,false,,Joe Ryan
+base,214,,false,,Brendan Donovan
+base,215,,false,,Yoshinobu Yamamoto
+base,216,,false,,Noelvi Marte
+base,217,,false,,Yusei Kikuchi
+base,218,,false,,Jacob Misiorowski
+base,219,,false,,Julio Rodriguez
+base,220,,false,,Francisco Lindor
+base,221,,false,,Rafael Devers
+base,222,,false,,Michael King
+base,223,,false,,Jeremiah Jackson
+base,224,,false,,Brandon Lowe
+base,225,,false,,Byron Buxton
+base,226,,false,,Cristopher Sanchez
+base,227,,false,,Ronald Acuna Jr.
+base,228,,false,,Chase Dollander
+base,229,,false,,Freddie Freeman
+base,230,,false,,Troy Melton
+base,231,,false,,Seiya Suzuki
+base,232,,false,,Owen Caissie
+base,233,,false,,Anthony Volpe
+base,234,,false,,Ezequiel Tovar
+base,235,,false,,Pete Crow-Armstrong
+base,236,,false,,George Valera
+base,237,,false,,Bryan Woo
+base,238,,false,,Bryce Harper
+base,239,,false,,Jose Ramirez
+base,240,,false,,Nolan McLean
+base,241,,false,,Wyatt Langford
+base,242,,false,,Masyn Winn
+base,243,,false,,Tarik Skubal
+base,244,,false,,Vinnie Pasquantino
+base,245,,false,,Brady House
+base,246,,false,,Evan Carter
+base,247,,false,,Juan Soto
+base,248,,false,,Jackson Chourio
+base,249,,false,,Adley Rutschman
+base,250,,false,,Shohei Ohtani
+base,251,,false,,Nick Kurtz
+base,252,,false,,Edwin Diaz
+base,253,,false,,James Wood
+base,254,,false,,Gunnar Henderson
+base,255,,false,,Manny Machado
+base,256,,false,,Adolis Garcia
+base,257,,false,,Daylen Lile
+base,258,,false,,Carson Benge
+base,259,,false,,Heriberto Hernandez
+base,260,,false,,Luis Arraez
+base,261,,false,,Yordan Alvarez
+base,262,,false,,Grant Taylor
+base,263,,false,,Chase Burns
+base,264,,false,,Samuel Basallo
+base,265,,false,,Shane Bieber
+base,266,,false,,Trey Yesavage
+base,267,,false,,Kyle Teel
+base,268,,false,,Konnor Griffin
+base,269,,false,,JJ Wetherholt
+base,270,,false,,Willy Adames
+base,271,,false,,Andrew Abbott
+base,272,,false,,Bubba Chandler
+base,273,,false,,Elly De La Cruz
+base,274,,false,,Fernando Tatis Jr.
+base,275,,false,,Kevin McGonigle
+base,276,,false,,Didier Fuentes
+base,277,,false,,Parker Messick
+base,278,,false,,Hunter Brown
+base,279,,false,,Junior Caminero
+base,280,,false,,Ranger Suarez
+base,281,,false,,Dansby Swanson
+base,282,,false,,Carson Whisenhunt
+base,283,,false,,Jackson Merrill
+base,284,,false,,Carter Jensen
+base,285,,false,,Austin Riley
+base,286,,false,,Marcelo Mayer
+base,287,,false,,Andrew Painter
+base,288,,false,,Carson Williams
+base,289,,false,,Rafael Flores Jr.
+base,290,,false,,Lawrence Butler
+base,291,,false,,Colson Montgomery
+base,292,,false,,Brandon Sproat
+base,293,,false,,Nolan Schanuel
+base,294,,false,,Sal Frelick
+base,295,,false,,Munetaka Murakami
+base,296,,false,,Mike Trout
+base,297,,false,,Corbin Carroll
+base,298,,false,,Ben Rice
+base,299,,false,,Aaron Judge
+base,300,,false,,Vladimir Guerrero Jr.
+base,301,,false,,Jac Caglianone
+base,302,,false,,Willie Mays
+base,303,,false,,Pete Crow-Armstrong
+base,304,,false,,Tarik Skubal
+base,305,,false,,Juan Soto
+base,306,,false,,Cal Ripken Jr.
+base,307,,false,,Bobby Witt Jr.
+base,308,,false,,Owen Caissie
+base,309,,false,,Aaron Judge
+base,310,,false,,Paul Skenes
+base,311,,false,,Bryce Harper
+base,312,,false,,Albert Pujols
+base,313,,false,,Julio Rodriguez
+base,314,,false,,Fernando Tatis Jr.
+base,315,,false,,Mookie Betts
+base,316,,false,,Jacob Misiorowski
+base,317,,false,,Vladimir Guerrero Jr.
+base,318,,false,,Tatsuya Imai
+base,319,,false,,Travis Bazzana
+base,320,,false,,Manny Machado
+base,321,,false,,Munetaka Murakami
+base,322,,false,,Nolan McLean
+base,323,,false,,Larry Walker
+base,324,,false,,Francisco Lindor
+base,325,,false,,Byron Buxton
+base,326,,false,,Mike Trout
+base,327,,false,,JJ Wetherholt
+base,328,,false,,Wyatt Langford
+base,329,,false,,Junior Caminero
+base,330,,false,,Samuel Basallo
+base,331,,false,,Elly De La Cruz
+base,332,,false,,Derek Jeter
+base,333,,false,,Yoshinobu Yamamoto
+base,334,,false,,Ronald Acuna Jr.
+base,335,,false,,Corbin Carroll
+base,336,,false,,Trey Yesavage
+base,337,,false,,Konnor Griffin
+base,338,,false,,Bryce Eldridge
+base,339,,false,,Gunnar Henderson
+base,340,,false,,Ichiro
+base,341,,false,,Nick Kurtz
+base,342,,false,,Chase Burns
+base,343,,false,,Kazuma Okamoto
+base,344,,false,,Roman Anthony
+base,345,,false,,Chase DeLauter
+base,346,,false,,Hank Aaron
+base,347,,false,,James Wood
+base,348,,false,,Colson Montgomery
+base,349,,false,,Kevin McGonigle
+base,350,,false,,Shohei Ohtani
+auto-finest-autographs,FA-AD,,true,,Adrian Gonzalez
+auto-finest-autographs,FA-AF,,true,,Alex Freeland
+auto-finest-autographs,FA-AJ,,true,,Adam Jones
+auto-finest-autographs,FA-AK,,true,,Alejandro Kirk
+auto-finest-autographs,FA-AP,,true,,Andrew Painter
+auto-finest-autographs,FA-APA,,true,,Andy Pages
+auto-finest-autographs,FA-AR,,true,,Agustin Ramirez
+auto-finest-autographs,FA-AS,,true,,Anthony Seigler
+auto-finest-autographs,FA-AX,,true,,Alex Gordon
+auto-finest-autographs,FA-BBY,,true,,Bert Blyleven
+auto-finest-autographs,FA-BC,,true,,Bubba Chandler
+auto-finest-autographs,FA-BE,,true,,Bryce Eldridge
+auto-finest-autographs,FA-BH,,true,,Brady House
+auto-finest-autographs,FA-BL,,true,,Brooks Lee
+auto-finest-autographs,FA-BR,,true,,Ben Rice
+auto-finest-autographs,FA-BRE,,true,,Bryan Reynolds
+auto-finest-autographs,FA-BRO,,true,,Brent Rooker
+auto-finest-autographs,FA-BT,,true,,Brice Turang
+auto-finest-autographs,FA-BW,,true,,Billy Wagner
+auto-finest-autographs,FA-BWO,,true,,Bryan Woo
+auto-finest-autographs,FA-CA,,true,,CJ Abrams
+auto-finest-autographs,FA-CAD,,true,,Cam Devanney
+auto-finest-autographs,FA-CAG,,true,,Jac Caglianone
+auto-finest-autographs,FA-CB,,true,,Chase Burns
+auto-finest-autographs,FA-CBL,,true,,Charlie Blackmon
+auto-finest-autographs,FA-CC,,true,,Carlos Cortes
+auto-finest-autographs,FA-CCA,,true,,Corbin Carroll
+auto-finest-autographs,FA-CD,,true,,Chase DeLauter
+auto-finest-autographs,FA-CDO,,true,,Chase Dollander
+auto-finest-autographs,FA-CE,,true,,Connelly Early
+auto-finest-autographs,FA-CFR,,true,,Cody Freeman
+auto-finest-autographs,FA-CH,,true,,Cade Horton
+auto-finest-autographs,FA-CHS,,true,,Chad Stevens
+auto-finest-autographs,FA-CJ,,true,,Carter Jensen
+auto-finest-autographs,FA-CK,,true,,C.J. Kayfus
+auto-finest-autographs,FA-CL,,true,,Cliff Lee
+auto-finest-autographs,FA-CM,,true,,Chase Meidroth
+auto-finest-autographs,FA-CMA,,true,,Coby Mayo
+auto-finest-autographs,FA-CME,,true,,Christian Moore
+auto-finest-autographs,FA-CMO,,true,,Colson Montgomery
+auto-finest-autographs,FA-CN,,true,,Carlos Narvaez
+auto-finest-autographs,FA-CP,,true,,Cesar Prieto
+auto-finest-autographs,FA-CS,,true,,C.J. Stubbs
+auto-finest-autographs,FA-CSC,,true,,Cam Schlittler
+auto-finest-autographs,FA-CSI,,true,,Chandler Simpson
+auto-finest-autographs,FA-CT,,true,,Colby Thomas
+auto-finest-autographs,FA-CW,,true,,Carson Williams
+auto-finest-autographs,FA-CY,,true,,Cole Young
+auto-finest-autographs,FA-DB,,true,,Drake Baldwin
+auto-finest-autographs,FA-DBS,,true,,Dylan Beavers
+auto-finest-autographs,FA-DD,,true,,Dillon Dingler
+auto-finest-autographs,FA-DF,,true,,Didier Fuentes
+auto-finest-autographs,FA-DGU,,true,,Denzer Guzman
+auto-finest-autographs,FA-DL,,true,,Derrek Lee
+auto-finest-autographs,FA-DW,,true,,Dave Winfield
+auto-finest-autographs,FA-EC,,true,,Evan Carter
+auto-finest-autographs,FA-EQ,,true,,Edgar Quero
+auto-finest-autographs,FA-FP,,true,,Freddy Peralta
+auto-finest-autographs,FA-HB,,true,,Hunter Barco
+auto-finest-autographs,FA-IS,,true,,Ian Seymour
+auto-finest-autographs,FA-JA,,true,,Jonathan Aranda
+auto-finest-autographs,FA-JC,,true,,Justin Crawford
+auto-finest-autographs,FA-JCA,,true,,Joe Carter
+auto-finest-autographs,FA-JCO,,true,,Jose Corniell
+auto-finest-autographs,FA-JCR,,true,,Jimmy Crooks
+auto-finest-autographs,FA-JD,,true,,Justin Dean
+auto-finest-autographs,FA-JDA,,true,,Johnny Damon
+auto-finest-autographs,FA-JDN,,true,,Jarren Duran
+auto-finest-autographs,FA-JDU,,true,,Jhoan Duran
+auto-finest-autographs,FA-JDZ,,true,,Jasson Dominguez
+auto-finest-autographs,FA-JE,,true,,Jim Edmonds
+auto-finest-autographs,FA-JG,,true,,Jhostynxon Garcia
+auto-finest-autographs,FA-JGO,,true,,Juan Gonzalez
+auto-finest-autographs,FA-JJ,,true,,Jackson Jobe
+auto-finest-autographs,FA-JJU,,true,,Jace Jung
+auto-finest-autographs,FA-JJW,,true,,JJ Wetherholt
+auto-finest-autographs,FA-JM,,true,,Jakob Marsee
+auto-finest-autographs,FA-JME,,true,,Jacob Melton
+auto-finest-autographs,FA-JMO,,true,,Justin Morneau
+auto-finest-autographs,FA-JP,,true,,Jack Perkins
+auto-finest-autographs,FA-JPA,,true,,Jim Palmer
+auto-finest-autographs,FA-JR,,true,,Jose Reyes
+auto-finest-autographs,FA-JS,,true,,John Smoltz
+auto-finest-autographs,FA-JT,,true,,Jonah Tong
+auto-finest-autographs,FA-JWI,,true,,Jack Winkler
+auto-finest-autographs,FA-KC,,true,,Kenedy Corona
+auto-finest-autographs,FA-KCA,,true,,Kristian Campbell
+auto-finest-autographs,FA-KG,,true,,Konnor Griffin
+auto-finest-autographs,FA-KK,,true,,Kyle Karros
+auto-finest-autographs,FA-KL,,true,,Kenny Lofton
+auto-finest-autographs,FA-KM,,true,,Kyle Manzardo
+auto-finest-autographs,FA-KMC,,true,,Kevin McGonigle
+auto-finest-autographs,FA-KO,,true,,Kazuma Okamoto
+auto-finest-autographs,FA-LA,,true,,Luisangel Acuna
+auto-finest-autographs,FA-LH,,true,,Logan Henderson
+auto-finest-autographs,FA-LW,,true,,Logan Webb
+auto-finest-autographs,FA-MA,,true,,Maximo Acosta
+auto-finest-autographs,FA-MAB,,true,,Mick Abel
+auto-finest-autographs,FA-MB,,true,,Mason Barnett
+auto-finest-autographs,FA-MBA,,true,,Moises Ballesteros
+auto-finest-autographs,FA-MF,,true,,Mitch Farris
+auto-finest-autographs,FA-MFR,,true,,Max Fried
+auto-finest-autographs,FA-MH,,true,,Michael Harris II
+auto-finest-autographs,FA-MIZ,,true,,Jacob Misiorowski
+auto-finest-autographs,FA-MM,,true,,Mason Miller
+auto-finest-autographs,FA-MMU,,true,,Munetaka Murakami
+auto-finest-autographs,FA-MOL,,true,,Matt Olson
+auto-finest-autographs,FA-MW,,true,,Masyn Winn
+auto-finest-autographs,FA-MY,,true,,Michael Young
+auto-finest-autographs,FA-NC,,true,,Nathan Church
+auto-finest-autographs,FA-NM,,true,,Nolan McLean
+auto-finest-autographs,FA-NME,,true,,Noelvi Marte
+auto-finest-autographs,FA-NS,,true,,Noah Schultz
+auto-finest-autographs,FA-OA,,true,,Ozzie Albies
+auto-finest-autographs,FA-OC,,true,,Owen Caissie
+auto-finest-autographs,FA-OH,,true,,Orlando Hernandez
+auto-finest-autographs,FA-OK,,true,,Otto Kemp
+auto-finest-autographs,FA-PH,,true,,Petey Halpin
+auto-finest-autographs,FA-PM,,true,,Parker Messick
+auto-finest-autographs,FA-PMO,,true,,Paul Molitor
+auto-finest-autographs,FA-PR,,true,,Geraldo Perdomo
+auto-finest-autographs,FA-PT,,true,,Payton Tolle
+auto-finest-autographs,FA-RA,,true,,Roman Anthony
+auto-finest-autographs,FA-RFL,,true,,Rafael Flores
+auto-finest-autographs,FA-RH,,true,,Robert Hassell III
+auto-finest-autographs,FA-RHO,,true,,Ryan Howard
+auto-finest-autographs,FA-RIZ,,true,,Anthony Rizzo
+auto-finest-autographs,FA-RL,,true,,Rhett Lowder
+auto-finest-autographs,FA-RR,,true,,Ryan Ritter
+auto-finest-autographs,FA-RZ,,true,,Ryan Zimmerman
+auto-finest-autographs,FA-SB,,true,,Samuel Basallo
+auto-finest-autographs,FA-SK,,true,,Steven Kwan
+auto-finest-autographs,FA-SR,,true,,Scott Rolen
+auto-finest-autographs,FA-SS,,true,,Spencer Schwellenbach
+auto-finest-autographs,FA-SSE,,true,,Sal Stewart
+auto-finest-autographs,FA-TA,,true,,Grant Taylor
+auto-finest-autographs,FA-TE,,true,,Tristin English
+auto-finest-autographs,FA-TG,,true,,Tom Glavine
+auto-finest-autographs,FA-TH,,true,,Trevor Hoffman
+auto-finest-autographs,FA-THA,,true,,Thomas Harrington
+auto-finest-autographs,FA-THU,,true,,Torii Hunter
+auto-finest-autographs,FA-TI,,true,,Tatsuya Imai
+auto-finest-autographs,FA-TJO,,true,,Troy Johnston
+auto-finest-autographs,FA-TM,,true,,Troy Melton
+auto-finest-autographs,FA-TP,,true,,Tristan Peters
+auto-finest-autographs,FA-TS,,true,,Tyler Soderstrom
+auto-finest-autographs,FA-TSA,,true,,Thomas Saggese
+auto-finest-autographs,FA-TY,,true,,Trey Yesavage
+auto-finest-autographs,FA-VA,,true,,George Valera
+auto-finest-autographs,FA-VM,,true,,Victor Martinez
+auto-finest-autographs,FA-WA,,true,,Wilyer Abreu
+auto-finest-autographs,FA-WB,,true,,Will Banfield
+auto-finest-autographs,FA-WBE,,true,,Warming Bernabel
+auto-finest-autographs,FA-WC,,true,,William Contreras
+auto-finest-autographs,FA-WG,,true,,Wikelman Gonzalez
+auto-finest-autographs,FA-WS,,true,,Will Smith
+auto-finest-autographs,FA-YF,,true,,Yanquiel Fernandez
+auto-finest-autographs,FA-ZC,,true,,Zach Cole
+auto-finest-autographs,FA-ZM,,true,,Zach Maxwell
+auto-finest-ink,FI-AB,,true,,Adrian Beltre
+auto-finest-ink,FI-AD,,true,,Andre Dawson
+auto-finest-ink,FI-AJ,,true,,Andruw Jones
+auto-finest-ink,FI-BB,,true,,Barry Bonds
+auto-finest-ink,FI-BL,,true,,Barry Larkin
+auto-finest-ink,FI-BW,,true,,Bernie Williams
+auto-finest-ink,FI-CB,,true,,Carlos Beltran
+auto-finest-ink,FI-CF,,true,,Carlton Fisk
+auto-finest-ink,FI-CFI,,true,,Cecil Fielder
+auto-finest-ink,FI-DE,,true,,Dennis Eckersley
+auto-finest-ink,FI-DJ,,true,,Derek Jeter
+auto-finest-ink,FI-FJ,,true,,Fergie Jenkins
+auto-finest-ink,FI-GG,,true,,Goose Gossage
+auto-finest-ink,FI-GS,,true,,Gary Sheffield
+auto-finest-ink,FI-JB,,true,,Johnny Bench
+auto-finest-ink,FI-KG,,true,,Ken Griffey Jr.
+auto-finest-ink,FI-LW,,true,,Larry Walker
+auto-finest-ink,FI-MM,,true,,Mark McGwire
+auto-finest-ink,FI-MR,,true,,Mariano Rivera
+auto-finest-ink,FI-MS,,true,,Mike Schmidt
+auto-finest-ink,FI-RC,,true,,Roger Clemens
+auto-finest-ink,FI-RF,,true,,Rollie Fingers
+auto-finest-ink,FI-RJ,,true,,Randy Johnson
+auto-finest-ink,FI-SK,,true,,Sandy Koufax
+auto-gustographs,GA-AB,,true,,Alex Bregman
+auto-gustographs,GA-AJ,,true,,Aaron Judge
+auto-gustographs,GA-AP,,true,,Albert Pujols
+auto-gustographs,GA-BC,,true,,Bubba Chandler
+auto-gustographs,GA-BE,,true,,Bryce Eldridge
+auto-gustographs,GA-BH,,true,,Bryce Harper
+auto-gustographs,GA-CB,,true,,Cody Bellinger
+auto-gustographs,GA-CH,,true,,Cade Horton
+auto-gustographs,GA-CJ,,true,,Chipper Jones
+auto-gustographs,GA-CM,,true,,Colson Montgomery
+auto-gustographs,GA-CMO,,true,,Christian Moore
+auto-gustographs,GA-CR,,true,,Cal Ripken Jr.
+auto-gustographs,GA-CY,,true,,Christian Yelich
+auto-gustographs,GA-DO,,true,,David Ortiz
+auto-gustographs,GA-EM,,true,,Eddie Murray
+auto-gustographs,GA-EMZ,,true,,Edgar Martinez
+auto-gustographs,GA-FH,,true,,Felix Hernandez
+auto-gustographs,GA-FT,,true,,Fernando Tatis Jr.
+auto-gustographs,GA-GB,,true,,George Brett
+auto-gustographs,GA-GM,,true,,Greg Maddux
+auto-gustographs,GA-GS,,true,,Gary Sheffield
+auto-gustographs,GA-JA,,true,,Jose Altuve
+auto-gustographs,GA-JC,,true,,Jac Caglianone
+auto-gustographs,GA-JCH,,true,,Jackson Chourio
+auto-gustographs,GA-JMZ,,true,,Jacob Misiorowski
+auto-gustographs,GA-JS,,true,,Juan Soto
+auto-gustographs,GA-JT,,true,,Jonah Tong
+auto-gustographs,GA-JVO,,true,,Joey Votto
+auto-gustographs,GA-JW,,true,,Jacob Wilson
+auto-gustographs,GA-LW,,true,,Larry Walker
+auto-gustographs,GA-MMU,,true,,Munetaka Murakami
+auto-gustographs,GA-MP,,true,,Mike Piazza
+auto-gustographs,GA-OC,,true,,Owen Caissie
+auto-gustographs,GA-OH,,true,,Orel Hershiser
+auto-gustographs,GA-PF,,true,,Prince Fielder
+auto-gustographs,GA-RA,,true,,Roman Anthony
+auto-gustographs,GA-RG,,true,,Riley Greene
+auto-gustographs,GA-SB,,true,,Samuel Basallo
+auto-gustographs,GA-TH,,true,,Torii Hunter
+auto-gustographs,GA-TT,,true,,Trea Turner
+auto-gustographs,GA-ZW,,true,,Zack Wheeler
+auto-finest-personality-autographs,FPA-BO,,true,,Buster Olney
+auto-finest-personality-autographs,FPA-BW,,true,,Brian Wilson
+auto-finest-personality-autographs,FPA-CR,,true,,Chris Rose
+auto-finest-personality-autographs,FPA-DS,,true,,Dave Sims
+auto-finest-personality-autographs,FPA-HP,,true,,Hunter Pence
+auto-finest-personality-autographs,FPA-JB,,true,,Joe Buck
+auto-finest-personality-autographs,FPA-JD,,true,,Joe Davis
+auto-finest-personality-autographs,FPA-JK,,true,,John Kruk
+auto-finest-personality-autographs,FPA-JR,,true,,Jimmy Rollins
+auto-finest-personality-autographs,FPA-KAY,,true,,Michael Kay
+auto-finest-personality-autographs,FPA-KR,,true,,Ken Rosenthal
+auto-finest-personality-autographs,FPA-LP,,true,,Lou Piniella
+auto-finest-personality-autographs,FPA-MD,,true,,"Christopher ""Mad Dog"" Russo"
+auto-finest-personality-autographs,FPA-OG,,true,,Ozzie Guillen
+auto-finest-personality-autographs,FPA-RJ,,true,,Reggie Jackson
+auto-topps-rookie-cup-anniversary-autographs,RCA-AB,,true,,Alec Bohm
+auto-topps-rookie-cup-anniversary-autographs,RCA-CJ,,true,,Chipper Jones
+auto-topps-rookie-cup-anniversary-autographs,RCA-DJ,,true,,David Justice
+auto-topps-rookie-cup-anniversary-autographs,RCA-FL,,true,,Fred Lynn
+auto-topps-rookie-cup-anniversary-autographs,RCA-HN,,true,,Hideo Nomo
+auto-topps-rookie-cup-anniversary-autographs,RCA-JR,,true,,Jim Rice
+auto-topps-rookie-cup-anniversary-autographs,RCA-JT,,true,,J.T. Realmuto
+auto-topps-rookie-cup-anniversary-autographs,RCA-KS,,true,,Kyle Schwarber
+auto-topps-rookie-cup-anniversary-autographs,RCA-LW,,true,,Larry Walker
+auto-topps-rookie-cup-anniversary-autographs,RCA-OG,,true,,Ozzie Guillen
+auto-topps-rookie-cup-anniversary-autographs,RCA-RV,,true,,Robin Ventura
+auto-topps-rookie-cup-anniversary-autographs,RCA-SG,,true,,Shawn Green
+auto-topps-rookie-cup-anniversary-autographs,RCA-TP,,true,,Tony Perez
+auto-topps-rookie-cup-dual-autographs,DRCA-AL,,true,,Fred Lynn/Roman Anthony
+auto-topps-rookie-cup-dual-autographs,DRCA-AR,,true,,Jim Rice/Roman Anthony
+auto-topps-rookie-cup-dual-autographs,DRCA-AS,,true,,Juan Soto/Ronald Acuna Jr.
+auto-topps-rookie-cup-dual-autographs,DRCA-BJ,,true,,Chipper Jones/Drake Baldwin
+auto-topps-rookie-cup-dual-autographs,DRCA-BM,,true,,Brian McCann/Drake Baldwin
+auto-topps-rookie-cup-dual-autographs,DRCA-CC,,true,,Isaac Collins/Jackson Chourio
+auto-topps-rookie-cup-dual-autographs,DRCA-CS,,true,,Jackson Chourio/Gary Sheffield
+auto-topps-rookie-cup-dual-autographs,DRCA-HC,,true,,Cade Horton/Noah Cameron
+auto-topps-rookie-cup-dual-autographs,DRCA-HI,,true,,Cade Horton/Shota Imanaga
+auto-topps-rookie-cup-dual-autographs,DRCA-HS,,true,,Matt Shaw/Cade Horton
+auto-topps-rookie-cup-dual-autographs,DRCA-HW,,true,,Kerry Wood/Cade Horton
+auto-topps-rookie-cup-dual-autographs,DRCA-JT,,true,,Mike Trout/Aaron Judge
+auto-topps-rookie-cup-dual-autographs,DRCA-KB,,true,,Nick Kurtz/Drake Baldwin
+auto-topps-rookie-cup-dual-autographs,DRCA-KC,,true,,Rod Carew/Luke Keaschall
+auto-topps-rookie-cup-dual-autographs,DRCA-KM,,true,,Luke Keaschall/Joe Mauer
+auto-topps-rookie-cup-dual-autographs,DRCA-KW,,true,,Nick Kurtz/Jacob Wilson
+auto-topps-rookie-cup-dual-autographs,DRCA-MR,,true,,Agustin Ramirez/Jakob Marsee
+auto-topps-rookie-cup-dual-autographs,DRCA-NM,,true,,Nick Kurtz/Mark McGwire
+auto-topps-rookie-cup-dual-autographs,DRCA-RR,,true,,Agustin Ramirez/Hanley Ramirez
+auto-topps-rookie-cup-dual-autographs,DRCA-SH,,true,,Matt Shaw/Ian Happ
+auto-finest-rookie-patch-autographs,RPA-AF,,true,,Alex Freeland
+auto-finest-rookie-patch-autographs,RPA-BC,,true,,Bubba Chandler
+auto-finest-rookie-patch-autographs,RPA-BH,,true,,Brady House
+auto-finest-rookie-patch-autographs,RPA-BM,,true,,Brice Matthews
+auto-finest-rookie-patch-autographs,RPA-BS,,true,,Brandon Sproat
+auto-finest-rookie-patch-autographs,RPA-CD,,true,,Chase DeLauter
+auto-finest-rookie-patch-autographs,RPA-CE,,true,,Connelly Early
+auto-finest-rookie-patch-autographs,RPA-CHM,,true,,Christian Moore
+auto-finest-rookie-patch-autographs,RPA-CJ,,true,,Carter Jensen
+auto-finest-rookie-patch-autographs,RPA-CK,,true,,C.J. Kayfus
+auto-finest-rookie-patch-autographs,RPA-CM,,true,,Colson Montgomery
+auto-finest-rookie-patch-autographs,RPA-CS,,true,,Cam Schlittler
+auto-finest-rookie-patch-autographs,RPA-CT,,true,,Colby Thomas
+auto-finest-rookie-patch-autographs,RPA-CW,,true,,Carson Williams
+auto-finest-rookie-patch-autographs,RPA-DB,,true,,Dylan Beavers
+auto-finest-rookie-patch-autographs,RPA-DF,,true,,Didier Fuentes
+auto-finest-rookie-patch-autographs,RPA-DG,,true,,Drew Gilbert
+auto-finest-rookie-patch-autographs,RPA-GT,,true,,Grant Taylor
+auto-finest-rookie-patch-autographs,RPA-HB,,true,,Hunter Barco
+auto-finest-rookie-patch-autographs,RPA-HH,,true,,Heriberto Hernandez
+auto-finest-rookie-patch-autographs,RPA-JC,,true,,Jac Caglianone
+auto-finest-rookie-patch-autographs,RPA-JG,,true,,Jhostynxon Garcia
+auto-finest-rookie-patch-autographs,RPA-JJ,,true,,Jeremiah Jackson
+auto-finest-rookie-patch-autographs,RPA-JM,,true,,Jacob Misiorowski
+auto-finest-rookie-patch-autographs,RPA-JT,,true,,Jonah Tong
+auto-finest-rookie-patch-autographs,RPA-JW,,true,,JJ Wetherholt
+auto-finest-rookie-patch-autographs,RPA-KK,,true,,Kyle Karros
+auto-finest-rookie-patch-autographs,RPA-KT,,true,,Kyle Teel
+auto-finest-rookie-patch-autographs,RPA-LM,,true,,Luis Morales
+auto-finest-rookie-patch-autographs,RPA-MA,,true,,Maximo Acosta
+auto-finest-rookie-patch-autographs,RPA-MM,,true,,Munetaka Murakami
+auto-finest-rookie-patch-autographs,RPA-NM,,true,,Nolan McLean
+auto-finest-rookie-patch-autographs,RPA-PM,,true,,Parker Messick
+auto-finest-rookie-patch-autographs,RPA-PT,,true,,Payton Tolle
+auto-finest-rookie-patch-autographs,RPA-RR,,true,,Ryan Ritter
+auto-finest-rookie-patch-autographs,RPA-SS,,true,,Sal Stewart
+auto-finest-rookie-patch-autographs,RPA-TY,,true,,Trey Yesavage
+insert-arrivals,A-1,,false,,Jac Caglianone
+insert-arrivals,A-2,,false,,Roman Anthony
+insert-arrivals,A-3,,false,,Samuel Basallo
+insert-arrivals,A-4,,false,,Bryce Eldridge
+insert-arrivals,A-5,,false,,Chase Burns
+insert-arrivals,A-6,,false,,Bubba Chandler
+insert-arrivals,A-7,,false,,Nolan McLean
+insert-arrivals,A-8,,false,,Trey Yesavage
+insert-arrivals,A-9,,false,,Kyle Teel
+insert-arrivals,A-10,,false,,Colson Montgomery
+insert-arrivals,A-11,,false,,Carson Williams
+insert-arrivals,A-12,,false,,Cole Young
+insert-arrivals,A-13,,false,,Christian Moore
+insert-arrivals,A-14,,false,,Harry Ford
+insert-arrivals,A-15,,false,,Brady House
+insert-arrivals,A-16,,false,,Owen Caissie
+insert-arrivals,A-17,,false,,Sal Stewart
+insert-arrivals,A-18,,false,,Jacob Misiorowski
+insert-arrivals,A-19,,false,,Jonah Tong
+insert-arrivals,A-20,,false,,Dylan Beavers
+insert-arrivals,A-21,,false,,C.J. Kayfus
+insert-arrivals,A-22,,false,,Connelly Early
+insert-arrivals,A-23,,false,,Kevin McGonigle
+insert-arrivals,A-24,,false,,Chase DeLauter
+insert-arrivals,A-25,,false,,Cam Schlittler
+insert-arrivals,A-26,,false,,Munetaka Murakami
+insert-arrivals,A-27,,false,,JJ Wetherholt
+insert-arrivals,A-28,,false,,Konnor Griffin
+insert-arrivals,A-29,,false,,Alex Freeland
+insert-arrivals,A-30,,false,,Carson Benge
+insert-worlds-finest,WF-1,,false,,Aaron Judge
+insert-worlds-finest,WF-2,,false,,Paul Skenes
+insert-worlds-finest,WF-3,,false,,Tarik Skubal
+insert-worlds-finest,WF-4,,false,,Alex Bregman
+insert-worlds-finest,WF-5,,false,,Clayton Kershaw
+insert-worlds-finest,WF-6,,false,,Gunnar Henderson
+insert-worlds-finest,WF-7,,false,,Kyle Schwarber
+insert-worlds-finest,WF-8,,false,,Pete Crow-Armstrong
+insert-worlds-finest,WF-9,,false,,Roman Anthony
+insert-worlds-finest,WF-10,,false,,Cal Raleigh
+insert-worlds-finest,WF-11,,false,,Bobby Witt Jr.
+insert-worlds-finest,WF-12,,false,,Nolan McLean
+insert-worlds-finest,WF-13,,false,,Bryce Harper
+insert-worlds-finest,WF-14,,false,,Byron Buxton
+insert-worlds-finest,WF-15,,false,,Julio Rodriguez
+insert-worlds-finest,WF-16,,false,,Junior Caminero
+insert-worlds-finest,WF-17,,false,,Vladimir Guerrero Jr.
+insert-worlds-finest,WF-18,,false,,Fernando Tatis Jr.
+insert-worlds-finest,WF-19,,false,,Juan Soto
+insert-worlds-finest,WF-20,,false,,Manny Machado
+insert-worlds-finest,WF-21,,false,,Ketel Marte
+insert-worlds-finest,WF-22,,false,,Shohei Ohtani
+insert-worlds-finest,WF-23,,false,,Yoshinobu Yamamoto
+insert-worlds-finest,WF-24,,false,,Munetaka Murakami
+insert-worlds-finest,WF-25,,false,,Seiya Suzuki
+insert-worlds-finest,WF-26,,false,,Jackson Chourio
+insert-worlds-finest,WF-27,,false,,Ronald Acuna Jr.
+insert-worlds-finest,WF-28,,false,,Salvador Perez
+insert-worlds-finest,WF-29,,false,,Nolan Arenado
+insert-worlds-finest,WF-30,,false,,Edwin Diaz
+insert-worlds-finest,WF-31,,false,,Randy Arozarena
+insert-worlds-finest,WF-32,,false,,Jazz Chisholm Jr.
+insert-worlds-finest,WF-33,,false,,Jac Caglianone
+insert-worlds-finest,WF-34,,false,,Jung Hoo Lee
+insert-worlds-finest,WF-35,,false,,Josh Naylor
+insert-topps-team-finest,TF-1,,false,,Paul Skenes
+insert-topps-team-finest,TF-2,,false,,Tarik Skubal
+insert-topps-team-finest,TF-3,,false,,Yoshinobu Yamamoto
+insert-topps-team-finest,TF-4,,false,,Garrett Crochet
+insert-topps-team-finest,TF-5,,false,,Max Fried
+insert-topps-team-finest,TF-6,,false,,Edwin Diaz
+insert-topps-team-finest,TF-7,,false,,Cal Raleigh
+insert-topps-team-finest,TF-8,,false,,Vladimir Guerrero Jr.
+insert-topps-team-finest,TF-9,,false,,Ketel Marte
+insert-topps-team-finest,TF-10,,false,,Jose Ramirez
+insert-topps-team-finest,TF-11,,false,,Bobby Witt Jr.
+insert-topps-team-finest,TF-12,,false,,Aaron Judge
+insert-topps-team-finest,TF-13,,false,,Ronald Acuna Jr.
+insert-topps-team-finest,TF-14,,false,,Juan Soto
+insert-topps-team-finest,TF-15,,false,,Shohei Ohtani
+insert-topps-team-finest,TF-16,,false,,Corbin Carroll
+insert-topps-team-finest,TF-17,,false,,Julio Rodriguez
+insert-topps-team-finest,TF-18,,false,,Elly De La Cruz
+insert-topps-team-finest,TF-19,,false,,Francisco Lindor
+insert-topps-team-finest,TF-20,,false,,Nick Kurtz
+insert-topps-team-finest,TF-21,,false,,Jac Caglianone
+insert-topps-team-finest,TF-22,,false,,Roman Anthony
+insert-topps-team-finest,TF-23,,false,,Konnor Griffin
+insert-topps-team-finest,TF-24,,false,,Jacob Misiorowski
+insert-topps-team-finest,TF-25,,false,,Samuel Basallo
+insert-finest-timelines,FT-21,,false,,Don Larsen
+insert-finest-timelines,FT-22,,false,,Kirk Gibson
+insert-finest-timelines,FT-23,,false,,Shohei Ohtani
+insert-finest-timelines,FT-24,,false,,Rickey Henderson
+insert-finest-timelines,FT-25,,false,,Mark McGwire
+insert-finest-timelines,FT-26,,false,,Kirby Puckett
+insert-finest-timelines,FT-27,,false,,George Springer
+insert-finest-timelines,FT-28,,false,,Albert Pujols
+insert-finest-timelines,FT-29,,false,,Ken Griffey Jr.
+insert-finest-timelines,FT-30,,false,,Kris Bryant
+insert-smashing-through,S-1,,false,,Roman Anthony
+insert-smashing-through,S-2,,false,,Jac Caglianone
+insert-smashing-through,S-3,,false,,Jacob Misiorowski
+insert-smashing-through,S-4,,false,,Samuel Basallo
+insert-smashing-through,S-5,,false,,Konnor Griffin
+insert-smashing-through,S-6,,false,,Kevin McGonigle
+insert-smashing-through,S-7,,false,,Francisco Lindor
+insert-smashing-through,S-8,,false,,Vladimir Guerrero Jr.
+insert-smashing-through,S-9,,false,,Freddie Freeman
+insert-smashing-through,S-10,,false,,Pete Crow-Armstrong
+insert-smashing-through,S-11,,false,,Nick Kurtz
+insert-smashing-through,S-12,,false,,Fernando Tatis Jr.
+insert-smashing-through,S-13,,false,,Jose Ramirez
+insert-smashing-through,S-14,,false,,Gunnar Henderson
+insert-smashing-through,S-15,,false,,Bobby Witt Jr.
+insert-smashing-through,S-16,,false,,Elly De La Cruz
+insert-smashing-through,S-17,,false,,Yoshinobu Yamamoto
+insert-smashing-through,S-18,,false,,Tarik Skubal
+insert-smashing-through,S-19,,false,,Aaron Judge
+insert-smashing-through,S-20,,false,,Cal Raleigh
+insert-the-man,TM-1,,false,,Aaron Judge
+insert-the-man,TM-2,,false,,Shohei Ohtani
+insert-the-man,TM-3,,false,,Paul Skenes
+insert-the-man,TM-4,,false,,Nick Kurtz
+insert-the-man,TM-5,,false,,Bobby Witt Jr.
+insert-the-man,TM-6,,false,,Juan Soto
+insert-the-man,TM-7,,false,,Bryce Harper
+insert-the-man,TM-8,,false,,Mike Trout
+insert-the-man,TM-9,,false,,Jac Caglianone
+insert-the-man,TM-10,,false,,Roman Anthony
+insert-gusto,G-1,,false,,Roman Anthony
+insert-gusto,G-2,,false,,Jac Caglianone
+insert-gusto,G-3,,false,,Samuel Basallo
+insert-gusto,G-4,,false,,Jacob Misiorowski
+insert-gusto,G-5,,false,,Bryce Eldridge
+insert-gusto,G-6,,false,,Chase Burns
+insert-gusto,G-7,,false,,Munetaka Murakami
+insert-gusto,G-8,,false,,Nolan McLean
+insert-gusto,G-9,,false,,Trey Yesavage
+insert-gusto,G-10,,false,,Nick Kurtz
+insert-gusto,G-11,,false,,Cal Raleigh
+insert-gusto,G-12,,false,,Bo Bichette
+insert-gusto,G-13,,false,,Kyle Tucker
+insert-gusto,G-14,,false,,Pete Alonso
+insert-gusto,G-15,,false,,Corbin Carroll
+insert-gusto,G-16,,false,,Tarik Skubal
+insert-gusto,G-17,,false,,Pete Crow-Armstrong
+insert-gusto,G-18,,false,,Jose Altuve
+insert-gusto,G-19,,false,,Ronald Acuna Jr.
+insert-gusto,G-20,,false,,Elly De La Cruz
+insert-nightmare-fuel,NF-1,,false,,Bryce Harper
+insert-nightmare-fuel,NF-2,,false,,Aaron Judge
+insert-nightmare-fuel,NF-3,,false,,Shohei Ohtani
+insert-nightmare-fuel,NF-4,,false,,Fernando Tatis Jr.
+insert-nightmare-fuel,NF-5,,false,,Juan Soto
+insert-nightmare-fuel,NF-6,,false,,Francisco Lindor
+insert-nightmare-fuel,NF-7,,false,,Mookie Betts
+insert-nightmare-fuel,NF-8,,false,,Paul Skenes
+insert-nightmare-fuel,NF-9,,false,,Julio Rodriguez
+insert-nightmare-fuel,NF-10,,false,,Tarik Skubal
+insert-nightmare-fuel,NF-11,,false,,Jose Ramirez
+insert-nightmare-fuel,NF-12,,false,,Bobby Witt Jr.
+insert-nightmare-fuel,NF-13,,false,,Ronald Acuna Jr.
+insert-nightmare-fuel,NF-14,,false,,Elly De La Cruz
+insert-nightmare-fuel,NF-15,,false,,Vladimir Guerrero Jr.
+insert-nightmare-fuel,NF-16,,false,,Roman Anthony
+insert-nightmare-fuel,NF-17,,false,,Jac Caglianone
+insert-nightmare-fuel,NF-18,,false,,Jacob Misiorowski
+insert-nightmare-fuel,NF-19,,false,,Samuel Basallo
+insert-nightmare-fuel,NF-20,,false,,Bryce Eldridge
+insert-headliners,HL-1,,false,,Aaron Judge
+insert-headliners,HL-2,,false,,Shohei Ohtani
+insert-headliners,HL-3,,false,,Paul Skenes
+insert-headliners,HL-4,,false,,Tarik Skubal
+insert-headliners,HL-5,,false,,Cal Raleigh
+insert-headliners,HL-6,,false,,Bryce Harper
+insert-headliners,HL-7,,false,,Bobby Witt Jr.
+insert-headliners,HL-8,,false,,Yoshinobu Yamamoto
+insert-headliners,HL-9,,false,,Vladimir Guerrero Jr.
+insert-headliners,HL-10,,false,,Munetaka Murakami
+insert-headliners,HL-11,,false,,Mike Trout
+insert-headliners,HL-12,,false,,Juan Soto
+insert-headliners,HL-13,,false,,Ronald Acuna Jr.
+insert-headliners,HL-14,,false,,Roman Anthony
+insert-headliners,HL-15,,false,,Jac Caglianone
+insert-aura,AU-1,,false,,Aaron Judge
+insert-aura,AU-2,,false,,Shohei Ohtani
+insert-aura,AU-3,,false,,Derek Jeter
+insert-aura,AU-4,,false,,Ronald Acuna Jr.
+insert-aura,AU-5,,false,,Elly De La Cruz
+insert-aura,AU-6,,false,,Juan Soto
+insert-aura,AU-7,,false,,Paul Skenes
+insert-aura,AU-8,,false,,Roman Anthony
+insert-aura,AU-9,,false,,Jazz Chisholm Jr.
+insert-aura,AU-10,,false,,Ken Griffey Jr.
+insert-finest-forces,FIF-1,,false,,Freddie Freeman
+insert-finest-forces,FIF-2,,false,,Jose Altuve
+insert-finest-forces,FIF-3,,false,,Manny Machado
+insert-finest-forces,FIF-4,,false,,Bryce Harper
+insert-finest-forces,FIF-5,,false,,Mike Trout
+insert-finest-forces,FIF-6,,false,,Ronald Acuna Jr.
+insert-finest-forces,FIF-7,,false,,Aaron Judge
+insert-finest-forces,FIF-8,,false,,Francisco Lindor
+insert-finest-forces,FIF-9,,false,,Mookie Betts
+insert-finest-forces,FIF-10,,false,,Paul Skenes
+insert-finest-forces,FIF-11,,false,,Shohei Ohtani
+insert-finest-forces,FIF-12,,false,,Yoshinobu Yamamoto
+insert-finest-forces,FIF-13,,false,,Nolan Ryan
+insert-finest-forces,FIF-14,,false,,Sandy Koufax
+insert-finest-forces,FIF-15,,false,,Derek Jeter
+insert-finest-forces,FIF-16,,false,,Ichiro
+insert-finest-forces,FIF-17,,false,,Ken Griffey Jr.
+insert-finest-forces,FIF-18,,false,,Albert Pujols
+insert-finest-forces,FIF-19,,false,,Roberto Clemente
+insert-finest-forces,FIF-20,,false,,Mickey Mantle
+insert-finest-forces,FIF-21,,false,,Babe Ruth
+insert-finest-forces,FIF-22,,false,,Willie Mays
+insert-finest-forces,FIF-23,,false,,Hank Aaron
+insert-finest-forces,FIF-24,,false,,David Ortiz
+insert-finest-forces,FIF-25,,false,,Cal Ripken Jr.

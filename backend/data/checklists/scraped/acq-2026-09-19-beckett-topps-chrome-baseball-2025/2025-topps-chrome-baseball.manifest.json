@@ -1,0 +1,48 @@
+{
+  "scrapedAt": "2026-09-19T19:14:25.700Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/07/2025-Topps-Chrome-Baseball-Checklist.xlsx",
+  "xlsxHttpStatus": 200,
+  "sha256": "e376b0d198456148bfb11ed3790dfb84b24a101c66e35a6a73034d6cda0e719d",
+  "source": "beckett-s3-2026-09-19",
+  "fetchDate": "2026-09-19",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Topps Chrome",
+  "productKey": "2025-topps-chrome",
+  "setKey": "topps-chrome",
+  "readyToIngest": false,
+  "why": "Rank-6 in the 2026-09-19 sales-volume-ranked acquisition queue (2,449 sales in the sampled 30-day window, 40% not backed, est. 980 not-backed sales). The two checklists already committed for this product-year (backend/data/checklists/2025-topps-chrome-baseball.csv, 300 base rows, source='seed'/baseballcardpedia; backend/data/checklists/scraped/beckett-2025-topps-chrome-baseball-variations-guide.csv, 66-row Beckett 'variations guide') are both narrow -- neither carries the full named-parallel matrix (Refractor, X-Fractor, Prism Refractor, Raywave/Lava/Wave/Geometric families, Superfractor, etc.) that the base card's colored refractors actually sell under, nor the ~35 auto/insert subsets. This is the 'a missing checklist is usually a wrong key' pattern from memory: the gap was never 'no checklist at all', it was 'only a base-numbers-only seed and a 66-row SP-only guide committed'.",
+  "reproduce": {
+    "discoverCommand": "targeted S3 HEAD probe over window 2025-Topps-Chrome-Baseball-Checklist.xlsx across 2024/12..2025/06 (discoverBeckettS3Checklists.cjs's GAP_LIST does not include this product; probed ad hoc with the same bounded-window/politeness logic, 1 req/sec) -- HIT at 2025/07, all earlier months 403.",
+    "convertCommand": "node backend/scripts/convertBeckettChecklistXlsx.cjs --xlsx 2025-topps-chrome-baseball.xlsx --year 2025 --set-key topps-chrome --set-name \"2025 Topps Chrome\" --sport baseball --out 2025-topps-chrome-baseball.csv --source-url \"https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/07/2025-Topps-Chrome-Baseball-Checklist.xlsx\" --source-label beckett-s3-2026-09-19",
+    "converterOutput": "wrote 2025-topps-chrome-baseball.csv; rows=19109 (deduped 0); by kind: {\"base\":13866,\"auto\":3577,\"insert\":1666}; sections: 39 (anchors 1, parallels 3, own-cards 35). No AMBIGUOUS overlaps, no zero-row sheets, no 'Topps Master Checklist' sheet present in this workbook (the known ALL-CAPS-leak defect did not trigger here -- checked directly: 0 all-caps parallel rows)."
+  },
+  "rowsByCategory": {
+    "base": {
+      "rowsInRawConvert": 13866,
+      "rowsStaged": 13858,
+      "note": "300 distinct card numbers x 49 distinct parallel spellings (blank/plain + 48 named refractor/variation rungs: Refractor, X-Fractor, Prism/Raywave/Negative/Sepia/Teal/Purple/Aqua/Blue/Green/Gold/Orange/Black/Red families incl. Wave/Lava/Raywave/Geometric sub-variants, Topps Refractor, Frozenfractor, Superfractor, Lightboard Logo Base Variation, Murakami Base Variations, Image Variation, Award Winners Variation, SSP Variation). Zero exact-duplicate rows. This is a genuinely complete parallel matrix straight from the source xlsx's own Base sheet (not synthesized -- Beckett's own sheet lists every parallel column per card, unlike the 2026 Topps Chrome file where variations live on a separate sheet)."
+    },
+    "auto": { "rows": 3577, "categories": "19 auto-* sections keyed by print-odds label (e.g. auto-133-packs = '1:33 packs'), not player-facing subset names -- Beckett's own section headers for this product ARE the pack-odds string, carried through verbatim per 'never synthesize'." },
+    "insert": {
+      "rowsInRawConvert": 1666,
+      "rowsStaged": 1658,
+      "note": "18 insert-* sections, all keyed by pack-odds label the same way as the auto sections."
+    }
+  },
+  "trimmedFromRawConvert": {
+    "count": 8,
+    "what": "8 rows under category insert-121258-packs (Beckett section '1:21,258 packs'), card numbers #1 and #50.",
+    "why": "R67 roster test: this tiny insert reuses the SAME card numbers (1, 50) as the flagship Base set but names DIFFERENT players (#1 Aaron Judge vs Base #1 Shohei Ohtani; #50 Shohei Ohtani vs Base #50 Mookie Betts) under every one of Base's own parallel spellings (blank, Negative Refractor, Refractor, X-Fractor) -- different players at the same number is the sibling-product signal, not a parallel/variation of Base. planStagedDirectory (see plannerVerdict) refused the raw 19,109-row convert with 'unregistered-set-keys' (topps-chrome-121258-packs, resolvesTo topps-chrome) and 8 hard id collisions for exactly this reason. Left out of this package per the task's instruction to report rather than fix; owner's ruling pending on whether '1:21,258 packs' needs its own registered key (e.g. topps-chrome-1-21258-packs) in a separate productSetKeys.ts PR with a fixed-point test."
+  },
+  "newVsExisting": {
+    "method": "Compared every (cardNumber, parallel) cell in this package (case-insensitive) against the union of backend/data/checklists/2025-topps-chrome-baseball.csv (300 cells, blank-parallel base only) and backend/data/checklists/scraped/beckett-2025-topps-chrome-baseball-variations-guide.csv (66 cells, Image Variation SP only).",
+    "totalCellsInPackage": 19101,
+    "newCells": 19101,
+    "existingCellsUnchanged": 0,
+    "note": "100% of this package's cells are new versus what is currently committed for this product-year -- the existing base CSV's 300 (cardNumber, blank) cells and the 66-row variations guide's (cardNumber, 'X Image Variation SP') cells use different cardNumber/parallel spellings than this file's, so a same-authority re-ingest of this package would not silently overwrite either existing file's fields; it adds the missing refractor/auto/insert matrix around them. A same-authority ingest never overwrites existing fields regardless (see ingest-checklist-csv-to-catalog.cjs authority rules) -- this note describes coverage, not a write-conflict risk."
+  },
+  "rosterFoldEvidence": "Player cells verified free of RC/marker suffixes and trailing commas in a spot-check of 40 rows across base/auto/insert categories (converter's own roster-fold + RC-marker-strip ran; Beckett's card-list xlsx has no multi-player cells for this product, so the multi-player-merge path was not exercised here).",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, offline, run against this trimmed file): 19101 batch rows, 19101 distinct ids, 0 collisions, 0 unregistered set keys, 0 duplicatesFolded, 0 unslugable. (The pre-trim 19109-row raw convert refused with reason=unregistered-set-keys, 8 collisions, 1 unregistered subset -- see trimmedFromRawConvert above; this manifest describes the POST-trim, passing file.)",
+  "note": "STAGED, not ingested. Never touch prod/Cosmos from this pass; a separate ingest step (with COSMOS_CONNECTION_STRING and an explicit SOURCE=beckett-s3-2026-09-19 catalogAuthority=checklist run) is required before this reaches card_catalog."
+}
