@@ -676,6 +676,43 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   S("upper-deck-series-2-o-pee-chee-retro-update-rookies", {
     family: "upper-deck-series-2", parent: "upper-deck-series-2",
   }),
+  /**
+   * R67 (Drew, ruling round of 2026-09-19): 2023-24 UPPER DECK SERIES 2
+   * HOCKEY -- "PC's" AND "POPULATION COUNT 1000" ARE TWO DIFFERENT PRODUCTS
+   * THAT SHARE A NUMBER PREFIX BY COINCIDENCE.
+   *
+   * Measured directly against the staged checklist (upperdeck.com's own
+   * inline HTML table, held pending this registration -- the ingest
+   * planner refuses the staged file over exactly this pair, reason
+   * unregistered-set-keys, until both keys exist). Per R67 (same
+   * (cardNumber -> player) roster on every shared number is a PARALLEL;
+   * different players/own numbering is its own product), these two do NOT
+   * fold: "PC's" runs #PC-1 through #PC-35 (e.g. #PC-31 Filip Forsberg,
+   * 3 rungs: PC's / Sparkle Parallel / Gold Sparkle Parallel, 105 staged
+   * rows) and "Population Count 1000" runs #PC-31 through #PC-60 (e.g.
+   * #PC-31 Connor McDavid, 7 rungs stepping the stated print run down
+   * 1000/500/100/50/25/10/1, 210 staged rows) -- overlapping on #PC-31
+   * through #PC-35 with a DIFFERENT PLAYER at every one of those five
+   * numbers. Two unrelated inserts printed their own numbering off the
+   * same "PC-" stem; nothing here is a parallel of anything else.
+   *
+   * NAME MATTERS FOR REACHABILITY. slugify() strips punctuation outright
+   * (it does not turn an apostrophe into a hyphen), so a sale titled
+   * "...Upper Deck Series 2 PC's #PC-31..." slugifies to
+   * "...-upper-deck-series-2-pcs-pc-31-..." -- the key is
+   * `upper-deck-series-2-pcs` (no internal hyphen splitting "pc" and "s"),
+   * confirmed by running slugify() on the exact staged-checklist title
+   * shape before choosing this spelling, not guessed from the display
+   * name. "Population Count" carries no punctuation to lose, so its own
+   * segments slugify unchanged into the key below.
+   */
+  S("upper-deck-series-2-pcs", {
+    family: "upper-deck-series-2", parent: "upper-deck-series-2",
+  }),
+  S("upper-deck-series-2-population-count-1000", {
+    names: ["upper-deck-series-2-population-count"],
+    family: "upper-deck-series-2", parent: "upper-deck-series-2",
+  }),
   // D39 (Drew, 2026-08-31): the hockey umbrella folds onto its SERIES products,
   // and Extended Series is one of them. It was the only named destination the
   // table did not spell, so "2024-25 Upper Deck Extended Series" resolved to

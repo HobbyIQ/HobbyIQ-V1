@@ -18,11 +18,15 @@
     {
       "setKey": "upper-deck-series-2-pcs",
       "rows": 105,
-      "note": "\"PC's\" insert (Prospect/Combine-style, unclear expansion from the page alone -- Drew's ruling needed on display name), cardNumbers PC-1 through PC-35, 3 rungs (PC's / Sparkle Parallel / Gold Sparkle Parallel) x 35 cards. Player at #PC-31 is Filip Forsberg."
+      "registered": true,
+      "registeredNote": "Registered 2026-09-19 in backend/src/services/catalog/productSetKeys.ts, nested under upper-deck-series-2 (family + parent). Pinned by tests/upperDeckSeries2PcsPopulationCountAreFixedPoints.test.ts.",
+      "note": "\"PC's\" insert (Prospect/Combine-style, unclear expansion from the page alone -- Drew's ruling still open on the DISPLAY name only, not the key), cardNumbers PC-1 through PC-35, 3 rungs (PC's / Sparkle Parallel / Gold Sparkle Parallel) x 35 cards. Player at #PC-31 is Filip Forsberg."
     },
     {
       "setKey": "upper-deck-series-2-population-count-1000",
       "rows": 210,
+      "registered": true,
+      "registeredNote": "Registered 2026-09-19 in backend/src/services/catalog/productSetKeys.ts, nested under upper-deck-series-2 (family + parent), with a names alias upper-deck-series-2-population-count. Pinned by tests/upperDeckSeries2PcsPopulationCountAreFixedPoints.test.ts.",
       "note": "\"Population Count 1000\" insert, cardNumbers PC-31 through PC-60 (announced print run of 1,000, stepping down through 500/100/50/25/10/1 parallels), 7 rungs x 30 cards. Player at #PC-31 is Connor McDavid -- collides with PC's #PC-31 (Filip Forsberg) on the raw card number alone; the two are unrelated products."
     }
   ],
@@ -202,7 +206,7 @@
       ]
     },
     {
-      "category": "pc-s",
+      "category": "pcs",
       "anchorSection": "PC's",
       "cardRange": "PC-1..PC-35",
       "cards": 35,
@@ -210,7 +214,7 @@
         "Sparkle",
         "Gold Sparkle"
       ],
-      "note": "UNREGISTERED -- see keysNeeded, R67 collision with population-count-1000"
+      "note": "category renamed pc-s -> pcs (2026-09-19, post-registration): slugify() strips the apostrophe in \"PC's\" outright rather than turning it into a hyphen, so a real sale title reads this insert's segment as \"pcs\" (one token), never \"pc-s\" (two). The registered key upper-deck-series-2-pcs is spelled to match. UNREGISTERED before the registration PR landed -- see keysNeeded and r67RosterFold.genuineCollisionFound; now registered, see status."
     },
     {
       "category": "population-count-1000",
@@ -225,7 +229,7 @@
         "10",
         "1"
       ],
-      "note": "UNREGISTERED -- see keysNeeded, R67 collision with pc-s"
+      "note": "Registered 2026-09-19 as upper-deck-series-2-population-count-1000, nested under upper-deck-series-2 -- see keysNeeded and r67RosterFold.genuineCollisionFound. Was the R67 collision with pcs before registration."
     },
     {
       "category": "ud-canvas",
@@ -289,8 +293,8 @@
   "markersSeenNotStripped": [
     "CL (dual-player Checklist card marker, e.g. 'Connor Bedard/Leo Carlsson CL' -- a real card-type flag, left exactly as the source states it, same convention as the 2022-23 Extended Series package)"
   ],
-  "status": "HELD: needs keys",
-  "holdReason": "planStagedDirectory refuses (reason unregistered-set-keys) until upper-deck-series-2-pcs and upper-deck-series-2-population-count-1000 are registered in productSetKeys.ts. See keysNeeded below. This package stays in the PR as documentation; it must NOT be ingested until those keys land in their own PR and the planner is re-run to confirm PASS.",
+  "status": "REGISTERED, still not ingested",
+  "holdReason": "RESOLVED 2026-09-19: upper-deck-series-2-pcs and upper-deck-series-2-population-count-1000 are now registered in productSetKeys.ts (nested under upper-deck-series-2), in their own PR against backend/src with a fixed-point test (tests/upperDeckSeries2PcsPopulationCountAreFixedPoints.test.ts). The staged CSV's category for the first insert was renamed pc-s -> pcs to match how slugify() actually reads \"PC's\" from a real sale title (apostrophe dropped, not hyphenated) -- see keysNeeded and the pcs sectionsReport entry's note. planStagedDirectory now PASSES: verdict 'pass', 4,400 distinct ids, 0 collisions, 0 unregistered keys (re-run after both the registration and the category rename landed). This package is still documentation only -- readyToIngest stays false pending the orchestrator's report-only run and explicit go, per this build's hard rules; nothing here changes that gate.",
   "r67RosterFold": {
     "rule": "Two Set Name groups fold into one category (anchor + parallel column) only when their (cardNumber -> player) maps agree on every shared number -- exact match for same-size groups, clean SUBSET match (0 disagree, 0 missing) for a smaller group against a larger anchor.",
     "perSectionEvidence": [
@@ -999,7 +1003,7 @@
         "verdict": "folded -- clean subset"
       }
     ],
-    "genuineCollisionFound": "\"PC's\" (cardNumbers PC-1..PC-35, e.g. #PC-31 Filip Forsberg) and \"Population Count 1000\" (cardNumbers PC-31..PC-60, e.g. #PC-31 Connor McDavid) are TWO DIFFERENT PRODUCTS that share the PC- number prefix by coincidence and OVERLAP on PC-31 through PC-35 with DIFFERENT PLAYERS at the same number. This is the R67 'different players/own numbering' branch: each needs its OWN registered productSetKey, not a fold. Left UNREGISTERED on purpose -- see keysNeeded."
+    "genuineCollisionFound": "\"PC's\" (cardNumbers PC-1..PC-35, e.g. #PC-31 Filip Forsberg) and \"Population Count 1000\" (cardNumbers PC-31..PC-60, e.g. #PC-31 Connor McDavid) are TWO DIFFERENT PRODUCTS that share the PC- number prefix by coincidence and OVERLAP on PC-31 through PC-35 with DIFFERENT PLAYERS at the same number. This is the R67 'different players/own numbering' branch: each needs its OWN registered productSetKey, not a fold. REGISTERED 2026-09-19 as upper-deck-series-2-pcs and upper-deck-series-2-population-count-1000 (see keysNeeded) -- planStagedDirectory now PASSES on this file (0 collisions, 0 unregistered keys)."
   },
   "rcSuffixStripped": {
     "count": 0,
