@@ -1,0 +1,652 @@
+{
+  "scrapedAt": "2026-09-19T22:55:19.803Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/11/2024-Panini-Mosaic-Football-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "football",
+  "year": 2024,
+  "setName": "2024 Panini Mosaic Football",
+  "productKey": "2024-panini-mosaic",
+  "setKey": "panini-mosaic",
+  "rowCount": 11468,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Rookies - #301-400",
+      "category": "base",
+      "cards": 250,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "National Pride",
+      "category": "base",
+      "cards": 20,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "NFL Debut",
+      "category": "base",
+      "cards": 20,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Hall of Fame",
+      "category": "base",
+      "cards": 10,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Rookies",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Autographs Mosaic",
+      "category": "auto-autographs-mosaic",
+      "cards": 26,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Autographs Mosaic Black",
+      "category": "auto-autographs-mosaic-black",
+      "cards": 36,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Autographs Mosaic Blue",
+      "category": "auto-autographs-mosaic-blue",
+      "cards": 31,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Autographs Mosaic Choice Black Gold",
+      "category": "auto-autographs-mosaic-choice-black-gold",
+      "cards": 37,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Autographs Mosaic Choice Fusion Green and Black",
+      "category": "auto-autographs-mosaic-choice-fusion-green-and-black",
+      "cards": 35,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Autographs Mosaic Black",
+      "overlapPct": 97.1
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Autographs Mosaic Choice Fusion Red and Yellow",
+      "category": "auto-autographs-mosaic-choice-fusion-red-and-yellow",
+      "cards": 34,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Autographs Mosaic Gold",
+      "category": "auto-autographs-mosaic-gold",
+      "cards": 36,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Autographs Mosaic Purple",
+      "category": "auto-autographs-mosaic-purple",
+      "cards": 35,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Autographs Mosaic Red",
+      "category": "auto-autographs-mosaic-red",
+      "cards": 27,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Autographs Mosaic White",
+      "category": "auto-autographs-mosaic-white",
+      "cards": 34,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Franchise Numbers",
+      "category": "auto-franchise-numbers",
+      "cards": 1,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "In Focus Signatures",
+      "category": "auto-in-focus-signatures",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "In Focus Signatures Black",
+      "category": "auto-in-focus-signatures-black",
+      "cards": 22,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "In Focus Signatures Blue",
+      "category": "auto-in-focus-signatures-blue",
+      "cards": 18,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "In Focus Signatures Choice Black Gold",
+      "category": "auto-in-focus-signatures-choice-black-gold",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "In Focus Signatures Choice Fusion Green and Black",
+      "category": "auto-in-focus-signatures-choice-fusion-green-and-black",
+      "cards": 23,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "In Focus Signatures Choice Fusion Red and Yellow",
+      "category": "auto-in-focus-signatures-choice-fusion-red-and-yellow",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "In Focus Signatures Gold",
+      "category": "auto-in-focus-signatures-gold",
+      "cards": 21,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "In Focus Signatures Purple",
+      "category": "auto-in-focus-signatures-purple",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "In Focus Signatures Red",
+      "category": "auto-in-focus-signatures-red",
+      "cards": 15,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>In Focus Signatures",
+      "overlapPct": 93.3
+    },
+    {
+      "sheet": "Autographs",
+      "section": "In Focus Signatures White",
+      "category": "auto-in-focus-signatures-white",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Pinnacle Inscriptions",
+      "category": "auto-pinnacle-inscriptions",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic",
+      "category": "auto-rookie-autographs-mosaic",
+      "cards": 45,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic Black",
+      "category": "auto-rookie-autographs-mosaic-black",
+      "cards": 69,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic Blue",
+      "category": "auto-rookie-autographs-mosaic-blue",
+      "cards": 51,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic Choice Black Gold",
+      "category": "auto-rookie-autographs-mosaic-choice-black-gold",
+      "cards": 61,
+      "role": "parallel",
+      "anchor": "Autographs>Rookie Autographs Mosaic Gold",
+      "rung": "Choice Black"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic Choice Fusion Green and Black",
+      "category": "auto-rookie-autographs-mosaic-choice-fusion-green-and-black",
+      "cards": 57,
+      "role": "parallel",
+      "anchor": "Autographs>Rookie Autographs Mosaic Black",
+      "rung": "Choice Fusion Green and"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic Choice Fusion Red and Yellow",
+      "category": "auto-rookie-autographs-mosaic-choice-fusion-red-and-yellow",
+      "cards": 48,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Rookie Autographs Mosaic Red",
+      "overlapPct": 95.8
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic Gold",
+      "category": "auto-rookie-autographs-mosaic-gold",
+      "cards": 62,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic Green Swirl",
+      "category": "auto-rookie-autographs-mosaic-green-swirl",
+      "cards": 90,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic No Huddle Blue",
+      "category": "auto-rookie-autographs-mosaic-no-huddle-blue",
+      "cards": 50,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Rookie Autographs Mosaic Blue",
+      "overlapPct": 96
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic Purple",
+      "category": "auto-rookie-autographs-mosaic-purple",
+      "cards": 59,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic Red",
+      "category": "auto-rookie-autographs-mosaic-red",
+      "cards": 52,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic White",
+      "category": "auto-rookie-autographs-mosaic-white",
+      "cards": 58,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Mosaic White Sparkle",
+      "category": "auto-rookie-autographs-mosaic-white-sparkle",
+      "cards": 71,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Scripts",
+      "category": "auto-rookie-scripts",
+      "cards": 26,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Scripts",
+      "overlapPct": 69.2
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Scripts Black",
+      "category": "auto-rookie-scripts-black",
+      "cards": 34,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Scripts Black",
+      "overlapPct": 91.2
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Scripts Gold",
+      "category": "auto-rookie-scripts-gold",
+      "cards": 32,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Scripts Gold",
+      "overlapPct": 90.6
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Scripts No Huddle Black",
+      "category": "auto-rookie-scripts-no-huddle-black",
+      "cards": 34,
+      "role": "parallel",
+      "anchor": "Autographs>Rookie Scripts Black",
+      "rung": "No Huddle"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Scripts No Huddle Blue",
+      "category": "auto-rookie-scripts-no-huddle-blue",
+      "cards": 28,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Scripts No Huddle Blue",
+      "overlapPct": 85.7
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Scripts No Huddle Gold",
+      "category": "auto-rookie-scripts-no-huddle-gold",
+      "cards": 32,
+      "role": "parallel",
+      "anchor": "Autographs>Rookie Scripts Gold",
+      "rung": "No Huddle"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Scripts Red Wave",
+      "category": "auto-rookie-scripts-red-wave",
+      "cards": 30,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Scripts Red Wave",
+      "overlapPct": 86.7
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Scripts",
+      "category": "auto-scripts",
+      "cards": 44,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Scripts Black",
+      "category": "auto-scripts-black",
+      "cards": 56,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Scripts Gold",
+      "category": "auto-scripts-gold",
+      "cards": 55,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Scripts No Huddle Black",
+      "category": "auto-scripts-no-huddle-black",
+      "cards": 55,
+      "role": "parallel",
+      "anchor": "Autographs>Scripts Black",
+      "rung": "No Huddle"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Scripts No Huddle Blue",
+      "category": "auto-scripts-no-huddle-blue",
+      "cards": 48,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Scripts No Huddle Gold",
+      "category": "auto-scripts-no-huddle-gold",
+      "cards": 54,
+      "role": "parallel",
+      "anchor": "Autographs>Scripts Gold",
+      "rung": "No Huddle"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Scripts Red Wave",
+      "category": "auto-scripts-red-wave",
+      "cards": 53,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Showtime Signatures",
+      "category": "auto-showtime-signatures",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Showtime Signatures Black",
+      "category": "auto-showtime-signatures-black",
+      "cards": 18,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Showtime Signatures Blue",
+      "category": "auto-showtime-signatures-blue",
+      "cards": 14,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Showtime Signatures Choice Black Gold",
+      "category": "auto-showtime-signatures-choice-black-gold",
+      "cards": 18,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Showtime Signatures Black",
+      "overlapPct": 94.4
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Showtime Signatures Choice Fusion Green and Black",
+      "category": "auto-showtime-signatures-choice-fusion-green-and-black",
+      "cards": 18,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Showtime Signatures Black",
+      "overlapPct": 94.4
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Showtime Signatures Choice Fusion Red and Yellow",
+      "category": "auto-showtime-signatures-choice-fusion-red-and-yellow",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Showtime Signatures Gold",
+      "category": "auto-showtime-signatures-gold",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Showtime Signatures Purple",
+      "category": "auto-showtime-signatures-purple",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Showtime Signatures Red",
+      "category": "auto-showtime-signatures-red",
+      "cards": 7,
+      "role": "parallel",
+      "anchor": "Autographs>Showtime Signatures",
+      "rung": "Red"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Showtime Signatures White",
+      "category": "auto-showtime-signatures-white",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Signatures Highlights",
+      "category": "auto-signatures-highlights",
+      "cards": 14,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Super Bowl Signatures",
+      "category": "auto-super-bowl-signatures",
+      "cards": 1,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Bang!",
+      "category": "insert-bang",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Capital Gains Mosaic",
+      "category": "insert-capital-gains-mosaic",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Carbon Copy",
+      "category": "insert-carbon-copy",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Center Stage Mosaic",
+      "category": "insert-center-stage-mosaic",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Elevate",
+      "category": "insert-elevate",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Epic Performers",
+      "category": "insert-epic-performers",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Gridiron Greats",
+      "category": "insert-gridiron-greats",
+      "cards": 13,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Introductions",
+      "category": "insert-introductions",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Kaleidoscopic",
+      "category": "insert-kaleidoscopic",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Men of Mastery",
+      "category": "insert-men-of-mastery",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Micro Mosaic",
+      "category": "insert-micro-mosaic",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Moments in Time",
+      "category": "insert-moments-in-time",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Money",
+      "category": "insert-money",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Montage",
+      "category": "insert-montage",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Notoriety",
+      "category": "insert-notoriety",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Overdrive Mosaic",
+      "category": "insert-overdrive-mosaic",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Splash Mosaic",
+      "category": "insert-splash-mosaic",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Stained Glass",
+      "category": "insert-stained-glass",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Storm Mosaic",
+      "category": "insert-storm-mosaic",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Touchdown Masters",
+      "category": "insert-touchdown-masters",
+      "cards": 20,
+      "role": "own-cards"
+    }
+  ]
+}
