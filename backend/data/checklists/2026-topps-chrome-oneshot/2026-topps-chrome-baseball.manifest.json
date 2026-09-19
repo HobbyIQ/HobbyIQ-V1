@@ -1,0 +1,24 @@
+{
+  "productKey": "2026-topps-chrome",
+  "sport": "baseball",
+  "year": 2026,
+  "setKey": "topps-chrome",
+  "source": "beckett-scraped-2026-09-01",
+  "confidence": 0.95,
+  "provenance": "Started as a byte-identical copy of backend/data/checklists/scraped/2026-topps-chrome-baseball.csv (sha256 8620899792bb065ec3c8c10ad7e95e56da52fdbbe55fd46ef39c79ad0cfc85d8, scrapedAt 2026-09-01T02:16:47.437Z, sourceUrl https://img.beckett.com/news/news-content/uploads/2026/06/2026-Topps-Chrome-Baseball-Checklist-1.xlsx per its sibling manifest in that directory), then trimmed 8 rows (see trimmedFromOriginal below) so planStagedDirectory passes. This file's own sha256 is a2fcf25cc67acb61561b2511cd3e3788f57433462e5e1c47be9bd760fa0f6062 -- it is a SUBSET of the original, not byte-identical to it (see trimmedFromOriginal for the full accounting of the difference).",
+  "sourceUrl": "https://img.beckett.com/news/news-content/uploads/2026/06/2026-Topps-Chrome-Baseball-Checklist-1.xlsx",
+  "rowCount": 1562,
+  "parallelColumnAuthoritative": true,
+  "readyToIngest": false,
+  "why": "2026-09-19 bounded Cosmos diagnosis (read-only, card_catalog point-reads + equality-filter TOP<=50 queries against 25 not-backed sample ids per product from the sales-volume ranking) found this exact file's card numbers (RA-CDE, RA-STU, BCP-58, BP-41, and 15 more) present in the committed CSV as text, but ZERO catalog rows at ANY sport/year/setKey/cardNumber combination for those numbers, and ZERO rows anywhere carrying a source tag matching this file's own scrapedAt (2026-09-01) or a beckett-scraped-<date> variant of it -- across the full bounded sample the only source values seen were checklistcenter-2026-08-29, baseballcardpedia-ladders-2026-08-29/08-30/09-02, hobbymonitor-scraped-2026-08-31, cardboardchecklist-scraped-2026-08-14, checklistinsider-2026-08-11/08-27, beckett-scraped-2026-08-13/08-25/08-26/08-26-graded/08-30, ingest-auto-seed, cardhedge-graded, checklist. 17 of 25 (68%) of the not-backed sample classified NEVER_INGESTED this way; the remaining 8 classified NUMBERED_TWIN (a separate, already-known FOLD pattern -- the checklist holds the same number under a :num-N suffixed twin). Classification: this committed CSV was staged on 2026-09-01 and never actually ingested into card_catalog under any source name.",
+  "note": "STAGED as a one-package scope directory per the ja-sv10 precedent (PR #2263, backend/data/checklists/tcgdex-ja-sv10/). ingest-checklist-csv-to-catalog.cjs takes a whole DIRECTORY (fs.readdirSync(DIR), no per-file filter) -- the shared backend/data/checklists/scraped/ directory holds hundreds of other files and cannot be swept without re-upserting all of them (fresh lastSeenAt/ETag churn on everything, the same class of risk written up for the 2026-09-14 Bush/Mantle incident). This directory exists ONLY to scope an ingest of this one file; the original stays in scraped/ unchanged. Disposable: delete this directory once the APPLY lands.",
+  "trimmedFromOriginal": {
+    "count": 8,
+    "what": "8 rows across 2 categories: insert-cooperstown-calls-class-of-2025-green-refractors (5 rows, CC-1..CC-5) and insert-cooperstown-calls-class-of-2026-blue-refractors (3 rows, CC-1..CC-3).",
+    "why": "R67 roster test: these two Cooperstown Calls subsets (2025's induction class vs 2026's) share the SAME CC-N numbering scheme but name DIFFERENT players at each number (CC-1 = Ichiro under the 2025 class vs Andruw Jones under the 2026 class). Different players at the same number is the sibling-product signal, not a parallel/variation pair. planStagedDirectory refused the untrimmed byte-identical copy with reason=unregistered-set-keys (2 unregistered subsets, both resolvesTo topps-chrome) and 3 hard id collisions (CC-1, CC-2, CC-3). Left out per the standing rule to report rather than fix; owner's ruling pending on whether each class needs its own registered key (e.g. topps-chrome-cooperstown-calls-2025 / -2026)."
+  },
+  "originalFile": "backend/data/checklists/scraped/2026-topps-chrome-baseball.csv",
+  "originalFileSha256": "8620899792bb065ec3c8c10ad7e95e56da52fdbbe55fd46ef39c79ad0cfc85d8",
+  "thisFileSha256": "a2fcf25cc67acb61561b2511cd3e3788f57433462e5e1c47be9bd760fa0f6062",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, offline, run against this trimmed file): 1562 batch rows, 1562 distinct ids, 0 collisions, 0 unregistered set keys, 0 duplicatesFolded, 0 unslugable. (The untrimmed byte-identical copy of the 1570-row original refused with reason=unregistered-set-keys, 3 collisions, 2 unregistered subsets -- see trimmedFromOriginal above.)"
+}
