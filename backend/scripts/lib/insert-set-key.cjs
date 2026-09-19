@@ -304,6 +304,52 @@ function parallelForRow({ category, parallel, subsetName, foldRungs }) {
  *
  * -> { ids, collisions: [{ id, rows: [row, ...] }], unslugable }
  */
+/**
+ * THE IDENTITY FIELDS A DUPLICATE MUST AGREE ON, in a stable order.
+ *
+ * Deliberately NOT the whole row: `category` is exactly what differs between a
+ * source's two spellings of one card, and notes/provenance are not identity.
+ * If these five agree the two rows describe the same card in every respect the
+ * catalog stores.
+ */
+function identityTuple(r) {
+  return [
+    String(r?.player ?? "").trim().toLowerCase(),
+    String(r?.cardNumber ?? "").trim().toLowerCase(),
+    String(r?.parallel ?? "").trim().toLowerCase(),
+    String(r?.isAuto ?? "") === "true" ? "auto" : "no-auto",
+    String(r?.printRun ?? "").trim(),
+  ].join(" ");
+}
+
+/**
+ * CF-A-DUPLICATE-IS-NOT-A-COLLISION (Drew, 2026-09-19).
+ *
+ * Two rows of ONE file minting one id is normally the defect this guard exists
+ * to catch: two different cards fighting for one address, and refusing the
+ * file is right because a set key cannot separate them.
+ *
+ * But some sources simply LIST THE SAME CARD TWICE, under two spellings of the
+ * same section. Measured on 2024 panini-photogenic football:
+ *
+ *     [base]              #1 (Black)  Ja'Marr Chase
+ *     [insert-base-black] #1 (Black)  Ja'Marr Chase
+ *
+ * Same player, same number, same parallel, same auto flag, same print run --
+ * one card, written twice. There is nothing to separate and nothing to lose:
+ * writing it once is the correct and complete answer, and refusing the whole
+ * file over it withholds 4,646 good rows for a defect in the source's
+ * bookkeeping.
+ *
+ * THE TEST IS AGREEMENT ON IDENTITY, NOT ON THE ROW. `category` is excluded on
+ * purpose -- it is the very field that differs between the two spellings. Any
+ * disagreement in player, cardNumber, parallel, isAuto or printRun and the
+ * group is NOT a duplicate: it stays an id-collision and the file is refused
+ * exactly as before. Two players at one number is the defect; one player
+ * written twice is a typo.
+ *
+ * -> { ids, collisions, unslugable, duplicatesFolded }
+ */
 function idCollisions(rows, computeId) {
   const byId = new Map();
   let unslugable = 0;
@@ -315,11 +361,21 @@ function idCollisions(rows, computeId) {
     byId.get(id).push(r);
   }
   const collisions = [];
+  let duplicatesFolded = 0;
   for (const [id, group] of byId) {
-    if (group.length > 1) collisions.push({ id, rows: group });
+    if (group.length < 2) continue;
+    const tuples = new Set(group.map(identityTuple));
+    if (tuples.size === 1) {
+      // One card, written N times. Keep one; the rest are the source's own
+      // duplication and are counted, never silently dropped.
+      duplicatesFolded += group.length - 1;
+      byId.set(id, [group[0]]);
+      continue;
+    }
+    collisions.push({ id, rows: group });
   }
   collisions.sort((a, b) => b.rows.length - a.rows.length || a.id.localeCompare(b.id));
-  return { ids: byId.size, collisions, unslugable };
+  return { ids: byId.size, collisions, unslugable, duplicatesFolded };
 }
 
 /**
@@ -845,17 +901,17 @@ function planFile({ rows, productSetKey, computeId, normalize, separate: given, 
   const keys = insertSetKeysOf(rows, productSetKey, separate, foldRungs);
   const unregistered = unregisteredKeys(keys, normalize);
   const finalId = finalIdFor({ productSetKey, separate, foldRungs }, computeId);
-  const { ids, collisions, unslugable } = idCollisions(rows, finalId);
+  const { ids, collisions, unslugable, duplicatesFolded } = idCollisions(rows, finalId);
   // ORDER IS LOAD-BEARING: an unregistered key is reported even when the
   // separation it would perform already removes every collision, because
   // writing to a key that folds elsewhere is the worse outcome of the two.
   if (unregistered.length) {
-    return { verdict: "refuse", reason: "unregistered-set-keys", separate, foldRungs, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
+    return { verdict: "refuse", reason: "unregistered-set-keys", separate, foldRungs, keys, unregistered, ids, collisions, unslugable, duplicatesFolded, rows: rows.length };
   }
   if (collisions.length) {
-    return { verdict: "refuse", reason: "id-collisions", separate, foldRungs, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
+    return { verdict: "refuse", reason: "id-collisions", separate, foldRungs, keys, unregistered, ids, collisions, unslugable, duplicatesFolded, rows: rows.length };
   }
-  return { verdict: "pass", reason: null, separate, foldRungs, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
+  return { verdict: "pass", reason: null, separate, foldRungs, keys, unregistered, ids, collisions, unslugable, duplicatesFolded, rows: rows.length };
 }
 
 /**
