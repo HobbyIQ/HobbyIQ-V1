@@ -46,12 +46,24 @@ beforeAll(() => {
  *  as checklist (the REAL dist/services/catalog/catalogAuthority.service.js
  *  is loaded unmocked here, same discipline as sport-title-evidence and
  *  splitIdentityWriteGuard -- one declaration, not a second copy in the
- *  fixture). */
-function shim(opts: { sales?: Array<Record<string, unknown>>; catalog?: Array<Record<string, unknown>> } = {}): { requirePath: string; ledger: string } {
+ *  fixture).
+ *
+ *  `catalogFailIds` (review HIGH, 2026-09-19): candidate ids that PERSISTENTLY
+ *  throw a non-404 error on read, every time, forever -- pinning that one bad
+ *  catalog id (a 429/503 exhausting the lane's own retry, or any other
+ *  persistent failure) never kills the whole run. The thrown error message
+ *  deliberately does NOT match the lane's own retry regex
+ *  (request rate|429|ETIMEDOUT|ECONNRESET|503|Request timed out), so `retry`
+ *  gives up on the FIRST attempt rather than working through its real
+ *  exponential backoff (500ms..15s x8) -- this test is about the failure
+ *  PROPAGATION path, not about proving the backoff itself works, and a real
+ *  8-try backoff would make the suite slow for no additional coverage. */
+function shim(opts: { sales?: Array<Record<string, unknown>>; catalog?: Array<Record<string, unknown>>; catalogFailIds?: string[] } = {}): { requirePath: string; ledger: string } {
   const ledger = path.join(tmp, `ledger-${Math.random().toString(36).slice(2)}.json`);
   const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
   const sales = opts.sales ?? [];
   const catalog = opts.catalog ?? [];
+  const catalogFailIds = opts.catalogFailIds ?? [];
 
   fs.writeFileSync(p, `
 const Module = require("node:module");
@@ -62,6 +74,7 @@ const salesKey = (id, cardId) => id + "::" + cardId;
 
 const state = { sales: new Map(${JSON.stringify(sales)}.map((d) => [salesKey(d.id, d.cardId), d])) };
 const catalogState = new Map(${JSON.stringify(catalog)}.map((d) => [d.id, d]));
+const CATALOG_FAIL_IDS = new Set(${JSON.stringify(catalogFailIds)});
 const led = { salesUpserts: [], salesPatches: [], salesDeletes: [], catalogReads: [] };
 const save = () => fs.writeFileSync(LEDGER, JSON.stringify(led));
 save();
@@ -123,6 +136,12 @@ const catalogContainer = {
     read: async () => {
       led.catalogReads.push(id);
       save();
+      if (CATALOG_FAIL_IDS.has(id)) {
+        // Deliberately NOT matching the lane's own retry regex -- see the
+        // shim's doc comment: this is about the failure PROPAGATION path,
+        // not about proving the real 429/503 backoff works.
+        throw new Error("simulated persistent catalog read failure (non-retryable in this test)");
+      }
       const d = catalogState.get(id);
       if (!d || d.id !== pk) throw notFound();
       return { resource: structuredClone(d) };
@@ -180,6 +199,11 @@ function drive(env: Record<string, string>, opts: Parameters<typeof shim>[0] = {
   return { code, out, led };
 }
 
+// playerName is Kevin McHale (NOT Danny Ainge): Danny Ainge is on the
+// two-sport-athlete gazetteer (scripts/lib/two-sport-athletes.cjs) and this
+// shape's default checklist-evidence fixtures below deliberately test the
+// ORDINARY (non-gazetteer) restore path -- the gazetteer's own bound is
+// pinned separately, with Danny Ainge fixtures built for exactly that.
 const WRONG_FLIP_PATCH_SHAPE = {
   id: "cardhedge::ch-daily::1",
   cardId: "1649639019826x860979551007433600", // vendor partition, untouched by the repair
@@ -188,8 +212,8 @@ const WRONG_FLIP_PATCH_SHAPE = {
   sportBefore: "basketball",
   hobbyiqCardIdBefore: "hiq:basketball:1988:fleer:8:base:no-auto",
   setSportRepairedAt: "2026-08-20T21:57:21.352Z",
-  title: "1988-89 Fleer Danny Ainge Celtics #8  MINT F3593 - Raw 10",
-  playerName: "Danny Ainge",
+  title: "1988-89 Fleer Kevin McHale Celtics #8  MINT F3593 - Raw 10",
+  playerName: "Kevin McHale",
   source: "cardhedge",
 };
 
@@ -424,26 +448,28 @@ describe("revert-set-sport-repair -- MODE default/unset is byte-for-byte the tit
 });
 
 describe("revert-set-sport-repair -- MODE=checklist-evidence", () => {
-  // playerName MATCHES WRONG_FLIP_PATCH_SHAPE's own "Danny Ainge" unless a
-  // test is specifically exercising the different-card (cell-collision)
-  // case -- see checklistMatchOf's own unit tests for that in isolation.
+  // playerName MATCHES WRONG_FLIP_PATCH_SHAPE's own "Kevin McHale" -- NOT a
+  // two-sport-athlete gazetteer entry, so these fixtures exercise the
+  // ORDINARY restore path -- unless a test is specifically exercising the
+  // different-card (cell-collision) case or the two-sport-athlete bound,
+  // which get their own dedicated fixtures below.
   const CHECKLIST_ROW_BASKETBALL = {
     id: "hiq:basketball:1988:fleer:8:base:no-auto",
     cardId: "hiq:basketball:1988:fleer:8:base:no-auto",
     source: "checklistcenter",
-    playerName: "Danny Ainge",
+    playerName: "Kevin McHale",
   };
   const CHECKLIST_ROW_BASEBALL = {
     id: "hiq:baseball:1988:fleer:8:base:no-auto",
     cardId: "hiq:baseball:1988:fleer:8:base:no-auto",
     source: "checklistcenter",
-    playerName: "Danny Ainge",
+    playerName: "Kevin McHale",
   };
   const VENDOR_ROW_BASEBALL = {
     id: "hiq:baseball:1988:fleer:8:base:no-auto",
     cardId: "hiq:baseball:1988:fleer:8:base:no-auto",
     source: "cardhedge",
-    playerName: "Danny Ainge",
+    playerName: "Kevin McHale",
   };
   // The cell-collision case (module header): a REAL checklist row at the
   // address, but for a DIFFERENT player -- the other sport's independent
@@ -456,7 +482,7 @@ describe("revert-set-sport-repair -- MODE=checklist-evidence", () => {
   };
 
   it("RESTOREs (patch) when only the before-sport candidate id has a checklist-authority catalog row naming the SAME player -- title carried NO evidence at all", () => {
-    const row = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-ce-1", title: "1988 Fleer Michael Jordan #8", playerName: "Danny Ainge" }; // no team/league word
+    const row = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-ce-1", title: "1988 Fleer Michael Jordan #8", playerName: "Kevin McHale" }; // no team/league word
     const fixture = { sales: [row], catalog: [CHECKLIST_ROW_BASKETBALL] };
     const report = drive({ SCOPE: "fleer|1988", MODE: "checklist-evidence" }, fixture);
     const apply = drive({ SCOPE: "fleer|1988", MODE: "checklist-evidence", BACKFILL_APPLY: "true" }, fixture);
@@ -573,6 +599,54 @@ describe("revert-set-sport-repair -- MODE=checklist-evidence", () => {
     expect(beforeReads.length).toBe(1);
   });
 
+  it("REVIEW HIGH (2026-09-19): a persistent catalog-read failure on ONE row's candidate id NEVER kills the run -- the other rows on the same page still decide, the failed row is counted (never cached as no-row, never given a verdict), and RECONCILE still prints", () => {
+    // Three rows, one page (CONCURRENCY defaults to 8, so all three land in
+    // the same Promise.all batch): a clean restore, a clean keep, and one
+    // whose candidateBefore id is wired to throw on every read.
+    const restoreRow = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-fail-batch-restore", hobbyiqCardId: "hiq:baseball:1988:fleer:20:base:no-auto", hobbyiqCardIdBefore: "hiq:basketball:1988:fleer:20:base:no-auto", title: "no evidence" };
+    const keepRow = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-fail-batch-keep", hobbyiqCardId: "hiq:baseball:1988:fleer:21:base:no-auto", hobbyiqCardIdBefore: "hiq:basketball:1988:fleer:21:base:no-auto", title: "no evidence" };
+    const failRow = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-fail-batch-fail", hobbyiqCardId: "hiq:baseball:1988:fleer:22:base:no-auto", hobbyiqCardIdBefore: "hiq:basketball:1988:fleer:22:base:no-auto", title: "no evidence" };
+    const catalog = [
+      { id: "hiq:basketball:1988:fleer:20:base:no-auto", cardId: "hiq:basketball:1988:fleer:20:base:no-auto", source: "checklistcenter", playerName: "Kevin McHale" }, // backs restoreRow
+      { id: "hiq:baseball:1988:fleer:21:base:no-auto", cardId: "hiq:baseball:1988:fleer:21:base:no-auto", source: "checklistcenter", playerName: "Kevin McHale" }, // backs keepRow
+    ];
+    const fixture = {
+      sales: [restoreRow, keepRow, failRow],
+      catalog,
+      catalogFailIds: ["hiq:basketball:1988:fleer:22:base:no-auto"], // failRow's candidateBefore -- persistent, non-404
+    };
+    const r = drive({ SCOPE: "fleer|1988", MODE: "checklist-evidence", BACKFILL_APPLY: "true" }, fixture);
+
+    // The run completes and prints its summary -- it does NOT die on the one
+    // bad id. Exit code follows the lane's existing s.failed>0 convention
+    // (4), same as any other named failure (e.g. a relocate failure).
+    expect(r.code).toBe(4);
+    expect(r.out).toMatch(/RESTORED \(patch\)\s+1/);
+    expect(r.out).toMatch(/KEEP \(flip was right\)\s+1/);
+    expect(r.out).toMatch(/failed\s+1/);
+    expect(r.out).toMatch(/FAILED catalog read s-fail-batch-fail/);
+    // RECONCILE still prints and balances -- the failed row is accounted for
+    // via s.failed, not silently dropped or double counted.
+    expect(r.out).toMatch(/RECONCILE BALANCES/);
+    expect(r.out).not.toMatch(/A row is unaccounted for/);
+    // The failed row was NEVER given a verdict: no patch for it, and it
+    // does not appear in KEEP or any LEAVE bucket.
+    expect(r.led.salesPatches.some((p: any) => p.id === "s-fail-batch-fail")).toBe(false);
+  });
+
+  it("does not kill the run on a persistent catalog-read failure in REPORT mode either -- REPORT/APPLY parity holds for the failed count too", () => {
+    const failRow = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-fail-report", hobbyiqCardId: "hiq:baseball:1988:fleer:23:base:no-auto", hobbyiqCardIdBefore: "hiq:basketball:1988:fleer:23:base:no-auto", title: "no evidence" };
+    const fixture = { sales: [failRow], catalog: [], catalogFailIds: ["hiq:basketball:1988:fleer:23:base:no-auto"] };
+    const report = drive({ SCOPE: "fleer|1988", MODE: "checklist-evidence" }, fixture);
+    const apply = drive({ SCOPE: "fleer|1988", MODE: "checklist-evidence", BACKFILL_APPLY: "true" }, fixture);
+    expect(report.code).toBe(4);
+    expect(apply.code).toBe(4);
+    expect(report.out).toMatch(/failed\s+1/);
+    expect(apply.out).toMatch(/failed\s+1/);
+    expect(report.out).toMatch(/RECONCILE BALANCES/);
+    expect(apply.out).toMatch(/RECONCILE BALANCES/);
+  });
+
   it("is idempotent: a checklist-evidence KEEP (setSportReviewedAt stamped) drops out of the next checklist-evidence run's selection", () => {
     const row = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-ce-idem", title: "1988 Fleer #8 no evidence" };
     const fixture = { sales: [row], catalog: [CHECKLIST_ROW_BASEBALL] };
@@ -593,18 +667,18 @@ describe("revert-set-sport-repair -- MODE=checklist-evidence", () => {
       sportBefore: "basketball", hobbyiqCardIdBefore: "hiq:basketball:1988:fleer::base:no-auto",
       setSportRepairedAt: "2026-08-20T21:58:48.718Z",
       title: "1988 Fleer #_ no evidence",
-      playerName: "Danny Ainge",
+      playerName: "Kevin McHale",
     };
-    const checklistBefore = { id: "hiq:basketball:1988:fleer::base:no-auto", cardId: "hiq:basketball:1988:fleer::base:no-auto", source: "checklistcenter", playerName: "Danny Ainge" };
+    const checklistBefore = { id: "hiq:basketball:1988:fleer::base:no-auto", cardId: "hiq:basketball:1988:fleer::base:no-auto", source: "checklistcenter", playerName: "Kevin McHale" };
     const r = drive({ SCOPE: "fleer|1988", MODE: "checklist-evidence", BACKFILL_APPLY: "true" }, { sales: [row], catalog: [checklistBefore] });
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/REFUSED: guard-parked\s+1/);
     expect(r.led.salesPatches.length).toBe(0);
   });
 
-  it("LEAVEs (checklist-row-names-different-card) when a candidate address is checklist-authority but names a DIFFERENT player -- the cell-collision case measured in production (Barry Bonds catalog row, Danny Ainge sale, same year/setKey/cardNumber cell)", () => {
-    const row = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-ce-collision", title: "1988 Fleer #8 no evidence" }; // playerName: Danny Ainge, inherited
-    const fixture = { sales: [row], catalog: [CHECKLIST_ROW_BASEBALL_DIFFERENT_PLAYER] }; // checklist-authority at current, but Barry Bonds != Danny Ainge
+  it("LEAVEs (checklist-row-names-different-card) when a candidate address is checklist-authority but names a DIFFERENT player -- the cell-collision case measured in production (Barry Bonds catalog row, Kevin McHale sale, same year/setKey/cardNumber cell)", () => {
+    const row = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-ce-collision", title: "1988 Fleer #8 no evidence" }; // playerName: Kevin McHale, inherited
+    const fixture = { sales: [row], catalog: [CHECKLIST_ROW_BASEBALL_DIFFERENT_PLAYER] }; // checklist-authority at current, but Barry Bonds != Kevin McHale
     const r = drive({ SCOPE: "fleer|1988", MODE: "checklist-evidence", BACKFILL_APPLY: "true" }, fixture);
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/LEAVE: checklist-row-names-different-card\s+1/);
@@ -633,11 +707,55 @@ describe("revert-set-sport-repair -- MODE=checklist-evidence", () => {
     const leave = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-ce-mix-leave", hobbyiqCardId: "hiq:baseball:1988:fleer:10:base:no-auto", hobbyiqCardIdBefore: "hiq:basketball:1988:fleer:10:base:no-auto", title: "no evidence" };
     const catalog = [
       CHECKLIST_ROW_BASKETBALL, // backs s-ce-mix-restore's before-candidate
-      { id: "hiq:baseball:1988:fleer:9:base:no-auto", cardId: "hiq:baseball:1988:fleer:9:base:no-auto", source: "checklistcenter", playerName: "Danny Ainge" }, // backs keep's current
+      { id: "hiq:baseball:1988:fleer:9:base:no-auto", cardId: "hiq:baseball:1988:fleer:9:base:no-auto", source: "checklistcenter", playerName: "Kevin McHale" }, // backs keep's current
       // s-ce-mix-leave: neither candidate has a catalog row at all
     ];
     const r = drive({ SCOPE: "all-repaired", MODE: "checklist-evidence", BACKFILL_APPLY: "true" }, { sales: [restore, keep, leave], catalog });
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/RECONCILE BALANCES/);
+  });
+
+  describe("two-sport-athlete bound (orchestrator ruling, review MEDIUM, 2026-09-19)", () => {
+    it("LEAVEs (two-sport-athlete) a gazetteer player when currentMatch is 'no-row' -- absence, not disagreement, must not restore", () => {
+      const row = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-2sport-norow", title: "no evidence", playerName: "Bo Jackson" };
+      const fixture = { sales: [row], catalog: [{ ...CHECKLIST_ROW_BASKETBALL, playerName: "Bo Jackson" }] }; // before=match, current=no-row (nothing at the baseball address)
+      const r = drive({ SCOPE: "fleer|1988", MODE: "checklist-evidence", BACKFILL_APPLY: "true" }, fixture);
+      expect(r.code).toBe(0);
+      expect(r.out).toMatch(/LEAVE: two-sport-athlete\s+1/);
+      expect(r.out).not.toMatch(/RESTORED \(patch\)\s+1/);
+      expect(r.led.salesPatches.length).toBe(0);
+    });
+
+    it("RESTOREs a gazetteer player when currentMatch is 'different-card' -- POSITIVE counter-evidence overrides the bound", () => {
+      const row = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-2sport-diffcard", title: "no evidence", playerName: "Bo Jackson" };
+      const fixture = {
+        sales: [row],
+        catalog: [
+          { ...CHECKLIST_ROW_BASKETBALL, playerName: "Bo Jackson" }, // before: match
+          { ...CHECKLIST_ROW_BASEBALL, playerName: "Someone Else" }, // current: a row exists and names someone else -- different-card
+        ],
+      };
+      const r = drive({ SCOPE: "fleer|1988", MODE: "checklist-evidence", BACKFILL_APPLY: "true" }, fixture);
+      expect(r.code).toBe(0);
+      expect(r.out).toMatch(/RESTORED \(patch\)\s+1/);
+      expect(r.out).not.toMatch(/LEAVE: two-sport-athlete/);
+    });
+
+    it("RESTOREs an ORDINARY (non-gazetteer) player when currentMatch is 'no-row' -- unchanged from before this fix", () => {
+      const row = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-ordinary-norow", title: "no evidence" }; // playerName: Kevin McHale, NOT on the gazetteer
+      const fixture = { sales: [row], catalog: [CHECKLIST_ROW_BASKETBALL] }; // before=match, current=no-row
+      const r = drive({ SCOPE: "fleer|1988", MODE: "checklist-evidence", BACKFILL_APPLY: "true" }, fixture);
+      expect(r.code).toBe(0);
+      expect(r.out).toMatch(/RESTORED \(patch\)\s+1/);
+      expect(r.out).not.toMatch(/LEAVE: two-sport-athlete/);
+    });
+
+    it("REPORT lists the restore-on-no-row example for pilot review, and does not for the different-card override", () => {
+      const norow = { ...WRONG_FLIP_PATCH_SHAPE, id: "s-pilot-norow", title: "no evidence" }; // ordinary player, restores on no-row
+      const fixture = { sales: [norow], catalog: [CHECKLIST_ROW_BASKETBALL] };
+      const r = drive({ SCOPE: "fleer|1988", MODE: "checklist-evidence", BACKFILL_APPLY: "true" }, fixture);
+      expect(r.out).toMatch(/RESTORE examples where current==no-row/);
+      expect(r.out).toMatch(/s-pilot-norow/);
+    });
   });
 });

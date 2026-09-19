@@ -208,6 +208,27 @@
  *             where the restore TARGET is candidateBefore itself (already
  *             carrying whatever later precision the row picked up), never
  *             hobbyiqCardIdBefore.
+ *
+ *             TWO-SPORT ATHLETE BOUND (orchestrator ruling, review MEDIUM,
+ *             2026-09-19): candidateCurrent being "no-row" (nobody has
+ *             ingested a checklist for the current sport at that address at
+ *             all) is ABSENCE of counter-evidence, not a disagreeing
+ *             checklist -- for an ordinary single-sport player that costs
+ *             nothing (no rival checklist can exist for a sport they never
+ *             played), but for a genuine two-sport athlete (Bo Jackson,
+ *             Deion Sanders, ...) a catalog coverage gap must not be read as
+ *             the checklist siding with sportBefore. For a player on the
+ *             committed gazetteer (scripts/lib/two-sport-athletes.cjs,
+ *             keyed by playerIdentityKey), restore additionally requires
+ *             candidateCurrent to be "different-card" -- a row EXISTS there
+ *             and names someone else, i.e. POSITIVE counter-evidence, not
+ *             merely its absence. Short of that, the row is left, named
+ *             `two-sport-athlete`. This is a no-op for every non-listed
+ *             player and for a listed player whose currentMatch already IS
+ *             "different-card". The REPORT artifact separately lists (up to
+ *             50) every restore in a run whose currentMatch was "no-row",
+ *             so a pilot dispatch can be eyeballed for a two-sport athlete
+ *             the gazetteer missed before any wider APPLY.
  *   keep      only candidateCurrent has a matching checklist-authority row
  *             -- the flip was right. Nothing is written to sport/
  *             hobbyiqCardId; `setSportReviewedAt` + `setSportReviewedReason`
@@ -217,14 +238,31 @@
  *             "keep, stamp nothing".
  *   leave     both candidates have a matching checklist-authority row
  *             ("both-sports-have-checklist-row"), neither does
- *             ("no-checklist-row-either"), or a candidate address resolves
- *             to a checklist row for a DIFFERENT PLAYER
+ *             ("no-checklist-row-either"), a candidate address resolves to
+ *             a checklist row for a DIFFERENT PLAYER
  *             ("checklist-row-names-different-card" -- the cell-collision
  *             case above: real evidence that this address is the WRONG
  *             card, not absence of evidence, so it is named and listed
- *             separately rather than folded into "no-checklist-row-either")
- *             -- a human rules on these, named and listed exactly like the
- *             title pass's own leave reasons.
+ *             separately rather than folded into "no-checklist-row-either"),
+ *             or the sale's player is a known two-sport athlete and the only
+ *             evidence for a restore is absence, not disagreement
+ *             ("two-sport-athlete", see above) -- a human rules on these,
+ *             named and listed exactly like the title pass's own leave
+ *             reasons.
+ *
+ * CATALOG-READ FAILURE ISOLATION (review HIGH, 2026-09-19). A persistent
+ * (non-404) catalog read failure -- a 429/503 that exhausts `retry`, a
+ * network blip -- for ONE row's candidate id is caught at the narrowest
+ * point that knows it is a read failure, not a verdict: `s.failed++`, the
+ * row named in FAILURES, and the row is given NO verdict at all (never
+ * cached as "no-row", never silently treated as absence of a checklist).
+ * The bounded-concurrency batch dispatch (the page-walk's own
+ * `Promise.all(batch.map(...))`) additionally catches per-row as a
+ * backstop, matching the sibling lanes' own convention (e.g.
+ * repair-ch-product-label-parallel.cjs), so ANY row-level throw -- not only
+ * a catalog read -- can never make the whole batch, page walk, or run fail:
+ * one bad id must never cost the RECONCILE line, the relaunch-on-marker
+ * banner, or every other row's decision in the same run.
  *
  * IDEMPOTENCY / RE-RUN SAFETY. The default mode's selection
  * (`candidateSpec`) is `setSportRepairedAt AND NOT setSportReversedAt` --
@@ -584,14 +622,37 @@ function checklistMatchOf(catalogRow, salePlayerName, catalogAuthorityOf, player
  * judgeRestoreVerdict -- has no I/O of its own and REPORT/APPLY can share it
  * verbatim.
  *
+ * TWO-SPORT ATHLETE BOUND (orchestrator ruling, review MEDIUM, 2026-09-19).
+ * `beforeIsMatch && currentMatch === "no-row"` is the RESTORE branch's only
+ * source of false positives: `no-row` means "nobody has ingested a checklist
+ * for the current sport at this address," which is ABSENCE of counter-
+ * evidence, not evidence the current sport is wrong. For a single-sport
+ * player that distinction is free -- no rival checklist can exist for a
+ * sport they never played. For a genuine two-sport athlete (Bo Jackson,
+ * Deion Sanders, ...) it is not: a catalog gap on the current side must not
+ * be read as the checklist siding with sportBefore. `isTwoSportAthlete` (the
+ * committed gazetteer, keyed by playerIdentityKey so name variants still
+ * match) narrows the restore condition for exactly these players to require
+ * currentMatch === "different-card" -- a row EXISTS at the current address
+ * and names someone else, i.e. POSITIVE counter-evidence, not merely its
+ * absence. Absent that stronger evidence, the row is left, named
+ * `two-sport-athlete`, for a human. This changes nothing for the ordinary
+ * (non-listed) player and nothing for a two-sport athlete whose currentMatch
+ * is already "different-card" (a real collision the gazetteer does not need
+ * to gate, since the evidence is already strong enough on its own merits).
+ *
  * @param {"match"|"different-card"|"no-row"} beforeMatch  checklistMatchOf(candidateBefore's row, ...)
  * @param {"match"|"different-card"|"no-row"} currentMatch checklistMatchOf(candidateCurrent's row, ...)
+ * @param {boolean} [saleIsTwoSportAthlete]  isTwoSportAthlete(sale's own playerIdentityKey) -- computed by the caller so this function stays pure and takes no I/O or gazetteer dependency of its own.
  * @returns {{ verdict: "restore"|"keep"|"leave", reason: string, detail: string }}
  */
-function judgeChecklistEvidenceVerdict({ beforeMatch, currentMatch }) {
+function judgeChecklistEvidenceVerdict({ beforeMatch, currentMatch, saleIsTwoSportAthlete }) {
   const beforeIsMatch = beforeMatch === "match";
   const currentIsMatch = currentMatch === "match";
   if (beforeIsMatch && !currentIsMatch) {
+    if (saleIsTwoSportAthlete && currentMatch !== "different-card") {
+      return { verdict: "leave", reason: "two-sport-athlete", detail: `this player is a known two-sport athlete and the current-sport candidate is only "${currentMatch}" (absence of counter-evidence, not a disagreeing checklist row) -- a catalog gap must not be read as the checklist siding with sportBefore for a player who genuinely could have a card in either sport` };
+    }
     return { verdict: "restore", reason: "checklist-backs-before", detail: "only the pre-repair sport's candidate id has a checklist-authority card_catalog row naming the SAME player as this sale" };
   }
   if (currentIsMatch && !beforeIsMatch) {
@@ -721,6 +782,12 @@ async function main() {
   const playerIdentityKey = IS_CHECKLIST_EVIDENCE
     ? require(path.join(backend, "dist/services/catalog/playerIdentityKey.js")).playerIdentityKey
     : null;
+  // TWO-SPORT ATHLETE BOUND (review MEDIUM, 2026-09-19) -- see
+  // judgeChecklistEvidenceVerdict's own doc and lib/two-sport-athletes.cjs's
+  // header for why. A committed .cjs data file, not a dist/ dependency.
+  const TWO_SPORT_ATHLETE_KEYS = IS_CHECKLIST_EVIDENCE
+    ? require(path.join(__dirname, "lib", "two-sport-athletes.cjs")).buildTwoSportAthleteKeys(playerIdentityKey)
+    : null;
 
   const client = new CosmosClient(conn);
   const db = client.database(process.env.COSMOS_DATABASE || "hobbyiq");
@@ -759,6 +826,14 @@ async function main() {
   const failures = [];
   const restoreExamples = [];
   const keepExamples = [];
+  // MODE=checklist-evidence ONLY (review MEDIUM, 2026-09-19): every restore
+  // whose currentMatch was "no-row" -- i.e. restored on ABSENCE of a
+  // current-sport checklist row rather than a disagreeing one. Not a defect
+  // by itself (an ordinary single-sport player restores correctly this way
+  // every time), but it is exactly the shape a missed two-sport athlete
+  // would take, so the pilot's own REPORT lists up to 50 of these for a
+  // human to eyeball before any wider APPLY.
+  const restoreOnNoRowExamples = [];
   const bump = (m, k) => m.set(k, (m.get(k) || 0) + 1);
   const bumpReason = (obj, k) => { obj[k] = (obj[k] || 0) + 1; };
   const pushExample = (map, k, line, cap = 20) => {
@@ -830,16 +905,44 @@ async function main() {
       } else if (!candidateBefore) {
         plan = { action: "leave", reason: "malformed-current-id", detail: `hobbyiqCardId (${candidateCurrent}) is not a well-formed hiq slug reSportSlug could operate on` };
       } else {
-        const [currentRow, beforeRow] = await Promise.all([catalogRowAt(candidateCurrent), catalogRowAt(candidateBefore)]);
+        // ── REVIEW HIGH (2026-09-19): a persistent (non-404) catalog read
+        // failure -- 429/503 exhausting `retry`, a network blip -- must NEVER
+        // be silently read as "no-row" (that would manufacture a false
+        // verdict from a read that never actually happened) and must NEVER
+        // propagate past this row: an uncaught rejection here would escape
+        // handleRow, escape the unguarded Promise.all at the page-walk site
+        // below, and kill the ENTIRE run on ONE bad id -- no RECONCILE
+        // printed, exit 1, relaunch-on-marker never fires because the
+        // marker line never gets a chance to print. Caught HERE, at the
+        // narrowest point that knows this is a catalog-read failure and not
+        // a verdict, exactly the way the write-side try/catch below already
+        // isolates one row's write failure from the rest of the batch.
+        let currentRow, beforeRow;
+        try {
+          [currentRow, beforeRow] = await Promise.all([catalogRowAt(candidateCurrent), catalogRowAt(candidateBefore)]);
+        } catch (e) {
+          s.failed++;
+          failures.push(`  FAILED catalog read ${doc.id}@${doc.cardId} (candidateCurrent=${candidateCurrent} candidateBefore=${candidateBefore}): ${String(e?.stack ?? e?.message ?? e)}`);
+          return;
+        }
         // checklistMatchOf requires the ROW to name the SAME player as this
         // sale, not merely to exist at a checklist-authority address (module
         // header: a shared identity cell can hold a DIFFERENT card on the
         // other sport's checklist).
+        const currentMatchForRow = checklistMatchOf(currentRow, doc.playerName, catalogAuthorityOf, playerIdentityKey);
         const checklistVerdict = judgeChecklistEvidenceVerdict({
           beforeMatch: checklistMatchOf(beforeRow, doc.playerName, catalogAuthorityOf, playerIdentityKey),
-          currentMatch: checklistMatchOf(currentRow, doc.playerName, catalogAuthorityOf, playerIdentityKey),
+          currentMatch: currentMatchForRow,
+          saleIsTwoSportAthlete: TWO_SPORT_ATHLETE_KEYS.has(playerIdentityKey(doc.playerName)),
         });
         plan = planRowChecklistEvidence(doc, checklistVerdict);
+        // review MEDIUM (2026-09-19): stash for the REPORT-artifact pilot
+        // list below -- a restore whose currentMatch was "no-row" restored
+        // on ABSENCE, not a disagreeing checklist row. Set only on the plan
+        // object this row produced, never leaked across rows.
+        if (plan.action === "restore" || plan.action === "patch" || plan.action === "relocate") {
+          plan.__currentMatchWasNoRow = currentMatchForRow === "no-row";
+        }
       }
     } else {
       plan = planRow(doc);
@@ -903,6 +1006,9 @@ async function main() {
         if (plan.alreadyAtTarget) s.alreadyAtTarget++;
         bump(bySetKeyYear, cellKey);
         if (restoreExamples.length < 24) restoreExamples.push(`  PATCH ${doc.id}@${doc.cardId} sport ${doc.sport}->${keep.sport}  hobbyiqCardId ${doc.hobbyiqCardId}->${keep.hobbyiqCardId}`);
+        if (plan.__currentMatchWasNoRow && !plan.alreadyAtTarget && restoreOnNoRowExamples.length < 50) {
+          restoreOnNoRowExamples.push(`  PATCH ${doc.id}@${doc.cardId} (playerName: ${doc.playerName ?? "?"}) sport ${doc.sport}->${keep.sport} -- current-sport candidate had NO catalog row at all (absence, not a disagreeing checklist)`);
+        }
         return;
       }
 
@@ -916,6 +1022,9 @@ async function main() {
           s.collapsedOntoResident++;
           bump(bySetKeyYear, cellKey);
           if (restoreExamples.length < 24) restoreExamples.push(`  COLLAPSE ${doc.id}@${doc.cardId} -- same sale already resident at ${destCardId}; wrong-partition copy deleted`);
+          if (plan.__currentMatchWasNoRow && restoreOnNoRowExamples.length < 50) {
+            restoreOnNoRowExamples.push(`  COLLAPSE ${doc.id}@${doc.cardId} (playerName: ${doc.playerName ?? "?"}) -> ${destCardId} -- current-sport candidate had NO catalog row at all`);
+          }
           return;
         }
         bumpReason(s.refused, "destination-collision");
@@ -940,6 +1049,9 @@ async function main() {
       s.restoreByRelocate++;
       bump(bySetKeyYear, cellKey);
       if (restoreExamples.length < 24) restoreExamples.push(`  RELOCATE ${doc.id}@${doc.cardId} -> ${destCardId}`);
+      if (plan.__currentMatchWasNoRow && restoreOnNoRowExamples.length < 50) {
+        restoreOnNoRowExamples.push(`  RELOCATE ${doc.id}@${doc.cardId} -> ${destCardId} (playerName: ${doc.playerName ?? "?"}) -- current-sport candidate had NO catalog row at all`);
+      }
     } catch (e) {
       s.failed++;
       failures.push(`  FAILED ${plan.action} ${doc.id}@${doc.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
@@ -947,12 +1059,26 @@ async function main() {
   }
 
   // ── bounded-concurrency page walk ------------------------------------------
+  // DEFENSE IN DEPTH (review HIGH, 2026-09-19), same shape as the sibling
+  // lanes' own batch dispatch (e.g. repair-ch-product-label-parallel.cjs):
+  // a `.catch` on EACH row's own promise, not on the Promise.all as a whole
+  // -- so one row throwing (an unexpected bug, not just the catalog-read
+  // failure already caught inside handleRow above) can never make
+  // Promise.all reject and take the rest of the batch, the page walk, and
+  // the run's own RECONCILE/relaunch-marker down with it. handleRow already
+  // catches every failure it can name (catalog reads, guard/write
+  // failures) and increments s.failed itself; this is the backstop for
+  // anything it does not, and is expected to be a no-op in the ordinary
+  // case.
   await forEachPage(pool, candidateSpec(IS_CHECKLIST_EVIDENCE), async (page) => {
     let i = 0;
     while (i < page.length) {
       if (CLOCK.outOfClock()) { stoppedAtBudget = true; return false; }
       const batch = page.slice(i, i + CONCURRENCY);
-      await Promise.all(batch.map((doc) => handleRow(doc)));
+      await Promise.all(batch.map((doc) => handleRow(doc).catch((e) => {
+        s.failed++;
+        failures.push(`  FAILED (unexpected, backstop) ${doc.id}@${doc.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
+      })));
       i += CONCURRENCY;
     }
     return true;
@@ -979,6 +1105,15 @@ async function main() {
   }
   if (restoreExamples.length) { console.log(`\n  examples:`); for (const e of restoreExamples) console.log(e); }
   if (keepExamples.length) { console.log(`\n  KEEP examples (flip was right, sample):`); for (const e of keepExamples) console.log(e); }
+  // review MEDIUM (2026-09-19): the pilot-eyeball list -- every restore in
+  // THIS run whose current-sport candidate had NO catalog row at all
+  // (restored on absence of counter-evidence, not a disagreeing checklist
+  // row). Up to 50, printed regardless of REPORT/APPLY so a REPORT pilot can
+  // be reviewed before any wider dispatch.
+  if (restoreOnNoRowExamples.length) {
+    console.log(`\n  RESTORE examples where current==no-row (up to 50, for pilot review -- ${f(restoreOnNoRowExamples.length)} shown this run):`);
+    for (const e of restoreOnNoRowExamples) console.log(e);
+  }
   for (const [reason, list] of Object.entries(leaveExamples)) {
     console.log(`\n  LEAVE (${reason}), every one listed (${f(list.length)} shown, ${f(s.leave[reason] || 0)} total -- full list in the uploaded artifact):`);
     for (const l of list) console.log(l);

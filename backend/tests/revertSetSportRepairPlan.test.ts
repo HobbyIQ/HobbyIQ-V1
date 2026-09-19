@@ -243,6 +243,54 @@ describe("revert-set-sport-repair: judgeChecklistEvidenceVerdict (MODE=checklist
     const v = mod.judgeChecklistEvidenceVerdict({ beforeMatch: "no-row", currentMatch: "different-card" });
     expect(v.reason).toBe("checklist-row-names-different-card");
   });
+
+  describe("two-sport-athlete bound (orchestrator ruling, review MEDIUM, 2026-09-19)", () => {
+    it("leave (two-sport-athlete): before=match, current=no-row, AND the sale is a known two-sport athlete -- absence is not enough", () => {
+      const v = mod.judgeChecklistEvidenceVerdict({ beforeMatch: "match", currentMatch: "no-row", saleIsTwoSportAthlete: true });
+      expect(v.verdict).toBe("leave");
+      expect(v.reason).toBe("two-sport-athlete");
+    });
+    it("restore (unchanged): before=match, current=no-row, but saleIsTwoSportAthlete is false/omitted -- the ordinary case", () => {
+      expect(mod.judgeChecklistEvidenceVerdict({ beforeMatch: "match", currentMatch: "no-row", saleIsTwoSportAthlete: false }).verdict).toBe("restore");
+      expect(mod.judgeChecklistEvidenceVerdict({ beforeMatch: "match", currentMatch: "no-row" }).verdict).toBe("restore");
+    });
+    it("restore: before=match, current=different-card, AND the sale IS a two-sport athlete -- POSITIVE counter-evidence overrides the bound", () => {
+      const v = mod.judgeChecklistEvidenceVerdict({ beforeMatch: "match", currentMatch: "different-card", saleIsTwoSportAthlete: true });
+      expect(v.verdict).toBe("restore");
+      expect(v.reason).toBe("checklist-backs-before");
+    });
+    it("the bound only fires on the restore branch -- a two-sport athlete flagged on a KEEP or LEAVE verdict is unaffected", () => {
+      expect(mod.judgeChecklistEvidenceVerdict({ beforeMatch: "no-row", currentMatch: "match", saleIsTwoSportAthlete: true }).verdict).toBe("keep");
+      expect(mod.judgeChecklistEvidenceVerdict({ beforeMatch: "no-row", currentMatch: "no-row", saleIsTwoSportAthlete: true }).verdict).toBe("leave");
+    });
+  });
+});
+
+describe("revert-set-sport-repair: two-sport-athletes gazetteer", () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const gaz = require("../scripts/lib/two-sport-athletes.cjs") as {
+    TWO_SPORT_ATHLETES: string[];
+    buildTwoSportAthleteKeys: (playerIdentityKey: (n: unknown) => string) => Set<string>;
+  };
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { playerIdentityKey } = require("../dist/services/catalog/playerIdentityKey.js") as { playerIdentityKey: (n: unknown) => string };
+
+  it("builds one distinct key per listed name -- no accidental collisions", () => {
+    const keys = gaz.buildTwoSportAthleteKeys(playerIdentityKey);
+    expect(keys.size).toBe(gaz.TWO_SPORT_ATHLETES.length);
+  });
+
+  it("recognises the reviewer's own worked example (Bo Jackson) and rejects an ordinary player", () => {
+    const keys = gaz.buildTwoSportAthleteKeys(playerIdentityKey);
+    expect(keys.has(playerIdentityKey("Bo Jackson"))).toBe(true);
+    expect(keys.has(playerIdentityKey("Kevin McHale"))).toBe(false);
+  });
+
+  it("matches a name-variant via the SAME playerIdentityKey reduction (punctuation-insensitive)", () => {
+    const keys = gaz.buildTwoSportAthleteKeys(playerIdentityKey);
+    expect(keys.has(playerIdentityKey("D.J. Dozier"))).toBe(true);
+    expect(keys.has(playerIdentityKey("DJ Dozier"))).toBe(true);
+  });
 });
 
 describe("revert-set-sport-repair: planRowChecklistEvidence -- write shapes and guards mirror planRow", () => {
