@@ -1,5 +1,5 @@
 {
- "builtAt": "2026-09-19T00:21:39.032Z",
+ "builtAt": "2026-09-19T00:46:39.202Z",
  "sources": [
   "C:/tmp/beckett-bulk",
   "C:/tmp/ci/csv2",
@@ -8,7 +8,7 @@
   "C:/tmp/hiq-acq-1658/backend/data/checklists/tcgdex-ja-modern"
  ],
  "productCount": 660,
- "parallelNameCount": 16128,
+ "parallelNameCount": 16241,
  "products": {
  "baseball|1984|topps": {
   "sport": "baseball",
@@ -348,12 +348,6 @@
     "rootKey": "hobby masters",
     "children": [
      "Hobby Masters"
-    ]
-   },
-   {
-    "rootKey": "base variations",
-    "children": [
-     "Base Variations"
     ]
    },
    {
@@ -706,12 +700,6 @@
     "rootKey": "trading places relics",
     "children": [
      "Trading Places Relics"
-    ]
-   },
-   {
-    "rootKey": "base variations errors",
-    "children": [
-     "Base Variations Errors"
     ]
    },
    {
@@ -42078,6 +42066,15 @@
     ]
    },
    {
+    "name": "Base Red RC Variations",
+    "printRun": null,
+    "odds": null,
+    "seen": 80,
+    "spellings": [
+     "Base Red RC Variations"
+    ]
+   },
+   {
     "name": "Chrome Prospect Packfractor Autographs",
     "printRun": null,
     "odds": null,
@@ -42150,6 +42147,15 @@
     ]
    },
    {
+    "name": "Base Etched IN Glass Variations",
+    "printRun": null,
+    "odds": null,
+    "seen": 24,
+    "spellings": [
+     "Base Etched IN Glass Variations"
+    ]
+   },
+   {
     "name": "Etched In Glass Variation",
     "printRun": null,
     "odds": null,
@@ -42179,26 +42185,6 @@
     "categories": [
      "insert-anime",
      "insert-anime-kanji-variations"
-    ]
-   },
-   {
-    "root": "Base Etched IN Glass Variations",
-    "rootKey": "base etched in glass variations",
-    "children": [
-     "Base Etched IN Glass Variations"
-    ],
-    "categories": [
-     "insert-base-etched-in-glass-variations"
-    ]
-   },
-   {
-    "root": "Base Red RC Variations",
-    "rootKey": "base red rc variations",
-    "children": [
-     "Base Red RC Variations"
-    ],
-    "categories": [
-     "insert-base-red-rc-variations"
     ]
    },
    {
@@ -59771,6 +59757,15 @@
     ]
    },
    {
+    "name": "Championship Tag",
+    "printRun": 2,
+    "odds": null,
+    "seen": 23,
+    "spellings": [
+     "Championship Tag"
+    ]
+   },
+   {
     "name": "Patch Blue",
     "printRun": 3,
     "odds": null,
@@ -60330,17 +60325,6 @@
     ],
     "categories": [
      "insert-career-milestones"
-    ]
-   },
-   {
-    "root": "Championship Tag",
-    "rootKey": "championship",
-    "children": [
-     "Championship Tag"
-    ],
-    "categories": [
-     "auto-2022-23-panini-flawless-basketball-championship-tags-autographs",
-     "insert-championship-tags"
     ]
    },
    {
@@ -61852,6 +61836,78 @@
     ]
    },
    {
+    "name": "Silver NBA Logo FOTL",
+    "printRun": 5,
+    "odds": null,
+    "seen": 65,
+    "spellings": [
+     "Silver NBA Logo FOTL"
+    ]
+   },
+   {
+    "name": "Stainless Star",
+    "printRun": 75,
+    "odds": null,
+    "seen": 50,
+    "spellings": [
+     "Stainless Star"
+    ]
+   },
+   {
+    "name": "Stainless Stars Blue",
+    "printRun": 75,
+    "odds": null,
+    "seen": 50,
+    "spellings": [
+     "Stainless Stars Blue"
+    ]
+   },
+   {
+    "name": "Stainless Stars Gold",
+    "printRun": 10,
+    "odds": null,
+    "seen": 50,
+    "spellings": [
+     "Stainless Stars Gold"
+    ]
+   },
+   {
+    "name": "Stainless Stars Orange",
+    "printRun": 25,
+    "odds": null,
+    "seen": 50,
+    "spellings": [
+     "Stainless Stars Orange"
+    ]
+   },
+   {
+    "name": "Stainless Stars Platinum",
+    "printRun": 1,
+    "odds": null,
+    "seen": 50,
+    "spellings": [
+     "Stainless Stars Platinum"
+    ]
+   },
+   {
+    "name": "Impeccable Stat",
+    "printRun": 61,
+    "odds": null,
+    "seen": 45,
+    "spellings": [
+     "Impeccable Stat"
+    ]
+   },
+   {
+    "name": "Impeccable Jersey Number",
+    "printRun": 23,
+    "odds": null,
+    "seen": 35,
+    "spellings": [
+     "Impeccable Jersey Number"
+    ]
+   },
+   {
     "name": "and Gold",
     "printRun": 1,
     "odds": null,
@@ -62447,7 +62503,6 @@
      "Impeccable Honors Signatures Holo Gold",
      "Impeccable Honors Signatures Holo Silver",
      "Impeccable Honors Signatures Platinum",
-     "Impeccable Jersey Number",
      "Impeccable Milestone",
      "Impeccable Rookie Logoman",
      "Impeccable Rookie Season",
@@ -62459,12 +62514,9 @@
      "Impeccable Stars Signature",
      "Impeccable Stars Signatures Holo Gold",
      "Impeccable Stars Signatures Holo Silver",
-     "Impeccable Stars Signatures Platinum",
-     "Impeccable Stat"
+     "Impeccable Stars Signatures Platinum"
     ],
     "categories": [
-     "auto-impeccable-jersey-number-autographs",
-     "auto-impeccable-stats-autographs",
      "insert-impeccable-all-time-signatures",
      "insert-impeccable-championship",
      "insert-impeccable-championship-signatures",
@@ -62474,7 +62526,6 @@
      "insert-impeccable-honors-signatures-holo-gold",
      "insert-impeccable-honors-signatures-holo-silver",
      "insert-impeccable-honors-signatures-platinum",
-     "insert-impeccable-jersey-number",
      "insert-impeccable-milestones",
      "insert-impeccable-rookie-logoman",
      "insert-impeccable-rookie-seasons",
@@ -62486,8 +62537,7 @@
      "insert-impeccable-stars-signatures",
      "insert-impeccable-stars-signatures-holo-gold",
      "insert-impeccable-stars-signatures-holo-silver",
-     "insert-impeccable-stars-signatures-platinum",
-     "insert-impeccable-stats"
+     "insert-impeccable-stars-signatures-platinum"
     ]
    },
    {
@@ -62543,43 +62593,25 @@
     "rootKey": "silver nba logo",
     "children": [
      "Silver NBA Logo",
-     "Silver NBA Logo FOTL",
      "Silver NBA Logo Holo Gold",
      "Silver NBA Logo International"
     ],
     "categories": [
-     "auto-silver-nba-logo-autographs-fotl",
      "insert-silver-nba-logo",
-     "insert-silver-nba-logo-fotl",
      "insert-silver-nba-logo-holo-gold",
      "insert-silver-nba-logo-international"
     ]
    },
    {
-    "root": "Stainless Stars",
-    "rootKey": "stainless",
+    "root": "Stainless Stars International Red",
+    "rootKey": "stainless stars international red",
     "children": [
-     "Stainless Star",
-     "Stainless Stars Blue",
-     "Stainless Stars Gold",
      "Stainless Stars International Red",
-     "Stainless Stars International Red and Gold",
-     "Stainless Stars Orange",
-     "Stainless Stars Platinum"
+     "Stainless Stars International Red and Gold"
     ],
     "categories": [
-     "auto-stainless-stars-autographs",
-     "auto-stainless-stars-autographs-blue",
-     "auto-stainless-stars-autographs-gold",
-     "auto-stainless-stars-autographs-orange",
-     "auto-stainless-stars-autographs-platinum",
-     "insert-stainless-stars",
-     "insert-stainless-stars-blue",
-     "insert-stainless-stars-gold",
      "insert-stainless-stars-international-red",
-     "insert-stainless-stars-international-red-and-gold",
-     "insert-stainless-stars-orange",
-     "insert-stainless-stars-platinum"
+     "insert-stainless-stars-international-red-and-gold"
     ]
    },
    {
@@ -81062,6 +81094,42 @@
     ]
    },
    {
+    "name": "2019",
+    "printRun": null,
+    "odds": null,
+    "seen": 4,
+    "spellings": [
+     "2019"
+    ]
+   },
+   {
+    "name": "2019 Gold",
+    "printRun": null,
+    "odds": null,
+    "seen": 4,
+    "spellings": [
+     "2019 Gold"
+    ]
+   },
+   {
+    "name": "2019 Green",
+    "printRun": null,
+    "odds": null,
+    "seen": 4,
+    "spellings": [
+     "2019 Green"
+    ]
+   },
+   {
+    "name": "2019 Platinum",
+    "printRun": null,
+    "odds": null,
+    "seen": 4,
+    "spellings": [
+     "2019 Platinum"
+    ]
+   },
+   {
     "name": "2021",
     "printRun": null,
     "odds": null,
@@ -81189,34 +81257,6 @@
    }
   ],
   "insertSets": [
-   {
-    "root": "2019",
-    "rootKey": "2019",
-    "children": [
-     "2019",
-     "2019 Gold",
-     "2019 Green",
-     "2019 Platinum"
-    ],
-    "categories": [
-     "auto-2019-base-autographs",
-     "auto-2019-base-autographs-gold",
-     "auto-2019-base-autographs-green",
-     "auto-2019-base-autographs-platinum",
-     "auto-2019-jumbo-patch-autographs",
-     "auto-2019-jumbo-patch-autographs-gold",
-     "auto-2019-jumbo-patch-autographs-green",
-     "auto-2019-jumbo-patch-autographs-platinum",
-     "auto-2019-optimum-diamond-autographs",
-     "auto-2019-optimum-diamond-autographs-gold",
-     "auto-2019-optimum-diamond-autographs-green",
-     "auto-2019-optimum-diamond-autographs-platinum",
-     "insert-2019-gilded-graphs",
-     "insert-2019-gilded-graphs-gold",
-     "insert-2019-gilded-graphs-green",
-     "insert-2019-gilded-graphs-platinum"
-    ]
-   },
    {
     "root": "Dual",
     "rootKey": "dual",
@@ -81406,6 +81446,15 @@
     "seen": 14,
     "spellings": [
      "Flawless Focus Platinum"
+    ]
+   },
+   {
+    "name": "Dual Championship Tag",
+    "printRun": 1,
+    "odds": null,
+    "seen": 10,
+    "spellings": [
+     "Dual Championship Tag"
     ]
    },
    {
@@ -82248,7 +82297,6 @@
     "rootKey": "dual",
     "children": [
      "Dual Brand Logo",
-     "Dual Championship Tag",
      "Dual Logoman",
      "Dual Patche",
      "Dual Patches Emerald",
@@ -82258,9 +82306,7 @@
      "Dual Patches Ruby"
     ],
     "categories": [
-     "auto-dual-championship-tag-autographs",
      "insert-dual-brand-logos",
-     "insert-dual-championship-tags",
      "insert-dual-logoman",
      "insert-dual-patches",
      "insert-dual-patches-emerald",
@@ -95066,6 +95112,15 @@
     ]
    },
    {
+    "name": "Fractal",
+    "printRun": 75,
+    "odds": null,
+    "seen": 11,
+    "spellings": [
+     "Fractal"
+    ]
+   },
+   {
     "name": "Asia",
     "printRun": null,
     "odds": null,
@@ -95456,27 +95511,64 @@
     ]
    },
    {
-    "root": "Fractal",
-    "rootKey": "fractal",
+    "root": "Fractal Prizms Black",
+    "rootKey": "fractal prizms black",
     "children": [
-     "Fractal",
-     "Fractal Prizms Black",
+     "Fractal Prizms Black"
+    ],
+    "categories": [
+     "insert-fractal-prizms-black"
+    ]
+   },
+   {
+    "root": "Fractal Prizms Blue",
+    "rootKey": "fractal prizms blue",
+    "children": [
      "Fractal Prizms Blue",
-     "Fractal Prizms Blue Ice",
-     "Fractal Prizms Gold",
-     "Fractal Prizms Mojo",
-     "Fractal Prizms Orange",
+     "Fractal Prizms Blue Ice"
+    ],
+    "categories": [
+     "insert-fractal-prizms-blue",
+     "insert-fractal-prizms-blue-ice"
+    ]
+   },
+   {
+    "root": "Fractal Prizms Gold",
+    "rootKey": "fractal prizms gold",
+    "children": [
+     "Fractal Prizms Gold"
+    ],
+    "categories": [
+     "insert-fractal-prizms-gold"
+    ]
+   },
+   {
+    "root": "Fractal Prizms Mojo",
+    "rootKey": "fractal prizms mojo",
+    "children": [
+     "Fractal Prizms Mojo"
+    ],
+    "categories": [
+     "insert-fractal-prizms-mojo"
+    ]
+   },
+   {
+    "root": "Fractal Prizms Orange",
+    "rootKey": "fractal prizms orange",
+    "children": [
+     "Fractal Prizms Orange"
+    ],
+    "categories": [
+     "insert-fractal-prizms-orange"
+    ]
+   },
+   {
+    "root": "Fractal Prizms Silver",
+    "rootKey": "fractal prizms silver",
+    "children": [
      "Fractal Prizms Silver"
     ],
     "categories": [
-     "auto-2023-panini-revolution-autographs-fractal",
-     "insert-fractal",
-     "insert-fractal-prizms-black",
-     "insert-fractal-prizms-blue",
-     "insert-fractal-prizms-blue-ice",
-     "insert-fractal-prizms-gold",
-     "insert-fractal-prizms-mojo",
-     "insert-fractal-prizms-orange",
      "insert-fractal-prizms-silver"
     ]
    },
@@ -121980,6 +122072,15 @@
     ]
    },
    {
+    "name": "Rookie",
+    "printRun": 25,
+    "odds": null,
+    "seen": 46,
+    "spellings": [
+     "Rookie"
+    ]
+   },
+   {
     "name": "Aquamarine",
     "printRun": 2,
     "odds": null,
@@ -121998,12 +122099,48 @@
     ]
    },
    {
+    "name": "Rookie Emerald",
+    "printRun": 5,
+    "odds": null,
+    "seen": 35,
+    "spellings": [
+     "Rookie Emerald"
+    ]
+   },
+   {
+    "name": "Rookie Platinum",
+    "printRun": 1,
+    "odds": null,
+    "seen": 35,
+    "spellings": [
+     "Rookie Platinum"
+    ]
+   },
+   {
+    "name": "Rookie Ruby",
+    "printRun": 15,
+    "odds": null,
+    "seen": 35,
+    "spellings": [
+     "Rookie Ruby"
+    ]
+   },
+   {
     "name": "Glove",
     "printRun": 5,
     "odds": null,
     "seen": 33,
     "spellings": [
      "Glove"
+    ]
+   },
+   {
+    "name": "2022",
+    "printRun": null,
+    "odds": null,
+    "seen": 32,
+    "spellings": [
+     "2022"
     ]
    },
    {
@@ -122022,6 +122159,51 @@
     "seen": 29,
     "spellings": [
      "Laundry Tag"
+    ]
+   },
+   {
+    "name": "2022 Ruby",
+    "printRun": null,
+    "odds": null,
+    "seen": 23,
+    "spellings": [
+     "2022 Ruby"
+    ]
+   },
+   {
+    "name": "2022 Emerald",
+    "printRun": null,
+    "odds": null,
+    "seen": 22,
+    "spellings": [
+     "2022 Emerald"
+    ]
+   },
+   {
+    "name": "2022 Silver",
+    "printRun": null,
+    "odds": null,
+    "seen": 22,
+    "spellings": [
+     "2022 Silver"
+    ]
+   },
+   {
+    "name": "2022 Platinum",
+    "printRun": null,
+    "odds": null,
+    "seen": 21,
+    "spellings": [
+     "2022 Platinum"
+    ]
+   },
+   {
+    "name": "2022 Sapphire",
+    "printRun": null,
+    "odds": null,
+    "seen": 21,
+    "spellings": [
+     "2022 Sapphire"
     ]
    },
    {
@@ -122067,6 +122249,33 @@
     "seen": 9,
     "spellings": [
      "Shield"
+    ]
+   },
+   {
+    "name": "2022 Gold and Ruby Efoilution",
+    "printRun": null,
+    "odds": null,
+    "seen": 6,
+    "spellings": [
+     "2022 Gold and Ruby Efoilution"
+    ]
+   },
+   {
+    "name": "2022 Sterling and Gold Efoilution",
+    "printRun": null,
+    "odds": null,
+    "seen": 6,
+    "spellings": [
+     "2022 Sterling and Gold Efoilution"
+    ]
+   },
+   {
+    "name": "2022 Sterling and Sapphire Efoilution",
+    "printRun": null,
+    "odds": null,
+    "seen": 6,
+    "spellings": [
+     "2022 Sterling and Sapphire Efoilution"
     ]
    },
    {
@@ -122121,6 +122330,42 @@
     "seen": 6,
     "spellings": [
      "2x Silver"
+    ]
+   },
+   {
+    "name": "2020",
+    "printRun": null,
+    "odds": null,
+    "seen": 5,
+    "spellings": [
+     "2020"
+    ]
+   },
+   {
+    "name": "2020 Emerald",
+    "printRun": null,
+    "odds": null,
+    "seen": 5,
+    "spellings": [
+     "2020 Emerald"
+    ]
+   },
+   {
+    "name": "2020 Platinum",
+    "printRun": null,
+    "odds": null,
+    "seen": 5,
+    "spellings": [
+     "2020 Platinum"
+    ]
+   },
+   {
+    "name": "2021",
+    "printRun": null,
+    "odds": null,
+    "seen": 5,
+    "spellings": [
+     "2021"
     ]
    },
    {
@@ -122202,6 +122447,33 @@
     "seen": 5,
     "spellings": [
      "Sterling and Sapphire Efoilution"
+    ]
+   },
+   {
+    "name": "2020 Ruby",
+    "printRun": null,
+    "odds": null,
+    "seen": 4,
+    "spellings": [
+     "2020 Ruby"
+    ]
+   },
+   {
+    "name": "2020 Sapphire",
+    "printRun": null,
+    "odds": null,
+    "seen": 4,
+    "spellings": [
+     "2020 Sapphire"
+    ]
+   },
+   {
+    "name": "2020 Silver",
+    "printRun": null,
+    "odds": null,
+    "seen": 4,
+    "spellings": [
+     "2020 Silver"
     ]
    },
    {
@@ -122378,53 +122650,12 @@
   ],
   "insertSets": [
    {
-    "root": "2020",
-    "rootKey": "2020",
-    "children": [
-     "2020",
-     "2020 Emerald",
-     "2020 Platinum",
-     "2020 Ruby",
-     "2020 Sapphire",
-     "2020 Silver"
-    ],
-    "categories": [
-     "auto-2020-distinguished-patch-autographs",
-     "auto-2020-distinguished-patch-autographs-emerald",
-     "auto-2020-distinguished-patch-autographs-platinum",
-     "auto-2020-distinguished-patch-autographs-ruby",
-     "auto-2020-distinguished-patch-autographs-sapphire",
-     "auto-2020-distinguished-patch-autographs-silver",
-     "auto-2020-patch-autographs",
-     "auto-2020-patch-autographs-emerald",
-     "auto-2020-patch-autographs-platinum",
-     "auto-2020-patch-autographs-ruby",
-     "auto-2020-patch-autographs-sapphire",
-     "auto-2020-patch-autographs-silver",
-     "insert-2020-career-progressions",
-     "insert-2020-career-progressions-emerald",
-     "insert-2020-career-progressions-platinum",
-     "insert-2020-greats",
-     "insert-2020-greats-emerald",
-     "insert-2020-greats-platinum",
-     "insert-2020-greats-ruby",
-     "insert-2020-greats-sapphire",
-     "insert-2020-greats-silver"
-    ]
-   },
-   {
-    "root": "2021",
+    "root": "2021 Shield",
     "rootKey": "2021",
     "children": [
-     "2021",
      "2021 Shield"
     ],
     "categories": [
-     "auto-2021-dual-patch-autographs",
-     "auto-2021-flawless-spike-autographs",
-     "auto-2021-patch-autographs",
-     "insert-2021-signature-gems-platinum",
-     "insert-2021-veteran-booklets",
      "insert-2021-veteran-shield-booklets"
     ]
    },
@@ -122432,97 +122663,14 @@
     "root": "2022",
     "rootKey": "2022",
     "children": [
-     "2022",
      "2022 Brand Logo",
-     "2022 Emerald",
      "2022 Glove",
-     "2022 Gold and Ruby Efoilution",
      "2022 Nameplate",
-     "2022 Platinum",
-     "2022 Ruby",
-     "2022 Sapphire",
-     "2022 Shield",
-     "2022 Silver",
-     "2022 Sterling and Gold Efoilution",
-     "2022 Sterling and Sapphire Efoilution"
+     "2022 Shield"
     ],
     "categories": [
-     "auto-2022-distinguished-patch-autographs",
-     "auto-2022-hall-of-fame-autographs",
-     "auto-2022-hall-of-fame-autographs-emerald",
-     "auto-2022-hall-of-fame-autographs-gold-and-ruby-efoilution",
-     "auto-2022-hall-of-fame-autographs-platinum",
-     "auto-2022-hall-of-fame-autographs-ruby",
-     "auto-2022-hall-of-fame-autographs-sapphire",
-     "auto-2022-hall-of-fame-autographs-silver",
-     "auto-2022-hall-of-fame-autographs-sterling-and-gold-efoilution",
-     "auto-2022-hall-of-fame-autographs-sterling-and-sapphire-efoilution",
-     "auto-2022-rookie-cleat-autographs",
-     "auto-2022-rookie-patch-autographs",
-     "insert-2022-all-pro-ink",
-     "insert-2022-all-pro-ink-emerald",
-     "insert-2022-all-pro-ink-platinum",
-     "insert-2022-all-pro-ink-ruby",
-     "insert-2022-all-pro-ink-sapphire",
-     "insert-2022-all-pro-ink-silver",
-     "insert-2022-career-progressions",
-     "insert-2022-career-progressions-emerald",
-     "insert-2022-career-progressions-platinum",
-     "insert-2022-career-progressions-ruby",
-     "insert-2022-career-progressions-sapphire",
-     "insert-2022-career-progressions-silver",
-     "insert-2022-champions-signatures",
-     "insert-2022-champions-signatures-emerald",
-     "insert-2022-champions-signatures-gold-and-ruby-efoilution",
-     "insert-2022-champions-signatures-platinum",
-     "insert-2022-champions-signatures-ruby",
-     "insert-2022-champions-signatures-sapphire",
-     "insert-2022-champions-signatures-silver",
-     "insert-2022-champions-signatures-sterling-and-gold-efoilution",
-     "insert-2022-champions-signatures-sterling-and-sapphire-efoilution",
-     "insert-2022-flawless-achievements",
-     "insert-2022-flawless-achievements-emerald",
-     "insert-2022-flawless-achievements-platinum",
-     "insert-2022-flawless-achievements-ruby",
-     "insert-2022-flawless-achievements-sapphire",
-     "insert-2022-flawless-achievements-silver",
-     "insert-2022-flawless-performances",
-     "insert-2022-flawless-performances-emerald",
-     "insert-2022-flawless-performances-platinum",
-     "insert-2022-flawless-performances-ruby",
-     "insert-2022-flawless-performances-sapphire",
-     "insert-2022-flawless-performances-silver",
-     "insert-2022-greats",
-     "insert-2022-greats-emerald",
-     "insert-2022-greats-platinum",
-     "insert-2022-greats-ruby",
-     "insert-2022-greats-sapphire",
-     "insert-2022-greats-silver",
-     "insert-2022-rookie-booklets",
      "insert-2022-rookie-brand-logo-booklets",
-     "insert-2022-rookie-debut-signatures",
-     "insert-2022-rookie-debut-signatures-emerald",
-     "insert-2022-rookie-debut-signatures-platinum",
-     "insert-2022-rookie-debut-signatures-ruby",
-     "insert-2022-rookie-debut-signatures-sapphire",
-     "insert-2022-rookie-debut-signatures-silver",
-     "insert-2022-rookie-frame-signatures",
-     "insert-2022-rookie-frame-signatures-emerald",
-     "insert-2022-rookie-frame-signatures-gold-and-ruby-efoilution",
-     "insert-2022-rookie-frame-signatures-platinum",
-     "insert-2022-rookie-frame-signatures-ruby",
-     "insert-2022-rookie-frame-signatures-sapphire",
-     "insert-2022-rookie-frame-signatures-silver",
-     "insert-2022-rookie-frame-signatures-sterling-and-gold-efoilution",
-     "insert-2022-rookie-frame-signatures-sterling-and-sapphire-efoilution",
      "insert-2022-rookie-gloves-booklets",
-     "insert-2022-signature-gloves",
-     "insert-2022-signature-gloves-emerald",
-     "insert-2022-signature-gloves-platinum",
-     "insert-2022-signature-gloves-ruby",
-     "insert-2022-signature-gloves-sapphire",
-     "insert-2022-signature-gloves-silver",
-     "insert-2022-veteran-booklets",
      "insert-2022-veteran-brand-logo-booklets",
      "insert-2022-veteran-nameplate-booklets",
      "insert-2022-veteran-shield-booklets"
@@ -122542,30 +122690,12 @@
     "root": "Rookie",
     "rootKey": "rookie",
     "children": [
-     "Rookie",
      "Rookie Brand Logo",
-     "Rookie Emerald",
-     "Rookie Platinum",
-     "Rookie Ruby",
      "Rookie Sapphire",
      "Rookie Silver"
     ],
     "categories": [
-     "auto-2022-rookie-dual-patch-autographs",
-     "auto-2022-rookie-dual-patch-autographs-emerald",
-     "auto-2022-rookie-dual-patch-autographs-platinum",
-     "auto-2022-rookie-dual-patch-autographs-ruby",
-     "auto-2022-rookie-patch-autographs-bronze",
-     "auto-2022-rookie-patch-autographs-emerald",
-     "auto-2022-rookie-patch-autographs-platinum",
-     "auto-2022-rookie-patch-autographs-ruby",
-     "auto-2022-rookie-patch-autographs-sapphire",
-     "auto-2022-rookie-patch-autographs-silver",
-     "insert-rookie-patches",
      "insert-rookie-patches-brand-logo",
-     "insert-rookie-patches-emerald",
-     "insert-rookie-patches-platinum",
-     "insert-rookie-patches-ruby",
      "insert-rookie-patches-sapphire",
      "insert-rookie-patches-silver"
     ]
@@ -122604,6 +122734,15 @@
     "seen": 200,
     "spellings": [
      "Retail"
+    ]
+   },
+   {
+    "name": "Trophy Collection Pro Bowl",
+    "printRun": 2,
+    "odds": null,
+    "seen": 150,
+    "spellings": [
+     "Trophy Collection Pro Bowl"
     ]
    },
    {
@@ -122775,6 +122914,42 @@
     "seen": 100,
     "spellings": [
      "Teal Trophy Collection"
+    ]
+   },
+   {
+    "name": "Trophy Collection Conference",
+    "printRun": 5,
+    "odds": null,
+    "seen": 100,
+    "spellings": [
+     "Trophy Collection Conference"
+    ]
+   },
+   {
+    "name": "Trophy Collection Division",
+    "printRun": 10,
+    "odds": null,
+    "seen": 100,
+    "spellings": [
+     "Trophy Collection Division"
+    ]
+   },
+   {
+    "name": "Trophy Collection Super Bowl",
+    "printRun": 1,
+    "odds": null,
+    "seen": 100,
+    "spellings": [
+     "Trophy Collection Super Bowl"
+    ]
+   },
+   {
+    "name": "Trophy Collection Wild Card",
+    "printRun": 30,
+    "odds": null,
+    "seen": 100,
+    "spellings": [
+     "Trophy Collection Wild Card"
     ]
    },
    {
@@ -123475,9 +123650,7 @@
      "Trophy Collection Black Ice",
      "Trophy Collection Blue",
      "Trophy Collection Bronze",
-     "Trophy Collection Conference",
      "Trophy Collection Diamond",
-     "Trophy Collection Division",
      "Trophy Collection Dot",
      "Trophy Collection Emerald",
      "Trophy Collection Gold",
@@ -123486,7 +123659,6 @@
      "Trophy Collection Orange",
      "Trophy Collection Pink",
      "Trophy Collection Platinum",
-     "Trophy Collection Pro Bowl",
      "Trophy Collection Purple",
      "Trophy Collection Red",
      "Trophy Collection Ruby",
@@ -123498,23 +123670,14 @@
      "Trophy Collection Signatures Red",
      "Trophy Collection Starlight",
      "Trophy Collection Sunburst",
-     "Trophy Collection Super Bowl",
      "Trophy Collection Teal",
-     "Trophy Collection Wild Card",
      "Trophy Collection Yellow Diamond"
     ],
     "categories": [
-     "insert-base-trophy-collection-conference",
-     "insert-base-trophy-collection-division",
-     "insert-base-trophy-collection-pro-bowl",
-     "insert-base-trophy-collection-super-bowl",
-     "insert-base-trophy-collection-wild-card",
      "insert-trophy-collection-black-ice",
      "insert-trophy-collection-blue",
      "insert-trophy-collection-bronze",
-     "insert-trophy-collection-conference",
      "insert-trophy-collection-diamond",
-     "insert-trophy-collection-division",
      "insert-trophy-collection-dots",
      "insert-trophy-collection-emerald",
      "insert-trophy-collection-gold",
@@ -123523,7 +123686,6 @@
      "insert-trophy-collection-orange",
      "insert-trophy-collection-pink",
      "insert-trophy-collection-platinum",
-     "insert-trophy-collection-pro-bowl",
      "insert-trophy-collection-purple",
      "insert-trophy-collection-red",
      "insert-trophy-collection-ruby",
@@ -123535,9 +123697,7 @@
      "insert-trophy-collection-signatures-red",
      "insert-trophy-collection-starlight",
      "insert-trophy-collection-sunburst",
-     "insert-trophy-collection-super-bowl",
      "insert-trophy-collection-teal",
-     "insert-trophy-collection-wild-card",
      "insert-trophy-collection-yellow-diamond"
     ]
    }
@@ -125538,6 +125698,15 @@
     ]
    },
    {
+    "name": "NFL Shield",
+    "printRun": 1,
+    "odds": null,
+    "seen": 96,
+    "spellings": [
+     "NFL Shield"
+    ]
+   },
+   {
     "name": "Signature",
     "printRun": 99,
     "odds": null,
@@ -126541,57 +126710,94 @@
     ]
    },
    {
-    "root": "NFL",
-    "rootKey": "nfl",
+    "root": "NFL Game Gear",
+    "rootKey": "nfl game gear",
     "children": [
      "NFL Game Gear",
      "NFL Game Gear Prime Holo Gold",
      "NFL Game Gear Prime Holo Silver",
-     "NFL Game Gear Super Prime",
+     "NFL Game Gear Super Prime"
+    ],
+    "categories": [
+     "insert-nfl-game-gear",
+     "insert-nfl-game-gear-prime-holo-gold",
+     "insert-nfl-game-gear-prime-holo-silver",
+     "insert-nfl-game-gear-super-prime"
+    ]
+   },
+   {
+    "root": "NFL Gear Combo Materials",
+    "rootKey": "nfl gear combo",
+    "children": [
      "NFL Gear Combo Material",
      "NFL Gear Combo Materials Holo Gold",
      "NFL Gear Combo Materials Holo Silver",
-     "NFL Gear Combo Materials Laundry Tag",
+     "NFL Gear Combo Materials Laundry Tag"
+    ],
+    "categories": [
+     "insert-nfl-gear-combo-materials",
+     "insert-nfl-gear-combo-materials-holo-gold",
+     "insert-nfl-gear-combo-materials-holo-silver",
+     "insert-nfl-gear-combo-materials-laundry-tags"
+    ]
+   },
+   {
+    "root": "NFL Gear Quad Materials",
+    "rootKey": "nfl gear quad",
+    "children": [
      "NFL Gear Quad Material",
      "NFL Gear Quad Materials Holo Gold",
      "NFL Gear Quad Materials Holo Silver",
      "NFL Gear Quad Materials Laundry Tag Brand Logo",
      "NFL Gear Quad Materials Laundry Tag NFL Player'",
-     "NFL Gear Quad Materials Laundry Tag NFL Shield",
-     "NFL Gear Trio Material",
-     "NFL Gear Trio Materials Holo Gold",
-     "NFL Gear Trio Materials Holo Silver",
-     "NFL Gear Trio Materials Laundry Tag Brand Logo",
-     "NFL Gear Trio Materials Laundry Tag NFL Player'",
-     "NFL Gear Trio Materials Laundry Tag NFL Shield",
-     "NFL Greatest Signature",
-     "NFL Shield",
-     "NFL Shields Dual"
+     "NFL Gear Quad Materials Laundry Tag NFL Shield"
     ],
     "categories": [
-     "auto-crossover-rookie-patch-autographs-nfl-shield",
-     "insert-nfl-game-gear",
-     "insert-nfl-game-gear-prime-holo-gold",
-     "insert-nfl-game-gear-prime-holo-silver",
-     "insert-nfl-game-gear-super-prime",
-     "insert-nfl-gear-combo-materials",
-     "insert-nfl-gear-combo-materials-holo-gold",
-     "insert-nfl-gear-combo-materials-holo-silver",
-     "insert-nfl-gear-combo-materials-laundry-tags",
      "insert-nfl-gear-quad-materials",
      "insert-nfl-gear-quad-materials-holo-gold",
      "insert-nfl-gear-quad-materials-holo-silver",
      "insert-nfl-gear-quad-materials-laundry-tag-brand-logo",
      "insert-nfl-gear-quad-materials-laundry-tag-nfl-players",
-     "insert-nfl-gear-quad-materials-laundry-tag-nfl-shield",
+     "insert-nfl-gear-quad-materials-laundry-tag-nfl-shield"
+    ]
+   },
+   {
+    "root": "NFL Gear Trio Materials",
+    "rootKey": "nfl gear trio",
+    "children": [
+     "NFL Gear Trio Material",
+     "NFL Gear Trio Materials Holo Gold",
+     "NFL Gear Trio Materials Holo Silver",
+     "NFL Gear Trio Materials Laundry Tag Brand Logo",
+     "NFL Gear Trio Materials Laundry Tag NFL Player'",
+     "NFL Gear Trio Materials Laundry Tag NFL Shield"
+    ],
+    "categories": [
      "insert-nfl-gear-trio-materials",
      "insert-nfl-gear-trio-materials-holo-gold",
      "insert-nfl-gear-trio-materials-holo-silver",
      "insert-nfl-gear-trio-materials-laundry-tag-brand-logo",
      "insert-nfl-gear-trio-materials-laundry-tag-nfl-players",
-     "insert-nfl-gear-trio-materials-laundry-tag-nfl-shield",
-     "insert-nfl-greatest-signatures",
-     "insert-nfl-shields",
+     "insert-nfl-gear-trio-materials-laundry-tag-nfl-shield"
+    ]
+   },
+   {
+    "root": "NFL Greatest Signature",
+    "rootKey": "nfl greatest",
+    "children": [
+     "NFL Greatest Signature"
+    ],
+    "categories": [
+     "insert-nfl-greatest-signatures"
+    ]
+   },
+   {
+    "root": "NFL Shields Dual",
+    "rootKey": "nfl shields dual",
+    "children": [
+     "NFL Shields Dual"
+    ],
+    "categories": [
      "insert-nfl-shields-dual"
     ]
    },
@@ -135601,6 +135807,15 @@
     ]
    },
    {
+    "name": "Signature",
+    "printRun": null,
+    "odds": null,
+    "seen": 80,
+    "spellings": [
+     "Signature"
+    ]
+   },
+   {
     "name": "Signatures Black Galaxy",
     "printRun": 1,
     "odds": null,
@@ -136063,7 +136278,6 @@
     "root": "Signature",
     "rootKey": "signature",
     "children": [
-     "Signature",
      "Signature Black Galaxy",
      "Signature Blue Diamond",
      "Signature Gold Star",
@@ -136089,8 +136303,6 @@
      "Signature Standouts Red"
     ],
     "categories": [
-     "insert-base-signatures",
-     "insert-signature-rookies",
      "insert-signature-rookies-black-galaxy",
      "insert-signature-rookies-blue-diamonds",
      "insert-signature-rookies-gold-stars",
@@ -138724,6 +138936,15 @@
     ]
    },
    {
+    "name": "2021",
+    "printRun": null,
+    "odds": null,
+    "seen": 21,
+    "spellings": [
+     "2021"
+    ]
+   },
+   {
     "name": "Shield",
     "printRun": 1,
     "odds": null,
@@ -138757,6 +138978,33 @@
     "seen": 14,
     "spellings": [
      "Signature"
+    ]
+   },
+   {
+    "name": "2021 Platinum",
+    "printRun": null,
+    "odds": null,
+    "seen": 8,
+    "spellings": [
+     "2021 Platinum"
+    ]
+   },
+   {
+    "name": "2021 Gold",
+    "printRun": null,
+    "odds": null,
+    "seen": 7,
+    "spellings": [
+     "2021 Gold"
+    ]
+   },
+   {
+    "name": "2021 Green",
+    "printRun": null,
+    "odds": null,
+    "seen": 7,
+    "spellings": [
+     "2021 Green"
     ]
    },
    {
@@ -138870,38 +139118,13 @@
   ],
   "insertSets": [
    {
-    "root": "2021",
+    "root": "2021 Signature",
     "rootKey": "2021",
     "children": [
-     "2021",
-     "2021 Gold",
-     "2021 Green",
-     "2021 Platinum",
      "2021 Signature"
     ],
     "categories": [
-     "auto-2021-dual-autographs",
-     "auto-2021-dual-autographs-platinum",
-     "auto-2021-patch-autographs",
-     "auto-2021-patch-autographs-gold",
-     "auto-2021-patch-autographs-green",
-     "auto-2021-patch-autographs-platinum",
-     "auto-2021-rookie-autographs-platinum-bar",
-     "auto-2021-rookie-patch-autographs",
-     "insert-2021-first-team-all-pro-diamond-signatures",
-     "insert-2021-first-team-all-pro-diamond-signatures-gold",
-     "insert-2021-first-team-all-pro-diamond-signatures-green",
-     "insert-2021-first-team-all-pro-diamond-signatures-platinum",
-     "insert-2021-nfl-shield-diamonds-signatures",
-     "insert-2021-pro-bowl-diamond-signatures",
-     "insert-2021-pro-bowl-diamond-signatures-platinum",
-     "insert-2021-super-bowl-mvp-diamond-signatures",
-     "insert-2021-super-bowl-mvp-diamond-signatures-gold",
-     "insert-2021-super-bowl-mvp-diamond-signatures-green",
-     "insert-2021-super-bowl-mvp-diamond-signatures-platinum",
-     "insert-2021-super-bowl-royalty-signatures-gold-bar",
-     "insert-2021-super-bowl-royalty-signatures-platinum-bar",
-     "insert-2021-super-bowl-royalty-signatures-silver-bar"
+     "insert-2021-nfl-shield-diamonds-signatures"
     ]
    }
   ]
@@ -139332,6 +139555,60 @@
     ]
    },
    {
+    "name": "Rookie Ruby",
+    "printRun": 15,
+    "odds": null,
+    "seen": 37,
+    "spellings": [
+     "Rookie Ruby"
+    ]
+   },
+   {
+    "name": "Rookie Emerald",
+    "printRun": 5,
+    "odds": null,
+    "seen": 36,
+    "spellings": [
+     "Rookie Emerald"
+    ]
+   },
+   {
+    "name": "Rookie Platinum",
+    "printRun": 1,
+    "odds": null,
+    "seen": 36,
+    "spellings": [
+     "Rookie Platinum"
+    ]
+   },
+   {
+    "name": "Rookie Sapphire",
+    "printRun": 10,
+    "odds": null,
+    "seen": 36,
+    "spellings": [
+     "Rookie Sapphire"
+    ]
+   },
+   {
+    "name": "Rookie",
+    "printRun": 25,
+    "odds": null,
+    "seen": 35,
+    "spellings": [
+     "Rookie"
+    ]
+   },
+   {
+    "name": "Rookie Silver",
+    "printRun": 20,
+    "odds": null,
+    "seen": 35,
+    "spellings": [
+     "Rookie Silver"
+    ]
+   },
+   {
     "name": "Glove",
     "printRun": 5,
     "odds": null,
@@ -139350,6 +139627,24 @@
     ]
    },
    {
+    "name": "2023",
+    "printRun": null,
+    "odds": null,
+    "seen": 18,
+    "spellings": [
+     "2023"
+    ]
+   },
+   {
+    "name": "2022",
+    "printRun": null,
+    "odds": null,
+    "seen": 9,
+    "spellings": [
+     "2022"
+    ]
+   },
+   {
     "name": "Rookie Bronze",
     "printRun": null,
     "odds": null,
@@ -139365,6 +139660,60 @@
     "seen": 6,
     "spellings": [
      "Shield"
+    ]
+   },
+   {
+    "name": "2016",
+    "printRun": null,
+    "odds": null,
+    "seen": 5,
+    "spellings": [
+     "2016"
+    ]
+   },
+   {
+    "name": "2022 Emerald",
+    "printRun": null,
+    "odds": null,
+    "seen": 4,
+    "spellings": [
+     "2022 Emerald"
+    ]
+   },
+   {
+    "name": "2022 Platinum",
+    "printRun": null,
+    "odds": null,
+    "seen": 4,
+    "spellings": [
+     "2022 Platinum"
+    ]
+   },
+   {
+    "name": "2022 Ruby",
+    "printRun": null,
+    "odds": null,
+    "seen": 4,
+    "spellings": [
+     "2022 Ruby"
+    ]
+   },
+   {
+    "name": "2022 Sapphire",
+    "printRun": null,
+    "odds": null,
+    "seen": 4,
+    "spellings": [
+     "2022 Sapphire"
+    ]
+   },
+   {
+    "name": "2022 Silver",
+    "printRun": null,
+    "odds": null,
+    "seen": 4,
+    "spellings": [
+     "2022 Silver"
     ]
    },
    {
@@ -139392,6 +139741,42 @@
     "seen": 3,
     "spellings": [
      "Dual Emerald"
+    ]
+   },
+   {
+    "name": "2016 Emerald",
+    "printRun": null,
+    "odds": null,
+    "seen": 2,
+    "spellings": [
+     "2016 Emerald"
+    ]
+   },
+   {
+    "name": "2016 Ruby",
+    "printRun": null,
+    "odds": null,
+    "seen": 2,
+    "spellings": [
+     "2016 Ruby"
+    ]
+   },
+   {
+    "name": "2016 Sapphire",
+    "printRun": null,
+    "odds": null,
+    "seen": 2,
+    "spellings": [
+     "2016 Sapphire"
+    ]
+   },
+   {
+    "name": "2016 Silver",
+    "printRun": null,
+    "odds": null,
+    "seen": 2,
+    "spellings": [
+     "2016 Silver"
     ]
    },
    {
@@ -139658,31 +140043,13 @@
   ],
   "insertSets": [
    {
-    "root": "2016",
+    "root": "2016 Platinum",
     "rootKey": "2016",
     "children": [
-     "2016",
-     "2016 Emerald",
-     "2016 Platinum",
-     "2016 Ruby",
-     "2016 Sapphire",
-     "2016 Silver"
+     "2016 Platinum"
     ],
     "categories": [
-     "auto-2016-patch-autographs",
-     "auto-2016-patch-autographs-emerald",
-     "auto-2016-patch-autographs-platinum",
-     "auto-2016-patch-autographs-ruby",
-     "auto-2016-patch-autographs-sapphire",
-     "auto-2016-patch-autographs-silver",
-     "insert-2016-shield-signatures",
-     "insert-2016-star-swatch-signatures",
-     "insert-2016-star-swatch-signatures-emerald",
-     "insert-2016-star-swatch-signatures-platinum",
-     "insert-2016-star-swatch-signatures-ruby",
-     "insert-2016-star-swatch-signatures-sapphire",
-     "insert-2016-star-swatch-signatures-silver",
-     "insert-2016-symbolic-signatures"
+     "insert-2016-star-swatch-signatures-platinum"
     ]
    },
    {
@@ -139721,7 +140088,6 @@
     "root": "2022",
     "rootKey": "2022",
     "children": [
-     "2022",
      "2022 4x",
      "2022 4x Emerald",
      "2022 4x Gold and Ruby Efoilution",
@@ -139732,26 +140098,9 @@
      "2022 4x Sterling and Gold Efoilution",
      "2022 4x Sterling and Sapphire Efoilution",
      "2022 Brand Logo",
-     "2022 Emerald",
-     "2022 Glove",
-     "2022 Platinum",
-     "2022 Ruby",
-     "2022 Sapphire",
-     "2022 Silver"
+     "2022 Glove"
     ],
     "categories": [
-     "auto-2022-hall-of-fame-autographs",
-     "auto-2022-hall-of-fame-autographs-emerald",
-     "auto-2022-hall-of-fame-autographs-platinum",
-     "auto-2022-hall-of-fame-autographs-ruby",
-     "auto-2022-hall-of-fame-autographs-sapphire",
-     "auto-2022-hall-of-fame-autographs-silver",
-     "insert-2022-all-pro-ink",
-     "insert-2022-all-pro-ink-emerald",
-     "insert-2022-all-pro-ink-platinum",
-     "insert-2022-all-pro-ink-ruby",
-     "insert-2022-all-pro-ink-sapphire",
-     "insert-2022-all-pro-ink-silver",
      "insert-2022-champions-4x-signatures",
      "insert-2022-champions-4x-signatures-emerald",
      "insert-2022-champions-4x-signatures-gold-and-ruby-efoilution",
@@ -139761,25 +140110,14 @@
      "insert-2022-champions-4x-signatures-silver",
      "insert-2022-champions-4x-signatures-sterling-and-gold-efoilution",
      "insert-2022-champions-4x-signatures-sterling-and-sapphire-efoilution",
-     "insert-2022-laundry-tag-signatures",
-     "insert-2022-rookie-booklets",
      "insert-2022-rookie-brand-logo-booklets",
-     "insert-2022-rookie-gloves-booklets",
-     "insert-2022-shield-signatures",
-     "insert-2022-star-swatch-signatures",
-     "insert-2022-star-swatch-signatures-emerald",
-     "insert-2022-star-swatch-signatures-platinum",
-     "insert-2022-star-swatch-signatures-ruby",
-     "insert-2022-star-swatch-signatures-sapphire",
-     "insert-2022-star-swatch-signatures-silver",
-     "insert-2022-symbolic-signatures"
+     "insert-2022-rookie-gloves-booklets"
     ]
    },
    {
     "root": "2023",
     "rootKey": "2023",
     "children": [
-     "2023",
      "2023 Bronze",
      "2023 Diamond",
      "2023 Emerald",
@@ -139789,58 +140127,47 @@
      "2023 Silver"
     ],
     "categories": [
-     "auto-2023-rookie-cleat-autographs",
-     "auto-2023-rookie-spike-autographs",
-     "insert-2023-all-pro-ink",
      "insert-2023-all-pro-ink-emerald",
      "insert-2023-all-pro-ink-platinum",
      "insert-2023-all-pro-ink-ruby",
      "insert-2023-all-pro-ink-sapphire",
      "insert-2023-all-pro-ink-silver",
-     "insert-2023-career-progressions",
      "insert-2023-career-progressions-emerald",
      "insert-2023-career-progressions-platinum",
      "insert-2023-career-progressions-ruby",
      "insert-2023-career-progressions-sapphire",
      "insert-2023-career-progressions-silver",
-     "insert-2023-champions-2x-signatures",
      "insert-2023-champions-2x-signatures-emerald",
      "insert-2023-champions-2x-signatures-platinum",
      "insert-2023-champions-2x-signatures-ruby",
      "insert-2023-champions-2x-signatures-sapphire",
      "insert-2023-champions-2x-signatures-silver",
      "insert-2023-champions-signatures-emerald",
-     "insert-2023-honored-ink",
      "insert-2023-honored-ink-emerald",
      "insert-2023-honored-ink-platinum",
      "insert-2023-honored-ink-ruby",
      "insert-2023-honored-ink-sapphire",
      "insert-2023-honored-ink-silver",
-     "insert-2023-rookie-debut-signatures",
      "insert-2023-rookie-debut-signatures-bronze",
      "insert-2023-rookie-debut-signatures-emerald",
      "insert-2023-rookie-debut-signatures-platinum",
      "insert-2023-rookie-debut-signatures-ruby",
      "insert-2023-rookie-debut-signatures-sapphire",
      "insert-2023-rookie-debut-signatures-silver",
-     "insert-2023-rookie-frame-signatures",
      "insert-2023-rookie-frame-signatures-emerald",
      "insert-2023-rookie-frame-signatures-platinum",
      "insert-2023-rookie-frame-signatures-ruby",
      "insert-2023-rookie-frame-signatures-sapphire",
      "insert-2023-rookie-frame-signatures-silver",
-     "insert-2023-rookie-gems-signatures",
      "insert-2023-rookie-gems-signatures-diamond",
      "insert-2023-rookie-gems-signatures-emerald",
      "insert-2023-rookie-gems-signatures-platinum",
      "insert-2023-rookie-gems-signatures-sapphire",
-     "insert-2023-signature-gloves",
      "insert-2023-signature-gloves-emerald",
      "insert-2023-signature-gloves-platinum",
      "insert-2023-signature-gloves-ruby",
      "insert-2023-signature-gloves-sapphire",
      "insert-2023-signature-gloves-silver",
-     "insert-2023-star-swatch-signatures",
      "insert-2023-star-swatch-signatures-emerald",
      "insert-2023-star-swatch-signatures-platinum",
      "insert-2023-star-swatch-signatures-ruby",
@@ -139859,32 +140186,13 @@
     ]
    },
    {
-    "root": "Rookie",
+    "root": "Rookie Brand Logo",
     "rootKey": "rookie",
     "children": [
-     "Rookie",
-     "Rookie Brand Logo",
-     "Rookie Emerald",
-     "Rookie Platinum",
-     "Rookie Ruby",
-     "Rookie Sapphire",
-     "Rookie Silver"
+     "Rookie Brand Logo"
     ],
     "categories": [
-     "auto-2022-rookie-patch-autographs-ruby",
-     "auto-2023-rookie-patch-autographs",
-     "auto-2023-rookie-patch-autographs-emerald",
-     "auto-2023-rookie-patch-autographs-platinum",
-     "auto-2023-rookie-patch-autographs-ruby",
-     "auto-2023-rookie-patch-autographs-sapphire",
-     "auto-2023-rookie-patch-autographs-silver",
-     "insert-rookie-patches",
-     "insert-rookie-patches-brand-logo",
-     "insert-rookie-patches-emerald",
-     "insert-rookie-patches-platinum",
-     "insert-rookie-patches-ruby",
-     "insert-rookie-patches-sapphire",
-     "insert-rookie-patches-silver"
+     "insert-rookie-patches-brand-logo"
     ]
    },
    {
@@ -144503,6 +144811,15 @@
     ]
    },
    {
+    "name": "NFL Shield",
+    "printRun": 1,
+    "odds": null,
+    "seen": 78,
+    "spellings": [
+     "NFL Shield"
+    ]
+   },
+   {
     "name": "Brand Logo",
     "printRun": 2,
     "odds": null,
@@ -145485,62 +145802,105 @@
     ]
    },
    {
-    "root": "NFL",
-    "rootKey": "nfl",
+    "root": "NFL Game Gear",
+    "rootKey": "nfl game gear",
     "children": [
      "NFL Game Gear",
      "NFL Game Gear Prime Holo Gold",
      "NFL Game Gear Prime Holo Silver",
-     "NFL Game Gear Super Prime",
+     "NFL Game Gear Super Prime"
+    ],
+    "categories": [
+     "insert-nfl-game-gear",
+     "insert-nfl-game-gear-prime-holo-gold",
+     "insert-nfl-game-gear-prime-holo-silver",
+     "insert-nfl-game-gear-super-prime"
+    ]
+   },
+   {
+    "root": "NFL Gear Combo Materials",
+    "rootKey": "nfl gear combo",
+    "children": [
      "NFL Gear Combo Material",
      "NFL Gear Combo Materials Holo Gold",
      "NFL Gear Combo Materials Holo Silver",
-     "NFL Gear Combo Materials Laundry Tag",
+     "NFL Gear Combo Materials Laundry Tag"
+    ],
+    "categories": [
+     "insert-nfl-gear-combo-materials",
+     "insert-nfl-gear-combo-materials-holo-gold",
+     "insert-nfl-gear-combo-materials-holo-silver",
+     "insert-nfl-gear-combo-materials-laundry-tags"
+    ]
+   },
+   {
+    "root": "NFL Gear Quad Materials",
+    "rootKey": "nfl gear quad",
+    "children": [
      "NFL Gear Quad Material",
      "NFL Gear Quad Materials Holo Gold",
      "NFL Gear Quad Materials Holo Silver",
      "NFL Gear Quad Materials Laundry Tag Brand Logo",
      "NFL Gear Quad Materials Laundry Tag NFL Player'",
-     "NFL Gear Quad Materials Laundry Tag NFL Shield",
-     "NFL Gear Trio Material",
-     "NFL Gear Trio Materials Holo Gold",
-     "NFL Gear Trio Materials Holo Silver",
-     "NFL Gear Trio Materials Laundry Tag Brand Logo",
-     "NFL Gear Trio Materials Laundry Tag NFL Player'",
-     "NFL Gear Trio Materials Laundry Tag NFL Shield",
-     "NFL Greatest Signature",
-     "NFL International Patch",
-     "NFL Shield",
-     "NFL Shields Dual"
+     "NFL Gear Quad Materials Laundry Tag NFL Shield"
     ],
     "categories": [
-     "auto-2023-playoff-national-treasures-football-crossover-rookie-patch-autographs-nfl-shield",
-     "auto-crossover-rookie-patch-autographs-nfl-shield",
-     "insert-nfl-game-gear",
-     "insert-nfl-game-gear-prime-holo-gold",
-     "insert-nfl-game-gear-prime-holo-silver",
-     "insert-nfl-game-gear-super-prime",
-     "insert-nfl-gear-combo-materials",
-     "insert-nfl-gear-combo-materials-holo-gold",
-     "insert-nfl-gear-combo-materials-holo-silver",
-     "insert-nfl-gear-combo-materials-laundry-tags",
      "insert-nfl-gear-quad-materials",
      "insert-nfl-gear-quad-materials-holo-gold",
      "insert-nfl-gear-quad-materials-holo-silver",
      "insert-nfl-gear-quad-materials-laundry-tag-brand-logo",
      "insert-nfl-gear-quad-materials-laundry-tag-nfl-players",
-     "insert-nfl-gear-quad-materials-laundry-tag-nfl-shield",
+     "insert-nfl-gear-quad-materials-laundry-tag-nfl-shield"
+    ]
+   },
+   {
+    "root": "NFL Gear Trio Materials",
+    "rootKey": "nfl gear trio",
+    "children": [
+     "NFL Gear Trio Material",
+     "NFL Gear Trio Materials Holo Gold",
+     "NFL Gear Trio Materials Holo Silver",
+     "NFL Gear Trio Materials Laundry Tag Brand Logo",
+     "NFL Gear Trio Materials Laundry Tag NFL Player'",
+     "NFL Gear Trio Materials Laundry Tag NFL Shield"
+    ],
+    "categories": [
      "insert-nfl-gear-trio-materials",
      "insert-nfl-gear-trio-materials-holo-gold",
      "insert-nfl-gear-trio-materials-holo-silver",
      "insert-nfl-gear-trio-materials-laundry-tag-brand-logo",
      "insert-nfl-gear-trio-materials-laundry-tag-nfl-players",
-     "insert-nfl-gear-trio-materials-laundry-tag-nfl-shield",
-     "insert-nfl-greatest-signatures",
-     "insert-nfl-international-patch",
-     "insert-nfl-shields",
-     "insert-nfl-shields-dual",
-     "insert-rookie-patches-nfl-shield"
+     "insert-nfl-gear-trio-materials-laundry-tag-nfl-shield"
+    ]
+   },
+   {
+    "root": "NFL Greatest Signature",
+    "rootKey": "nfl greatest",
+    "children": [
+     "NFL Greatest Signature"
+    ],
+    "categories": [
+     "insert-nfl-greatest-signatures"
+    ]
+   },
+   {
+    "root": "NFL International Patch",
+    "rootKey": "nfl international patch",
+    "children": [
+     "NFL International Patch"
+    ],
+    "categories": [
+     "insert-nfl-international-patch"
+    ]
+   },
+   {
+    "root": "NFL Shields Dual",
+    "rootKey": "nfl shields dual",
+    "children": [
+     "NFL Shields Dual"
+    ],
+    "categories": [
+     "insert-nfl-shields-dual"
     ]
    },
    {
@@ -164806,6 +165166,15 @@
     ]
    },
    {
+    "name": "Signature",
+    "printRun": null,
+    "odds": null,
+    "seen": 83,
+    "spellings": [
+     "Signature"
+    ]
+   },
+   {
     "name": "Signatures Black Galaxy",
     "printRun": 1,
     "odds": null,
@@ -165436,7 +165805,6 @@
     "root": "Signature",
     "rootKey": "signature",
     "children": [
-     "Signature",
      "Signature Black Galaxy",
      "Signature Blue Diamond",
      "Signature Gold Star",
@@ -165463,8 +165831,6 @@
      "Signature Standouts Red"
     ],
     "categories": [
-     "insert-base-signatures",
-     "insert-signature-rookies",
      "insert-signature-rookies-black-galaxy",
      "insert-signature-rookies-blue-diamonds",
      "insert-signature-rookies-gold-stars",
@@ -167737,12 +168103,75 @@
     ]
    },
    {
+    "name": "2024 Flawless",
+    "printRun": null,
+    "odds": null,
+    "seen": 43,
+    "spellings": [
+     "2024 Flawless"
+    ]
+   },
+   {
+    "name": "2024 Flawless Emerald",
+    "printRun": null,
+    "odds": null,
+    "seen": 42,
+    "spellings": [
+     "2024 Flawless Emerald"
+    ]
+   },
+   {
+    "name": "2024 Flawless Platinum",
+    "printRun": null,
+    "odds": null,
+    "seen": 40,
+    "spellings": [
+     "2024 Flawless Platinum"
+    ]
+   },
+   {
     "name": "Tag",
     "printRun": 3,
     "odds": null,
     "seen": 40,
     "spellings": [
      "Tag"
+    ]
+   },
+   {
+    "name": "2024 Flawless Silver",
+    "printRun": null,
+    "odds": null,
+    "seen": 39,
+    "spellings": [
+     "2024 Flawless Silver"
+    ]
+   },
+   {
+    "name": "2024 Flawless Ruby",
+    "printRun": null,
+    "odds": null,
+    "seen": 38,
+    "spellings": [
+     "2024 Flawless Ruby"
+    ]
+   },
+   {
+    "name": "2023 Flawless",
+    "printRun": null,
+    "odds": null,
+    "seen": 37,
+    "spellings": [
+     "2023 Flawless"
+    ]
+   },
+   {
+    "name": "2024 Flawless Sapphire",
+    "printRun": null,
+    "odds": null,
+    "seen": 37,
+    "spellings": [
+     "2024 Flawless Sapphire"
     ]
    },
    {
@@ -167773,12 +168202,84 @@
     ]
    },
    {
+    "name": "2023 Flawless Emerald",
+    "printRun": null,
+    "odds": null,
+    "seen": 21,
+    "spellings": [
+     "2023 Flawless Emerald"
+    ]
+   },
+   {
+    "name": "2023 Flawless Platinum",
+    "printRun": null,
+    "odds": null,
+    "seen": 20,
+    "spellings": [
+     "2023 Flawless Platinum"
+    ]
+   },
+   {
+    "name": "2023 Flawless Sapphire",
+    "printRun": null,
+    "odds": null,
+    "seen": 20,
+    "spellings": [
+     "2023 Flawless Sapphire"
+    ]
+   },
+   {
+    "name": "2023 Flawless Ruby",
+    "printRun": null,
+    "odds": null,
+    "seen": 18,
+    "spellings": [
+     "2023 Flawless Ruby"
+    ]
+   },
+   {
+    "name": "2023 Flawless Silver",
+    "printRun": null,
+    "odds": null,
+    "seen": 18,
+    "spellings": [
+     "2023 Flawless Silver"
+    ]
+   },
+   {
+    "name": "2022 Flawless",
+    "printRun": null,
+    "odds": null,
+    "seen": 16,
+    "spellings": [
+     "2022 Flawless"
+    ]
+   },
+   {
+    "name": "2020 Flawless",
+    "printRun": null,
+    "odds": null,
+    "seen": 13,
+    "spellings": [
+     "2020 Flawless"
+    ]
+   },
+   {
     "name": "Gold",
     "printRun": null,
     "odds": null,
     "seen": 13,
     "spellings": [
      "Gold"
+    ]
+   },
+   {
+    "name": "2022 Flawless Sapphire",
+    "printRun": null,
+    "odds": null,
+    "seen": 11,
+    "spellings": [
+     "2022 Flawless Sapphire"
     ]
    },
    {
@@ -167791,12 +168292,84 @@
     ]
    },
    {
+    "name": "2022 Flawless Emerald",
+    "printRun": null,
+    "odds": null,
+    "seen": 9,
+    "spellings": [
+     "2022 Flawless Emerald"
+    ]
+   },
+   {
+    "name": "2022 Flawless Ruby",
+    "printRun": null,
+    "odds": null,
+    "seen": 9,
+    "spellings": [
+     "2022 Flawless Ruby"
+    ]
+   },
+   {
+    "name": "2022 Flawless Silver",
+    "printRun": null,
+    "odds": null,
+    "seen": 9,
+    "spellings": [
+     "2022 Flawless Silver"
+    ]
+   },
+   {
     "name": "2024 Flawless Bronze",
     "printRun": null,
     "odds": null,
     "seen": 9,
     "spellings": [
      "2024 Flawless Bronze"
+    ]
+   },
+   {
+    "name": "2024 Rookie",
+    "printRun": null,
+    "odds": null,
+    "seen": 9,
+    "spellings": [
+     "2024 Rookie"
+    ]
+   },
+   {
+    "name": "2022 Flawless Platinum",
+    "printRun": null,
+    "odds": null,
+    "seen": 8,
+    "spellings": [
+     "2022 Flawless Platinum"
+    ]
+   },
+   {
+    "name": "2021 Flawless",
+    "printRun": null,
+    "odds": null,
+    "seen": 7,
+    "spellings": [
+     "2021 Flawless"
+    ]
+   },
+   {
+    "name": "2024",
+    "printRun": null,
+    "odds": null,
+    "seen": 7,
+    "spellings": [
+     "2024"
+    ]
+   },
+   {
+    "name": "2023",
+    "printRun": null,
+    "odds": null,
+    "seen": 6,
+    "spellings": [
+     "2023"
     ]
    },
    {
@@ -167953,6 +168526,33 @@
     ]
    },
    {
+    "name": "2021 Flawless Emerald",
+    "printRun": null,
+    "odds": null,
+    "seen": 3,
+    "spellings": [
+     "2021 Flawless Emerald"
+    ]
+   },
+   {
+    "name": "2021 Flawless Ruby",
+    "printRun": null,
+    "odds": null,
+    "seen": 3,
+    "spellings": [
+     "2021 Flawless Ruby"
+    ]
+   },
+   {
+    "name": "2021 Flawless Sapphire",
+    "printRun": null,
+    "odds": null,
+    "seen": 3,
+    "spellings": [
+     "2021 Flawless Sapphire"
+    ]
+   },
+   {
     "name": "2023 Flawless Distinguished",
     "printRun": null,
     "odds": null,
@@ -168004,6 +168604,15 @@
     "seen": 3,
     "spellings": [
      "2023 Flawless Distinguished Silver"
+    ]
+   },
+   {
+    "name": "2023 Rookie",
+    "printRun": null,
+    "odds": null,
+    "seen": 3,
+    "spellings": [
+     "2023 Rookie"
     ]
    },
    {
@@ -168076,6 +168685,24 @@
     "seen": 2,
     "spellings": [
      "2020 Flawless Sapphire"
+    ]
+   },
+   {
+    "name": "2021 Flawless Platinum",
+    "printRun": null,
+    "odds": null,
+    "seen": 2,
+    "spellings": [
+     "2021 Flawless Platinum"
+    ]
+   },
+   {
+    "name": "2021 Flawless Silver",
+    "printRun": null,
+    "odds": null,
+    "seen": 2,
+    "spellings": [
+     "2021 Flawless Silver"
     ]
    },
    {
@@ -168538,24 +169165,17 @@
     "children": [
      "2020",
      "2020 Emerald",
-     "2020 Flawless",
      "2020 Platinum",
      "2020 Ruby",
      "2020 Sapphire"
     ],
     "categories": [
-     "auto-2020-flawless-patch-autographs",
      "insert-2020-flawless-flawless-achievements",
      "insert-2020-flawless-flawless-achievements-emerald",
      "insert-2020-flawless-flawless-achievements-platinum",
      "insert-2020-flawless-flawless-achievements-ruby",
      "insert-2020-flawless-flawless-achievements-sapphire",
-     "insert-2020-flawless-flawless-duals-platinum",
-     "insert-2020-flawless-laundry-tag-signatures",
-     "insert-2020-flawless-shield-signatures",
-     "insert-2020-flawless-signature-gems-platinum",
-     "insert-2020-flawless-super-bowl-gems-platinum",
-     "insert-2020-flawless-symbolic-signatures"
+     "insert-2020-flawless-flawless-duals-platinum"
     ]
    },
    {
@@ -168565,41 +169185,19 @@
      "2021",
      "2021 Emerald",
      "2021 Eminence NFL Diamond",
-     "2021 Flawless",
-     "2021 Flawless Emerald",
-     "2021 Flawless Platinum",
-     "2021 Flawless Ruby",
-     "2021 Flawless Sapphire",
-     "2021 Flawless Silver",
      "2021 Platinum",
      "2021 Ruby",
      "2021 Sapphire",
      "2021 Silver"
     ],
     "categories": [
-     "auto-2021-flawless-patch-autographs",
-     "auto-2021-flawless-patch-autographs-emerald",
-     "auto-2021-flawless-patch-autographs-platinum",
-     "auto-2021-flawless-patch-autographs-ruby",
-     "auto-2021-flawless-patch-autographs-sapphire",
-     "auto-2021-flawless-patch-autographs-silver",
      "insert-2021-eminence-nfl-shield-diamonds-signatures",
      "insert-2021-flawless-flawless-flyers",
      "insert-2021-flawless-flawless-flyers-emerald",
      "insert-2021-flawless-flawless-flyers-platinum",
      "insert-2021-flawless-flawless-flyers-ruby",
      "insert-2021-flawless-flawless-flyers-sapphire",
-     "insert-2021-flawless-flawless-flyers-silver",
-     "insert-2021-flawless-greats",
-     "insert-2021-flawless-honored-ink",
-     "insert-2021-flawless-honored-ink-emerald",
-     "insert-2021-flawless-honored-ink-platinum",
-     "insert-2021-flawless-honored-ink-ruby",
-     "insert-2021-flawless-honored-ink-sapphire",
-     "insert-2021-flawless-honored-ink-silver",
-     "insert-2021-flawless-laundry-tag-signatures",
-     "insert-2021-flawless-shield-signatures",
-     "insert-2021-flawless-symbolic-signatures"
+     "insert-2021-flawless-flawless-flyers-silver"
     ]
    },
    {
@@ -168608,7 +169206,6 @@
     "children": [
      "2022",
      "2022 Emerald",
-     "2022 Flawless",
      "2022 Flawless 3x",
      "2022 Flawless 3x Emerald",
      "2022 Flawless 3x Gold and Ruby Efoilution",
@@ -168618,12 +169215,7 @@
      "2022 Flawless 3x Silver",
      "2022 Flawless 3x Sterling and Gold Efoilution",
      "2022 Flawless 3x Sterling and Sapphire Efoilution",
-     "2022 Flawless Emerald",
      "2022 Flawless Gold and Ruby Efoilution",
-     "2022 Flawless Platinum",
-     "2022 Flawless Ruby",
-     "2022 Flawless Sapphire",
-     "2022 Flawless Silver",
      "2022 Flawless Sterling and Gold Efoilution",
      "2022 Flawless Sterling and Sapphire Efoilution",
      "2022 Gold and Ruby Efoilution",
@@ -168636,12 +169228,6 @@
      "2022 Sterling and Sapphire Efoilution"
     ],
     "categories": [
-     "auto-2022-flawless-patch-autographs",
-     "auto-2022-flawless-patch-autographs-emerald",
-     "auto-2022-flawless-patch-autographs-platinum",
-     "auto-2022-flawless-patch-autographs-ruby",
-     "auto-2022-flawless-patch-autographs-sapphire",
-     "auto-2022-flawless-patch-autographs-silver",
      "insert-2022-flawless-champions-3x-signatures",
      "insert-2022-flawless-champions-3x-signatures-emerald",
      "insert-2022-flawless-champions-3x-signatures-gold-and-ruby-efoilution",
@@ -168651,13 +169237,7 @@
      "insert-2022-flawless-champions-3x-signatures-silver",
      "insert-2022-flawless-champions-3x-signatures-sterling-and-gold-efoilution",
      "insert-2022-flawless-champions-3x-signatures-sterling-and-sapphire-efoilution",
-     "insert-2022-flawless-champions-signatures",
-     "insert-2022-flawless-champions-signatures-emerald",
      "insert-2022-flawless-champions-signatures-gold-and-ruby-efoilution",
-     "insert-2022-flawless-champions-signatures-platinum",
-     "insert-2022-flawless-champions-signatures-ruby",
-     "insert-2022-flawless-champions-signatures-sapphire",
-     "insert-2022-flawless-champions-signatures-silver",
      "insert-2022-flawless-champions-signatures-sterling-and-gold-efoilution",
      "insert-2022-flawless-champions-signatures-sterling-and-sapphire-efoilution",
      "insert-2022-flawless-flawless-flyers",
@@ -168675,38 +169255,14 @@
      "insert-2022-flawless-flawless-frame-signatures-silver",
      "insert-2022-flawless-flawless-frame-signatures-sterling-and-gold-efoilution",
      "insert-2022-flawless-flawless-frame-signatures-sterling-and-sapphire-efoilution",
-     "insert-2022-flawless-greats",
-     "insert-2022-flawless-greats-emerald",
-     "insert-2022-flawless-greats-platinum",
-     "insert-2022-flawless-greats-ruby",
-     "insert-2022-flawless-greats-sapphire",
-     "insert-2022-flawless-greats-silver",
-     "insert-2022-flawless-honored-ink",
-     "insert-2022-flawless-honored-ink-emerald",
-     "insert-2022-flawless-honored-ink-platinum",
-     "insert-2022-flawless-honored-ink-ruby",
-     "insert-2022-flawless-honored-ink-sapphire",
-     "insert-2022-flawless-honored-ink-silver",
-     "insert-2022-flawless-laundry-tag-signatures",
-     "insert-2022-flawless-rookie-frame-signatures-platinum",
-     "insert-2022-flawless-rookie-gems-signatures",
-     "insert-2022-flawless-shield-signatures",
-     "insert-2022-flawless-star-swatch-signatures",
-     "insert-2022-flawless-star-swatch-signatures-emerald",
-     "insert-2022-flawless-star-swatch-signatures-platinum",
-     "insert-2022-flawless-star-swatch-signatures-ruby",
-     "insert-2022-flawless-star-swatch-signatures-sapphire",
-     "insert-2022-flawless-star-swatch-signatures-silver",
-     "insert-2022-flawless-symbolic-signatures"
+     "insert-2022-flawless-rookie-frame-signatures-platinum"
     ]
    },
    {
     "root": "2023",
     "rootKey": "2023",
     "children": [
-     "2023",
      "2023 Emerald",
-     "2023 Flawless",
      "2023 Flawless 2x",
      "2023 Flawless 2x Emerald",
      "2023 Flawless 2x Platinum",
@@ -168720,13 +169276,7 @@
      "2023 Flawless 3x Sapphire",
      "2023 Flawless 3x Silver",
      "2023 Flawless Diamond",
-     "2023 Flawless Emerald",
-     "2023 Flawless Platinum",
-     "2023 Flawless Ruby",
-     "2023 Flawless Sapphire",
-     "2023 Flawless Silver",
      "2023 Platinum",
-     "2023 Rookie",
      "2023 Rookie Emerald",
      "2023 Rookie Platinum",
      "2023 Rookie Ruby",
@@ -168737,33 +169287,6 @@
      "2023 Silver"
     ],
     "categories": [
-     "auto-2023-flawless-flawless-cleat-autographs",
-     "auto-2023-flawless-patch-autographs",
-     "auto-2023-flawless-patch-autographs-emerald",
-     "auto-2023-flawless-patch-autographs-platinum",
-     "auto-2023-flawless-patch-autographs-ruby",
-     "auto-2023-flawless-patch-autographs-sapphire",
-     "auto-2023-flawless-patch-autographs-silver",
-     "auto-2023-flawless-rookie-cleat-autographs",
-     "auto-2023-flawless-rookie-patch-autographs",
-     "auto-2023-flawless-rookie-patch-autographs-emerald",
-     "auto-2023-flawless-rookie-patch-autographs-platinum",
-     "auto-2023-flawless-rookie-patch-autographs-ruby",
-     "auto-2023-flawless-rookie-patch-autographs-sapphire",
-     "auto-2023-flawless-rookie-patch-autographs-silver",
-     "auto-2023-flawless-rookie-spike-autographs",
-     "insert-2023-flawless-all-pro-ink",
-     "insert-2023-flawless-all-pro-ink-emerald",
-     "insert-2023-flawless-all-pro-ink-platinum",
-     "insert-2023-flawless-all-pro-ink-ruby",
-     "insert-2023-flawless-all-pro-ink-sapphire",
-     "insert-2023-flawless-all-pro-ink-silver",
-     "insert-2023-flawless-career-progressions",
-     "insert-2023-flawless-career-progressions-emerald",
-     "insert-2023-flawless-career-progressions-platinum",
-     "insert-2023-flawless-career-progressions-ruby",
-     "insert-2023-flawless-career-progressions-sapphire",
-     "insert-2023-flawless-career-progressions-silver",
      "insert-2023-flawless-champions-2x-signatures",
      "insert-2023-flawless-champions-2x-signatures-emerald",
      "insert-2023-flawless-champions-2x-signatures-platinum",
@@ -168776,73 +169299,35 @@
      "insert-2023-flawless-champions-3x-signatures-ruby",
      "insert-2023-flawless-champions-3x-signatures-sapphire",
      "insert-2023-flawless-champions-3x-signatures-silver",
-     "insert-2023-flawless-flawless-achievements",
      "insert-2023-flawless-flawless-achievements-emerald",
      "insert-2023-flawless-flawless-achievements-platinum",
      "insert-2023-flawless-flawless-achievements-ruby",
      "insert-2023-flawless-flawless-achievements-sapphire",
      "insert-2023-flawless-flawless-achievements-silver",
-     "insert-2023-flawless-flawless-flyers",
      "insert-2023-flawless-flawless-flyers-emerald",
      "insert-2023-flawless-flawless-flyers-platinum",
      "insert-2023-flawless-flawless-flyers-ruby",
      "insert-2023-flawless-flawless-flyers-sapphire",
      "insert-2023-flawless-flawless-flyers-silver",
-     "insert-2023-flawless-flawless-frame-signatures",
      "insert-2023-flawless-flawless-frame-signatures-emerald",
      "insert-2023-flawless-flawless-frame-signatures-platinum",
      "insert-2023-flawless-flawless-frame-signatures-ruby",
      "insert-2023-flawless-flawless-frame-signatures-sapphire",
      "insert-2023-flawless-flawless-frame-signatures-silver",
-     "insert-2023-flawless-greats",
-     "insert-2023-flawless-greats-emerald",
-     "insert-2023-flawless-greats-platinum",
-     "insert-2023-flawless-greats-ruby",
-     "insert-2023-flawless-greats-sapphire",
-     "insert-2023-flawless-greats-silver",
-     "insert-2023-flawless-laundry-tag-signatures",
-     "insert-2023-flawless-rookie-debut-signatures",
-     "insert-2023-flawless-rookie-debut-signatures-emerald",
-     "insert-2023-flawless-rookie-debut-signatures-platinum",
-     "insert-2023-flawless-rookie-debut-signatures-ruby",
-     "insert-2023-flawless-rookie-debut-signatures-sapphire",
-     "insert-2023-flawless-rookie-debut-signatures-silver",
-     "insert-2023-flawless-rookie-frame-signatures",
      "insert-2023-flawless-rookie-frame-signatures-emerald",
      "insert-2023-flawless-rookie-frame-signatures-platinum",
      "insert-2023-flawless-rookie-frame-signatures-ruby",
      "insert-2023-flawless-rookie-frame-signatures-sapphire",
      "insert-2023-flawless-rookie-frame-signatures-silver",
-     "insert-2023-flawless-rookie-gems-signatures",
-     "insert-2023-flawless-rookie-gems-signatures-diamond",
-     "insert-2023-flawless-rookie-gems-signatures-emerald",
-     "insert-2023-flawless-rookie-gems-signatures-platinum",
-     "insert-2023-flawless-rookie-gems-signatures-sapphire",
-     "insert-2023-flawless-shield-signatures",
-     "insert-2023-flawless-signature-gems-platinum",
-     "insert-2023-flawless-signature-gloves",
-     "insert-2023-flawless-signature-gloves-emerald",
-     "insert-2023-flawless-signature-gloves-platinum",
-     "insert-2023-flawless-signature-gloves-ruby",
-     "insert-2023-flawless-signature-gloves-sapphire",
-     "insert-2023-flawless-signature-gloves-silver",
-     "insert-2023-flawless-star-swatch-signatures",
-     "insert-2023-flawless-star-swatch-signatures-emerald",
-     "insert-2023-flawless-star-swatch-signatures-platinum",
-     "insert-2023-flawless-star-swatch-signatures-ruby",
-     "insert-2023-flawless-star-swatch-signatures-sapphire",
-     "insert-2023-flawless-star-swatch-signatures-silver",
-     "insert-2023-flawless-symbolic-signatures"
+     "insert-2023-flawless-rookie-gems-signatures-diamond"
     ]
    },
    {
     "root": "2024",
     "rootKey": "2024",
     "children": [
-     "2024",
      "2024 Emerald",
      "2024 Eminence NFL Diamond",
-     "2024 Flawless",
      "2024 Flawless 2x",
      "2024 Flawless 2x Emerald",
      "2024 Flawless 2x Platinum",
@@ -168856,13 +169341,7 @@
      "2024 Flawless 3x Sapphire",
      "2024 Flawless 3x Silver",
      "2024 Flawless Diamond",
-     "2024 Flawless Emerald",
-     "2024 Flawless Platinum",
-     "2024 Flawless Ruby",
-     "2024 Flawless Sapphire",
-     "2024 Flawless Silver",
      "2024 Platinum",
-     "2024 Rookie",
      "2024 Rookie Emerald",
      "2024 Rookie Platinum",
      "2024 Rookie Ruby",
@@ -168873,28 +169352,7 @@
      "2024 Silver"
     ],
     "categories": [
-     "auto-2024-flawless-flawless-spike-autographs",
-     "auto-2024-flawless-patch-autographs",
-     "auto-2024-flawless-patch-autographs-emerald",
-     "auto-2024-flawless-patch-autographs-platinum",
-     "auto-2024-flawless-patch-autographs-ruby",
-     "auto-2024-flawless-patch-autographs-sapphire",
-     "auto-2024-flawless-patch-autographs-silver",
-     "auto-2024-flawless-rookie-cleat-autographs",
-     "auto-2024-flawless-rookie-spike-autographs",
      "insert-2024-eminence-nfl-shield-diamonds-signatures",
-     "insert-2024-flawless-all-pro-ink",
-     "insert-2024-flawless-all-pro-ink-emerald",
-     "insert-2024-flawless-all-pro-ink-platinum",
-     "insert-2024-flawless-all-pro-ink-ruby",
-     "insert-2024-flawless-all-pro-ink-sapphire",
-     "insert-2024-flawless-all-pro-ink-silver",
-     "insert-2024-flawless-career-progressions",
-     "insert-2024-flawless-career-progressions-emerald",
-     "insert-2024-flawless-career-progressions-platinum",
-     "insert-2024-flawless-career-progressions-ruby",
-     "insert-2024-flawless-career-progressions-sapphire",
-     "insert-2024-flawless-career-progressions-silver",
      "insert-2024-flawless-champions-2x-signatures",
      "insert-2024-flawless-champions-2x-signatures-emerald",
      "insert-2024-flawless-champions-2x-signatures-platinum",
@@ -168907,60 +169365,22 @@
      "insert-2024-flawless-champions-3x-signatures-ruby",
      "insert-2024-flawless-champions-3x-signatures-sapphire",
      "insert-2024-flawless-champions-3x-signatures-silver",
-     "insert-2024-flawless-champions-signatures",
-     "insert-2024-flawless-champions-signatures-emerald",
-     "insert-2024-flawless-champions-signatures-platinum",
-     "insert-2024-flawless-champions-signatures-ruby",
-     "insert-2024-flawless-champions-signatures-sapphire",
-     "insert-2024-flawless-champions-signatures-silver",
-     "insert-2024-flawless-flawless-achievements",
      "insert-2024-flawless-flawless-achievements-emerald",
      "insert-2024-flawless-flawless-achievements-platinum",
      "insert-2024-flawless-flawless-achievements-ruby",
      "insert-2024-flawless-flawless-achievements-sapphire",
      "insert-2024-flawless-flawless-achievements-silver",
-     "insert-2024-flawless-flawless-duals-platinum",
-     "insert-2024-flawless-flawless-frame-signatures",
      "insert-2024-flawless-flawless-frame-signatures-emerald",
      "insert-2024-flawless-flawless-frame-signatures-platinum",
      "insert-2024-flawless-flawless-frame-signatures-ruby",
      "insert-2024-flawless-flawless-frame-signatures-sapphire",
      "insert-2024-flawless-flawless-frame-signatures-silver",
-     "insert-2024-flawless-greats",
-     "insert-2024-flawless-greats-emerald",
-     "insert-2024-flawless-greats-platinum",
-     "insert-2024-flawless-greats-ruby",
-     "insert-2024-flawless-greats-sapphire",
-     "insert-2024-flawless-greats-silver",
-     "insert-2024-flawless-rookie-frame-signatures",
      "insert-2024-flawless-rookie-frame-signatures-emerald",
      "insert-2024-flawless-rookie-frame-signatures-platinum",
      "insert-2024-flawless-rookie-frame-signatures-ruby",
      "insert-2024-flawless-rookie-frame-signatures-sapphire",
      "insert-2024-flawless-rookie-frame-signatures-silver",
-     "insert-2024-flawless-rookie-gems-signatures",
-     "insert-2024-flawless-rookie-gems-signatures-diamond",
-     "insert-2024-flawless-rookie-gems-signatures-emerald",
-     "insert-2024-flawless-rookie-gems-signatures-platinum",
-     "insert-2024-flawless-rookie-gems-signatures-sapphire",
-     "insert-2024-flawless-rookie-shadow-signatures",
-     "insert-2024-flawless-rookie-shadow-signatures-emerald",
-     "insert-2024-flawless-rookie-shadow-signatures-platinum",
-     "insert-2024-flawless-rookie-shadow-signatures-ruby",
-     "insert-2024-flawless-rookie-shadow-signatures-sapphire",
-     "insert-2024-flawless-rookie-shadow-signatures-silver",
-     "insert-2024-flawless-signature-gems-platinum",
-     "insert-2024-flawless-signature-gloves",
-     "insert-2024-flawless-signature-gloves-emerald",
-     "insert-2024-flawless-signature-gloves-platinum",
-     "insert-2024-flawless-signature-gloves-ruby",
-     "insert-2024-flawless-signature-gloves-silver",
-     "insert-2024-flawless-star-swatch-signatures",
-     "insert-2024-flawless-star-swatch-signatures-emerald",
-     "insert-2024-flawless-star-swatch-signatures-platinum",
-     "insert-2024-flawless-star-swatch-signatures-ruby",
-     "insert-2024-flawless-star-swatch-signatures-sapphire",
-     "insert-2024-flawless-star-swatch-signatures-silver"
+     "insert-2024-flawless-rookie-gems-signatures-diamond"
     ]
    },
    {
@@ -177127,6 +177547,15 @@
     ]
    },
    {
+    "name": "NFL Shield",
+    "printRun": 1,
+    "odds": null,
+    "seen": 127,
+    "spellings": [
+     "NFL Shield"
+    ]
+   },
+   {
     "name": "Gold",
     "printRun": 35,
     "odds": null,
@@ -180659,63 +181088,105 @@
     ]
    },
    {
-    "root": "NFL",
-    "rootKey": "nfl",
+    "root": "NFL 100 Signature",
+    "rootKey": "nfl 100",
     "children": [
-     "NFL 100 Signature",
+     "NFL 100 Signature"
+    ],
+    "categories": [
+     "insert-nfl-100-signatures"
+    ]
+   },
+   {
+    "root": "NFL Game Gear",
+    "rootKey": "nfl game gear",
+    "children": [
      "NFL Game Gear",
      "NFL Game Gear Prime Holo Gold",
      "NFL Game Gear Prime Holo Silver",
-     "NFL Game Gear Super Prime",
+     "NFL Game Gear Super Prime"
+    ],
+    "categories": [
+     "insert-nfl-game-gear",
+     "insert-nfl-game-gear-prime-holo-gold",
+     "insert-nfl-game-gear-prime-holo-silver",
+     "insert-nfl-game-gear-super-prime"
+    ]
+   },
+   {
+    "root": "NFL Gear Combo Materials",
+    "rootKey": "nfl gear combo",
+    "children": [
      "NFL Gear Combo Material",
      "NFL Gear Combo Materials Holo Gold",
      "NFL Gear Combo Materials Holo Silver",
-     "NFL Gear Combo Materials Laundry Tag",
+     "NFL Gear Combo Materials Laundry Tag"
+    ],
+    "categories": [
+     "insert-nfl-gear-combo-materials",
+     "insert-nfl-gear-combo-materials-holo-gold",
+     "insert-nfl-gear-combo-materials-holo-silver",
+     "insert-nfl-gear-combo-materials-laundry-tags"
+    ]
+   },
+   {
+    "root": "NFL Gear Quad Materials",
+    "rootKey": "nfl gear quad",
+    "children": [
      "NFL Gear Quad Material",
      "NFL Gear Quad Materials Holo Gold",
      "NFL Gear Quad Materials Holo Silver",
      "NFL Gear Quad Materials Laundry Tag Brand Logo",
      "NFL Gear Quad Materials Laundry Tag NFL Player'",
-     "NFL Gear Quad Materials Laundry Tag NFL Shield",
-     "NFL Gear Trio Material",
-     "NFL Gear Trio Materials Holo Gold",
-     "NFL Gear Trio Materials Holo Silver",
-     "NFL Gear Trio Materials Laundry Tag Brand Logo",
-     "NFL Gear Trio Materials Laundry Tag NFL Player'",
-     "NFL Gear Trio Materials Laundry Tag NFL Shield",
-     "NFL Greatest Signature",
-     "NFL Shield",
-     "NFL Shields Dual"
+     "NFL Gear Quad Materials Laundry Tag NFL Shield"
     ],
     "categories": [
-     "auto-2025-immaculate-collection-premium-patch-autographs-nfl-shield",
-     "auto-2025-immaculate-collection-rookie-patch-autographs-nfl-shield",
-     "auto-crossover-rookie-patch-autographs-nfl-shield",
-     "insert-nfl-100-signatures",
-     "insert-nfl-game-gear",
-     "insert-nfl-game-gear-prime-holo-gold",
-     "insert-nfl-game-gear-prime-holo-silver",
-     "insert-nfl-game-gear-super-prime",
-     "insert-nfl-gear-combo-materials",
-     "insert-nfl-gear-combo-materials-holo-gold",
-     "insert-nfl-gear-combo-materials-holo-silver",
-     "insert-nfl-gear-combo-materials-laundry-tags",
      "insert-nfl-gear-quad-materials",
      "insert-nfl-gear-quad-materials-holo-gold",
      "insert-nfl-gear-quad-materials-holo-silver",
      "insert-nfl-gear-quad-materials-laundry-tag-brand-logo",
      "insert-nfl-gear-quad-materials-laundry-tag-nfl-players",
-     "insert-nfl-gear-quad-materials-laundry-tag-nfl-shield",
+     "insert-nfl-gear-quad-materials-laundry-tag-nfl-shield"
+    ]
+   },
+   {
+    "root": "NFL Gear Trio Materials",
+    "rootKey": "nfl gear trio",
+    "children": [
+     "NFL Gear Trio Material",
+     "NFL Gear Trio Materials Holo Gold",
+     "NFL Gear Trio Materials Holo Silver",
+     "NFL Gear Trio Materials Laundry Tag Brand Logo",
+     "NFL Gear Trio Materials Laundry Tag NFL Player'",
+     "NFL Gear Trio Materials Laundry Tag NFL Shield"
+    ],
+    "categories": [
      "insert-nfl-gear-trio-materials",
      "insert-nfl-gear-trio-materials-holo-gold",
      "insert-nfl-gear-trio-materials-holo-silver",
      "insert-nfl-gear-trio-materials-laundry-tag-brand-logo",
      "insert-nfl-gear-trio-materials-laundry-tag-nfl-players",
-     "insert-nfl-gear-trio-materials-laundry-tag-nfl-shield",
-     "insert-nfl-greatest-signatures",
-     "insert-nfl-shields",
-     "insert-nfl-shields-dual",
-     "insert-rookie-patches-nfl-shield"
+     "insert-nfl-gear-trio-materials-laundry-tag-nfl-shield"
+    ]
+   },
+   {
+    "root": "NFL Greatest Signature",
+    "rootKey": "nfl greatest",
+    "children": [
+     "NFL Greatest Signature"
+    ],
+    "categories": [
+     "insert-nfl-greatest-signatures"
+    ]
+   },
+   {
+    "root": "NFL Shields Dual",
+    "rootKey": "nfl shields dual",
+    "children": [
+     "NFL Shields Dual"
+    ],
+    "categories": [
+     "insert-nfl-shields-dual"
     ]
    },
    {
@@ -198538,6 +199009,15 @@
   "setKey": "ultimate-collection",
   "parallels": [
    {
+    "name": "Gold Parallel",
+    "printRun": 35,
+    "odds": null,
+    "seen": 273,
+    "spellings": [
+     "Gold Parallel"
+    ]
+   },
+   {
     "name": "Gold",
     "printRun": 35,
     "odds": null,
@@ -198807,26 +199287,6 @@
      "insert-gold-auto-parallel",
      "insert-ultimate-introductions-gold-auto-parallel",
      "insert-ultimate-introductions-gold-auto-parallel-showcase"
-    ]
-   },
-   {
-    "root": "Gold Parallel",
-    "rootKey": "gold parallel",
-    "children": [
-     "Gold Parallel"
-    ],
-    "categories": [
-     "auto-2022-update-1999-00-ultimate-victory-retro-autographs-gold-parallel",
-     "insert-2003-04-retro-signatures-gold-parallel",
-     "insert-2021-update-2000-01-ultimate-signatures-retro-gold-parallel",
-     "insert-2021-update-2000-01-ultimate-signatures-retro-gold-parallel-rookies",
-     "insert-2021-update-ultimate-emblems-rookies-auto-gold-parallel",
-     "insert-2022-update-ultimate-emblems-auto-gold-parallel",
-     "insert-2022-update-ultimate-signatures-gold-parallel",
-     "insert-gold-parallel",
-     "insert-ultimate-introductions-gold-parallel",
-     "insert-ultimate-introductions-gold-parallel-showcase",
-     "insert-ultimate-signatures-gold-parallel"
     ]
    },
    {
@@ -206866,12 +207326,48 @@
   "setKey": "upper-deck-credentials",
   "parallels": [
    {
+    "name": "Green Parallel",
+    "printRun": 25,
+    "odds": null,
+    "seen": 211,
+    "spellings": [
+     "Green Parallel"
+    ]
+   },
+   {
     "name": "Red Parallel",
     "printRun": 99,
     "odds": null,
     "seen": 165,
     "spellings": [
      "Red Parallel"
+    ]
+   },
+   {
+    "name": "Blue Parallel",
+    "printRun": 299,
+    "odds": null,
+    "seen": 115,
+    "spellings": [
+     "Blue Parallel"
+    ]
+   },
+   {
+    "name": "Black Parallel",
+    "printRun": 1,
+    "odds": null,
+    "seen": 113,
+    "spellings": [
+     "Black Parallel"
+    ]
+   },
+   {
+    "name": "Purple Parallel",
+    "printRun": 10,
+    "odds": null,
+    "seen": 107,
+    "spellings": [
+     "Purple Parallel"
     ]
    },
    {
@@ -207016,36 +207512,6 @@
     ]
    },
    {
-    "root": "Black Parallel",
-    "rootKey": "black parallel",
-    "children": [
-     "Black Parallel"
-    ],
-    "categories": [
-     "auto-2022-23-update-dual-ticket-access-autographs-black-parallel",
-     "insert-2021-22-update-retro-ticket-access-auto-black-parallel",
-     "insert-2023-24-update-dual-ticket-access-auto-black-parallel",
-     "insert-2023-24-update-ticket-access-auto-black-parallel",
-     "insert-black-parallel"
-    ]
-   },
-   {
-    "root": "Blue Parallel",
-    "rootKey": "blue parallel",
-    "children": [
-     "Blue Parallel"
-    ],
-    "categories": [
-     "auto-2022-23-update-debut-ticket-access-autographs-blue-parallel-level-2",
-     "auto-2022-23-update-dual-ticket-access-autographs-blue-parallel",
-     "auto-2022-23-update-horizontal-debut-ticket-access-autographs-blue-parallel-level-2",
-     "insert-2021-22-update-retro-ticket-access-auto-blue-parallel",
-     "insert-2023-24-update-dual-ticket-access-auto-blue-parallel",
-     "insert-2023-24-update-ticket-access-auto-blue-parallel",
-     "insert-blue-parallel"
-    ]
-   },
-   {
     "root": "Gold Parallel",
     "rootKey": "gold parallel",
     "children": [
@@ -207053,26 +207519,6 @@
     ],
     "categories": [
      "insert-gold-parallel"
-    ]
-   },
-   {
-    "root": "Green Parallel",
-    "rootKey": "green parallel",
-    "children": [
-     "Green Parallel"
-    ],
-    "categories": [
-     "auto-2022-23-update-dual-ticket-access-autographs-green-parallel",
-     "auto-2022-23-update-horizontal-debut-ticket-access-autographs-green-parallel-level-2",
-     "insert-2021-22-update-retro-ticket-access-auto-green-parallel",
-     "insert-2023-24-update-ticket-access-auto-green-parallel",
-     "insert-cheered-to-the-rafters-green-parallel",
-     "insert-front-row-talent-green-parallel",
-     "insert-frozen-fight-green-parallel",
-     "insert-green-parallel",
-     "insert-jumping-on-the-ice-green-parallel",
-     "insert-milestone-pucks-green-parallel",
-     "insert-thats-a-hatty-green-parallel"
     ]
    },
    {
@@ -207108,18 +207554,6 @@
     ],
     "categories": [
      "insert-purple-auto-parallel"
-    ]
-   },
-   {
-    "root": "Purple Parallel",
-    "rootKey": "purple parallel",
-    "children": [
-     "Purple Parallel"
-    ],
-    "categories": [
-     "auto-2022-23-update-horizontal-debut-ticket-access-autographs-purple-parallel-level-2",
-     "insert-2023-24-update-ticket-access-auto-purple-parallel",
-     "insert-purple-parallel"
     ]
    }
   ]
@@ -213666,12 +214100,57 @@
     ]
    },
    {
+    "name": "Black Auto",
+    "printRun": 1,
+    "odds": null,
+    "seen": 1829,
+    "spellings": [
+     "Black Auto"
+    ]
+   },
+   {
+    "name": "Auto (Introductions - 1:5; Phenoms - 1:40)",
+    "printRun": null,
+    "odds": null,
+    "seen": 1757,
+    "spellings": [
+     "Auto (Introductions - 1:5; Phenoms - 1:40)"
+    ]
+   },
+   {
+    "name": "Gold Auto",
+    "printRun": 49,
+    "odds": null,
+    "seen": 1757,
+    "spellings": [
+     "Gold Auto"
+    ]
+   },
+   {
+    "name": "Purple Auto",
+    "printRun": 10,
+    "odds": null,
+    "seen": 1757,
+    "spellings": [
+     "Purple Auto"
+    ]
+   },
+   {
     "name": "Black",
     "printRun": 1,
     "odds": null,
     "seen": 93,
     "spellings": [
      "Black"
+    ]
+   },
+   {
+    "name": "Jumbo Patch",
+    "printRun": 10,
+    "odds": null,
+    "seen": 88,
+    "spellings": [
+     "Jumbo Patch"
     ]
    },
    {
@@ -213983,403 +214462,60 @@
     "rootKey": "auto",
     "children": [
      "Auto",
-     "Auto (Introductions - 1:5; Phenoms - 1:40)",
      "Auto Gold Parallel",
      "Auto Parallel"
     ],
     "categories": [
-     "insert-2015-update-2005-06-ultimate-rookies-auto-jersey-parallel",
-     "insert-2015-update-spectrum-silver-parallel-ultimate-rookies-auto-jersey",
-     "insert-2018-update-all-star-skills-shield-patch-auto",
-     "insert-2018-update-ultimate-icons-premium-materials-gold-auto-parallel",
-     "insert-2018-update-ultimate-materials-signatures",
-     "insert-2021-update-pro-threads",
-     "insert-2021-update-signature-material-laureates",
-     "insert-2021-update-ultimate-display-auto-jersey",
-     "insert-2021-update-ultimate-display-auto-patch-parallel",
-     "insert-2021-update-ultimate-display-auto-tag-parallel",
-     "insert-2021-update-ultimate-emblems-auto",
-     "insert-2021-update-ultimate-premium-material-signatures-parallel",
-     "insert-2022-update-auto-parallel-legends",
-     "insert-2022-update-signature-masterpieces",
-     "insert-2022-update-signature-material-laureates",
-     "insert-2022-update-ultimate-signatures",
-     "insert-2023-update-2003-04-retro-signatures-gold-parallel",
-     "insert-2023-update-base-set-ultimate-rookies-auto",
-     "insert-2023-update-debut-threads",
-     "insert-2023-update-la-collection-ultime-gold-spectrum-auto-patch-parallel",
-     "insert-2023-update-pro-threads",
-     "insert-2023-update-rookie-accents",
-     "insert-2023-update-shield-parallel-ultimate-rookies-auto",
-     "insert-2023-update-signature-masterpieces",
-     "insert-2023-update-signature-materials-gold-patch-parallel",
-     "insert-2023-update-signature-materials-jersey",
-     "insert-2023-update-ultimate-access-auto-patch",
-     "insert-2023-update-ultimate-emblems-auto",
-     "insert-2023-update-ultimate-emblems-gold-auto-parallel-rookies",
-     "insert-2023-update-ultimate-emblems-platinum-auto-parallel",
-     "insert-2023-update-ultimate-introductions-auto-parallel",
-     "insert-2023-update-ultimate-introductions-black-auto-parallel",
-     "insert-2023-update-ultimate-rookie-signatures",
-     "insert-2023-update-ultimate-signatures-gold-parallel",
-     "insert-2024-update-auto-parallel-legends",
-     "insert-2024-update-auto-patch-parallel-ultimate-rookies",
-     "insert-2024-update-debut-threads",
-     "insert-2024-update-epitome-of-the-nhl",
-     "insert-2024-update-jumbo-patch-parallel-ultimate-rookies-auto",
-     "insert-2024-update-pro-threads",
-     "insert-2024-update-rookie-signature-premium-materials",
-     "insert-2024-update-shield-patch-parallel-ultimate-rookies-auto",
-     "insert-2024-update-ultimate-access-patch-autos",
-     "insert-2024-update-ultimate-auto-shield-patches",
-     "insert-2024-update-ultimate-displays-black-tag-parallel",
-     "insert-2024-update-ultimate-displays-number-patch",
-     "insert-2024-update-ultimate-emblems-auto",
-     "insert-2024-update-ultimate-emblems-auto-rookies",
-     "insert-2024-update-ultimate-emblems-auto-rookies-gold-parallel",
-     "insert-2024-update-ultimate-emblems-auto-rookies-platinum-parallel",
-     "insert-2024-update-ultimate-heroes-black-tag-parallel",
-     "insert-2024-update-ultimate-heroes-patch",
-     "insert-2024-update-ultimate-introductions-auto-parallel",
-     "insert-2024-update-ultimate-introductions-gold-auto-parallel",
-     "insert-2024-update-ultimate-introductions-platinum-auto-parallel",
-     "insert-2024-update-ultimate-introductions-purple-auto-parallel",
-     "insert-2024-update-ultimate-material-signatures",
-     "insert-2024-update-ultimate-phenoms-auto-parallel",
-     "insert-2024-update-ultimate-phenoms-gold-auto-parallel",
-     "insert-2024-update-ultimate-phenoms-platinum-auto-parallel",
-     "insert-2024-update-ultimate-phenoms-purple-auto-parallel",
-     "insert-2024-update-ultimate-rookie-signatures",
-     "insert-2024-update-ultimate-signatures",
-     "insert-4-nations-face-off-puck-logo-patches",
      "insert-auto-gold-parallel",
      "insert-auto-gold-parallel-legends",
      "insert-auto-parallel",
-     "insert-auto-parallel-legends",
-     "insert-auto-patch-parallel-ultimate-rookies-auto",
-     "insert-base-set-legends",
-     "insert-base-set-ultimate-rookies",
      "insert-black-auto-parallel-legends",
-     "insert-black-parallel-legends",
-     "insert-debut-threads",
-     "insert-franchise-figures",
-     "insert-gold-parallel-legends",
-     "insert-jersey-parallel-ultimate-rookies",
-     "insert-jumbo-jersey-parallel-legends",
-     "insert-jumbo-patch-parallel-legends",
-     "insert-jumbo-patch-parallel-ultimate-rookies-auto",
-     "insert-patch-parallel-ultimate-rookies",
-     "insert-platinum-parallel-legends",
-     "insert-pro-threads",
-     "insert-purple-parallel-legends",
-     "insert-rookie-tandem-shield-patches",
-     "insert-shield-patch-parallel-legends",
-     "insert-shield-patch-parallel-ultimate-rookies-auto",
-     "insert-true-blues",
-     "insert-ulti-mates-jersey",
-     "insert-ulti-mates-patch-parallel",
-     "insert-ulti-mates-tag-parallel",
      "insert-ultimate-access-4-nations-face-off-auto-patch-parallel",
-     "insert-ultimate-access-4-nations-face-off-patch",
      "insert-ultimate-access-auto-patch-parallel",
-     "insert-ultimate-access-patch",
-     "insert-ultimate-apparel",
-     "insert-ultimate-apparel-auto-parallel",
-     "insert-ultimate-emblems",
-     "insert-ultimate-emblems-black-parallel",
-     "insert-ultimate-emblems-gold-parallel",
-     "insert-ultimate-emblems-rookies",
-     "insert-ultimate-emblems-rookies-black-parallel",
-     "insert-ultimate-foundations",
-     "insert-ultimate-heroes-auto-patch",
-     "insert-ultimate-heroes-auto-patch-black-parallel",
-     "insert-ultimate-inscriptions",
-     "insert-ultimate-introductions",
      "insert-ultimate-introductions-auto-parallel",
-     "insert-ultimate-materials-signatures",
-     "insert-ultimate-materials-signatures-rookies",
-     "insert-ultimate-materials-signatures-rookies-black-parallel",
-     "insert-ultimate-patches",
-     "insert-ultimate-phenoms",
-     "insert-ultimate-phenoms-auto-parallel",
-     "insert-ultimate-quad-materials-jersey",
-     "insert-ultimate-quad-materials-patch-parallel",
-     "insert-ultimate-quad-materials-tag-parallel",
-     "insert-ultimate-quad-signatures",
-     "insert-ultimate-shield-patch",
-     "insert-ultimate-shield-patch-auto",
-     "insert-ultimate-signatures",
-     "insert-ultimate-signatures-rookies",
-     "insert-ultimate-triple-signatures"
+     "insert-ultimate-phenoms-auto-parallel"
     ]
    },
    {
-    "root": "Black",
-    "rootKey": "black",
+    "root": "Black Auto Parallel",
+    "rootKey": "black auto parallel",
     "children": [
-     "Black Auto",
-     "Black Auto Parallel",
+     "Black Auto Parallel"
+    ],
+    "categories": [
+     "insert-black-auto-parallel",
+     "insert-ultimate-introductions-black-auto-parallel",
+     "insert-ultimate-phenoms-black-auto-parallel"
+    ]
+   },
+   {
+    "root": "Black Parallel",
+    "rootKey": "black parallel",
+    "children": [
      "Black Parallel"
     ],
     "categories": [
-     "auto-2018-update-ultimate-icons-premium-materials-copper-autographs-parallel",
-     "auto-2024-update-base-set-ultimate-rookies-autographs",
-     "auto-base-set-ultimate-rookies-autographs",
-     "insert-2015-update-2005-06-ultimate-rookies-auto-jersey-parallel",
-     "insert-2015-update-spectrum-silver-parallel-ultimate-rookies-auto-jersey",
-     "insert-2018-update-all-star-skills-shield-patch-auto",
-     "insert-2018-update-ultimate-icons-premium-materials-gold-auto-parallel",
-     "insert-2018-update-ultimate-materials-signatures",
-     "insert-2021-update-pro-threads",
-     "insert-2021-update-signature-material-laureates",
-     "insert-2021-update-ultimate-display-auto-jersey",
-     "insert-2021-update-ultimate-display-auto-patch-parallel",
-     "insert-2021-update-ultimate-display-auto-tag-parallel",
-     "insert-2021-update-ultimate-emblems-auto",
-     "insert-2021-update-ultimate-premium-material-signatures-parallel",
-     "insert-2022-update-auto-parallel-legends",
-     "insert-2022-update-signature-masterpieces",
-     "insert-2022-update-signature-material-laureates",
-     "insert-2022-update-ultimate-signatures",
-     "insert-2023-update-2003-04-retro-signatures-gold-parallel",
-     "insert-2023-update-base-set-ultimate-rookies-auto",
-     "insert-2023-update-debut-threads",
-     "insert-2023-update-la-collection-ultime-gold-spectrum-auto-patch-parallel",
-     "insert-2023-update-pro-threads",
-     "insert-2023-update-rookie-accents",
-     "insert-2023-update-shield-parallel-ultimate-rookies-auto",
-     "insert-2023-update-signature-masterpieces",
-     "insert-2023-update-signature-materials-gold-patch-parallel",
-     "insert-2023-update-signature-materials-jersey",
-     "insert-2023-update-ultimate-access-auto-patch",
-     "insert-2023-update-ultimate-emblems-auto",
-     "insert-2023-update-ultimate-emblems-gold-auto-parallel-rookies",
-     "insert-2023-update-ultimate-emblems-platinum-auto-parallel",
-     "insert-2023-update-ultimate-introductions-auto-parallel",
-     "insert-2023-update-ultimate-introductions-black-auto-parallel",
-     "insert-2023-update-ultimate-rookie-signatures",
-     "insert-2023-update-ultimate-signatures-gold-parallel",
-     "insert-2024-update-auto-parallel-legends",
-     "insert-2024-update-auto-patch-parallel-ultimate-rookies",
-     "insert-2024-update-debut-threads",
-     "insert-2024-update-epitome-of-the-nhl",
-     "insert-2024-update-jumbo-patch-parallel-ultimate-rookies-auto",
-     "insert-2024-update-pro-threads",
-     "insert-2024-update-rookie-signature-premium-materials",
-     "insert-2024-update-shield-patch-parallel-ultimate-rookies-auto",
-     "insert-2024-update-ultimate-access-patch-autos",
-     "insert-2024-update-ultimate-auto-shield-patches",
-     "insert-2024-update-ultimate-displays-black-tag-parallel",
-     "insert-2024-update-ultimate-displays-number-patch",
-     "insert-2024-update-ultimate-emblems-auto",
-     "insert-2024-update-ultimate-emblems-auto-rookies",
-     "insert-2024-update-ultimate-emblems-auto-rookies-gold-parallel",
-     "insert-2024-update-ultimate-emblems-auto-rookies-platinum-parallel",
-     "insert-2024-update-ultimate-heroes-black-tag-parallel",
-     "insert-2024-update-ultimate-heroes-patch",
-     "insert-2024-update-ultimate-introductions-auto-parallel",
-     "insert-2024-update-ultimate-introductions-gold-auto-parallel",
-     "insert-2024-update-ultimate-introductions-platinum-auto-parallel",
-     "insert-2024-update-ultimate-introductions-purple-auto-parallel",
-     "insert-2024-update-ultimate-material-signatures",
-     "insert-2024-update-ultimate-phenoms-auto-parallel",
-     "insert-2024-update-ultimate-phenoms-gold-auto-parallel",
-     "insert-2024-update-ultimate-phenoms-platinum-auto-parallel",
-     "insert-2024-update-ultimate-phenoms-purple-auto-parallel",
-     "insert-2024-update-ultimate-rookie-signatures",
-     "insert-2024-update-ultimate-signatures",
-     "insert-4-nations-face-off-puck-logo-patches",
-     "insert-auto-parallel-legends",
-     "insert-auto-patch-parallel-ultimate-rookies-auto",
-     "insert-base-set-legends",
-     "insert-base-set-ultimate-rookies",
-     "insert-black-auto-parallel",
      "insert-black-parallel",
-     "insert-black-parallel-legends",
-     "insert-debut-threads",
-     "insert-franchise-figures",
-     "insert-gold-parallel-legends",
-     "insert-jersey-parallel-ultimate-rookies",
-     "insert-jumbo-jersey-parallel-legends",
-     "insert-jumbo-patch-parallel-legends",
-     "insert-jumbo-patch-parallel-ultimate-rookies-auto",
-     "insert-patch-parallel-ultimate-rookies",
-     "insert-platinum-parallel-legends",
-     "insert-pro-threads",
-     "insert-purple-parallel-legends",
-     "insert-rookie-tandem-shield-patches",
-     "insert-shield-patch-parallel-legends",
-     "insert-shield-patch-parallel-ultimate-rookies-auto",
-     "insert-true-blues",
-     "insert-ulti-mates-jersey",
-     "insert-ulti-mates-patch-parallel",
-     "insert-ulti-mates-tag-parallel",
-     "insert-ultimate-access-4-nations-face-off-patch",
-     "insert-ultimate-access-patch",
-     "insert-ultimate-apparel",
-     "insert-ultimate-apparel-auto-parallel",
-     "insert-ultimate-emblems",
-     "insert-ultimate-emblems-black-parallel",
-     "insert-ultimate-emblems-gold-parallel",
-     "insert-ultimate-emblems-rookies",
-     "insert-ultimate-emblems-rookies-black-parallel",
-     "insert-ultimate-foundations",
-     "insert-ultimate-heroes-auto-patch",
-     "insert-ultimate-heroes-auto-patch-black-parallel",
-     "insert-ultimate-inscriptions",
-     "insert-ultimate-introductions",
-     "insert-ultimate-introductions-black-auto-parallel",
      "insert-ultimate-introductions-black-parallel",
-     "insert-ultimate-materials-signatures",
      "insert-ultimate-materials-signatures-black-parallel",
-     "insert-ultimate-materials-signatures-rookies",
-     "insert-ultimate-materials-signatures-rookies-black-parallel",
-     "insert-ultimate-patches",
-     "insert-ultimate-phenoms",
-     "insert-ultimate-phenoms-black-auto-parallel",
-     "insert-ultimate-phenoms-black-parallel",
-     "insert-ultimate-quad-materials-jersey",
-     "insert-ultimate-quad-materials-patch-parallel",
-     "insert-ultimate-quad-materials-tag-parallel",
-     "insert-ultimate-quad-signatures",
-     "insert-ultimate-shield-patch",
-     "insert-ultimate-shield-patch-auto",
-     "insert-ultimate-signatures",
-     "insert-ultimate-signatures-rookies",
-     "insert-ultimate-triple-signatures"
+     "insert-ultimate-phenoms-black-parallel"
     ]
    },
    {
-    "root": "Gold",
-    "rootKey": "gold",
+    "root": "Gold Parallel",
+    "rootKey": "gold parallel",
     "children": [
-     "Gold Auto",
      "Gold Parallel"
     ],
     "categories": [
-     "insert-2015-update-2005-06-ultimate-rookies-auto-jersey-parallel",
-     "insert-2015-update-spectrum-silver-parallel-ultimate-rookies-auto-jersey",
-     "insert-2018-update-all-star-skills-shield-patch-auto",
-     "insert-2018-update-ultimate-icons-premium-materials-gold-auto-parallel",
-     "insert-2018-update-ultimate-materials-signatures",
-     "insert-2021-update-pro-threads",
-     "insert-2021-update-signature-material-laureates",
-     "insert-2021-update-ultimate-display-auto-jersey",
-     "insert-2021-update-ultimate-display-auto-patch-parallel",
-     "insert-2021-update-ultimate-display-auto-tag-parallel",
-     "insert-2021-update-ultimate-emblems-auto",
      "insert-2021-update-ultimate-emblems-auto-gold-parallel",
-     "insert-2021-update-ultimate-premium-material-signatures-parallel",
-     "insert-2022-update-auto-parallel-legends",
-     "insert-2022-update-signature-masterpieces",
-     "insert-2022-update-signature-material-laureates",
-     "insert-2022-update-ultimate-signatures",
      "insert-2022-update-ultimate-signatures-gold-parallel",
-     "insert-2023-update-2003-04-retro-signatures-gold-parallel",
-     "insert-2023-update-base-set-ultimate-rookies-auto",
-     "insert-2023-update-debut-threads",
-     "insert-2023-update-la-collection-ultime-gold-spectrum-auto-patch-parallel",
-     "insert-2023-update-pro-threads",
-     "insert-2023-update-rookie-accents",
-     "insert-2023-update-shield-parallel-ultimate-rookies-auto",
-     "insert-2023-update-signature-masterpieces",
-     "insert-2023-update-signature-materials-gold-patch-parallel",
-     "insert-2023-update-signature-materials-jersey",
-     "insert-2023-update-ultimate-access-auto-patch",
-     "insert-2023-update-ultimate-emblems-auto",
      "insert-2023-update-ultimate-emblems-gold-auto-parallel",
-     "insert-2023-update-ultimate-emblems-gold-auto-parallel-rookies",
-     "insert-2023-update-ultimate-emblems-platinum-auto-parallel",
-     "insert-2023-update-ultimate-introductions-auto-parallel",
-     "insert-2023-update-ultimate-introductions-black-auto-parallel",
-     "insert-2023-update-ultimate-rookie-signatures",
-     "insert-2023-update-ultimate-signatures-gold-parallel",
-     "insert-2024-update-auto-parallel-legends",
-     "insert-2024-update-auto-patch-parallel-ultimate-rookies",
-     "insert-2024-update-debut-threads",
-     "insert-2024-update-epitome-of-the-nhl",
-     "insert-2024-update-jumbo-patch-parallel-ultimate-rookies-auto",
-     "insert-2024-update-pro-threads",
-     "insert-2024-update-rookie-signature-premium-materials",
-     "insert-2024-update-shield-patch-parallel-ultimate-rookies-auto",
-     "insert-2024-update-ultimate-access-patch-autos",
-     "insert-2024-update-ultimate-auto-shield-patches",
-     "insert-2024-update-ultimate-displays-black-tag-parallel",
-     "insert-2024-update-ultimate-displays-number-patch",
-     "insert-2024-update-ultimate-emblems-auto",
      "insert-2024-update-ultimate-emblems-auto-gold-parallel",
-     "insert-2024-update-ultimate-emblems-auto-rookies",
-     "insert-2024-update-ultimate-emblems-auto-rookies-gold-parallel",
-     "insert-2024-update-ultimate-emblems-auto-rookies-platinum-parallel",
-     "insert-2024-update-ultimate-heroes-black-tag-parallel",
-     "insert-2024-update-ultimate-heroes-patch",
-     "insert-2024-update-ultimate-introductions-auto-parallel",
-     "insert-2024-update-ultimate-introductions-gold-auto-parallel",
-     "insert-2024-update-ultimate-introductions-platinum-auto-parallel",
-     "insert-2024-update-ultimate-introductions-purple-auto-parallel",
-     "insert-2024-update-ultimate-material-signatures",
-     "insert-2024-update-ultimate-phenoms-auto-parallel",
-     "insert-2024-update-ultimate-phenoms-gold-auto-parallel",
-     "insert-2024-update-ultimate-phenoms-platinum-auto-parallel",
-     "insert-2024-update-ultimate-phenoms-purple-auto-parallel",
-     "insert-2024-update-ultimate-rookie-signatures",
-     "insert-2024-update-ultimate-signatures",
-     "insert-4-nations-face-off-puck-logo-patches",
-     "insert-auto-parallel-legends",
-     "insert-auto-patch-parallel-ultimate-rookies-auto",
-     "insert-base-set-legends",
-     "insert-base-set-ultimate-rookies",
-     "insert-black-parallel-legends",
-     "insert-debut-threads",
-     "insert-franchise-figures",
      "insert-gold-parallel",
-     "insert-gold-parallel-legends",
-     "insert-jersey-parallel-ultimate-rookies",
-     "insert-jumbo-jersey-parallel-legends",
-     "insert-jumbo-patch-parallel-legends",
-     "insert-jumbo-patch-parallel-ultimate-rookies-auto",
-     "insert-patch-parallel-ultimate-rookies",
-     "insert-platinum-parallel-legends",
-     "insert-pro-threads",
-     "insert-purple-parallel-legends",
-     "insert-rookie-tandem-shield-patches",
-     "insert-shield-patch-parallel-legends",
-     "insert-shield-patch-parallel-ultimate-rookies-auto",
-     "insert-true-blues",
-     "insert-ulti-mates-jersey",
-     "insert-ulti-mates-patch-parallel",
-     "insert-ulti-mates-tag-parallel",
-     "insert-ultimate-access-4-nations-face-off-patch",
-     "insert-ultimate-access-patch",
-     "insert-ultimate-apparel",
-     "insert-ultimate-apparel-auto-parallel",
-     "insert-ultimate-emblems",
-     "insert-ultimate-emblems-black-parallel",
-     "insert-ultimate-emblems-gold-parallel",
-     "insert-ultimate-emblems-rookies",
-     "insert-ultimate-emblems-rookies-black-parallel",
      "insert-ultimate-emblems-rookies-gold-parallel",
-     "insert-ultimate-foundations",
-     "insert-ultimate-heroes-auto-patch",
-     "insert-ultimate-heroes-auto-patch-black-parallel",
-     "insert-ultimate-inscriptions",
-     "insert-ultimate-introductions",
      "insert-ultimate-introductions-gold-parallel",
-     "insert-ultimate-materials-signatures",
-     "insert-ultimate-materials-signatures-rookies",
-     "insert-ultimate-materials-signatures-rookies-black-parallel",
-     "insert-ultimate-patches",
-     "insert-ultimate-phenoms",
-     "insert-ultimate-phenoms-gold-parallel",
-     "insert-ultimate-quad-materials-jersey",
-     "insert-ultimate-quad-materials-patch-parallel",
-     "insert-ultimate-quad-materials-tag-parallel",
-     "insert-ultimate-quad-signatures",
-     "insert-ultimate-shield-patch",
-     "insert-ultimate-shield-patch-auto",
-     "insert-ultimate-signatures",
-     "insert-ultimate-signatures-rookies",
-     "insert-ultimate-triple-signatures"
+     "insert-ultimate-phenoms-gold-parallel"
     ]
    },
    {
@@ -214393,22 +214529,15 @@
     ]
    },
    {
-    "root": "Jumbo Patch",
-    "rootKey": "jumbo patch",
+    "root": "Jumbo Patch Parallel",
+    "rootKey": "jumbo patch parallel",
     "children": [
-     "Jumbo Patch",
      "Jumbo Patch Parallel",
      "Jumbo Patch Parallel Auto"
     ],
     "categories": [
-     "auto-2018-update-ultimate-icons-premium-materials-copper-autographs-parallel",
-     "auto-2024-update-base-set-ultimate-rookies-autographs",
-     "auto-base-set-ultimate-rookies-autographs",
-     "insert-2022-update-jumbo-patch-parallel-legends-auto",
-     "insert-2024-update-jumbo-patch-parallel-legends-auto",
      "insert-jumbo-patch-parallel",
-     "insert-jumbo-patch-parallel-auto",
-     "insert-jumbo-patch-parallel-legends-auto"
+     "insert-jumbo-patch-parallel-auto"
     ]
    },
    {
@@ -214424,129 +214553,13 @@
     ]
    },
    {
-    "root": "Purple",
-    "rootKey": "purple",
+    "root": "Purple Parallel",
+    "rootKey": "purple parallel",
     "children": [
-     "Purple Auto",
      "Purple Parallel"
     ],
     "categories": [
-     "insert-2015-update-2005-06-ultimate-rookies-auto-jersey-parallel",
-     "insert-2015-update-spectrum-silver-parallel-ultimate-rookies-auto-jersey",
-     "insert-2018-update-all-star-skills-shield-patch-auto",
-     "insert-2018-update-ultimate-icons-premium-materials-gold-auto-parallel",
-     "insert-2018-update-ultimate-materials-signatures",
-     "insert-2021-update-pro-threads",
-     "insert-2021-update-signature-material-laureates",
-     "insert-2021-update-ultimate-display-auto-jersey",
-     "insert-2021-update-ultimate-display-auto-patch-parallel",
-     "insert-2021-update-ultimate-display-auto-tag-parallel",
-     "insert-2021-update-ultimate-emblems-auto",
-     "insert-2021-update-ultimate-premium-material-signatures-parallel",
-     "insert-2022-update-auto-parallel-legends",
-     "insert-2022-update-signature-masterpieces",
-     "insert-2022-update-signature-material-laureates",
-     "insert-2022-update-ultimate-signatures",
-     "insert-2023-update-2003-04-retro-signatures-gold-parallel",
-     "insert-2023-update-base-set-ultimate-rookies-auto",
-     "insert-2023-update-debut-threads",
-     "insert-2023-update-la-collection-ultime-gold-spectrum-auto-patch-parallel",
-     "insert-2023-update-pro-threads",
-     "insert-2023-update-rookie-accents",
-     "insert-2023-update-shield-parallel-ultimate-rookies-auto",
-     "insert-2023-update-signature-masterpieces",
-     "insert-2023-update-signature-materials-gold-patch-parallel",
-     "insert-2023-update-signature-materials-jersey",
-     "insert-2023-update-ultimate-access-auto-patch",
-     "insert-2023-update-ultimate-emblems-auto",
-     "insert-2023-update-ultimate-emblems-gold-auto-parallel-rookies",
-     "insert-2023-update-ultimate-emblems-platinum-auto-parallel",
-     "insert-2023-update-ultimate-introductions-auto-parallel",
-     "insert-2023-update-ultimate-introductions-black-auto-parallel",
-     "insert-2023-update-ultimate-rookie-signatures",
-     "insert-2023-update-ultimate-signatures-gold-parallel",
-     "insert-2024-update-auto-parallel-legends",
-     "insert-2024-update-auto-patch-parallel-ultimate-rookies",
-     "insert-2024-update-debut-threads",
-     "insert-2024-update-epitome-of-the-nhl",
-     "insert-2024-update-jumbo-patch-parallel-ultimate-rookies-auto",
-     "insert-2024-update-pro-threads",
-     "insert-2024-update-rookie-signature-premium-materials",
-     "insert-2024-update-shield-patch-parallel-ultimate-rookies-auto",
-     "insert-2024-update-ultimate-access-patch-autos",
-     "insert-2024-update-ultimate-auto-shield-patches",
-     "insert-2024-update-ultimate-displays-black-tag-parallel",
-     "insert-2024-update-ultimate-displays-number-patch",
-     "insert-2024-update-ultimate-emblems-auto",
-     "insert-2024-update-ultimate-emblems-auto-rookies",
-     "insert-2024-update-ultimate-emblems-auto-rookies-gold-parallel",
-     "insert-2024-update-ultimate-emblems-auto-rookies-platinum-parallel",
-     "insert-2024-update-ultimate-heroes-black-tag-parallel",
-     "insert-2024-update-ultimate-heroes-patch",
-     "insert-2024-update-ultimate-introductions-auto-parallel",
-     "insert-2024-update-ultimate-introductions-gold-auto-parallel",
-     "insert-2024-update-ultimate-introductions-platinum-auto-parallel",
-     "insert-2024-update-ultimate-introductions-purple-auto-parallel",
-     "insert-2024-update-ultimate-material-signatures",
-     "insert-2024-update-ultimate-phenoms-auto-parallel",
-     "insert-2024-update-ultimate-phenoms-gold-auto-parallel",
-     "insert-2024-update-ultimate-phenoms-platinum-auto-parallel",
-     "insert-2024-update-ultimate-phenoms-purple-auto-parallel",
-     "insert-2024-update-ultimate-rookie-signatures",
-     "insert-2024-update-ultimate-signatures",
-     "insert-4-nations-face-off-puck-logo-patches",
-     "insert-auto-parallel-legends",
-     "insert-auto-patch-parallel-ultimate-rookies-auto",
-     "insert-base-set-legends",
-     "insert-base-set-ultimate-rookies",
-     "insert-black-parallel-legends",
-     "insert-debut-threads",
-     "insert-franchise-figures",
-     "insert-gold-parallel-legends",
-     "insert-jersey-parallel-ultimate-rookies",
-     "insert-jumbo-jersey-parallel-legends",
-     "insert-jumbo-patch-parallel-legends",
-     "insert-jumbo-patch-parallel-ultimate-rookies-auto",
-     "insert-patch-parallel-ultimate-rookies",
-     "insert-platinum-parallel-legends",
-     "insert-pro-threads",
-     "insert-purple-parallel",
-     "insert-purple-parallel-legends",
-     "insert-rookie-tandem-shield-patches",
-     "insert-shield-patch-parallel-legends",
-     "insert-shield-patch-parallel-ultimate-rookies-auto",
-     "insert-true-blues",
-     "insert-ulti-mates-jersey",
-     "insert-ulti-mates-patch-parallel",
-     "insert-ulti-mates-tag-parallel",
-     "insert-ultimate-access-4-nations-face-off-patch",
-     "insert-ultimate-access-patch",
-     "insert-ultimate-apparel",
-     "insert-ultimate-apparel-auto-parallel",
-     "insert-ultimate-emblems",
-     "insert-ultimate-emblems-black-parallel",
-     "insert-ultimate-emblems-gold-parallel",
-     "insert-ultimate-emblems-rookies",
-     "insert-ultimate-emblems-rookies-black-parallel",
-     "insert-ultimate-foundations",
-     "insert-ultimate-heroes-auto-patch",
-     "insert-ultimate-heroes-auto-patch-black-parallel",
-     "insert-ultimate-inscriptions",
-     "insert-ultimate-introductions",
-     "insert-ultimate-materials-signatures",
-     "insert-ultimate-materials-signatures-rookies",
-     "insert-ultimate-materials-signatures-rookies-black-parallel",
-     "insert-ultimate-patches",
-     "insert-ultimate-phenoms",
-     "insert-ultimate-quad-materials-jersey",
-     "insert-ultimate-quad-materials-patch-parallel",
-     "insert-ultimate-quad-materials-tag-parallel",
-     "insert-ultimate-quad-signatures",
-     "insert-ultimate-shield-patch",
-     "insert-ultimate-shield-patch-auto",
-     "insert-ultimate-signatures",
-     "insert-ultimate-signatures-rookies",
-     "insert-ultimate-triple-signatures"
+     "insert-purple-parallel"
     ]
    },
    {
@@ -215968,6 +215981,51 @@
   "setKey": "upper-deck-credentials",
   "parallels": [
    {
+    "name": "Green Parallel",
+    "printRun": 25,
+    "odds": null,
+    "seen": 242,
+    "spellings": [
+     "Green Parallel"
+    ]
+   },
+   {
+    "name": "Purple Parallel",
+    "printRun": 10,
+    "odds": null,
+    "seen": 202,
+    "spellings": [
+     "Purple Parallel"
+    ]
+   },
+   {
+    "name": "Gold Parallel",
+    "printRun": 5,
+    "odds": null,
+    "seen": 163,
+    "spellings": [
+     "Gold Parallel"
+    ]
+   },
+   {
+    "name": "Black Parallel",
+    "printRun": 1,
+    "odds": null,
+    "seen": 139,
+    "spellings": [
+     "Black Parallel"
+    ]
+   },
+   {
+    "name": "Blue Parallel",
+    "printRun": 199,
+    "odds": null,
+    "seen": 102,
+    "spellings": [
+     "Blue Parallel"
+    ]
+   },
+   {
     "name": "Black",
     "printRun": 1,
     "odds": null,
@@ -216127,60 +216185,6 @@
     ]
    },
    {
-    "root": "Black Parallel",
-    "rootKey": "black parallel",
-    "children": [
-     "Black Parallel"
-    ],
-    "categories": [
-     "auto-2022-23-update-ticket-access-autographs-black-parallel",
-     "auto-debut-ticket-access-autographs-black-parallel",
-     "insert-2023-24-update-dual-ticket-access-auto-black-parallel",
-     "insert-black-parallel"
-    ]
-   },
-   {
-    "root": "Blue Parallel",
-    "rootKey": "blue parallel",
-    "children": [
-     "Blue Parallel"
-    ],
-    "categories": [
-     "auto-2022-23-update-ticket-access-autographs-blue-parallel",
-     "insert-2023-24-update-dual-ticket-access-auto-blue-parallel",
-     "insert-blue-parallel"
-    ]
-   },
-   {
-    "root": "Gold Parallel",
-    "rootKey": "gold parallel",
-    "children": [
-     "Gold Parallel"
-    ],
-    "categories": [
-     "auto-debut-ticket-access-autographs-gold-parallel",
-     "insert-bright-cellys-gold-parallel",
-     "insert-gold-parallel"
-    ]
-   },
-   {
-    "root": "Green Parallel",
-    "rootKey": "green parallel",
-    "children": [
-     "Green Parallel"
-    ],
-    "categories": [
-     "auto-2022-23-update-ticket-access-autographs-green-parallel",
-     "auto-debut-ticket-access-autographs-green-parallel",
-     "insert-2023-24-update-dual-ticket-access-auto-green-parallel",
-     "insert-defined-success-green-parallel",
-     "insert-front-row-talent-green-parallel",
-     "insert-green-parallel",
-     "insert-sensational-youth-green-parallel",
-     "insert-standing-on-their-head-green-parallel"
-    ]
-   },
-   {
     "root": "Printing Plates Parallel",
     "rootKey": "printing plates parallel",
     "children": [
@@ -216188,22 +216192,6 @@
     ],
     "categories": [
      "insert-printing-plates-parallel"
-    ]
-   },
-   {
-    "root": "Purple Parallel",
-    "rootKey": "purple parallel",
-    "children": [
-     "Purple Parallel"
-    ],
-    "categories": [
-     "auto-2022-23-update-ticket-access-autographs-purple-parallel",
-     "insert-2023-24-update-dual-ticket-access-auto-purple-parallel",
-     "insert-defined-success-purple-parallel",
-     "insert-front-row-talent-purple-parallel",
-     "insert-purple-parallel",
-     "insert-sensational-youth-purple-parallel",
-     "insert-standing-on-their-head-purple-parallel"
     ]
    }
   ]

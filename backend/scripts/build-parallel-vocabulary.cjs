@@ -96,6 +96,9 @@
  */
 const fs = require("node:fs");
 const path = require("node:path");
+// THE ONE READER OF THE `category` COLUMN, shared with the ingester so the
+// two cannot drift on what a category means. See its header.
+const { readChecklistCategory } = require("./lib/checklist-category.cjs");
 
 /**
  * THE OVERLAY: RUNGS A RULING ADDED THAT NO SOURCE FILE CARRIES.
@@ -337,15 +340,32 @@ function main() {
       //
       // The base category is the manufacturer saying "this is a parallel of
       // the base card". Nothing an insert does can unsay it.
+      // ASKED THROUGH THE SHARED READER (2026-09-18). This used to re-derive
+      // "is this a base category" inline, testing only the FIRST segment -- so
+      // `insert-base-hobby`, the Hobby printing of the BASE card, read as an
+      // insert. The ingester had the same defect independently (485 colliding
+      // ids on 2024 panini-zenith football, 5,338 distinct ids for 6,214 rows),
+      // which is why the rule now lives in ONE module both callers read.
+      //
+      // `auto-base*` is base-like too: it is the same card, signed, and its
+      // tail is a parallel rather than an insert set name.
       const onBase = [...(e.categories ?? [])].some((c) => {
-        const d = String(c).indexOf("-");
-        return (d < 0 ? String(c) : String(c).slice(0, d)) === "base";
+        const k = readChecklistCategory(c, e.name).kind;
+        return k === "base" || k === "auto";
       });
       if (onBase) { parallels.push(e); continue; }
       let root = null;
       for (const cat of e.categories ?? []) {
         const dash = String(cat).indexOf("-");
         if (dash < 0 || String(cat).slice(0, dash) !== "insert") continue;
+        // ...and never from a BASE-LIKE category, whose tail is a parallel or a
+        // tier. Without this the root walk mints an insert set called `base`
+        // (children: "1st Down", "Hobby", "Club Level") -- the same defect
+        // from the other side. One rule, asked through the shared reader.
+        {
+          const k = readChecklistCategory(cat, e.name).kind;
+          if (k === "base" || k === "auto") continue;
+        }
         const sw = normForRoot(String(cat).slice(dash + 1)).split(" ").filter(Boolean);
         for (let k = sw.length; k >= 1; k--) {
           const cand = sw.slice(0, k).join(" ");
@@ -439,11 +459,10 @@ function main() {
       // The >=8 floor is KEPT regardless: a split that yields a handful of
       // names is still more likely to be noise than a ladder, whatever the
       // categories say.
-      const sourceLabelsItsBase = [...bucket.values()].some((e) =>
-        [...(e.categories ?? [])].some((c) => {
-          const s = String(c);
-          return s === "insert-base" || s.startsWith("insert-base-")
-            || s === "base" || s.startsWith("base-");
+      const sourceLabelsItsBase = [...bucket.values()].some((en) =>
+        [...(en.categories ?? [])].some((c) => {
+          const k = readChecklistCategory(c, en.name).kind;
+          return k === "base" || k === "auto";
         }));
       const keptEnough = parallels.length >= MIN_KEPT_NAMES
         && (sourceLabelsItsBase || parallels.length / totalCount >= MIN_KEPT_FRACTION);
