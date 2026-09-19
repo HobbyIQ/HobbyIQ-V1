@@ -118,4 +118,36 @@ describe("a duplicate is not a collision", () => {
     expect(r.collisions).toHaveLength(1);
     expect(r.collisions[0].rows).toHaveLength(3);
   });
+
+  it("a base card and a DIFFERENT NAMED SUBSET at the same number is a collision, not a duplicate", () => {
+    // CF-A-DUPLICATE-IS-NOT-A-COLLISION's own identity tuple is player,
+    // cardNumber, parallel, isAuto, printRun -- deliberately NOT category, so
+    // that Photogenic's two spellings of one base card fold. But `category` is
+    // also the ONLY field that says which SUBSET a row belongs to, and a base
+    // card can share every one of those five fields with a DIFFERENT,
+    // same-numbered named subset by coincidence: same player, same number,
+    // both blank parallel, no auto, no print run. That is not a source
+    // spelling one card twice -- it is the R30 defect the guard exists to
+    // catch: two different cards fighting for one address, and only a set key
+    // (subsetsToSeparate, which reuses idCollisions to measure this) can tell
+    // them apart. Folding it here hides the collision from that guard --
+    // measured on the cbc shape, a base set and "College Penmanship" both
+    // numbered 1-3 lost the subset's rows silently (6 ids instead of 9).
+    //
+    // subsetName distinguishes the two rows below, `idOf` does not read it
+    // (mirroring the pre-separation address subsetsToSeparate measures), so
+    // they still collide on one id -- and that collision must SURVIVE, not
+    // fold, because the rows name different subsets.
+    const rows = [
+      { category: "", cardNumber: "1", parallel: "", isAuto: "", printRun: "", player: "Paolo Banchero", subsetName: null },
+      { category: "", cardNumber: "1", parallel: "", isAuto: "", printRun: "", player: "Paolo Banchero", subsetName: "College Penmanship" },
+    ];
+    const r = idCollisions(rows, idOf);
+    expect(r.duplicatesFolded).toBe(0);
+    expect(r.collisions).toHaveLength(1);
+    expect(r.collisions[0].rows).toHaveLength(2);
+    // One CONTESTED id, not one settled id: the collision is what lets
+    // subsetsToSeparate see that this address needs splitting.
+    expect(r.ids).toBe(1);
+  });
 });
