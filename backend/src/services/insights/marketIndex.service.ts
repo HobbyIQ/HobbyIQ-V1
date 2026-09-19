@@ -490,13 +490,19 @@ export async function fetchSales(
   to: string,
 ): Promise<CompRow[]> {
   const iter = container.items.query<CompRow>({
+    // R70 (owner ruling, 2026-09-19): a row PARKED by the write guard
+    // (`identityUnverified: true`) has an unverified identity and must not
+    // move a published index level, the same way a `flaggedWrong` row must
+    // not. Mirrors this query's own undefined-tolerant shape.
     query: `SELECT c.cardId, c.price, c.soldAt
             FROM c
             WHERE c.sport = @sport
               AND c.soldAt >= @from
               AND c.soldAt < @to
               AND c.price > 0
-              AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)`,
+              AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)
+              AND (NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv = false)
+              AND (NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified = false)`,
     parameters: [
       { name: "@sport", value: sport },
       { name: "@from", value: from },
