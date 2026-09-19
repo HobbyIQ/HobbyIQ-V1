@@ -1,0 +1,338 @@
+{
+  "scrapedAt": "2026-09-19T09:05:47.886Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/01/2026-Topps-Series-1-Baseball-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Topps Series 1 Baseball",
+  "productKey": "2026-topps",
+  "setKey": "topps",
+  "rowCount": 2943,
+  "parallelColumnAuthoritative": true,
+  "readyToIngest": false,
+  "stagedNote": "STAGED ONLY, not ingested. Dry-plan via lib/insert-set-key.cjs planFile() REFUSES this file: 7 same-numbered insert-set keys are unregistered against the topps flagship key (see PR body). Registration in productSetKeys.ts + hobbyIqCardId.service.ts is required before an ingest run. The repo already carries a disjoint 3-rung ladder file for this same product at backend/data/checklists/scraped/acq-2026-09-15-ladders/2026-topps-baseball-ladder.csv (checklistinsider source, Sandglitter Gold/75 Years of Topps/Base Confetti) -- this Beckett file's 7 stated parallel rungs (Golden Mirror/Golden Mirror Legend/Vintage Stock/True Photo/Player Number/Team Color Border/1952 Topps Rookie Variation) do not overlap it at all; combined they are 10 distinct rungs, zero collisions between the two sources.",
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 370,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Vintage Stock Variations",
+      "category": "insert-base-vintage-stock-variations",
+      "cards": 100,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Vintage Stock Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Hobby Exclusive",
+      "category": "insert-hobby-exclusive",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Retail Tin Exclusive",
+      "category": "insert-retail-tin-exclusive",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Golden Mirror Variation",
+      "category": "insert-base-golden-mirror-variation",
+      "cards": 370,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Golden Mirror Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - True Photo Variation",
+      "category": "insert-base-true-photo-variation",
+      "cards": 100,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "True Photo Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Player Number Variations",
+      "category": "insert-base-player-number-variations",
+      "cards": 100,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Player Number Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Team Color Border Variation",
+      "category": "insert-base-team-color-border-variation",
+      "cards": 100,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Team Color Border Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - 1952 Topps Rookie Variations",
+      "category": "insert-base-1952-topps-rookie-variations",
+      "cards": 25,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "1952 Topps Rookie Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Golden Mirror Legend Variations",
+      "category": "insert-base-golden-mirror-legend-variations",
+      "cards": 51,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Golden Mirror Legend Variation"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Flagship Real One Autographs",
+      "category": "auto-flagship-real-one-autographs",
+      "cards": 48,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "75 Years Of Topps Die-Cut Autographs",
+      "category": "auto-75-years-of-topps-die-cut-autographs",
+      "cards": 77,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Baseball Stars Autographs",
+      "category": "auto-baseball-stars-autographs",
+      "cards": 83,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1991 Topps Baseball Autographs",
+      "category": "auto-1991-topps-baseball-autographs",
+      "cards": 185,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Hobby and Jumbo Silver Pack Exclusive",
+      "category": "auto-hobby-and-jumbo-silver-pack-exclusive",
+      "cards": 86,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Cover Athlete Autographs",
+      "category": "auto-cover-athlete-autographs",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1952 Base Variation Autographs",
+      "category": "auto-1952-base-variation-autographs",
+      "cards": 21,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Major League Materials Autographs",
+      "category": "auto-major-league-materials-autographs",
+      "cards": 86,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Major League Materials Dual Autographs",
+      "category": "auto-major-league-materials-dual-autographs",
+      "cards": 5,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Heavy Lumber Autographed Relics",
+      "category": "auto-heavy-lumber-autographed-relics",
+      "cards": 60,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "City Connect Swatch Collection Autographed Relics",
+      "category": "auto-city-connect-swatch-collection-autographed-relics",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Hobby and Jumbo Exclusive",
+      "category": "auto-hobby-and-jumbo-exclusive",
+      "cards": 17,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Funko Pop Autographs",
+      "category": "auto-funko-pop-autographs",
+      "cards": 2,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Signature Tunes Dual Autograph",
+      "category": "auto-signature-tunes-dual-autograph",
+      "cards": 1,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "First Pitch Autographs",
+      "category": "auto-first-pitch-autographs",
+      "cards": 9,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "75 Years Of Topps Autographs",
+      "category": "auto-75-years-of-topps-autographs",
+      "cards": 13,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Major League Material",
+      "category": "insert-major-league-material",
+      "cards": 87,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "1991 Topps Baseball Relics",
+      "category": "insert-1991-topps-baseball-relics",
+      "cards": 91,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Hobby and Jumbo Exclusive",
+      "category": "insert-hobby-and-jumbo-exclusive",
+      "cards": 108,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Real One Relics",
+      "category": "insert-real-one-relics",
+      "cards": 80,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "2025 All-Topps Team",
+      "category": "insert-2025-all-topps-team",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "2025 Greatest Hits",
+      "category": "insert-2025-greatest-hits",
+      "cards": 28,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Topps Profiles",
+      "category": "insert-topps-profiles",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Big Ticket Players",
+      "category": "insert-big-ticket-players",
+      "cards": 26,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "First Pitch",
+      "category": "insert-first-pitch",
+      "cards": 9,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Heavy Lumber",
+      "category": "insert-heavy-lumber",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Home Field Advantage",
+      "category": "insert-home-field-advantage",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Cover Athlete Cards",
+      "category": "insert-cover-athlete-cards",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "All Aces",
+      "category": "insert-all-aces",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "All Kings",
+      "category": "insert-all-kings",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1991 Topps Baseball",
+      "category": "insert-1991-topps-baseball",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Hobby and Jumbo Silver Pack Exclusive",
+      "category": "insert-hobby-and-jumbo-silver-pack-exclusive",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Retail Exclusive",
+      "category": "insert-retail-exclusive",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Super Box Exclusive",
+      "category": "insert-super-box-exclusive",
+      "cards": 37,
+      "role": "own-cards"
+    }
+  ]
+}
