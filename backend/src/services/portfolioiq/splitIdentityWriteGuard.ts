@@ -75,7 +75,18 @@ export type SplitIdentityReason =
   | "sport-unresolved"
   /** An identity field is not a well-formed address: its sport segment is
    *  empty or names no canonical vertical, so the row is unaddressable. */
-  | "malformed-key";
+  | "malformed-key"
+  /** R70 (Drew, 2026-09-19). The title names a known insert set of its own
+   *  product, and that insert has NO registered product key in
+   *  `catalog/productSetKeys.ts`. The sale is real and kept queryable; it is
+   *  never pooled on the base card because the title said it is a different
+   *  card, and never pooled on a guessed insert key because none is ruled.
+   *  The parked list (grouped by insert root) is the registration queue. */
+  | "insert-named-no-key"
+  /** R70 companion. The title names TWO DIFFERENT insert sets of its own
+   *  product and neither is chosen -- guessing between two named games risks
+   *  filing the sale on the wrong one. */
+  | "two-inserts-named";
 
 export type SplitIdentityOutcome =
   /** The fields agree, or one is a vendor key. Write unchanged. */
@@ -318,4 +329,35 @@ export function guardSoldCompDoc(
   }
 
   return outcome;
+}
+
+/**
+ * PARK BY NAME, FOR A REASON DECIDED OUTSIDE THE SPLIT-IDENTITY COMPARISON
+ * (R70, 2026-09-19).
+ *
+ * `decideSplitIdentity` answers exactly one question -- do `cardId` and
+ * `hobbyiqCardId` name the same product. R70's park ("this title names an
+ * insert set with no registered key") and its companion
+ * ("this title names two different insert sets") are not that question at
+ * all: the two identity fields may agree perfectly and the row still must not
+ * be filed, because the TITLE says the card is a different product than the
+ * one the writer is about to mint an id for.
+ *
+ * This is the SAME mutation `guardSoldCompDoc`'s park branch applies --
+ * intentionally: a row parked by either mechanism must be indistinguishable
+ * to every reader and to the unpark lane, per `GuardedSoldCompDoc`'s own
+ * header. It is not a second guard; it is the one park stamp, applied for a
+ * reason the split-identity comparison was never asked about.
+ */
+export function parkSoldCompDoc(
+  doc: GuardedSoldCompDoc,
+  reason: SplitIdentityReason,
+  detail: string,
+  guardedBy: string,
+): void {
+  doc.identityUnverified = true;
+  doc.identityUnverifiedAt = new Date().toISOString();
+  doc.identityUnverifiedBy = guardedBy;
+  doc.identityUnverifiedReason = reason;
+  doc.identityUnverifiedDetail = detail;
 }
