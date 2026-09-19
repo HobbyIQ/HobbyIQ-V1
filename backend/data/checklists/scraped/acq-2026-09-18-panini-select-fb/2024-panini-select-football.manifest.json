@@ -1,0 +1,13 @@
+{
+  "productKey": "2024-panini-select",
+  "sport": "football",
+  "year": 2024,
+  "setKey": "panini-select",
+  "setName": "2024 Panini Select Football",
+  "source": "checklistinsider",
+  "confidence": 0.9,
+  "provenance": "checklistinsider.com 2024 Panini Select Football -- staged to C:/tmp/ci/csv2 by the acquisition sweep, read 2026-09-18. 27,324 rows across the Concourse/Club Level/Suite Level/Premier Level/Field Level tiers and 33 named insert sets.",
+  "sourceUrl": "https://www.checklistinsider.com/2024-panini-select-football",
+  "rowCount": 27324,
+  "parallelColumnAuthoritative": true
+}
