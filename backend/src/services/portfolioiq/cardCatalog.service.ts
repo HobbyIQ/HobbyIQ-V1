@@ -700,6 +700,66 @@ export function deriveCatalogEntry(input: {
  */
 const GENERATIONAL_SUFFIX_COMMA = /,\s*(Jr|Sr|III|IV|II|V)\.?(?![A-Za-z])/gi;
 
+/**
+ * CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME (2026-09-19, census by another
+ * agent). Checklist sources (baseballcardpedia, cardboardconnection,
+ * checklistinsider, tcdb, drew-rulings CSVs) put the rookie marker INSIDE the
+ * player cell -- "Jonah Tong RC" -- rather than in its own column the way
+ * beckettChecklistParser's spreadsheet markers do. Uncaught, playerSlugify
+ * mints `jonah-tong-rc`, and the SIBLING row of the same card number (a
+ * source that omits the marker, or the same card in a later season) carries
+ * the clean slug -- one card, split across two player identities. Measured:
+ * >=33,000 card_catalog rows across ~40 product-years carry a playerSlug
+ * ending `-rc` (2026 topps 10,821; 2026 topps-chrome 2,885; 2022 bowman
+ * 1,826; 2024 bowman 1,910; 2019 topps-update 1,734; 2015-2017 topps ~4,000;
+ * hockey upper-deck-series-1/2 2019-2024 ~5,800; ...).
+ *
+ * SCOPE OF THIS PASS: the RC family only -- " RC", " RC*", " (RC)" -- because
+ * it is the one marker that is unambiguously "rookie" and never part of a
+ * player's own name or a card fact that changes the card's identity. Every
+ * other suffix shape seen at the same position is DELIBERATELY left alone
+ * here and needs its own ruling:
+ *
+ *   " TC"          team card ("New York Yankees TC") -- TC is not a person
+ *                  at all; stripping it would not clean a name, it would
+ *                  turn a team card into a fabricated player.
+ *   " UER"         (Uncorrected) Error card -- a fact about the PRINTING,
+ *                  which the checklist states as part of what this card IS.
+ *   " SP" / " SSP" short-print / super-short-print -- may be load-bearing for
+ *                  identity (a short-print can be a distinct card from the
+ *                  base version at the same number) and the census did not
+ *                  rule on this.
+ *   " RR"          Rated Rookie (e.g. "Al Leiter RR RC") -- checked below:
+ *                  no existing code path recognises RR as a marker, so it is
+ *                  NOT handled by this pass either. "Al Leiter RR RC" ->
+ *                  "Al Leiter RR" after this fix, not "Al Leiter" -- RR is a
+ *                  follow-up.
+ *   " DP"          Draft Pick (e.g. "Luis De Los Santos DP RC") -- same:
+ *                  unhandled, needs its own ruling.
+ *   single tier letter before RC ("Rich Hunter B RC", "Livan Hernandez G RC",
+ *                  1996 Topps Finest) -- a bare letter is too easily a real
+ *                  name fragment or initial to strip by pattern; needs Drew's
+ *                  ruling with the product's own tier vocabulary in hand.
+ *
+ * These are listed, not guessed at: stripping any of them here without a
+ * ruling risks exactly the damage this fix repairs, in the other direction
+ * (turning a real identity distinction into a silent merge).
+ *
+ * THE MATCH IS A CASE-SENSITIVE, WHITESPACE-ANCHORED, END-OF-STRING TOKEN.
+ * Case-sensitivity is load-bearing: a name that merely ENDS in those letters
+ * without the marker's own casing/spacing shape -- "Marc" (no space before
+ * "RC"), "DuPRC" (no space, wrong case) -- is untouched, because the token
+ * must be preceded by whitespace and be exactly "RC" (optionally with a
+ * trailing "*", or wrapped in parens) with nothing after it. "J.R. Richard"
+ * is untouched for the same reason: "R" alone is not the two-letter "RC"
+ * token, so there is no match starting there. Applied in a loop so a
+ * doubled/redundant marker ("Name RC RC") is fully stripped in one call
+ * (repeated-safe), and re-applied AFTER the generational-suffix comma pass so
+ * a source that writes both ("Bobby Witt, Jr. RC") ends up "Bobby Witt Jr.",
+ * not "Bobby Witt, Jr." with the marker still attached.
+ */
+const ROOKIE_MARKER_RC = /\s+(?:RC\*?|\(RC\))$/;
+
 export function cleanPlayerName(raw: string | null | undefined): string {
   // CF-A-COMMA-BEFORE-JR-IS-NOT-A-TEAM (D33, Drew 2026-08-30). The picker
   // listed "Bobby Witt, Jr." and "Bobby Witt Jr." as two different players for
@@ -710,12 +770,18 @@ export function cleanPlayerName(raw: string | null | undefined): string {
   // "Eddie Murray / Cal Ripken, Jr." both carry it away from the end -- and
   // the (?![A-Za-z]) lookahead is what keeps "Smith, Ivan" / "Brown, Sroka"
   // (a real name that merely STARTS like a suffix) untouched.
-  return String(raw ?? "")
+  let out = String(raw ?? "")
     .trim()
     .replace(GENERATIONAL_SUFFIX_COMMA, (_m, suffix: string) => ` ${suffix}${_m.trimEnd().endsWith(".") ? "." : ""}`)
     .replace(/\s{2,}/g, " ")
     .trim()
     .replace(/[\s,;]+$/, "");
+  // CF-A-ROOKIE-MARKER-IS-NOT-PART-OF-THE-NAME: strip a trailing RC-family
+  // token, repeated-safe ("Name RC RC" -- unseen but cheap to guard).
+  while (ROOKIE_MARKER_RC.test(out)) {
+    out = out.replace(ROOKIE_MARKER_RC, "").replace(/[\s,;]+$/, "");
+  }
+  return out;
 }
 
 function playerSlugify(name: string): string {
