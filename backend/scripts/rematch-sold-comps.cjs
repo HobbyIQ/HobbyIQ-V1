@@ -175,9 +175,34 @@
  *                                            SOURCES for rekey-product-
  *                                            setkey) rather than a new
  *                                            workflow_dispatch input.
- *      BACKING_PRELOAD_CELL_CAP=500           LRU cap on distinct (sport,
- *                                            year, setKey) cells the backing
- *                                            preload holds at once.
+ *      BACKING_PRELOAD_CELL_CAP=500           SECONDARY LRU cap on distinct
+ *                                            (sport, year, setKey) cells the
+ *                                            backing preload holds at once
+ *                                            (see BACKING_PRELOAD_ROW_BUDGET,
+ *                                            the PRIMARY bound, 2026-09-20).
+ *      BACKING_PRELOAD_ROW_BUDGET=1200000     PRIMARY eviction bound: total
+ *                                            CACHED ROWS across every held
+ *                                            cell (one cell can be 200k+
+ *                                            rows; a cell-count cap alone
+ *                                            cannot see that). LRU by cell's
+ *                                            last use, whole cells evicted.
+ *      BACKING_PRELOAD_QUERY_TIMEOUT_MS=20000 hard cap on ONE cell's preload
+ *                                            query -- covers a GENUINE
+ *                                            network stall only; see
+ *                                            BACKING_PRELOAD_SPIN_GUARD_PAGES
+ *                                            for the defect this alone
+ *                                            cannot stop.
+ *      BACKING_PRELOAD_SPIN_GUARD_PAGES=50    consecutive empty (0-row, 0-RU)
+ *                                            pages that trip the SYNCHRONOUS
+ *                                            in-loop spin guard -- the guard
+ *                                            that actually stopped the
+ *                                            2026-09-20 hang, since a
+ *                                            setTimeout-based timeout cannot
+ *                                            fire against a microtask-only
+ *                                            empty-page spin (confirmed by
+ *                                            review: 1.3M empty pages in 8s,
+ *                                            a pre-registered timer never
+ *                                            fired).
  *      BACKING_PRELOAD_CELL_FAIL_RETRIES=3    a cell's card_catalog load may
  *                                            fail this many times before
  *                                            it is marked permanently
@@ -283,10 +308,14 @@ const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "tr
  * offline RU estimate). Every sale in a cell is then answered from an
  * in-process Map built from that one query, so a slot that touches N
  * distinct cells issues N queries total, never one per sale and never one
- * per distinct id. Bounded by an LRU (BACKING_PRELOAD_CELL_CAP) so a slot
- * whose sales spread across an unusually large number of cells cannot grow
- * this without bound; an evicted cell's next sale re-queries rather than
- * reusing a stale answer, so eviction costs RU, never correctness.
+ * per distinct id. Bounded by an LRU, PRIMARILY on total cached ROWS
+ * (BACKING_PRELOAD_ROW_BUDGET, 2026-09-20 per review -- one cell can be
+ * 200,000+ rows, so a cell-count cap alone cannot bound memory) and
+ * secondarily on cell count (BACKING_PRELOAD_CELL_CAP), so a slot whose
+ * sales spread across an unusually large number of cells, or through
+ * unusually large ones, cannot grow this without bound; an evicted cell's
+ * next sale re-queries rather than reusing a stale answer, so eviction
+ * costs RU, never correctness.
  */
 const CENSUS_BACKING = MODE === "census" && String(process.env.SOURCES ?? "").trim().toLowerCase() === "backing";
 // CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD: this lane's NORMAL mode is a
@@ -1381,29 +1410,37 @@ async function main() {
    * function, called on the SAME shape of input, so a change to the strict
    * allowlist moves both call sites together.
    *
-   * BOUNDED CACHE SIZE, NOT BOUNDED QUERY COUNT. `BACKING_PRELOAD_CELL_CAP`
-   * caps how many cells the cache HOLDS at once (oldest by last access
-   * evicted on overflow) -- it does NOT cap the total number of queries a
-   * slot issues over its whole walk. If a slot's sales interleaved cells
-   * faster than the cap (cell A, cell B, ..., cell A again, after A was
+   * BOUNDED CACHE SIZE, NOT BOUNDED QUERY COUNT. Two bounds now, not one
+   * (2026-09-20 per review): `BACKING_PRELOAD_ROW_BUDGET` is the PRIMARY
+   * cap, on the total ROWS held across every cached cell's verdict map --
+   * necessary because one cell can be 200,000+ rows (measured against prod:
+   * baseball:2025:topps, 203,058) while another is under 2,000, so a
+   * cell-COUNT cap alone cannot bound the cache's actual memory. `BACKING_
+   * PRELOAD_CELL_CAP` remains as a SECONDARY cap on distinct cell count (a
+   * backstop for many-small-cells bookkeeping overhead the row budget does
+   * not itself limit). Neither caps the total number of QUERIES a slot
+   * issues over its whole walk. If a slot's sales interleaved cells faster
+   * than either cap (cell A, cell B, ..., cell A again, after A was
    * evicted), each return to an evicted cell is a fresh cache MISS and a
    * fresh query: the pathological upper bound is one query per sale, same
    * as no cache at all. This is a COST risk, never a correctness one -- an
    * evicted cell's next sale simply re-queries and gets the same right
    * answer, just paying for it twice.
    *
-   * What actually keeps this cheap in practice is PRODUCT LOCALITY, not the
-   * cap: sold_comps ingest writes in per-product bursts (one CH/eBay pull =
-   * one product = many consecutive same-cardId rows), so pages within a
-   * shard unit overwhelmingly repeat a small, stable set of recently-seen
+   * What actually keeps this cheap in practice is PRODUCT LOCALITY, not
+   * either cap: sold_comps ingest writes in per-product bursts (one CH/eBay
+   * pull = one product = many consecutive same-cardId rows), so pages within
+   * a shard unit overwhelmingly repeat a small, stable set of recently-seen
    * cells rather than round-robining across thousands of them -- the same
    * locality `checklistCells`/`flagshipNumbers` above already rely on
    * (their caches are UNBOUNDED and have never needed a cap for exactly
-   * this reason). The cap exists only as a backstop against an unusually
-   * adversarial ordering, not as the primary cost control; if a live run's
-   * artifact ever reports `preload.distinctCellQueries` far above the
-   * cap value for its slot, that is the signal locality broke down and the
-   * cap should be reconsidered, not evidence the design failed.
+   * this reason). Both caps exist only as a backstop against an unusually
+   * adversarial ordering or an unusually large working set, not as the
+   * primary cost control; if a live run's artifact ever reports
+   * `preload.distinctCellQueries` far above either cap's value for its
+   * slot, or `preload.evictions` climbing steadily rather than settling,
+   * that is the signal locality broke down and the caps should be
+   * reconsidered, not evidence the design failed.
    *
    * *** A FAILED LOAD IS NEVER CACHED, AND IS NOT `noRow`. *** The previous
    * version wrapped `retry()` in `catch { out = [] }` -- so a load that
@@ -1429,6 +1466,39 @@ async function main() {
    * `unknown` for the rest of the slot with no further queries issued.
    */
   const BACKING_PRELOAD_CELL_CAP = Math.max(1, Number(process.env.BACKING_PRELOAD_CELL_CAP || 500));
+  /** ROW-BUDGETED EVICTION (2026-09-20 per review). The cell-count cap above
+   *  (`BACKING_PRELOAD_CELL_CAP`, default 500) bounds how many DISTINCT
+   *  cells the cache holds -- it says nothing about how many ROWS live
+   *  inside them, and one cell can be 203,058 rows
+   *  (baseball:2025:topps, measured against prod) while another is 1,446.
+   *  500 cells at that large cell's size would be ~100M cached rows -- at
+   *  the measured ~0.1 KB/row steady-state footprint (a Map entry: a short
+   *  string id key + a one-word "strict"/"row" string value, V8 overhead
+   *  included) that is roughly 10 GB, an OOM on any App Service plan this
+   *  runs under, and CLASSIFY_CONCURRENCY=8 cells warming concurrently make
+   *  the transient peak (a page's raw rows plus the Map both resident, see
+   *  `runOnce` above) worse still. `backfill-runner.yml` gives `census`
+   *  mode no `NODE_OPTIONS` heap override, so this cache is the only thing
+   *  standing between a large-cell-heavy shard and a silent OOM kill --
+   *  the SAME failure MODE (a slot that dies with no diagnostic banner) as
+   *  the hang this PR already fixes, just a different cause.
+   *
+   *  `BACKING_PRELOAD_ROW_BUDGET` therefore bounds the cache by TOTAL CACHED
+   *  ROWS across every cell, LRU by cell's LAST USE (a touch, same as the
+   *  existing per-cell LRU below) -- evicting the least-recently-used WHOLE
+   *  CELL (never a partial cell; a cell's verdict map is only ever correct
+   *  as a whole) until the total is back under budget. Default 1,200,000
+   *  rows: at ~0.1 KB/row steady state that is a ~120 MB cache floor --
+   *  deliberately far under the ~1.2 GB figure the review's own budget
+   *  implies as a ceiling, leaving headroom for the transient per-page peak
+   *  and every other cache/array this process already holds (checklistCells,
+   *  flagshipNumbers, the census aggregate maps, etc). The cell-count cap
+   *  (`BACKING_PRELOAD_CELL_CAP`) is KEPT as a secondary bound -- a slot that
+   *  touches many small cells (each far under the row budget on its own)
+   *  could otherwise grow the cache's cell COUNT without bound even while
+   *  staying under the row budget; both caps are checked on every insert and
+   *  either one alone can trigger eviction. */
+  const BACKING_PRELOAD_ROW_BUDGET = Math.max(1, Number(process.env.BACKING_PRELOAD_ROW_BUDGET || 1_200_000));
   const BACKING_PRELOAD_CELL_FAIL_RETRIES = Math.max(1, Number(process.env.BACKING_PRELOAD_CELL_FAIL_RETRIES || 3));
   const BACKING_FAILED_CELLS_SAMPLE_CAP = 50;
   const BACKING_LOAD_FAILED = Symbol("backing-load-failed");
@@ -1438,10 +1508,86 @@ async function main() {
   const backingCellFailCounts = new Map(); // cell key -> attempts failed so far
   const backingPermanentlyFailedCells = new Set(); // cell key -> never queried again this slot
   const backingFailedCellSamples = []; // [{ cell, error }], capped
-  let backingPreloadQueries = 0, backingPreloadRowsRead = 0;
+  /** Running total of rows held across every cached cell's verdict Map --
+   *  maintained incrementally on insert/evict rather than summed on demand,
+   *  so checking it against the row budget on every insert is O(1), not
+   *  O(cells cached). */
+  let backingPreloadCachedRows = 0;
+  let backingPreloadEvictions = 0;
+  let backingPreloadQueries = 0, backingPreloadRowsRead = 0, backingPreloadRUSpent = 0;
+  let backingPreloadTimeouts = 0, backingPreloadSpinGuardTrips = 0;
+  /** Hard wall-clock cap on ONE cell's preload query (2026-09-20, the census
+   *  batch #2346 hang). MEASURED read-only against prod: `STARTSWITH` +
+   *  `SELECT DISTINCT` with `maxItemCount: -1` and no `maxDegreeOfParallelism`
+   *  does not merely run slow -- the Node SDK (@azure/cosmos 4.9.3) spins in a
+   *  non-terminating `hasMoreResults()===true` / `fetchNext()` loop that
+   *  resolves immediately with 0 RU and 0 rows on EVERY page, reproduced on
+   *  the SMALLEST measured cell (1,446 rows) exactly as on the largest
+   *  (203,058 rows) -- confirming it is independent of result size and is a
+   *  client-side defect, not network latency. `retry()`'s own 8-try backoff
+   *  and the SDK's 30-try/120s throttle retry NEVER see this: the promise the
+   *  loop is awaiting keeps resolving, it just never makes progress, so
+   *  nothing here ever throws to trigger either retry layer. The fix is
+   *  `maxItemCount` bounded to a real page size + explicit
+   *  `maxDegreeOfParallelism: -1` -- measured to complete every one of the 5
+   *  real cells in the PR's report in well under a second per page.
+   *
+   *  *** CORRECTED 2026-09-20 PER REVIEW: A `setTimeout`-BASED TIMEOUT CANNOT
+   *  STOP THIS SPECIFIC SPIN. *** The reviewer reproduced it directly: the
+   *  OLD-shape query produces 1.3M empty, 0-RU pages in 8 seconds by
+   *  resolving each `fetchNext()` through a MICROTASK ONLY (no real I/O, no
+   *  macrotask tick between pages) -- and a `setTimeout` registered BEFORE
+   *  that loop starts NEVER FIRES, because Node's event loop only checks the
+   *  timer phase between macrotasks; a tight `await`-microtask loop starves
+   *  it completely. `Promise.race`/`AbortController` are therefore dead code
+   *  for EXACTLY the failure this function exists to survive -- they still
+   *  work for a genuine network stall (a real socket wait IS a macrotask),
+   *  which is why both guards are kept, each covering a DIFFERENT stall
+   *  shape:
+   *    - SPIN GUARD (synchronous, inside the fetch loop itself, checked on
+   *      EVERY iteration): counts consecutive empty (0-row, 0-RU) pages and
+   *      the wall clock via `Date.now()`, and throws the instant either
+   *      crosses its limit -- this is what actually stops the spin this PR
+   *      was written to fix, counted as `preload.spinGuard`.
+   *    - TIMEOUT GUARD (`withHardTimeout`, `AbortController`+`Promise.race`):
+   *      covers a query that is genuinely waiting on the network (a real
+   *      socket, a throttled container, a partition outage) and therefore
+   *      DOES yield macrotask ticks for its timer to fire on. Counted
+   *      separately as `preload.timeouts`. */
+  const BACKING_PRELOAD_QUERY_TIMEOUT_MS = Math.max(1000, Number(process.env.BACKING_PRELOAD_QUERY_TIMEOUT_MS || 20000));
+  /** How many CONSECUTIVE empty (0 resources, 0 RU) pages in a row trip the
+   *  spin guard. 50 is comfortably above any real page-boundary noise (a
+   *  genuinely sparse cell still returns SOME rows on an early page, or ends
+   *  via `hasMoreResults() === false`) and comfortably below the ~1.3M empty
+   *  pages/8s the reviewer measured -- the guard fires in a few milliseconds
+   *  against the real defect, nowhere near this cap being a practical risk
+   *  of misfiring on a legitimately slow-but-progressing cell. */
+  const BACKING_PRELOAD_SPIN_GUARD_PAGES = Math.max(1, Number(process.env.BACKING_PRELOAD_SPIN_GUARD_PAGES || 50));
   /** `hiq:<sport>:<year>:<setKey>:` -- the SAME prefix a sale's own
    *  hobbyiqCardId carries under this cell, and the query predicate. */
   const backingCellIdPrefix = (sport, year, setKey) => `hiq:${sport}:${year}:${setKey}:`;
+  /** Run `fn(signal)` under a hard, CANCELLABLE deadline. `fn` receives an
+   *  `AbortSignal` it must pass into the Cosmos call (`abortSignal` is a
+   *  supported `FeedOptions` field on this SDK version) so a timeout here
+   *  actually tears down the underlying network request instead of merely
+   *  abandoning the promise -- a bare `Promise.race` leaves the loser's
+   *  socket open, which is precisely the defect `runner-budget.cjs`'s own
+   *  header documents for the Cosmos SDK ("the loser was a query inside the
+   *  lane's `retry()`, which keeps sleeping on REF'd timers and re-issuing
+   *  the request"). NAMES itself in the thrown error (which cell, which
+   *  budget) so a BACKING_LOAD_FAILED sample is diagnosable, and the losing
+   *  timer is always cleared. COVERS A GENUINE NETWORK STALL ONLY -- see
+   *  BACKING_PRELOAD_QUERY_TIMEOUT_MS's header for why this cannot, by
+   *  itself, stop the microtask-only spin; the spin guard inside `runOnce`
+   *  below is what actually does. */
+  const withHardTimeout = (fn, ms, label) => {
+    const controller = new AbortController();
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => { controller.abort(); reject(new Error(`BACKING_PRELOAD_TIMEOUT after ${ms}ms: ${label}`)); }, ms);
+    });
+    return Promise.race([fn(controller.signal), timeout]).finally(() => clearTimeout(timer));
+  };
   const backingCellPreloadRaw = async (year, setKey, sport) => {
     if (!sport || !setKey || year === null || year === undefined) return null;
     const prefix = backingCellIdPrefix(sport, year, setKey);
@@ -1451,25 +1597,93 @@ async function main() {
     // before throwing, so anything that reaches this function's caller is
     // either a permanent error or a transient one retry() gave up on; both
     // are this cell's problem to track, never silently swallowed into "no
-    // rows exist".
-    const { resources } = await retry(() => cat.items.query({
-      query: "SELECT DISTINCT c.id, c.source, c.sourceSystem, c.sources, c.sport FROM c WHERE STARTSWITH(c.id, @prefix)",
-      parameters: [{ name: "@prefix", value: prefix }],
-    }, { maxItemCount: -1 }).fetchAll());
-    const out = resources ?? [];
+    // rows exist". ONE bounded retry only (not `retry()`'s stacked 8) -- see
+    // BACKING_PRELOAD_QUERY_TIMEOUT_MS's header: a stall here is a client-side
+    // spin, not a transient 429, so retrying it many times inside `retry()`
+    // was never going to help and only cost 150 minutes proving that.
+    const runOnce = async (signal) => {
+      const iter = cat.items.query({
+        query: "SELECT DISTINCT c.id, c.source, c.sourceSystem, c.sources, c.sport FROM c WHERE STARTSWITH(c.id, @prefix)",
+        parameters: [{ name: "@prefix", value: prefix }],
+      }, {
+        // BOUNDED maxItemCount + explicit maxDegreeOfParallelism: -1 IS THE
+        // FIX. See BACKING_PRELOAD_QUERY_TIMEOUT_MS's header comment above --
+        // `maxItemCount: -1` on a cross-partition DISTINCT query is what
+        // spins; a real page size lets the SDK's parallel fan-out actually
+        // terminate. Measured: the same query text at maxItemCount:500 with
+        // maxDegreeOfParallelism:-1 completed the census batch's 5 real
+        // cells in 175ms-4.6s total (all pages), 196-21,714 RU.
+        maxItemCount: 500, maxDegreeOfParallelism: -1, abortSignal: signal,
+      });
+      // STREAMED DIRECTLY INTO THE VERDICT MAP, PAGE BY PAGE (2026-09-20 per
+      // review). The old shape accumulated a full `resources` array across
+      // every page THEN filtered/mapped it into `idToVerdict` at the end --
+      // for a 203,058-row cell that is two full-size in-memory copies of the
+      // same rows alive at once (the raw array AND the derived Map) at their
+      // peak, on top of whatever else `CLASSIFY_CONCURRENCY` cells are
+      // warming concurrently. Building `idToVerdict` per page as it arrives
+      // means only ONE page's raw rows (at most 500, per `maxItemCount`
+      // above) are ever resident alongside the growing Map, never the whole
+      // cell's raw result set.
+      const idToVerdict = new Map();
+      let rowCount = 0, ru = 0;
+      let consecutiveEmptyPages = 0;
+      const deadlineAt = Date.now() + BACKING_PRELOAD_QUERY_TIMEOUT_MS;
+      while (iter.hasMoreResults()) {
+        // THE SPIN GUARD. Checked SYNCHRONOUSLY on every loop iteration --
+        // never inside a timer callback -- because this is the one check
+        // that still runs when a `setTimeout` registered before this loop
+        // would not (see BACKING_PRELOAD_QUERY_TIMEOUT_MS's header). Two
+        // independent trips, either one throws immediately:
+        //   1. wall clock: Date.now() past the SAME deadline the timeout
+        //      guard uses, checked here too so a page that DOES yield a
+        //      macrotask tick between iterations (partial progress, still
+        //      too slow) is caught even though it would also eventually hit
+        //      the timeout guard -- belt and suspenders, cheap to check.
+        //   2. spin: BACKING_PRELOAD_SPIN_GUARD_PAGES consecutive pages with
+        //      zero rows AND zero RU -- the exact signature of the
+        //      reproduced defect (a real sparse-but-progressing cell always
+        //      differs on at least one of those two axes, or terminates via
+        //      hasMoreResults()===false instead of an endless true).
+        if (Date.now() > deadlineAt) {
+          throw new Error(`BACKING_PRELOAD_TIMEOUT after ${BACKING_PRELOAD_QUERY_TIMEOUT_MS}ms (in-loop deadline): ${sport}:${year}:${setKey}`);
+        }
+        const page = await iter.fetchNext();
+        const pageRows = page.resources ?? [];
+        const pageRU = page.requestCharge || 0;
+        if (pageRows.length === 0 && pageRU === 0) {
+          consecutiveEmptyPages++;
+          if (consecutiveEmptyPages >= BACKING_PRELOAD_SPIN_GUARD_PAGES) {
+            backingPreloadSpinGuardTrips++;
+            throw new Error(`BACKING_PRELOAD_SPIN_GUARD after ${consecutiveEmptyPages} consecutive empty pages: ${sport}:${year}:${setKey}`);
+          }
+        } else {
+          consecutiveEmptyPages = 0;
+        }
+        // Sport-filtered IN MEMORY, exactly like flagshipNumbers/
+        // checklistNames above -- the prefix already scopes to this (sport,
+        // year, setKey), so this is now a belt-and-suspenders check against
+        // a row whose id lies about its own segments (should not happen;
+        // costs nothing when it doesn't fire). Streamed per page rather than
+        // filtered once over the whole cell -- same predicate, same result.
+        for (const r of pageRows) {
+          if (!rowIsSport(r, sport)) continue;
+          const named = [r.source, r.sourceSystem, ...(Array.isArray(r.sources) ? r.sources : [])];
+          idToVerdict.set(r.id, named.some((s) => K.isStrictChecklistSource(s)) ? "strict" : "row");
+        }
+        rowCount += pageRows.length;
+        ru += pageRU;
+      }
+      return { idToVerdict, rowCount, ru };
+    };
+    const { idToVerdict, rowCount, ru } = await withHardTimeout(
+      (signal) => retry(() => runOnce(signal), 1),
+      BACKING_PRELOAD_QUERY_TIMEOUT_MS,
+      `${sport}:${year}:${setKey}`,
+    );
     backingPreloadQueries++;
-    backingPreloadRowsRead += out.length;
-    // Sport-filtered IN MEMORY, exactly like flagshipNumbers/checklistNames
-    // above -- the prefix already scopes to this (sport, year, setKey), so
-    // this is now a belt-and-suspenders check against a row whose id lies
-    // about its own segments (should not happen; costs nothing when it
-    // doesn't fire).
-    const rows = out.filter((r) => rowIsSport(r, sport));
-    const idToVerdict = new Map();
-    for (const r of rows) {
-      const named = [r.source, r.sourceSystem, ...(Array.isArray(r.sources) ? r.sources : [])];
-      idToVerdict.set(r.id, named.some((s) => K.isStrictChecklistSource(s)) ? "strict" : "row");
-    }
+    backingPreloadRowsRead += rowCount;
+    backingPreloadRUSpent += ru;
     return idToVerdict;
   };
   const backingCellPreload = async (year, setKey, sport) => {
@@ -1478,7 +1692,7 @@ async function main() {
     if (backingPreloadCache.has(key)) {
       // Touch for LRU recency: delete + re-set moves it to the end of
       // insertion order, which Map preserves and this cache's eviction
-      // reads.
+      // (both the cell-count cap and the row budget below) reads.
       const v = backingPreloadCache.get(key);
       backingPreloadCache.delete(key);
       backingPreloadCache.set(key, v);
@@ -1494,6 +1708,13 @@ async function main() {
         const failed = (backingCellFailCounts.get(key) ?? 0) + 1;
         backingCellFailCounts.set(key, failed);
         const message = String(e?.message ?? e);
+        // Named separately from the generic fail count (never silent, never
+        // folded away): a timeout says "this cell's own query would not
+        // terminate inside its budget", a DIFFERENT fact from a real Cosmos
+        // error, and the two must be tellable apart in the artifact -- see
+        // BACKING_PRELOAD_QUERY_TIMEOUT_MS's header for why this path exists
+        // at all.
+        if (/^BACKING_PRELOAD_TIMEOUT/.test(message)) backingPreloadTimeouts++;
         if (backingFailedCellSamples.length < BACKING_FAILED_CELLS_SAMPLE_CAP) {
           backingFailedCellSamples.push({ cell: key, attempt: failed, error: message });
         }
@@ -1505,9 +1726,36 @@ async function main() {
       }
       if (v) {
         backingPreloadCache.set(key, v);
-        while (backingPreloadCache.size > BACKING_PRELOAD_CELL_CAP) {
-          const oldest = backingPreloadCache.keys().next().value;
-          backingPreloadCache.delete(oldest);
+        backingPreloadCachedRows += v.size;
+        // TWO INDEPENDENT EVICTION BOUNDS, either one alone can trigger a
+        // cell's eviction, checked in a single loop so a pathological
+        // insert (a huge cell arriving when the cache is already near both
+        // limits) cannot leave EITHER bound exceeded:
+        //   1. row budget (PRIMARY, 2026-09-20 per review) -- total cached
+        //      rows across every cell vs BACKING_PRELOAD_ROW_BUDGET, since
+        //      one cell's row count can vary by 100x+ (measured: 1,446 to
+        //      203,058 across 5 real cells) and a cell-count cap alone
+        //      cannot see that.
+        //   2. cell count (SECONDARY, pre-existing) -- distinct cells vs
+        //      BACKING_PRELOAD_CELL_CAP, kept so a slot touching many SMALL
+        //      cells (each individually far under the row budget) still has
+        //      a bound on the cache's own bookkeeping overhead (Map-of-Maps
+        //      entries, in-flight tracking, etc), which the row budget does
+        //      not itself limit.
+        // LRU by cell's LAST USE either way (oldest insertion-order entry;
+        // `Map` preserves insertion order and the touch-on-hit above already
+        // keeps it as recency order) -- a cell is evicted WHOLE, never
+        // partially, since a verdict map missing some of its own rows would
+        // silently misanswer the rows it still has.
+        while (
+          backingPreloadCache.size > 0
+          && (backingPreloadCachedRows > BACKING_PRELOAD_ROW_BUDGET || backingPreloadCache.size > BACKING_PRELOAD_CELL_CAP)
+        ) {
+          const oldestKey = backingPreloadCache.keys().next().value;
+          const oldestValue = backingPreloadCache.get(oldestKey);
+          backingPreloadCache.delete(oldestKey);
+          backingPreloadCachedRows -= oldestValue ? oldestValue.size : 0;
+          backingPreloadEvictions++;
         }
       }
       return v;
@@ -2948,6 +3196,35 @@ async function main() {
     : `concurrency ${CLASSIFY_CONCURRENCY}, ${f(pagesPrefetched)} page(s) warmed, ` +
       `${f(prefetchHitsTotal)} row(s) served from the warm identity cache (parsed once, not twice)`);
 
+  /** THE ROW-LOOP HEARTBEAT (2026-09-20, the census hang fix). 32 backing
+   *  slots ran 150 minutes and were killed printing NOTHING -- not even the
+   *  periodic page checkpoint's own save, because a checkpoint only fires
+   *  after a page's rows finish and the stalled preload never let a page
+   *  finish. This line is checked inside the row loop itself (not only at
+   *  page/unit boundaries) so a stall INSIDE a page is still visible before
+   *  the run is killed. `HEARTBEAT_MS` defaults under the 60s DELIVER asks
+   *  for; `budget()`'s own 5-minute lane-level keepalive in runner-budget.cjs
+   *  is a DIFFERENT, coarser signal (this process is alive at all) -- this
+   *  one says what the row loop itself is doing right now, which is what a
+   *  reader needs to tell "warming a big cell" from "wedged". */
+  const HEARTBEAT_MS = Math.max(1, Number(process.env.CENSUS_HEARTBEAT_MS || 60000));
+  const fmtMsLocal = (ms) => (ms >= 60000 ? `${Math.round(ms / 60000)}m` : `${Math.round(ms / 1000)}s`);
+  let lastHeartbeatAt = Date.now();
+  const emitHeartbeat = (force = false) => {
+    const now = Date.now();
+    if (!force && now - lastHeartbeatAt < HEARTBEAT_MS) return;
+    lastHeartbeatAt = now;
+    const mins = Math.round((now - started) / 60000);
+    const backingNote = CENSUS_BACKING
+      ? `, backing: ${f(backingPreloadCache.size + backingPermanentlyFailedCells.size)} cell(s) preloaded, `
+        + `${f(backingPermanentlyFailedCells.size)} permanently failed, ${f(backingPreloadTimeouts)} timed out, `
+        + `${f(backingPreloadSpinGuardTrips)} spin-guard trip(s), `
+        + `${f(backingPreloadCachedRows)} row(s) cached, ${f(backingPreloadEvictions)} cell eviction(s), `
+        + `${Math.round(backingPreloadRUSpent).toLocaleString()} RU spent on backing`
+      : "";
+    console.log(`  heartbeat: ${mins}m elapsed, ${f(stats.seen)} row(s) classified, ${f(pagesPrefetched)} page(s) warmed${backingNote}, ${fmtMsLocal(Math.max(0, budgetLeft()))} of budget left`);
+  };
+
   page: for (const unit of unitsThisPass) {
     if (MODE === "census" && budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget`; break; }
     // `unit` already survived slotQuery's own YEARS filter once, when `q.units`
@@ -3062,8 +3339,60 @@ async function main() {
         { length: Math.min(CLASSIFY_CONCURRENCY, Math.max(toWarm.length, 1)) },
         warmOne,
       ));
+      // ── BACKING PRELOAD, WARMED HERE TOO (2026-09-20, the census hang fix) ──
+      //
+      // `backingCellPreload` used to be awaited for the FIRST TIME inside the
+      // row loop below, one row at a time, serially -- the exact defect the
+      // PR this comment ships with exists to end. The row loop's own
+      // `await backingCellPreload(...)` is UNCHANGED (same cache, same
+      // sentinels, same counting) -- what moves is only WHEN the network
+      // round trip happens, identically to how `checklistBacked` etc. above
+      // are warmed here and re-read (free) in the loop.
+      //
+      // Distinct CELLS of the page, not distinct rows: `pageIdentity`'s
+      // `stored` already carries `sport`/`year`/`setKey` per row (the SAME
+      // fields the row loop's own CENSUS_BACKING block reads off `stored`),
+      // so this collects the page's distinct (sport, year, setKey) cells
+      // ONCE and preloads each ONCE, bounded by CLASSIFY_CONCURRENCY -- never
+      // once per row, which would just move the N-fold cost here instead of
+      // removing it.
+      if (CENSUS_BACKING) {
+        const cellsToWarm = new Map(); // cellKey -> { sport, year, setKey }
+        for (const row of toWarm) {
+          const warmed = pageIdentity.get(row.id);
+          const stored = warmed ? warmed.stored : null;
+          if (!stored) continue; // prefilter-skipped or a caught failure above; the row loop re-derives it and preloads on its own miss
+          const sport = String(stored?.sport ?? row?.sport ?? "").trim().toLowerCase() || null;
+          const year = stored?.year ?? stored?.cardYear ?? null;
+          const setKey = stored?.setKey ?? null;
+          if (!sport || year == null || !setKey) continue; // same "absent beats wrong" refusal the row loop's own unparseable bucket uses
+          const cellKey = `${year}|${setKey}|${sport}`;
+          if (!cellsToWarm.has(cellKey)) cellsToWarm.set(cellKey, { sport, year, setKey });
+        }
+        const cellList = [...cellsToWarm.values()];
+        if (cellList.length) {
+          let ci = 0;
+          const warmCell = async () => {
+            while (ci < cellList.length) {
+              const { sport, year, setKey } = cellList[ci++];
+              try { await backingCellPreload(year, setKey, sport); }
+              catch { /* best effort: backingCellPreload itself never throws (see its own try/catch); this guard is belt-and-suspenders only */ }
+              // A big or slow-loading cell can eat most of HEARTBEAT_MS on
+              // its own inside this warm phase, before the row loop below
+              // even starts -- checked here too, not only in the row loop,
+              // so a heartbeat still lands during a long warm phase.
+              emitHeartbeat();
+            }
+          };
+          await Promise.all(Array.from(
+            { length: Math.min(CLASSIFY_CONCURRENCY, cellList.length) },
+            warmCell,
+          ));
+        }
+      }
     }
     for (const row of resources ?? []) {
+      emitHeartbeat();
       if (!rowInSlot(row, q.units)) { stats.otherSlot++; continue; }
       // THE IN-SLOT ROW FILTER, applied after slot membership and before any
       // derivation: a row this dispatch was not asked to look at costs no
@@ -3227,6 +3556,26 @@ async function main() {
           // not to spend.
           sb.unparseable++;
           if (cb) cb.unparseable++;
+        } else if (!backingPreloadCache.has(cellKey) && !backingPermanentlyFailedCells.has(cellKey) && budgetLeft() < BACKING_PRELOAD_QUERY_TIMEOUT_MS + 90000) {
+          // BUDGET CHECK BEFORE A COLD PRELOAD, NOT ONLY AT THE PAGE/UNIT
+          // BOUNDARY. On a warmed page this branch never runs -- the warm
+          // phase above already populated `backingPreloadCache` for every
+          // distinct cell before the row loop started, so every row here
+          // hits the cache and costs no network wait at all (the row loop
+          // performs ZERO backing queries on a warmed page -- see the
+          // preload-warm-phase test). This guard exists for the page(s)
+          // that do NOT go through the warm phase (a one-row page, or
+          // CLASSIFY_CONCURRENCY=1): a cold preload can still cost up to
+          // BACKING_PRELOAD_QUERY_TIMEOUT_MS, and starting one with less
+          // than that plus margin left on the clock is exactly how a slot
+          // gets killed mid-query instead of stopping at a checkpoint. Bail
+          // out to `unknown` (never `noRow` -- this says nothing about
+          // whether a catalog row exists, only that this run chose not to
+          // spend its last budget finding out) and let the ordinary
+          // page-boundary budget check below write the checkpoint.
+          sb.unknown++;
+          if (cb) cb.unknown++;
+          stopReason = stopReason ?? `stopped at the ${RUN_MINUTES}-minute budget`;
         } else {
           const idMap = await backingCellPreload(year, setKey, sport);
           if (idMap === BACKING_LOAD_FAILED || idMap === BACKING_LOAD_PERMANENTLY_FAILED) {
@@ -4034,11 +4383,47 @@ async function main() {
       cellOverflowed: backingByCell.has("other"),
       preload: {
         cellCap: BACKING_PRELOAD_CELL_CAP,
+        // ROW-BUDGETED EVICTION (2026-09-20 per review) -- the PRIMARY
+        // eviction bound; cellCap above is now SECONDARY (see
+        // BACKING_PRELOAD_ROW_BUDGET's own header for why cell count alone
+        // could not see a 203,058-row cell coming). cachedRows is the
+        // CURRENT total (a live gauge, read at artifact-write time);
+        // evictions is a cumulative COUNTER of whole-cell evictions this
+        // slot has performed so far, by either bound.
+        rowBudget: BACKING_PRELOAD_ROW_BUDGET,
+        cachedRows: backingPreloadCachedRows,
+        evictions: backingPreloadEvictions,
         failRetries: BACKING_PRELOAD_CELL_FAIL_RETRIES,
+        queryTimeoutMs: BACKING_PRELOAD_QUERY_TIMEOUT_MS,
         distinctCellQueries: backingPreloadQueries,
         distinctCellsTouched: backingPreloadCache.size + backingPermanentlyFailedCells.size,
         catalogRowsRead: backingPreloadRowsRead,
+        // MEASURED, not estimated (2026-09-20 follow-up to the census hang
+        // fix): the actual RU this slot's backing queries charged, summed
+        // as each query returns -- see backingCellPreloadRaw. Real RU
+        // varies by cell size (a whole-product id-prefix, not a flat cost
+        // -- see the runbook's step 0b for the measured 197-21,933 RU/cell
+        // range across 5 real cells), so a per-slot total read directly off
+        // the artifact is the only trustworthy number, never an estimate
+        // multiplied by a query count.
+        ruSpent: Math.round(backingPreloadRUSpent),
         failedCells: backingPermanentlyFailedCells.size,
+        // How many of this slot's failed attempts (across ALL cells, not
+        // just permanently-failed ones) were specifically a
+        // BACKING_PRELOAD_QUERY_TIMEOUT_MS timeout, as opposed to a real
+        // Cosmos error -- the two are different facts (see
+        // BACKING_PRELOAD_QUERY_TIMEOUT_MS's own header) and an operator
+        // triaging a run needs to tell them apart without parsing
+        // failedCellSamples' free-text error strings.
+        timeouts: backingPreloadTimeouts,
+        // How many cell loads were stopped by the SYNCHRONOUS in-loop spin
+        // guard (consecutive empty pages or an in-loop deadline check),
+        // never by the AbortController/Promise.race timeout guard -- see
+        // BACKING_PRELOAD_QUERY_TIMEOUT_MS's header for why the two are
+        // different mechanisms covering different stall shapes, and why
+        // this field existing at all is the fix for a real gap (a timer
+        // cannot fire against a microtask-only spin).
+        spinGuardTrips: backingPreloadSpinGuardTrips,
         failedCellSamples: backingFailedCellSamples,
         note: "distinctCellQueries is the count of card_catalog queries this "
           + "slot issued for backing (one per (sport,year,setKey) cell, "
@@ -4047,14 +4432,28 @@ async function main() {
           + "counts 3 here); distinctCellsTouched is the count of DISTINCT "
           + "cells this slot asked about at all, successful or not. "
           + "catalogRowsRead is the total c.id rows the SUCCESSFUL queries "
-          + "returned. failedCells is how many distinct cells hit "
-          + "BACKING_PRELOAD_CELL_FAIL_RETRIES failures and were marked "
-          + "permanently failed for the rest of this slot -- every sale of "
-          + "one lands in the unknown bucket, never noRow. "
+          + "returned. ruSpent is the REAL measured RU this slot's backing "
+          + "queries charged -- read it directly, never estimate it "
+          + "(RU scales with each cell's matched-row count, not a flat "
+          + "per-query cost; see the 2026-09-20 runbook update). failedCells "
+          + "is how many distinct cells hit BACKING_PRELOAD_CELL_FAIL_RETRIES "
+          + "failures and were marked permanently failed for the rest of "
+          + "this slot -- every sale of one lands in the unknown bucket, "
+          + "never noRow. timeouts is how many of those failed attempts "
+          + "were a genuine network stall caught by the AbortController "
+          + "timeout guard; spinGuardTrips is how many were caught by the "
+          + "SYNCHRONOUS in-loop spin guard instead -- a setTimeout-based "
+          + "timeout cannot fire against a microtask-only empty-page spin, "
+          + "so this counter is the one that actually witnesses that "
+          + "failure shape recurring. "
           + "failedCellSamples lists up to 50 (cell key, attempt number, "
-          + "error message) entries for triage. Multiply distinctCellQueries "
-          + "by the PR's offline RU-per-page estimate to get this slot's "
-          + "added RU.",
+          + "error message) entries for triage. rowBudget/cachedRows/"
+          + "evictions describe the ROW-BUDGETED cache eviction (PRIMARY "
+          + "bound, 2026-09-20 per review) -- cachedRows near rowBudget "
+          + "with evictions climbing means this slot's shard is dense with "
+          + "large cells and re-querying previously-evicted-then-revisited "
+          + "cells more than the locality assumption expects; cellCap is "
+          + "now only the SECONDARY bound.",
       },
     } : null,
     // The filter is part of the census's identity: two censuses of the same

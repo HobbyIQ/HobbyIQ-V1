@@ -52,6 +52,163 @@ untouched by this batch.
 
 ---
 
+## 0b. INCIDENT 2026-09-20: all 32 backing slots hung 150 minutes, zero output — FIXED
+
+The first 32-slot dispatch of this batch (this section's own step 2, before
+the fix below) hung every slot for the full 150-minute step ceiling and was
+killed with **no banner, no heartbeat, nothing past `CENSUS CURSOR: no usable
+prior checkpoint`**. A read-only probe against prod (bounded, 60s-capped
+queries, never against `sold_comps`, never a write) found the cause and it is
+**not** what this runbook's step 0's "Added cost of `sources=backing`"
+section assumed.
+
+### Root cause: not slow — non-terminating
+
+`backingCellPreloadRaw`'s query (`SELECT DISTINCT c.id, c.source,
+c.sourceSystem, c.sources, c.sport FROM c WHERE STARTSWITH(c.id, @prefix)`)
+was issued with `{ maxItemCount: -1 }` and no `maxDegreeOfParallelism`. On
+`card_catalog` (40 physical partitions), that combination does not run
+slow — it **spins**: `iterator.hasMoreResults()` stays `true` forever while
+`fetchNext()` resolves *immediately* with **0 RU and 0 rows on every single
+page**. Measured directly: 5,000+ empty pages in under 500ms of wall clock,
+repeated identically on the **smallest** measured cell (hockey:2023:
+upper-deck, 1,446 rows) and the **largest** (baseball:2025:topps, 203,058
+rows) — proving it is a client-side `@azure/cosmos` (v4.9.3) defect
+independent of result size, never network latency. Because nothing ever
+*threw*, neither `retry()`'s own 8-try backoff nor the SDK's own
+30-try/120s-per-try throttle retry (`maxRetryAttemptsOnThrottledRequests: 30,
+maxWaitTimeInSeconds: 120`, `main()`'s `CosmosClient` connection policy) ever
+engaged — the promise kept resolving, it just never made progress. That is
+why 32 slots hung 150 minutes and printed nothing: the "150-minute budget"
+check itself was never reached, because the query it was waiting on inside
+the per-row classify loop never returned.
+
+The fix (shipped in this PR): the SAME query text, with **`maxItemCount:
+500` (or any bounded page size) and `maxDegreeOfParallelism: -1` set
+explicitly**. Isolated by measurement: `maxDegreeOfParallelism: -1` alone,
+with `maxItemCount` still `-1`, does **not** fix it (still spins) — the
+bounded `maxItemCount` is the load-bearing half of the fix;
+`maxDegreeOfParallelism: -1` is what makes the bounded-page version fast
+(parallel partition fan-out) rather than merely correct.
+
+### MEASURED RU/latency/rows — the OLD shape vs the FIXED shape, 5 real cells
+
+Read-only against prod `card_catalog` (`hobbyiq-comps`/`hobbyiq`), 2026-09-20.
+"OLD" is capped at 8s per cell (proven non-terminating; no point re-proving
+it burns the full budget on every cell) — its true behavior is unbounded
+empty-page spinning, 0 RU, 0 rows, forever.
+
+| cell | OLD shape (`maxItemCount:-1`, no MDOP) | FIXED shape (`maxItemCount:500`, `MDOP:-1`) |
+|---|---|---|
+| baseball:1989:topps | spins (0 RU, 0 rows, capped at 8s) | **1.3s, 243 RU, 3,310 rows** |
+| baseball:2025:topps | spins (0 RU, 0 rows, capped at 8s) | **3.8s, 21,933 RU, 203,058 rows** |
+| basketball:2023:panini-prizm | spins (0 RU, 0 rows, capped at 8s) | **1.7s, 4,775 RU, 95,701 rows** |
+| football:2024:panini-donruss | spins (0 RU, 0 rows, capped at 8s) | **0.5s, 1,179 RU, 23,424 rows** |
+| hockey:2023:upper-deck | spins (0 RU, 0 rows, capped at 8s) | **0.2s, 197 RU, 1,446 rows** |
+
+### What differed from the "flat 112 RU, fast" ad-hoc measurement
+
+This runbook's own step 0 ("Added cost of `sources=backing`") cited
+`catalogIdentityResolver.ts`'s ad-hoc, pre-existing measurement of a
+`STARTSWITH`+`DISTINCT` query at "a flat 112 RU, whatever the predicate" and
+concluded the backing preload would cost the same. **That number was real,
+but it was measured on a different query, answering a different question,
+over a different-sized result set — and the difference is exactly what this
+census's cells hit:**
+
+1. **Result-set size, not query shape.** The ad-hoc measurement's
+   `STEM_QUERY` (`src/services/catalog/catalogIdentityResolver.ts`) prefixes
+   on **one card's own stem** (`<sport>:<year>:<setKey>:<number>...`) — a
+   handful of graded/parallel twins, at most. This census's prefix
+   (`backingCellIdPrefix`) is a **whole PRODUCT** (`<sport>:<year>:<setKey>:`
+   with no card number) — every card, every parallel, every graded child of
+   an entire set. `baseball:2025:topps` alone matched **203,058 rows**. RU is
+   not flat at 112 once the match count leaves "a few twins" — it scales
+   with rows actually read off disk, 21,933 RU for that cell alone. The
+   original "flat 112 RU" framing (`card_catalog is partitioned... so ANY
+   cross-partition query pays the per-partition floor... whatever the
+   predicate`) is true only when the MATCHED set is small; it does not hold
+   once the predicate is product-wide.
+2. **Projection width, secondarily.** The ad-hoc query selected `c.id,
+   c.source` (2 fields); this census's selects `c.id, c.source,
+   c.sourceSystem, c.sources, c.sport` (5 fields, one an array) — measured
+   ~10% more RU for the same rows on the largest cell, real but a minor
+   factor next to (1).
+3. **The one that actually caused the hang: `maxItemCount`.** The ad-hoc
+   measurement's own comment ("`maxDegreeOfParallelism` did not change it")
+   never tested `maxItemCount`, because its own result sets were always a
+   handful of rows — under ANY page size, `maxItemCount:-1` never spun
+   because the first page always exhausted the (tiny) result set before the
+   defect's shape could manifest. A product-wide prefix is the first shape
+   in this codebase's history to put enough matched rows through this exact
+   code path to expose it.
+
+**Revised RU model.** Not a flat 112 RU/query — RU scales with the cell's
+matched-row count, from ~200 RU (a small vintage set) to ~22,000 RU (a large
+modern flagship). A conservative per-slot estimate: ~1,374 distinct cells
+(this runbook's own coupon-collector estimate, unchanged) × an assumed
+worse-than-median per-cell cost — at the high end (`baseball:2025:topps`
+scale, 21,933 RU) that is **~30,000,000 RU per slot**, not ~154,000 RU. Real
+per-slot RU is reported in each slot's own artifact
+(`backing.preload.catalogRowsRead` and the new heartbeat's running RU
+total) and should be read from the FIRST slot's actual run (see the canary
+below) before trusting any estimate for the full 32-slot dispatch.
+
+### One-slot canary — REQUIRED before a 32-slot dispatch
+
+Dispatch **slot 0 alone** first and watch its own log for a **heartbeat
+line within 5 minutes** of the `CENSUS CURSOR` startup line:
+
+```bash
+gh workflow run backfill-runner.yml --ref main \
+  -f script=rematch-sold-comps -f mode=census -f slot=0 -f slots=32 \
+  -f scope=improve -f apply=false -f sources=backing
+```
+
+Expect, within the first page:
+
+```
+  heartbeat: 0m elapsed, <N> row(s) classified, <M> page(s) warmed, backing: <C> cell(s) preloaded, 0 permanently failed, 0 timed out, <RU> RU spent on backing, ...m of budget left
+```
+
+**If no heartbeat line appears within 5 minutes, CANCEL the run** (`gh run
+cancel <run-id>`) — do not let it run to the budget or the step ceiling. No
+heartbeat within 5 minutes means either the fix did not actually land on the
+dispatched commit (check `SLOTS`/the confirmed script path in the log) or a
+NEW stall shape this PR's fix does not cover; either way, 31 more slots
+hung the same way is not information worth 150 minutes to re-learn. Only
+dispatch the remaining 31 slots after the canary's heartbeat confirms real
+progress (rows climbing, RU climbing, no repeated `permanently failed`
+climbing unboundedly).
+
+### Recommended max concurrent slots for `sources=backing`
+
+`card_catalog` is provisioned at 100,000+ RU/s. Using the REVISED model
+above (worst-case ~22,000 RU per large cell, not a flat 112 RU), a slot
+warming several large cells concurrently inside one page's
+`CLASSIFY_CONCURRENCY`-bounded warm phase (default 8) could burst up to
+`8 × 22,000 ≈ 176,000 RU` for that one page's warm phase alone if every
+concurrent cell happened to be topps-2025-scale — briefly over the
+container's ceiling for slots that unluckily co-warm several large cells at
+once (the SDK's own 429 retry absorbs this, at the cost of latency, not
+correctness). Spread across **32 concurrent slots**, a simultaneous
+worst-case burst is not realistic (cells are drawn from each slot's OWN
+shard unit, and large modern flagship products cluster in a minority of
+units per `data/rematch-shard-table.json`), but the REVISED model means the
+prior "small fraction of one second of headroom" conclusion no longer holds
+without qualification.
+
+**Recommendation: dispatch in two waves of 16, not all 32 at once**, watching
+`card_catalog`'s 429 rate (App Insights `hobbyiq-insights`) between waves —
+this is a scheduling choice for THIS dispatch, not a config change, so it
+does not require the live-config HALT. If the first wave's 429 rate stays at
+baseline, the second wave can follow immediately; if it climbs materially,
+pause and let the first wave finish before starting the second. This
+supersedes step 3's prior abort criterion of watching for a 429 climb only
+AFTER a full 32-slot dispatch — watch it after EACH wave now.
+
+---
+
 ## 1. Merge order and expected stamp
 
 Computed locally (fresh clone, no push) by merging/diffing each branch
@@ -109,7 +266,14 @@ batch exists to close, not a blocker to running it.
 
 ---
 
-## 2. Dispatch — 32 slots, one census
+## 2. Dispatch — ONE-SLOT CANARY FIRST, then two waves of 16
+
+**Run the one-slot canary in step 0b before dispatching any of the 32
+slots below.** The 2026-09-20 incident (all 32 slots hung 150 minutes, zero
+output — see step 0b) was caused by a non-terminating query inside the
+backing preload that is now fixed and covered by tests, but the canary is
+what proves the FIX actually landed on the dispatched commit, not just that
+the PR merged.
 
 `rematch-sold-comps` dispatches through **`backfill-runner.yml`** (registered
 workflow name: "Backfill Runner (sold_comps re-slug / verify_queue batch)"),
@@ -121,8 +285,12 @@ rule about dispatching "Daily 5AM ET Refresh & Deploy" after every
 deploy dispatch is needed at all — the runner checks out the branch fresh and
 runs the script directly, it is not part of the deployed App Service bundle.
 
+Per step 0b's revised RU model and recommended concurrency, dispatch in
+**two waves of 16 slots**, not all 32 at once:
+
 ```bash
-for SLOT in $(seq 0 31); do
+# WAVE 1: slots 0-15
+for SLOT in $(seq 0 15); do
   gh workflow run backfill-runner.yml --ref main \
     -f script=rematch-sold-comps \
     -f mode=census \
@@ -132,6 +300,21 @@ for SLOT in $(seq 0 31); do
     -f apply=false \
     -f sources=backing
   sleep 5   # stay well under GitHub's dispatch rate limit
+done
+# Watch card_catalog's 429 rate (App Insights hobbyiq-insights) before wave 2.
+# If it is at baseline, proceed immediately; if it climbs materially, wait
+# for wave 1 to finish before dispatching wave 2.
+# WAVE 2: slots 16-31
+for SLOT in $(seq 16 31); do
+  gh workflow run backfill-runner.yml --ref main \
+    -f script=rematch-sold-comps \
+    -f mode=census \
+    -f slot=$SLOT \
+    -f slots=32 \
+    -f scope=improve \
+    -f apply=false \
+    -f sources=backing
+  sleep 5
 done
 ```
 
@@ -163,6 +346,16 @@ more rows — see `data/rematch-shard-table.json` for the per-slot row counts,
 1.07x spread) plus GitHub Actions queue time, NOT 32× that.
 
 ### Added cost of `sources=backing`
+
+**SUPERSEDED 2026-09-20 — see step 0b above for the corrected RU model.**
+The "flat 112 RU per query" framing below held only for the ad-hoc
+measurement it was borrowed from (a single card's stem, a handful of
+matched rows); this census's prefix is a whole PRODUCT and its real RU
+scales with the cell's matched-row count (measured 197-21,933 RU per cell
+across 5 real cells, not a flat 112). The design (one query per distinct
+cell, never a point read per sale) is UNCHANGED and correct; only the
+per-query RU estimate below is stale. Kept for its still-correct point read
+comparison and design rationale.
 
 See `CENSUS_BACKING`'s own comment block in `rematch-sold-comps.cjs` for the
 full design. Summary: a **projected** `card_catalog` query per distinct
@@ -349,6 +542,13 @@ artifact would then lack the `backing` block the merge step needs).
   (App Insights `hobbyiq-insights`) — HALT the remaining un-dispatched slots,
   this is the live-config-adjacent signal the RU estimate above was meant to
   keep this batch clear of.
+- **A slot's log has no heartbeat line for more than ~2x `CENSUS_HEARTBEAT_MS`
+  (default 60s, so >2 minutes silent) while its own run is still `in_progress`**
+  — per step 0b, the fix guarantees a heartbeat inside page processing at
+  least every `CENSUS_HEARTBEAT_MS`; a gap that large with the process still
+  running is a NEW stall shape this PR's fix does not cover, not the
+  incident this PR closes. Cancel that slot and investigate before
+  re-dispatching it — do not assume it will recover on its own.
 
 ---
 
