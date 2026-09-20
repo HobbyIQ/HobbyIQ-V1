@@ -722,6 +722,38 @@ describe("resolve-split-identity-parks -- REVIEW #1 (HIGH, delta review 2026-09-
     const deletedIds = new Set(first.led.salesDeletes as string[]);
     expect(deletedIds.size).toBe(2); // one old-partition delete (the relocate) + one collapse delete
   });
+
+  it("CONCURRENCY (MEDIUM follow-up): two movers to DIFFERENT destinations at the SAME price+day run concurrently -- both resolve independently, neither waits on the other's lock", () => {
+    // Same price + same day as TWIN_* (the shared signature every other
+    // test in this block uses), but for TWO UNRELATED cards resolving to
+    // TWO DIFFERENT destinations. Before the destination was added to the
+    // lock key, every same-price/same-day row nationwide serialised through
+    // ONE queue regardless of destination; this proves that is fixed.
+    const cardA = {
+      id: "cardhedge::unrelated-a", cardId: "hiq:baseball:2023:topps:vw-3:base:no-auto", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto",
+      sport: "baseball", identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z", identityUnverifiedBy: "relocate-pool-rows-by-list",
+      identityUnverifiedReason: "split-identity", identityUnverifiedDetail: "x",
+      title: TWIN_TITLE, playerName: "Victor Wembanyama", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT,
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "cardhedge",
+    };
+    const barrySandersCatalog = { id: "hiq:football:1989:score:257:base:no-auto", cardId: "hiq:football:1989:score:257:base:no-auto", source: "checklistcenter", playerName: "Barry Sanders" };
+    const cardB = {
+      id: "tca-ebay::unrelated-b", cardId: "hiq:baseball:1989:score:257:base:no-auto", hobbyiqCardId: "hiq:football:1989:score:257:base:no-auto",
+      sport: "baseball", identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z", identityUnverifiedBy: "relocate-pool-rows-by-list",
+      identityUnverifiedReason: "split-identity", identityUnverifiedDetail: "x",
+      title: "1989 Score Barry Sanders Detroit Lions Rookie RC #257", playerName: "Barry Sanders", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT,
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "tca-ebay", cardNumber: "257",
+    };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true", CONCURRENCY: "16" }, { sales: [cardA, cardB], catalog: [VW3_CHECKLIST_BASKETBALL, barrySandersCatalog] });
+    expect(r.code).toBe(0);
+    // Both resolve to their OWN distinct destination -- neither is parked
+    // or refused by the other's presence in the same price+day bucket.
+    expect(r.out).toMatch(/RESOLVE-TO-H \(relocate\)\s+2/);
+    expect(r.out).not.toMatch(/possible-twin-at-destination/);
+    expect(r.out).toMatch(/COLLAPSED onto a resident \(same sale, by hash\)\s+0/);
+    expect(r.out).toMatch(/RECONCILE BALANCES/);
+    expect(r.led.salesUpserts.sort()).toEqual(["cardhedge::unrelated-a", "tca-ebay::unrelated-b"].sort());
+  });
 });
 
 describe("resolve-split-identity-parks -- guard refusal", () => {

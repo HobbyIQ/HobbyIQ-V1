@@ -22,7 +22,7 @@ const mod = require("../scripts/resolve-split-identity-parks.cjs") as {
   titleVetoes: (input: Record<string, unknown>, deps: Record<string, unknown>) => { vetoed: boolean; detail?: string };
   guessTitlePlayer: (title: string, deps: Record<string, unknown>) => string | null;
   playerIdentityTokens: (name: unknown, deps: Record<string, unknown>) => string[];
-  physicalSaleKeyOf: (doc: Record<string, unknown>) => string;
+  physicalSaleKeyOf: (doc: Record<string, unknown>, dest?: string) => string;
   listingIdOf: (doc: Record<string, unknown>) => string;
   sameListingIdentity: (a: Record<string, unknown>, b: Record<string, unknown>) => boolean;
   isPinnedOrFlagged: (doc: Record<string, unknown>) => boolean;
@@ -343,25 +343,34 @@ describe("resolve-split-identity-parks: REVIEW #2 -- guessTitlePlayer + playerId
 });
 
 describe("resolve-split-identity-parks: REVIEW #1 -- physicalSaleKeyOf", () => {
-  it("keys on price (cents) + soldAt (day) ONLY -- title is deliberately NOT part of this key", () => {
-    expect(mod.physicalSaleKeyOf({ price: 12.5, soldAt: "2026-06-02T02:59:03.000Z", title: "  Pikachu   V  Holo  " }))
-      .toBe("1250|2026-06-02");
+  it("keys on destination|price (cents)|soldAt (day) -- title is deliberately NOT part of this key", () => {
+    expect(mod.physicalSaleKeyOf({ price: 12.5, soldAt: "2026-06-02T02:59:03.000Z", title: "  Pikachu   V  Holo  " }, "hiq:basketball:2023:topps:vw3:base:no-auto"))
+      .toBe("hiq:basketball:2023:topps:vw3:base:no-auto|1250|2026-06-02");
   });
 
-  it("two differently-titled twins of the SAME physical sale (different id, same price/day, DIFFERENT title formatting) still share one lock key", () => {
+  it("two differently-titled twins of the SAME physical sale AT THE SAME DESTINATION (different id, same price/day, DIFFERENT title formatting) still share one lock key", () => {
     // The delta review's own finding: a CardHedge-templated title and a
     // tca-ebay title for the exact same physical sale do not byte-match, so
     // keying the LOCK on title let two such twins serialize under different
     // keys. Dropping title from the key fixes that.
+    const dest = "hiq:basketball:2023:topps:vw3:base:no-auto";
     const a = { id: "cardhedge::abc", price: 12.5, soldAt: "2026-06-02T02:59:03.000Z", title: "2023 Topps Now Victor Wembanyama RC #VW3 PSA-clean raw" };
     const b = { id: "tca-ebay::999-dup", price: 12.5, soldAt: "2026-06-02T18:00:00.000Z", title: "Wembanyama 2023 Topps Now Rookie VW3 Basketball Card" };
-    expect(mod.physicalSaleKeyOf(a)).toBe(mod.physicalSaleKeyOf(b));
+    expect(mod.physicalSaleKeyOf(a, dest)).toBe(mod.physicalSaleKeyOf(b, dest));
   });
 
-  it("a genuinely different sale (different price) gets a different key", () => {
+  it("REVIEW #1 (MEDIUM follow-up): the SAME price+day at TWO DIFFERENT destinations gets TWO DIFFERENT keys -- unrelated cards must never share a lock queue", () => {
+    const a = { id: "a", price: 1.99, soldAt: "2026-06-02T00:00:00.000Z", title: "unrelated card A" };
+    const b = { id: "b", price: 1.99, soldAt: "2026-06-02T00:00:00.000Z", title: "unrelated card B" };
+    expect(mod.physicalSaleKeyOf(a, "hiq:baseball:2023:topps:1:base:no-auto"))
+      .not.toBe(mod.physicalSaleKeyOf(b, "hiq:baseball:2023:topps:2:base:no-auto"));
+  });
+
+  it("a genuinely different sale (different price) at the SAME destination gets a different key", () => {
+    const dest = "hiq:baseball:2023:topps:1:base:no-auto";
     const a = { id: "a", price: 12.5, soldAt: "2026-06-02T00:00:00.000Z", title: "Pikachu V Holo" };
     const b = { id: "b", price: 99.99, soldAt: "2026-06-02T00:00:00.000Z", title: "Pikachu V Holo" };
-    expect(mod.physicalSaleKeyOf(a)).not.toBe(mod.physicalSaleKeyOf(b));
+    expect(mod.physicalSaleKeyOf(a, dest)).not.toBe(mod.physicalSaleKeyOf(b, dest));
   });
 });
 
@@ -398,6 +407,39 @@ describe("resolve-split-identity-parks: REVIEW #1 (delta review) -- listingIdOf 
     expect(mod.sameListingIdentity({ id: "no-sep" }, { id: "tca-ebay::123" })).toBe(false);
     expect(mod.sameListingIdentity({ id: "tca-ebay::123" }, { id: "also-no-sep" })).toBe(false);
     expect(mod.sameListingIdentity({ id: "no-sep-a" }, { id: "no-sep-b" })).toBe(false);
+  });
+
+  // REVIEW #1 (LOW follow-up, 2026-09-20). "undefined"/"null"/"NaN" (case-
+  // insensitive, trimmed) are known corruption shapes for sourceExternalId
+  // (or an id tail) -- a JS undefined/null/NaN stringified into a template
+  // literal upstream -- and must read as EMPTY, never as a real listing id,
+  // so two independently-corrupted rows can never "prove" a shared listing.
+  it("listingIdOf: treats a literal 'undefined' sourceExternalId as empty and falls back to the id tail", () => {
+    expect(mod.listingIdOf({ id: "tca-ebay::168568127039", sourceExternalId: "undefined" })).toBe("168568127039");
+  });
+
+  it("listingIdOf: treats 'null'/'NaN' (any case, whitespace-padded) sourceExternalId as empty", () => {
+    expect(mod.listingIdOf({ id: "cardhedge::abc", sourceExternalId: "null" })).toBe("abc");
+    expect(mod.listingIdOf({ id: "cardhedge::abc", sourceExternalId: "  NULL  " })).toBe("abc");
+    expect(mod.listingIdOf({ id: "cardhedge::abc", sourceExternalId: "NaN" })).toBe("abc");
+  });
+
+  it("listingIdOf: treats a corrupted id TAIL (after sourceExternalId is absent) as empty too", () => {
+    expect(mod.listingIdOf({ id: "cardhedge::undefined" })).toBe("");
+    expect(mod.listingIdOf({ id: "tca-ebay::null" })).toBe("");
+    expect(mod.listingIdOf({ id: "tca-ebay:: NaN " })).toBe("");
+  });
+
+  it("sameListingIdentity: FALSE for two docs that both stringified to the literal 'undefined' -- never a proof of a shared listing", () => {
+    const a = { id: "cardhedge::internal-a", sourceExternalId: "undefined", source: "cardhedge" };
+    const b = { id: "tca-ebay::internal-b", sourceExternalId: "undefined", source: "tca-ebay" };
+    expect(mod.sameListingIdentity(a, b)).toBe(false);
+  });
+
+  it("sameListingIdentity: FALSE for two docs whose id TAIL both corrupted to 'null'", () => {
+    const a = { id: "cardhedge::null" };
+    const b = { id: "tca-ebay::null" };
+    expect(mod.sameListingIdentity(a, b)).toBe(false);
   });
 });
 

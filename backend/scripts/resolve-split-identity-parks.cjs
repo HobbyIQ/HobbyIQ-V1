@@ -194,10 +194,10 @@
  * a sample naming both docs' id + source + title, and fold into the
  * RECONCILE line's `refused` total like every other named refusal.
  *
- * Serialised WITHIN a run by a PHYSICAL-SALE KEY (price|soldAt-day -- `title`
- * dropped from this key, see `physicalSaleKeyOf`'s own doc), not by `id` --
- * two twins share no `id` to group on, so without this lock both could pass
- * the destination scan concurrently and both write.
+ * Serialised WITHIN a run by a PHYSICAL-SALE KEY (destination|price|
+ * soldAt-day -- `title` dropped from this key, see `physicalSaleKeyOf`'s own
+ * doc), not by `id` -- two twins share no `id` to group on, so without this
+ * lock both could pass the destination scan concurrently and both write.
  *
  * TWO WRITE SHAPES:
  *   PATCH      RESOLVE-TO-C always; RESOLVE-TO-H when the row's cardId
@@ -475,30 +475,45 @@ function checklistMatchOf(catalogRow, salePlayerName, catalogAuthorityOf, player
 }
 
 /**
- * REVIEW #1 (delta review, HIGH, follow-up). A physical sale's own LOCK
- * signature -- destination cardId, price (cents, to avoid a float-equality
- * footgun), soldAt floored to the DAY (matching relocate-sold-comp.cjs's own
- * `contentHashOf`/`day()` helper). Two rows sharing this key are candidates
- * for "the same underlying physical sale, filed twice under different ids"
- * and this key is what serialises this run's own writes against each other
- * (see `withPhysicalSaleLock` in main()).
+ * REVIEW #1 (delta review, HIGH; MEDIUM follow-up, 2026-09-20). A physical
+ * sale's own LOCK signature -- destination cardId, price (cents, to avoid a
+ * float-equality footgun), soldAt floored to the DAY (matching relocate-
+ * sold-comp.cjs's own `contentHashOf`/`day()` helper). Two rows sharing this
+ * key are candidates for "the same underlying physical sale, filed twice
+ * under different ids" and this key is what serialises this run's own
+ * writes against each other (see `withPhysicalSaleLock` in main()).
  *
- * `title` is DELIBERATELY NOT part of this key (dropped from the delta
- * review's own finding): a CardHedge bulk-import title and a tca-ebay title
- * for the exact same physical sale are independently templated by each
- * vendor's own scraper and do not byte-match, so keying the lock on title
- * let two differently-formatted titles for the SAME sale serialize under
- * TWO different keys -- defeating the lock precisely when it mattered most.
+ * `dest` (the destination cardId partition `physicalTwinAtPartition` itself
+ * scans -- `winner` at the call site, i.e. `keep.cardId` for both the PATCH
+ * and RELOCATE write shapes) is REQUIRED, not optional: a price+day-only key
+ * (the MEDIUM follow-up's own finding) serialises EVERY $1.99 sale of ANY
+ * card nationwide sold the same day through ONE queue -- measured 13x
+ * slower, maxConcurrentInsideLock collapsing to 1 across completely
+ * unrelated cards that could never physically collide at the same
+ * destination partition. Two movers to DIFFERENT destinations can never be
+ * the same physical sale (a sale has exactly one destination), so they must
+ * run concurrently; only two movers racing the SAME destination at the same
+ * price+day need the lock at all.
+ *
+ * `title` is DELIBERATELY NOT part of this key (the delta review's earlier
+ * finding): a CardHedge bulk-import title and a tca-ebay title for the
+ * exact same physical sale are independently templated by each vendor's own
+ * scraper and do not byte-match, so keying the lock on title let two
+ * differently-formatted titles for the SAME sale serialize under TWO
+ * different keys -- defeating the lock precisely when it mattered most.
+ *
  * The lock's own job is only to stop two CONCURRENT calls from racing the
  * destination scan for the same (destination, price, day) triple; it is
  * never the identity test itself (that is `sameListingIdentity`, below, plus
  * `isSameSale`/`contentHashOf`), so a coarser key here costs nothing but a
- * few sales with genuinely different content sharing a lock queue.
+ * few sales with genuinely different content sharing a lock queue -- and
+ * with `dest` restored, that "few" is bounded to one destination partition,
+ * not the whole nationwide price+day cross-section.
  */
-function physicalSaleKeyOf(d) {
+function physicalSaleKeyOf(d, dest) {
   const price = Number.isFinite(Number(d?.price)) ? Math.round(Number(d.price) * 100) : "?";
   const soldDay = String(d?.soldAt ?? "").slice(0, 10);
-  return `${price}|${soldDay}`;
+  return `${str(dest)}|${price}|${soldDay}`;
 }
 
 /**
@@ -542,15 +557,29 @@ function physicalSaleKeyOf(d) {
  * shared listing proof today, and correctly do NOT collapse: that gap is
  * real (there is no cross-vendor listing linkage field in this schema
  * today), not a bug in this function.
+ *
+ * CORRUPTED-LITERAL GUARD (delta review, LOW, follow-up 2026-09-20). A
+ * `sourceExternalId` (or an `id` tail) that is literally the string
+ * "undefined", "null", or "NaN" -- trimmed, case-insensitive -- is a known
+ * corruption shape (a JS `undefined`/`null`/`NaN` value stringified into a
+ * template literal upstream, e.g. `${source}::${externalId}` when
+ * `externalId` was itself one of those, or a CSV/JSON field that lost its
+ * type) and is treated as EMPTY, never as a real listing id. Without this
+ * guard, two DIFFERENT corrupted rows -- e.g. two unrelated ingests that
+ * both wrote `sourceExternalId: undefined` and both stringify to
+ * `"undefined"` -- would satisfy `sameListingIdentity`'s bare non-empty-
+ * and-equal test and let this lane delete a real sale on a data bug rather
+ * than a proven shared listing. Absent beats wrong applies here too.
  */
+const CORRUPTED_LISTING_ID_LITERALS = new Set(["undefined", "null", "nan"]);
 function listingIdOf(doc) {
   const ext = str(doc?.sourceExternalId);
-  if (ext) return ext;
+  if (ext && !CORRUPTED_LISTING_ID_LITERALS.has(ext.toLowerCase())) return ext;
   const id = str(doc?.id);
   const i = id.indexOf("::");
   if (i < 0) return "";
   const tail = id.slice(i + 2).trim();
-  return tail;
+  return tail && !CORRUPTED_LISTING_ID_LITERALS.has(tail.toLowerCase()) ? tail : "";
 }
 
 function sameListingIdentity(a, b) {
@@ -948,8 +977,8 @@ async function main() {
   // FROM those candidates in memory, so this is additive precision, never a
   // second, looser definition of "same sale."
   //
-  // SERIALISED WITHIN A RUN by a PHYSICAL-SALE KEY (price|soldAt-day|
-  // normalised title, `physicalSaleKeyOf` above at module scope -- pure, no
+  // SERIALISED WITHIN A RUN by a PHYSICAL-SALE KEY (destination cardId|
+  // price|soldAt-day, `physicalSaleKeyOf` above at module scope -- pure, no
   // I/O, exported for its own unit test), not by `id` -- two twins of the
   // same physical sale have DIFFERENT ids and would otherwise both pass the
   // destination check concurrently (read-then-write race: both read "no
@@ -1091,11 +1120,15 @@ async function main() {
     const cellKey = [...cells].join(",") || "unknown-cell";
 
     // ── REVIEW #1: serialise the write against every OTHER sale in THIS run
-    // sharing this sale's physical signature (price|soldAt-day|normalised
-    // title) -- a CardHedge dual-id twin has a DIFFERENT `doc.id`, so the
-    // page-walk's own group-by-id below cannot serialise two twins against
-    // each other; this is the one place that does.
-    await withPhysicalSaleLock(physicalSaleKeyOf(doc), async () => {
+    // sharing this sale's physical signature (destination|price|soldAt-day)
+    // -- a CardHedge dual-id twin has a DIFFERENT `doc.id`, so the page-walk's
+    // own group-by-id below cannot serialise two twins against each other;
+    // this is the one place that does. `winner` is the destination cardId
+    // both write shapes converge on (`keep.cardId`) -- the SAME partition
+    // `physicalTwinAtPartition` scans below, so two movers to DIFFERENT
+    // destinations (which can never be the same physical sale) run
+    // concurrently, and only a genuine race at ONE destination serialises.
+    await withPhysicalSaleLock(physicalSaleKeyOf(doc, winner), async () => {
     try {
       const ledger = {
         splitResolvedAt: new Date().toISOString(),
