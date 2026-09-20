@@ -63,6 +63,17 @@ const SOURCE_URL = val("--source-url", "");
 // which read the img.beckett.com CDN URL discoverBeckettChecklists.cjs finds.
 // Defaults to "" so every existing caller's manifest is byte-identical.
 const SOURCE_LABEL = val("--source-label", "");
+// CF-A-DECLARED-PARALLEL-THAT-NEVER-BECOMES-A-ROW-IS-A-FINDING (2026-09-20).
+// Opt-in escape hatch for the droppedDeclaredParallels guard (see main()):
+// when a section's own "Parallels:" block declares a name that produces zero
+// rows for that section and the refused line is not recognizably a footnote
+// or a hedge phrase, the run FAILS LOUDLY by default rather than emitting a
+// plausible-looking row count with a silent gap -- the exact failure mode
+// Phoenix's sixteen missing names shipped as before this guard existed. Set
+// only when a human has looked at the reported drop and confirmed the name
+// genuinely is not a card-bearing parallel (Beckett prints a LOT of ladder
+// prose this file has never seen the shape of yet).
+const ALLOW_DROPPED_PARALLELS = args.includes("--allow-dropped-parallels");
 // Only a direct run needs the CLI args; the classifier is also imported as a
 // module (see module.exports at the bottom) and must not exit on load.
 if (require.main === module && (!XLSX || !YEAR || !SET_KEY || !OUT)) {
@@ -315,6 +326,12 @@ function sheetSectionHeaderNames(rows) {
       const cell = String(row[0]).trim();
       if (LADDER_HEAD.test(cell)) { inLadder = true; continue; }
       if (PLACEHOLDER.test(cell)) continue;
+      // CF-BECKETT-AN-ODDS-LINE-IS-NEVER-A-SECTION-NAME (see its own header
+      // comment above): never a sibling header name either, or a workbook
+      // whose sections are all named after their own odds line would make
+      // stripChecklistSuffix compare against those odds lines as if they
+      // were real titles.
+      if (!inLadder && ODDS_LINE.test(cell)) continue;
       if (inLadder) { if (!parseRung(cell)) continue; else continue; }
       out.push(cell);
       inLadder = false;
@@ -1109,6 +1126,45 @@ const LADDER_HEAD = /^parallels?\s*:?\s*$/i;
 // the ladder stays open; only a real heading closes it.
 const PLACEHOLDER = /^(tba|n\/?a|none|list tba\.?|checklist tba\.?|coming soon)\.?$/i;
 
+// CF-BECKETT-AN-ODDS-LINE-IS-NEVER-A-SECTION-NAME (2026-09-20). 2025-26 Topps
+// Holiday Basketball prints pack odds as their OWN single-cell row, directly
+// under the section's real header and its count line, with no distinguishing
+// word at all:
+//
+//     Frostbite Finishers          <- the real header
+//     25 cards
+//     1:200 packs                  <- odds, printed bare, no parens
+//     FF-AB  Ace Bailey
+//
+//     Score Select Throwback       (repeats the shape on 10 more sections)
+//     96 cards
+//     1:379 packs
+//     BCA-ABL  Anthony Black
+//
+// isCountLine only matches "<N> cards[.]"; "1:379 packs" is a DIFFERENT
+// single-cell shape and fell straight through to the unconditional
+// `section = cell` assignment (same as every other header line), so it
+// overwrote the real header that had just been read one line above, before
+// a single card row could commit it. 11 sections on this one workbook (12
+// counting the split half of a repeated pair) ended up named after their own
+// odds line -- categories like `auto-1379-packs`, `insert-1200-packs`,
+// `insert-16-packs-advent-exclusive` -- and every one of "Frostbite
+// Finishers", "Hidden Elf", "Making The Nice List", "Evergreen", "Score
+// Select Throwback", "Snapshots" and the rest is gone from the checklist
+// entirely, even though the workbook states the real name one line earlier
+// every single time. Base's own "Base - SSP Variations" / "25 cards" /
+// "1:23 packs" pair reproduces the identical shape.
+//
+// This is exactly the same class of evidence parseRung's `statesOdds` already
+// recognizes for a NOTE trailing a ladder rung ("Green /99 (1:83)" -- see
+// above) -- a "1:NNN[,NNN]" ratio is Beckett's pack-odds notation everywhere
+// in this file, never a name. Extended here to a BARE single-cell line (no
+// parens, because a header-fallback line never has the ladder's note
+// syntax to strip first) so the section-header branch recognizes it the
+// same way PLACEHOLDER and RANGE_PREVIEW_LINE already are recognized: it
+// names no section, and whatever section was already open stays in force.
+const ODDS_LINE = /^\s*1\s*:\s*[\d,]+(\s+\S.*)?$/i;
+
 // "Gold Refractors - /50" -> /50. "Superfractors - 1/1" -> a one-of-one.
 // "Gold /10" -> /10: the dash is OPTIONAL, and most publishers omit it.
 // Distribution notes ("hobby only", "HTA only") and pack odds ("1:83") are not
@@ -1177,6 +1233,102 @@ function parseRung(line) {
   return { name: s, printRun: printRun, note: note };
 }
 
+// CF-BECKETT-AN-UNNUMBERED-PARALLEL-IS-STILL-A-PARALLEL (2026-09-20). 2024
+// Panini Phoenix Football's Base sheet declares its "Parallels:" ladder as:
+//
+//     Parallels:
+//     Hyper
+//     Ice
+//     International
+//     Lazer
+//     Orange
+//     Orange Fade
+//     Orange Hyper
+//     Orange Lazer
+//     Pandora
+//     Purple
+//     Purple Fade
+//     Purple Hyper
+//     Purple Lazer
+//     Silver
+//     Wave                      <- matches FINISH_WORD ("wave"), survives
+//     White Shimmer             <- matches FINISH_WORD ("shimmer"), survives
+//     Phoenix - /399            <- states a print run, survives
+//     ...
+//     1  Kyler Murray
+//
+// The sixteen unnumbered names above Phoenix's first print-run rung carry no
+// print run (Beckett states none for these), no pack odds, and none of them
+// happens to contain a word from FINISH_WORD's closed twelve-root vocabulary
+// -- "Lazer" is Panini's own spelling and does not match "laser" either. Every
+// one of them fell through to parseRung's vocabulary test, was refused, and
+// (per CF-BECKETT-PROSE-INSIDE-A-LADDER-IS-NOT-A-SECTION above) silently
+// disappeared: not a rung, not a section, just gone. The identical shape is
+// already on a currently-committed, "clean" workbook: 2026 Donruss Elite's
+// own base ladder declares "Orange", "Mixorama" and "Razzle Dazzle" the same
+// way, and all three are dropped today by the same defect
+// (beckettReadsEverySectionClass.test.ts's own ladder assertions never
+// checked for them, so the loss went unmeasured).
+//
+// FIX IS EVIDENCE FROM CONTEXT, NOT A WIDER VOCABULARY. Extending FINISH_WORD
+// with "hyper", "ice", "orange", "purple", "silver", "pandora", "lazer",
+// "mixorama", "razzle dazzle", ... is exactly the whitelist-style fix the
+// PLAIN_SECTION/CANONICAL_CATEGORY_SLUG history in this file warns against --
+// the next workbook invents a seventeenth bare colour name and the same loss
+// recurs. What actually distinguishes these sixteen names from real prose
+// ("Aspirations /99 or fewer (See list below)", "*Odds as provided by Topps",
+// "Printing Plates 1/1 (Each card has Cyan, Magenta, Yellow, and Black
+// versions)") is SHAPE, not spelling: every one of the sixteen is a bare,
+// short, Title-Case phrase -- one to three words, no digits, no slash, no
+// leading asterisk, no parenthetical note -- while every refused prose line
+// in the corpus is either marked with a footnote asterisk, states an
+// unparseable fractional hedge ("/99 or fewer"), or carries an explanatory
+// parenthetical. A bare short Title-Case line INSIDE an already-open ladder
+// (the "Parallels:" marker has fired -- see the call site below) has no
+// other candidate meaning: it is not a card row (single populated cell), not
+// a footnote, not a count line, not prose describing something else -- it is
+// Beckett naming one more rung of the ladder it just opened.
+//
+// SCOPED TO THE LADDER-READING CALL SITE ONLY, never merged into parseRung
+// itself: parseRung is also called directly, context-free, by
+// beckettReadsEverySectionClass.test.ts's own "still refuses prose" pins,
+// which require parseRung("Base Set") and parseRung("Parallels") to stay
+// null regardless of context -- both are bare, short, Title-Case phrases
+// that would otherwise match this same shape. Only the row-reading loop
+// knows it is inside a confirmed ladder, so only that call site may use this
+// fallback; parseRung's own contract (called with no surrounding context) is
+// unchanged.
+const BARE_LADDER_NAME = /^[A-Za-z][A-Za-z'.]*(?:[\s-][A-Za-z][A-Za-z'.]*){0,2}$/;
+
+/** parseRung, widened with the bare-name fallback above -- but ONLY for a
+ *  line already known to sit inside an open ladder block. Never call this
+ *  outside that context (see BARE_LADDER_NAME's header comment for why
+ *  parseRung itself must stay narrow). */
+function parseLadderLine(line) {
+  const rung = parseRung(line);
+  if (rung) return rung;
+  const raw = String(line || "").trim();
+  if (!raw || raw.length < 3) return null;
+  if (!BARE_LADDER_NAME.test(raw)) return null;
+  return { name: raw, printRun: null, note: null };
+}
+
+// CF-A-DECLARED-PARALLEL-THAT-NEVER-BECOMES-A-ROW-IS-A-FINDING (2026-09-20).
+// parseLadderLine (above) reads nearly every genuinely-named rung, but a
+// ladder line can still be refused -- a footnote asterisk, or an unstated,
+// hedge-worded print run ("Aspirations /99 or fewer (See list below)") --
+// and that refusal is BY DESIGN (see CF-BECKETT-PROSE-INSIDE-A-LADDER-IS-
+// NOT-A-SECTION at the call site: neither is a real parallel name at all).
+// This regex is how main()'s own guard tells the two apart: a footnote or a
+// hedge phrase is recognizably prose ABOUT the ladder, never a name IN it,
+// so a refused line matching it is not reported as a dropped declared
+// parallel. A refused line that does NOT match it (some future workbook's
+// line shape neither parseLadderLine nor this file's authors have seen yet)
+// IS reported -- absent beats silently wrong, and a human sees it in the
+// manifest instead of the loss disappearing the way Phoenix's sixteen names
+// did before this file had any guard at all.
+const LADDER_PROSE_NOT_A_NAME = /^[*]|\bor (fewer|less)\b|\(see /i;
+
 function main() {
   const files = readZip(fs.readFileSync(path.resolve(XLSX)));
   const sheets = sheetsByName(files);
@@ -1227,6 +1379,18 @@ function main() {
     // The ladder belongs to the section it sits under, and resets with it.
     let inLadder = false;
     let pendingLadder = [];
+    // CF-A-DECLARED-PARALLEL-THAT-NEVER-BECOMES-A-ROW-IS-A-FINDING
+    // (2026-09-20). Every line inside the current ladder block that LOOKS
+    // like a declared parallel name -- accepted by parseLadderLine, or
+    // refused but not recognizably prose (LADDER_PROSE_NOT_A_NAME) -- is
+    // recorded here, resetting at exactly the same points as pendingLadder
+    // (same section, same ladder lifecycle) so the guard after pass 1 can
+    // compare "every name this block declared" against "what this section
+    // actually emitted" per section. Kept separate from pendingLadder
+    // itself (which stays exactly what it was -- the rungs pass 3 emits)
+    // so this guard is purely additive and cannot change a single emitted
+    // row.
+    let pendingDeclaredNames = [];
     // CF-BECKETT-A-STATED-RANGE-HEADER-MUST-MATCH-ITS-OWN-CARDS (2026-09-19).
     // 2024 Panini Illusions Football's Base sheet lists TWO section headers
     // back-to-back -- "Base Set", then (with no card row between them)
@@ -1293,15 +1457,47 @@ function main() {
       // section headers is what turned 97 rungs into 97 sections.
       if (nonEmpty(row) === 1 && row[0]) {
         const cell = String(row[0]).trim();
-        if (LADDER_HEAD.test(cell)) { inLadder = true; pendingLadder = []; continue; }
+        if (LADDER_HEAD.test(cell)) { inLadder = true; pendingLadder = []; pendingDeclaredNames = []; continue; }
         // A placeholder never names a section, in or out of a ladder.
         if (PLACEHOLDER.test(cell)) continue;
         // A table-of-contents preview line names no section -- whatever
         // section was already open (or not yet opened) stays in force.
         if (rangePreviewIdx.has(rowIndex)) continue;
+        // CF-BECKETT-AN-ODDS-LINE-IS-NEVER-A-SECTION-NAME (see its own
+        // header comment above ODDS_LINE's definition): a bare "1:NNN
+        // packs" line never names a section either, in or out of a ladder
+        // -- whatever section was already open (the real header Beckett
+        // printed one line earlier) stays in force, the same treatment
+        // PLACEHOLDER and the range-preview line already get.
+        if (ODDS_LINE.test(cell)) continue;
         if (inLadder) {
-          const rung = parseRung(cell);
-          if (rung) { pendingLadder.push(rung); continue; }
+          // CF-BECKETT-AN-UNNUMBERED-PARALLEL-IS-STILL-A-PARALLEL: widened to
+          // parseLadderLine (see its own header above) so a bare, short,
+          // Title-Case rung name with no stated print run -- "Hyper", "Ice",
+          // "Orange" -- is read as a rung here, where it is known to sit
+          // inside an already-open "Parallels:" block. parseRung itself
+          // stays narrow; only this call site has that context.
+          const rung = parseLadderLine(cell);
+          if (rung) {
+            pendingLadder.push(rung);
+            pendingDeclaredNames.push(rung.name);
+            continue;
+          }
+          // A refused line that is not recognizably prose (no footnote
+          // asterisk, no hedge phrase, no bare odds statement) is still a
+          // NAME as far as this guard is concerned -- see CF-A-DECLARED-
+          // PARALLEL-THAT-NEVER-BECOMES-A-ROW-IS-A-FINDING above. Recorded
+          // here, not emitted as a rung: this cannot change pass 3's
+          // output, only what the guard compares against. ODDS_LINE is
+          // excluded too (CF-BECKETT-AN-ODDS-LINE-IS-NEVER-A-SECTION-NAME,
+          // defined below the header branch this same test is mirrored
+          // from) -- this file has no evidence a "Parallels:" block ever
+          // contains a bare odds line mid-ladder, but a future workbook
+          // proving otherwise must not false-positive this guard over it.
+          const trimmedCell = String(cell || "").trim();
+          if (!LADDER_PROSE_NOT_A_NAME.test(trimmedCell) && !ODDS_LINE.test(trimmedCell)) {
+            pendingDeclaredNames.push(trimmedCell);
+          }
           // CF-BECKETT-PROSE-INSIDE-A-LADDER-IS-NOT-A-SECTION (2026-09-04).
           // A line the rung parser refuses used to fall through and BECOME the
           // section, which closed the ladder and threw away every rung after it.
@@ -1338,6 +1534,7 @@ function main() {
         section = stripChecklistSuffix(cell, siblingSectionNames, masterNames);
         inLadder = false;
         pendingLadder = [];
+        pendingDeclaredNames = [];
         pendingRangeHeader = null;
         continue;
       }
@@ -1363,6 +1560,7 @@ function main() {
         if (inRange) {
           section = pendingRangeHeader.name;
           pendingLadder = [];
+          pendingDeclaredNames = [];
         } else {
           // A discard is a finding, not a silence -- see
           // CF-A-DISCARDED-RANGE-HEADER-IS-A-FINDING-NOT-A-SILENCE above.
@@ -1464,6 +1662,12 @@ function main() {
           roster: new Map(),
           // Whatever "Parallels:" block preceded this section's first card.
           ladder: pendingLadder,
+          // Every name that block declared, accepted or refused-but-not-
+          // prose -- see CF-A-DECLARED-PARALLEL-THAT-NEVER-BECOMES-A-ROW-
+          // IS-A-FINDING above. A snapshot (never the live array) so a
+          // later ladder on a DIFFERENT section can never retroactively
+          // change what this one declared.
+          declaredParallels: pendingDeclaredNames.slice(),
           lastRecordIndex: -1,
         });
       }
@@ -1658,6 +1862,44 @@ function main() {
     csv.push([r.category, r.cardNumber, q(r.parallel), r.isAuto, r.printRun, q(r.player)].join(","));
   }
 
+  // CF-A-DECLARED-PARALLEL-THAT-NEVER-BECOMES-A-ROW-IS-A-FINDING (2026-09-20).
+  // Every section declared at least one name in its OWN "Parallels:" block
+  // (sec.declaredParallels, tracked in pass 1) that a card should carry as a
+  // row once pass 3 runs -- UNLESS the section itself folds onto another
+  // section as a parallel rung (foldsHere in pass 3 above; a folded
+  // section's own ladder is never emitted by design, and checking it here
+  // would false-positive on every ordinary fold in the corpus). For every
+  // own-cards/anchor section, compare what it declared against what
+  // actually reached rowsOut under that section's category -- a declared
+  // name absent from that set never became a row for a single card, the
+  // exact failure class Phoenix's sixteen names and Donruss Elite's three
+  // shipped silently before this guard existed.
+  const droppedDeclaredParallels = [];
+  for (const sec of sections.values()) {
+    if (!sec.declaredParallels || !sec.declaredParallels.length) continue;
+    if (sec.parallelOf) continue; // folds onto another section; its own ladder is never emitted
+    const emittedNames = new Set(
+      rowsOut.filter((r) => r.category === sec.category).map((r) => r.parallel)
+    );
+    for (const name of new Set(sec.declaredParallels)) {
+      if (!emittedNames.has(name)) {
+        droppedDeclaredParallels.push({ sheet: sec.sheet, section: sec.section, parallel: name });
+      }
+    }
+  }
+  if (droppedDeclaredParallels.length && !ALLOW_DROPPED_PARALLELS) {
+    for (const d of droppedDeclaredParallels) {
+      console.error(
+        `FATAL: "${d.sheet}" > "${d.section}" declared a parallel named "${d.parallel}" in its ` +
+        `own Parallels: block, but no row for that section carries it -- see CF-A-DECLARED-` +
+        `PARALLEL-THAT-NEVER-BECOMES-A-ROW-IS-A-FINDING in convertBeckettChecklistXlsx.cjs. Pass ` +
+        `--allow-dropped-parallels once a human has confirmed this name genuinely is not a ` +
+        `card-bearing parallel.`);
+    }
+    process.exitCode = 4;
+    return { droppedDeclaredParallels };
+  }
+
   const outPath = path.resolve(OUT);
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, csv.join("\n") + "\n");
@@ -1683,6 +1925,12 @@ function main() {
     // range header was ever discarded, so every existing manifest this
     // converter has ever written stays byte-identical on a re-run.
     ...(discardedRangeHeaders.length ? { discardedRangeHeaders } : {}),
+    // Same additive contract, for a --allow-dropped-parallels run that
+    // continued past the guard above instead of exiting: the manifest still
+    // carries what was found, so a human reviewing the acquisition sees the
+    // gap even though the run did not refuse -- see CF-A-DECLARED-PARALLEL-
+    // THAT-NEVER-BECOMES-A-ROW-IS-A-FINDING.
+    ...(droppedDeclaredParallels.length ? { droppedDeclaredParallels } : {}),
   };
   fs.writeFileSync(outPath.replace(/\.csv$/, ".manifest.json"), JSON.stringify(manifest, null, 2));
 
@@ -1723,4 +1971,5 @@ module.exports = {
   normalizeRosterPlayer, rosterFoldAgainst,
   rangePreviewLineIndices, RANGE_PREVIEW_LINE,
   countDataLookingRows,
+  parseLadderLine, BARE_LADDER_NAME, ODDS_LINE, LADDER_PROSE_NOT_A_NAME,
 };
