@@ -1,0 +1,282 @@
+{
+  "scrapedAt": "2026-09-20T02:46:43.253Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/02/2024-25-Panini-Prizm-Basketball-Checklist-1.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "basketball",
+  "year": 2024,
+  "setName": "2024-25 Panini Prizm Basketball",
+  "productKey": "2024-panini-prizm",
+  "setKey": "panini-prizm",
+  "rowCount": 29837,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 300,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Base Variations",
+      "category": "insert-base-variations",
+      "cards": 20,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Variation"
+    },
+    {
+      "sheet": "Base",
+      "section": "Rookie Variations",
+      "category": "insert-rookie-variations",
+      "cards": 20,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Rookie Variation"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Fast Break Autographs",
+      "category": "auto-fast-break-autographs",
+      "cards": 59,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Fast Break Autographs Red",
+      "category": "auto-fast-break-autographs-red",
+      "cards": 19,
+      "role": "parallel",
+      "anchor": "Autographs>Fast Break Autographs",
+      "rung": "Red"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Fast Break Rookie Autographs",
+      "category": "auto-fast-break-rookie-autographs",
+      "cards": 39,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Fast Break Autographs",
+      "overlapPct": 97.4
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Fast Break Rookie Autographs Red",
+      "category": "auto-fast-break-rookie-autographs-red",
+      "cards": 39,
+      "role": "parallel",
+      "anchor": "Autographs>Fast Break Rookie Autographs",
+      "rung": "Red"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Penmanship",
+      "category": "auto-penmanship",
+      "cards": 49,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Penmanship Prizms Gold",
+      "category": "auto-penmanship-prizms-gold",
+      "cards": 18,
+      "role": "parallel",
+      "anchor": "Autographs>Penmanship",
+      "rung": "Prizms Gold"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Penmanship Prizms Silver",
+      "category": "auto-penmanship-prizms-silver",
+      "cards": 48,
+      "role": "parallel",
+      "anchor": "Autographs>Penmanship",
+      "rung": "Prizms Silver"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Prizmatrix Signatures",
+      "category": "auto-prizmatrix-signatures",
+      "cards": 10,
+      "role": "parallel",
+      "anchor": "Autographs>Signatures",
+      "rung": "Prizmatrix"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Penmanship",
+      "category": "auto-rookie-penmanship",
+      "cards": 41,
+      "role": "parallel",
+      "anchor": "Autographs>Penmanship",
+      "rung": "Rookie"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Signatures",
+      "category": "auto-rookie-signatures",
+      "cards": 49,
+      "role": "parallel",
+      "anchor": "Autographs>Signatures",
+      "rung": "Rookie"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Sensational Signatures",
+      "category": "auto-sensational-signatures",
+      "cards": 89,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Sensational Signatures Prizms Blue",
+      "category": "auto-sensational-signatures-prizms-blue",
+      "cards": 80,
+      "role": "parallel",
+      "anchor": "Autographs>Sensational Signatures",
+      "rung": "Prizms Blue"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Sensational Signatures Prizms Choice Blue",
+      "category": "auto-sensational-signatures-prizms-choice-blue",
+      "cards": 80,
+      "role": "parallel",
+      "anchor": "Autographs>Sensational Signatures",
+      "rung": "Prizms Choice Blue"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Sensational Signatures Prizms Red",
+      "category": "auto-sensational-signatures-prizms-red",
+      "cards": 50,
+      "role": "parallel",
+      "anchor": "Autographs>Sensational Signatures",
+      "rung": "Prizms Red"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Signatures",
+      "category": "auto-signatures",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Signatures Prizms Choice Blue",
+      "category": "auto-signatures-prizms-choice-blue",
+      "cards": 34,
+      "role": "parallel",
+      "anchor": "Autographs>Signatures",
+      "rung": "Prizms Choice Blue"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Signatures Prizms Red",
+      "category": "auto-signatures-prizms-red",
+      "cards": 24,
+      "role": "parallel",
+      "anchor": "Autographs>Signatures",
+      "rung": "Prizms Red"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Deep Space",
+      "category": "insert-deep-space",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Dominance",
+      "category": "insert-dominance",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Emergent",
+      "category": "insert-emergent",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Fireworks",
+      "category": "insert-fireworks",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Fractal",
+      "category": "insert-fractal",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Global Reach",
+      "category": "insert-global-reach",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Groovy",
+      "category": "insert-groovy",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Instant Impact",
+      "category": "insert-instant-impact",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Kaleidoscopic",
+      "category": "insert-kaleidoscopic",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Luck of the Lottery",
+      "category": "insert-luck-of-the-lottery",
+      "cards": 14,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Manga",
+      "category": "insert-manga",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Prizmania",
+      "category": "insert-prizmania",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Sublime",
+      "category": "insert-sublime",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Talismen",
+      "category": "insert-talismen",
+      "cards": 21,
+      "role": "own-cards"
+    }
+  ]
+}

@@ -1,0 +1,1254 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,H1,,false,,Shohei Ohtani
+base,H2,,false,,Evan Carter
+base,H3,,false,,Junior Caminero
+base,H4,,false,,Jacob Wilson
+base,H5,,false,,George Kirby
+base,H6,,false,,Drew Thorpe
+base,H7,,false,,Josh Jung
+base,H8,,false,,Ben Rice
+base,H9,,false,,Marcus Semien
+base,H10,,false,,Jasson Domínguez
+base,H11,,false,,Byron Buxton
+base,H12,,false,,Freddie Freeman
+base,H13,,false,,Brooks Lee
+base,H14,,false,,Anthony Santander
+base,H15,,false,,Matt Olson
+base,H16,,false,,Will Warren
+base,H17,,false,,Orelvis Martinez
+base,H18,,false,,Gunnar Henderson
+base,H19,,false,,Agustín Ramírez
+base,H20,,false,,Yandy Díaz
+base,H21,,false,,William Contreras
+base,H22,,false,,Garrett Crochet
+base,H23,,false,,Roki Sasaki
+base,H24,,false,,Framber Valdez
+base,H25,,false,,Christian Yelich
+base,H26,,false,,Kyle Tucker
+base,H27,,false,,Ian Happ
+base,H28,,false,,Shane McClanahan
+base,H29,,false,,Giancarlo Stanton
+base,H30,,false,,Jackson Merrill
+base,H31,,false,,Justyn-Henry Malloy
+base,H32,,false,,Tyler Soderstrom
+base,H33,,false,,J.T. Realmuto
+base,H34,,false,,Pete Alonso
+base,H35,,false,,Marcelo Mayer
+base,H36,,false,,Ozzie Albies
+base,H37,,false,,Edgar Quero
+base,H38,,false,,Chandler Simpson
+base,H39,,false,,Dansby Swanson
+base,H40,,false,,Nick Kurtz
+base,H41,,false,,Pete Crow-Armstrong
+base,H42,,false,,Adael Amador
+base,H43,,false,,Ketel Marte
+base,H44,,false,,Yordan Alvarez
+base,H45,,false,,Bo Bichette
+base,H46,,false,,Dylan Crews
+base,H47,,false,,Nathan Eovaldi
+base,H48,,false,,Mason Miller
+base,H49,,false,,Triston Casas
+base,H50,,false,,Mike Trout
+base,H51,,false,,Jack Flaherty
+base,H52,,false,,Mookie Betts
+base,H53,,false,,Grant McCray
+base,H54,,false,,Cal Raleigh
+base,H55,,false,,Nolan Schanuel
+base,H56,,false,,Austin Wells
+base,H57,,false,,Leo Jiménez
+base,H58,,false,,Jordan Westburg
+base,H59,,false,,Yusei Kikuchi
+base,H60,,false,,Drake Baldwin
+base,H61,,false,,Adolis García
+base,H62,,false,,Ronald Acuña Jr.
+base,H63,,false,,Cole Ragans
+base,H64,,false,,Alec Burleson
+base,H65,,false,,Xander Bogaerts
+base,H66,,false,,Vladimir Guerrero Jr.
+base,H67,,false,,Austin Hays
+base,H68,,false,,Zebby Matthews
+base,H69,,false,,Bryce Harper
+base,H70,,false,,Paul Skenes
+base,H71,,false,,Matt Strahm
+base,H72,,false,,Connor Norby
+base,H73,,false,,Oneil Cruz
+base,H74,,false,,Tarik Skubal
+base,H75,,false,,Spencer Strider
+base,H76,,false,,Riley Greene
+base,H77,,false,,Dylan Cease
+base,H78,,false,,David Festa
+base,H79,,false,,Andrew McCutchen
+base,H80,,false,,Lawrence Butler
+base,H81,,false,,Kris Bryant
+base,H82,,false,,Angel Martínez
+base,H83,,false,,Logan Gilbert
+base,H84,,false,,Andrew Benintendi
+base,H85,,false,,Hayden Birdsong
+base,H86,,false,,Austin Riley
+base,H87,,false,,Wyatt Langford
+base,H88,,false,,Yu Darvish
+base,H89,,false,,Seiya Suzuki
+base,H90,,false,,Trea Turner
+base,H91,,false,,Manny Machado
+base,H92,,false,,Zac Veen
+base,H93,,false,,Geraldo Perdomo
+base,H94,,false,,James Wood
+base,H95,,false,,Shane Bieber
+base,H96,,false,,Emmanuel Clase
+base,H97,,false,,Elly De La Cruz
+base,H98,,false,,Chris Sale
+base,H99,,false,,Freddy Peralta
+base,H100,,false,,Bobby Witt Jr.
+base,H101,,false,,Brenton Doyle
+base,H102,,false,,Shea Langeliers
+base,H103,,false,,Kristian Campbell
+base,H104,,false,,Rhett Lowder
+base,H105,,false,,Dalton Rushing
+base,H106,,false,,Sean Burke
+base,H107,,false,,Michael Harris II
+base,H108,,false,,Will Wagner
+base,H109,,false,,Kevin Alcántara
+base,H110,,false,,Willy Adames
+base,H111,,false,,Mick Abel
+base,H112,,false,,Sal Frelick
+base,H113,,false,,Luisangel Acuña
+base,H114,,false,,Drew Romo
+base,H115,,false,,Nick Yorke
+base,H116,,false,,Salvador Perez
+base,H117,,false,,Luis Robert Jr.
+base,H118,,false,,Coby Mayo
+base,H119,,false,,Max Fried
+base,H120,,false,,Jhonkensy Noel
+base,H121,,false,,Cam Smith
+base,H122,,false,,Randy Arozarena
+base,H123,,false,,Shota Imanaga
+base,H124,,false,,Griffin Conine
+base,H125,,false,,Corey Seager
+base,H126,,false,,Clayton Kershaw
+base,H127,,false,,Kerry Carpenter
+base,H128,,false,,Jung Hoo Lee
+base,H129,,false,,Heliot Ramos
+base,H130,,false,,Chase Dollander
+base,H131,,false,,Zac Gallen
+base,H132,,false,,Nolan Arenado
+base,H133,,false,,Caden Dana
+base,H134,,false,,Taylor Ward
+base,H135,,false,,Blake Snell
+base,H136,,false,,Jace Jung
+base,H137,,false,,Tomoyuki Sugano
+base,H138,,false,,Bryan Reynolds
+base,H139,,false,,Hunter Greene
+base,H140,,false,,Cade Horton
+base,H141,,false,,Jordan Lawlar
+base,H142,,false,,Mark Vientos
+base,H143,,false,,Steven Kwan
+base,H144,,false,,Sandy Alcantara
+base,H145,,false,,Ezequiel Tovar
+base,H146,,false,,CJ Abrams
+base,H147,,false,,Brent Rooker
+base,H148,,false,,Kumar Rocker
+base,H149,,false,,Zach Neto
+base,H150,,false,,Juan Soto
+base,H151,,false,,Luis Arraez
+base,H152,,false,,Luis Castillo
+base,H153,,false,,Josh Smith
+base,H154,,false,,Alex Bregman
+base,H155,,false,,Christian Walker
+base,H156,,false,,Ceddanne Rafaela
+base,H157,,false,,Colton Cowser
+base,H158,,false,,Corbin Carroll
+base,H159,,false,,Yoshinobu Yamamoto
+base,H160,,false,,Jackson Jobe
+base,H161,,false,,Aaron Judge
+base,H162,,false,,Zach Dezenzo
+base,H163,,false,,Jose Altuve
+base,H164,,false,,Teoscar Hernández
+base,H165,,false,,Tyler Locklear
+base,H166,,false,,Dustin Harris
+base,H167,,false,,Darren Baker
+base,H168,,false,,Rece Hinds
+base,H169,,false,,Moisés Ballesteros
+base,H170,,false,,Fernando Tatis Jr.
+base,H171,,false,,Francisco Lindor
+base,H172,,false,,Trey Sweeney
+base,H173,,false,,Matt Shaw
+base,H174,,false,,Hyeseong Kim
+base,H175,,false,,Carlos Correa
+base,H176,,false,,Jazz Chisholm Jr.
+base,H177,,false,,Matt Chapman
+base,H178,,false,,Ryan Helsley
+base,H179,,false,,Zack Wheeler
+base,H180,,false,,Jarren Duran
+base,H181,,false,,Adrian Del Castillo
+base,H182,,false,,Jackson Chourio
+base,H183,,false,,Nacho Alvarez Jr.
+base,H184,,false,,Ryan Bliss
+base,H185,,false,,Corbin Burnes
+base,H186,,false,,Julio Rodríguez
+base,H187,,false,,Thomas Saggese
+base,H188,,false,,Jackson Holliday
+base,H189,,false,,Luke Keaschall
+base,H190,,false,,Rafael Devers
+base,H191,,false,,Adley Rutschman
+base,H192,,false,,Spencer Steer
+base,H193,,false,,Masyn Winn
+base,H194,,false,,Royce Lewis
+base,H195,,false,,José Ramírez
+base,H196,,false,,Jacob deGrom
+base,H197,,false,,Walker Buehler
+base,H198,,false,,Vinnie Pasquantino
+base,H199,,false,,Spencer Schwellenbach
+base,H200,,false,,Shohei Ohtani
+base,H1,Blue Sparkle,false,,Shohei Ohtani
+base,H1,Green Sparkle,false,,Shohei Ohtani
+base,H1,Superfractor,false,,Shohei Ohtani
+base,H2,Blue Sparkle,false,,Evan Carter
+base,H2,Green Sparkle,false,,Evan Carter
+base,H2,Superfractor,false,,Evan Carter
+base,H3,Blue Sparkle,false,,Junior Caminero
+base,H3,Green Sparkle,false,,Junior Caminero
+base,H3,Superfractor,false,,Junior Caminero
+base,H4,Blue Sparkle,false,,Jacob Wilson
+base,H4,Green Sparkle,false,,Jacob Wilson
+base,H4,Superfractor,false,,Jacob Wilson
+base,H5,Blue Sparkle,false,,George Kirby
+base,H5,Green Sparkle,false,,George Kirby
+base,H5,Superfractor,false,,George Kirby
+base,H6,Blue Sparkle,false,,Drew Thorpe
+base,H6,Green Sparkle,false,,Drew Thorpe
+base,H6,Superfractor,false,,Drew Thorpe
+base,H7,Blue Sparkle,false,,Josh Jung
+base,H7,Green Sparkle,false,,Josh Jung
+base,H7,Superfractor,false,,Josh Jung
+base,H8,Blue Sparkle,false,,Ben Rice
+base,H8,Green Sparkle,false,,Ben Rice
+base,H8,Superfractor,false,,Ben Rice
+base,H9,Blue Sparkle,false,,Marcus Semien
+base,H9,Green Sparkle,false,,Marcus Semien
+base,H9,Superfractor,false,,Marcus Semien
+base,H10,Blue Sparkle,false,,Jasson Domínguez
+base,H10,Green Sparkle,false,,Jasson Domínguez
+base,H10,Superfractor,false,,Jasson Domínguez
+base,H11,Blue Sparkle,false,,Byron Buxton
+base,H11,Green Sparkle,false,,Byron Buxton
+base,H11,Superfractor,false,,Byron Buxton
+base,H12,Blue Sparkle,false,,Freddie Freeman
+base,H12,Green Sparkle,false,,Freddie Freeman
+base,H12,Superfractor,false,,Freddie Freeman
+base,H13,Blue Sparkle,false,,Brooks Lee
+base,H13,Green Sparkle,false,,Brooks Lee
+base,H13,Superfractor,false,,Brooks Lee
+base,H14,Blue Sparkle,false,,Anthony Santander
+base,H14,Green Sparkle,false,,Anthony Santander
+base,H14,Superfractor,false,,Anthony Santander
+base,H15,Blue Sparkle,false,,Matt Olson
+base,H15,Green Sparkle,false,,Matt Olson
+base,H15,Superfractor,false,,Matt Olson
+base,H16,Blue Sparkle,false,,Will Warren
+base,H16,Green Sparkle,false,,Will Warren
+base,H16,Superfractor,false,,Will Warren
+base,H17,Blue Sparkle,false,,Orelvis Martinez
+base,H17,Green Sparkle,false,,Orelvis Martinez
+base,H17,Superfractor,false,,Orelvis Martinez
+base,H18,Blue Sparkle,false,,Gunnar Henderson
+base,H18,Green Sparkle,false,,Gunnar Henderson
+base,H18,Superfractor,false,,Gunnar Henderson
+base,H19,Blue Sparkle,false,,Agustín Ramírez
+base,H19,Green Sparkle,false,,Agustín Ramírez
+base,H19,Superfractor,false,,Agustín Ramírez
+base,H20,Blue Sparkle,false,,Yandy Díaz
+base,H20,Green Sparkle,false,,Yandy Díaz
+base,H20,Superfractor,false,,Yandy Díaz
+base,H21,Blue Sparkle,false,,William Contreras
+base,H21,Green Sparkle,false,,William Contreras
+base,H21,Superfractor,false,,William Contreras
+base,H22,Blue Sparkle,false,,Garrett Crochet
+base,H22,Green Sparkle,false,,Garrett Crochet
+base,H22,Superfractor,false,,Garrett Crochet
+base,H23,Blue Sparkle,false,,Roki Sasaki
+base,H23,Green Sparkle,false,,Roki Sasaki
+base,H23,Superfractor,false,,Roki Sasaki
+base,H24,Blue Sparkle,false,,Framber Valdez
+base,H24,Green Sparkle,false,,Framber Valdez
+base,H24,Superfractor,false,,Framber Valdez
+base,H25,Blue Sparkle,false,,Christian Yelich
+base,H25,Green Sparkle,false,,Christian Yelich
+base,H25,Superfractor,false,,Christian Yelich
+base,H26,Blue Sparkle,false,,Kyle Tucker
+base,H26,Green Sparkle,false,,Kyle Tucker
+base,H26,Superfractor,false,,Kyle Tucker
+base,H27,Blue Sparkle,false,,Ian Happ
+base,H27,Green Sparkle,false,,Ian Happ
+base,H27,Superfractor,false,,Ian Happ
+base,H28,Blue Sparkle,false,,Shane McClanahan
+base,H28,Green Sparkle,false,,Shane McClanahan
+base,H28,Superfractor,false,,Shane McClanahan
+base,H29,Blue Sparkle,false,,Giancarlo Stanton
+base,H29,Green Sparkle,false,,Giancarlo Stanton
+base,H29,Superfractor,false,,Giancarlo Stanton
+base,H30,Blue Sparkle,false,,Jackson Merrill
+base,H30,Green Sparkle,false,,Jackson Merrill
+base,H30,Superfractor,false,,Jackson Merrill
+base,H31,Blue Sparkle,false,,Justyn-Henry Malloy
+base,H31,Green Sparkle,false,,Justyn-Henry Malloy
+base,H31,Superfractor,false,,Justyn-Henry Malloy
+base,H32,Blue Sparkle,false,,Tyler Soderstrom
+base,H32,Green Sparkle,false,,Tyler Soderstrom
+base,H32,Superfractor,false,,Tyler Soderstrom
+base,H33,Blue Sparkle,false,,J.T. Realmuto
+base,H33,Green Sparkle,false,,J.T. Realmuto
+base,H33,Superfractor,false,,J.T. Realmuto
+base,H34,Blue Sparkle,false,,Pete Alonso
+base,H34,Green Sparkle,false,,Pete Alonso
+base,H34,Superfractor,false,,Pete Alonso
+base,H35,Blue Sparkle,false,,Marcelo Mayer
+base,H35,Green Sparkle,false,,Marcelo Mayer
+base,H35,Superfractor,false,,Marcelo Mayer
+base,H36,Blue Sparkle,false,,Ozzie Albies
+base,H36,Green Sparkle,false,,Ozzie Albies
+base,H36,Superfractor,false,,Ozzie Albies
+base,H37,Blue Sparkle,false,,Edgar Quero
+base,H37,Green Sparkle,false,,Edgar Quero
+base,H37,Superfractor,false,,Edgar Quero
+base,H38,Blue Sparkle,false,,Chandler Simpson
+base,H38,Green Sparkle,false,,Chandler Simpson
+base,H38,Superfractor,false,,Chandler Simpson
+base,H39,Blue Sparkle,false,,Dansby Swanson
+base,H39,Green Sparkle,false,,Dansby Swanson
+base,H39,Superfractor,false,,Dansby Swanson
+base,H40,Blue Sparkle,false,,Nick Kurtz
+base,H40,Green Sparkle,false,,Nick Kurtz
+base,H40,Superfractor,false,,Nick Kurtz
+base,H41,Blue Sparkle,false,,Pete Crow-Armstrong
+base,H41,Green Sparkle,false,,Pete Crow-Armstrong
+base,H41,Superfractor,false,,Pete Crow-Armstrong
+base,H42,Blue Sparkle,false,,Adael Amador
+base,H42,Green Sparkle,false,,Adael Amador
+base,H42,Superfractor,false,,Adael Amador
+base,H43,Blue Sparkle,false,,Ketel Marte
+base,H43,Green Sparkle,false,,Ketel Marte
+base,H43,Superfractor,false,,Ketel Marte
+base,H44,Blue Sparkle,false,,Yordan Alvarez
+base,H44,Green Sparkle,false,,Yordan Alvarez
+base,H44,Superfractor,false,,Yordan Alvarez
+base,H45,Blue Sparkle,false,,Bo Bichette
+base,H45,Green Sparkle,false,,Bo Bichette
+base,H45,Superfractor,false,,Bo Bichette
+base,H46,Blue Sparkle,false,,Dylan Crews
+base,H46,Green Sparkle,false,,Dylan Crews
+base,H46,Superfractor,false,,Dylan Crews
+base,H47,Blue Sparkle,false,,Nathan Eovaldi
+base,H47,Green Sparkle,false,,Nathan Eovaldi
+base,H47,Superfractor,false,,Nathan Eovaldi
+base,H48,Blue Sparkle,false,,Mason Miller
+base,H48,Green Sparkle,false,,Mason Miller
+base,H48,Superfractor,false,,Mason Miller
+base,H49,Blue Sparkle,false,,Triston Casas
+base,H49,Green Sparkle,false,,Triston Casas
+base,H49,Superfractor,false,,Triston Casas
+base,H50,Blue Sparkle,false,,Mike Trout
+base,H50,Green Sparkle,false,,Mike Trout
+base,H50,Superfractor,false,,Mike Trout
+base,H51,Blue Sparkle,false,,Jack Flaherty
+base,H51,Green Sparkle,false,,Jack Flaherty
+base,H51,Superfractor,false,,Jack Flaherty
+base,H52,Blue Sparkle,false,,Mookie Betts
+base,H52,Green Sparkle,false,,Mookie Betts
+base,H52,Superfractor,false,,Mookie Betts
+base,H53,Blue Sparkle,false,,Grant McCray
+base,H53,Green Sparkle,false,,Grant McCray
+base,H53,Superfractor,false,,Grant McCray
+base,H54,Blue Sparkle,false,,Cal Raleigh
+base,H54,Green Sparkle,false,,Cal Raleigh
+base,H54,Superfractor,false,,Cal Raleigh
+base,H55,Blue Sparkle,false,,Nolan Schanuel
+base,H55,Green Sparkle,false,,Nolan Schanuel
+base,H55,Superfractor,false,,Nolan Schanuel
+base,H56,Blue Sparkle,false,,Austin Wells
+base,H56,Green Sparkle,false,,Austin Wells
+base,H56,Superfractor,false,,Austin Wells
+base,H57,Blue Sparkle,false,,Leo Jiménez
+base,H57,Green Sparkle,false,,Leo Jiménez
+base,H57,Superfractor,false,,Leo Jiménez
+base,H58,Blue Sparkle,false,,Jordan Westburg
+base,H58,Green Sparkle,false,,Jordan Westburg
+base,H58,Superfractor,false,,Jordan Westburg
+base,H59,Blue Sparkle,false,,Yusei Kikuchi
+base,H59,Green Sparkle,false,,Yusei Kikuchi
+base,H59,Superfractor,false,,Yusei Kikuchi
+base,H60,Blue Sparkle,false,,Drake Baldwin
+base,H60,Green Sparkle,false,,Drake Baldwin
+base,H60,Superfractor,false,,Drake Baldwin
+base,H61,Blue Sparkle,false,,Adolis García
+base,H61,Green Sparkle,false,,Adolis García
+base,H61,Superfractor,false,,Adolis García
+base,H62,Blue Sparkle,false,,Ronald Acuña Jr.
+base,H62,Green Sparkle,false,,Ronald Acuña Jr.
+base,H62,Superfractor,false,,Ronald Acuña Jr.
+base,H63,Blue Sparkle,false,,Cole Ragans
+base,H63,Green Sparkle,false,,Cole Ragans
+base,H63,Superfractor,false,,Cole Ragans
+base,H64,Blue Sparkle,false,,Alec Burleson
+base,H64,Green Sparkle,false,,Alec Burleson
+base,H64,Superfractor,false,,Alec Burleson
+base,H65,Blue Sparkle,false,,Xander Bogaerts
+base,H65,Green Sparkle,false,,Xander Bogaerts
+base,H65,Superfractor,false,,Xander Bogaerts
+base,H66,Blue Sparkle,false,,Vladimir Guerrero Jr.
+base,H66,Green Sparkle,false,,Vladimir Guerrero Jr.
+base,H66,Superfractor,false,,Vladimir Guerrero Jr.
+base,H67,Blue Sparkle,false,,Austin Hays
+base,H67,Green Sparkle,false,,Austin Hays
+base,H67,Superfractor,false,,Austin Hays
+base,H68,Blue Sparkle,false,,Zebby Matthews
+base,H68,Green Sparkle,false,,Zebby Matthews
+base,H68,Superfractor,false,,Zebby Matthews
+base,H69,Blue Sparkle,false,,Bryce Harper
+base,H69,Green Sparkle,false,,Bryce Harper
+base,H69,Superfractor,false,,Bryce Harper
+base,H70,Blue Sparkle,false,,Paul Skenes
+base,H70,Green Sparkle,false,,Paul Skenes
+base,H70,Superfractor,false,,Paul Skenes
+base,H71,Blue Sparkle,false,,Matt Strahm
+base,H71,Green Sparkle,false,,Matt Strahm
+base,H71,Superfractor,false,,Matt Strahm
+base,H72,Blue Sparkle,false,,Connor Norby
+base,H72,Green Sparkle,false,,Connor Norby
+base,H72,Superfractor,false,,Connor Norby
+base,H73,Blue Sparkle,false,,Oneil Cruz
+base,H73,Green Sparkle,false,,Oneil Cruz
+base,H73,Superfractor,false,,Oneil Cruz
+base,H74,Blue Sparkle,false,,Tarik Skubal
+base,H74,Green Sparkle,false,,Tarik Skubal
+base,H74,Superfractor,false,,Tarik Skubal
+base,H75,Blue Sparkle,false,,Spencer Strider
+base,H75,Green Sparkle,false,,Spencer Strider
+base,H75,Superfractor,false,,Spencer Strider
+base,H76,Blue Sparkle,false,,Riley Greene
+base,H76,Green Sparkle,false,,Riley Greene
+base,H76,Superfractor,false,,Riley Greene
+base,H77,Blue Sparkle,false,,Dylan Cease
+base,H77,Green Sparkle,false,,Dylan Cease
+base,H77,Superfractor,false,,Dylan Cease
+base,H78,Blue Sparkle,false,,David Festa
+base,H78,Green Sparkle,false,,David Festa
+base,H78,Superfractor,false,,David Festa
+base,H79,Blue Sparkle,false,,Andrew McCutchen
+base,H79,Green Sparkle,false,,Andrew McCutchen
+base,H79,Superfractor,false,,Andrew McCutchen
+base,H80,Blue Sparkle,false,,Lawrence Butler
+base,H80,Green Sparkle,false,,Lawrence Butler
+base,H80,Superfractor,false,,Lawrence Butler
+base,H81,Blue Sparkle,false,,Kris Bryant
+base,H81,Green Sparkle,false,,Kris Bryant
+base,H81,Superfractor,false,,Kris Bryant
+base,H82,Blue Sparkle,false,,Angel Martínez
+base,H82,Green Sparkle,false,,Angel Martínez
+base,H82,Superfractor,false,,Angel Martínez
+base,H83,Blue Sparkle,false,,Logan Gilbert
+base,H83,Green Sparkle,false,,Logan Gilbert
+base,H83,Superfractor,false,,Logan Gilbert
+base,H84,Blue Sparkle,false,,Andrew Benintendi
+base,H84,Green Sparkle,false,,Andrew Benintendi
+base,H84,Superfractor,false,,Andrew Benintendi
+base,H85,Blue Sparkle,false,,Hayden Birdsong
+base,H85,Green Sparkle,false,,Hayden Birdsong
+base,H85,Superfractor,false,,Hayden Birdsong
+base,H86,Blue Sparkle,false,,Austin Riley
+base,H86,Green Sparkle,false,,Austin Riley
+base,H86,Superfractor,false,,Austin Riley
+base,H87,Blue Sparkle,false,,Wyatt Langford
+base,H87,Green Sparkle,false,,Wyatt Langford
+base,H87,Superfractor,false,,Wyatt Langford
+base,H88,Blue Sparkle,false,,Yu Darvish
+base,H88,Green Sparkle,false,,Yu Darvish
+base,H88,Superfractor,false,,Yu Darvish
+base,H89,Blue Sparkle,false,,Seiya Suzuki
+base,H89,Green Sparkle,false,,Seiya Suzuki
+base,H89,Superfractor,false,,Seiya Suzuki
+base,H90,Blue Sparkle,false,,Trea Turner
+base,H90,Green Sparkle,false,,Trea Turner
+base,H90,Superfractor,false,,Trea Turner
+base,H91,Blue Sparkle,false,,Manny Machado
+base,H91,Green Sparkle,false,,Manny Machado
+base,H91,Superfractor,false,,Manny Machado
+base,H92,Blue Sparkle,false,,Zac Veen
+base,H92,Green Sparkle,false,,Zac Veen
+base,H92,Superfractor,false,,Zac Veen
+base,H93,Blue Sparkle,false,,Geraldo Perdomo
+base,H93,Green Sparkle,false,,Geraldo Perdomo
+base,H93,Superfractor,false,,Geraldo Perdomo
+base,H94,Blue Sparkle,false,,James Wood
+base,H94,Green Sparkle,false,,James Wood
+base,H94,Superfractor,false,,James Wood
+base,H95,Blue Sparkle,false,,Shane Bieber
+base,H95,Green Sparkle,false,,Shane Bieber
+base,H95,Superfractor,false,,Shane Bieber
+base,H96,Blue Sparkle,false,,Emmanuel Clase
+base,H96,Green Sparkle,false,,Emmanuel Clase
+base,H96,Superfractor,false,,Emmanuel Clase
+base,H97,Blue Sparkle,false,,Elly De La Cruz
+base,H97,Green Sparkle,false,,Elly De La Cruz
+base,H97,Superfractor,false,,Elly De La Cruz
+base,H98,Blue Sparkle,false,,Chris Sale
+base,H98,Green Sparkle,false,,Chris Sale
+base,H98,Superfractor,false,,Chris Sale
+base,H99,Blue Sparkle,false,,Freddy Peralta
+base,H99,Green Sparkle,false,,Freddy Peralta
+base,H99,Superfractor,false,,Freddy Peralta
+base,H100,Blue Sparkle,false,,Bobby Witt Jr.
+base,H100,Green Sparkle,false,,Bobby Witt Jr.
+base,H100,Superfractor,false,,Bobby Witt Jr.
+base,H101,Blue Sparkle,false,,Brenton Doyle
+base,H101,Green Sparkle,false,,Brenton Doyle
+base,H101,Superfractor,false,,Brenton Doyle
+base,H102,Blue Sparkle,false,,Shea Langeliers
+base,H102,Green Sparkle,false,,Shea Langeliers
+base,H102,Superfractor,false,,Shea Langeliers
+base,H103,Blue Sparkle,false,,Kristian Campbell
+base,H103,Green Sparkle,false,,Kristian Campbell
+base,H103,Superfractor,false,,Kristian Campbell
+base,H104,Blue Sparkle,false,,Rhett Lowder
+base,H104,Green Sparkle,false,,Rhett Lowder
+base,H104,Superfractor,false,,Rhett Lowder
+base,H105,Blue Sparkle,false,,Dalton Rushing
+base,H105,Green Sparkle,false,,Dalton Rushing
+base,H105,Superfractor,false,,Dalton Rushing
+base,H106,Blue Sparkle,false,,Sean Burke
+base,H106,Green Sparkle,false,,Sean Burke
+base,H106,Superfractor,false,,Sean Burke
+base,H107,Blue Sparkle,false,,Michael Harris II
+base,H107,Green Sparkle,false,,Michael Harris II
+base,H107,Superfractor,false,,Michael Harris II
+base,H108,Blue Sparkle,false,,Will Wagner
+base,H108,Green Sparkle,false,,Will Wagner
+base,H108,Superfractor,false,,Will Wagner
+base,H109,Blue Sparkle,false,,Kevin Alcántara
+base,H109,Green Sparkle,false,,Kevin Alcántara
+base,H109,Superfractor,false,,Kevin Alcántara
+base,H110,Blue Sparkle,false,,Willy Adames
+base,H110,Green Sparkle,false,,Willy Adames
+base,H110,Superfractor,false,,Willy Adames
+base,H111,Blue Sparkle,false,,Mick Abel
+base,H111,Green Sparkle,false,,Mick Abel
+base,H111,Superfractor,false,,Mick Abel
+base,H112,Blue Sparkle,false,,Sal Frelick
+base,H112,Green Sparkle,false,,Sal Frelick
+base,H112,Superfractor,false,,Sal Frelick
+base,H113,Blue Sparkle,false,,Luisangel Acuña
+base,H113,Green Sparkle,false,,Luisangel Acuña
+base,H113,Superfractor,false,,Luisangel Acuña
+base,H114,Blue Sparkle,false,,Drew Romo
+base,H114,Green Sparkle,false,,Drew Romo
+base,H114,Superfractor,false,,Drew Romo
+base,H115,Blue Sparkle,false,,Nick Yorke
+base,H115,Green Sparkle,false,,Nick Yorke
+base,H115,Superfractor,false,,Nick Yorke
+base,H116,Blue Sparkle,false,,Salvador Perez
+base,H116,Green Sparkle,false,,Salvador Perez
+base,H116,Superfractor,false,,Salvador Perez
+base,H117,Blue Sparkle,false,,Luis Robert Jr.
+base,H117,Green Sparkle,false,,Luis Robert Jr.
+base,H117,Superfractor,false,,Luis Robert Jr.
+base,H118,Blue Sparkle,false,,Coby Mayo
+base,H118,Green Sparkle,false,,Coby Mayo
+base,H118,Superfractor,false,,Coby Mayo
+base,H119,Blue Sparkle,false,,Max Fried
+base,H119,Green Sparkle,false,,Max Fried
+base,H119,Superfractor,false,,Max Fried
+base,H120,Blue Sparkle,false,,Jhonkensy Noel
+base,H120,Green Sparkle,false,,Jhonkensy Noel
+base,H120,Superfractor,false,,Jhonkensy Noel
+base,H121,Blue Sparkle,false,,Cam Smith
+base,H121,Green Sparkle,false,,Cam Smith
+base,H121,Superfractor,false,,Cam Smith
+base,H122,Blue Sparkle,false,,Randy Arozarena
+base,H122,Green Sparkle,false,,Randy Arozarena
+base,H122,Superfractor,false,,Randy Arozarena
+base,H123,Blue Sparkle,false,,Shota Imanaga
+base,H123,Green Sparkle,false,,Shota Imanaga
+base,H123,Superfractor,false,,Shota Imanaga
+base,H124,Blue Sparkle,false,,Griffin Conine
+base,H124,Green Sparkle,false,,Griffin Conine
+base,H124,Superfractor,false,,Griffin Conine
+base,H125,Blue Sparkle,false,,Corey Seager
+base,H125,Green Sparkle,false,,Corey Seager
+base,H125,Superfractor,false,,Corey Seager
+base,H126,Blue Sparkle,false,,Clayton Kershaw
+base,H126,Green Sparkle,false,,Clayton Kershaw
+base,H126,Superfractor,false,,Clayton Kershaw
+base,H127,Blue Sparkle,false,,Kerry Carpenter
+base,H127,Green Sparkle,false,,Kerry Carpenter
+base,H127,Superfractor,false,,Kerry Carpenter
+base,H128,Blue Sparkle,false,,Jung Hoo Lee
+base,H128,Green Sparkle,false,,Jung Hoo Lee
+base,H128,Superfractor,false,,Jung Hoo Lee
+base,H129,Blue Sparkle,false,,Heliot Ramos
+base,H129,Green Sparkle,false,,Heliot Ramos
+base,H129,Superfractor,false,,Heliot Ramos
+base,H130,Blue Sparkle,false,,Chase Dollander
+base,H130,Green Sparkle,false,,Chase Dollander
+base,H130,Superfractor,false,,Chase Dollander
+base,H131,Blue Sparkle,false,,Zac Gallen
+base,H131,Green Sparkle,false,,Zac Gallen
+base,H131,Superfractor,false,,Zac Gallen
+base,H132,Blue Sparkle,false,,Nolan Arenado
+base,H132,Green Sparkle,false,,Nolan Arenado
+base,H132,Superfractor,false,,Nolan Arenado
+base,H133,Blue Sparkle,false,,Caden Dana
+base,H133,Green Sparkle,false,,Caden Dana
+base,H133,Superfractor,false,,Caden Dana
+base,H134,Blue Sparkle,false,,Taylor Ward
+base,H134,Green Sparkle,false,,Taylor Ward
+base,H134,Superfractor,false,,Taylor Ward
+base,H135,Blue Sparkle,false,,Blake Snell
+base,H135,Green Sparkle,false,,Blake Snell
+base,H135,Superfractor,false,,Blake Snell
+base,H136,Blue Sparkle,false,,Jace Jung
+base,H136,Green Sparkle,false,,Jace Jung
+base,H136,Superfractor,false,,Jace Jung
+base,H137,Blue Sparkle,false,,Tomoyuki Sugano
+base,H137,Green Sparkle,false,,Tomoyuki Sugano
+base,H137,Superfractor,false,,Tomoyuki Sugano
+base,H138,Blue Sparkle,false,,Bryan Reynolds
+base,H138,Green Sparkle,false,,Bryan Reynolds
+base,H138,Superfractor,false,,Bryan Reynolds
+base,H139,Blue Sparkle,false,,Hunter Greene
+base,H139,Green Sparkle,false,,Hunter Greene
+base,H139,Superfractor,false,,Hunter Greene
+base,H140,Blue Sparkle,false,,Cade Horton
+base,H140,Green Sparkle,false,,Cade Horton
+base,H140,Superfractor,false,,Cade Horton
+base,H141,Blue Sparkle,false,,Jordan Lawlar
+base,H141,Green Sparkle,false,,Jordan Lawlar
+base,H141,Superfractor,false,,Jordan Lawlar
+base,H142,Blue Sparkle,false,,Mark Vientos
+base,H142,Green Sparkle,false,,Mark Vientos
+base,H142,Superfractor,false,,Mark Vientos
+base,H143,Blue Sparkle,false,,Steven Kwan
+base,H143,Green Sparkle,false,,Steven Kwan
+base,H143,Superfractor,false,,Steven Kwan
+base,H144,Blue Sparkle,false,,Sandy Alcantara
+base,H144,Green Sparkle,false,,Sandy Alcantara
+base,H144,Superfractor,false,,Sandy Alcantara
+base,H145,Blue Sparkle,false,,Ezequiel Tovar
+base,H145,Green Sparkle,false,,Ezequiel Tovar
+base,H145,Superfractor,false,,Ezequiel Tovar
+base,H146,Blue Sparkle,false,,CJ Abrams
+base,H146,Green Sparkle,false,,CJ Abrams
+base,H146,Superfractor,false,,CJ Abrams
+base,H147,Blue Sparkle,false,,Brent Rooker
+base,H147,Green Sparkle,false,,Brent Rooker
+base,H147,Superfractor,false,,Brent Rooker
+base,H148,Blue Sparkle,false,,Kumar Rocker
+base,H148,Green Sparkle,false,,Kumar Rocker
+base,H148,Superfractor,false,,Kumar Rocker
+base,H149,Blue Sparkle,false,,Zach Neto
+base,H149,Green Sparkle,false,,Zach Neto
+base,H149,Superfractor,false,,Zach Neto
+base,H150,Blue Sparkle,false,,Juan Soto
+base,H150,Green Sparkle,false,,Juan Soto
+base,H150,Superfractor,false,,Juan Soto
+base,H151,Blue Sparkle,false,,Luis Arraez
+base,H151,Green Sparkle,false,,Luis Arraez
+base,H151,Superfractor,false,,Luis Arraez
+base,H152,Blue Sparkle,false,,Luis Castillo
+base,H152,Green Sparkle,false,,Luis Castillo
+base,H152,Superfractor,false,,Luis Castillo
+base,H153,Blue Sparkle,false,,Josh Smith
+base,H153,Green Sparkle,false,,Josh Smith
+base,H153,Superfractor,false,,Josh Smith
+base,H154,Blue Sparkle,false,,Alex Bregman
+base,H154,Green Sparkle,false,,Alex Bregman
+base,H154,Superfractor,false,,Alex Bregman
+base,H155,Blue Sparkle,false,,Christian Walker
+base,H155,Green Sparkle,false,,Christian Walker
+base,H155,Superfractor,false,,Christian Walker
+base,H156,Blue Sparkle,false,,Ceddanne Rafaela
+base,H156,Green Sparkle,false,,Ceddanne Rafaela
+base,H156,Superfractor,false,,Ceddanne Rafaela
+base,H157,Blue Sparkle,false,,Colton Cowser
+base,H157,Green Sparkle,false,,Colton Cowser
+base,H157,Superfractor,false,,Colton Cowser
+base,H158,Blue Sparkle,false,,Corbin Carroll
+base,H158,Green Sparkle,false,,Corbin Carroll
+base,H158,Superfractor,false,,Corbin Carroll
+base,H159,Blue Sparkle,false,,Yoshinobu Yamamoto
+base,H159,Green Sparkle,false,,Yoshinobu Yamamoto
+base,H159,Superfractor,false,,Yoshinobu Yamamoto
+base,H160,Blue Sparkle,false,,Jackson Jobe
+base,H160,Green Sparkle,false,,Jackson Jobe
+base,H160,Superfractor,false,,Jackson Jobe
+base,H161,Blue Sparkle,false,,Aaron Judge
+base,H161,Green Sparkle,false,,Aaron Judge
+base,H161,Superfractor,false,,Aaron Judge
+base,H162,Blue Sparkle,false,,Zach Dezenzo
+base,H162,Green Sparkle,false,,Zach Dezenzo
+base,H162,Superfractor,false,,Zach Dezenzo
+base,H163,Blue Sparkle,false,,Jose Altuve
+base,H163,Green Sparkle,false,,Jose Altuve
+base,H163,Superfractor,false,,Jose Altuve
+base,H164,Blue Sparkle,false,,Teoscar Hernández
+base,H164,Green Sparkle,false,,Teoscar Hernández
+base,H164,Superfractor,false,,Teoscar Hernández
+base,H165,Blue Sparkle,false,,Tyler Locklear
+base,H165,Green Sparkle,false,,Tyler Locklear
+base,H165,Superfractor,false,,Tyler Locklear
+base,H166,Blue Sparkle,false,,Dustin Harris
+base,H166,Green Sparkle,false,,Dustin Harris
+base,H166,Superfractor,false,,Dustin Harris
+base,H167,Blue Sparkle,false,,Darren Baker
+base,H167,Green Sparkle,false,,Darren Baker
+base,H167,Superfractor,false,,Darren Baker
+base,H168,Blue Sparkle,false,,Rece Hinds
+base,H168,Green Sparkle,false,,Rece Hinds
+base,H168,Superfractor,false,,Rece Hinds
+base,H169,Blue Sparkle,false,,Moisés Ballesteros
+base,H169,Green Sparkle,false,,Moisés Ballesteros
+base,H169,Superfractor,false,,Moisés Ballesteros
+base,H170,Blue Sparkle,false,,Fernando Tatis Jr.
+base,H170,Green Sparkle,false,,Fernando Tatis Jr.
+base,H170,Superfractor,false,,Fernando Tatis Jr.
+base,H171,Blue Sparkle,false,,Francisco Lindor
+base,H171,Green Sparkle,false,,Francisco Lindor
+base,H171,Superfractor,false,,Francisco Lindor
+base,H172,Blue Sparkle,false,,Trey Sweeney
+base,H172,Green Sparkle,false,,Trey Sweeney
+base,H172,Superfractor,false,,Trey Sweeney
+base,H173,Blue Sparkle,false,,Matt Shaw
+base,H173,Green Sparkle,false,,Matt Shaw
+base,H173,Superfractor,false,,Matt Shaw
+base,H174,Blue Sparkle,false,,Hyeseong Kim
+base,H174,Green Sparkle,false,,Hyeseong Kim
+base,H174,Superfractor,false,,Hyeseong Kim
+base,H175,Blue Sparkle,false,,Carlos Correa
+base,H175,Green Sparkle,false,,Carlos Correa
+base,H175,Superfractor,false,,Carlos Correa
+base,H176,Blue Sparkle,false,,Jazz Chisholm Jr.
+base,H176,Green Sparkle,false,,Jazz Chisholm Jr.
+base,H176,Superfractor,false,,Jazz Chisholm Jr.
+base,H177,Blue Sparkle,false,,Matt Chapman
+base,H177,Green Sparkle,false,,Matt Chapman
+base,H177,Superfractor,false,,Matt Chapman
+base,H178,Blue Sparkle,false,,Ryan Helsley
+base,H178,Green Sparkle,false,,Ryan Helsley
+base,H178,Superfractor,false,,Ryan Helsley
+base,H179,Blue Sparkle,false,,Zack Wheeler
+base,H179,Green Sparkle,false,,Zack Wheeler
+base,H179,Superfractor,false,,Zack Wheeler
+base,H180,Blue Sparkle,false,,Jarren Duran
+base,H180,Green Sparkle,false,,Jarren Duran
+base,H180,Superfractor,false,,Jarren Duran
+base,H181,Blue Sparkle,false,,Adrian Del Castillo
+base,H181,Green Sparkle,false,,Adrian Del Castillo
+base,H181,Superfractor,false,,Adrian Del Castillo
+base,H182,Blue Sparkle,false,,Jackson Chourio
+base,H182,Green Sparkle,false,,Jackson Chourio
+base,H182,Superfractor,false,,Jackson Chourio
+base,H183,Blue Sparkle,false,,Nacho Alvarez Jr.
+base,H183,Green Sparkle,false,,Nacho Alvarez Jr.
+base,H183,Superfractor,false,,Nacho Alvarez Jr.
+base,H184,Blue Sparkle,false,,Ryan Bliss
+base,H184,Green Sparkle,false,,Ryan Bliss
+base,H184,Superfractor,false,,Ryan Bliss
+base,H185,Blue Sparkle,false,,Corbin Burnes
+base,H185,Green Sparkle,false,,Corbin Burnes
+base,H185,Superfractor,false,,Corbin Burnes
+base,H186,Blue Sparkle,false,,Julio Rodríguez
+base,H186,Green Sparkle,false,,Julio Rodríguez
+base,H186,Superfractor,false,,Julio Rodríguez
+base,H187,Blue Sparkle,false,,Thomas Saggese
+base,H187,Green Sparkle,false,,Thomas Saggese
+base,H187,Superfractor,false,,Thomas Saggese
+base,H188,Blue Sparkle,false,,Jackson Holliday
+base,H188,Green Sparkle,false,,Jackson Holliday
+base,H188,Superfractor,false,,Jackson Holliday
+base,H189,Blue Sparkle,false,,Luke Keaschall
+base,H189,Green Sparkle,false,,Luke Keaschall
+base,H189,Superfractor,false,,Luke Keaschall
+base,H190,Blue Sparkle,false,,Rafael Devers
+base,H190,Green Sparkle,false,,Rafael Devers
+base,H190,Superfractor,false,,Rafael Devers
+base,H191,Blue Sparkle,false,,Adley Rutschman
+base,H191,Green Sparkle,false,,Adley Rutschman
+base,H191,Superfractor,false,,Adley Rutschman
+base,H192,Blue Sparkle,false,,Spencer Steer
+base,H192,Green Sparkle,false,,Spencer Steer
+base,H192,Superfractor,false,,Spencer Steer
+base,H193,Blue Sparkle,false,,Masyn Winn
+base,H193,Green Sparkle,false,,Masyn Winn
+base,H193,Superfractor,false,,Masyn Winn
+base,H194,Blue Sparkle,false,,Royce Lewis
+base,H194,Green Sparkle,false,,Royce Lewis
+base,H194,Superfractor,false,,Royce Lewis
+base,H195,Blue Sparkle,false,,José Ramírez
+base,H195,Green Sparkle,false,,José Ramírez
+base,H195,Superfractor,false,,José Ramírez
+base,H196,Blue Sparkle,false,,Jacob deGrom
+base,H196,Green Sparkle,false,,Jacob deGrom
+base,H196,Superfractor,false,,Jacob deGrom
+base,H197,Blue Sparkle,false,,Walker Buehler
+base,H197,Green Sparkle,false,,Walker Buehler
+base,H197,Superfractor,false,,Walker Buehler
+base,H198,Blue Sparkle,false,,Vinnie Pasquantino
+base,H198,Green Sparkle,false,,Vinnie Pasquantino
+base,H198,Superfractor,false,,Vinnie Pasquantino
+base,H199,Blue Sparkle,false,,Spencer Schwellenbach
+base,H199,Green Sparkle,false,,Spencer Schwellenbach
+base,H199,Superfractor,false,,Spencer Schwellenbach
+base,H200,Blue Sparkle,false,,Shohei Ohtani
+base,H200,Green Sparkle,false,,Shohei Ohtani
+base,H200,Superfractor,false,,Shohei Ohtani
+auto-holiday-relic-autographs,HRA-AG,,true,,Adolis García
+auto-holiday-relic-autographs,HRA-AR,,true,,Adley Rutschman
+auto-holiday-relic-autographs,HRA-BR,,true,,Brent Rooker
+auto-holiday-relic-autographs,HRA-BW,,true,,Bobby Witt Jr.
+auto-holiday-relic-autographs,HRA-CM,,true,,Coby Mayo
+auto-holiday-relic-autographs,HRA-CY,,true,,Christian Yelich
+auto-holiday-relic-autographs,HRA-EC,,true,,Evan Carter
+auto-holiday-relic-autographs,HRA-ET,,true,,Ezequiel Tovar
+auto-holiday-relic-autographs,HRA-FF,,true,,Freddie Freeman
+auto-holiday-relic-autographs,HRA-FT,,true,,Fernando Tatis Jr.
+auto-holiday-relic-autographs,HRA-GH,,true,,Gunnar Henderson
+auto-holiday-relic-autographs,HRA-GW,,true,,Gavin Williams
+auto-holiday-relic-autographs,HRA-HD,,true,,Henry Davis
+auto-holiday-relic-autographs,HRA-JJU,,true,,Jace Jung
+auto-holiday-relic-autographs,HRA-JL,,true,,Jordan Lawlar
+auto-holiday-relic-autographs,HRA-JLE,,true,,Jung Hoo Lee
+auto-holiday-relic-autographs,HRA-JN,,true,,Jhonkensy Noel
+auto-holiday-relic-autographs,HRA-JW,,true,,Jacob Wilson
+auto-holiday-relic-autographs,HRA-KB,,true,,Kris Bryant
+auto-holiday-relic-autographs,HRA-KC,,true,,Kristian Campbell
+auto-holiday-relic-autographs,HRA-KM,,true,,Keider Montero
+auto-holiday-relic-autographs,HRA-KT,,true,,Kyle Tucker
+auto-holiday-relic-autographs,HRA-LA,,true,,Luis Arraez
+auto-holiday-relic-autographs,HRA-LR,,true,,Luis Robert Jr.
+auto-holiday-relic-autographs,HRA-MC,,true,,Matt Chapman
+auto-holiday-relic-autographs,HRA-MM,,true,,Matt McLain
+auto-holiday-relic-autographs,HRA-NC,,true,,Nestor Cortes
+auto-holiday-relic-autographs,HRA-NE,,true,,Nathan Eovaldi
+auto-holiday-relic-autographs,HRA-NG,,true,,Nolan Gorman
+auto-holiday-relic-autographs,HRA-NM,,true,,Noelvi Marte
+auto-holiday-relic-autographs,HRA-PS,,true,,Paul Skenes
+auto-holiday-relic-autographs,HRA-RD,,true,,Rafael Devers
+auto-holiday-relic-autographs,HRA-RG,,true,,Riley Greene
+auto-holiday-relic-autographs,HRA-SG,,true,,Sonny Gray
+auto-holiday-relic-autographs,HRA-TL,,true,,Tyler Locklear
+auto-holiday-relic-autographs,HRA-TS,,true,,Tyler Soderstrom
+auto-holiday-relic-autographs,HRA-TSA,,true,,Thomas Saggese
+auto-holiday-relic-autographs,HRA-VP,,true,,Vinnie Pasquantino
+auto-holiday-relic-autographs,HRA-ZG,,true,,Zac Gallen
+auto-holiday-relic-autographs,HRA-ZGE,,true,,Zack Gelof
+auto-holiday-relic-autographs,HRA-ZN,,true,,Zach Neto
+auto-holiday-faux-relic-autographs,HFA-E,,true,,Elf
+auto-holiday-faux-relic-autographs,HFA-ES,,true,,Ebenezer Scrooge
+auto-holiday-faux-relic-autographs,HFA-GM,,true,,Gingerbread Man
+auto-holiday-faux-relic-autographs,HFA-N,,true,,Nutcracker
+auto-holiday-faux-relic-autographs,HFA-SC,,true,,Santa Claus
+auto-player-autographed-relics,PAR-AA,,true,,Adael Amador
+auto-player-autographed-relics,PAR-BL,,true,,Brooks Lee
+auto-player-autographed-relics,PAR-BR,,true,,Ben Rice
+auto-player-autographed-relics,PAR-BW,,true,,Bobby Witt Jr.
+auto-player-autographed-relics,PAR-CC,,true,,Corbin Carroll
+auto-player-autographed-relics,PAR-CD,,true,,Caden Dana
+auto-player-autographed-relics,PAR-CM,,true,,Coby Mayo
+auto-player-autographed-relics,PAR-CN,,true,,Connor Norby
+auto-player-autographed-relics,PAR-CS,,true,,Cam Smith
+auto-player-autographed-relics,PAR-DB,,true,,Drake Baldwin
+auto-player-autographed-relics,PAR-EC,,true,,Evan Carter
+auto-player-autographed-relics,PAR-ED,,true,,Elly De La Cruz
+auto-player-autographed-relics,PAR-GM,,true,,Grant McCray
+auto-player-autographed-relics,PAR-HK,,true,,Hyeseong Kim
+auto-player-autographed-relics,PAR-HW,,true,,Hurston Waldrep
+auto-player-autographed-relics,PAR-JC,,true,,Jackson Chourio
+auto-player-autographed-relics,PAR-JCA,,true,,Junior Caminero
+auto-player-autographed-relics,PAR-JD,,true,,Jasson Domínguez
+auto-player-autographed-relics,PAR-JH,,true,,Jackson Holliday
+auto-player-autographed-relics,PAR-JJU,,true,,Jace Jung
+auto-player-autographed-relics,PAR-JM,,true,,Justyn-Henry Malloy
+auto-player-autographed-relics,PAR-JN,,true,,Jhonkensy Noel
+auto-player-autographed-relics,PAR-JW,,true,,Jacob Wilson
+auto-player-autographed-relics,PAR-JWO,,true,,James Wood
+auto-player-autographed-relics,PAR-KA,,true,,Kevin Alcántara
+auto-player-autographed-relics,PAR-KC,,true,,Kristian Campbell
+auto-player-autographed-relics,PAR-KR,,true,,Kumar Rocker
+auto-player-autographed-relics,PAR-LA,,true,,Luisangel Acuña
+auto-player-autographed-relics,PAR-MC,,true,,Matt Chapman
+auto-player-autographed-relics,PAR-MM,,true,,Marcelo Mayer
+auto-player-autographed-relics,PAR-MS,,true,,Matt Shaw
+auto-player-autographed-relics,PAR-MT,,true,,Mike Trout
+auto-player-autographed-relics,PAR-NK,,true,,Nick Kurtz
+auto-player-autographed-relics,PAR-OA,,true,,Ozzie Albies
+auto-player-autographed-relics,PAR-OM,,true,,Orelvis Martínez
+auto-player-autographed-relics,PAR-PS,,true,,Paul Skenes
+auto-player-autographed-relics,PAR-RA,,true,,Ronald Acuña Jr.
+auto-player-autographed-relics,PAR-RAR,,true,,Randy Arozarena
+auto-player-autographed-relics,PAR-RB,,true,,Ryan Bliss
+auto-player-autographed-relics,PAR-RH,,true,,Rece Hinds
+auto-player-autographed-relics,PAR-RL,,true,,Rhett Lowder
+auto-player-autographed-relics,PAR-RS,,true,,Roki Sasaki
+auto-player-autographed-relics,PAR-SA,,true,,Sandy Alcantara
+auto-player-autographed-relics,PAR-SS,,true,,Spencer Schwellenbach
+auto-player-autographed-relics,PAR-TS,,true,,Thomas Saggese
+auto-player-autographed-relics,PAR-WL,,true,,Wyatt Langford
+auto-player-autographs,PA-AA,,true,,Adael Amador
+auto-player-autographs,PA-AR,,true,,Austin Riley
+auto-player-autographs,PA-AS,,true,,AJ Smith-Shawver
+auto-player-autographs,PA-AV,,true,,Anthony Volpe
+auto-player-autographs,PA-BL,,true,,Brooks Lee
+auto-player-autographs,PA-BR,,true,,Ben Rice
+auto-player-autographs,PA-BRO,,true,,Brent Rooker
+auto-player-autographs,PA-BS,,true,,Brady Singer
+auto-player-autographs,PA-BW,,true,,Bobby Witt Jr.
+auto-player-autographs,PA-CD,,true,,Caden Dana
+auto-player-autographs,PA-CH,,true,,Cade Horton
+auto-player-autographs,PA-CM,,true,,Coby Mayo
+auto-player-autographs,PA-CN,,true,,Connor Norby
+auto-player-autographs,PA-CSM,,true,,Cam Smith
+auto-player-autographs,PA-DC,,true,,Dylan Crews
+auto-player-autographs,PA-DR,,true,,Dalton Rushing
+auto-player-autographs,PA-GH,,true,,Gunnar Henderson
+auto-player-autographs,PA-GM,,true,,Grant McCray
+auto-player-autographs,PA-HK,,true,,Hyeseong Kim
+auto-player-autographs,PA-HW,,true,,Hurston Waldrep
+auto-player-autographs,PA-JD,,true,,Jasson Domínguez
+auto-player-autographs,PA-JJ,,true,,Jackson Jobe
+auto-player-autographs,PA-JJU,,true,,Jace Jung
+auto-player-autographs,PA-JL,,true,,Jordan Lawlar
+auto-player-autographs,PA-JM,,true,,Justyn-Henry Malloy
+auto-player-autographs,PA-JN,,true,,Jhonkensy Noel
+auto-player-autographs,PA-JW,,true,,Jacob Wilson
+auto-player-autographs,PA-JWO,,true,,James Wood
+auto-player-autographs,PA-KA,,true,,Kevin Alcántara
+auto-player-autographs,PA-KR,,true,,Kumar Rocker
+auto-player-autographs,PA-LA,,true,,Luisangel Acuña
+auto-player-autographs,PA-LG,,true,,Luis García Jr.
+auto-player-autographs,PA-LK,,true,,Luke Keaschall
+auto-player-autographs,PA-MB,,true,,Moisés Ballesteros
+auto-player-autographs,PA-MC,,true,,Matt Chapman
+auto-player-autographs,PA-MM,,true,,Marcelo Mayer
+auto-player-autographs,PA-MS,,true,,Matt Shaw
+auto-player-autographs,PA-NK,,true,,Nick Kurtz
+auto-player-autographs,PA-OM,,true,,Orelvis Martinez
+auto-player-autographs,PA-PC,,true,,Pete Crow-Armstrong
+auto-player-autographs,PA-RA,,true,,Ronald Acuña Jr.
+auto-player-autographs,PA-RB,,true,,Ryan Bliss
+auto-player-autographs,PA-RH,,true,,Rece Hinds
+auto-player-autographs,PA-RL,,true,,Rhett Lowder
+auto-player-autographs,PA-RS,,true,,Roki Sasaki
+auto-player-autographs,PA-SM,,true,,Starling Marte
+auto-player-autographs,PA-TS,,true,,Thomas Saggese
+auto-player-autographs,PA-VG,,true,,Vladimir Guerrero Jr.
+auto-player-autographs,PA-WL,,true,,Wyatt Langford
+auto-player-autographs,PA-YM,,true,,Yuki Matsui
+insert-player-relics,PR-AB,,false,,Andrew Benintendi
+insert-player-relics,PR-AD,,false,,Adrian Del Castillo
+insert-player-relics,PR-AG,,false,,Adolis García
+insert-player-relics,PR-AJ,,false,,Aaron Judge
+insert-player-relics,PR-AM,,false,,Andrew McCutchen
+insert-player-relics,PR-AR,,false,,Austin Riley
+insert-player-relics,PR-AV,,false,,Anthony Volpe
+insert-player-relics,PR-AW,,false,,Austin Wells
+insert-player-relics,PR-BB,,false,,Byron Buxton
+insert-player-relics,PR-BBI,,false,,Bo Bichette
+insert-player-relics,PR-BH,,false,,Bryce Harper
+insert-player-relics,PR-BL,,false,,Brooks Lee
+insert-player-relics,PR-BW,,false,,Bobby Witt Jr.
+insert-player-relics,PR-CB,,false,,Cody Bellinger
+insert-player-relics,PR-CC,,false,,Corbin Carroll
+insert-player-relics,PR-CCO,,false,,Carlos Correa
+insert-player-relics,PR-CD,,false,,Caden Dana
+insert-player-relics,PR-CM,,false,,Coby Mayo
+insert-player-relics,PR-CME,,false,,Curtis Mead
+insert-player-relics,PR-CN,,false,,Connor Norby
+insert-player-relics,PR-CR,,false,,Cal Raleigh
+insert-player-relics,PR-CSM,,false,,Cam Smith
+insert-player-relics,PR-CY,,false,,Christian Yelich
+insert-player-relics,PR-DC,,false,,Dylan Crews
+insert-player-relics,PR-DR,,false,,Drew Romo
+insert-player-relics,PR-DT,,false,,Drew Thorpe
+insert-player-relics,PR-ED,,false,,Elly De La Cruz
+insert-player-relics,PR-FF,,false,,Freddie Freeman
+insert-player-relics,PR-FL,,false,,Francisco Lindor
+insert-player-relics,PR-FT,,false,,Fernando Tatis Jr.
+insert-player-relics,PR-GC,,false,,Gerrit Cole
+insert-player-relics,PR-GH,,false,,Gunnar Henderson
+insert-player-relics,PR-HB,,false,,Hayden Birdsong
+insert-player-relics,PR-HK,,false,,Hyeseong Kim
+insert-player-relics,PR-JA,,false,,Jose Altuve
+insert-player-relics,PR-JC,,false,,Jackson Chourio
+insert-player-relics,PR-JCA,,false,,Junior Caminero
+insert-player-relics,PR-JH,,false,,Jackson Holliday
+insert-player-relics,PR-JJ,,false,,Jackson Jobe
+insert-player-relics,PR-JJU,,false,,Jace Jung
+insert-player-relics,PR-JL,,false,,Jordan Lawlar
+insert-player-relics,PR-JLE,,false,,Jung Hoo Lee
+insert-player-relics,PR-JM,,false,,Jackson Merrill
+insert-player-relics,PR-JN,,false,,Jhonkensy Noel
+insert-player-relics,PR-JR,,false,,José Ramírez
+insert-player-relics,PR-JRO,,false,,Julio Rodríguez
+insert-player-relics,PR-JS,,false,,Juan Soto
+insert-player-relics,PR-JW,,false,,Jacob Wilson
+insert-player-relics,PR-JWO,,false,,James Wood
+insert-player-relics,PR-KA,,false,,Kevin Alcántara
+insert-player-relics,PR-KB,,false,,Kris Bryant
+insert-player-relics,PR-KC,,false,,Kristian Campbell
+insert-player-relics,PR-KM,,false,,Ketel Marte
+insert-player-relics,PR-KR,,false,,Kumar Rocker
+insert-player-relics,PR-KT,,false,,Kyle Tucker
+insert-player-relics,PR-LA,,false,,Luisangel Acuña
+insert-player-relics,PR-LB,,false,,Lawrence Butler
+insert-player-relics,PR-MB,,false,,Mookie Betts
+insert-player-relics,PR-MG,,false,,MacKenzie Gore
+insert-player-relics,PR-MM,,false,,Manny Machado
+insert-player-relics,PR-MO,,false,,Matt Olson
+insert-player-relics,PR-MS,,false,,Matt Shaw
+insert-player-relics,PR-MT,,false,,Mike Trout
+insert-player-relics,PR-MW,,false,,Masyn Winn
+insert-player-relics,PR-NA,,false,,Nolan Arenado
+insert-player-relics,PR-NAL,,false,,Nacho Alvarez Jr.
+insert-player-relics,PR-NC,,false,,Nick Castellanos
+insert-player-relics,PR-NK,,false,,Nick Kurtz
+insert-player-relics,PR-NS,,false,,Nolan Schanuel
+insert-player-relics,PR-OA,,false,,Ozzie Albies
+insert-player-relics,PR-OM,,false,,Orelvis Martinez
+insert-player-relics,PR-PA,,false,,Pete Alonso
+insert-player-relics,PR-PC,,false,,Pete Crow-Armstrong
+insert-player-relics,PR-PS,,false,,Paul Skenes
+insert-player-relics,PR-RA,,false,,Ronald Acuña Jr.
+insert-player-relics,PR-RD,,false,,Rafael Devers
+insert-player-relics,PR-RH,,false,,Rece Hinds
+insert-player-relics,PR-RL,,false,,Rhett Lowder
+insert-player-relics,PR-RS,,false,,Roki Sasaki
+insert-player-relics,PR-SA,,false,,Sandy Alcantara
+insert-player-relics,PR-SF,,false,,Sal Frelick
+insert-player-relics,PR-SI,,false,,Shota Imanaga
+insert-player-relics,PR-SK,,false,,Steven Kwan
+insert-player-relics,PR-SO,,false,,Shohei Ohtani
+insert-player-relics,PR-SP,,false,,Salvador Perez
+insert-player-relics,PR-SS,,false,,Seiya Suzuki
+insert-player-relics,PR-SSC,,false,,Spencer Schwellenbach
+insert-player-relics,PR-TL,,false,,Tyler Locklear
+insert-player-relics,PR-TS,,false,,Tarik Skubal
+insert-player-relics,PR-TSA,,false,,Thomas Saggese
+insert-player-relics,PR-TSO,,false,,Tyler Soderstrom
+insert-player-relics,PR-TST,,false,,Trevor Story
+insert-player-relics,PR-TSW,,false,,Trey Sweeney
+insert-player-relics,PR-TT,,false,,Trea Turner
+insert-player-relics,PR-VG,,false,,Vladimir Guerrero Jr.
+insert-player-relics,PR-WA,,false,,Willy Adames
+insert-player-relics,PR-WC,,false,,William Contreras
+insert-player-relics,PR-WL,,false,,Wyatt Langford
+insert-player-relics,PR-YA,,false,,Yordan Alvarez
+insert-player-relics,PR-YD,,false,,Yu Darvish
+insert-player-relics-dual,DPR-AA,,false,,Ronald Acuña Jr./Luisangel Acuña
+insert-player-relics-dual,DPR-AAL,,false,,Jose Altuve/Yordan Alvarez
+insert-player-relics-dual,DPR-CB,,false,,Byron Buxton/Carlos Correa
+insert-player-relics-dual,DPR-FB,,false,,Mookie Betts/Freddie Freeman
+insert-player-relics-dual,DPR-HC,,false,,Jackson Chourio/Jackson Holliday
+insert-player-relics-dual,DPR-HR,,false,,Gunnar Henderson/Adley Rutschman
+insert-player-relics-dual,DPR-JH,,false,,Bryce Harper/Aaron Judge
+insert-player-relics-dual,DPR-JT,,false,,Mike Trout/Aaron Judge
+insert-player-relics-dual,DPR-LS,,false,,Juan Soto/Francisco Lindor
+insert-player-relics-dual,DPR-RA,,false,,Julio Rodríguez/Randy Arozarena
+insert-player-relics-dual,DPR-SC,,false,,Paul Skenes/Dylan Crews
+insert-player-relics-dual,DPR-TM,,false,,Manny Machado/Fernando Tatis Jr.
+insert-player-relics-dual,DPR-WB,,false,,Lawrence Butler/Jacob Wilson
+insert-player-relics-dual,DPR-WC,,false,,James Wood/Dylan Crews
+insert-player-relics-dual,DPR-WP,,false,,Bobby Witt Jr./Salvador Perez
+insert-player-relics-dual,DPR-YS,,false,,Yoshinobu Yamamoto/Roki Sasaki
+insert-holiday-relics,HR-AG,,false,,Adolis García
+insert-holiday-relics,HR-AR,,false,,Adley Rutschman
+insert-holiday-relics,HR-BR,,false,,Brent Rooker
+insert-holiday-relics,HR-BW,,false,,Bobby Witt Jr.
+insert-holiday-relics,HR-CC,,false,,Corbin Carroll
+insert-holiday-relics,HR-CM,,false,,Coby Mayo
+insert-holiday-relics,HR-CR,,false,,Cole Ragans
+insert-holiday-relics,HR-CY,,false,,Christian Yelich
+insert-holiday-relics,HR-EC,,false,,Evan Carter
+insert-holiday-relics,HR-ET,,false,,Ezequiel Tovar
+insert-holiday-relics,HR-FF,,false,,Freddie Freeman
+insert-holiday-relics,HR-FT,,false,,Fernando Tatis Jr.
+insert-holiday-relics,HR-GH,,false,,Gunnar Henderson
+insert-holiday-relics,HR-JJ,,false,,Jackson Jobe
+insert-holiday-relics,HR-JJU,,false,,Jace Jung
+insert-holiday-relics,HR-JL,,false,,Jordan Lawlar
+insert-holiday-relics,HR-JLE,,false,,Jung Hoo Lee
+insert-holiday-relics,HR-JM,,false,,Jackson Merrill
+insert-holiday-relics,HR-JN,,false,,Jhonkensy Noel
+insert-holiday-relics,HR-JW,,false,,Jacob Wilson
+insert-holiday-relics,HR-Jd,,false,,Jacob deGrom
+insert-holiday-relics,HR-KB,,false,,Kris Bryant
+insert-holiday-relics,HR-KC,,false,,Kristian Campbell
+insert-holiday-relics,HR-KH,,false,,Ke'Bryan Hayes
+insert-holiday-relics,HR-KM,,false,,Ketel Marte
+insert-holiday-relics,HR-KT,,false,,Kyle Tucker
+insert-holiday-relics,HR-LA,,false,,Luis Arraez
+insert-holiday-relics,HR-LR,,false,,Luis Robert Jr.
+insert-holiday-relics,HR-MC,,false,,Matt Chapman
+insert-holiday-relics,HR-MM,,false,,Manny Machado
+insert-holiday-relics,HR-MMC,,false,,Matt McLain
+insert-holiday-relics,HR-MW,,false,,Masyn Winn
+insert-holiday-relics,HR-NE,,false,,Nathan Eovaldi
+insert-holiday-relics,HR-NG,,false,,Nolan Gorman
+insert-holiday-relics,HR-PC,,false,,Pete Crow-Armstrong
+insert-holiday-relics,HR-PS,,false,,Paul Skenes
+insert-holiday-relics,HR-RA,,false,,Randy Arozarena
+insert-holiday-relics,HR-RD,,false,,Rafael Devers
+insert-holiday-relics,HR-RG,,false,,Riley Greene
+insert-holiday-relics,HR-SF,,false,,Sal Frelick
+insert-holiday-relics,HR-SI,,false,,Shota Imanaga
+insert-holiday-relics,HR-SP,,false,,Salvador Perez
+insert-holiday-relics,HR-SS,,false,,Seiya Suzuki
+insert-holiday-relics,HR-TS,,false,,Tarik Skubal
+insert-holiday-relics,HR-TSA,,false,,Thomas Saggese
+insert-holiday-relics,HR-TSO,,false,,Tyler Soderstrom
+insert-holiday-relics,HR-VP,,false,,Vinnie Pasquantino
+insert-holiday-relics,HR-WA,,false,,Willy Adames
+insert-holiday-relics,HR-YK,,false,,Yusei Kikuchi
+insert-holiday-relics,HR-ZG,,false,,Zac Gallen
+insert-holiday-faux-relics,HFR-E,,false,,Elf
+insert-holiday-faux-relics,HFR-ES,,false,,Ebenezer Scrooge
+insert-holiday-faux-relics,HFR-GM,,false,,Gingerbread Man
+insert-holiday-faux-relics,HFR-N,,false,,Nutcracker
+insert-holiday-faux-relics,HFR-SC,,false,,Santa Claus
+insert-the-santa-archives,TSA-02,,false,,Santa Claus
+insert-the-santa-archives,TSA-04,,false,,Santa Claus
+insert-the-santa-archives,TSA-09,,false,,Santa Claus
+insert-the-santa-archives,TSA-16,,false,,Santa Claus
+insert-the-santa-archives,TSA-18,,false,,Santa Claus
+insert-the-santa-archives,TSA-20,,false,,Santa Claus
+insert-the-santa-archives,TSA-22,,false,,Santa Claus
+insert-the-santa-archives,TSA-25,,false,,Santa Claus
+insert-the-santa-archives,TSA-51,,false,,Santa Claus
+insert-the-santa-archives,TSA-54,,false,,Santa Claus
+insert-the-santa-archives,TSA-57,,false,,Santa Claus
+insert-the-santa-archives,TSA-60,,false,,Santa Claus
+insert-the-santa-archives,TSA-63,,false,,Santa Claus
+insert-the-santa-archives,TSA-66,,false,,Santa Claus
+insert-the-santa-archives,TSA-68,,false,,Santa Claus
+insert-the-santa-archives,TSA-71,,false,,Santa Claus
+insert-the-santa-archives,TSA-73,,false,,Santa Claus
+insert-the-santa-archives,TSA-76,,false,,Santa Claus
+insert-the-santa-archives,TSA-78,,false,,Santa Claus
+insert-the-santa-archives,TSA-80,,false,,Santa Claus
+insert-the-santa-archives,TSA-84,,false,,Santa Claus
+insert-the-santa-archives,TSA-88,,false,,Santa Claus
+insert-the-santa-archives,TSA-91,,false,,Santa Claus
+insert-the-santa-archives,TSA-94,,false,,Santa Claus
+insert-the-santa-archives,TSA-97,,false,,Santa Claus
+insert-hidden-elf,HE-1,,false,,Bobby Witt Jr.
+insert-hidden-elf,HE-2,,false,,Bobby Witt Jr.
+insert-hidden-elf,HE-3,,false,,Bobby Witt Jr.
+insert-hidden-elf,HE-4,,false,,Bobby Witt Jr.
+insert-hidden-elf,HE-5,,false,,Bobby Witt Jr.
+insert-hidden-elf,HE-6,,false,,Aaron Judge
+insert-hidden-elf,HE-7,,false,,Aaron Judge
+insert-hidden-elf,HE-8,,false,,Aaron Judge
+insert-hidden-elf,HE-9,,false,,Aaron Judge
+insert-hidden-elf,HE-10,,false,,Aaron Judge
+insert-hidden-elf,HE-11,,false,,Paul Skenes
+insert-hidden-elf,HE-12,,false,,Paul Skenes
+insert-hidden-elf,HE-13,,false,,Paul Skenes
+insert-hidden-elf,HE-14,,false,,Paul Skenes
+insert-hidden-elf,HE-15,,false,,Paul Skenes
+insert-hidden-elf,HE-16,,false,,Dylan Crews
+insert-hidden-elf,HE-17,,false,,Dylan Crews
+insert-hidden-elf,HE-18,,false,,Dylan Crews
+insert-hidden-elf,HE-19,,false,,Dylan Crews
+insert-hidden-elf,HE-20,,false,,Dylan Crews
+insert-hidden-elf,HE-21,,false,,Roki Sasaki
+insert-hidden-elf,HE-22,,false,,Roki Sasaki
+insert-hidden-elf,HE-23,,false,,Roki Sasaki
+insert-hidden-elf,HE-24,,false,,Roki Sasaki
+insert-hidden-elf,HE-25,,false,,Roki Sasaki
+insert-advent-calendar-exclusive,MNL-1,,false,,Shohei Ohtani
+insert-advent-calendar-exclusive,MNL-2,,false,,Shohei Ohtani
+insert-advent-calendar-exclusive,MNL-3,,false,,Aaron Judge
+insert-advent-calendar-exclusive,MNL-4,,false,,Bobby Witt Jr.
+insert-advent-calendar-exclusive,MNL-5,,false,,Luis Arraez
+insert-advent-calendar-exclusive,MNL-6,,false,,Aaron Judge
+insert-advent-calendar-exclusive,MNL-7,,false,,Elly De La Cruz
+insert-advent-calendar-exclusive,MNL-8,,false,,Matt Chapman
+insert-advent-calendar-exclusive,MNL-9,,false,,Corbin Carroll
+insert-advent-calendar-exclusive,MNL-10,,false,,Kyle Schwarber
+insert-advent-calendar-exclusive,MNL-11,,false,,Paul Skenes
+insert-advent-calendar-exclusive,MNL-12,,false,,Chris Sale
+insert-advent-calendar-exclusive,MNL-13,,false,,Ryan Helsley
+insert-advent-calendar-exclusive,MNL-14,,false,,Tarik Skubal
+insert-advent-calendar-exclusive,MNL-15,,false,,Emmanuel Clase
+insert-advent-calendar-exclusive,MNL-16,,false,,Gunnar Henderson
+insert-advent-calendar-exclusive,MNL-17,,false,,Logan Gilbert
+insert-advent-calendar-exclusive,MNL-18,,false,,Giancarlo Stanton
+insert-advent-calendar-exclusive,MNL-19,,false,,Oneil Cruz
+insert-advent-calendar-exclusive,MNL-20,,false,,Aaron Judge
+insert-advent-calendar-exclusive,MNL-21,,false,,Bobby Witt Jr.
+insert-advent-calendar-exclusive,MNL-22,,false,,Tyler Rogers
+insert-advent-calendar-exclusive,MNL-23,,false,,Vladimir Guerrero Jr.
+insert-advent-calendar-exclusive,MNL-24,,false,,Jarren Duran
+insert-advent-calendar-exclusive,MNL-25,,false,,Aaron Judge
+insert-advent-calendar-exclusive,E-1,,false,,Roki Sasaki
+insert-advent-calendar-exclusive,E-2,,false,,Hyeseong Kim
+insert-advent-calendar-exclusive,E-3,,false,,Luisangel Acuña
+insert-advent-calendar-exclusive,E-4,,false,,Kumar Rocker
+insert-advent-calendar-exclusive,E-5,,false,,James Wood
+insert-advent-calendar-exclusive,E-6,,false,,Coby Mayo
+insert-advent-calendar-exclusive,E-7,,false,,Jacob Wilson
+insert-advent-calendar-exclusive,E-8,,false,,Dylan Crews
+insert-advent-calendar-exclusive,E-9,,false,,Matt Shaw
+insert-advent-calendar-exclusive,E-10,,false,,Shohei Ohtani
+insert-advent-calendar-exclusive,E-11,,false,,Aaron Judge
+insert-advent-calendar-exclusive,E-12,,false,,Bobby Witt Jr.
+insert-advent-calendar-exclusive,E-13,,false,,Ivan Rodriguez
+insert-advent-calendar-exclusive,E-14,,false,,Justin Verlander
+insert-advent-calendar-exclusive,E-15,,false,,Wade Boggs
+insert-advent-calendar-exclusive,E-16,,false,,Ernie Banks
+insert-advent-calendar-exclusive,E-17,,false,,Randy Johnson
+insert-advent-calendar-exclusive,E-18,,false,,Harmon Killebrew
+insert-advent-calendar-exclusive,E-19,,false,,Joe Morgan
+insert-advent-calendar-exclusive,E-20,,false,,José Ramírez
+insert-advent-calendar-exclusive,E-21,,false,,Freddie Freeman
+insert-advent-calendar-exclusive,E-22,,false,,Juan Soto
+insert-advent-calendar-exclusive,E-23,,false,,Mike Trout
+insert-advent-calendar-exclusive,E-24,,false,,Hank Aaron
+insert-advent-calendar-exclusive,E-25,,false,,Mike Piazza
+insert-oversized-die-cut-ornaments,OO-1,,false,,Roki Sasaki
+insert-oversized-die-cut-ornaments,OO-2,,false,,Hyeseong Kim
+insert-oversized-die-cut-ornaments,OO-3,,false,,Luisangel Acuña
+insert-oversized-die-cut-ornaments,OO-4,,false,,Kumar Rocker
+insert-oversized-die-cut-ornaments,OO-5,,false,,James Wood
+insert-oversized-die-cut-ornaments,OO-6,,false,,Coby Mayo
+insert-oversized-die-cut-ornaments,OO-7,,false,,Jacob Wilson
+insert-oversized-die-cut-ornaments,OO-8,,false,,Dylan Crews
+insert-oversized-die-cut-ornaments,OO-9,,false,,Matt Shaw
+insert-oversized-die-cut-ornaments,OO-10,,false,,Gunnar Henderson
+insert-oversized-die-cut-ornaments,OO-11,,false,,Juan Soto
+insert-oversized-die-cut-ornaments,OO-12,,false,,Pete Alonso
+insert-oversized-die-cut-ornaments,OO-13,,false,,Babe Ruth
+insert-oversized-die-cut-ornaments,OO-14,,false,,Ted Williams
+insert-oversized-die-cut-ornaments,OO-15,,false,,Ken Griffey Jr.
+insert-oversized-die-cut-ornaments,OO-16,,false,,Kyle Tucker
+insert-oversized-die-cut-ornaments,OO-17,,false,,Yordan Alvarez
+insert-oversized-die-cut-ornaments,OO-18,,false,,José Ramírez
+insert-oversized-die-cut-ornaments,OO-19,,false,,Ketel Marte
+insert-oversized-die-cut-ornaments,OO-20,,false,,Trea Turner
+insert-present-die-cut-ornaments,PO-1,,false,,Roki Sasaki
+insert-present-die-cut-ornaments,PO-2,,false,,Hyeseong Kim
+insert-present-die-cut-ornaments,PO-3,,false,,Luisangel Acuña
+insert-present-die-cut-ornaments,PO-4,,false,,Kumar Rocker
+insert-present-die-cut-ornaments,PO-5,,false,,James Wood
+insert-present-die-cut-ornaments,PO-6,,false,,Coby Mayo
+insert-present-die-cut-ornaments,PO-7,,false,,Jacob Wilson
+insert-present-die-cut-ornaments,PO-8,,false,,Dylan Crews
+insert-present-die-cut-ornaments,PO-9,,false,,Matt Shaw
+insert-present-die-cut-ornaments,PO-10,,false,,Shohei Ohtani
+insert-present-die-cut-ornaments,PO-11,,false,,Mookie Betts
+insert-present-die-cut-ornaments,PO-12,,false,,Aaron Judge
+insert-present-die-cut-ornaments,PO-13,,false,,Bryce Harper
+insert-present-die-cut-ornaments,PO-14,,false,,Paul Skenes
+insert-present-die-cut-ornaments,PO-15,,false,,Mike Trout
+insert-present-die-cut-ornaments,PO-16,,false,,Elly De La Cruz
+insert-present-die-cut-ornaments,PO-17,,false,,Bobby Witt Jr.
+insert-present-die-cut-ornaments,PO-18,,false,,Julio Rodríguez
+insert-present-die-cut-ornaments,PO-19,,false,,Jackson Holliday
+insert-present-die-cut-ornaments,PO-20,,false,,Tarik Skubal
