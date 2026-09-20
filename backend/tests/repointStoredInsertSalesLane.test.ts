@@ -10,6 +10,19 @@
  * on every re-upsert. This lane drives from the insert's OWN checklist
  * (never a pool-wide title scan) to find and re-key exactly those rows.
  *
+ * REVIEW FIXES PINNED HERE (2026-09-19, independent review of the first
+ * version): (1) split-identity -- a patch that only moved hobbyiqCardId while
+ * cardId disagreed manufactured a WORSE split, never parked; the two writable
+ * shapes are now the ONLY ones planInsertRekey ever proposes a write for, and
+ * guardSoldCompDoc runs on the would-be doc in both shapes. (2) dual-address
+ * race -- CardHedge same-id twins at two partitions are grouped and handled
+ * serially within one unit, plus a last-line _etag re-read before every
+ * write. (3) one STARTSWITH scan per (cell, base product), not per (cell,
+ * insert key) -- several requested inserts sharing one base product are one
+ * unit. (4) flaggedWrong / excludedFromFmv join the never-move markers.
+ * (5) the exact destination RUNG (number + parallel + auto), not just the
+ * number, must be checklist-attested before a move.
+ *
  * The lane is executed as the COMMITTED FILE via execFileSync, with
  * @azure/cosmos and writeReconciliation replaced through Module._load; every
  * other require (insertSetTitleReader, productSetKeys, catalogAuthority,
@@ -48,10 +61,11 @@ beforeAll(() => {
 // on its own module.exports.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const lane = require(LANE) as {
-  planInsertRekey: (deps: any, sale: any, shape: string, ctx: any) => any;
+  planInsertRekey: (deps: any, sale: any, ctx: any) => any;
   confirmedAgainstLoadedChecklist: (deps: any, rows: any[], num: string | null, player: string | null) => string;
   withLeadingZeroFold: (variants: string[]) => string[];
   checklistNumberVariantSet: (deps: any, rows: any[]) => Set<string>;
+  destinationRungOnChecklist: (deps: any, rows: any[], num: string | null, parallel: string | null, isAuto: boolean) => boolean;
   USER_SEED_SOURCES: Set<string>;
 };
 
@@ -62,120 +76,183 @@ const { cardNumberVariants } = require(path.join(backend, "dist/services/portfol
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { playerIdentityKey } = require(path.join(backend, "dist/services/catalog/playerIdentityKey.js"));
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { productSetKeyOf, withProductSetKey } = require(path.join(backend, "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
+const { withProductSetKey } = require(path.join(backend, "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
 
-const deps = { insertSetNamedInTitle, cardNumberVariants, playerIdentityKey, productSetKeyOf, withProductSetKey };
+const deps = { insertSetNamedInTitle, cardNumberVariants, playerIdentityKey, withProductSetKey };
 
-const BASE_HIQ = "hiq:football:2024:panini-photogenic:cpa-dm:base:no-auto";
+const SPORT = "football";
+const YEAR = 2024;
+const BASE_SET_KEY = "panini-photogenic";
 const INSERT_KEY = "panini-photogenic-rookie-pix";
-const CHECKLIST_ROWS = [{ cardNumber: "DT-5", playerName: "Drake Maye", source: "checklistinsider-2024-08-01" }];
-const ctxFor = (rows = CHECKLIST_ROWS) => ({
-  sport: "football", year: 2024, baseSetKey: "panini-photogenic", insertSetKey: INSERT_KEY,
-  checklistRows: rows, checklistNumberVariants: lane.checklistNumberVariantSet(deps, rows),
+const SECOND_INSERT_KEY = "panini-photogenic-troops-tribute";
+const BASE_HIQ = `hiq:${SPORT}:${YEAR}:${BASE_SET_KEY}:cpa-dm:base:no-auto`;
+const INSERT_HIQ = `hiq:${SPORT}:${YEAR}:${INSERT_KEY}:cpa-dm:base:no-auto`;
+
+const CHECKLIST_ROWS = [{ cardNumber: "DT-5", playerName: "Drake Maye", source: "checklistinsider-2024-08-01", parallelSlug: "base", isAuto: false }];
+const ctxFor = (rows: any[] = CHECKLIST_ROWS, insertKey = INSERT_KEY) => ({
+  sport: SPORT, year: YEAR, baseSetKey: BASE_SET_KEY,
+  insertsByKey: new Map([[insertKey, { checklistRows: rows, checklistNumberVariants: lane.checklistNumberVariantSet(deps, rows) }]]),
 });
 
 describe("planInsertRekey -- pure decision", () => {
-  it("MOVEs a sale whose title names ONLY this insert and confirms number+player on the checklist", () => {
-    const sale = { id: "s1", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
-    const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+  it("MOVEs (relocate) a sale whose title names ONLY this insert, confirms number+player, and the destination rung is checklist-attested", () => {
+    const sale = { id: "s1", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
     expect(plan.action).toBe("relocate");
-    expect(plan.newCardId).toBe(`hiq:football:2024:${INSERT_KEY}:cpa-dm:base:no-auto`);
+    expect(plan.newCardId).toBe(INSERT_HIQ);
     expect(plan.newHiq).toBe(plan.newCardId);
   });
 
-  it("PATCHes (hobbyiqCardId only) when cardId is a raw vendor partition", () => {
-    const sale = { id: "s2", cardId: "vendor-xyz-123", hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
-    const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+  it("PATCHes (hobbyiqCardId only) when cardId is a raw vendor partition (shape B)", () => {
+    const sale = { id: "s2", cardId: "vendor-xyz-123", hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
     expect(plan.action).toBe("patch");
-    expect(plan.newHiq).toBe(`hiq:football:2024:${INSERT_KEY}:cpa-dm:base:no-auto`);
+    expect(plan.newHiq).toBe(INSERT_HIQ);
+  });
+
+  it("LEAVEs (pre-existing-split-identity) when cardId and hobbyiqCardId are BOTH hiq: slugs naming DIFFERENT cells -- REVIEW FIX finding 1", () => {
+    const otherProductCardId = `hiq:${SPORT}:${YEAR}:panini-prizm:cpa-dm:base:no-auto`;
+    const sale = { id: "s-split", cardId: otherProductCardId, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
+    expect(plan.action).toBe("leave");
+    expect(plan.reason).toBe("pre-existing-split-identity");
+    expect(plan.detail).toContain(otherProductCardId);
+    expect(plan.detail).toContain(BASE_HIQ);
+  });
+
+  it("never proposes a write when cardId is hiq: but a DIFFERENT product than hobbyiqCardId, even though hobbyiqCardId alone would confirm -- the old defect this fix closes", () => {
+    // Before the fix, this exact shape planned a PATCH (hobbyiqCardId moves
+    // to the insert) while cardId stayed on panini-prizm -- a worse split,
+    // never parked. The fix must LEAVE it instead.
+    const prizmCardId = `hiq:${SPORT}:${YEAR}:panini-prizm:cpa-dm:base:no-auto`;
+    const sale = { id: "s-split2", cardId: prizmCardId, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
+    expect(plan.action).toBe("leave");
+    expect(plan.reason).toBe("pre-existing-split-identity");
+  });
+
+  it("LEAVEs (destination-rung-not-on-checklist) when the number confirms but the sale's parallel/auto rung is not on the insert's checklist -- REVIEW FIX finding 5", () => {
+    const sale = { id: "s-rung", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "gold", isAuto: true, title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
+    expect(plan.action).toBe("leave");
+    expect(plan.reason).toBe("destination-rung-not-on-checklist");
+    expect(plan.rungKey).toBe(`${INSERT_KEY}|gold|auto`);
+  });
+
+  it("MOVEs when the sale's rung (parallel+auto) matches a DIFFERENT checklist row at the same number", () => {
+    const rows = [
+      { cardNumber: "DT-5", playerName: "Drake Maye", parallelSlug: "base", isAuto: false },
+      { cardNumber: "DT-5", playerName: "Drake Maye", parallelSlug: "gold", isAuto: true },
+    ];
+    const sale = { id: "s-rung2", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "Gold", isAuto: true, title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor(rows));
+    expect(plan.action).toBe("relocate");
   });
 
   it("LEAVEs (title-does-not-name-insert) an ordinary base-card title", () => {
-    const sale = { id: "s3", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "20", playerName: "Some Other Player", title: "2024 Panini Photogenic #20 Some Other Player" };
-    const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+    const sale = { id: "s3", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "20", playerName: "Some Other Player", parallel: "base", isAuto: false, title: "2024 Panini Photogenic #20 Some Other Player" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
     expect(plan.action).toBe("leave");
     expect(plan.reason).toBe("title-does-not-name-insert");
   });
 
   it("LEAVEs (two-inserts-named) when the title names two distinct insert families", () => {
-    const sale = { id: "s4", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", title: "2024 Panini Photogenic Rookie Pix Troops Tribute Drake Maye" };
-    const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+    const sale = { id: "s4", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Troops Tribute Drake Maye" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
     expect(plan.action).toBe("leave");
     expect(plan.reason).toBe("two-inserts-named");
   });
 
   it("LEAVEs (pinned-or-verified) a verifiedByUser sale even with a matching title/number", () => {
-    const sale = { id: "s5", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", title: "2024 Panini Photogenic Rookie Pix Drake Maye", verifiedByUser: true };
-    const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+    const sale = { id: "s5", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye", verifiedByUser: true };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
     expect(plan.action).toBe("leave");
     expect(plan.reason).toBe("pinned-or-verified");
   });
 
   it("LEAVEs (pinned-or-verified) a USER_SEED_SOURCES sale", () => {
     for (const source of ["ebay-user-purchase", "ebay-user-sale", "manual-user-entry", "user-verified"]) {
-      const sale = { id: `s-${source}`, cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", title: "2024 Panini Photogenic Rookie Pix Drake Maye", source };
-      const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+      const sale = { id: `s-${source}`, cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye", source };
+      const plan = lane.planInsertRekey(deps, sale, ctxFor());
       expect(plan.action).toBe("leave");
       expect(plan.reason).toBe("pinned-or-verified");
     }
   });
 
   it("LEAVEs (already-parked) an identityUnverified sale", () => {
-    const sale = { id: "s6", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", title: "2024 Panini Photogenic Rookie Pix Drake Maye", identityUnverified: true };
-    const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+    const sale = { id: "s6", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye", identityUnverified: true };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
     expect(plan.action).toBe("leave");
     expect(plan.reason).toBe("already-parked");
   });
 
+  it("LEAVEs (flagged-or-excluded) a flaggedWrong sale -- REVIEW FIX finding 4", () => {
+    const sale = { id: "s-flag", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye", flaggedWrong: true };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
+    expect(plan.action).toBe("leave");
+    expect(plan.reason).toBe("flagged-or-excluded");
+  });
+
+  it("LEAVEs (flagged-or-excluded) an excludedFromFmv sale -- REVIEW FIX finding 4", () => {
+    const sale = { id: "s-excl", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye", excludedFromFmv: true };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
+    expect(plan.action).toBe("leave");
+    expect(plan.reason).toBe("flagged-or-excluded");
+  });
+
   it("LEAVEs (number-is-base-number) when the stored number never appears on the insert's checklist", () => {
-    // Title names the insert (an incidental/adjacent mention), but the stored
-    // cardNumber is the BASE product's own #20 -- never on the insert's own
-    // checklist under any normalised variant.
-    const sale = { id: "s7", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "20", playerName: "Drake Maye", title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
-    const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+    const sale = { id: "s7", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "20", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
     expect(plan.action).toBe("leave");
     expect(plan.reason).toBe("number-is-base-number");
   });
 
   it("LEAVEs (no-checklist-match) when the title names the insert, the number is on ITS checklist, but the player disagrees with that row", () => {
-    const sale = { id: "s8", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "A Different Player", title: "2024 Panini Photogenic Rookie Pix A Different Player" };
-    const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+    const sale = { id: "s8", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "A Different Player", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix A Different Player" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
     expect(plan.action).toBe("leave");
     expect(plan.reason).toBe("no-checklist-match");
   });
 
   it("confirms on number ALONE when the SALE's player is unknown (nothing to disagree with)", () => {
-    const sale = { id: "s9", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "", title: "2024 Panini Photogenic Rookie Pix" };
-    const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+    const sale = { id: "s9", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
     expect(plan.action).toBe("relocate");
   });
 
   it("does NOT confirm on number alone when the SALE names a player but the matching checklist row carries none -- FIX 1's both-known rule requires the SAME row to confirm both", () => {
-    const rows = [{ cardNumber: "DT-5", playerName: null, source: "checklistinsider-2024-08-01" }];
-    const sale = { id: "s9b", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Anybody", title: "2024 Panini Photogenic Rookie Pix Anybody" };
-    const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor(rows));
+    const rows = [{ cardNumber: "DT-5", playerName: null, parallelSlug: "base", isAuto: false }];
+    const sale = { id: "s9b", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Anybody", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Anybody" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor(rows));
     expect(plan.action).toBe("leave");
     expect(plan.reason).toBe("no-checklist-match");
   });
 
   it("card-number normalisation: leading zeros / hyphen / case all confirm", () => {
-    const sale = { id: "s10", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "dt5", playerName: "Drake Maye", title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
-    const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+    const sale = { id: "s10", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "dt5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
     expect(plan.action).toBe("relocate");
   });
 
-  it("LEAVEs (neither-field-names-base-product) when neither cardId nor hobbyiqCardId names the base setKey", () => {
-    const otherProduct = "hiq:football:2024:panini-prizm:cpa-dm:base:no-auto";
-    const sale = { id: "s11", cardId: otherProduct, hobbyiqCardId: otherProduct, cardNumber: "DT-5", playerName: "Drake Maye", title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
-    const plan = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+  it("LEAVEs (neither-field-names-base-product) when neither cardId nor hobbyiqCardId names the base cell", () => {
+    const otherProduct = `hiq:${SPORT}:${YEAR}:panini-prizm:cpa-dm:base:no-auto`;
+    const sale = { id: "s11", cardId: otherProduct, hobbyiqCardId: otherProduct, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor());
     expect(plan.action).toBe("leave");
     expect(plan.reason).toBe("neither-field-names-base-product");
   });
 
+  it("LEAVEs (title-names-a-different-insert) when the title names a registered insert NOT requested this run", () => {
+    const sale = { id: "s12", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "TT-1", playerName: "J J", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Troops Tribute J J" };
+    const plan = lane.planInsertRekey(deps, sale, ctxFor()); // ctx only carries INSERT_KEY, not SECOND_INSERT_KEY
+    expect(plan.action).toBe("leave");
+    expect(plan.reason).toBe("title-names-a-different-insert");
+  });
+
   it("REPORT and APPLY (dry-run vs live) call the SAME pure function -- identical plan for identical input", () => {
-    const sale = { id: "s12", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
-    const plan1 = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
-    const plan2 = lane.planInsertRekey(deps, sale, "hobbyiqCardId", ctxFor());
+    const sale = { id: "s13", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, cardNumber: "DT-5", playerName: "Drake Maye", parallel: "base", isAuto: false, title: "2024 Panini Photogenic Rookie Pix Drake Maye" };
+    const plan1 = lane.planInsertRekey(deps, sale, ctxFor());
+    const plan2 = lane.planInsertRekey(deps, sale, ctxFor());
     expect(plan1).toEqual(plan2);
   });
 });
@@ -202,46 +279,76 @@ describe("confirmedAgainstLoadedChecklist -- FIX 1 both-known rule, no I/O", () 
   });
 });
 
+describe("destinationRungOnChecklist -- REVIEW FIX finding 5, no I/O", () => {
+  const rows = [{ cardNumber: "DT-5", parallelSlug: "Gold", isAuto: true }];
+  it("matches case-insensitively and on the auto flag together", () => {
+    expect(lane.destinationRungOnChecklist(deps, rows, "DT-5", "gold", true)).toBe(true);
+  });
+  it("refuses when the auto flag disagrees", () => {
+    expect(lane.destinationRungOnChecklist(deps, rows, "DT-5", "gold", false)).toBe(false);
+  });
+  it("refuses when the parallel disagrees", () => {
+    expect(lane.destinationRungOnChecklist(deps, rows, "DT-5", "silver", true)).toBe(false);
+  });
+});
+
 // ── END-TO-END: real dist modules, fake Cosmos containers ──────────────────
 
-const SPORT = "football";
-const YEAR = 2024;
-const BASE_SET_KEY = "panini-photogenic";
-
 const CHECKLIST_ROW = (over: Record<string, unknown> = {}) => ({
-  id: `hiq:${SPORT}:${YEAR}:${INSERT_KEY}:cpa-dm:base:no-auto`,
-  cardId: `hiq:${SPORT}:${YEAR}:${INSERT_KEY}:cpa-dm:base:no-auto`,
+  id: INSERT_HIQ, cardId: INSERT_HIQ,
   sport: SPORT, year: YEAR, cardYear: YEAR, setKey: INSERT_KEY,
   cardNumber: "DT-5", playerName: "Drake Maye", source: "checklistinsider-2024-08-27",
+  parallelSlug: "base", parallel: "Base", isAuto: false,
   gradeTier: undefined,
   ...over,
 });
+
+let etagCounter = 0;
+const nextEtag = () => `"etag-${++etagCounter}"`;
 
 /**
  * A minimal in-memory Cosmos-shaped store, keyed by (container, id, pk) for
  * card_catalog/portfolio and (id::cardId) for sold_comps -- the same
  * partition-aware shape repointSalesToChecklistNumberedLane's own shim uses,
  * for the same reason (a resident-at-the-destination collision needs two
- * documents sharing an id at two different cardId partitions).
+ * documents sharing an id at two different cardId partitions). Every
+ * sold_comps document is auto-stamped with an `_etag` on read, and
+ * patch/delete/upsert honour `accessCondition: { type: "IfMatch", condition }`
+ * (REVIEW FIX finding 2, part b) so the lane's own re-read-before-write
+ * defence is exercised for real, not merely assumed.
  */
 function shim(opts: {
   catalog?: Array<Record<string, unknown>>;
   sales?: Array<Record<string, unknown>>;
   portfolio?: Array<Record<string, unknown>>;
   failChecklistQueryForSetKey?: string;
+  /** Simulates a concurrent external write landing on this sale id (a
+   *  different process bumping the etag) right after the FIRST read this
+   *  test drive performs on it -- for the changed-since-planned pin. */
+  raceEtagAfterFirstReadForSaleId?: string;
 } = {}): { requirePath: string; ledger: string } {
   const ledger = path.join(tmp, `ledger-${Math.random().toString(36).slice(2)}.json`);
   const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
-  const catalog = opts.catalog ?? [];
-  const sales = opts.sales ?? [];
-  const portfolio = opts.portfolio ?? [];
+  const catalog = (opts.catalog ?? []).map((d) => ({ ...d }));
+  const sales = (opts.sales ?? []).map((d) => ({ ...d, _etag: d._etag ?? nextEtag() }));
+  const portfolio = (opts.portfolio ?? []).map((d) => ({ ...d }));
   const failChecklistQueryForSetKey = opts.failChecklistQueryForSetKey ?? null;
+  const raceSaleId = opts.raceEtagAfterFirstReadForSaleId ?? null;
 
   fs.writeFileSync(p, `
 const Module = require("node:module");
 const fs = require("node:fs");
 const LEDGER = ${JSON.stringify(ledger)};
 const FAIL_CHECKLIST_SETKEY = ${JSON.stringify(failChecklistQueryForSetKey)};
+const RACE_SALE_ID = ${JSON.stringify(raceSaleId)};
+// Armed once: the FIRST call to sold_comps items.query() (the candidate
+// STARTSWITH scan, which is how planInsertRekey's input is captured) bumps
+// the raced sale id's etag in the STORE immediately after building the page
+// it returns -- so the page the lane plans against still carries the
+// ORIGINAL etag (a faithful snapshot of "what planning saw"), but the very
+// next read of that same address (the lane's own re-read-before-write) sees
+// the NEW etag underneath it, simulating a concurrent external writer.
+let raceArmed = RACE_SALE_ID !== null;
 
 const salesKey = (id, cardId) => id + "::" + cardId;
 
@@ -250,11 +357,14 @@ const state = {
   sales: new Map(${JSON.stringify(sales)}.map((d) => [salesKey(d.id, d.cardId), d])),
   portfolio: new Map(${JSON.stringify(portfolio)}.map((d) => [d.id, d])),
 };
-const led = { catalogUpserts: [], salesUpserts: [], salesPatches: [], salesDeletes: [], portfolioPatches: [] };
+const led = { catalogUpserts: [], salesUpserts: [], salesPatches: [], salesDeletes: [], portfolioPatches: [], etagMismatches: [] };
 const save = () => fs.writeFileSync(LEDGER, JSON.stringify(led));
 save();
 
 function notFound() { return Object.assign(new Error("not found"), { code: 404 }); }
+function preconditionFailed() { return Object.assign(new Error("etag mismatch"), { code: 412 }); }
+let etagSeq = 1000;
+function bumpEtag(d) { d._etag = '"etag-bump-' + (etagSeq++) + '"'; }
 
 function makeContainer(name, store, onUpsert, onDelete, onPatch, keyOf) {
   const key = keyOf || ((id) => id);
@@ -265,15 +375,25 @@ function makeContainer(name, store, onUpsert, onDelete, onPatch, keyOf) {
         if (!d) throw notFound();
         return { resource: structuredClone(d) };
       },
-      patch: async (ops) => {
+      patch: async (ops, patchOpts) => {
         const d = store.get(key(id, pk));
         if (!d) throw notFound();
+        if (patchOpts && patchOpts.accessCondition && String(d._etag) !== String(patchOpts.accessCondition.condition)) {
+          led.etagMismatches.push({ id, op: "patch" }); save();
+          throw preconditionFailed();
+        }
         for (const o of ops) { if (o.op === "set" || o.op === "add") d[o.path.slice(1)] = o.value; }
+        bumpEtag(d);
         if (onPatch) onPatch(id, ops);
         return { resource: structuredClone(d) };
       },
-      delete: async () => {
-        if (!store.has(key(id, pk))) throw notFound();
+      delete: async (delOpts) => {
+        const d = store.get(key(id, pk));
+        if (!d) throw notFound();
+        if (delOpts && delOpts.accessCondition && String(d._etag) !== String(delOpts.accessCondition.condition)) {
+          led.etagMismatches.push({ id, op: "delete" }); save();
+          throw preconditionFailed();
+        }
         store.delete(key(id, pk));
         if (onDelete) onDelete(id);
         return {};
@@ -281,9 +401,11 @@ function makeContainer(name, store, onUpsert, onDelete, onPatch, keyOf) {
     }),
     items: {
       upsert: async (doc) => {
-        store.set(key(doc.id, doc.cardId), structuredClone(doc));
+        const withEtag = { ...doc, _etag: doc._etag ?? '"etag-new"' };
+        bumpEtag(withEtag);
+        store.set(key(doc.id, doc.cardId), structuredClone(withEtag));
         if (onUpsert) onUpsert(doc);
-        return { resource: structuredClone(doc) };
+        return { resource: structuredClone(withEtag) };
       },
       query: (spec) => {
         const q = typeof spec === "string" ? spec : spec.query;
@@ -300,14 +422,28 @@ function makeContainer(name, store, onUpsert, onDelete, onPatch, keyOf) {
         } else if (name === "sold_comps" && q.includes("STARTSWITH(c.hobbyiqCardId, @p)")) {
           const prefix = params["@p"];
           resources = all.filter((d) => String(d.hobbyiqCardId ?? "").startsWith(prefix));
+          // The RACE (see the header comment above): a snapshot of the raced
+          // sale id is taken for THIS page (the clone below, made from the
+          // pre-bump document), then the STORE's own copy is bumped, so any
+          // read of this address AFTER this query call sees a different etag.
+          if (raceArmed) {
+            const raced = resources.find((d) => d.id === RACE_SALE_ID);
+            if (raced) {
+              const snapshot = structuredClone(raced);
+              const storeDoc = store.get(salesKey(raced.id, raced.cardId));
+              if (storeDoc) bumpEtag(storeDoc);
+              resources = resources.map((d) => (d === raced ? snapshot : d));
+              raceArmed = false;
+            }
+          }
         } else if (name === "portfolio" && q.includes("IS_DEFINED(c.holdings)")) {
           resources = all;
         } else {
           throw new Error("fake " + name + ": unsupported query " + q);
         }
         return {
-          fetchNext: async () => ({ resources, continuationToken: undefined }),
-          fetchAll: async () => ({ resources }),
+          fetchNext: async () => ({ resources: resources.map((r) => structuredClone(r)), continuationToken: undefined }),
+          fetchAll: async () => ({ resources: resources.map((r) => structuredClone(r)) }),
         };
       },
     },
@@ -379,7 +515,8 @@ function drive(env: Record<string, string>, opts: Parameters<typeof shim>[0] = {
 const PORTFOLIO_EMPTY = [{ id: "p1", userId: "u1", holdings: {} }];
 const BASE_SALE = (over: Record<string, unknown> = {}) => ({
   id: "s1", cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ, sport: SPORT, cardYear: YEAR,
-  cardNumber: "DT-5", playerName: "Drake Maye", title: "2024 Panini Photogenic Rookie Pix Drake Maye",
+  cardNumber: "DT-5", playerName: "Drake Maye", parallel: "Base", isAuto: false,
+  title: "2024 Panini Photogenic Rookie Pix Drake Maye",
   price: 5, soldAt: "2024-01-01",
   ...over,
 });
@@ -484,8 +621,7 @@ describe("repoint-stored-insert-sales -- APPLY moves sales", () => {
     );
     expect(first.led.salesUpserts).toContain("s1");
 
-    const movedId = `hiq:${SPORT}:${YEAR}:${INSERT_KEY}:cpa-dm:base:no-auto`;
-    const movedSale = { ...BASE_SALE(), id: "s1", cardId: movedId, hobbyiqCardId: movedId };
+    const movedSale = { ...BASE_SALE(), id: "s1", cardId: INSERT_HIQ, hobbyiqCardId: INSERT_HIQ };
     const second = drive(
       { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true" },
       { catalog: [CHECKLIST_ROW()], sales: [movedSale], portfolio: PORTFOLIO_EMPTY },
@@ -505,6 +641,26 @@ describe("repoint-stored-insert-sales -- LEAVE cases end-to-end", () => {
     expect(r.code).toBe(0);
     expect(r.led.salesUpserts.length).toBe(0);
     expect(r.out).toMatch(/LEFT: pinned-or-verified\s+1/);
+  });
+
+  it("LEAVEs a flaggedWrong sale untouched -- REVIEW FIX finding 4", () => {
+    const r = drive(
+      { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [BASE_SALE({ flaggedWrong: true })], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/LEFT: flagged-or-excluded\s+1/);
+  });
+
+  it("LEAVEs an excludedFromFmv sale untouched -- REVIEW FIX finding 4", () => {
+    const r = drive(
+      { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [BASE_SALE({ excludedFromFmv: true })], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/LEFT: flagged-or-excluded\s+1/);
   });
 
   it("LEAVEs an already-parked (identityUnverified) sale untouched", () => {
@@ -537,22 +693,44 @@ describe("repoint-stored-insert-sales -- LEAVE cases end-to-end", () => {
     expect(r.out).toMatch(/LEFT: number-is-base-number\s+1/);
   });
 
-  it("counts an insert with an EMPTY checklist for the cell and moves nothing", () => {
+  it("LEAVEs (destination-rung-not-on-checklist) a sale whose number confirms but whose parallel/auto rung is unattested -- REVIEW FIX finding 5", () => {
+    const r = drive(
+      { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [BASE_SALE({ parallel: "Gold", isAuto: true })], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/LEFT: destination-rung-not-on-checklist\s+1/);
+    expect(r.out).toMatch(/destination-rung-not-on-checklist, by rung/);
+  });
+
+  it("LEAVEs (pre-existing-split-identity) a sale whose cardId and hobbyiqCardId are hiq: slugs naming DIFFERENT products, moving NEITHER -- REVIEW FIX CRITICAL finding 1", () => {
+    const prizmCardId = `hiq:${SPORT}:${YEAR}:panini-prizm:cpa-dm:base:no-auto`;
+    const r = drive(
+      { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [BASE_SALE({ cardId: prizmCardId, hobbyiqCardId: BASE_HIQ })], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesPatches.length).toBe(0);
+    expect(r.out).toMatch(/LEFT: pre-existing-split-identity\s+1/);
+  });
+
+  it("counts a requested insert with an EMPTY checklist for the cell and moves nothing", () => {
     const r = drive(
       { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true" },
       { catalog: [], sales: [BASE_SALE()], portfolio: PORTFOLIO_EMPTY },
     );
     expect(r.code).toBe(0);
-    expect(r.out).toMatch(/targets with an EMPTY checklist\s+1/);
+    expect(r.out).toMatch(/requested inserts with an EMPTY checklist\s+1/);
     expect(r.led.salesUpserts.length).toBe(0);
   });
 });
 
 describe("repoint-stored-insert-sales -- destination collision / collapse", () => {
   it("REFUSES (destination-collision) when a DIFFERENT sale already occupies the insert address", () => {
-    const insertId = `hiq:${SPORT}:${YEAR}:${INSERT_KEY}:cpa-dm:base:no-auto`;
     const shortIdCopy = BASE_SALE({ id: "shared::1", price: 5, soldAt: "2024-01-01" });
-    const resident = { ...shortIdCopy, id: "shared::1", cardId: insertId, hobbyiqCardId: insertId, price: 999, soldAt: "2024-06-06" };
+    const resident = { ...shortIdCopy, id: "shared::1", cardId: INSERT_HIQ, hobbyiqCardId: INSERT_HIQ, price: 999, soldAt: "2024-06-06" };
     const r = drive(
       { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true" },
       { catalog: [CHECKLIST_ROW()], sales: [shortIdCopy, resident], portfolio: PORTFOLIO_EMPTY },
@@ -564,10 +742,9 @@ describe("repoint-stored-insert-sales -- destination collision / collapse", () =
   });
 
   it("COLLAPSES when the SAME sale (by content hash) is already resident at the insert address", () => {
-    const insertId = `hiq:${SPORT}:${YEAR}:${INSERT_KEY}:cpa-dm:base:no-auto`;
     const shared = { id: "shared::2", sport: SPORT, cardYear: YEAR, cardNumber: "DT-5", playerName: "Drake Maye", title: "2024 Panini Photogenic Rookie Pix Drake Maye", price: 5, parallel: "Base", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2024-01-01" };
     const shortIdCopy = { ...shared, cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ };
-    const resident = { ...shared, cardId: insertId, hobbyiqCardId: insertId };
+    const resident = { ...shared, cardId: INSERT_HIQ, hobbyiqCardId: INSERT_HIQ };
     const r = drive(
       { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true" },
       { catalog: [CHECKLIST_ROW()], sales: [shortIdCopy, resident], portfolio: PORTFOLIO_EMPTY },
@@ -579,9 +756,76 @@ describe("repoint-stored-insert-sales -- destination collision / collapse", () =
   });
 });
 
+describe("repoint-stored-insert-sales -- dual-address race (CardHedge same-id twins) -- REVIEW FIX CRITICAL finding 2", () => {
+  it("exactly ONE of two same-id twin copies MOVES; the other COLLAPSES onto it; reconcile balances -- CONCURRENCY=16", () => {
+    // Two documents sharing the SAME sale id, resident at TWO different
+    // sold_comps partitions -- the CardHedge dual-id-twin shape. Both would
+    // independently plan a MOVE to the exact same destination address
+    // without the by-construction serial-per-id handling this fix adds.
+    const sharedId = "cardhedge::twin::1";
+    const twinA = BASE_SALE({ id: sharedId, cardId: `${BASE_HIQ}`, hobbyiqCardId: BASE_HIQ });
+    const twinB = BASE_SALE({ id: sharedId, cardId: `${BASE_HIQ}-vendor-alt`, hobbyiqCardId: BASE_HIQ });
+    // twinB's cardId is a raw vendor-shaped id (does not start with hiq:) so
+    // it independently qualifies for a PATCH shape while twinA qualifies for
+    // a RELOCATE -- both target the exact same hobbyiqCardId destination.
+    const r = drive(
+      { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true", CONCURRENCY: "16" },
+      { catalog: [CHECKLIST_ROW()], sales: [twinA, twinB], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    // Exactly one MOVE/PATCH total across the two twin copies -- never two
+    // independent writes to the same destination.
+    const totalWrites = (r.out.match(/MOVED (\d+)/)?.[1] ? Number(r.out.match(/MOVED (\d+)/)![1]) : 0)
+      + (r.out.match(/PATCHED (\d+)/)?.[1] ? Number(r.out.match(/PATCHED (\d+)/)![1]) : 0);
+    expect(totalWrites).toBe(1);
+    expect(r.out).toMatch(/COLLAPSED onto a resident \(same sale, by hash\)\s+1/);
+    expect(r.out).toMatch(/candidates found\s+2/);
+    expect(r.out).toMatch(/matched -- every candidate is moved, patched, collapsed, refused, failed, or left/);
+  });
+});
+
+describe("repoint-stored-insert-sales -- changed-since-planned (etag race) -- REVIEW FIX CRITICAL finding 2, part b", () => {
+  it("REFUSES a write when the source row's _etag changed between the plan read and the write", () => {
+    const sale = BASE_SALE({ id: "s-raced" });
+    const r = drive(
+      { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY, raceEtagAfterFirstReadForSaleId: "s-raced" },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED: changed-since-planned\s+1/);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+  });
+});
+
+describe("repoint-stored-insert-sales -- one scan per base cell, not per insert key -- REVIEW FIX finding 3", () => {
+  it("two requested inserts sharing ONE base product produce exactly one STARTSWITH scan of that cell (both move correctly)", () => {
+    const secondInsertRow = CHECKLIST_ROW({
+      id: `hiq:${SPORT}:${YEAR}:${SECOND_INSERT_KEY}:cpa-jj:base:no-auto`,
+      cardId: `hiq:${SPORT}:${YEAR}:${SECOND_INSERT_KEY}:cpa-jj:base:no-auto`,
+      setKey: SECOND_INSERT_KEY, cardNumber: "TT-1", playerName: "J J",
+    });
+    const saleForFirst = BASE_SALE({ id: "s1" });
+    const saleForSecond = BASE_SALE({
+      id: "s-tt", cardId: `hiq:${SPORT}:${YEAR}:${BASE_SET_KEY}:cpa-jj:base:no-auto`,
+      hobbyiqCardId: `hiq:${SPORT}:${YEAR}:${BASE_SET_KEY}:cpa-jj:base:no-auto`,
+      cardNumber: "TT-1", playerName: "J J", title: "2024 Panini Photogenic Troops Tribute J J",
+    });
+    const r = drive(
+      { SCOPE: "football:2024", SET_KEYS: `${INSERT_KEY},${SECOND_INSERT_KEY}`, BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW(), secondInsertRow], sales: [saleForFirst, saleForSecond], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/MOVED 2/);
+    // ONE unit processed (cell x base product), not two (cell x insert key).
+    expect(r.out).toMatch(/units processed \(cell x base product\)\s+1/);
+    expect(r.out).toMatch(/base products \(1, each scanned ONCE per cell\)/);
+  });
+});
+
 describe("repoint-stored-insert-sales -- concurrency produces identical counters", () => {
   it("CONCURRENCY=4 finds the same MOVED/PATCHED/LEFT counts as CONCURRENCY=1", () => {
-    const secondInsertRow = CHECKLIST_ROW({ id: `hiq:${SPORT}:${YEAR}:panini-photogenic-troops-tribute:cpa-jj:base:no-auto`, cardId: `hiq:${SPORT}:${YEAR}:panini-photogenic-troops-tribute:cpa-jj:base:no-auto`, setKey: "panini-photogenic-troops-tribute", cardNumber: "TT-1", playerName: "J J" });
+    const secondInsertRow = CHECKLIST_ROW({ id: `hiq:${SPORT}:${YEAR}:${SECOND_INSERT_KEY}:cpa-jj:base:no-auto`, cardId: `hiq:${SPORT}:${YEAR}:${SECOND_INSERT_KEY}:cpa-jj:base:no-auto`, setKey: SECOND_INSERT_KEY, cardNumber: "TT-1", playerName: "J J" });
     const saleForFirst = BASE_SALE({ id: "s1" });
     const saleForSecond = BASE_SALE({ id: "s-tt", cardId: `hiq:${SPORT}:${YEAR}:${BASE_SET_KEY}:cpa-jj:base:no-auto`, hobbyiqCardId: `hiq:${SPORT}:${YEAR}:${BASE_SET_KEY}:cpa-jj:base:no-auto`, cardNumber: "TT-1", playerName: "J J", title: "2024 Panini Photogenic Troops Tribute J J" });
     const fixture = {
@@ -589,7 +833,7 @@ describe("repoint-stored-insert-sales -- concurrency produces identical counters
       sales: [saleForFirst, saleForSecond],
       portfolio: PORTFOLIO_EMPTY,
     };
-    const titles = `${INSERT_KEY},panini-photogenic-troops-tribute`;
+    const titles = `${INSERT_KEY},${SECOND_INSERT_KEY}`;
 
     const serial = drive({ SCOPE: "football:2024", SET_KEYS: titles, CONCURRENCY: "1" }, fixture);
     const parallel = drive({ SCOPE: "football:2024", SET_KEYS: titles, CONCURRENCY: "4" }, fixture);
@@ -601,8 +845,8 @@ describe("repoint-stored-insert-sales -- concurrency produces identical counters
   });
 });
 
-describe("repoint-stored-insert-sales -- a persistent read failure fails ONE target, not the run", () => {
-  it("a thrown query error on one target's checklist page does not abort a sibling target", () => {
+describe("repoint-stored-insert-sales -- a persistent read failure fails ONE unit, not the run", () => {
+  it("a thrown query error on one base product's checklist page does not abort a sibling unit", () => {
     const okCheck = CHECKLIST_ROW();
     const failingTargetCheck = CHECKLIST_ROW({
       id: `hiq:${SPORT}:${YEAR}:panini-zenith-z-marquee:cpa-zz:base:no-auto`,
@@ -614,10 +858,10 @@ describe("repoint-stored-insert-sales -- a persistent read failure fails ONE tar
       { SCOPE: "football:2024", SET_KEYS: `${INSERT_KEY},panini-zenith-z-marquee` },
       { catalog: [okCheck, failingTargetCheck], sales, portfolio: PORTFOLIO_EMPTY, failChecklistQueryForSetKey: "panini-zenith-z-marquee" },
     );
-    // The failing target's exception must not crash the whole run (exit
-    // non-zero, or a process crash reported as a non-2/non-4 code) -- the
-    // sibling target's own MOVE still happens and the run itself exits with
-    // the FAILURES accounting this lane already reports for one bad unit.
+    // panini-zenith-z-marquee's base product is panini-zenith -- a DIFFERENT
+    // unit than panini-photogenic-rookie-pix's (panini-photogenic), so the
+    // thrown error on one unit's checklist page must not prevent the
+    // sibling unit's own MOVE.
     expect(r.out).toMatch(/WOULD MOVE\s+1/);
     expect(r.out).toMatch(/simulated persistent read failure/);
   });

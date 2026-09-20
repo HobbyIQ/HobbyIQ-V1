@@ -32,39 +32,64 @@
  *      a base product -- `productParentOf` resolves each insert's own base
  *      product from productSetKeys.ts, and a key with no registered parent is
  *      refused by name (an insert with no parent is not this lane's shape).
- *   2. For each (sport:year cell, insert setKey), page card_catalog for the
- *      insert's own CHECKLIST-AUTHORITY rows (catalogAuthorityOf(source) ===
- *      "checklist") -- these are the CONFIRMATION SET, read once per target,
- *      never re-read per sale.
- *   3. Candidate sales are every stored row at the BASE PRODUCT'S OWN CELL:
+ *   2. UNITS ARE (cell, BASE PRODUCT), NOT (cell, insert key) -- REVIEW FIX
+ *      (2026-09-19, finding 3). Several requested insert keys sharing one
+ *      base product (panini-photogenic-rookie-pix AND
+ *      panini-photogenic-troops-tribute both nest under panini-photogenic)
+ *      are grouped into ONE unit, so the base product's cell is scanned
+ *      exactly ONCE no matter how many of its inserts are in scope, cutting
+ *      RU cost N-fold and removing cross-target overlap by construction
+ *      (the old per-insert-key unit shape STARTSWITH-scanned the SAME base
+ *      cell once per insert key requested against it).
+ *   3. For each unit, page card_catalog ONCE PER REQUESTED INSERT sharing
+ *      this base product for that insert's own CHECKLIST-AUTHORITY rows
+ *      (catalogAuthorityOf(source) === "checklist") -- these are the
+ *      CONFIRMATION SETS, read once per (cell, insert), never re-read per
+ *      sale, keyed by insertSetKey so each candidate sale is routed to the
+ *      RIGHT insert's confirmation set below.
+ *   4. Candidate sales are every stored row at the BASE PRODUCT'S OWN CELL:
  *      `STARTSWITH(c.hobbyiqCardId, "hiq:sport:year:baseSetKey:")` -- THE
  *      SAME query shape rekey-product-setkey.cjs's own MODE=pool lane already
  *      runs against sold_comps, header-justified there with a measured row
  *      count ("the pool is the substance of these rulings and it is swept
- *      directly, by slug prefix"). A per-number query is NOT used for
- *      candidate discovery (only for confirmation, in step 5) because a
- *      mis-pooled sale's STORED cardNumber may be the BASE product's own
- *      number for that roster slot, not the insert's -- the whole point of
- *      the CARD-NUMBER RULE below -- so filtering candidates by the insert's
- *      numbers before the checklist comparison runs would make that LEAVE
- *      reason structurally unreachable. Every candidate is double-checked in
- *      JS (productSetKeyOf, the same reader splitIdentityWriteGuard.ts's own
- *      carryProductRekeyOntoCardId uses) against BOTH cardId and
- *      hobbyiqCardId, since a vendor-partitioned row's cardId names no
- *      product at all and only hobbyiqCardId carries the base slug.
- *   4. Each candidate sale's TITLE is read through the REAL compiled
+ *      directly, by slug prefix"). Scanned ONCE per unit (see #2), not once
+ *      per insert. A per-number query is NOT used for candidate discovery
+ *      (only for confirmation, in step 6) because a mis-pooled sale's STORED
+ *      cardNumber may be the BASE product's own number for that roster slot,
+ *      not the insert's -- the whole point of the CARD-NUMBER RULE below --
+ *      so filtering candidates by an insert's numbers before the checklist
+ *      comparison runs would make that LEAVE reason structurally
+ *      unreachable. Every candidate's own (sport, year, setKey) CELL is
+ *      double-checked in JS against BOTH cardId and hobbyiqCardId (see
+ *      FULL-CELL DEFENCE IN DEPTH below), since a vendor-partitioned row's
+ *      cardId names no product at all and only hobbyiqCardId carries the
+ *      base slug.
+ *   5. Each candidate sale's TITLE is read through the REAL compiled
  *      `insertSetNamedInTitle` (dist/services/portfolioiq/
  *      insertSetTitleReader.js) against the sale's OWN base identity
  *      (sport/year/baseSetKey) -- exactly the question the ingest-time
- *      writers ask, asked here after the fact. A title that does not name
- *      THIS insert (or names it beside another) is left untouched.
- *   5. A title match is confirmed against the checklist rows ALREADY LOADED
- *      in step 2 -- no per-sale Cosmos read -- via `planInsertRekey`'s pure
+ *      writers ask, asked here after the fact, ONCE per sale (not once per
+ *      requested insert): the matched registeredKey is what ROUTES the sale
+ *      to the right insert's confirmation set loaded in step 3. A title that
+ *      names no insert, or names two, or names an insert NOT in this run's
+ *      requested set, is left untouched -- see LEAVE REASONS below.
+ *   6. A title match is confirmed against the checklist rows ALREADY LOADED
+ *      in step 3 -- no per-sale Cosmos read -- via `planInsertRekey`'s pure
  *      predicate below, which mirrors insertSetChecklistConfirm.ts's own
  *      "both known -> one row must confirm both" rule (FIX 1) without
  *      importing that module (its predicate is private; only its I/O-facing
  *      exports are public, and this lane's whole point is to do that
  *      confirmation WITHOUT a second Cosmos round-trip per sale).
+ *   7. DESTINATION RUNG (REVIEW FIX, finding 5, "price only checklist-matched
+ *      identities"). A MOVE also requires the exact DESTINATION address (the
+ *      insert's number/parallel/auto rung, minus any grade suffix) to be one
+ *      the insert's OWN checklist actually prints -- confirming the NUMBER
+ *      is not enough, because the move keeps every other segment of the
+ *      sale's stored identity byte-identical (parallel, auto flag), and a
+ *      confirmed number under a parallel or auto flag the checklist never
+ *      printed for that number is a rung nobody has attested. Checked
+ *      against the SAME already-loaded checklist rows (parallelSlug, isAuto)
+ *      -- no per-sale I/O. See DESTINATION RUNG RULE below.
  *
  * CARD-NUMBER RULE. An insert checklist usually numbers with its own prefix
  * (DT-5) while a mis-pooled sale may carry the BASE card's number instead (a
@@ -83,17 +108,34 @@
  * number differs from the stored field is a job for a title-vocabulary pass,
  * not this identity mover.
  *
+ * DESTINATION RUNG RULE (REVIEW FIX, finding 5). "Price only checklist-
+ * matched identities": confirming the card NUMBER alone is not sufficient
+ * when the MOVE preserves the sale's own parallel/auto segments verbatim (one
+ * axis only -- the setKey segment moves, nothing else). A stored sale
+ * confirmed at DT-5 but marked `isAuto: true` (or a `parallel` the checklist
+ * never lists at DT-5) would land at an address like
+ * `hiq:...:panini-photogenic-rookie-pix:cpa-dm:gold:auto:num-5` that no
+ * checklist row backs -- the number matched, but the exact destination rung
+ * never printed. So a MOVE additionally requires a checklist-authority row
+ * at the SAME insert whose (cardNumber, normalised parallel, isAuto) all
+ * match the sale's own (case-insensitive parallel comparison, since checklist
+ * parallel spellings are human-form/mixed-case per
+ * feedback_catalog_parallel_field_is_human_form_mixed_case). No such row ->
+ * LEAVE `destination-rung-not-on-checklist`, listed with counts by rung
+ * (insertSetKey + normalised parallel + auto flag) so the ladder gap is
+ * visible to whoever acquires the missing checklist rows. Checked against the
+ * SAME already-loaded checklist rows -- no per-sale I/O.
+ *
  * VERDICTS, ONE AXIS ONLY (relocation lists change one axis only):
- *   MOVE       title names ONLY this insert, AND confirms (number+player,
- *              or number alone when the checklist row carries no player) on
- *              exactly one checklist row. hobbyiqCardId's setKey segment
- *              moves to the insert key (withProductSetKey, the same helper
+ *   MOVE       title names ONLY this insert, confirms (number+player, or
+ *              number alone when the checklist row carries no player) on
+ *              exactly one checklist row, AND the destination rung
+ *              (number+parallel+auto) is itself checklist-attested (see
+ *              DESTINATION RUNG RULE). hobbyiqCardId's setKey segment moves
+ *              to the insert key (withProductSetKey, the same helper
  *              carryProductRekeyOntoCardId already trusts); cardId's setKey
- *              segment moves TOO, but only when cardId is itself the hiq:
- *              slug equal to the pre-move hobbyiqCardId (a relocate) -- a raw
- *              vendor cardId is patched (hobbyiqCardId only), exactly the
- *              cardId/hobbyiqCardId split repoint-sales-to-checklist-
- *              numbered.cjs already draws between its two candidate shapes.
+ *              segment moves TOO, but ONLY in the two writable shapes named
+ *              under SPLIT-IDENTITY below -- everything else LEAVEs.
  *   LEAVE      named reasons below; nothing written.
  *   REFUSE     destination collision (a DIFFERENT sale already resident) --
  *              neither moved.
@@ -101,61 +143,154 @@
  *              destination -- the short-address copy is deleted, the
  *              resident is untouched.
  *
+ * SPLIT-IDENTITY (REVIEW FIX, CRITICAL finding 1). The ONLY two writable
+ * shapes, both requiring cardId and hobbyiqCardId to AGREE before the move
+ * (never independently -- the old `patch` branch moved hobbyiqCardId alone
+ * onto the insert while leaving a DISAGREEING cardId exactly where it was,
+ * manufacturing a WORSE split than the one it started from and never parking
+ * it):
+ *
+ *   (A) RELOCATE  cardId === hobbyiqCardId, both the base product's own hiq:
+ *                 slug -- both fields move together, one axis (the setKey
+ *                 segment), via relocate-sold-comp.cjs's upsert-verify-delete.
+ *   (B) PATCH     cardId is a RAW VENDOR id (does not start with "hiq:") and
+ *                 hobbyiqCardId is the base product's slug -- only
+ *                 hobbyiqCardId is patched; cardId (a legacy vendor
+ *                 partition key) is untouched, exactly the shape
+ *                 repoint-sales-to-checklist-numbered.cjs's own patch branch
+ *                 already draws.
+ *
+ * Any OTHER shape -- most pointedly cardId and hobbyiqCardId are BOTH
+ * `hiq:` slugs but name DIFFERENT products (cardId says panini-prizm,
+ * hobbyiqCardId says panini-photogenic) -- is a PRE-EXISTING SPLIT this lane
+ * did not create and must not deepen. LEAVE `pre-existing-split-identity`,
+ * listing BOTH ids and which field this candidate query matched on; nothing
+ * is written. This is the same disagreement guardSoldCompDoc's own
+ * decideSplitIdentity already names and parks at the INGEST door -- this
+ * lane does not re-park it (parking is `identityUnverified`'s own job,
+ * already handled as a never-move marker below), it simply refuses to widen
+ * it by moving only one side.
+ *
+ * guardSoldCompDoc RUN ON THE WOULD-BE DOCUMENT, BOTH SHAPES (REVIEW FIX,
+ * part of finding 1). Before either a relocate or a patch actually writes,
+ * the WOULD-BE new document (cardId/hobbyiqCardId both already set to the
+ * insert's address, per whichever shape applies) is run through
+ * guardSoldCompDoc -- the SAME write-door predicate recordSoldComp itself
+ * applies -- and a `park` verdict is honoured (the doc is stamped
+ * identityUnverified and written parked, never silently forced through as a
+ * clean insert-keyed row). The old patch branch skipped this entirely.
+ *
+ * FULL-CELL DEFENCE IN DEPTH (REVIEW FIX, part of finding 1). Beyond the
+ * setKey-segment comparison, `planInsertRekey` also compares the sale's OWN
+ * (sport, year, setKey) cell -- read off whichever field is the base slug --
+ * against the UNIT's own (sport, year, baseSetKey) before ever proposing a
+ * move. A STARTSWITH false positive or a cross-cell contamination is refused
+ * the same way (LEAVE `neither-field-names-base-product`), never trusted on
+ * the setKey segment alone.
+ *
+ * NEVER-MOVE MARKERS (checked first, before any title/checklist work):
+ *   verifiedByUser === true      a real user attested THIS sale to THIS card.
+ *   source in USER_SEED_SOURCES  ebay-user-purchase / ebay-user-sale /
+ *                                 manual-user-entry / user-verified --
+ *                                 soldCompsStore.service.ts's own set: these
+ *                                 transactions are ALREADY reconciled through
+ *                                 the catalog by the user's own action per
+ *                                 CF-A-USER-SALE-IS-ALWAYS-RECONCILED.
+ *   identityUnverified === true   already parked by the split-identity guard
+ *                                 or by R70 itself; unparking is a different
+ *                                 lane's job.
+ *   flaggedWrong === true        (REVIEW FIX, finding 4) the row's own
+ *                                 moderation flag -- a user has already told
+ *                                 the engine this comp is wrong; re-addressing
+ *                                 it under a NEW identity on a title-
+ *                                 vocabulary guess compounds that, it does not
+ *                                 resolve it.
+ *   excludedFromFmv === true     (REVIEW FIX, finding 4) already excluded
+ *                                 from pricing for a reason this lane has no
+ *                                 visibility into; moving it does not restore
+ *                                 trust, it just moves a doubted row.
+ *   All four bucket to LEAVE `pinned-or-verified` (the first three) or
+ *   `flagged-or-excluded` (the last two) -- kept as two named reasons rather
+ *   than one, so an operator can tell "a person vouched for this" from "a
+ *   person or the engine doubted this" at a glance.
+ *
  * LEAVE REASONS:
- *   two-inserts-named        the title names two distinct insert families --
- *                            R70's own "never choose" rule, reused: guessing
- *                            between two named games risks the wrong one.
- *   pinned-or-verified       the sale itself is a trust-anchored row this
- *                            lane must never re-address on a title-vocabulary
- *                            basis alone: `verifiedByUser === true` (a real
- *                            user attested THIS sale to THIS card -- the
- *                            highest-trust field the row itself carries), or
- *                            `source` is one of USER_SEED_SOURCES
- *                            (ebay-user-purchase / ebay-user-sale /
- *                            manual-user-entry / user-verified --
- *                            soldCompsStore.service.ts's own set: these
- *                            transactions are ALREADY reconciled through the
- *                            catalog by the user's own action per CF-A-USER-
- *                            SALE-IS-ALWAYS-RECONCILED, and a title-vocabulary
- *                            mover second-guessing a user's own purchase
- *                            record is exactly the class of harm the pin
- *                            check in soldCompsStore's own recordSoldComp
- *                            exists to prevent on the ingest side).
- *   already-parked            `identityUnverified === true` -- a row already
- *                            parked by the split-identity guard or by R70
- *                            itself has no reliable base identity to move
- *                            FROM; unparking is a different lane's job.
- *   number-is-base-number    the sale's stored cardNumber never appears on
- *                            the insert's own checklist (any normalised
- *                            variant) -- see CARD-NUMBER RULE above.
- *   no-checklist-match       the title names this insert and the number is
- *                            not the base number, but no checklist row
- *                            confirms BOTH the number and the (when known)
- *                            player together -- refuted, not unknown (the
- *                            checklist rows were already loaded in step 2;
- *                            there is no "the read failed" case here the way
- *                            insertSetChecklistConfirm.ts's live, per-sale
- *                            query has to allow for).
- *   insert-checklist-empty   the insert setKey has ZERO checklist-authority
- *                            rows in this cell -- nothing to confirm against;
- *                            counted separately from no-checklist-match so an
- *                            operator can tell "wrong number" from "the
- *                            checklist was never ingested for this cell".
+ *   two-inserts-named             the title names two distinct insert
+ *                                 families -- R70's own "never choose" rule,
+ *                                 reused: guessing between two named games
+ *                                 risks the wrong one.
+ *   pinned-or-verified            see NEVER-MOVE MARKERS above.
+ *   flagged-or-excluded           see NEVER-MOVE MARKERS above.
+ *   already-parked                see NEVER-MOVE MARKERS above.
+ *   number-is-base-number         see CARD-NUMBER RULE above.
+ *   destination-rung-not-on-checklist  see DESTINATION RUNG RULE above.
+ *   no-checklist-match            the title names this insert and the number
+ *                                 is not the base number, but no checklist
+ *                                 row confirms BOTH the number and the (when
+ *                                 known) player together -- refuted, not
+ *                                 unknown (the checklist rows were already
+ *                                 loaded in step 3; there is no "the read
+ *                                 failed" case here the way
+ *                                 insertSetChecklistConfirm.ts's live,
+ *                                 per-sale query has to allow for).
+ *   title-does-not-name-insert    the title names no known insert of its own
+ *                                 product at all.
+ *   title-names-a-different-insert  the title names a registered insert, but
+ *                                 not one requested (`titles`) this run.
+ *   pre-existing-split-identity   see SPLIT-IDENTITY above.
+ *   neither-field-names-base-product  neither field names this unit's base
+ *                                 product/cell at all -- not this unit's row.
+ *   insert-checklist-empty        the insert setKey has ZERO checklist-
+ *                                 authority rows in this cell -- nothing to
+ *                                 confirm against; counted separately from
+ *                                 no-checklist-match so an operator can tell
+ *                                 "wrong number" from "the checklist was
+ *                                 never ingested for this cell".
  *
  * CF-A-SALE-IS-NEVER-LOST throughout: every relocation goes through
  * scripts/lib/relocate-sold-comp.cjs (upsert -> verify read-back -> delete);
  * the banner's own reconciliation is candidates found == moved + refused +
  * collapsed + failed + left (named).
  *
+ * DUAL-ADDRESS RACE (REVIEW FIX, CRITICAL finding 2). CardHedge dual-id twins
+ * -- the SAME sale `id`, resident at TWO different sold_comps partitions
+ * (project_cardhedge_dual_id_duplicates_and_graded_in_raw_pool) -- can both
+ * appear as separate candidate rows in one unit's STARTSWITH scan, and both
+ * independently plan a MOVE to the SAME insert address. Fixed two ways:
+ *
+ *   (a) BY CONSTRUCTION: candidates are grouped by sale `id` before planning,
+ *       and every copy of one `id` is handled SERIALLY, in one pass, within
+ *       one unit (units themselves may still run concurrently -- a DIFFERENT
+ *       sale id is unaffected by another unit's timing). The first copy
+ *       processed that decides MOVE performs the relocate; every LATER copy
+ *       of the same id then re-checks the destination (now resident) and
+ *       either COLLAPSES (same content hash) or REFUSES (destination-
+ *       collision) -- never a second independent upsert racing the first.
+ *   (b) LAST-LINE DEFENCE: immediately before every write (upsert, patch, or
+ *       delete of the SOURCE row), the source document is RE-READ and its
+ *       `_etag` compared against the etag captured at planning time. A
+ *       mismatch means some OTHER process (a concurrent unit, a live ingest
+ *       re-upsert) wrote this exact row between the plan and the write --
+ *       refused as `changed-since-planned`, nothing written, the row is left
+ *       for a future run to re-evaluate fresh. The write itself is issued
+ *       with `accessCondition: { type: "IfMatch", condition: etag }`
+ *       (the SAME precedent backfill-holding-ebay-ids.cjs already uses for
+ *       portfolio replaces), so even a race that slips past the JS re-read
+ *       is caught by Cosmos itself at the storage layer and answered with a
+ *       412 Precondition Failed, handled identically to a local mismatch.
+ *
  * CONCURRENCY FROM THE START (per the brief: the model lane's serial
  * per-target loop over its one cross-partition query is a known defect, PR in
- * flight). This lane's per-(cell, insertKey) TARGET loop runs with bounded
+ * flight). This lane's per-(cell, baseSetKey) UNIT loop runs with bounded
  * concurrency (`CONCURRENCY`, default 6) via a small in-file pool -- each
- * target's own candidate-number sub-queries execute inside that same budget,
- * never unbounded. Every per-target write path (relocate / patch / holdings)
- * is independent of every other target's, so interleaving them changes
- * nothing about correctness, only wall clock -- verified by the
- * "concurrency>1 produces identical counters to CONCURRENCY=1" pin below.
+ * unit's own work executes inside that same budget, never unbounded. Every
+ * unit's write path (relocate / patch / holdings) is independent of every
+ * OTHER unit's (a different base product, or a different cell), so
+ * interleaving them changes nothing about correctness, only wall clock --
+ * verified by the "concurrency>1 produces identical counters to
+ * CONCURRENCY=1" pin below. WITHIN one unit, same-id candidates are handled
+ * serially (see DUAL-ADDRESS RACE above) regardless of the unit-level
+ * concurrency setting.
  *
  * REPORT-FIRST. BACKFILL_APPLY=true (not APPLY) gates every write, matching
  * the runner's own env name and every sibling lane. `planInsertRekey` is
@@ -243,10 +378,12 @@ async function forEachPage(container, spec, onPage, pageSize = 1000) {
 /** A tiny bounded-concurrency pool -- CONCURRENCY workers pull from `items`
  *  and run `worker` on each; the model lane's own header names its serial
  *  per-target loop as the known defect this lane must not repeat. Each
- *  target's own writes are independent of every other's (a different sale
- *  set, a different destination id), so interleaving changes only wall
- *  clock, never which decision a given sale receives -- pinned by the
- *  identical-counters-under-concurrency test. */
+ *  unit's own writes are independent of every other's (a different base
+ *  product, or a different cell), so interleaving changes only wall clock,
+ *  never which decision a given sale receives -- pinned by the
+ *  identical-counters-under-concurrency test. Same-id candidates WITHIN one
+ *  unit are still handled serially by that unit's own logic (see the
+ *  DUAL-ADDRESS RACE fix), independent of this pool's concurrency. */
 async function runPool(items, concurrency, worker) {
   let next = 0;
   const workers = Array.from({ length: Math.min(concurrency, items.length) || 0 }, async () => {
@@ -259,11 +396,7 @@ async function runPool(items, concurrency, worker) {
   await Promise.all(workers);
 }
 
-/** Result cap for a per-number sold_comps candidate query -- generous
- *  headroom (a single card number's sale volume across one product-year,
- *  even a flagship, is a few hundred at most); a hit answers by STOPPING
- *  this number's scan and counting it, never by silently truncating what
- *  the banner reports as "found". */
+/** Page size for the base-cell STARTSWITH candidate scan. */
 const CANDIDATE_PAGE_SIZE = 500;
 
 /**
@@ -293,6 +426,10 @@ function withLeadingZeroFold(variants) {
 }
 
 const normNumber = (n) => String(n ?? "").trim().toLowerCase();
+/** Human-form, mixed-case checklist parallel spellings -- compared
+ *  case-insensitively, same discipline the catalog's own LOWER(c.parallel)
+ *  convention already uses. */
+const normParallelForRung = (p) => String(p ?? "").trim().toLowerCase().replace(/\s+/g, " ") || "base";
 
 /** Multi-player catalog rows are one string with every name listed
  *  ("Eddie Murray / Cal Ripken Jr.") -- the SAME D33 shape
@@ -361,6 +498,31 @@ function checklistNumberVariantSet(deps, checklistRows) {
   return set;
 }
 
+/**
+ * DESTINATION RUNG RULE (REVIEW FIX, finding 5). Does a checklist-authority
+ * row exist for this insert at THIS EXACT (cardNumber, parallel, isAuto)
+ * combination? Bounded, over the SAME already-loaded checklist rows -- no
+ * per-sale I/O. `parallel`/`isAuto` on a checklist row are compared to the
+ * SALE's own stored `parallel`/`isAuto`, since the move keeps those segments
+ * byte-identical (one axis only) -- so if the checklist never attests this
+ * exact rung, the destination the move would mint is unattested regardless
+ * of the number matching.
+ */
+function destinationRungOnChecklist(deps, checklistRows, saleCardNumber, saleParallel, saleIsAuto) {
+  const variants = new Set(withLeadingZeroFold(deps.cardNumberVariants(saleCardNumber)).map((v) => v.toLowerCase()));
+  const num = normNumber(saleCardNumber);
+  const wantParallel = normParallelForRung(saleParallel);
+  const wantAuto = saleIsAuto === true;
+  return checklistRows.some((r) => {
+    const rNum = normNumber(r.cardNumber);
+    if (rNum !== num && !variants.has(rNum)) return false;
+    const rParallel = normParallelForRung(r.parallelSlug ?? r.parallel);
+    if (rParallel !== wantParallel) return false;
+    const rAuto = r.isAuto === true;
+    return rAuto === wantAuto;
+  });
+}
+
 const USER_SEED_SOURCES = new Set(["ebay-user-purchase", "ebay-user-sale", "manual-user-entry", "user-verified"]);
 
 /**
@@ -368,18 +530,17 @@ const USER_SEED_SOURCES = new Set(["ebay-user-purchase", "ebay-user-sale", "manu
  * logic (the sibling bug this guards against: a structural zero because a
  * write-only code path decided something a report-only path never ran).
  *
- * @param {object} deps  { insertSetNamedInTitle, cardNumberVariants, playerIdentityKey, productSetKeyOf, withProductSetKey }
+ * @param {object} deps  { insertSetNamedInTitle, cardNumberVariants, playerIdentityKey, withProductSetKey }
  * @param {object} sale  the sold_comps row as read
  * @param {object} ctx
  * @param {string} ctx.sport
  * @param {number} ctx.year
- * @param {string} ctx.baseSetKey     the base product's setKey (from productParentOf)
- * @param {string} ctx.insertSetKey   the registered insert key this target confirms against
- * @param {Array}  ctx.checklistRows  the insert's own checklist-authority rows for this cell
- * @param {Set<string>} ctx.checklistNumberVariants  every normalised number the checklist carries
- * @param {"cardId"|"hobbyiqCardId"} shape which address the candidate query found this sale by
+ * @param {string} ctx.baseSetKey       the base product's setKey (from productParentOf)
+ * @param {Map<string,{checklistRows:Array, checklistNumberVariants:Set<string>}>} ctx.insertsByKey
+ *        every REQUESTED insert sharing this unit's base product, keyed by
+ *        insertSetKey, each carrying its own already-loaded checklist rows.
  */
-function planInsertRekey(deps, sale, shape, ctx) {
+function planInsertRekey(deps, sale, ctx) {
   // ── NEVER-MOVE MARKERS, checked first, before any title/checklist work ──
   if (sale.verifiedByUser === true) {
     return { action: "leave", reason: "pinned-or-verified", detail: "verifiedByUser=true -- a real user attested this exact sale to this exact card" };
@@ -389,6 +550,43 @@ function planInsertRekey(deps, sale, shape, ctx) {
   }
   if (sale.identityUnverified === true) {
     return { action: "leave", reason: "already-parked", detail: "identityUnverified=true -- already parked; unparking is a different lane's job" };
+  }
+  if (sale.flaggedWrong === true) {
+    return { action: "leave", reason: "flagged-or-excluded", detail: "flaggedWrong=true -- a user already told the engine this comp is wrong; re-addressing it compounds that, it does not resolve it" };
+  }
+  if (sale.excludedFromFmv === true) {
+    return { action: "leave", reason: "flagged-or-excluded", detail: "excludedFromFmv=true -- already excluded from pricing; moving it does not restore trust" };
+  }
+
+  // ── FULL-CELL DEFENCE IN DEPTH (REVIEW FIX, finding 1). Compare the sale's
+  // OWN (sport, year, setKey) cell -- read off whichever field is the base
+  // slug -- against the UNIT's own cell, not merely the setKey segment. A
+  // STARTSWITH false positive or cross-cell contamination is refused here,
+  // never trusted on the setKey segment alone.
+  const hiq = String(sale.hobbyiqCardId ?? "");
+  const cardId = String(sale.cardId ?? "");
+  const cellOf = (slug) => {
+    const parts = slug.split(":");
+    if (parts.length < 4 || parts[0] !== "hiq") return null;
+    return `${parts[1]}|${parts[2]}|${parts[3]}`;
+  };
+  const wantCell = `${ctx.sport}|${ctx.year}|${ctx.baseSetKey}`;
+  const hiqCell = hiq.startsWith("hiq:") ? cellOf(hiq) : null;
+  const cardIdCell = cardId.startsWith("hiq:") ? cellOf(cardId) : null;
+  const hiqBase = hiqCell === wantCell;
+  const cardIdBase = cardIdCell === wantCell;
+  if (!hiqBase && !cardIdBase) {
+    return { action: "leave", reason: "neither-field-names-base-product", detail: `cardId=${cardId} hobbyiqCardId=${hiq} -- neither names ${wantCell}; not this unit's row` };
+  }
+
+  // ── SPLIT-IDENTITY (REVIEW FIX, CRITICAL finding 1). Both fields are
+  // `hiq:` slugs but name DIFFERENT products/cells -- a PRE-EXISTING split
+  // this lane did not create and must not deepen by moving only one side.
+  if (cardId.startsWith("hiq:") && hiq.startsWith("hiq:") && cardIdCell !== null && hiqCell !== null && cardIdCell !== hiqCell) {
+    return {
+      action: "leave", reason: "pre-existing-split-identity",
+      detail: `cardId=${cardId} hobbyiqCardId=${hiq} -- both are hiq: slugs naming DIFFERENT cells; not this lane's to arbitrate or deepen`,
+    };
   }
 
   const insertMatches = deps.insertSetNamedInTitle({
@@ -404,42 +602,49 @@ function planInsertRekey(deps, sale, shape, ctx) {
     };
   }
   const only = insertMatches[0];
-  if (only.registeredKey !== ctx.insertSetKey) {
-    // Names a DIFFERENT registered insert than the one this target confirms
-    // against -- not this target's sale (it will be a candidate under its
-    // own insert's target, if that key is also in scope this run).
-    return { action: "leave", reason: "title-names-a-different-insert", detail: `title names "${only.root}" -> ${only.registeredKey ?? "(unregistered)"}, not ${ctx.insertSetKey}` };
+  const insertSetKey = only.registeredKey;
+  const insertCtx = insertSetKey ? ctx.insertsByKey.get(insertSetKey) : null;
+  if (!insertCtx) {
+    // Names a registered insert, but not one requested (`titles`) this run --
+    // it will be a candidate under its own insert's target if/when that key
+    // is also in scope.
+    return { action: "leave", reason: "title-names-a-different-insert", detail: `title names "${only.root}" -> ${insertSetKey ?? "(unregistered)"}, not in this run's requested set` };
   }
 
   const num = normNumber(sale.cardNumber);
-  if (num && !ctx.checklistNumberVariants.has(num) && !withLeadingZeroFold(deps.cardNumberVariants(sale.cardNumber)).some((v) => ctx.checklistNumberVariants.has(v.toLowerCase()))) {
-    return { action: "leave", reason: "number-is-base-number", detail: `stored cardNumber "${sale.cardNumber}" never appears on ${ctx.insertSetKey}'s checklist -- likely the base product's own number for this slot; a title re-read is a different pass` };
+  if (num && !insertCtx.checklistNumberVariants.has(num) && !withLeadingZeroFold(deps.cardNumberVariants(sale.cardNumber)).some((v) => insertCtx.checklistNumberVariants.has(v.toLowerCase()))) {
+    return { action: "leave", reason: "number-is-base-number", detail: `stored cardNumber "${sale.cardNumber}" never appears on ${insertSetKey}'s checklist -- likely the base product's own number for this slot; a title re-read is a different pass` };
   }
 
-  const verdict = confirmedAgainstLoadedChecklist(deps, ctx.checklistRows, sale.cardNumber, sale.playerName);
+  const verdict = confirmedAgainstLoadedChecklist(deps, insertCtx.checklistRows, sale.cardNumber, sale.playerName);
   if (verdict !== "confirmed") {
-    return { action: "leave", reason: "no-checklist-match", detail: `title names ${ctx.insertSetKey} but no checklist row confirms cardNumber="${sale.cardNumber ?? ""}" playerName="${sale.playerName ?? ""}" together` };
+    return { action: "leave", reason: "no-checklist-match", detail: `title names ${insertSetKey} but no checklist row confirms cardNumber="${sale.cardNumber ?? ""}" playerName="${sale.playerName ?? ""}" together` };
   }
 
-  // ── MOVE. One axis: the setKey segment, on whichever field(s) name the
-  // base product. hobbyiqCardId always moves when it names the base product;
-  // cardId moves TOO only when it is itself an hiq: slug naming the SAME base
-  // product as hobbyiqCardId pre-move (a relocate) -- otherwise cardId is a
-  // raw vendor partition key and only hobbyiqCardId is patched.
-  const hiq = String(sale.hobbyiqCardId ?? "");
-  const cardId = String(sale.cardId ?? "");
-  const hiqIsBase = deps.productSetKeyOf(hiq) === ctx.baseSetKey;
-  const cardIdIsBase = cardId.startsWith("hiq:") && deps.productSetKeyOf(cardId) === ctx.baseSetKey && cardId === hiq;
-  if (!hiqIsBase && !cardIdIsBase) {
-    return { action: "leave", reason: "neither-field-names-base-product", detail: `cardId=${cardId} hobbyiqCardId=${hiq} -- neither names ${ctx.baseSetKey}; not this target's row (pre-existing split, not this lane's to fix)` };
+  // ── DESTINATION RUNG (REVIEW FIX, finding 5). The number is confirmed;
+  // the exact (number, parallel, auto) destination rung must ALSO be
+  // checklist-attested -- "price only checklist-matched identities".
+  if (!destinationRungOnChecklist(deps, insertCtx.checklistRows, sale.cardNumber, sale.parallel, sale.isAuto)) {
+    const rungKey = `${insertSetKey}|${normParallelForRung(sale.parallel)}|${sale.isAuto === true ? "auto" : "no-auto"}`;
+    return {
+      action: "leave", reason: "destination-rung-not-on-checklist",
+      detail: `${insertSetKey} #${sale.cardNumber ?? ""} confirms on number+player, but no checklist row attests the (parallel="${sale.parallel ?? "base"}", auto=${sale.isAuto === true}) rung this move would mint`,
+      rungKey,
+    };
   }
 
-  const newHiq = hiqIsBase ? deps.withProductSetKey(hiq, ctx.insertSetKey) : hiq;
-  if (cardIdIsBase) {
-    const newCardId = deps.withProductSetKey(cardId, ctx.insertSetKey);
-    return { action: "relocate", newCardId, newHiq: newCardId };
+  // ── MOVE. One axis: the setKey segment. Only the two writable shapes named
+  // in SPLIT-IDENTITY above are ever reached here (the split case already
+  // returned above; the neither-field case already returned above), so by
+  // this point exactly one of RELOCATE (both fields agree, both hiq:) or
+  // PATCH (cardId is a raw vendor id) applies.
+  const newHiq = deps.withProductSetKey(hiq, insertSetKey);
+  if (cardId.startsWith("hiq:") && cardId === hiq) {
+    const newCardId = deps.withProductSetKey(cardId, insertSetKey);
+    return { action: "relocate", newCardId, newHiq: newCardId, insertSetKey };
   }
-  return { action: "patch", newHiq };
+  // cardId is a raw vendor id (does not start with "hiq:") -- shape (B).
+  return { action: "patch", newHiq, insertSetKey };
 }
 
 async function main() {
@@ -481,11 +686,11 @@ async function main() {
   const { insertSetNamedInTitle } = require(path.join(backend, "dist/services/portfolioiq/insertSetTitleReader.js"));
   const { cardNumberVariants } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { playerIdentityKey } = require(path.join(backend, "dist/services/catalog/playerIdentityKey.js"));
-  const { productSetKeyOf, withProductSetKey } = require(path.join(backend, "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
+  const { withProductSetKey, guardSoldCompDoc } = require(path.join(backend, "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
 
-  const deps = { insertSetNamedInTitle, cardNumberVariants, playerIdentityKey, productSetKeyOf, withProductSetKey };
+  const deps = { insertSetNamedInTitle, cardNumberVariants, playerIdentityKey, withProductSetKey };
   const isChecklist = (source) => catalogAuthorityOf(source) === "checklist";
 
   const client = new CosmosClient(conn);
@@ -498,12 +703,12 @@ async function main() {
   // name any insert with no registered parent -- an insert with no base
   // product is not this lane's shape (it is either a flagship's own insert
   // with no parent registered yet, or a mis-typed key).
-  const targets = [];
+  const insertToBase = new Map();
   const rejectedNoParent = [];
   for (const insertSetKey of SET_KEYS) {
     const parent = productParentOf(insertSetKey);
     if (!parent) { rejectedNoParent.push(insertSetKey); continue; }
-    targets.push({ insertSetKey, baseSetKey: parent });
+    insertToBase.set(insertSetKey, parent);
   }
   if (rejectedNoParent.length) {
     console.error("");
@@ -513,30 +718,47 @@ async function main() {
     process.exit(2);
   }
 
+  // ── REVIEW FIX (finding 3): GROUP requested inserts by BASE PRODUCT, so a
+  // base cell shared by several requested inserts (panini-photogenic-
+  // rookie-pix + panini-photogenic-troops-tribute, both under
+  // panini-photogenic) is scanned exactly ONCE per (cell, baseSetKey) unit,
+  // never once per insert key.
+  const baseSetKeys = [...new Set(insertToBase.values())];
+  const insertsByBase = new Map(); // baseSetKey -> [insertSetKey, ...]
+  for (const [insertSetKey, baseSetKey] of insertToBase) {
+    const list = insertsByBase.get(baseSetKey) ?? [];
+    list.push(insertSetKey);
+    insertsByBase.set(baseSetKey, list);
+  }
+
   console.log(`  scope (${SCOPE_CELLS.length} cell${SCOPE_CELLS.length === 1 ? "" : "s"})    ${SCOPE_CELLS.join(", ")}`);
-  console.log(`  target insert setKeys   ${targets.map((t) => `${t.insertSetKey} (base: ${t.baseSetKey})`).join(", ")}`);
+  console.log(`  target insert setKeys   ${[...insertToBase.entries()].map(([k, p]) => `${k} (base: ${p})`).join(", ")}`);
+  console.log(`  base products (${baseSetKeys.length}, each scanned ONCE per cell)   ${baseSetKeys.join(", ")}`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  ${CLOCK.describe()}`);
   console.log(`  concurrency ${CONCURRENCY}`);
   console.log("");
 
   const s = {
-    checklistRowsScanned: 0, insertChecklistEmpty: 0, targetsFailed: 0,
+    checklistRowsScanned: 0, insertChecklistEmpty: 0, unitsFailed: 0,
     candidateNumbers: 0, candidatesFound: 0, otherShard: 0,
     moved: 0, patched: 0, collapsedOntoResident: 0,
-    leftPinnedOrVerified: 0, leftAlreadyParked: 0, leftNumberIsBaseNumber: 0,
+    leftPinnedOrVerified: 0, leftFlaggedOrExcluded: 0, leftAlreadyParked: 0, leftNumberIsBaseNumber: 0,
     leftNoChecklistMatch: 0, leftTitleDoesNotNameInsert: 0, leftTwoInsertsNamed: 0,
-    leftTitleNamesDifferentInsert: 0, leftNeitherFieldNamesBase: 0,
-    refusedDestinationCollision: 0, failed: 0,
+    leftTitleNamesDifferentInsert: 0, leftNeitherFieldNamesBase: 0, leftPreExistingSplitIdentity: 0,
+    leftDestinationRungNotOnChecklist: 0,
+    refusedDestinationCollision: 0, refusedChangedSincePlanned: 0, failed: 0,
     holdingsRepointed: 0, holdingsWalked: 0, holdingDocsWalked: 0,
-    targetsProcessed: 0,
+    unitsProcessed: 0,
   };
   const bySetKey = new Map();
+  const rungGaps = new Map(); // rungKey -> count
   const moveExamples = [];
   const leaveBuckets = {
-    "pinned-or-verified": [], "already-parked": [], "number-is-base-number": [],
+    "pinned-or-verified": [], "flagged-or-excluded": [], "already-parked": [], "number-is-base-number": [],
+    "destination-rung-not-on-checklist": [],
     "no-checklist-match": [], "title-does-not-name-insert": [], "two-inserts-named": [],
-    "title-names-a-different-insert": [], "neither-field-names-base-product": [],
+    "title-names-a-different-insert": [], "neither-field-names-base-product": [], "pre-existing-split-identity": [],
   };
   const failures = [];
   const bump = (m, k) => m.set(k, (m.get(k) || 0) + 1);
@@ -606,59 +828,76 @@ async function main() {
     return contentHashOf(resident) === contentHashOf(incomingAtNewAddress);
   }
 
-  /** One (cell, target) unit: page the insert's checklist rows, find
-   *  candidate sales at the base product for each distinct number, plan and
-   *  (in APPLY) write each one. Independent of every other unit -- safe to
-   *  run inside the concurrency pool. */
-  async function processTarget(cell, target) {
+  /**
+   * DUAL-ADDRESS RACE, last-line defence (REVIEW FIX, CRITICAL finding 2,
+   * part b). Re-read the SOURCE document immediately before writing and
+   * compare `_etag` against the etag captured when this sale was planned. A
+   * mismatch means some OTHER process (a concurrent unit, a live ingest
+   * re-upsert) wrote this exact row between the plan and the write -- refuse
+   * rather than write over an unknown state. Returns the fresh doc's etag on
+   * success (for the accessCondition passed to the actual write), or null on
+   * mismatch/gone.
+   */
+  async function etagUnchangedOrRefuse(saleId, cardId, plannedEtag) {
+    let fresh;
+    try { fresh = (await retry(() => pool.item(saleId, cardId).read())).resource ?? null; }
+    catch (e) { if (e?.code === 404 || e?.statusCode === 404) return { ok: false, gone: true }; throw e; }
+    if (!fresh) return { ok: false, gone: true };
+    if (String(fresh._etag ?? "") !== String(plannedEtag ?? "")) return { ok: false, gone: false, fresh };
+    return { ok: true, etag: fresh._etag };
+  }
+
+  /** One (cell, baseSetKey) unit: page EVERY requested insert's checklist
+   *  rows sharing this base product, scan the base cell's candidates ONCE,
+   *  route each candidate to its matched insert's confirmation set, plan and
+   *  (in APPLY) write each one. Same-id candidates are handled serially
+   *  within this function (never two independent writes for one sale id) --
+   *  see DUAL-ADDRESS RACE. Independent of every OTHER unit -- safe to run
+   *  inside the concurrency pool. */
+  async function processUnit(cell, baseSetKey, insertSetKeysHere) {
     if (CLOCK.outOfClock()) { stoppedAtBudget = true; return; }
     const [sport, yearStr] = cell.split(":");
     const year = Number(yearStr);
-    const { insertSetKey, baseSetKey } = target;
 
-    if (SHARD_SCOPE.SHARDED && shardOf(`${cell}|${insertSetKey}`) !== SHARD_SCOPE.SLOT) { s.otherShard++; return; }
+    if (SHARD_SCOPE.SHARDED && shardOf(`${cell}|${baseSetKey}`) !== SHARD_SCOPE.SLOT) { s.otherShard++; return; }
 
-    // ── STEP 2: the insert's own checklist-authority rows for this cell.
-    const checklistRows = [];
-    await forEachPage(cat, {
-      query: `SELECT c.cardNumber, c.playerName, c.source FROM c
-              WHERE c.sport = @sport AND (c.year = @year OR c.cardYear = @year)
-                AND c.setKey = @setKey AND NOT IS_DEFINED(c.gradeTier)`,
-      parameters: [
-        { name: "@sport", value: sport },
-        { name: "@year", value: year },
-        { name: "@setKey", value: insertSetKey },
-      ],
-    }, async (page) => {
-      for (const r of page) { s.checklistRowsScanned++; if (isChecklist(r.source)) checklistRows.push(r); }
-      return true;
-    });
+    // ── STEP 3: EVERY requested insert sharing this base product's own
+    // CHECKLIST-AUTHORITY rows for this cell, one page per insert (never one
+    // per sale) -- the CONFIRMATION SETS this unit's candidates route into.
+    const insertsByKey = new Map();
+    for (const insertSetKey of insertSetKeysHere) {
+      const checklistRows = [];
+      await forEachPage(cat, {
+        query: `SELECT c.cardNumber, c.playerName, c.source, c.parallelSlug, c.parallel, c.isAuto FROM c
+                WHERE c.sport = @sport AND (c.year = @year OR c.cardYear = @year)
+                  AND c.setKey = @setKey AND NOT IS_DEFINED(c.gradeTier)`,
+        parameters: [
+          { name: "@sport", value: sport },
+          { name: "@year", value: year },
+          { name: "@setKey", value: insertSetKey },
+        ],
+      }, async (page) => {
+        for (const r of page) { s.checklistRowsScanned++; if (isChecklist(r.source)) checklistRows.push(r); }
+        return true;
+      });
 
-    s.targetsProcessed++;
-    if (checklistRows.length === 0) {
-      s.insertChecklistEmpty++;
-      return;
+      if (checklistRows.length === 0) {
+        s.insertChecklistEmpty++;
+        continue;
+      }
+      insertsByKey.set(insertSetKey, {
+        checklistRows,
+        checklistNumberVariants: checklistNumberVariantSet(deps, checklistRows),
+      });
+      s.candidateNumbers += new Set(checklistRows.map((r) => r.cardNumber).filter(Boolean)).size;
     }
+    s.unitsProcessed++;
+    if (insertsByKey.size === 0) return; // every requested insert here has an empty checklist
 
-    const numberVariants = checklistNumberVariantSet(deps, checklistRows);
-    s.candidateNumbers += new Set(checklistRows.map((r) => r.cardNumber).filter(Boolean)).size;
-
-    // ── STEP 3: candidate sales -- STARTSWITH(c.hobbyiqCardId, @prefix) over
-    // the BASE PRODUCT'S OWN CELL (sport:year:baseSetKey:), the SAME query
-    // shape rekey-product-setkey.cjs's own MODE=pool lane already runs
-    // against sold_comps and justifies in its own header (measured
-    // 2026-09-01: 43,724 rows at one product-year prefix, most of them still
-    // sitting under a legacy VENDOR cardId rather than their own hiq: slug --
-    // "the pool is the substance of these rulings and it is swept directly,
-    // by slug prefix"). This is deliberately WIDER than repoint-sales-to-
-    // checklist-numbered.cjs's own exact-equality queries (which address a
-    // single already-known short id) because this lane's whole job is
-    // finding sales whose STORED CARD NUMBER may be the insert's own OR the
-    // base product's -- there is no number to filter by in SQL until the
-    // candidates are already in hand and checked against the loaded
-    // checklist, which is why the scope is a PRODUCT CELL and not a number.
-    // Bounded to exactly the one (sport, year, baseSetKey) cell this target
-    // names; never a whole-sport or whole-pool scan.
+    // ── STEP 4: candidate sales -- STARTSWITH(c.hobbyiqCardId, @prefix) over
+    // the BASE PRODUCT'S OWN CELL, scanned EXACTLY ONCE for this whole unit
+    // (REVIEW FIX, finding 3) regardless of how many requested inserts share
+    // this base product.
     const prefix = `hiq:${sport}:${year}:${baseSetKey}:`;
     const candidatesByKey = new Map();
     await forEachPage(pool, {
@@ -669,19 +908,35 @@ async function main() {
       return true;
     }, CANDIDATE_PAGE_SIZE);
 
-    {
-      const ctx = { sport, year, baseSetKey, insertSetKey, checklistRows, checklistNumberVariants: numberVariants };
-      for (const sale of candidatesByKey.values()) {
-        if (CLOCK.outOfClock()) { stoppedAtBudget = true; return; }
-        const hiqBase = productSetKeyOf(String(sale.hobbyiqCardId ?? "")) === baseSetKey;
-        const cardIdBase = productSetKeyOf(String(sale.cardId ?? "")) === baseSetKey;
-        if (!hiqBase && !cardIdBase) continue; // STARTSWITH false positive guard (never expected, but never trusted blind)
+    // ── DUAL-ADDRESS RACE, by construction (REVIEW FIX, finding 2, part a).
+    // Group every candidate by its sale `id` FIRST, so twin copies of the
+    // SAME sale (a CardHedge dual-id twin, or any other same-id resident at
+    // two partitions) are handled in one serial pass, never as two
+    // independently-planned writes racing each other.
+    const bySaleId = new Map();
+    for (const sale of candidatesByKey.values()) {
+      const list = bySaleId.get(sale.id) ?? [];
+      list.push(sale);
+      bySaleId.set(sale.id, list);
+    }
+
+    const ctx = { sport, year, baseSetKey, insertsByKey };
+
+    for (const [, copies] of bySaleId) {
+      if (CLOCK.outOfClock()) { stoppedAtBudget = true; return; }
+      // "Has this sale id already moved (or been collapsed/refused) earlier
+      // in this SAME pass?" -- once true, every remaining copy of the id is
+      // re-checked against the (now possibly resident) destination rather
+      // than independently planned again.
+      let alreadyHandled = false;
+
+      for (const sale of copies) {
         s.candidatesFound++;
         if (LIMIT && (s.moved + s.patched) >= LIMIT) continue;
 
         let plan;
         try {
-          plan = planInsertRekey(deps, sale, hiqBase ? "hobbyiqCardId" : "cardId", ctx);
+          plan = planInsertRekey(deps, sale, ctx);
         } catch (e) {
           s.failed++;
           failures.push(`  FAILED plan ${sale.id}@${sale.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
@@ -690,30 +945,63 @@ async function main() {
 
         if (plan.action === "leave") {
           const bumpMap = {
-            "pinned-or-verified": "leftPinnedOrVerified", "already-parked": "leftAlreadyParked",
+            "pinned-or-verified": "leftPinnedOrVerified", "flagged-or-excluded": "leftFlaggedOrExcluded",
+            "already-parked": "leftAlreadyParked",
             "number-is-base-number": "leftNumberIsBaseNumber", "no-checklist-match": "leftNoChecklistMatch",
             "title-does-not-name-insert": "leftTitleDoesNotNameInsert", "two-inserts-named": "leftTwoInsertsNamed",
             "title-names-a-different-insert": "leftTitleNamesDifferentInsert",
             "neither-field-names-base-product": "leftNeitherFieldNamesBase",
+            "pre-existing-split-identity": "leftPreExistingSplitIdentity",
+            "destination-rung-not-on-checklist": "leftDestinationRungNotOnChecklist",
           };
           const key = bumpMap[plan.reason];
           if (key) s[key]++;
+          if (plan.rungKey) bump(rungGaps, plan.rungKey);
           const bucket = leaveBuckets[plan.reason];
           if (bucket && bucket.length < 50) bucket.push(`  ${sale.id}@${sale.cardId}: ${plan.detail}`);
           continue;
         }
 
+        // ── If an EARLIER copy of this same sale id already moved/collapsed
+        // in this pass, this LATER copy must not plan an independent second
+        // write -- re-check the (now-resident) destination instead (see the
+        // `alreadyHandled` branches below).
         try {
           if (plan.action === "relocate") {
             const oldCardId = String(sale.cardId ?? "");
+
+            if (alreadyHandled) {
+              const resident = await residentAt(sale.id, plan.newCardId);
+              const wouldBeKeep = { ...stripSystem(sale), cardId: plan.newCardId, hobbyiqCardId: plan.newHiq };
+              if (resident && isSameSale(resident, wouldBeKeep)) {
+                if (APPLY) await retry(() => pool.item(sale.id, oldCardId).delete());
+                s.collapsedOntoResident++;
+              } else if (resident) {
+                s.refusedDestinationCollision++;
+                failures.push(`  REFUSED destination-collision ${sale.id}@${oldCardId} -> ${plan.newCardId}: a DIFFERENT sale already resides there (same-id twin race)`);
+              }
+              continue;
+            }
+
             const keep = { ...stripSystem(sale), cardId: plan.newCardId, hobbyiqCardId: plan.newHiq, insertRekeyedAt: new Date().toISOString(), insertRekeyedFrom: oldCardId, insertRekeyedBy: "repoint-stored-insert-sales" };
             keep.contentHash = contentHashOf(keep);
+
+            // ── guardSoldCompDoc, BOTH shapes (REVIEW FIX, finding 1). The
+            // WOULD-BE document -- already carrying the insert's address on
+            // both fields -- is run through the SAME write-door predicate
+            // recordSoldComp itself applies. A park verdict is honoured, not
+            // bypassed: the doc is written with the guard's own stamp, still
+            // moved (the sale is real and the address is the one this lane
+            // decided), but marked unverified for every downstream reader.
+            guardSoldCompDoc(keep, { guardedBy: "repoint-stored-insert-sales" });
 
             const resident = await residentAt(sale.id, plan.newCardId);
             if (resident) {
               if (isSameSale(resident, keep)) {
                 if (APPLY) await retry(() => pool.item(sale.id, oldCardId).delete());
                 s.collapsedOntoResident++;
+                alreadyHandled = true;
+                if (bySetKey.has(plan.insertSetKey)) bump(bySetKey, plan.insertSetKey);
                 continue;
               }
               s.refusedDestinationCollision++;
@@ -721,30 +1009,78 @@ async function main() {
               continue;
             }
 
-            const res = await relocateSoldComp(pool, { keep, drop: [{ id: sale.id, cardId: oldCardId }], retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY });
+            // ── DUAL-ADDRESS RACE, last-line defence (part b). Re-read the
+            // SOURCE row and compare _etag before writing anything.
+            const guardCheck = await etagUnchangedOrRefuse(sale.id, oldCardId, sale._etag);
+            if (!guardCheck.ok) {
+              if (guardCheck.gone) {
+                // The source row is already gone -- another process (this
+                // same run's own earlier copy, or a concurrent one) already
+                // moved or deleted it. Treat as collapsed if the destination
+                // now holds the same sale, else leave silently (nothing to
+                // move, nothing lost -- the row exists somewhere already).
+                const nowResident = await residentAt(sale.id, plan.newCardId);
+                if (nowResident && isSameSale(nowResident, keep)) { s.collapsedOntoResident++; continue; }
+                continue;
+              }
+              s.refusedChangedSincePlanned++;
+              failures.push(`  REFUSED changed-since-planned ${sale.id}@${oldCardId}: the source row was written by another process between planning and write`);
+              continue;
+            }
+
+            const res = await relocateSoldComp(pool, {
+              keep, drop: [{ id: sale.id, cardId: oldCardId }], retry,
+              verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY,
+            });
             if (!res.ok && res.stage !== "dry-run") {
               s.failed++;
               failures.push(`  FAILED relocate ${sale.id}@${oldCardId} -> ${plan.newCardId}: ${res.error ?? "unknown"}`);
               continue;
             }
             s.moved++;
-            bump(bySetKey, insertSetKey);
+            alreadyHandled = true;
+            bump(bySetKey, plan.insertSetKey);
             if (moveExamples.length < 50) moveExamples.push(`  MOVE ${JSON.stringify(sale.title ?? "")} | ${oldCardId} -> ${plan.newCardId}`);
             await repointHoldings(oldCardId, plan.newCardId);
           } else {
             // patch: hobbyiqCardId only, cardId (a vendor partition) unchanged.
+            if (alreadyHandled) {
+              // A later copy of the SAME sale id already handled by an
+              // earlier RELOCATE/PATCH copy this pass -- nothing further to
+              // do for a patch-shape duplicate (its own address is unique to
+              // its own vendor cardId partition, so it cannot collide with a
+              // relocate destination; counted as collapsed for visibility).
+              s.collapsedOntoResident++;
+              continue;
+            }
+
+            const wouldBeDoc = { ...stripSystem(sale), hobbyiqCardId: plan.newHiq };
+            guardSoldCompDoc(wouldBeDoc, { guardedBy: "repoint-stored-insert-sales" });
+            const finalHiq = wouldBeDoc.hobbyiqCardId;
+
+            const guardCheck = await etagUnchangedOrRefuse(sale.id, sale.cardId, sale._etag);
+            if (!guardCheck.ok) {
+              if (!guardCheck.gone) {
+                s.refusedChangedSincePlanned++;
+                failures.push(`  REFUSED changed-since-planned ${sale.id}@${sale.cardId}: the source row was written by another process between planning and write`);
+              }
+              continue;
+            }
+
             if (APPLY) {
               await retry(() => pool.item(sale.id, sale.cardId).patch([
-                { op: "set", path: "/hobbyiqCardId", value: plan.newHiq },
+                { op: "set", path: "/hobbyiqCardId", value: finalHiq },
+                { op: "set", path: "/identityUnverified", value: wouldBeDoc.identityUnverified ?? false },
                 { op: "set", path: "/insertRekeyedFrom", value: String(sale.hobbyiqCardId ?? "") },
                 { op: "set", path: "/insertRekeyedAt", value: new Date().toISOString() },
                 { op: "set", path: "/insertRekeyedBy", value: "repoint-stored-insert-sales" },
-              ]));
+              ], { accessCondition: { type: "IfMatch", condition: guardCheck.etag } }));
             }
             s.patched++;
-            bump(bySetKey, insertSetKey);
-            if (moveExamples.length < 50) moveExamples.push(`  PATCH ${JSON.stringify(sale.title ?? "")} | ${sale.cardId}: hobbyiqCardId ${sale.hobbyiqCardId} -> ${plan.newHiq}`);
-            await repointHoldings(String(sale.hobbyiqCardId ?? ""), plan.newHiq);
+            alreadyHandled = true;
+            bump(bySetKey, plan.insertSetKey);
+            if (moveExamples.length < 50) moveExamples.push(`  PATCH ${JSON.stringify(sale.title ?? "")} | ${sale.cardId}: hobbyiqCardId ${sale.hobbyiqCardId} -> ${finalHiq}`);
+            await repointHoldings(String(sale.hobbyiqCardId ?? ""), finalHiq);
           }
         } catch (e) {
           s.failed++;
@@ -755,48 +1091,56 @@ async function main() {
   }
 
   const units = [];
-  for (const cell of SCOPE_CELLS) for (const target of targets) units.push({ cell, target });
+  for (const cell of SCOPE_CELLS) for (const [baseSetKey, insertSetKeysHere] of insertsByBase) units.push({ cell, baseSetKey, insertSetKeysHere });
   // A persistent read failure (a query that throws every retry, a broken
-  // checklist page) fails ONLY the one (cell, target) unit it happened on --
-  // never the whole run. Each unit is independent (its own checklist rows,
-  // its own candidate sales, its own writes), so one bad unit's exception is
-  // caught, counted, and named here rather than rejecting the pool's
-  // Promise.all and losing every OTHER target's already-planned work.
-  await runPool(units, CONCURRENCY, async ({ cell, target }) => {
+  // checklist page) fails ONLY the one (cell, baseSetKey) unit it happened
+  // on -- never the whole run. Each unit is independent (its own checklist
+  // rows, its own candidate sales, its own writes), so one bad unit's
+  // exception is caught, counted, and named here rather than rejecting the
+  // pool's Promise.all and losing every OTHER unit's already-planned work.
+  await runPool(units, CONCURRENCY, async ({ cell, baseSetKey, insertSetKeysHere }) => {
     try {
-      await processTarget(cell, target);
+      await processUnit(cell, baseSetKey, insertSetKeysHere);
     } catch (e) {
-      s.targetsFailed++;
-      failures.push(`  FAILED target ${cell}|${target.insertSetKey}: ${String(e?.stack ?? e?.message ?? e)}`);
+      s.unitsFailed++;
+      failures.push(`  FAILED unit ${cell}|${baseSetKey}: ${String(e?.stack ?? e?.message ?? e)}`);
     }
   });
 
   console.log("");
-  console.log(`checklist rows scanned (insert targets)   ${f(s.checklistRowsScanned)}${SHARD_SCOPE.SHARDED ? `  (${f(s.otherShard)} targets in other shards)` : ""}`);
-  console.log(`  targets processed                        ${f(s.targetsProcessed)}`);
-  console.log(`  targets with an EMPTY checklist           ${f(s.insertChecklistEmpty)}   <- nothing to confirm against, not ingested for this cell`);
-  console.log(`  targets FAILED (persistent read failure)  ${f(s.targetsFailed)}   <- this target's sales are untouched; every OTHER target still ran`);
+  console.log(`checklist rows scanned (all requested inserts)   ${f(s.checklistRowsScanned)}${SHARD_SCOPE.SHARDED ? `  (${f(s.otherShard)} units in other shards)` : ""}`);
+  console.log(`  units processed (cell x base product)    ${f(s.unitsProcessed)}`);
+  console.log(`  requested inserts with an EMPTY checklist  ${f(s.insertChecklistEmpty)}   <- nothing to confirm against, not ingested for this cell`);
+  console.log(`  units FAILED (persistent read failure)    ${f(s.unitsFailed)}   <- this unit's sales are untouched; every OTHER unit still ran`);
   console.log(`  distinct checklist numbers scanned        ${f(s.candidateNumbers)}`);
   console.log("");
-  console.log(`candidates found (title names this insert or not, all read)  ${f(s.candidatesFound)}`);
+  console.log(`candidates found (title names a requested insert or not, all read)  ${f(s.candidatesFound)}`);
   console.log(`  ${APPLY ? "MOVED" : "WOULD MOVE"}          ${f(s.moved)}`);
   console.log(`  ${APPLY ? "PATCHED" : "WOULD PATCH"}        ${f(s.patched)}`);
   console.log(`  COLLAPSED onto a resident (same sale, by hash)  ${f(s.collapsedOntoResident)}`);
   console.log(`  REFUSED: destination collision            ${f(s.refusedDestinationCollision)}`);
+  console.log(`  REFUSED: changed-since-planned            ${f(s.refusedChangedSincePlanned)}   <- another process wrote this row between plan and write`);
   console.log(`  failed                                    ${f(s.failed)}`);
   console.log("");
   console.log(`  LEFT: title does not name this insert     ${f(s.leftTitleDoesNotNameInsert)}`);
   console.log(`  LEFT: title names a DIFFERENT insert       ${f(s.leftTitleNamesDifferentInsert)}`);
   console.log(`  LEFT: two-inserts-named                    ${f(s.leftTwoInsertsNamed)}`);
   console.log(`  LEFT: pinned-or-verified                   ${f(s.leftPinnedOrVerified)}`);
+  console.log(`  LEFT: flagged-or-excluded                  ${f(s.leftFlaggedOrExcluded)}`);
   console.log(`  LEFT: already-parked                       ${f(s.leftAlreadyParked)}`);
   console.log(`  LEFT: number-is-base-number                ${f(s.leftNumberIsBaseNumber)}`);
+  console.log(`  LEFT: destination-rung-not-on-checklist    ${f(s.leftDestinationRungNotOnChecklist)}`);
   console.log(`  LEFT: no-checklist-match                   ${f(s.leftNoChecklistMatch)}`);
   console.log(`  LEFT: neither field names the base product ${f(s.leftNeitherFieldNamesBase)}`);
+  console.log(`  LEFT: pre-existing-split-identity           ${f(s.leftPreExistingSplitIdentity)}`);
   console.log("");
   console.log(`  holdings re-pointed        ${f(s.holdingsRepointed)}   (walked ${f(s.holdingsWalked)} holdings across ${f(s.holdingDocsWalked)} portfolio docs)`);
 
   if (bySetKey.size) { console.log(`\n  by insert setKey:`); for (const [k, n] of [...bySetKey.entries()].sort((a, b) => b[1] - a[1])) console.log(`    ${String(n).padStart(9)}  ${k}`); }
+  if (rungGaps.size) {
+    console.log(`\n  destination-rung-not-on-checklist, by rung (insertSetKey|parallel|auto):`);
+    for (const [k, n] of [...rungGaps.entries()].sort((a, b) => b[1] - a[1])) console.log(`    ${String(n).padStart(9)}  ${k}`);
+  }
   if (moveExamples.length) { console.log(`\n  MOVE/PATCH examples (title | from -> to), sample of ${moveExamples.length}:`); for (const e of moveExamples) console.log(e); }
   for (const [reason, list] of Object.entries(leaveBuckets)) {
     if (list.length) { console.log(`\n  LEFT (${reason}), sample of ${f(list.length)}:`); for (const l of list) console.log(l); }
@@ -805,10 +1149,11 @@ async function main() {
 
   // ── CF-A-SALE-IS-NEVER-LOST reconciliation ---------------------------------
   const totalLeft = s.leftTitleDoesNotNameInsert + s.leftTitleNamesDifferentInsert + s.leftTwoInsertsNamed
-    + s.leftPinnedOrVerified + s.leftAlreadyParked + s.leftNumberIsBaseNumber + s.leftNoChecklistMatch
-    + s.leftNeitherFieldNamesBase;
+    + s.leftPinnedOrVerified + s.leftFlaggedOrExcluded + s.leftAlreadyParked + s.leftNumberIsBaseNumber
+    + s.leftNoChecklistMatch + s.leftNeitherFieldNamesBase + s.leftPreExistingSplitIdentity
+    + s.leftDestinationRungNotOnChecklist;
   const written = s.moved + s.patched + s.collapsedOntoResident;
-  const refused = s.refusedDestinationCollision;
+  const refused = s.refusedDestinationCollision + s.refusedChangedSincePlanned;
   const accountedFor = written + refused + s.failed + totalLeft;
   console.log("");
   console.log(`CF-A-SALE-IS-NEVER-LOST`);
@@ -847,7 +1192,7 @@ async function main() {
 
 module.exports = {
   planInsertRekey, confirmedAgainstLoadedChecklist, withLeadingZeroFold, checklistNumberVariantSet,
-  CELL_RE, WILDCARDS, INHERITED_SCOPES, USER_SEED_SOURCES,
+  destinationRungOnChecklist, CELL_RE, WILDCARDS, INHERITED_SCOPES, USER_SEED_SOURCES,
 };
 
 if (require.main === module) {

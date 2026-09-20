@@ -248,9 +248,23 @@ on:
           # then confirmed against the insert's own checklist rows (already
           # loaded, no per-sale Cosmos read) via the real compiled
           # insertSetNamedInTitle + a pure mirror of insertSetChecklistConfirm
-          # .ts's FIX-1 rule. `scope` is REQUIRED sport:year cells, no 'all'.
-          # Never touches a verifiedByUser sale, a USER_SEED_SOURCES sale, or
-          # an already-parked (identityUnverified) row. The pilot dispatch is
+          # .ts's FIX-1 rule -- AND the exact destination rung (number +
+          # parallel + auto flag) must itself be checklist-attested, not the
+          # number alone ("price only checklist-matched identities"). Units
+          # are (cell, BASE PRODUCT), never (cell, insert key), so a base
+          # product shared by several requested inserts is STARTSWITH-scanned
+          # exactly once. Only writes the two shapes where cardId and
+          # hobbyiqCardId AGREE (both the base slug -> relocate; cardId a raw
+          # vendor id -> patch hobbyiqCardId only) -- a PRE-EXISTING split
+          # between the two (both hiq: slugs, different products) is left
+          # untouched by name, never deepened by moving one side alone, and
+          # guardSoldCompDoc runs on the would-be doc before every write.
+          # Same-id twins (CardHedge dual-id duplicates) are grouped and
+          # handled serially within one unit, plus a last-line _etag
+          # re-read-before-write refusing `changed-since-planned` on a race.
+          # `scope` is REQUIRED sport:year cells, no 'all'. Never touches a
+          # verifiedByUser, flaggedWrong, excludedFromFmv, USER_SEED_SOURCES,
+          # or already-parked (identityUnverified) sale. The pilot dispatch is
           # scope=football:2024 titles=panini-photogenic-rookie-pix,panini-
           # photogenic-troops-tribute,panini-zenith-z-marquee.
           - repoint-stored-insert-sales
