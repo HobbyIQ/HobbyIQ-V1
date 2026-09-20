@@ -30,6 +30,8 @@ const mod = require("../scripts/resolve-split-identity-parks.cjs") as {
   CELL_RE: RegExp;
   ALL_SPLITS: string;
   PARK_FIELDS: string[];
+  parseTitlesInput: (raw: unknown) => { excludedWinners: Set<string>; titlesFilter: string[] };
+  EXCLUDE_WINNER_PREFIX: RegExp;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -463,5 +465,51 @@ describe("resolve-split-identity-parks: REVIEW #5 -- isPinnedOrFlagged", () => {
   });
   it("USER_SEED_SOURCES is the exact literal from soldCompsStore.service.ts (not exported there, kept in sync by inspection)", () => {
     expect([...mod.USER_SEED_SOURCES].sort()).toEqual(["ebay-user-purchase", "ebay-user-sale", "manual-user-entry", "user-verified"].sort());
+  });
+});
+
+describe("resolve-split-identity-parks: parseTitlesInput -- exclude-winner:<id>[,...] vs the ordinary title-substring filter", () => {
+  it("empty input: no exclude, no filter", () => {
+    const { excludedWinners, titlesFilter } = mod.parseTitlesInput("");
+    expect(excludedWinners.size).toBe(0);
+    expect(titlesFilter).toEqual([]);
+  });
+
+  it("an ordinary comma-separated substring filter, lowercased", () => {
+    const { excludedWinners, titlesFilter } = mod.parseTitlesInput("Topps Now,Panini Prizm");
+    expect(excludedWinners.size).toBe(0);
+    expect(titlesFilter).toEqual(["topps now", "panini prizm"]);
+  });
+
+  it("a single exclude-winner: id populates excludedWinners and leaves titlesFilter empty", () => {
+    const { excludedWinners, titlesFilter } = mod.parseTitlesInput("exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto");
+    expect(excludedWinners).toEqual(new Set(["hiq:basketball:2023:topps:vw3:base:no-auto"]));
+    expect(titlesFilter).toEqual([]);
+  });
+
+  it("multiple comma-separated exclude-winner ids -- the ids' OWN colons survive (never mangled by the generic csv/lower pipeline)", () => {
+    const raw = "exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto,hiq:baseball:2023:topps:vw-3:base:no-auto";
+    const { excludedWinners, titlesFilter } = mod.parseTitlesInput(raw);
+    expect(excludedWinners).toEqual(new Set([
+      "hiq:basketball:2023:topps:vw3:base:no-auto",
+      "hiq:baseball:2023:topps:vw-3:base:no-auto",
+    ]));
+    expect(titlesFilter).toEqual([]);
+  });
+
+  it("the exclude-winner: prefix is case-insensitive", () => {
+    const { excludedWinners } = mod.parseTitlesInput("EXCLUDE-WINNER:hiq:basketball:2023:topps:vw3:base:no-auto");
+    expect(excludedWinners).toEqual(new Set(["hiq:basketball:2023:topps:vw3:base:no-auto"]));
+  });
+
+  it("a title merely containing the substring 'exclude-winner' but not as a PREFIX is read as an ordinary filter", () => {
+    const { excludedWinners, titlesFilter } = mod.parseTitlesInput("card says exclude-winner somewhere");
+    expect(excludedWinners.size).toBe(0);
+    expect(titlesFilter).toEqual(["card says exclude-winner somewhere"]);
+  });
+
+  it("EXCLUDE_WINNER_PREFIX matches only at the start of the string", () => {
+    expect(mod.EXCLUDE_WINNER_PREFIX.test("exclude-winner:x")).toBe(true);
+    expect(mod.EXCLUDE_WINNER_PREFIX.test("not-exclude-winner:x")).toBe(false);
   });
 });

@@ -235,16 +235,53 @@
  *      SCOPE required (`all-splits` or comma `sport:year` cells, matched
  *      against EITHER id's sport/year); TITLES optional freeform filter
  *      (substring, case-insensitive, against the sale's own title) mirroring
- *      the runner's inherited `titles` dispatch field; MODE unused (kept for
- *      workflow-input symmetry, refused if set to anything but empty);
- *      SLOT/SLOTS (sha1(id) shards, opt-in via SHARD=true for slot 0);
- *      CONCURRENCY=8; RUN_MINUTES=110; LIMIT=0.
+ *      the runner's inherited `titles` dispatch field -- OR, when it starts
+ *      with the literal `exclude-winner:`, a comma list of winner candidate
+ *      ids to LEAVE untouched (named `excluded-by-operator`) instead of a
+ *      substring filter; MODE unused (kept for workflow-input symmetry,
+ *      refused if set to anything but empty); SLOT/SLOTS (sha1(id) shards,
+ *      opt-in via SHARD=true for slot 0); CONCURRENCY=8; RUN_MINUTES=110;
+ *      LIMIT=0.
+ *
+ * PLAN_OUT (AUDITABILITY, 2026-09-20). The banner's own samples cap at 20-60
+ * lines per bucket -- necessarily, for a lane this large (1,506+ LEAVE rows
+ * measured on the pilot alone) -- so a REPORT that only ever lived in that
+ * capped banner could not be audited row-by-row before the matching APPLY
+ * ran, even though the banner CLAIMED "full list in the uploaded artifact."
+ * It was not: the uploaded artifact was `/tmp/backfill.log` alone, the same
+ * capped text. When PLAN_OUT names a path (the runner sets it to a FIXED
+ * directory, guarded on script name, so an operator never has to know this
+ * exists), this run writes ONE NDJSON record per IN-SCOPE row -- every
+ * scanned row this run did not drop for being out of shard/cell/titles-
+ * filter/limit, i.e. every row `intended` counts -- to
+ * `${PLAN_OUT}/plan-slot-${SLOT}.ndjson`, one JSON object per line:
+ *   action    "resolve-to-c-patch" | "resolve-to-h-patch" |
+ *             "resolve-to-h-relocate" | "collapse" | "leave" | "refused" |
+ *             "failed"
+ *   reason    the named bucket (verdict.reason / the LEAVE/REFUSED name)
+ *   id, source, title, price, soldAt, cardId, hobbyiqCardId   the row's own
+ *             identity + sale fields, read verbatim off `doc`
+ *   winner    the candidate id this row resolved/would resolve to, or null
+ *   winnerCatalogPlayer, winnerCatalogSource   the winning candidate's own
+ *             catalog row playerName/source (its checklist authority), or
+ *             null when there is no winner (LEAVE/REFUSED/FAILED)
+ *   titlePlayerGuess   the SAME guessTitlePlayer() this lane's own title
+ *             veto already computed, so the file carries the evidence a
+ *             human needs without re-deriving it
+ *   twinId, twinSource   the OTHER document's id/source when this row was
+ *             REFUSED over a possible/proven physical-sale twin, else null
+ * This is written into the SAME fixed path the runner already uploads as
+ * part of this lane's artifact (see backfill-runner.yml's own "Upload the
+ * resolve-split-identity-parks log" step) -- no new upload-artifact step, no
+ * new workflow_dispatch input.
+ *
  * Requires dist/ (splitIdentityWriteGuard, catalogAuthority.service.js,
  * playerIdentityKey.js) and scripts/lib (relocate-sold-comp, runner-budget,
  * runner-shard-scope, two-sport-athletes, sport-title-evidence).
  */
 "use strict";
 const path = require("path");
+const fs = require("node:fs");
 const crypto = require("node:crypto");
 const backend = path.resolve(__dirname, "..");
 
@@ -262,6 +299,13 @@ const STARTED = Date.now();
 const CLOCK = budget({ minutes: 110, reserveMs: 30 * 1000, verifyMs: 5 * 60 * 1000, startedAt: STARTED });
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 8));
 const LIMIT = Number(process.env.LIMIT || 0);
+
+// ── PLAN_OUT (module header). A fixed directory the runner sets, guarded on
+// script name -- not a new workflow_dispatch input. Empty means "no plan
+// file" (a local operator run, or a test harness that never wires it) --
+// the run still prints its capped banner exactly as before; only the full
+// machine-readable audit trail is skipped.
+const PLAN_OUT = str(process.env.PLAN_OUT);
 
 const SHARD_SCOPE = runnerShardScope({ label: "resolve-split-identity-parks" });
 const shardOf = (key) => parseInt(crypto.createHash("sha1").update(String(key)).digest("hex").slice(0, 8), 16) % SHARD_SCOPE.SLOTS;
@@ -298,7 +342,40 @@ const SCOPE_REJECTED = SCOPE_IS_ALL ? [] : RAW_SCOPE.filter((p) => !CELL_RE.test
 // unused by revert-set-sport-repair.cjs but wired here because a pilot
 // dispatch narrowing to one product family (e.g. "topps now") is a natural
 // operator move on a lane this large. Empty means no filter.
-const TITLES_FILTER = csv(process.env.TITLES).map(lower);
+//
+// EXCLUDE-BY-WINNER (optional, riding the SAME `titles` input rather than a
+// new one -- workflow_dispatch is at its 25-input cap). A single token,
+// `exclude-winner:<id>[,<id>...]`, names one or more WINNER candidate ids
+// (the full hiq: slug either H or C would resolve/relocate a row onto) an
+// operator wants this run to leave alone -- e.g. a product an acquisition
+// freeze covers, or a cell a human is mid-review on. A row whose verdict
+// would otherwise resolve to an excluded winner is LEAVEd instead, named
+// `excluded-by-operator`, counted and reconciled exactly like every other
+// named LEAVE bucket -- never silently dropped from the run's own math.
+//
+// Recognised ONLY when the token starts with the literal prefix
+// `exclude-winner:` (case-insensitive) -- anything else is read as the
+// ordinary title-substring filter, unchanged. The two are mutually
+// exclusive on one dispatch (this lane has no third value for "both"), and
+// that is fine: a pilot narrowing by product family and a pilot excluding a
+// winner are two different operator intents, never issued in the same
+// dispatch today. Winner ids are hiq: slugs, which themselves contain
+// colons, so this is parsed OUT OF the raw (pre-lowercased, pre-csv-split)
+// env value rather than reusing the generic `csv().map(lower)` pipeline,
+// which would mangle the prefix's own colon.
+//
+// `parseTitlesInput` is pure (no process.env read) so it can be unit tested
+// directly; the module-scope constants below are its one, real call.
+const EXCLUDE_WINNER_PREFIX = /^exclude-winner:/i;
+function parseTitlesInput(raw) {
+  const rawStr = str(raw);
+  if (EXCLUDE_WINNER_PREFIX.test(rawStr)) {
+    const excludedWinners = new Set(csv(rawStr.replace(EXCLUDE_WINNER_PREFIX, "")));
+    return { excludedWinners, titlesFilter: [] };
+  }
+  return { excludedWinners: new Set(), titlesFilter: csv(rawStr).map(lower) };
+}
+const { excludedWinners: EXCLUDED_WINNERS, titlesFilter: TITLES_FILTER } = parseTitlesInput(process.env.TITLES);
 
 /** Unset every park field on a resolve. Read from splitIdentityWriteGuard.ts's
  *  GuardedSoldCompDoc and relocate-pool-rows-by-list.cjs's own PARK stamp --
@@ -893,6 +970,7 @@ async function main() {
 
   console.log(`  scope            ${SCOPE_IS_ALL ? "all-splits (every parked split-identity row this lane can reach)" : SCOPE_CELLS.join(", ")}`);
   if (TITLES_FILTER.length) console.log(`  titles filter     ${TITLES_FILTER.join(", ")}`);
+  if (EXCLUDED_WINNERS.size) console.log(`  exclude-winner    ${[...EXCLUDED_WINNERS].join(", ")}`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  ${CLOCK.describe()}`);
   console.log("");
@@ -921,6 +999,72 @@ async function main() {
     if (map[k].length < cap) map[k].push(line);
   };
   let stoppedAtBudget = false;
+
+  // ── PLAN_OUT: one NDJSON record per in-scope row, written into the SAME
+  // fixed path the runner already uploads (see module header). A synchronous
+  // append -- this lane's own CONCURRENCY is bounded (default 8), so a
+  // per-row fs.appendFileSync is never a bottleneck next to a Cosmos round
+  // trip, and synchronous means no write can be lost to an unflushed buffer
+  // if the process is killed at its own budget boundary.
+  let planFd = null;
+  if (PLAN_OUT) {
+    try {
+      fs.mkdirSync(PLAN_OUT, { recursive: true });
+      const planPath = path.join(PLAN_OUT, `plan-slot-${SHARD_SCOPE.SLOT}.ndjson`);
+      // Truncate at the START of a run (not append across relaunches) --
+      // each relaunch's own selection is disjoint from the last (a row this
+      // run resolves drops out of the next run's own query), so a
+      // continuation's plan file describes ONLY the rows THIS invocation
+      // reached, same scope discipline the banner's own 'scanned' line
+      // documents in its LIVE-COUNT NOTE below.
+      planFd = fs.openSync(planPath, "w");
+      console.log(`  plan file         ${planPath}`);
+    } catch (e) {
+      console.log(`\n::warning::could not open PLAN_OUT (${PLAN_OUT}): ${e?.message}`);
+      planFd = null;
+    }
+  }
+  let planRowsWritten = 0;
+  /**
+   * Write ONE plan record. `doc` is the row this run is deciding; `action`
+   * is one of resolve-to-c-patch/resolve-to-h-patch/resolve-to-h-relocate/
+   * collapse/leave/refused/failed; `reason` is the named bucket (verdict
+   * reason, or the LEAVE/REFUSED bucket name); `extra` carries the winner +
+   * catalog-player + twin fields documented in the module header, whichever
+   * apply to this outcome (undefined fields serialise as omitted, never a
+   * stray `null` key on rows that never had a winner).
+   */
+  function emitPlanRow(doc, action, reason, extra = {}) {
+    planRowsWritten++;
+    if (!planFd) return;
+    const record = {
+      action, reason,
+      id: doc?.id ?? null, source: doc?.source ?? null, title: doc?.title ?? null,
+      price: doc?.price ?? null, soldAt: doc?.soldAt ?? null,
+      cardId: doc?.cardId ?? null, hobbyiqCardId: doc?.hobbyiqCardId ?? null,
+      winner: extra.winner ?? null,
+      winnerCatalogPlayer: extra.winnerCatalogPlayer ?? null,
+      winnerCatalogSource: extra.winnerCatalogSource ?? null,
+      titlePlayerGuess: extra.titlePlayerGuess ?? null,
+      twinId: extra.twinId ?? null, twinSource: extra.twinSource ?? null,
+    };
+    try { fs.appendFileSync(planFd, JSON.stringify(record) + "\n"); }
+    catch (e) { console.log(`\n::warning::PLAN_OUT write failed for ${doc?.id}: ${e?.message}`); }
+  }
+
+  // ── ROLLUP (banner-readable, no file needed to see the SHAPE of a run).
+  // fromWinner: keyed on "<hobbyiqCardId>" + ROLLUP_DELIM + "<winner>" --
+  // top 40 pairs by count. neitherSideNames: keyed on "<cardId-side
+  // product>" + ROLLUP_DELIM + "<hobbyiqCardId-side product>" for the
+  // `neither-side-names-the-player` bucket only -- top 25 combos.
+  // ROLLUP_DELIM (the literal codepoint U+0000, never found in a slug or
+  // a product name) is the join separator so a product name containing
+  // "->" or a comma can never be misparsed back into two fields when the
+  // key is split back apart for the banner.
+  const ROLLUP_DELIM = "\u0000";
+  const fromWinnerRollup = new Map();
+  const neitherSideRollup = new Map();
+  const bumpRollup = (m, k) => m.set(k, (m.get(k) || 0) + 1);
 
   /** Point read + memoise a card_catalog row by id (partition key IS the id
    *  for an hiq: slug). Caches the IN-FLIGHT PROMISE, not the resolved
@@ -1054,6 +1198,7 @@ async function main() {
     if (isPinnedOrFlagged(doc)) {
       bumpReason(s.leave, "pinned-or-flagged");
       pushExample(leaveExamples, "pinned-or-flagged", `  ${doc.id}@${doc.cardId}: verifiedByUser=${doc.verifiedByUser === true} flaggedWrong=${doc.flaggedWrong === true} excludedFromFmv=${doc.excludedFromFmv === true} source=${doc.source ?? "?"}`);
+      emitPlanRow(doc, "leave", "pinned-or-flagged");
       return;
     }
 
@@ -1064,6 +1209,7 @@ async function main() {
     if (!segmentsOf(H) || !segmentsOf(C) || !hSport || !cSport) {
       bumpReason(s.leave, "malformed-candidate-id");
       pushExample(leaveExamples, "malformed-candidate-id", `  ${doc.id}@${doc.cardId}: cardId=${C} hobbyiqCardId=${H}`);
+      emitPlanRow(doc, "leave", "malformed-candidate-id");
       return;
     }
 
@@ -1075,6 +1221,7 @@ async function main() {
     } catch (e) {
       s.failed++;
       failures.push(`  FAILED catalog read ${doc.id}@${doc.cardId} (H=${H} C=${C}): ${String(e?.stack ?? e?.message ?? e)}`);
+      emitPlanRow(doc, "failed", "catalog-read-failed");
       return;
     }
 
@@ -1086,6 +1233,12 @@ async function main() {
     if (verdict.verdict === "leave") {
       bumpReason(s.leave, verdict.reason);
       pushExample(leaveExamples, verdict.reason, `  ${doc.id}@${doc.cardId}: ${verdict.detail}`);
+      if (verdict.reason === "neither-side-names-the-player") {
+        const cProduct = setKeySegmentOf(C) || "(unknown)";
+        const hProduct = setKeySegmentOf(H) || "(unknown)";
+        bumpRollup(neitherSideRollup, `${cProduct}${ROLLUP_DELIM}${hProduct}`);
+      }
+      emitPlanRow(doc, "leave", verdict.reason);
       return;
     }
 
@@ -1093,6 +1246,21 @@ async function main() {
     const winnerRow = verdict.verdict === "resolve-to-h" ? hRow : cRow;
     const winnerSport = verdict.verdict === "resolve-to-h" ? hSport : cSport;
     const otherSport = verdict.verdict === "resolve-to-h" ? cSport : hSport;
+    const planExtra = { winner, winnerCatalogPlayer: winnerRow?.playerName ?? null, winnerCatalogSource: winnerRow?.source ?? null };
+
+    // ── EXCLUDE-BY-OPERATOR (optional, via titles=exclude-winner:<id>[,...]).
+    // A row that would otherwise resolve to an operator-named winner is left
+    // untouched instead -- named, counted, reconciled like every other LEAVE
+    // bucket. Checked AFTER the verdict (so an excluded winner is reported
+    // against the SAME winner id the verdict actually computed) but BEFORE
+    // the title veto and any write, so an excluded row never reaches Cosmos.
+    if (EXCLUDED_WINNERS.has(winner)) {
+      bumpReason(s.leave, "excluded-by-operator");
+      pushExample(leaveExamples, "excluded-by-operator", `  ${doc.id}@${doc.cardId}: winner ${winner} is named in this run's exclude-winner list -- left parked untouched`);
+      bumpRollup(fromWinnerRollup, `${doc.hobbyiqCardId}${ROLLUP_DELIM}${winner}`);
+      emitPlanRow(doc, "leave", "excluded-by-operator", planExtra);
+      return;
+    }
 
     // ── TITLE VETO: never a decider, only a refusal of a checklist-backed
     // winner the title actively contradicts.
@@ -1108,8 +1276,13 @@ async function main() {
     if (veto.vetoed) {
       bumpReason(s.leave, "title-contradicts-winner");
       pushExample(leaveExamples, "title-contradicts-winner", `  ${doc.id}@${doc.cardId}: ${veto.detail}`);
+      emitPlanRow(doc, "leave", "title-contradicts-winner", { ...planExtra, titlePlayerGuess: guessTitlePlayer(doc.title, titleDeps) });
       return;
     }
+
+    // Every genuine resolve (never excluded, never vetoed) rolls up here --
+    // the SAME winner every write shape below converges on.
+    bumpRollup(fromWinnerRollup, `${doc.hobbyiqCardId}${ROLLUP_DELIM}${winner}`);
 
     // ── ALREADY AT TARGET: cardId, hobbyiqCardId and sport already all
     // equal the winner -- some earlier partial run or unrelated fix already
@@ -1149,6 +1322,7 @@ async function main() {
       if (guardVerdict.verdict === "park") {
         bumpReason(s.refused, "guard-parked");
         pushExample(refuseExamples, "guard-parked", `  ${doc.id}@${doc.cardId} -> ${winner}: ${guardVerdict.detail}`);
+        emitPlanRow(doc, "refused", "guard-parked", planExtra);
         return;
       }
 
@@ -1177,6 +1351,7 @@ async function main() {
             : `a row matching this sale's price+soldAt-day already resides at this SAME partition under a different id (${patchTwin.id} source=${patchTwin.source ?? "?"}), but NEITHER doc proves a shared external listing id (this=${listingIdOf(doc) || "(none)"} source=${doc.source ?? "?"}, other=${listingIdOf(patchTwin) || "(none)"}) -- could be a genuine twin OR two distinct sales (e.g. two different $1.99 raw copies sold the same day); left parked for a human, never resolved on a guess`;
           bumpReason(s.refused, reason);
           pushExample(refuseExamples, reason, `  ${doc.id}@${doc.cardId} (source=${doc.source ?? "?"}, title="${str(doc.title).slice(0, 60)}") vs ${patchTwin.id}@${patchTwin.cardId} (source=${patchTwin.source ?? "?"}, title="${str(patchTwin.title).slice(0, 60)}"): ${detail}`);
+          emitPlanRow(doc, "refused", reason, { ...planExtra, twinId: patchTwin.id ?? null, twinSource: patchTwin.source ?? null });
           return;
         }
 
@@ -1215,6 +1390,7 @@ async function main() {
             if (planEtag && fresh?.resource?._etag && fresh.resource._etag !== planEtag) {
               bumpReason(s.refused, "stale-since-plan");
               pushExample(refuseExamples, "stale-since-plan", `  ${doc.id}@${doc.cardId}: patch refused -- a re-read immediately before write found the document already changed since this run's own planning read; nothing written`);
+              emitPlanRow(doc, "refused", "stale-since-plan", planExtra);
               return;
             }
           } catch (e) {
@@ -1235,6 +1411,7 @@ async function main() {
             if (e?.code === 412 || e?.statusCode === 412) {
               bumpReason(s.refused, "stale-since-plan");
               pushExample(refuseExamples, "stale-since-plan", `  ${doc.id}@${doc.cardId}: patch refused (412) -- the document changed since this run's own planning read; nothing written`);
+              emitPlanRow(doc, "refused", "stale-since-plan", planExtra);
               return;
             }
             throw e;
@@ -1246,6 +1423,7 @@ async function main() {
         if (resolveExamples.length < 60) {
           resolveExamples.push(`  PATCH   ${str(doc.title).slice(0, 70)} | ${doc.cardId} | ${doc.hobbyiqCardId} -> ${winner} (${verdict.reason}, catalog player: ${winnerRow?.playerName ?? "?"})`);
         }
+        emitPlanRow(doc, verdict.verdict === "resolve-to-h" ? "resolve-to-h-patch" : "resolve-to-c-patch", verdict.reason, planExtra);
         return;
       }
 
@@ -1258,10 +1436,12 @@ async function main() {
           s.collapsedOntoResident++;
           bump(byCell, cellKey);
           if (resolveExamples.length < 60) resolveExamples.push(`  COLLAPSE ${str(doc.title).slice(0, 70)} -- same sale already resident at ${destCardId}; wrong-partition copy deleted`);
+          emitPlanRow(doc, "collapse", "same-id-resident", { ...planExtra, twinId: resident.id ?? null, twinSource: resident.source ?? null });
           return;
         }
         bumpReason(s.refused, "destination-collision");
         pushExample(refuseExamples, "destination-collision", `  ${doc.id}@${doc.cardId} -> ${destCardId}: a DIFFERENT sale (by content hash) already resides at the destination; NEITHER moved -- resident price=${resident.price ?? "?"} soldAt=${resident.soldAt ?? "?"} vs incoming price=${doc.price ?? "?"} soldAt=${doc.soldAt ?? "?"}`);
+        emitPlanRow(doc, "refused", "destination-collision", { ...planExtra, twinId: resident.id ?? null, twinSource: resident.source ?? null });
         return;
       }
 
@@ -1298,10 +1478,12 @@ async function main() {
             s.collapsedOntoResident++;
             bump(byCell, cellKey);
             if (resolveExamples.length < 60) resolveExamples.push(`  COLLAPSE ${str(doc.title).slice(0, 70)} -- a physical-sale twin (${physicalTwin.id}) already resides at ${destCardId}, both share listing id "${listingIdOf(doc)}"; this copy (${doc.id}) deleted, one survivor remains`);
+            emitPlanRow(doc, "collapse", "physical-sale-twin-proven", { ...planExtra, twinId: physicalTwin.id ?? null, twinSource: physicalTwin.source ?? null });
             return;
           }
           bumpReason(s.refused, "possible-twin-at-destination");
           pushExample(refuseExamples, "possible-twin-at-destination", `  ${doc.id}@${doc.cardId} (source=${doc.source ?? "?"}, title="${str(doc.title).slice(0, 60)}") -> ${destCardId} vs resident ${physicalTwin.id} (source=${physicalTwin.source ?? "?"}, title="${str(physicalTwin.title).slice(0, 60)}"): same price+soldAt-day+contentHash, but NEITHER doc proves a shared external listing id (this=${listingIdOf(doc) || "(none)"}, other=${listingIdOf(physicalTwin) || "(none)"}) -- could be a genuine twin OR two distinct sales (e.g. two different $1.99 raw copies sold the same day); left PARKED, never moved or deleted on a guess`);
+          emitPlanRow(doc, "refused", "possible-twin-at-destination", { ...planExtra, twinId: physicalTwin.id ?? null, twinSource: physicalTwin.source ?? null });
           return;
         }
         // A physical-sale-signature (price+soldAt-day) match that FAILS the
@@ -1328,6 +1510,7 @@ async function main() {
           if (planEtagForDrop && fresh?.resource?._etag && fresh.resource._etag !== planEtagForDrop) {
             bumpReason(s.refused, "stale-since-plan");
             pushExample(refuseExamples, "stale-since-plan", `  ${doc.id}@${doc.cardId}: relocate refused -- a re-read immediately before write found the document already changed since this run's own planning read; nothing written`);
+            emitPlanRow(doc, "refused", "stale-since-plan", planExtra);
             return;
           }
         } catch (e) {
@@ -1341,16 +1524,19 @@ async function main() {
       if (res.guard?.verdict === "park") {
         bumpReason(s.refused, "guard-parked");
         pushExample(refuseExamples, "guard-parked", `  ${doc.id}@${doc.cardId}: ${res.error ?? res.guard.reason}`);
+        emitPlanRow(doc, "refused", "guard-parked", planExtra);
         return;
       }
       if (res.staleSincePlan?.length) {
         bumpReason(s.refused, "stale-since-plan");
         pushExample(refuseExamples, "stale-since-plan", `  ${doc.id}@${doc.cardId}: relocate's source delete refused (412) -- the document changed since this run's own planning read; the new copy at ${destCardId} was written, the OLD copy at ${doc.cardId} was NOT deleted (a duplicate this lane does not retry past)`);
+        emitPlanRow(doc, "refused", "stale-since-plan", planExtra);
         return;
       }
       if (!res.ok && res.stage !== "dry-run") {
         s.failed++;
         failures.push(`  FAILED relocate ${doc.id}@${doc.cardId} -> ${destCardId}: ${res.error ?? "unknown"}`);
+        emitPlanRow(doc, "failed", "relocate-failed", planExtra);
         return;
       }
       s.resolveToHByRelocate++;
@@ -1358,9 +1544,11 @@ async function main() {
       if (resolveExamples.length < 60) {
         resolveExamples.push(`  RELOCATE ${str(doc.title).slice(0, 70)} | ${doc.cardId} | ${doc.hobbyiqCardId} -> ${winner} (${verdict.reason}, catalog player: ${winnerRow?.playerName ?? "?"})`);
       }
+      emitPlanRow(doc, "resolve-to-h-relocate", verdict.reason, planExtra);
     } catch (e) {
       s.failed++;
       failures.push(`  FAILED resolve ${doc.id}@${doc.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
+      emitPlanRow(doc, "failed", "unexpected-error", planExtra);
     }
     });
   }
@@ -1414,19 +1602,45 @@ async function main() {
       console.log(`    ${String(n).padStart(9)}  ${k}`);
     }
   }
+
+  // ── ROLLUPS -- the SHAPE of a run readable without opening the plan file.
+  if (fromWinnerRollup.size) {
+    console.log(`\n  top 40 (hobbyiqCardId -> winner) pairs by row count:`);
+    const rows = [...fromWinnerRollup.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40);
+    for (const [key, n] of rows) {
+      const [fromId, toId] = key.split(ROLLUP_DELIM);
+      console.log(`    ${String(n).padStart(7)}  ${fromId} -> ${toId}`);
+    }
+  }
+  if (neitherSideRollup.size) {
+    console.log(`\n  top 25 (cardId-side product, hobbyiqCardId-side product) combos for neither-side-names-the-player:`);
+    const rows = [...neitherSideRollup.entries()].sort((a, b) => b[1] - a[1]).slice(0, 25);
+    for (const [key, n] of rows) {
+      const [cProduct, hProduct] = key.split(ROLLUP_DELIM);
+      console.log(`    ${String(n).padStart(7)}  (${cProduct}, ${hProduct})`);
+    }
+  }
+
   if (resolveExamples.length) {
     console.log(`\n  RESOLVE examples (up to 60, for eyeballing -- title | cardId | hobbyiqCardId -> winner + catalog player):`);
     for (const e of resolveExamples) console.log(e);
   }
   for (const [reason, list] of Object.entries(leaveExamples)) {
-    console.log(`\n  LEAVE (${reason}), every one listed (${f(list.length)} shown, ${f(s.leave[reason] || 0)} total -- full list in the uploaded artifact):`);
+    console.log(`\n  LEAVE (${reason}), every one listed (${f(list.length)} shown, ${f(s.leave[reason] || 0)} total -- full list in the uploaded plan file, action=leave reason=${reason}):`);
     for (const l of list) console.log(l);
   }
   for (const [reason, list] of Object.entries(refuseExamples)) {
-    console.log(`\n  REFUSED (${reason}), every one listed (${f(list.length)} shown, ${f(s.refused[reason] || 0)} total -- full list in the uploaded artifact):`);
+    console.log(`\n  REFUSED (${reason}), every one listed (${f(list.length)} shown, ${f(s.refused[reason] || 0)} total -- full list in the uploaded plan file, action=refused reason=${reason}):`);
     for (const l of list) console.log(l);
   }
   if (failures.length) { console.log(`\n  FAILURES (${f(failures.length)}):`); for (const fl of failures) console.log(fl); }
+
+  if (planFd) {
+    console.log(`\n  plan file rows written  ${f(planRowsWritten)}  (one NDJSON record per in-scope row -- resolve/collapse/leave/refused/failed, every one auditable, not just the samples above)`);
+    try { fs.closeSync(planFd); } catch { /* best effort */ }
+  } else if (PLAN_OUT) {
+    console.log(`\n  ::warning::PLAN_OUT was set but no plan file was opened -- see the warning above.`);
+  }
 
   console.log("");
   console.log(`  LIVE-COUNT NOTE: 'scanned' above is what THIS run's paged walk read (bounded`);
@@ -1473,7 +1687,8 @@ module.exports = {
   withSportSegment, cellsOf, checklistMatchOf, multiPlayerKeysOf,
   judgeSplitIdentityVerdict, titleVetoes, guessTitlePlayer, playerIdentityTokens,
   physicalSaleKeyOf, listingIdOf, sameListingIdentity, isPinnedOrFlagged, USER_SEED_SOURCES,
-  ALL_SPLITS, CELL_RE, PARK_FIELDS,
+  ALL_SPLITS, CELL_RE, PARK_FIELDS, EXCLUDE_WINNER_PREFIX, EXCLUDED_WINNERS, TITLES_FILTER,
+  parseTitlesInput,
 };
 
 if (require.main === module) {

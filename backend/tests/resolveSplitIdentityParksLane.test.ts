@@ -991,3 +991,203 @@ describe("resolve-split-identity-parks -- REVIEW #3 (MEDIUM): end-to-end conditi
     expect(report.out).toMatch(/WOULD RESOLVE-TO-H \(relocate\)\s+1/);
   });
 });
+
+describe("resolve-split-identity-parks -- PLAN_OUT: the full machine-readable plan file", () => {
+  function readPlan(dir: string, slot = 0): Array<Record<string, unknown>> {
+    const p = path.join(dir, `plan-slot-${slot}.ndjson`);
+    const text = fs.readFileSync(p, "utf8");
+    return text.split("\n").filter((l) => l.trim().length).map((l) => JSON.parse(l));
+  }
+
+  it("writes exactly one NDJSON record per in-scope row -- a mixed batch of resolve/leave/refused", () => {
+    const planDir = fs.mkdtempSync(path.join(tmp, "plan-"));
+    const resolveRow = { ...VW3_SALE, id: "plan-resolve-1" };
+    const leaveRow = { ...VW3_SALE, id: "plan-leave-1", cardId: "hiq:baseball:2024:topps:9:base:no-auto", hobbyiqCardId: "hiq:basketball:2024:topps:9:base:no-auto" };
+    const refusedRow = {
+      ...VW3_SALE, id: "plan-refused-1",
+      cardId: "hiq:baseball:2023:topps::base:no-auto",
+      hobbyiqCardId: "hiq:basketball:2023:topps::base:no-auto",
+    };
+    const malformedChecklistRow = { id: "hiq:basketball:2023:topps::base:no-auto", cardId: "hiq:basketball:2023:topps::base:no-auto", source: "checklistcenter", playerName: "Victor Wembanyama" };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true", PLAN_OUT: planDir }, {
+      sales: [resolveRow, leaveRow, refusedRow],
+      catalog: [VW3_CHECKLIST_BASKETBALL, malformedChecklistRow],
+    });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RECONCILE BALANCES/);
+
+    const plan = readPlan(planDir);
+    expect(plan.length).toBe(3);
+    const byId = new Map(plan.map((row) => [row.id, row]));
+
+    expect(byId.get("plan-resolve-1")).toMatchObject({
+      action: "resolve-to-h-relocate", id: "plan-resolve-1",
+      cardId: VW3_SALE.cardId, hobbyiqCardId: VW3_SALE.hobbyiqCardId,
+      winner: "hiq:basketball:2023:topps:vw3:base:no-auto",
+      winnerCatalogPlayer: "Victor Wembanyama", winnerCatalogSource: "checklistcenter",
+    });
+
+    expect(byId.get("plan-leave-1")).toMatchObject({ action: "leave", reason: "neither-side-names-the-player", id: "plan-leave-1", winner: null });
+
+    expect(byId.get("plan-refused-1")).toMatchObject({ action: "refused", reason: "guard-parked", id: "plan-refused-1" });
+  });
+
+  it("the plan file's own row count reconciles with the banner's written+skipped+refused+failed total", () => {
+    const planDir = fs.mkdtempSync(path.join(tmp, "plan-"));
+    const rows = Array.from({ length: 5 }, (_, i) => ({
+      ...VW3_SALE, id: `plan-recon-${i}`,
+      cardId: `hiq:baseball:2024:topps:${i}:base:no-auto`,
+      hobbyiqCardId: `hiq:basketball:2024:topps:${i}:base:no-auto`,
+    }));
+    // Only rows 0 and 2 get a catalog match (RESOLVE); the rest LEAVE.
+    const catalog = [0, 2].map((i) => ({
+      id: `hiq:basketball:2024:topps:${i}:base:no-auto`, cardId: `hiq:basketball:2024:topps:${i}:base:no-auto`,
+      source: "checklistcenter", playerName: "Victor Wembanyama",
+    }));
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true", PLAN_OUT: planDir }, { sales: rows, catalog });
+    expect(r.code).toBe(0);
+    const plan = readPlan(planDir);
+    expect(plan.length).toBe(5);
+    const intendedMatch = r.out.match(/intended \(in scope, this shard\)\s+([\d,]+)/);
+    expect(intendedMatch).toBeTruthy();
+    expect(Number(intendedMatch![1].replace(/,/g, ""))).toBe(plan.length);
+  });
+
+  it("does NOT write a plan file when PLAN_OUT is unset -- a local operator run is unaffected", () => {
+    const r = drive({ SCOPE: "all-splits" }, { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/plan file/);
+  });
+
+  it("REPORT and APPLY write the SAME plan rows (same action/reason/winner) for the same fixture -- only the write lands differently", () => {
+    const reportDir = fs.mkdtempSync(path.join(tmp, "plan-report-"));
+    const applyDir = fs.mkdtempSync(path.join(tmp, "plan-apply-"));
+    const sale = { ...VW3_SALE, id: "plan-parity-1" };
+    const fixture = { sales: [sale], catalog: [VW3_CHECKLIST_BASKETBALL] };
+    const report = drive({ SCOPE: "all-splits", PLAN_OUT: reportDir }, fixture);
+    const apply = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true", PLAN_OUT: applyDir }, fixture);
+    expect(report.code).toBe(0);
+    expect(apply.code).toBe(0);
+    const reportPlan = readPlan(reportDir);
+    const applyPlan = readPlan(applyDir);
+    expect(reportPlan.length).toBe(1);
+    expect(applyPlan.length).toBe(1);
+    // REPORT's action is still the ordinary resolve action name (the plan
+    // records WHAT WOULD HAPPEN / DID HAPPEN identically; only the banner's
+    // own "WOULD RESOLVE" vs "RESOLVE" prefix differs, and the write itself).
+    expect(reportPlan[0].action).toBe(applyPlan[0].action);
+    expect(reportPlan[0].reason).toBe(applyPlan[0].reason);
+    expect(reportPlan[0].winner).toBe(applyPlan[0].winner);
+  });
+});
+
+describe("resolve-split-identity-parks -- banner rollups: (hobbyiqCardId -> winner) pairs and neither-side-names-the-player combos", () => {
+  it("prints a top-40 (hobbyiqCardId -> winner) rollup line for a resolved row", () => {
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/top 40 \(hobbyiqCardId -> winner\) pairs by row count/);
+    expect(r.out).toMatch(/hiq:basketball:2023:topps:vw3:base:no-auto -> hiq:basketball:2023:topps:vw3:base:no-auto/);
+  });
+
+  it("aggregates repeated (hobbyiqCardId -> winner) pairs into one rollup row with the summed count", () => {
+    const rows = Array.from({ length: 3 }, (_, i) => ({ ...VW3_SALE, id: `rollup-${i}` }));
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: rows, catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/\s+3\s+hiq:basketball:2023:topps:vw3:base:no-auto -> hiq:basketball:2023:topps:vw3:base:no-auto/);
+  });
+
+  it("prints a top-25 (cardId-side product, hobbyiqCardId-side product) rollup line for neither-side-names-the-player", () => {
+    const sale = { ...VW3_SALE, id: "neither-rollup-1" };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/LEAVE: neither-side-names-the-player\s+1/);
+    expect(r.out).toMatch(/top 25 \(cardId-side product, hobbyiqCardId-side product\) combos for neither-side-names-the-player/);
+    expect(r.out).toMatch(/\(topps, topps\)/);
+  });
+
+  it("does NOT print either rollup section when there is nothing to roll up", () => {
+    const r = drive({ SCOPE: "basketball:1901" }, { sales: [], catalog: [] });
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/top 40 \(hobbyiqCardId -> winner\)/);
+    expect(r.out).not.toMatch(/top 25 \(cardId-side product/);
+  });
+});
+
+describe("resolve-split-identity-parks -- exclude-by-operator via titles=exclude-winner:<id>[,...]", () => {
+  it("LEAVEs (excluded-by-operator) a row whose winner is named in the exclude list, instead of resolving it", () => {
+    const r = drive(
+      { SCOPE: "all-splits", BACKFILL_APPLY: "true", TITLES: "exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto" },
+      { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/LEAVE: excluded-by-operator\s+1/);
+    expect(r.out).not.toMatch(/RESOLVE-TO-H \(relocate\)\s+1/);
+    expect(r.led.salesPatches.length).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+  });
+
+  it("does NOT exclude a row whose winner is a DIFFERENT id than the ones named", () => {
+    const r = drive(
+      { SCOPE: "all-splits", BACKFILL_APPLY: "true", TITLES: "exclude-winner:hiq:basketball:1999:topps:1:base:no-auto" },
+      { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RESOLVE-TO-H \(relocate\)\s+1/);
+    expect(r.out).not.toMatch(/LEAVE: excluded-by-operator/);
+  });
+
+  it("excludes multiple winners named comma-separated in one exclude-winner: token", () => {
+    const saleA = { ...VW3_SALE, id: "exclude-multi-a" };
+    const saleB = {
+      id: "cardhedge::exclude-multi-b",
+      cardId: "hiq:football:1989:score:257:base:no-auto",
+      hobbyiqCardId: "hiq:baseball:1989:score:257:base:no-auto",
+      sport: "baseball",
+      identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z",
+      identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity",
+      identityUnverifiedDetail: "no source attests either side",
+      title: "1989 Score Barry Sanders Detroit Lions Rookie RC #257",
+      playerName: "Barry Sanders", price: 40, soldAt: "2026-06-02T00:00:00.000Z",
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "cardhedge", cardNumber: "257",
+    };
+    const catalogFootball = { id: "hiq:football:1989:score:257:base:no-auto", cardId: "hiq:football:1989:score:257:base:no-auto", source: "checklistcenter", playerName: "Barry Sanders" };
+    const r = drive(
+      {
+        SCOPE: "all-splits", BACKFILL_APPLY: "true",
+        TITLES: "exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto,hiq:football:1989:score:257:base:no-auto",
+      },
+      { sales: [saleA, saleB], catalog: [VW3_CHECKLIST_BASKETBALL, catalogFootball] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/LEAVE: excluded-by-operator\s+2/);
+    expect(r.led.salesPatches.length).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("excluded-by-operator is counted in RECONCILE like every other named LEAVE bucket", () => {
+    const r = drive(
+      { SCOPE: "all-splits", BACKFILL_APPLY: "true", TITLES: "exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto" },
+      { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RECONCILE BALANCES/);
+    expect(r.out).not.toMatch(/A row is unaccounted for/);
+  });
+
+  it("the exclude-winner: value takes an ORDINARY title-substring filter's place -- it does not ALSO filter by substring", () => {
+    // exclude-winner: is parsed from the raw TITLES value BEFORE the
+    // generic csv/lower substring-filter pipeline runs, so a dispatch using
+    // the exclude syntax applies no title-substring narrowing at all -- the
+    // full scope is still walked, just with the named winner(s) left alone.
+    const other = { ...VW3_SALE, id: "exclude-syntax-other", cardId: "hiq:baseball:2024:topps:1:base:no-auto", hobbyiqCardId: "hiq:basketball:2024:topps:1:base:no-auto" };
+    const catalogOther = { id: "hiq:basketball:2024:topps:1:base:no-auto", cardId: "hiq:basketball:2024:topps:1:base:no-auto", source: "checklistcenter", playerName: "Victor Wembanyama" };
+    const r = drive(
+      { SCOPE: "all-splits", BACKFILL_APPLY: "true", TITLES: "exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto" },
+      { sales: [VW3_SALE, other], catalog: [VW3_CHECKLIST_BASKETBALL, catalogOther] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/LEAVE: excluded-by-operator\s+1/);
+    expect(r.out).toMatch(/RESOLVE-TO-H \(relocate\)\s+1/); // "other" is untouched by the exclude and still resolves
+  });
+});
