@@ -490,13 +490,28 @@ export async function fetchSales(
   to: string,
 ): Promise<CompRow[]> {
   const iter = container.items.query<CompRow>({
+    // R70 (owner ruling, 2026-09-19): a row PARKED by the write guard
+    // (`identityUnverified: true`) has an unverified identity and must not
+    // move a published index level, the same way a `flaggedWrong` row must
+    // not. Mirrors this query's own undefined-tolerant shape.
+    //
+    // R71 (owner ruling, 2026-09-19) deliberately does NOT extend the
+    // hobbyiqCardId carve-out here — same reasoning as
+    // marketMoversSnapshot.service.ts's raw-scan path: this query groups by
+    // `c.sport`, the row's own PRE-correction vendor-derived stamp, never by
+    // `c.hobbyiqCardId`. Admitting the carve-out would attribute a
+    // sport-segment split row to its WRONG (vendor) sport's index rather
+    // than its corrected one, which is not a fix — it is the same
+    // wrong-sport attribution R70 removed, just re-opened on this surface.
     query: `SELECT c.cardId, c.price, c.soldAt
             FROM c
             WHERE c.sport = @sport
               AND c.soldAt >= @from
               AND c.soldAt < @to
               AND c.price > 0
-              AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)`,
+              AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)
+              AND (NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv = false)
+              AND (NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified = false)`,
     parameters: [
       { name: "@sport", value: sport },
       { name: "@from", value: from },
