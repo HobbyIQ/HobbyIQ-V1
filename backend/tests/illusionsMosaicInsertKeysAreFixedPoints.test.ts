@@ -104,3 +104,36 @@ describe("2024 Panini Mosaic Football — eighteen named insert sets", () => {
     }
   });
 });
+
+describe("2024 Panini Select Football — two placeholder-named splits", () => {
+  // Beckett prints "Score Select Throwback" and "Snapshots" TWICE each, once
+  // per genuinely different 25-card roster, with no distinguishing word
+  // either time. #2337's converter splits the repeated header the moment
+  // its roster disagrees; the split's category is a numbered placeholder
+  // since the source never named the second listing. See productSetKeys.ts's
+  // own comment for the full rationale and the flag for Drew.
+  const SPLIT_KEYS = ["score-select-throwback-2", "snapshots-2"];
+
+  it("registers both placeholder splits", () => {
+    const missing = SPLIT_KEYS.filter((sub) => !isProductSetKey(`panini-select-${sub}`));
+    expect(missing).toEqual([]);
+  });
+
+  it("every split key is a normalizeSetKey FIXED POINT", () => {
+    const collapsed = SPLIT_KEYS
+      .map((sub) => `panini-select-${sub}`)
+      .filter((key) => normalizeSetKey(key) !== key)
+      .map((key) => `${key} -> ${normalizeSetKey(key)}`);
+    expect(collapsed).toEqual([]);
+  });
+
+  it("each nests under panini-select, distinct from its unsuffixed sibling", () => {
+    for (const sub of SPLIT_KEYS) {
+      const key = `panini-select-${sub}`;
+      expect(productParentOf(key), `${key} must nest under panini-select`).toBe("panini-select");
+      const sibling = key.replace(/-2$/, "");
+      expect(isProductSetKey(sibling), `${sibling} must also be registered (the first listing)`).toBe(true);
+      expect(key).not.toBe(sibling);
+    }
+  });
+});

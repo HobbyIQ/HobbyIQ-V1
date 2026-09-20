@@ -2324,6 +2324,43 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   S("panini-select-sparks", { family: "panini-select", parent: "panini-select" }),
 
   /**
+   * 2024 PANINI SELECT FOOTBALL -- TWO PLACEHOLDER-NAMED SPLITS, PENDING A
+   * REAL NAME (#2337, 2026-09-19).
+   *
+   * Beckett's own Inserts sheet prints the bare header "Score Select
+   * Throwback" TWICE for two genuinely different 25-card rosters (#1 Jalen
+   * Hurts, veterans; #1 Caleb Williams, rookies) with no distinguishing word
+   * either time, and "Snapshots" the same way (#1 CeeDee Lamb vs #1 Patrick
+   * Mahomes II). #2337's converter fix splits a repeated header into a
+   * second section the moment its incoming roster disagrees with what is
+   * already stored under that name -- doctrine already used everywhere else
+   * in this file (roster decides, not the label) -- but the SOURCE never
+   * gave the second listing its own name, so the split's category is a
+   * numbered placeholder (`-2`) rather than a real one.
+   *
+   * REGISTERED SO THE SPLIT ACTUALLY CLEARS THE COLLISION IT WAS MADE TO
+   * FIX: an unregistered split key still falls back to its unsuffixed
+   * sibling's own product-key address, which is the identical collision
+   * with a different label. Verified: registering these two drops #2337's
+   * offline planner result on this file from 832 unexplained id-collisions
+   * (three categories silently double-booked) to a fully-explained REFUSE
+   * -- these two keys named, nothing else.
+   *
+   *     panini-select-score-select-throwback-2   25 rows (rookies)
+   *     panini-select-snapshots-2                25 rows (rookies)
+   *
+   * FLAGGED FOR DREW, NOT SILENCED: `-2` is a placeholder, not a name
+   * Beckett ever printed. If a maintainer later identifies which named
+   * insert this rookie listing actually is (Select's own site or a Beckett
+   * price guide may call it something), re-key it under that name instead
+   * -- this entry exists so the rows are ADDRESSABLE and priced correctly
+   * in their own pool today, not because `-2` is the intended permanent
+   * spelling.
+   */
+  S("panini-select-score-select-throwback-2", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-snapshots-2", { family: "panini-select", parent: "panini-select" }),
+
+  /**
    * R67 (Drew, ruling round of 2026-09-19): 2024 PANINI SELECT FOOTBALL --
    * FOUR MORE NAMED INSERT ROOTS THE R60 GUARD DID NOT NEED.
    *
