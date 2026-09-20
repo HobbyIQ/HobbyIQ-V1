@@ -114,6 +114,19 @@ describe("2024 Panini Phoenix Football (Beckett S3) — REFUSE on this branch al
     expect(parallels.has("Wave")).toBe(true);
     expect(parallels.has("White Shimmer")).toBe(true);
   });
+
+  it("carries a heldRows gate — this package cannot be ingested half-right, even after keys are registered", () => {
+    const m = JSON.parse(
+      readFileSync(
+        join(SCRAPED_ROOT, "acq-2026-09-19-beckett-panini-phoenix-fb", "2024-panini-phoenix-football.manifest.json"),
+        "utf8",
+      ),
+    );
+    expect(m.heldRows).toBeDefined();
+    expect(m.heldRows.rows).toBe(16209);
+    expect(m.heldRows.reason).toMatch(/14 declared unnumbered base parallels/);
+    expect(m.heldRows.reason).toMatch(/converter defect/);
+  });
 });
 
 describe("2024 Panini Donruss Football, full workbook (Beckett S3) — REFUSE on this branch alone", () => {
@@ -209,6 +222,19 @@ describe("2025-26 Topps Holiday Basketball (Beckett S3) — REFUSE, converter de
     // The Base sheet's own instance is harmless -- it still lands on "base".
     const baseOddsLine = oddsLineSections.find((s: { sheet: string }) => s.sheet === "Base");
     expect(baseOddsLine.category).toBe("base");
+  });
+
+  it("carries a heldRows gate — this package cannot be ingested half-right, even after keys are registered", () => {
+    const m = JSON.parse(
+      readFileSync(
+        join(SCRAPED_ROOT, "acq-2026-09-19-beckett-topps-holiday-basketball", "2025-26-topps-holiday-basketball.manifest.json"),
+        "utf8",
+      ),
+    );
+    expect(m.heldRows).toBeDefined();
+    expect(m.heldRows.rows).toBe(4606);
+    expect(m.heldRows.reason).toMatch(/odds line read as section name/);
+    expect(m.heldRows.reason).toMatch(/Autographs sheet/);
   });
 });
 

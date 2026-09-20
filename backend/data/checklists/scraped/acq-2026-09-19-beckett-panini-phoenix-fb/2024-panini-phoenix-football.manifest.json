@@ -9,6 +9,10 @@
   "setKey": "panini-phoenix",
   "rowCount": 16209,
   "parallelColumnAuthoritative": true,
+  "heldRows": {
+    "rows": 16209,
+    "reason": "14 declared unnumbered base parallels (Hyper, Ice, International, Lazer, Orange, Pandora, Purple, Silver, plus the Orange/Purple Fade/Hyper/Lazer variants) emitted zero rows -- converter defect, ladder incomplete. A converter fix plus regeneration lifts this hold; do not ingest until the base parallel ladder is complete for every card."
+  },
   "sectionsReport": [
     {
       "sheet": "Base",

@@ -9,6 +9,10 @@
   "setKey": "topps-holiday",
   "rowCount": 4606,
   "parallelColumnAuthoritative": true,
+  "heldRows": {
+    "rows": 4606,
+    "reason": "odds line read as section name on the Autographs sheet -- 'Autographs' repeats as the sheet's own generic row-0 header across every subset, so the splitter falls back to the next line ('1:379 packs'), which is an odds line, not a real section name. Two categories (auto-1379-packs, auto-1379-packs-2) carry this artifact. A converter fix plus regeneration lifts this hold; do not ingest until the Autographs sheet's real subset names are recovered."
+  },
   "sectionsReport": [
     {
       "sheet": "Base",
