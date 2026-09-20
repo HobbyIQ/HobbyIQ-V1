@@ -305,6 +305,127 @@ describe("neverPricedBucket / sampleWindows / suggestedDispatchFor", () => {
   });
 });
 
+// ── LOAD SAFETY: sold_comps is 10k RU/s shared with production pricing ─────
+describe("makeGovernor -- the pacing governor, on a fake clock", () => {
+  const fake = () => {
+    let t = 1_000_000; const naps: number[] = [];
+    return { now: () => t, sleep: async (ms: number) => { naps.push(ms); t += ms; }, tick: (ms: number) => { t += ms; }, naps };
+  };
+
+  it("never sleeps while the 10 s window is under its allowance", async () => {
+    const c = fake();
+    const g = lane.makeGovernor({ targetRuPerSec: 1500, windowMs: 10_000, now: c.now, sleep: c.sleep });
+    for (let i = 0; i < 14; i++) { await g.pace(); g.record(1000); c.tick(100); } // 14,000 < 15,000
+    expect(c.naps).toEqual([]);
+  });
+
+  it("sleeps exactly until the oldest charges age out -- not a fixed nap", async () => {
+    const c = fake();
+    const g = lane.makeGovernor({ targetRuPerSec: 1500, windowMs: 10_000, now: c.now, sleep: c.sleep });
+    g.record(9000); c.tick(4000);   // t0
+    g.record(6000); c.tick(1000);   // t0+4s -> 15,000 in window: full
+    const slept = await g.pace();   // the 9,000 leaves the window at t0+10s, i.e. in 5s
+    expect(slept).toBe(5001);
+    expect(g.ruPerSecNow()).toBe(600); // only the 6,000 remains
+    expect(await g.pace()).toBe(0);
+  });
+
+  it("HOLDS the long-run average at the target however fast pages come back", async () => {
+    const c = fake();
+    const g = lane.makeGovernor({ targetRuPerSec: 1500, windowMs: 10_000, now: c.now, sleep: c.sleep });
+    const t0 = c.now(); let spent = 0;
+    for (let i = 0; i < 400; i++) { await g.pace(); g.record(500); spent += 500; c.tick(5); } // 100,000 RU/s if ungoverned
+    const avg = spent / ((c.now() - t0) / 1000);
+    expect(avg).toBeLessThanOrEqual(1500 * 1.15);
+    expect(g.stats().sleeps).toBeGreaterThan(0);
+    expect(g.stats().total).toBe(200_000);
+  });
+});
+
+describe("pagedQuery -- 429 back-off and the clean abort", () => {
+  const e429 = (retryAfterInMs?: number) => Object.assign(new Error("Request rate is large"), { code: 429, retryAfterInMs });
+
+  it("sleeps retryAfter x2, counts it, and re-asks for the SAME page", async () => {
+    let served = false; const naps: number[] = [];
+    const container = { items: { query: () => ({
+      hasMoreResults: () => !served,
+      fetchNext: async () => { if (naps.length < 2) throw e429(250); served = true; return { resources: [{ id: "a" }], requestCharge: 7 }; },
+    }) } };
+    const throttle = { count: 0, max: 20, sleptMs: 0, sleep: async (ms: number) => { naps.push(ms); } };
+    const rows: any[] = [];
+    const ru = await lane.pagedQuery(container, {}, (r: any[]) => { rows.push(...r); }, { throttle });
+    expect(naps).toEqual([500, 500]);
+    expect(throttle).toMatchObject({ count: 2, sleptMs: 1000 });
+    expect(rows).toEqual([{ id: "a" }]);
+    expect(ru).toBe(7);
+  });
+
+  it("a 429 with no retryAfter backs off 2 s, never zero", async () => {
+    let n = 0; const naps: number[] = [];
+    const container = { items: { query: () => ({ hasMoreResults: () => n < 2, fetchNext: async () => { if (n++ === 0) throw e429(); return { resources: [], requestCharge: 3 }; } }) } };
+    await lane.pagedQuery(container, {}, () => {}, { throttle: { count: 0, max: 20, sleptMs: 0, sleep: async (ms: number) => { naps.push(ms); } } });
+    expect(naps).toEqual([2000]);
+  });
+
+  it("the run's Nth throttle throws ThrottleAbort; any other error is never swallowed", async () => {
+    const always = { items: { query: () => ({ hasMoreResults: () => true, fetchNext: async () => { throw e429(1); } }) } };
+    const throttle = { count: 17, max: 20, sleptMs: 0, sleep: async () => {} };
+    await expect(lane.pagedQuery(always, {}, () => {}, { throttle })).rejects.toBeInstanceOf(lane.ThrottleAbort);
+    expect(throttle.count).toBe(20);
+    const boom = { items: { query: () => ({ hasMoreResults: () => true, fetchNext: async () => { throw new Error("socket hang up"); } }) } };
+    await expect(lane.pagedQuery(boom, {}, () => {}, { throttle: { count: 0, max: 20, sleptMs: 0, sleep: async () => {} } })).rejects.toThrow("socket hang up");
+  });
+
+  it("paces BEFORE each page and charges the governor AFTER it; passes the bounded page size + parallelism through", async () => {
+    const calls: string[] = []; let n = 0; let opts: any;
+    const container = { items: { query: (_s: any, o: any) => { opts = o; return { hasMoreResults: () => n < 2, fetchNext: async () => { n++; calls.push("fetch"); return { resources: [], requestCharge: 40 }; } }; } } };
+    const governor = { pace: async () => { calls.push("pace"); }, record: (ru: number) => { calls.push(`record:${ru}`); } };
+    await lane.pagedQuery(container, {}, () => {}, { governor, pageSize: 100, parallelism: 2 });
+    expect(calls).toEqual(["pace", "fetch", "record:40", "pace", "fetch", "record:40"]);
+    expect(opts).toMatchObject({ maxItemCount: 100, maxDegreeOfParallelism: 2 });
+  });
+});
+
+describe("relaunchDecision + the resume value -- the chain cannot loop", () => {
+  it("scan_limit carries hop * 1,000,000 + offset, and round-trips", () => {
+    expect(lane.decodeResume("0")).toEqual({ hop: 0, offset: 0 });
+    expect(lane.decodeResume("37")).toEqual({ hop: 0, offset: 37 });        // a hand-typed resume
+    expect(lane.decodeResume("3000120")).toEqual({ hop: 3, offset: 120 });
+    expect(lane.decodeResume("garbage")).toEqual({ hop: 0, offset: 0 });
+    expect(lane.encodeResume({ hop: 3, offset: 120 })).toBe(3_000_120);
+    // what the workflow's $(( scan_limit + 1000000 + N )) does to it:
+    expect(lane.decodeResume(String(3_000_120 + lane.HOP_UNIT + 45))).toEqual({ hop: 4, offset: 165 });
+  });
+
+  it("ONLY a clock stop that advanced cells, under the hop cap, prints the marker", () => {
+    expect(lane.relaunchDecision({ stoppedBy: "clock", cellsProcessed: 9, hop: 0 })).toEqual({ stop: "budget", printMarker: true, exitCode: 0 });
+    expect(lane.relaunchDecision({ stoppedBy: "clock", cellsProcessed: 1, hop: 11 }).printMarker).toBe(true);
+  });
+
+  it("no-progress: a clock stop with ZERO cells advanced never relaunches", () => {
+    expect(lane.relaunchDecision({ stoppedBy: "clock", cellsProcessed: 0, hop: 0 })).toEqual({ stop: "no-progress", printMarker: false, exitCode: 5 });
+  });
+
+  it("hop-cap: the 12th relaunch is the last", () => {
+    expect(lane.MAX_RELAUNCH_HOPS).toBe(12);
+    expect(lane.relaunchDecision({ stoppedBy: "clock", cellsProcessed: 50, hop: 12 })).toEqual({ stop: "hop-cap", printMarker: false, exitCode: 5 });
+  });
+
+  it("throttled and the RU cap never relaunch; a finished run is clean", () => {
+    expect(lane.relaunchDecision({ stoppedBy: "throttled", cellsProcessed: 50, hop: 0 })).toEqual({ stop: "throttled", printMarker: false, exitCode: 5 });
+    expect(lane.relaunchDecision({ stoppedBy: "ru", cellsProcessed: 50, hop: 0 })).toEqual({ stop: "ru-budget", printMarker: false, exitCode: 0 });
+    expect(lane.relaunchDecision({ stoppedBy: null, cellsProcessed: 50, hop: 0 })).toEqual({ stop: "finished", printMarker: false, exitCode: 0 });
+  });
+
+  it("the marker is printed in ONE place, behind relaunchDecision", () => {
+    const src = fs.readFileSync(LANE, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    expect(src.match(/stopped at the /g) ?? []).toHaveLength(1);
+    expect(src).toMatch(/if \(end\.printMarker\) \{\s*console\.log\(`  stopped at the \$\{CLOCK\.RUN_MINUTES\}-minute budget/);
+    expect(src).toMatch(/RU_BUDGET_MAX \|\| 300_000/);
+    expect(src).toMatch(/SOLD_COMPS_RU_PER_SEC \|\| 1500/);
+  });
+});
+
 // ── publish-census-backing.cjs ──────────────────────────────────────────────
 describe("publish-census-backing.cjs", () => {
   const bySport = { baseball: { noRow: 900, rowExistsNonStrict: 100 }, hockey: { noRow: 100, rowExistsNonStrict: 0 }, pokemon: { noRow: 5000, rowExistsNonStrict: 0 } };
@@ -410,7 +531,7 @@ const container = (name) => ({
       let i = 0, first = true;
       return {
         hasMoreResults: () => first || i < rows.length,
-        fetchNext: async () => { first = false; const page = rows.slice(i, i + opts.maxItemCount); i += opts.maxItemCount; return { resources: page, requestCharge: 3 + page.length * 0.05 }; },
+        fetchNext: async () => { if (process.env.FAKE_429 === name) throw Object.assign(new Error("Request rate is large"), { code: 429, retryAfterInMs: 1 }); first = false; const page = rows.slice(i, i + opts.maxItemCount); i += opts.maxItemCount; return { resources: page, requestCharge: 3 + page.length * 0.05 }; },
       };
     },
   },
@@ -507,6 +628,46 @@ describe("route-backing-gaps -- end to end", () => {
     expect(drive({ SCOPE: "baseball", SCAN_LIMIT: "3" }).plan).toEqual([]);
   });
 
+  it("meters sold_comps and card_catalog SEPARATELY, per cell and in the banner", () => {
+    const r = drive({ SCOPE: "baseball", LIMIT: "1" });
+    const topps = r.plan[0];
+    expect(topps.ruSoldComps).toBeGreaterThan(0);
+    expect(topps.ruCatalog).toBeGreaterThan(topps.ruSoldComps);
+    expect(Math.abs(topps.ruSoldComps + topps.ruCatalog - topps.ru)).toBeLessThanOrEqual(1);
+    expect(r.out).toMatch(/RU sold_comps\s+[\d,]+ \+ card_catalog\s+[\d,]+/);
+    expect(r.out).toMatch(/sold_comps\s+[\d,]+ RU {2}-- governed to 1,500 RU\/s over 10s/);
+    expect(r.out).toMatch(/throttles \(429\)\s+0 of 20 allowed/);
+    expect(r.out).toMatch(/RU_BUDGET_MAX\s+300,000/);
+    expect(r.out).toMatch(/STOP REASON: finished/);
+  });
+
+  it("THROTTLED: sold_comps answering 429 ends the run after MAX_THROTTLES -- exit 5, no relaunch marker, the cell NOT counted", () => {
+    const r = drive({ SCOPE: "baseball", FAKE_429: "sold_comps", MAX_THROTTLES: "3" });
+    expect(r.code).toBe(5);
+    expect(r.out).toMatch(/STOP REASON: throttled/);
+    expect(r.out).toMatch(/BACKING OFF: .* answered 429 3 time\(s\) \(cap 3\)/);
+    expect(r.out).toMatch(/-f scan_limit=0 to resume/);
+    expect(r.out).not.toMatch(/stopped at the .*budget/);
+    expect(r.out).toMatch(/cells processed\s+0/);
+    expect(r.plan).toEqual([]); // the half-built record is never emitted
+    expect(r.out).toMatch(/finishLane: exiting code 5/);
+  });
+
+  it("NO-PROGRESS: a clock that runs out with zero cells advanced exits 5 and prints NO marker", () => {
+    const r = drive({ SCOPE: "baseball", BUDGET_MS: "1" });
+    expect(r.code).toBe(5);
+    expect(r.out).toMatch(/STOP REASON: no-progress/);
+    expect(r.out).toMatch(/ABORT no-progress/);
+    expect(r.out).not.toMatch(/stopped at the .*budget/);
+    expect(r.out).toMatch(/finishLane: exiting code 5/);
+  });
+
+  it("a relaunched link reads its hop and offset back out of SCAN_LIMIT", () => {
+    const r = drive({ SCOPE: "baseball", SCAN_LIMIT: "12000001" });
+    expect(r.plan.map((x: any) => x.setKey)).toEqual(["topps-chrome", "topps-nothing-here"]);
+    expect(r.out).toMatch(/STOP REASON: finished {3}\(hop 12 of 12/);
+  });
+
   it("LIMIT, the setKey filter and an RU cap all bound the run; an RU stop prints NO relaunch marker", () => {
     expect(drive({ SCOPE: "baseball", LIMIT: "1" }).plan).toHaveLength(1);
     expect(drive({ SCOPE: "baseball", SET_KEYS: "topps-chrome" }).plan.map((x: any) => x.setKey)).toEqual(["topps-chrome"]);
@@ -539,10 +700,12 @@ describe("route-backing-gaps -- the runner contract", () => {
     const line = relaunch.slice(0, relaunch.indexOf("\n\n"));
     for (const input of ["apply", "slot", "slots", "scope", "titles", "limit"]) expect(line).toContain(`-f ${input}="\${{ inputs.${input} }}"`);
     expect(line).toMatch(/-f script=route-backing-gaps/);
-    // THE RESUME OFFSET: a lane that writes nothing keeps no cursor, so the
+    // THE RESUME VALUE: a lane that writes nothing keeps no cursor, so the
     // continuation must ADVANCE scan_limit by this link's own count -- a
-    // verbatim forward would re-route the same cells forever.
-    expect(line).toContain('-f scan_limit="$(( ${{ inputs.scan_limit }} + ${N:-0} ))"');
+    // verbatim forward would re-route the same cells forever -- plus one
+    // HOP (1,000,000), which is what lets the script cap the chain at 12.
+    expect(line).toContain('-f scan_limit="$(( ${{ inputs.scan_limit }} + 1000000 + ${N:-0} ))"');
+    expect(RUNNER, "load limits live in the script, where no dispatch can loosen them").not.toMatch(/^\s+RU_BUDGET_MAX:/m);
     expect(relaunch.slice(0, relaunch.indexOf("dispatch: |"))).toMatch(/N=\$\(grep -aoE "cells processed \+\[0-9,\]\+"/);
   });
 

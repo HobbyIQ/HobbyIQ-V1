@@ -162,13 +162,17 @@
  *      REQUIRED from>to pairs -- this lane's `titles` is a plain filter, not
  *      a pair list); SLOT/SLOTS (sha1(cell) shards, opt-in via SHARD=true for
  *      slot 0, via runner-shard-scope.cjs); RU_BUDGET_MAX (hard RU ceiling,
- *      default 2,000,000 -- no existing RU-budget env name was found by grep
- *      across scripts/, so this lane defines its own, clean-stopping and
- *      flushing the banner rather than crashing -- and an RU stop does NOT
- *      print the budget marker, so the runner never relaunches into the same
- *      spend); SAMPLE_CAP=400; SIBLING_CANDIDATE_CAP=12;
- *      NUMBER_CACHE_BUDGET=600000; SCAN_LIMIT (the runner's `scan_limit`) =
- *      the RESUME OFFSET a budget relaunch carries, 0 on a first dispatch;
+ *      default 300,000 per link, both containers -- an RU stop exits 0 and
+ *      does NOT print the budget marker, so the runner never relaunches into
+ *      the same spend); SOLD_COMPS_RU_PER_SEC=1500 over GOVERNOR_WINDOW_MS=
+ *      10000 (the pacing governor); SALES_PAGE_SIZE=100;
+ *      SALES_QUERY_PARALLELISM=2; MAX_THROTTLES=20 (then stop `throttled`,
+ *      exit 5, no marker) -- see LOAD SAFETY beside the constants;
+ *      SAMPLE_CAP=400; SIBLING_CANDIDATE_CAP=12; NUMBER_CACHE_BUDGET=600000;
+ *      SCAN_LIMIT (the runner's `scan_limit`) = hop * 1,000,000 + the RESUME
+ *      OFFSET a budget relaunch carries, 0 on a first dispatch; a clock stop
+ *      that advanced ZERO cells (`no-progress`) or sits at hop 12 (`hop-cap`)
+ *      exits 5 and prints no marker;
  *      BACKING_CELLS optional table path (workstation/tests); PLAN_OUT optional NDJSON
  *      dir; RUN_MINUTES=110 (runner-budget.cjs convention).
  *
@@ -197,17 +201,119 @@ const LIMIT = Number(process.env.LIMIT || 0);
 // that would push the running total over this ceiling is SKIPPED (not
 // crashed): the banner still prints, cleanly, with an explicit note of how
 // many cells were left unclassified for the next run.
-const RU_BUDGET_MAX = Number(process.env.RU_BUDGET_MAX || 2_000_000);
+//
+// LOAD SAFETY (2026-09-20). sold_comps runs at 10,000 RU/s SHARED with
+// production pricing reads, and the census day's heavy scans already produced
+// 429s and pricing timeouts. A triage lane must never be the reason a price
+// request times out, so it throttles ITSELF four ways:
+//   RU_BUDGET_MAX        300,000 RU per link across both containers (was 2M).
+//   SOLD_COMPS_RU_PER_SEC  1,500 -- a pacing governor holds this lane's OWN
+//                        sold_comps consumption under that average over a
+//                        sliding 10 s window, sleeping before a page when
+//                        the window is full. card_catalog is a separate
+//                        container, not governed, but metered separately.
+//   SALES_PAGE_SIZE 100 / SALES_QUERY_PARALLELISM 2 -- a sample read stops at
+//                        ~100 rows per window, so it pages small and does
+//                        NOT fan out across every partition at once (-1 is
+//                        for a scan that must FINISH; a sample must not).
+//   MAX_THROTTLES        20 -- any 429 sleeps retryAfter x2 and is counted;
+//                        the 20th ends the run with stop reason `throttled`.
+const RU_BUDGET_MAX = Number(process.env.RU_BUDGET_MAX || 300_000);
+const SOLD_COMPS_RU_PER_SEC = Math.max(1, Number(process.env.SOLD_COMPS_RU_PER_SEC || 1500));
+const GOVERNOR_WINDOW_MS = Math.max(1000, Number(process.env.GOVERNOR_WINDOW_MS || 10_000));
+const SALES_PAGE_SIZE = Math.max(1, Number(process.env.SALES_PAGE_SIZE || 100));
+const SALES_QUERY_PARALLELISM = Math.max(1, Number(process.env.SALES_QUERY_PARALLELISM || 2));
+const MAX_THROTTLES = Math.max(1, Number(process.env.MAX_THROTTLES || 20));
+const MAX_RELAUNCH_HOPS = 12;
 
-// THE RESUME OFFSET. This lane writes nothing, so it cannot keep a cursor in
+// THE RESUME VALUE. This lane writes nothing, so it cannot keep a cursor in
 // Cosmos, and a relaunch that re-read the table from the top would redo the
-// same cells until the end of time. The runner's relaunch step therefore adds
-// this link's "cells processed" to the EXISTING `scan_limit` input (exported
-// to every script as SCAN_LIMIT, inherited default "0"), and the next link
-// skips that many cells of the SAME deterministic order (unbacked desc, then
-// cell key). LIMIT bounds the whole chain, not each link: the order is cut to
-// LIMIT first and the offset applied second.
-const RESUME_OFFSET = Math.max(0, Math.floor(Number(process.env.SCAN_LIMIT || 0)) || 0);
+// same cells until the end of time. The runner's relaunch step therefore
+// advances the EXISTING `scan_limit` input (exported to every script as
+// SCAN_LIMIT, inherited default "0"), and the next link skips that many cells
+// of the SAME deterministic order (unbacked desc, then cell key). LIMIT bounds
+// the whole chain, not each link: the order is cut to LIMIT first and the
+// offset applied second.
+//
+// THE HOP COUNT RIDES IN THE SAME VALUE (no input is free to carry it):
+//   scan_limit = hop * 1,000,000 + offset
+// The published table cannot reach a million cells, so the two never collide,
+// and each relaunch adds 1,000,000 + the cells this link processed.
+const HOP_UNIT = 1_000_000;
+function decodeResume(raw) {
+  const v = Math.max(0, Math.floor(Number(raw || 0)) || 0);
+  return { hop: Math.floor(v / HOP_UNIT), offset: v % HOP_UNIT };
+}
+const encodeResume = ({ hop, offset }) => hop * HOP_UNIT + offset;
+const RESUME = decodeResume(process.env.SCAN_LIMIT);
+const RESUME_OFFSET = RESUME.offset;
+
+/**
+ * HOW A LINK ENDS. PURE. `stoppedBy` is null (every cell done) | "clock" |
+ * "ru" | "throttled". The relaunch composite re-dispatches on the budget
+ * marker and nothing else, so `printMarker` is the whole decision:
+ *   clock + progress + hops left  -> marker, exit 0: the chain continues.
+ *   clock + ZERO cells advanced   -> `no-progress`: the next link would start
+ *                                    from the same offset with the same clock
+ *                                    and advance nothing again, forever.
+ *   clock at the hop cap          -> `hop-cap`.
+ *   throttled                     -> the container is refusing us; a relaunch
+ *                                    would walk straight back into it.
+ *   ru                            -> the operator's own budget; exit 0.
+ * The three refusals exit 5 with an ABORT/BACKING OFF line, which the
+ * composite reports as a FINISHED WITH VERDICT (red, no re-dispatch) rather
+ * than as a clean finish with work left over.
+ */
+function relaunchDecision({ stoppedBy, cellsProcessed, hop, maxHops = MAX_RELAUNCH_HOPS }) {
+  if (!stoppedBy) return { stop: "finished", printMarker: false, exitCode: 0 };
+  if (stoppedBy === "ru") return { stop: "ru-budget", printMarker: false, exitCode: 0 };
+  if (stoppedBy === "throttled") return { stop: "throttled", printMarker: false, exitCode: 5 };
+  if (!(cellsProcessed > 0)) return { stop: "no-progress", printMarker: false, exitCode: 5 };
+  if (hop >= maxHops) return { stop: "hop-cap", printMarker: false, exitCode: 5 };
+  return { stop: "budget", printMarker: true, exitCode: 0 };
+}
+
+/**
+ * THE PACING GOVERNOR. Holds the RU this lane draws from ONE container under
+ * `targetRuPerSec`, averaged over a sliding `windowMs`. `record(ru)` after a
+ * page; `await pace()` before the next. When the window already holds its
+ * whole allowance, pace() sleeps exactly until enough of the OLDEST charges
+ * have aged out -- never a fixed nap, so a cheap run is never slowed and an
+ * expensive one is held to the line. `now`/`sleep` are injected so the test
+ * drives it with a fake clock.
+ */
+function makeGovernor({ targetRuPerSec, windowMs = 10_000, now = Date.now, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }) {
+  const allowance = targetRuPerSec * (windowMs / 1000);
+  let events = [];
+  let sleeps = 0, sleptMs = 0, total = 0;
+  const prune = () => { const cut = now() - windowMs; events = events.filter((e) => e.t > cut); };
+  const inWindow = () => { prune(); return events.reduce((n, e) => n + e.ru, 0); };
+  return {
+    record(ru) { if (ru > 0) { events.push({ t: now(), ru }); total += ru; } },
+    async pace() {
+      let sum = inWindow();
+      if (sum < allowance) return 0;
+      let until = now();
+      for (const e of events) { sum -= e.ru; until = e.t + windowMs; if (sum < allowance) break; }
+      const ms = Math.max(1, until - now() + 1);
+      sleeps++; sleptMs += ms;
+      await sleep(ms);
+      return ms;
+    },
+    ruPerSecNow: () => inWindow() / (windowMs / 1000),
+    stats: () => ({ sleeps, sleptMs, total }),
+  };
+}
+
+/** Thrown by pagedQuery when the run's 429 count reaches MAX_THROTTLES. */
+class ThrottleAbort extends Error {
+  constructor(count) { super(`THROTTLE_ABORT after ${count} throttled request(s)`); this.name = "ThrottleAbort"; }
+}
+const is429 = (e) => e?.code === 429 || e?.statusCode === 429 || /\b429\b|request rate is large|TooManyRequests/i.test(String(e?.message ?? ""));
+const retryAfterMsOf = (e) => {
+  const n = Number(e?.retryAfterInMs ?? e?.retryAfterInMilliseconds ?? e?.headers?.["x-ms-retry-after-ms"]);
+  return Number.isFinite(n) && n > 0 ? n : 1000;
+};
 const SAMPLE_CAP = Math.max(1, Number(process.env.SAMPLE_CAP || 400));
 // How many sibling candidates one cell may probe (see SIBLING DISCOVERY in the
 // header for the order and the RU effect), and how many card NUMBERS the
@@ -615,14 +721,35 @@ function suggestedDispatchFor(suggestion, cell) {
  *  knob -- unbounded fan-out for one query's own cross-partition reads).
  *  Mirrors rematch-sold-comps.cjs's own backingCellPreloadRaw exactly,
  *  including its synchronous spin guard. */
+/**
+ * `opts.governor` paces BEFORE every page and is charged AFTER it.
+ * `opts.throttle` is the run-wide 429 ledger `{ count, max, sleptMs, sleep }`:
+ * a 429 that reaches us has already outlived the SDK's own retries, so it is
+ * counted, slept off at retryAfter x2, and the SAME page is asked for again
+ * -- until the run's count reaches `max`, which throws ThrottleAbort.
+ */
 async function pagedQuery(container, spec, onPage, opts = {}) {
   const pageSize = opts.pageSize ?? 500;
   const SPIN_GUARD_PAGES = Number(process.env.SPIN_GUARD_PAGES || 50);
-  const iter = container.items.query(spec, { maxItemCount: pageSize, maxDegreeOfParallelism: -1 });
+  const iter = container.items.query(spec, { maxItemCount: pageSize, maxDegreeOfParallelism: opts.parallelism ?? -1 });
+  const throttle = opts.throttle;
   let consecutiveEmptyPages = 0;
   let ru = 0;
   while (iter.hasMoreResults()) {
-    const page = await iter.fetchNext();
+    if (opts.governor) await opts.governor.pace();
+    let page;
+    for (;;) {
+      try { page = await iter.fetchNext(); break; }
+      catch (e) {
+        if (!is429(e) || !throttle) throw e;
+        throttle.count++;
+        if (throttle.count >= throttle.max) throw new ThrottleAbort(throttle.count);
+        const ms = retryAfterMsOf(e) * 2;
+        throttle.sleptMs += ms;
+        await throttle.sleep(ms);
+      }
+    }
+    if (opts.governor) opts.governor.record(page.requestCharge || 0);
     const rows = page.resources ?? [];
     const pageRU = page.requestCharge || 0;
     if (rows.length === 0 && pageRU === 0) {
@@ -634,6 +761,7 @@ async function pagedQuery(container, spec, onPage, opts = {}) {
       consecutiveEmptyPages = 0;
     }
     ru += pageRU;
+    if (opts.onCharge) opts.onCharge(pageRU); // metered per PAGE, so an aborted read still counts what it spent
     if ((await onPage(rows, pageRU)) === false) break;
   }
   return ru;
@@ -767,6 +895,28 @@ async function main() {
 
   let totalRU = 0;
 
+  // ── LOAD SAFETY wiring (see the constants' own block). Two meters, because
+  // the two containers are two different budgets: sold_comps is the one
+  // production pricing reads share, and the only one the governor paces.
+  const meter = { catalog: 0, sales: 0 };
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const governor = makeGovernor({ targetRuPerSec: SOLD_COMPS_RU_PER_SEC, windowMs: GOVERNOR_WINDOW_MS });
+  const throttle = { count: 0, max: MAX_THROTTLES, sleptMs: 0, sleep };
+  const readCatalog = (spec, onPage) => pagedQuery(catalog, spec, onPage, { throttle, onCharge: (n) => { meter.catalog += n; } });
+  const readSales = (spec, onPage) => pagedQuery(sales, spec, onPage, {
+    throttle, governor, pageSize: SALES_PAGE_SIZE, parallelism: SALES_QUERY_PARALLELISM, onCharge: (n) => { meter.sales += n; },
+  });
+  let cellsDoneForBeat = 0;
+  // The lane's OWN heartbeat, beside the budget's keepalive: what a reader
+  // tailing the log needs to see is load, not just liveness. Unref'd -- the
+  // keepalive is what holds the loop; this only narrates.
+  CLOCK.keepalive("route-backing-gaps");
+  const beat = setInterval(() => {
+    const g = governor.stats();
+    console.log(`narrate: route-backing-gaps load -- cells ${cellsDoneForBeat}, sold_comps ${f(Math.round(meter.sales))} RU (now ${f(Math.round(governor.ruPerSecNow()))} RU/s of a ${f(SOLD_COMPS_RU_PER_SEC)} target, paced ${g.sleeps}x / ${f(g.sleptMs)} ms), card_catalog ${f(Math.round(meter.catalog))} RU, throttles ${throttle.count}/${MAX_THROTTLES}`);
+  }, Number(process.env.LOAD_HEARTBEAT_MS || 60_000));
+  if (beat.unref) beat.unref();
+
   // ── THE NUMBER CACHE: one strict NUMBER set per (sport, year, setKey),
   // loaded at most once per run and shared by every cell that probes it --
   // including each cell's OWN set, since the cells of one family are each
@@ -790,7 +940,7 @@ async function main() {
     const hit = numberCache.get(key);
     if (hit) { numberCache.delete(key); numberCache.set(key, hit); numberCacheHits++; return { numbers: hit, ru: 0 }; }
     const numbers = new Set();
-    const ru = await pagedQuery(catalog, numbersSpec(sport, year, setKey), (rows) => {
+    const ru = await readCatalog(numbersSpec(sport, year, setKey), (rows) => {
       for (const r of rows) { if (isChecklist(r.source)) { const n = numberOfId(r); if (n) numbers.add(n); } }
     });
     numberCacheLoads++;
@@ -872,6 +1022,7 @@ async function main() {
     const { sport, setKey, cell } = cellRow;
     const year = Number(cellRow.year);
     let cellRU = 0;
+    const meterAtStart = { ...meter };
     const record = {
       cell, sport, year, setKey, unbacked: cellRow.unbacked,
       unbackedShareOfSportGap: cellRow.unbackedShareOfSportGap ?? null,
@@ -892,7 +1043,7 @@ async function main() {
       const ownRungsByNumber = new Map();
       const nonStrictSourcesById = new Map();
       let totalCatalogRows = 0;
-      cellRU += await pagedQuery(catalog, checklistSpec(sport, year, setKey), (rows) => {
+      cellRU += await readCatalog(checklistSpec(sport, year, setKey), (rows) => {
         totalCatalogRows += rows.length;
         for (const r of rows) {
           if (!isChecklist(r.source)) {
@@ -950,7 +1101,7 @@ async function main() {
         for (const { from, to } of sampleWindows()) {
           if (sampled.length >= SAMPLE_CAP || CLOCK.outOfClock()) break;
           const windowCap = Math.min(SAMPLE_CAP, sampled.length + Math.ceil(SAMPLE_CAP / 4));
-          cellRU += await pagedQuery(sales, salesSpecWindow(sport, year, setKey, from, to), (rows) => {
+          cellRU += await readSales(salesSpecWindow(sport, year, setKey, from, to), (rows) => {
             for (const r of rows) {
               if (sampled.length >= windowCap) return false;
               if (neverPricedBucket(r)) { skippedNeverPrice++; continue; }
@@ -975,7 +1126,7 @@ async function main() {
           let probed = 0;
           for (const c of cands) {
             if (candidateHits.length >= SIBLING_CANDIDATE_CAP || probed >= 4 * SIBLING_CANDIDATE_CAP) break;
-            if (CLOCK.outOfClock() || totalRU + cellRU >= RU_BUDGET_MAX) { record.blockers.push(`sibling probe cut short at "${c.setKey}" (budget) -- pairs below are a lower bound`); break; }
+            if (CLOCK.outOfClock() || meter.catalog + meter.sales >= RU_BUDGET_MAX) { record.blockers.push(`sibling probe cut short at "${c.setKey}" (budget) -- pairs below are a lower bound`); break; }
             const got = await strictNumbersOf(sport, year, c.setKey);
             cellRU += got.ru; probed++;
             if (!got.numbers.size) continue; // no checklist that year: costs ~3 RU, holds no slot
@@ -1071,28 +1222,43 @@ async function main() {
         record.suggestedDispatch = record.suggestions[0]?.dispatch ?? null;
       }
     } catch (e) {
+      if (e instanceof ThrottleAbort) {
+        // NOT counted as processed: the resume offset must not step over a
+        // cell whose record is half-built. Nothing is emitted for it.
+        stoppedBy = "throttled";
+        totalRU = meter.catalog + meter.sales;
+        break;
+      }
       cellsFailed++;
       record.class = record.class ?? "FAILED";
       record.blockers.push(`cell read failed: ${String(e?.message ?? e).slice(0, 200)}`);
     }
 
     record.ru = Math.round(cellRU);
-    totalRU += cellRU;
+    record.ruCatalog = Math.round(meter.catalog - meterAtStart.catalog);
+    record.ruSoldComps = Math.round(meter.sales - meterAtStart.sales);
+    totalRU = meter.catalog + meter.sales;
     cellsProcessed++;
+    cellsDoneForBeat = cellsProcessed;
     const cc = cellsByClass.get(record.class) ?? { cells: 0, unbacked: 0 };
     cc.cells++; cc.unbacked += cellRow.unbacked; cellsByClass.set(record.class, cc);
     const rs = reachedBySport.get(sport) ?? { cells: 0, unbacked: 0, smallest: Infinity };
     rs.cells++; rs.unbacked += cellRow.unbacked; rs.smallest = Math.min(rs.smallest, cellRow.unbacked); reachedBySport.set(sport, rs);
     emitPlanRow(record);
-    console.log(`    ${cell.padEnd(44)} ${String(record.class).padEnd(17)} sampled ${String(record.sampled).padStart(3)}  RU ${f(record.ru).padStart(7)}  (running ${f(Math.round(totalRU))})`);
+    console.log(`    ${cell.padEnd(44)} ${String(record.class).padEnd(17)} sampled ${String(record.sampled).padStart(3)}  RU sold_comps ${f(record.ruSoldComps).padStart(6)} + card_catalog ${f(record.ruCatalog).padStart(7)}  (running ${f(Math.round(totalRU))}; throttles ${throttle.count})`);
   }
+  clearInterval(beat);
 
   // ── BANNER ────────────────────────────────────────────────────────────────
   const left = candidates.length - cellsProcessed;
   console.log("");
   console.log(`  cells processed         ${f(cellsProcessed)}${cellsFailed ? `   (${f(cellsFailed)} FAILED to read -- see their plan records)` : ""}`);
   if (stoppedBy === "ru") console.log(`  RU_BUDGET_MAX (${f(RU_BUDGET_MAX)}) reached -- stopped cleanly, ${f(left)} cell(s) NOT processed; re-dispatch with a higher budget or a narrower scope.`);
+  const gov = governor.stats();
   console.log(`  total RU spent          ${f(Math.round(totalRU))}    avg/cell ${cellsProcessed ? f(Math.round(totalRU / cellsProcessed)) : 0}`);
+  console.log(`    sold_comps            ${f(Math.round(meter.sales))} RU  -- governed to ${f(SOLD_COMPS_RU_PER_SEC)} RU/s over ${GOVERNOR_WINDOW_MS / 1000}s: paced ${f(gov.sleeps)} time(s), ${f(gov.sleptMs)} ms asleep; run average ${f(Math.round(meter.sales / Math.max(1, (Date.now() - STARTED) / 1000)))} RU/s`);
+  console.log(`    card_catalog          ${f(Math.round(meter.catalog))} RU  (its own container; metered, not governed)`);
+  console.log(`  throttles (429)         ${throttle.count} of ${MAX_THROTTLES} allowed, ${f(throttle.sleptMs)} ms backed off`);
   console.log(`  number cache            ${f(numberCacheLoads)} loads, ${f(numberCacheHits)} hits, ${f(numberCacheEvictions)} evictions, ${f(numberCacheSize)} numbers held`);
 
   console.log("\n  COVERAGE -- how far down each sport's tail this run reached:");
@@ -1142,12 +1308,27 @@ async function main() {
   // run that stopped on its RU cap would just spend the same RU again.
   // Spelled as a literal (not CLOCK.stoppedAtBudget()) because
   // tests/everyWriteJobReconciles.test.ts reads the SOURCE for the phrase.
-  if (stoppedBy === "clock") console.log(`\n  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- ${f(left)} cell(s) left; the relaunch resumes at offset ${f(RESUME_OFFSET + cellsProcessed)} (scan_limit)`);
+  //
+  // THE ONE PLACE THE MARKER IS PRINTED, and relaunchDecision is the only
+  // thing that can authorise it. Every refusal below is worded so it can
+  // never match the composite's `stopped at the .*budget` grep.
+  const end = relaunchDecision({ stoppedBy, cellsProcessed, hop: RESUME.hop });
+  console.log(`\n  STOP REASON: ${end.stop}   (hop ${RESUME.hop} of ${MAX_RELAUNCH_HOPS}, ${f(left)} cell(s) left)`);
+  if (end.printMarker) {
+    console.log(`  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- ${f(left)} cell(s) left; the relaunch resumes at offset ${f(RESUME_OFFSET + cellsProcessed)}, hop ${RESUME.hop + 1} (both ride scan_limit)`);
+  } else if (end.stop === "throttled") {
+    console.log(`  BACKING OFF: sold_comps/card_catalog answered 429 ${throttle.count} time(s) (cap ${MAX_THROTTLES}) -- production reads need that throughput more than a triage does. NOT relaunching. Re-dispatch later with -f scan_limit=${encodeResume({ hop: 0, offset: RESUME_OFFSET + cellsProcessed })} to resume, and consider a lower SOLD_COMPS_RU_PER_SEC.`);
+  } else if (end.stop === "no-progress") {
+    console.log(`  ABORT no-progress: the clock ran out with ZERO cells advanced, so a relaunch would start at the same offset and advance nothing again. NOT relaunching. The next cell alone outlasts this link's clock -- narrow it with titles=, or raise RUN_MINUTES.`);
+  } else if (end.stop === "hop-cap") {
+    console.log(`  ABORT hop-cap: this chain has already relaunched ${RESUME.hop} time(s) (cap ${MAX_RELAUNCH_HOPS}). NOT relaunching. Re-dispatch with -f scan_limit=${encodeResume({ hop: 0, offset: RESUME_OFFSET + cellsProcessed })} to continue deliberately, or fan out with slot/slots.`);
+  }
+  return end.exitCode;
 }
 
 if (require.main === module) {
   main()
-    .then(() => finishLane(0, { budget: CLOCK }))
+    .then((code) => finishLane(code || 0, { budget: CLOCK }))
     .catch((e) => {
       console.error(`\nFATAL: ${String(e?.stack ?? e)}`);
       finishLane(1, { budget: CLOCK });
@@ -1159,4 +1340,7 @@ module.exports = {
   classifyCellClass, classifySaleShape, suggestedDispatchFor,
   siblingCandidatesFor, neverPricedBucket, sampleWindows,
   KNOWN_SIBLING_PAIRS, JUNK_PARALLEL_WORDS, REDERIVE_LANE, MISSING_FLOOR,
+  // load safety + the relaunch chain
+  makeGovernor, pagedQuery, ThrottleAbort, relaunchDecision, decodeResume, encodeResume,
+  MAX_RELAUNCH_HOPS, HOP_UNIT,
 };

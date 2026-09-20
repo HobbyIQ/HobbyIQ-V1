@@ -355,9 +355,11 @@ on:
           # 'all'. `titles` is an OPTIONAL setKey filter (comma list, NOT a
           # from>to pair like the sibling repoint lanes) -- empty means every
           # cell in scope. `limit` caps the cells routed by the whole relaunch
-          # chain. `scan_limit` is this lane's RESUME OFFSET -- leave it 0;
-          # the budget relaunch below sets it. The pilot dispatch is
-          # scope=baseball limit=150.
+          # chain. `scan_limit` is this lane's RESUME VALUE (hop * 1,000,000
+          # + cell offset) -- leave it 0; the budget relaunch below sets it.
+          # SELF-THROTTLED: 300k RU per link, sold_comps reads paced to
+          # 1,500 RU/s, 20 throttles ends the run with no relaunch. The
+          # pilot dispatch is scope=baseball limit=150.
           - route-backing-gaps
           # R76 (Drew, 2026-09-19). repair-set-sport.cjs (2026-08-20) flipped
           # 183,248 sold_comps rows' sport by set-level checklist dominance,
@@ -2212,13 +2214,11 @@ jobs:
           # dispatch arguments. Empty (the common case) means every in-scope
           # cell, filtered only by SCOPE/LIMIT/slot-shard.
           SET_KEYS: ${{ inputs.script == 'route-backing-gaps' && inputs.titles || '' }}
-          # route-backing-gaps is READ-ONLY / decision-only and needs no RU
-          # cap input of its own (there is no existing RU_BUDGET-shaped
-          # workflow_dispatch input to reuse and the 25-input cap is spent),
-          # so a sane default ships with the script and this only exists so
-          # an operator COULD override it via a manual re-dispatch env, not
-          # because the runner needs to set it per run.
-          RU_BUDGET_MAX: ${{ inputs.script == 'route-backing-gaps' && '2000000' || '' }}
+          # route-backing-gaps' LOAD LIMITS are deliberately NOT set here:
+          # RU_BUDGET_MAX (300,000/link), SOLD_COMPS_RU_PER_SEC (1,500 over a
+          # 10 s window) and MAX_THROTTLES (20) default inside the script, so
+          # there is one place to read them and no dispatch can loosen them
+          # -- sold_comps is 10,000 RU/s shared with production pricing reads.
           # resolve-split-identity-parks (2026-09-20). The banner's own
           # samples cap at 20-60 lines per bucket and, until now, the banner
           # claimed a fuller list lived "in the uploaded artifact" when the
@@ -3704,11 +3704,15 @@ jobs:
         # CF-RELAUNCH-ONLY-ON-BUDGET (#1361): relaunch iff the marker printed,
         # never on a count. This lane is READ ONLY and never reads `apply`; it
         # is forwarded verbatim like every marker-gated lane's. THE RESUME
-        # OFFSET: the lane writes nothing, so it keeps no cursor -- the
-        # continuation instead carries `scan_limit` = the offset this link
-        # started at + the cells it processed, and the script skips that
-        # many cells of its own deterministic order. Without it a relaunch
-        # would re-route the same cells forever.
+        # VALUE: the lane writes nothing, so it keeps no cursor -- the
+        # continuation carries `scan_limit` = hop * 1,000,000 + offset, so
+        # each relaunch adds 1,000,000 (one hop) + the cells this link
+        # processed, and the script skips `offset` cells of its own
+        # deterministic order. THE SCRIPT decides whether the marker prints
+        # at all: never on zero cells advanced (`no-progress`), never past
+        # 12 hops (`hop-cap`), never after 20 throttles (`throttled`), never
+        # on its RU cap -- those exit with a verdict and this step reports
+        # it, re-dispatch withheld.
         if: ${{ !cancelled() && inputs.script == 'route-backing-gaps' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -3724,7 +3728,7 @@ jobs:
           finished-notice: |
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (cellsProcessed=${N:-0}) — done, no re-dispatch."
           dispatch: |
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=route-backing-gaps -f apply="${{ inputs.apply }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}" -f limit="${{ inputs.limit }}" -f scan_limit="$(( ${{ inputs.scan_limit }} + ${N:-0} ))"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=route-backing-gaps -f apply="${{ inputs.apply }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}" -f limit="${{ inputs.limit }}" -f scan_limit="$(( ${{ inputs.scan_limit }} + 1000000 + ${N:-0} ))"
 
       # R76's whole point is a reviewer being able to audit every wrongly-
       # flipped sale that moved (or was refused, and why) -- never a
