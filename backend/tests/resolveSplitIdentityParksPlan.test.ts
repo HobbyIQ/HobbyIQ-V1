@@ -30,8 +30,13 @@ const mod = require("../scripts/resolve-split-identity-parks.cjs") as {
   CELL_RE: RegExp;
   ALL_SPLITS: string;
   PARK_FIELDS: string[];
-  parseTitlesInput: (raw: unknown) => { excludedWinners?: Set<string>; rawExcludedWinnerIds?: string[]; titlesFilter?: string[]; error?: string };
+  parseTitlesInput: (raw: unknown) => {
+    excludedWinners?: Set<string>; rawExcludedWinnerIds?: string[];
+    excludedIds?: Set<string>; rawExcludedIds?: string[];
+    titlesFilter?: string[]; error?: string;
+  };
   EXCLUDE_WINNER_PREFIX: RegExp;
+  EXCLUDE_ID_PREFIX: RegExp;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -533,20 +538,109 @@ describe("resolve-split-identity-parks: parseTitlesInput -- exclude-winner:<id>[
 
   it("fix (HIGH): a bare 'exclude-winner:' with nothing after the colon REFUSES (named error), never a silent full sweep", () => {
     const result = mod.parseTitlesInput("exclude-winner:");
-    expect(result.error).toMatch(/carries no ids after the prefix/);
+    expect(result.error).toMatch(/with no ids after the prefix/);
     expect(result.excludedWinners).toBeUndefined();
     expect(result.titlesFilter).toBeUndefined();
   });
 
   it("fix (HIGH): 'exclude-winner:' followed by only commas/whitespace also REFUSES", () => {
-    expect(mod.parseTitlesInput("exclude-winner:,,").error).toMatch(/carries no ids after the prefix/);
-    expect(mod.parseTitlesInput("exclude-winner:   ").error).toMatch(/carries no ids after the prefix/);
-    expect(mod.parseTitlesInput("exclude-winner: , , ").error).toMatch(/carries no ids after the prefix/);
+    expect(mod.parseTitlesInput("exclude-winner:,,").error).toMatch(/with no ids after the prefix/);
+    expect(mod.parseTitlesInput("exclude-winner:   ").error).toMatch(/with no ids after the prefix/);
+    expect(mod.parseTitlesInput("exclude-winner: , , ").error).toMatch(/with no ids after the prefix/);
   });
 
   it("at least one real id after the prefix, even amid empty entries, does NOT error", () => {
     const result = mod.parseTitlesInput("exclude-winner:,hiq:basketball:2023:topps:vw3:base:no-auto,");
     expect(result.error).toBeUndefined();
     expect(result.excludedWinners).toEqual(new Set(["hiq:basketball:2023:topps:vw3:base:no-auto"]));
+  });
+});
+
+describe("resolve-split-identity-parks: parseTitlesInput -- exclude-id:<sold_comps id>[,...] (row-level, coordinator round 2)", () => {
+  const REAL_SHAPE_A = "cardhedge::ch-fill::1696404425047x713141937632706600::2024-04-01T16:41:02.000Z::9500";
+  const REAL_SHAPE_B = "tca-ebay::EBAY-v1|358639037826|0";
+
+  it("a single exclude-id: id populates excludedIds, case-folded, and preserves the raw text separately", () => {
+    const { excludedIds, rawExcludedIds, titlesFilter } = mod.parseTitlesInput(`exclude-id:${REAL_SHAPE_A}`);
+    expect(excludedIds).toEqual(new Set([REAL_SHAPE_A.toLowerCase()]));
+    expect(rawExcludedIds).toEqual([REAL_SHAPE_A]);
+    expect(titlesFilter).toEqual([]);
+  });
+
+  it("handles the eBay-style pipe-delimited id shape without corrupting it", () => {
+    const { excludedIds, rawExcludedIds } = mod.parseTitlesInput(`exclude-id:${REAL_SHAPE_B}`);
+    expect(excludedIds).toEqual(new Set([REAL_SHAPE_B.toLowerCase()]));
+    expect(rawExcludedIds).toEqual([REAL_SHAPE_B]);
+  });
+
+  it("multiple comma-separated exclude-id ids -- their own '::' and '|' survive untouched", () => {
+    const raw = `exclude-id:${REAL_SHAPE_A},${REAL_SHAPE_B}`;
+    const { excludedIds } = mod.parseTitlesInput(raw);
+    expect(excludedIds).toEqual(new Set([REAL_SHAPE_A.toLowerCase(), REAL_SHAPE_B.toLowerCase()]));
+  });
+
+  it("the exclude-id: prefix is case-insensitive", () => {
+    const { excludedIds } = mod.parseTitlesInput(`EXCLUDE-ID:${REAL_SHAPE_A}`);
+    expect(excludedIds).toEqual(new Set([REAL_SHAPE_A.toLowerCase()]));
+  });
+
+  it("EXCLUDE_ID_PREFIX matches only at the start of the string", () => {
+    expect(mod.EXCLUDE_ID_PREFIX.test("exclude-id:x")).toBe(true);
+    expect(mod.EXCLUDE_ID_PREFIX.test("not-exclude-id:x")).toBe(false);
+  });
+
+  it("a bare 'exclude-id:' with nothing after the colon REFUSES (named error)", () => {
+    const result = mod.parseTitlesInput("exclude-id:");
+    expect(result.error).toMatch(/with no ids after the prefix/);
+    expect(result.excludedIds).toBeUndefined();
+  });
+
+  it("'exclude-id:' followed by only commas/whitespace also REFUSES", () => {
+    expect(mod.parseTitlesInput("exclude-id:,,").error).toMatch(/with no ids after the prefix/);
+    expect(mod.parseTitlesInput("exclude-id:   ").error).toMatch(/with no ids after the prefix/);
+  });
+});
+
+describe("resolve-split-identity-parks: parseTitlesInput -- BOTH prefixes in one value, joined by ';'", () => {
+  it("exclude-winner:a,b;exclude-id:x,y populates BOTH sets independently", () => {
+    const result = mod.parseTitlesInput("exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto,hiq:baseball:2023:topps:vw-3:base:no-auto;exclude-id:tca-ebay::227353572453,cardhedge::abc");
+    expect(result.excludedWinners).toEqual(new Set([
+      "hiq:basketball:2023:topps:vw3:base:no-auto",
+      "hiq:baseball:2023:topps:vw-3:base:no-auto",
+    ]));
+    expect(result.excludedIds).toEqual(new Set(["tca-ebay::227353572453", "cardhedge::abc"]));
+    expect(result.titlesFilter).toEqual([]);
+  });
+
+  it("order is irrelevant -- exclude-id: first, exclude-winner: second, still works", () => {
+    const result = mod.parseTitlesInput("exclude-id:tca-ebay::1;exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto");
+    expect(result.excludedIds).toEqual(new Set(["tca-ebay::1"]));
+    expect(result.excludedWinners).toEqual(new Set(["hiq:basketball:2023:topps:vw3:base:no-auto"]));
+  });
+
+  it("a stray leading/trailing/doubled ';' is tolerated (an empty segment is skipped, not an error)", () => {
+    const result = mod.parseTitlesInput(";exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto;;");
+    expect(result.error).toBeUndefined();
+    expect(result.excludedWinners).toEqual(new Set(["hiq:basketball:2023:topps:vw3:base:no-auto"]));
+  });
+
+  it("once EITHER prefix appears, an unrecognised segment REFUSES rather than silently falling through to a substring filter", () => {
+    const result = mod.parseTitlesInput("exclude-winner:a;topps now");
+    expect(result.error).toMatch(/unrecognised segment/);
+  });
+
+  it("a ';' with ZERO real segments anywhere REFUSES (the 'nothing but separators' case)", () => {
+    const result = mod.parseTitlesInput("exclude-winner:a;exclude-id:");
+    // exclude-id: with nothing after its own colon refuses at THAT segment,
+    // before the "zero total ids" fallback check ever runs.
+    expect(result.error).toMatch(/exclude-id.*with no ids after the prefix/);
+  });
+
+  it("neither prefix present anywhere: ';' is read as ordinary (odd but harmless) title text", () => {
+    const result = mod.parseTitlesInput("topps now;panini prizm");
+    expect(result.error).toBeUndefined();
+    expect(result.excludedWinners?.size ?? 0).toBe(0);
+    expect(result.excludedIds?.size ?? 0).toBe(0);
+    expect(result.titlesFilter).toEqual(["topps now;panini prizm"]);
   });
 });
