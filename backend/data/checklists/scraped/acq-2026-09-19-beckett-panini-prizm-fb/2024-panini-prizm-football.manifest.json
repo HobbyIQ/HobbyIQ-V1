@@ -1,0 +1,404 @@
+{
+  "scrapedAt": "2026-09-20T02:38:15.972Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/12/2024-Panini-Prizm-Football-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "football",
+  "year": 2024,
+  "setName": "2024 Panini Prizm Football",
+  "productKey": "2024-panini-prizm",
+  "setKey": "panini-prizm",
+  "rowCount": 29980,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 300,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Rookies",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Rookie Variations Prizms Silver",
+      "category": "insert-rookie-variations-prizms-silver",
+      "cards": 42,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Prizm Silver",
+      "category": "auto-base-autographs-prizm-silver",
+      "cards": 115,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Prizm Silver",
+      "rosterFold": true,
+      "agree": 115,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Prizm Black Shimmer",
+      "category": "auto-base-autographs-prizm-black-shimmer",
+      "cards": 131,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Prizm Black Shimmer",
+      "rosterFold": true,
+      "agree": 131,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Prizm Blue Shimmer",
+      "category": "auto-base-autographs-prizm-blue-shimmer",
+      "cards": 125,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Prizm Blue Shimmer",
+      "rosterFold": true,
+      "agree": 125,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Prizm Green Shimmer",
+      "category": "auto-base-autographs-prizm-green-shimmer",
+      "cards": 128,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Prizm Green Shimmer",
+      "rosterFold": true,
+      "agree": 128,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Prizm Red Shimmer",
+      "category": "auto-base-autographs-prizm-red-shimmer",
+      "cards": 119,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Prizm Red Shimmer",
+      "rosterFold": true,
+      "agree": 119,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Prizm Choice Autographs",
+      "category": "auto-base-prizm-choice-autographs",
+      "cards": 114,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Prizm Choice Autographs",
+      "rosterFold": true,
+      "agree": 114,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Flashback Autographs",
+      "category": "auto-flashback-autographs",
+      "cards": 13,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Franchise Legends Signatures",
+      "category": "auto-franchise-legends-signatures",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Silver",
+      "category": "auto-rookie-autographs-prizm-silver",
+      "cards": 47,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Black Finite",
+      "category": "auto-rookie-autographs-prizm-black-finite",
+      "cards": 69,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Black Shimmer",
+      "category": "auto-rookie-autographs-prizm-black-shimmer",
+      "cards": 63,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Blue Shimmer",
+      "category": "auto-rookie-autographs-prizm-blue-shimmer",
+      "cards": 54,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Camo",
+      "category": "auto-rookie-autographs-prizm-camo",
+      "cards": 59,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Gold",
+      "category": "auto-rookie-autographs-prizm-gold",
+      "cards": 62,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Gold Vinyl",
+      "category": "auto-rookie-autographs-prizm-gold-vinyl",
+      "cards": 64,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Green Scope",
+      "category": "auto-rookie-autographs-prizm-green-scope",
+      "cards": 56,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Green Shimmer",
+      "category": "auto-rookie-autographs-prizm-green-shimmer",
+      "cards": 56,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm No Huddle",
+      "category": "auto-rookie-autographs-prizm-no-huddle",
+      "cards": 52,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm No Huddle Black",
+      "category": "auto-rookie-autographs-prizm-no-huddle-black",
+      "cards": 70,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm No Huddle Gold",
+      "category": "auto-rookie-autographs-prizm-no-huddle-gold",
+      "cards": 64,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Pink",
+      "category": "auto-rookie-autographs-prizm-pink",
+      "cards": 42,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Purple Power",
+      "category": "auto-rookie-autographs-prizm-purple-power",
+      "cards": 59,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Purple Pulsar",
+      "category": "auto-rookie-autographs-prizm-purple-pulsar",
+      "cards": 49,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Red Shimmer",
+      "category": "auto-rookie-autographs-prizm-red-shimmer",
+      "cards": 54,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm Red Wave",
+      "category": "auto-rookie-autographs-prizm-red-wave",
+      "cards": 53,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Prizm White Sparkle",
+      "category": "auto-rookie-autographs-prizm-white-sparkle",
+      "cards": 61,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Patch Autographs Prizm Silver",
+      "category": "auto-rookie-patch-autographs-prizm-silver",
+      "cards": 36,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Sensational Signatures",
+      "category": "auto-sensational-signatures",
+      "cards": 33,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Significant Signatures",
+      "category": "auto-significant-signatures",
+      "cards": 83,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Premier Jerseys",
+      "category": "insert-premier-jerseys",
+      "cards": 29,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Rookie Gear",
+      "category": "insert-rookie-gear",
+      "cards": 29,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "All Purpose Prizms Silver",
+      "category": "insert-all-purpose-prizms-silver",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Aurora",
+      "category": "insert-aurora",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Color Blast",
+      "category": "insert-color-blast",
+      "cards": 35,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Color Blast Duals",
+      "category": "insert-color-blast-duals",
+      "cards": 15,
+      "role": "parallel",
+      "anchor": "Inserts>Color Blast",
+      "rung": "Dual"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Emergent",
+      "category": "insert-emergent",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Fireworks",
+      "category": "insert-fireworks",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Hype",
+      "category": "insert-hype",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Lockdown! Prizms Silver",
+      "category": "insert-lockdown-prizms-silver",
+      "cards": 17,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Manga Horizontal",
+      "category": "insert-manga-horizontal",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Manga Vertical",
+      "category": "insert-manga-vertical",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Portals",
+      "category": "insert-portals",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Prizm Break",
+      "category": "insert-prizm-break",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Prizm Flashback Prizms Silver",
+      "category": "insert-prizm-flashback-prizms-silver",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Prizmania",
+      "category": "insert-prizmania",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Prizmatic",
+      "category": "insert-prizmatic",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Profiles",
+      "category": "insert-profiles",
+      "cards": 20,
+      "role": "own-cards"
+    }
+  ],
+  "discardedRangeHeaders": [
+    {
+      "sheet": "Base",
+      "row": 3,
+      "header": "Rookies - #301-400",
+      "nextCardNumber": "1"
+    }
+  ]
+}

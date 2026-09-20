@@ -1,0 +1,102 @@
+{
+  "scrapedAt": "2026-09-20T02:49:11.783Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/10/2025-26-Topps-Holiday-Basketball-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "basketball",
+  "year": 2025,
+  "setName": "2025-26 Topps Holiday Basketball",
+  "productKey": "2025-topps-holiday",
+  "setKey": "topps-holiday",
+  "rowCount": 4606,
+  "parallelColumnAuthoritative": true,
+  "heldRows": {
+    "rows": 4606,
+    "reason": "odds line read as section name on the Autographs sheet -- 'Autographs' repeats as the sheet's own generic row-0 header across every subset, so the splitter falls back to the next line ('1:379 packs'), which is an odds line, not a real section name. Two categories (auto-1379-packs, auto-1379-packs-2) carry this artifact. A converter fix plus regeneration lifts this hold; do not ingest until the Autographs sheet's real subset names are recovered."
+  },
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 200,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "1:23 packs",
+      "category": "base",
+      "cards": 50,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1:379 packs",
+      "category": "auto-1379-packs",
+      "cards": 92,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1:379 packs",
+      "category": "auto-1379-packs-2",
+      "cards": 4,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Relics",
+      "section": "1:75 packs",
+      "category": "insert-175-packs",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Relics",
+      "section": "1:392 packs",
+      "category": "insert-1392-packs",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Relics",
+      "section": "1:345 packs",
+      "category": "insert-1345-packs",
+      "cards": 24,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Relics",
+      "section": "1:54 packs",
+      "category": "insert-154-packs",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1:200 packs",
+      "category": "insert-1200-packs",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1:2 packs (Advent-exclusive)",
+      "category": "insert-12-packs-advent-exclusive",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1:6 packs (Advent-exclusive)",
+      "category": "insert-16-packs-advent-exclusive",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1:10 packs",
+      "category": "insert-110-packs",
+      "cards": 20,
+      "role": "own-cards"
+    }
+  ]
+}

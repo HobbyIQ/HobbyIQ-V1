@@ -132,8 +132,25 @@ const VENDOR = /^(cardhedge|cardsight|ebay|user-verified)/;
  * checked directly against every manifest using it before adding this
  * sibling alternative; none of them are `*-official` without `-pdf`, so the
  * two alternatives cannot collide) and is left completely untouched.
+ *
+ * CF-DREW-GOOGLE-SHEET-AND-DREW-RULING-ARE-CHECKLIST-GRADE (2026-09-19).
+ * `drew-google-sheet` was already trusted on the STRICT side
+ * (rematch-classify.cjs's STRICT_CHECKLIST_SOURCES, explicit entry, own
+ * comment: "A human transcribing a printed checklist is a scrape with the
+ * best possible provenance") but had no stem here at all, so the loose gate
+ * called it "unknown" while the strict gate adjudicated on it -- a source
+ * the strict gate trusted MORE than the loose one, the opposite direction
+ * from every other disagreement this file's history documents. `drew-ruling`
+ * (a bare `drew-ruling-<date>`, Drew's own hand-authored ruling with no
+ * checklist name in the tag at all, `handAuthored: true` in its own
+ * manifest) is the same class of source once rematch-classify.cjs's sibling
+ * fix generalised STRICT to `*-drew-ruling*` regardless of what precedes or
+ * trails the substring -- the two must keep agreeing, so both stems land
+ * here too. `cardpedia-drew-ruling` and `checklist-drew-ruling-<slug>`
+ * already matched via the bare `checklist`/`cardpedia` stems above; this
+ * adds the two shapes that did not.
  */
-const CHECKLIST = /checklist|beckett|cardpedia|bccp|cardboard.?connection|almanac|hobbymonitor|tcdb|tcgdex|pokemon-tcg-data|official-pdf|(?:upperdeck|upper-deck|topps|panini|leaf)-official\b/;
+const CHECKLIST = /checklist|beckett|cardpedia|bccp|cardboard.?connection|almanac|hobbymonitor|tcdb|tcgdex|pokemon-tcg-data|official-pdf|(?:upperdeck|upper-deck|topps|panini|leaf)-official\b|drew-google-sheet|drew-ruling/;
 
 /**
  * Classify a catalog row's source.
@@ -146,6 +163,27 @@ const CHECKLIST = /checklist|beckett|cardpedia|bccp|cardboard.?connection|almana
 export function catalogAuthorityOf(source: string | null | undefined): CatalogAuthority {
   const s = String(source ?? "").toLowerCase().trim().replace(/-graded$/, "");
   if (!s || s === "undefined" || s === "null") return "unknown";
+  // CF-A-COMPOUND-SOURCE-IS-CHECKLIST-IFF-EVERY-COMPONENT-IS (2026-09-19).
+  // An acquisition sometimes names its provenance as several publishers
+  // joined with "+" (`beckett+cardboardconnection`, a three-way `beckett+
+  // checklistinsider+cardboardconnection`) because it cross-checked more
+  // than one source before staging the file. Before this, the WHOLE string
+  // was tested against CHECKLIST unanchored, so it matched on any ONE
+  // component's substring regardless of what the others were --
+  // `baseballcardpedia+observed-sold-comps` classified "checklist" on the
+  // strength of "baseballcardpedia" alone, even though the second half is a
+  // sale observation, not a checklist transcription. This is the loose
+  // gate's own version of the exact defect isStrictChecklistSource's
+  // sibling fix (rematch-classify.cjs, same date) found and fixed on the
+  // STRICT allowlist: split on "+", and the compound classifies "checklist"
+  // only when EVERY piece independently does. One weak piece (a `+si`
+  // fourth source with no registered stem, `+observed-sold-comps`) now
+  // correctly fails the whole compound rather than riding along on a
+  // stronger sibling's name.
+  if (s.includes("+")) {
+    const parts = s.split("+").map((p) => p.trim()).filter(Boolean);
+    return parts.length > 0 && parts.every((p) => catalogAuthorityOf(p) === "checklist") ? "checklist" : "unknown";
+  }
   if (DERIVED.test(s)) return "derived";
   if (VENDOR.test(s)) return "vendor";
   if (/-product-structure$/.test(s)) return "vendor";

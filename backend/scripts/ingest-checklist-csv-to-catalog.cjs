@@ -1191,7 +1191,24 @@ async function main() {
     // file. The rows-read reconciliation a few lines further down calls the
     // same function, so the two banners can never disagree about what
     // "skipped" means, and a mutant that drops the term drops it from both.
-    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skipCount() + refuseCount(), failed });
+    //
+    // CF-A-DUPLICATE-IS-NOT-A-COLLISION (run 35485294973, 2026-09-19). This
+    // banner's own arithmetic a few lines down has always declared
+    // `sourceDuplicates` -- one card the source file listed twice, identical
+    // identity tuple, kept once, never refused (see `plan.duplicatesFolded`
+    // above) -- and balances against `rows` including it. But it was never
+    // passed to `reportWrites`, which only knows intended (== rows) and
+    // written: the shared reconciler had no bucket for the fold, so it
+    // computed `unaccounted = intended - (written + skipped + failed)` with
+    // the 86 folded duplicates missing from every term on the right, printed
+    // "!! WORK VANISHED ... UNACCOUNTED 86" and told an operator not to treat
+    // a complete, balanced 2024 Panini Mosaic FB apply as complete. A row
+    // deliberately folded because the source itself repeated it is exactly
+    // the shape `skipped` exists for -- a declared, deliberate non-write, not
+    // a loss -- so it is added here, not to `refuseCount()` (that term is for
+    // a whole refused file/category, and duplicates are never refused: the
+    // row's twin already landed).
+    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skipCount() + refuseCount() + sourceDuplicates, failed });
   }
   // The per-row gates this file dropped before ever reaching the batch: a
   // DELIBERATE, DECLARED skip, never a lost row.

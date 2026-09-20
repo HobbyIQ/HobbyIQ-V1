@@ -1840,6 +1840,16 @@ jobs:
           # script re-checks both halves and refuses without either, so a
           # half-typed dispatch dies on its arguments rather than mid-sweep.
           #
+          # rematch-sold-comps MODE=census (2026-09-19 census batch) reads the
+          # SAME SOURCES env as a SECOND, non-colliding meaning: the literal
+          # value "backing" arms the per-sale catalog BACKING tally (see
+          # CENSUS_BACKING in that script). rekey-product-setkey never
+          # produces or reads "backing" as a sources value and
+          # rematch-sold-comps only checks it under MODE=census, so the two
+          # meanings cannot collide on the same dispatch. Dispatch:
+          # script=rematch-sold-comps mode=census slots=32 scope=improve
+          # apply=false sources=backing.
+          #
           # It is scoped to the ONE script by name so the token cannot leak into
           # another lane: every other script sees the empty string.
           RETIRE_UNTWINNED: ${{ (inputs.script == 'rekey-product-setkey' && inputs.mode == 'catalog' && inputs.sources != '') && 'true' || '' }}

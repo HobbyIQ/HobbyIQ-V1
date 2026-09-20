@@ -156,6 +156,35 @@
  *      LIMIT                                 cap rows read (0 = the whole slot)
  *      YEARS                                 narrow to these years inside the slot
  *      CENSUS_OUT                            where the shard census JSON lands
+ *      SOURCES=backing (MODE=census only)    also tally catalog BACKING per
+ *                                            sale (backedStrict/rowExists
+ *                                            NonStrict/noRow/unparseable/
+ *                                            parked/notPricedFlagged/
+ *                                            unknown) by sport and by
+ *                                            (sport, year, setKey) cell,
+ *                                            into the same census-slot-N
+ *                                            .json under `backing`, from a
+ *                                            PROJECTED per-cell card_catalog
+ *                                            preload keyed by ID PREFIX
+ *                                            (STARTSWITH(c.id, 'hiq:<sport>:
+ *                                            <year>:<setKey>:'), never a
+ *                                            point read and never the
+ *                                            setKey FIELD -- see
+ *                                            CENSUS_BACKING). Reuses
+ *                                            `sources` (already wired to
+ *                                            SOURCES for rekey-product-
+ *                                            setkey) rather than a new
+ *                                            workflow_dispatch input.
+ *      BACKING_PRELOAD_CELL_CAP=500           LRU cap on distinct (sport,
+ *                                            year, setKey) cells the backing
+ *                                            preload holds at once.
+ *      BACKING_PRELOAD_CELL_FAIL_RETRIES=3    a cell's card_catalog load may
+ *                                            fail this many times before
+ *                                            it is marked permanently
+ *                                            failed for the rest of the
+ *                                            slot (every sale of it then
+ *                                            buckets `unknown`, never
+ *                                            `noRow`).
  *      SCOPE=revert-eviction                 undo damaged evictions (see above)
  * Requires dist/ (parseTitleIdentity, hobbyIqCardId, slugGuard,
  * persistVendorSalesToPool, writeReconciliation).
@@ -221,6 +250,45 @@ const SUBSET = require(path.join(__dirname, "lib", "subset-identity.cjs"));
 
 const MODE = String(process.env.MODE || "").trim();
 const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "true"; // the runner exports BACKFILL_APPLY, not APPLY
+/**
+ * CENSUS BACKING COUNT (2026-09-19). MODE=census, SOURCES=backing turns on a
+ * second, ADDITIVE tally alongside the ordinary AGREE/IMPROVE/CONFLICT/
+ * UNDERIVABLE classification: does THIS sale's card_catalog row exist, and
+ * is it strict-checklist-backed?
+ *
+ * NO NEW WORKFLOW INPUT. Same reasoning as BCP_TITLES/RETIRE_UNTWINNED
+ * above: workflow_dispatch is at 24 of 25 inputs. `sources` already carries
+ * SOURCES for rekey-product-setkey's RETIRE_UNTWINNED gate; `backing` is a
+ * value that script never produces or reads, so this reuses the input/env
+ * pair for a second, non-colliding meaning scoped to `MODE=census` alone. A
+ * dispatch is `mode=census slots=32 scope=improve apply=false
+ * sources=backing`.
+ *
+ * *** NOT A POINT READ. THIS WAS THE FIRST DRAFT'S DEFECT. *** A read-only
+ * re-score measured card_catalog point reads at ~49 RU EACH on this
+ * container's real document sizes (523,104 RU / 10,664 distinct ids, vs the
+ * ~1 RU an earlier, smaller sample suggested) -- `catRow`/`checklistBacked`/
+ * `checklistBackedStrict` above are exactly this point-read shape, safe for
+ * the handful of per-row lookups the ordinary classifier needs but NOT safe
+ * to run once per DISTINCT id across a 16.3M-row census: even folding
+ * millions of sales down to their few hundred thousand distinct
+ * hobbyiqCardIds, that many point reads at ~49 RU each is tens of millions
+ * of RU against a container with no room for it tonight.
+ *
+ * THE ACTUAL SHAPE: a PROJECTED, PER-CELL PRELOAD, identical in kind to
+ * `checklistCells`/`flagshipNumbers`/`checklistNames`/`checklistAutos`
+ * above -- one paged query per (sport, year, setKey) cell, selecting ONLY
+ * `c.id, c.source` (a projection keeps RU proportional to two small fields,
+ * not the whole document -- see backingCellPreload below and the PR's
+ * offline RU estimate). Every sale in a cell is then answered from an
+ * in-process Map built from that one query, so a slot that touches N
+ * distinct cells issues N queries total, never one per sale and never one
+ * per distinct id. Bounded by an LRU (BACKING_PRELOAD_CELL_CAP) so a slot
+ * whose sales spread across an unusually large number of cells cannot grow
+ * this without bound; an evicted cell's next sale re-queries rather than
+ * reusing a stale answer, so eviction costs RU, never correctness.
+ */
+const CENSUS_BACKING = MODE === "census" && String(process.env.SOURCES ?? "").trim().toLowerCase() === "backing";
 // CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD: this lane's NORMAL mode is a
 // fan-out -- it declares its own multi-slot default (32) and is always
 // dispatched per slot -- so it shards on the env alone. The helper is shared so
@@ -1274,6 +1342,180 @@ async function main() {
   const checklistNamesOnce = guardProduct(inFlightNames, checklistNames);
   const checklistAutosOnce = guardProduct(inFlightAutos, checklistAutos);
   const clashMapOnce = guardProduct(inFlightClash, clashMap);
+  /**
+   * CENSUS BACKING PRELOAD (2026-09-19, corrected 2026-09-19 per review). The
+   * RU-safe replacement for a per-row/per-id catalog point read. See
+   * CENSUS_BACKING's own comment for why a point read is not viable here
+   * (~49 RU each on this container's real documents; tens of millions of RU
+   * across a 16.3M-row census).
+   *
+   * *** LOADS BY ID PREFIX, NOT BY THE setKey FIELD. *** The metric's actual
+   * question is "does a catalog row exist whose `id` EQUALS this sale's
+   * hobbyiqCardId" -- and a row's `id` and its `setKey` FIELD are NOT the
+   * same fact (an earlier version of this comment claimed they were; that
+   * was wrong). `catalogIdentityResolver.ts`'s own measured history is
+   * exactly this defect: field equality on setKey/year "measured 184-274 RU,
+   * MORE rows (every graded child), same fan-out" and additionally can be
+   * WRONG -- its own comment: "the …:cpa-bm:red-refractor:auto twin carries
+   * setKey \"bowman\" while its id says bowman-chrome... rows disagree with
+   * their own fields". Loading by `STARTSWITH(c.id, @prefix)` on the SAME
+   * `hiq:<sport>:<year>:<setKey>:` prefix a sale's own hobbyiqCardId carries
+   * answers the metric's real question directly, at LOWER cost: that same
+   * file measures the plain STARTSWITH query at a flat 112 RU (40 partitions
+   * x ~2.8 RU cross-partition floor, "whatever the predicate") vs field
+   * equality's 184-274 RU, and `SELECT DISTINCT` on the same predicate cuts
+   * wall-clock further (150-340ms vs 1.7-2.4s) for the identical RU by
+   * letting the SDK fan the partitions out in parallel. Projection is
+   * unchanged: `c.id, c.source, c.sourceSystem, c.sources` only, never a
+   * whole-document read.
+   *
+   * ONE PROJECTED QUERY PER (sport, year, setKey) CELL -- the cell KEY is
+   * still the id prefix's three segments, only the QUERY PREDICATE moved
+   * from field equality to STARTSWITH. Same "a per-row catalog query over
+   * 16.3M rows is an outage, not a census" discipline as
+   * `checklistCells`/`flagshipNumbers` above. Building the strict verdict
+   * from the projected fields (rather than re-deriving through
+   * `checklistBackedStrict`, which expects a full resource and would still
+   * need the corroboration rival scan) is the one piece of
+   * `isStrictChecklistSource`'s logic duplicated here; it is the SAME pure
+   * function, called on the SAME shape of input, so a change to the strict
+   * allowlist moves both call sites together.
+   *
+   * BOUNDED CACHE SIZE, NOT BOUNDED QUERY COUNT. `BACKING_PRELOAD_CELL_CAP`
+   * caps how many cells the cache HOLDS at once (oldest by last access
+   * evicted on overflow) -- it does NOT cap the total number of queries a
+   * slot issues over its whole walk. If a slot's sales interleaved cells
+   * faster than the cap (cell A, cell B, ..., cell A again, after A was
+   * evicted), each return to an evicted cell is a fresh cache MISS and a
+   * fresh query: the pathological upper bound is one query per sale, same
+   * as no cache at all. This is a COST risk, never a correctness one -- an
+   * evicted cell's next sale simply re-queries and gets the same right
+   * answer, just paying for it twice.
+   *
+   * What actually keeps this cheap in practice is PRODUCT LOCALITY, not the
+   * cap: sold_comps ingest writes in per-product bursts (one CH/eBay pull =
+   * one product = many consecutive same-cardId rows), so pages within a
+   * shard unit overwhelmingly repeat a small, stable set of recently-seen
+   * cells rather than round-robining across thousands of them -- the same
+   * locality `checklistCells`/`flagshipNumbers` above already rely on
+   * (their caches are UNBOUNDED and have never needed a cap for exactly
+   * this reason). The cap exists only as a backstop against an unusually
+   * adversarial ordering, not as the primary cost control; if a live run's
+   * artifact ever reports `preload.distinctCellQueries` far above the
+   * cap value for its slot, that is the signal locality broke down and the
+   * cap should be reconsidered, not evidence the design failed.
+   *
+   * *** A FAILED LOAD IS NEVER CACHED, AND IS NOT `noRow`. *** The previous
+   * version wrapped `retry()` in `catch { out = [] }` -- so a load that
+   * failed for ANY reason (retries exhausted on a real outage, auth, a
+   * syntax error, anything) produced an EMPTY Map that was then CACHED like
+   * a real answer, silently bucketing every sale of that cell `noRow` for
+   * the rest of the slot with no signal anything went wrong. A cell's load
+   * can fail up to `BACKING_PRELOAD_CELL_FAIL_RETRIES` times (default 3),
+   * each attempt made by whichever sale next asks for that cell (never
+   * cached, never retried in a tight loop by this function itself) --
+   * after which the cell is marked PERMANENTLY FAILED for the rest of the
+   * slot and every sale of it lands in its own `unknown` bucket, counted by
+   * `backing.preload.failedCells`, never folded into `noRow`.
+   *
+   * Returns `null` for an unanswerable question (no sport, no setKey, no
+   * year) -- the caller treats that as "unparseable", the same refusal
+   * shape every other product-level lookup in this file already uses.
+   * Returns the sentinel `BACKING_LOAD_FAILED` (never cached as a Map) when
+   * this attempt failed and the cell's retry budget is not yet exhausted;
+   * the caller must bucket that sale `unknown` and try again on the NEXT
+   * sale of the same cell. Returns `BACKING_LOAD_PERMANENTLY_FAILED` once
+   * the retry budget is spent -- every subsequent sale of that cell is
+   * `unknown` for the rest of the slot with no further queries issued.
+   */
+  const BACKING_PRELOAD_CELL_CAP = Math.max(1, Number(process.env.BACKING_PRELOAD_CELL_CAP || 500));
+  const BACKING_PRELOAD_CELL_FAIL_RETRIES = Math.max(1, Number(process.env.BACKING_PRELOAD_CELL_FAIL_RETRIES || 3));
+  const BACKING_FAILED_CELLS_SAMPLE_CAP = 50;
+  const BACKING_LOAD_FAILED = Symbol("backing-load-failed");
+  const BACKING_LOAD_PERMANENTLY_FAILED = Symbol("backing-load-permanently-failed");
+  const backingPreloadCache = new Map(); // insertion order == LRU recency (re-set on touch)
+  const backingPreloadInFlight = new Map();
+  const backingCellFailCounts = new Map(); // cell key -> attempts failed so far
+  const backingPermanentlyFailedCells = new Set(); // cell key -> never queried again this slot
+  const backingFailedCellSamples = []; // [{ cell, error }], capped
+  let backingPreloadQueries = 0, backingPreloadRowsRead = 0;
+  /** `hiq:<sport>:<year>:<setKey>:` -- the SAME prefix a sale's own
+   *  hobbyiqCardId carries under this cell, and the query predicate. */
+  const backingCellIdPrefix = (sport, year, setKey) => `hiq:${sport}:${year}:${setKey}:`;
+  const backingCellPreloadRaw = async (year, setKey, sport) => {
+    if (!sport || !setKey || year === null || year === undefined) return null;
+    const prefix = backingCellIdPrefix(sport, year, setKey);
+    // Let a failure PROPAGATE -- the caller decides whether to retry or give
+    // up on this cell for the slot. `retry()` itself already exhausts its
+    // own internal transient-error backoff (429/timeout/etc, up to 8 tries)
+    // before throwing, so anything that reaches this function's caller is
+    // either a permanent error or a transient one retry() gave up on; both
+    // are this cell's problem to track, never silently swallowed into "no
+    // rows exist".
+    const { resources } = await retry(() => cat.items.query({
+      query: "SELECT DISTINCT c.id, c.source, c.sourceSystem, c.sources, c.sport FROM c WHERE STARTSWITH(c.id, @prefix)",
+      parameters: [{ name: "@prefix", value: prefix }],
+    }, { maxItemCount: -1 }).fetchAll());
+    const out = resources ?? [];
+    backingPreloadQueries++;
+    backingPreloadRowsRead += out.length;
+    // Sport-filtered IN MEMORY, exactly like flagshipNumbers/checklistNames
+    // above -- the prefix already scopes to this (sport, year, setKey), so
+    // this is now a belt-and-suspenders check against a row whose id lies
+    // about its own segments (should not happen; costs nothing when it
+    // doesn't fire).
+    const rows = out.filter((r) => rowIsSport(r, sport));
+    const idToVerdict = new Map();
+    for (const r of rows) {
+      const named = [r.source, r.sourceSystem, ...(Array.isArray(r.sources) ? r.sources : [])];
+      idToVerdict.set(r.id, named.some((s) => K.isStrictChecklistSource(s)) ? "strict" : "row");
+    }
+    return idToVerdict;
+  };
+  const backingCellPreload = async (year, setKey, sport) => {
+    const key = `${year}|${setKey}|${sport}`;
+    if (backingPermanentlyFailedCells.has(key)) return BACKING_LOAD_PERMANENTLY_FAILED;
+    if (backingPreloadCache.has(key)) {
+      // Touch for LRU recency: delete + re-set moves it to the end of
+      // insertion order, which Map preserves and this cache's eviction
+      // reads.
+      const v = backingPreloadCache.get(key);
+      backingPreloadCache.delete(key);
+      backingPreloadCache.set(key, v);
+      return v;
+    }
+    const pending = backingPreloadInFlight.get(key);
+    if (pending) return pending;
+    const p = (async () => {
+      let v;
+      try {
+        v = await backingCellPreloadRaw(year, setKey, sport);
+      } catch (e) {
+        const failed = (backingCellFailCounts.get(key) ?? 0) + 1;
+        backingCellFailCounts.set(key, failed);
+        const message = String(e?.message ?? e);
+        if (backingFailedCellSamples.length < BACKING_FAILED_CELLS_SAMPLE_CAP) {
+          backingFailedCellSamples.push({ cell: key, attempt: failed, error: message });
+        }
+        if (failed >= BACKING_PRELOAD_CELL_FAIL_RETRIES) {
+          backingPermanentlyFailedCells.add(key);
+          return BACKING_LOAD_PERMANENTLY_FAILED;
+        }
+        return BACKING_LOAD_FAILED;
+      }
+      if (v) {
+        backingPreloadCache.set(key, v);
+        while (backingPreloadCache.size > BACKING_PRELOAD_CELL_CAP) {
+          const oldest = backingPreloadCache.keys().next().value;
+          backingPreloadCache.delete(oldest);
+        }
+      }
+      return v;
+    })();
+    backingPreloadInFlight.set(key, p);
+    try { return await p; }
+    finally { backingPreloadInFlight.delete(key); }
+  };
   /** The clashing subsets at THIS row's rung, or [] -- which is the state of
    *  effectively every row and means the subset rule says nothing. */
   const clashSubsetsFor = async (stored) => {
@@ -1796,6 +2038,77 @@ async function main() {
   const scopeMoveSamples = { r31: [], r32: [], r33: [] };
   const scopeRefuseSamples = { r31: [], r32: [], r33: [] };
   const SCOPE_SAMPLE_CAP = 30;
+
+  /**
+   * CENSUS BACKING COUNT accumulators (see CENSUS_BACKING above). Populated
+   * only when the flag is on -- an idle Map add is not worth measuring, but
+   * an idle Map costs nothing either, so the declarations are unconditional
+   * and only the per-row tally below is gated.
+   *
+   * `bySport`/`byCell` buckets, corrected 2026-09-19 per review:
+   *   backedStrict        card_catalog row exists, strict-checklist-sourced
+   *   rowExistsNonStrict  card_catalog row exists, not strict
+   *   noRow               the cell loaded successfully; no row for this id
+   *   unparseable         no hobbyiqCardId, or no readable (sport,year,setKey)
+   *                       cell to load under -- a fact about the SALE, not
+   *                       about the catalog
+   *   parked              identityUnverified===true -- excluded from every
+   *                       priced pool already
+   *   notPricedFlagged    flaggedWrong===true or excludedFromFmv===true --
+   *                       ALSO not priced, own bucket, same reason as parked
+   *                       (a card_catalog answer for a sale nothing prices
+   *                       is not a "gap" in the same sense a live sale's is)
+   *   unknown             the cell's card_catalog LOAD FAILED (see
+   *                       BACKING_LOAD_FAILED/PERMANENTLY_FAILED above) --
+   *                       NEVER folded into noRow. A failed load says
+   *                       nothing about whether a row exists.
+   *
+   * `byCell` is keyed `${sport}|${year}|${setKey}`, capped at
+   * BACKING_CELL_CAP distinct cells -- overflow folds into an `other` cell
+   * so a long tail of one-off setKeys cannot grow this without bound.
+   *
+   * This is CATALOG BACKING ONLY: whether a card_catalog row exists and is
+   * strict-checklist-sourced. It is NOT the title-contradiction "strict
+   * clean" check I9/the sample audit runs -- that stays a sample measure,
+   * deliberately, per the go: judging whether a SALE'S TITLE matches its
+   * catalog row costs a second parse this census does not otherwise do, and
+   * is out of scope for this batch.
+   *
+   * THE HEADLINE DENOMINATOR EXCLUDES parked, notPricedFlagged AND unknown.
+   * `parked`/`notPricedFlagged` are sales nothing prices, and `unknown` is a
+   * sale this run could not answer for -- neither is evidence about the
+   * catalog's actual coverage, and folding either into the denominator would
+   * either understate coverage (parked/flagged, which are never "missing"
+   * from a pricing perspective) or silently pretend a failed load answered
+   * the question. merge-census-backing.cjs states both the included and
+   * excluded denominators explicitly rather than picking one silently.
+   */
+  const BACKING_CELL_CAP = 2000;
+  const backingBySport = new Map();
+  const backingByCell = new Map();
+  const backingBucketsOf = (m, key) => {
+    let b = m.get(key);
+    if (!b) {
+      b = {
+        backedStrict: 0, rowExistsNonStrict: 0, noRow: 0, unparseable: 0,
+        parked: 0, notPricedFlagged: 0, unknown: 0,
+      };
+      m.set(key, b);
+    }
+    return b;
+  };
+  /** The seven buckets summed across every sport this slot saw -- used only
+   *  to compute the artifact's own denominatorNote, so a reader does not
+   *  have to sum bySport by hand to see whether a slot's headline share
+   *  excluded a material unknown/flagged share. */
+  const backingOverallTotals = () => {
+    const t = {
+      backedStrict: 0, rowExistsNonStrict: 0, noRow: 0, unparseable: 0,
+      parked: 0, notPricedFlagged: 0, unknown: 0,
+    };
+    for (const b of backingBySport.values()) for (const k of Object.keys(t)) t[k] += b[k];
+    return t;
+  };
 
   // ── page the shard ────────────────────────────────────────────────────────
   const counts = { [K.AGREE]: 0, [K.IMPROVE]: 0, [K.CONFLICT]: 0, [K.UNDERIVABLE]: 0 };
@@ -2855,6 +3168,83 @@ async function main() {
         titleNamesInsertSet: r31In.titleNamesInsertSet ?? r33In.titleNamesInsertSet ?? null,
       });
       counts[res.klass]++;
+      // CENSUS BACKING COUNT (see CENSUS_BACKING above). notPricedFlagged
+      // and parked sales get their own buckets first and skip the rest:
+      // identityUnverified rows and flaggedWrong/excludedFromFmv rows are
+      // ALL excluded from every priced pool already, so folding either into
+      // no-row/unparseable would describe a sale nothing prices as if it
+      // were a live gap.
+      //
+      // *** PROJECTED PER-CELL PRELOAD, NEVER A POINT READ. *** `backed`
+      // (from `checklistBacked(der.slug)`, computed above for the ordinary
+      // classification) is a POINT READ and is NOT reused here -- see
+      // CENSUS_BACKING's header comment for the measured ~49 RU/read cost
+      // that makes one per distinct id unaffordable across this census.
+      // `backingCellPreload` below is the one query per (sport, year,
+      // setKey) cell instead; every sale in a cell is answered from its
+      // returned in-process map, keyed by `row.hobbyiqCardId` (the field
+      // `card_catalog.id` addresses, same field `checklistBacked` itself
+      // reads at the splitBackedSides call site above).
+      if (CENSUS_BACKING) {
+        const sport = String(stored?.sport ?? row?.sport ?? "").trim().toLowerCase() || null;
+        const sb = backingBucketsOf(backingBySport, sport ?? "(unknown)");
+        // Per-cell breakdown, capped. `year`/`setKey` come off the STORED
+        // identity (the row's own fields): the cell describes what the row
+        // IS, not what it re-derives to, since an IMPROVE row's derived
+        // cell may differ from its stored one and the backing question is
+        // "does the row's own product have a catalog", not "does its
+        // corrected product have one".
+        const year = stored?.year ?? stored?.cardYear ?? null;
+        const setKey = stored?.setKey ?? null;
+        const cellKey = (sport && year != null && setKey) ? `${sport}|${year}|${setKey}` : null;
+        const overflowing = cellKey && !backingByCell.has(cellKey) && backingByCell.size >= BACKING_CELL_CAP;
+        const cb = cellKey ? backingBucketsOf(backingByCell, overflowing ? "other" : cellKey) : null;
+        if (row?.flaggedWrong === true || row?.excludedFromFmv === true) {
+          // Own bucket, checked BEFORE parked: a flagged/excluded sale is
+          // never priced regardless of whether it is also parked, and this
+          // bucket's whole point is to separate "wrong/excluded" from every
+          // other reason a sale might not be priced.
+          sb.notPricedFlagged++;
+          if (cb) cb.notPricedFlagged++;
+        } else if (row?.identityUnverified === true) {
+          sb.parked++;
+          if (cb) cb.parked++;
+        } else if (!row?.hobbyiqCardId) {
+          // No canonical id to look up at all -- not "no catalog row", but
+          // "no address to look one up under". Counted apart from noRow for
+          // the same reason the header comment on `counts` keeps derivation
+          // class and backing separate: an unparseable id says nothing about
+          // whether a catalog exists.
+          sb.unparseable++;
+          if (cb) cb.unparseable++;
+        } else if (!cellKey) {
+          // Has an id but no readable (sport, year, setKey) cell to preload
+          // under -- the same "absent beats wrong" refusal every other
+          // product-level lookup in this file already uses. Cannot safely
+          // fall back to a point read (that is the exact cost this design
+          // avoids), so it is counted unparseable too: the census cannot
+          // answer the question for this row without the RU it is trying
+          // not to spend.
+          sb.unparseable++;
+          if (cb) cb.unparseable++;
+        } else {
+          const idMap = await backingCellPreload(year, setKey, sport);
+          if (idMap === BACKING_LOAD_FAILED || idMap === BACKING_LOAD_PERMANENTLY_FAILED) {
+            // A FAILED LOAD IS NOT `noRow`. It says nothing about whether a
+            // catalog row exists -- only that this run could not find out.
+            // Never cached as a value, so a later sale of a not-yet-
+            // permanently-failed cell gets a fresh attempt (see
+            // backingCellPreload's own retry accounting).
+            sb.unknown++;
+            if (cb) cb.unknown++;
+          } else {
+            const verdict = idMap ? idMap.get(row.hobbyiqCardId) : undefined;
+            if (verdict === "strict") { sb.backedStrict++; if (cb) cb.backedStrict++; }
+            else if (verdict === "row") { sb.rowExistsNonStrict++; if (cb) cb.rowExistsNonStrict++; }
+            else { sb.noRow++; if (cb) cb.noRow++; }
+          }
+        }
+      }
       // THE PER-SCOPE PREDICATE COUNTS, MODE=CENSUS ONLY. Asks each of the
       // three 2026-09-13 evidence functions DIRECTLY, off `res.axes` (the
       // exact diff `classifyRow` itself computed for this row) and the SAME
@@ -3603,6 +3993,70 @@ async function main() {
     job: "rematch-sold-comps", mode: MODE, slot: SLOT, slots: SLOTS,
     axis: "(cardYear, sportClass, sha1(id) % parts)", measuredAt: SHARD_TABLE.measuredAt,
     units: q.units, expectedRows: expected, classified: total, otherSlot: stats.otherSlot,
+    // CENSUS BACKING COUNT (see CENSUS_BACKING above). `null` when the flag
+    // was not armed for this run -- rebaseline-i9-reference.cjs and every
+    // existing artifact reader ignore unknown top-level keys, so this is
+    // additive to every prior census-slot-N.json shape, never a rename of one.
+    backing: CENSUS_BACKING ? {
+      armedBy: "SOURCES=backing",
+      note: "Catalog BACKING only -- does this sale's card_catalog row "
+        + "(keyed by row.hobbyiqCardId, matched by ID PREFIX "
+        + "STARTSWITH(c.id, 'hiq:<sport>:<year>:<setKey>:') -- NOT the "
+        + "setKey FIELD, which can disagree with a row's own id) exist, "
+        + "and is it strict-checklist-sourced, answered from a PROJECTED "
+        + "per-(sport,year,setKey)-cell preload (SELECT DISTINCT c.id, "
+        + "c.source[...]), never a point read -- a point read measures ~49 "
+        + "RU on this container's real documents, unaffordable per "
+        + "distinct id across a 16.3M-row census. This is NOT the "
+        + "title-contradiction 'strict clean' check the I9 sample audit "
+        + "runs; that stays a sample measure.\n"
+        + "bySport/byCell buckets: backedStrict, rowExistsNonStrict, "
+        + "noRow, unparseable (no hobbyiqCardId or no readable cell), "
+        + "parked (identityUnverified===true), notPricedFlagged "
+        + "(flaggedWrong===true or excludedFromFmv===true), unknown "
+        + "(this cell's card_catalog load FAILED -- see preload.failedCells "
+        + "-- never folded into noRow, since a failed load says nothing "
+        + "about whether a row exists).\n"
+        + "HEADLINE DENOMINATOR: parked, notPricedFlagged and unknown are "
+        + "ALL excluded -- see denominatorNote below for the exact figures "
+        + "on this slot.",
+      denominatorNote: (() => {
+        const t = backingOverallTotals();
+        const included = t.backedStrict + t.rowExistsNonStrict + t.noRow + t.unparseable;
+        const excluded = t.parked + t.notPricedFlagged + t.unknown;
+        return `this slot: included-in-denominator (backedStrict+rowExistsNonStrict+noRow+unparseable) = ${included}; `
+          + `excluded-from-denominator (parked+notPricedFlagged+unknown) = ${excluded}; `
+          + `total sales seen by backing = ${included + excluded}.`;
+      })(),
+      bySport: Object.fromEntries(backingBySport),
+      byCell: Object.fromEntries(backingByCell),
+      cellCap: BACKING_CELL_CAP,
+      cellOverflowed: backingByCell.has("other"),
+      preload: {
+        cellCap: BACKING_PRELOAD_CELL_CAP,
+        failRetries: BACKING_PRELOAD_CELL_FAIL_RETRIES,
+        distinctCellQueries: backingPreloadQueries,
+        distinctCellsTouched: backingPreloadCache.size + backingPermanentlyFailedCells.size,
+        catalogRowsRead: backingPreloadRowsRead,
+        failedCells: backingPermanentlyFailedCells.size,
+        failedCellSamples: backingFailedCellSamples,
+        note: "distinctCellQueries is the count of card_catalog queries this "
+          + "slot issued for backing (one per (sport,year,setKey) cell, "
+          + "cache misses only, INCLUDING a cell's failed attempts -- a "
+          + "cell retried 3 times before being marked permanently failed "
+          + "counts 3 here); distinctCellsTouched is the count of DISTINCT "
+          + "cells this slot asked about at all, successful or not. "
+          + "catalogRowsRead is the total c.id rows the SUCCESSFUL queries "
+          + "returned. failedCells is how many distinct cells hit "
+          + "BACKING_PRELOAD_CELL_FAIL_RETRIES failures and were marked "
+          + "permanently failed for the rest of this slot -- every sale of "
+          + "one lands in the unknown bucket, never noRow. "
+          + "failedCellSamples lists up to 50 (cell key, attempt number, "
+          + "error message) entries for triage. Multiply distinctCellQueries "
+          + "by the PR's offline RU-per-page estimate to get this slot's "
+          + "added RU.",
+      },
+    } : null,
     // The filter is part of the census's identity: two censuses of the same
     // slot are only comparable when they were taken through the same filter.
     rowFilter: ROW_FILTER_ON ? { sports: SPORTS_FILTER, setkeyLike: SETKEY_LIKE || null, skipped: stats.filtered } : null,

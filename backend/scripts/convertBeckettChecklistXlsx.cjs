@@ -28,6 +28,23 @@
 
 const fs = require("fs");
 const path = require("path");
+// CF-A-TRANSCRIPTION-VARIANT-IS-NOT-A-DISAGREEMENT (2026-09-20, review fix).
+// normalizeRosterPlayer's own `.toLowerCase()` reduction treats "Ja'Marr"
+// and "JaMarr", or an accented spelling and its plain-ASCII transcription,
+// as two different players -- and now that a roster disagreement actively
+// SUPPRESSES a fold (Defect 2's explicitAnchor gate) and SPLITS a repeated
+// section into two (Defect 4), a punctuation/accent transcription variant
+// would wrongly read as a real disagreement and either block a genuine
+// colour rung's fold or mint a fake second insert set out of one card
+// spelled two ways across two sheets. `player-identity.cjs` is the shared
+// reduction the rest of the repo already uses for exactly this question
+// (playerIdentityKey.ts's own header: accents fold to their base letter,
+// identity-bearing symbols transliterate to the market's own spelling,
+// then everything else outside a-z0-9 is deleted) -- loaded the same
+// defensive way `player-evidence.cjs`/`market-guard.cjs` already do, so a
+// tree without `dist/` built degrades to the pre-fix bare reduction rather
+// than throwing.
+const { playerIdentityKey } = require(path.join(__dirname, "lib", "player-identity.cjs"));
 const zlib = require("zlib");
 
 const args = process.argv.slice(2);
@@ -353,7 +370,86 @@ const PLAIN_SECTION = /^(base[- ]?set|base|chrome[- ]prospects?|base[- ]prospect
 
 // Sheet -> category prefix. Chrome Prospects are part of the base set's own
 // numbering (BCP-###), so they are base cards, not inserts.
-function categoryFor(sheetName, section) {
+// CF-BECKETT-A-BRAND-WIDE-FINISH-SUFFIX-IS-NOT-A-NEW-PRODUCT (2026-09-19).
+// A section header that is ALSO the whole product's own base card stock name
+// ("Prizm" on every 2024 Panini Select Football section; "Mosaic" on every
+// 2024 Panini Mosaic Football section, since each product IS printed on that
+// finish) carries the brand word as REDUNDANT PROSE, not as a distinct
+// insert set's own name -- but categoryFor has no way to tell that from a
+// genuinely independent insert whose title happens to end the same way,
+// short of a registered-key lookup this offline converter does not have.
+//
+// MEASURED, NOT GUESSED: this map holds ONLY category slugs verified, by
+// hand, against `backend/src/services/catalog/productSetKeys.ts`, to be a
+// trailing-brand-suffix spelling of an ALREADY-REGISTERED sibling key with
+// no suffix at all --
+//
+//   insert-sparks-prizm                    -> insert-sparks                 (panini-select-sparks registered)
+//   insert-jumbo-rookie-swatch-prizm        -> insert-jumbo-rookie-swatch     (panini-select-jumbo-rookie-swatch)
+//   insert-draft-selections-memorabilia-prizm -> insert-draft-selections-memorabilia
+//   insert-rookie-swatches-prizm           -> insert-rookie-swatches         (panini-select-rookie-swatches)
+//   auto-select-signatures-prizm           -> auto-select-signatures         (panini-select-select-signatures)
+//   auto-signatures-prizm                  -> auto-signatures                (panini-select-signatures)
+//   auto-rookie-signature-memorabilia-prizm -> auto-rookie-signature-memorabilia
+//   auto-jumbo-rookie-signature-swatches-prizm -> auto-jumbo-rookie-signature-swatches
+//   auto-2025-xrc-mystery-autograph-prizm  -> auto-2025-xrc-mystery-autograph (panini-select-2025-xrc-mystery-autograph)
+//   auto-jumbo-signature-swatches-prizm    -> auto-jumbo-signature-swatches   (panini-select-jumbo-signature-swatches)
+//   insert-center-stage-mosaic             -> insert-center-stage            (panini-mosaic-center-stage, pre-existing)
+//   insert-overdrive-mosaic                -> insert-overdrive               (panini-mosaic-overdrive, pre-existing)
+//
+// EVERY OTHER "-prizm"/"-mosaic" category on either file is LEFT ALONE --
+// most of Select's own Prizm-suffixed sections (Signatures Prizm's rookie
+// sibling Rookie Signatures Prizm, Jumbo Signature Swatches Prizm, etc.) and
+// most of Mosaic's own Mosaic-suffixed sections (Capital Gains Mosaic,
+// Splash Mosaic, Storm Mosaic, Micro Mosaic) are each their OWN genuinely
+// new named insert set with no un-suffixed registered sibling at all --
+// #2342 registers those, deliberately, rather than folding them here. A
+// blanket "always strip the trailing brand word" rule was considered and
+// rejected: it is exactly the unbounded-whitelist trap PLAIN_SECTION's own
+// history already warns this file about, just aimed at a suffix instead of
+// a whole name, and it would have silently merged Capital Gains Mosaic into
+// a "Capital Gains" key that does not exist and should not.
+//
+// This table is therefore a closed, hand-verified list of SPELLING fixes
+// for keys that already have a registered sibling -- not a general finish-
+// word stripper, and not something a future acquisition should extend
+// without first checking the registered key table the same way.
+//
+// SCOPED BY PRODUCT SET KEY (2026-09-20, review fix). A flat, unscoped map
+// keyed on the slug ALONE would rewrite an unrelated product's own
+// coincidentally-identical category the same way -- nothing stops some
+// future workbook's own "Sparks Prizm" section (a different product, a
+// different roster, no relationship to Select's registered
+// panini-select-sparks at all) from silently landing on
+// panini-select-sparks's address the moment its raw slug happens to match.
+// Each entry is therefore keyed `${SET_KEY}::${rawSlug}`, so a fold only
+// ever fires for the EXACT product it was hand-verified against.
+const CANONICAL_CATEGORY_SLUG = {
+  "panini-select::insert-sparks-prizm": "insert-sparks",
+  "panini-select::insert-jumbo-rookie-swatch-prizm": "insert-jumbo-rookie-swatch",
+  "panini-select::insert-draft-selections-memorabilia-prizm": "insert-draft-selections-memorabilia",
+  "panini-select::insert-rookie-swatches-prizm": "insert-rookie-swatches",
+  "panini-select::auto-select-signatures-prizm": "auto-select-signatures",
+  "panini-select::auto-signatures-prizm": "auto-signatures",
+  "panini-select::auto-rookie-signature-memorabilia-prizm": "auto-rookie-signature-memorabilia",
+  "panini-select::auto-jumbo-rookie-signature-swatches-prizm": "auto-jumbo-rookie-signature-swatches",
+  "panini-select::auto-2025-xrc-mystery-autograph-prizm": "auto-2025-xrc-mystery-autograph",
+  "panini-select::auto-jumbo-signature-swatches-prizm": "auto-jumbo-signature-swatches",
+  "panini-mosaic::insert-center-stage-mosaic": "insert-center-stage",
+  "panini-mosaic::insert-overdrive-mosaic": "insert-overdrive",
+};
+
+// `setKeyOverride` lets a test (or a future caller) exercise the scoping
+// directly without going through the CLI arg parser; main()'s own call
+// sites never pass it, so they always scope on the real `--set-key`.
+function categoryFor(sheetName, section, setKeyOverride) {
+  const raw = categoryForRaw(sheetName, section);
+  const setKey = setKeyOverride !== undefined ? setKeyOverride : SET_KEY;
+  const scoped = CANONICAL_CATEGORY_SLUG[`${setKey}::${raw}`];
+  return scoped || raw;
+}
+
+function categoryForRaw(sheetName, section) {
   const s = slug(section) || "unsectioned";
   // A variation section gets its own category even when Beckett lists it on the
   // Base sheet, which Mega Box does ('Base > Mega Chrome Base Cards - Image
@@ -514,17 +610,22 @@ function rungName(section, anchorSection) {
 // R67 (Drew, ruling round of 2026-09-19): same numbers + a same-or-subset
 // roster is a PARALLEL, whatever word the section used for the variant.
 // normalizeRosterPlayer is the shared comparison: split on "/", trim,
-// lowercase, de-duplicate, sort (players split so "Will Shipley/Xavier
-// Legette" and "Xavier Legette / Will Shipley" agree) -- AND strip a trailing
-// " RC" first, because Beckett's own RC flag (appended in pass 1 above,
-// `player += " RC"`) is stamped onto the player field by SOME sheets (the
-// Base sheet, and any parallel section built from the same sheet layout) and
-// never by others for the identical card, which would otherwise read as a
-// disagreement that is really a formatting artifact, not a different player.
+// reduce EACH name through playerIdentityKey (accents fold, identity
+// symbols transliterate, punctuation/case become noise -- see the
+// player-identity.cjs require above), de-duplicate, sort (players split so
+// "Will Shipley/Xavier Legette" and "Xavier Legette / Will Shipley" agree)
+// -- AND strip a trailing " RC" first, because Beckett's own RC flag
+// (appended in pass 1 above, `player += " RC"`) is stamped onto the player
+// field by SOME sheets (the Base sheet, and any parallel section built from
+// the same sheet layout) and never by others for the identical card, which
+// would otherwise read as a disagreement that is really a formatting
+// artifact, not a different player. The explicit RC strip stays even though
+// playerIdentityKey's own cleanPlayerName pass also strips it -- belt and
+// suspenders, and it keeps this function's contract readable on its own.
 function normalizeRosterPlayer(player) {
   return String(player || "")
     .split("/")
-    .map((p) => p.trim().replace(/\s+RC$/i, "").trim().toLowerCase())
+    .map((p) => playerIdentityKey(p.trim().replace(/\s+RC$/i, "")))
     .filter(Boolean)
     .sort()
     .join("/");
@@ -626,9 +727,101 @@ function classifySections(sections) {
     // already carries that vocabulary for ladder lines; a section header
     // just is a longer line to test it against.
     const looksLikeFinishName = (cand) => FINISH_WORD.test(cand.section);
+    // CF-BECKETT-THE-ROSTER-DECIDES-THE-EXPLICIT-ANCHOR-FOLD-TOO (2026-09-19).
+    // looksLikeFinishName narrowed the bypass from "any explicitAnchor" to
+    // "an explicitAnchor whose CANDIDATE section merely contains a finish
+    // word" -- but a finish word in a section's own name is not proof the
+    // section IS a finish/rung rather than an independently named insert
+    // product that happens to be printed in that finish. 2024 Panini Select
+    // Football's Memorabilia sheet lists "Draft Selections Memorabilia
+    // Prizm" (25 cards, #1-25), "Jumbo Rookie Swatch Prizm" (42, #1-42),
+    // "Rookie Swatches Prizm" (25, #1-25) and "Sparks Prizm" (58, #1-58) --
+    // four already-registered named insert products whose own numbering is a
+    // 100% SUBSET of Base>Base Concourse's #1-100 range, so looksLikeFinishName
+    // (true: each contains "Prizm") plus the numeric-overlap test alone was
+    // enough to fold all four onto Base Concourse as fabricated parallel
+    // names ("parallel=Draft Selections Memorabilia Prizm" on a base row),
+    // when their ACTUAL rosters disagree with Concourse card-for-card
+    // (measured: Base Concourse #1 = Tory Taylor; the four sections' own #1 =
+    // Caleb Williams / Adonai Mitchell / Caleb Williams / Kurt Warner) --
+    // 150 rows, plus 832 id collisions downstream. rosterFoldAgainst already
+    // exists and already correctly reports disagree > 0 for this exact
+    // pairing; this bypass just never consulted it, unlike the roster-fold
+    // pass much further down in this same function.
+    //
+    // Doctrine: "the roster decides" (R67, and CF-A-NAMED-INSERT-SET-IS-ITS-
+    // OWN-CARD-SET before it). A colour/finish rung is a parallel of its
+    // anchor only when it reprints the anchor's own roster; a named insert
+    // set is its own card set whatever finish word its title happens to use.
+    // So the explicitAnchor+FINISH_WORD bypass now additionally requires
+    // rosterFoldAgainst to find at least one shared number and ZERO
+    // disagreements -- the identical bar the nameless-section roster-fold
+    // pass already holds itself to. "International Refractors" on Bowman
+    // Chrome and "Chrome Prospect Packfractor Autographs" both still clear
+    // this (their rosters, where numbers overlap the anchor at all, agree);
+    // Select's four Memorabilia sections do not, and fall through to
+    // own-cards under their own registered category exactly as intended.
+    // ABSENT ROSTER DATA IS NOT A DISAGREEMENT (2026-09-20 correction, found
+    // by CI). `rosterFoldAgainst` returns `shared: 0` both when the rosters
+    // genuinely share zero numbers AND when either side carries no `roster`
+    // map at all (its own documented degrade-gracefully behaviour, so a
+    // caller built from numbers alone -- every classifySections unit test
+    // predating this bypass, including checklistVariationIsAParallel.test.ts's
+    // own Packfractor/International-Refractors fixtures, which construct a
+    // section descriptor with numbers only, no roster -- gets the exact same
+    // "nothing to disagree with" answer a roster-blind fold already gave).
+    // The FIRST version of this fix treated `shared > 0` as the gate, which
+    // made an absent roster read as "roster refuses" and broke every one of
+    // those pre-existing tests -- fold something can't be more disagreeable
+    // than what it never SAW.
+    //
+    // PARTIAL AGREEMENT IS NOT THE SAME QUESTION AS ZERO AGREEMENT (2026-09-20,
+    // second review round). The bar here decides whether `a` is even a fold
+    // CANDIDATE at all -- it must stay permissive for "at least some genuine
+    // evidence of agreement, whatever the rest of the roster says", because
+    // the actual per-number split (fold the agreeing numbers, hold out the
+    // rest) is a SEPARATE decision made once a fold is chosen as `best`,
+    // below, via the same foldExceptions mechanism the nameless-section
+    // roster-fold pass already uses for its own #420 (R67 Super Box
+    // Exclusive) shape. 2023 Topps Chrome Platinum's "Image Variations" (25
+    // rows, 16 agree with base as a true photo variation, 9 name a
+    // completely different card at the same number) needs exactly this: a
+    // bar of "zero agreement" here would have refused the whole section, but
+    // the 16 genuine variations are real evidence the fold IS live and only
+    // 9 rows need holding out. 2026 Topps Series 1's "Golden Mirror Legend
+    // Variations" (0/51 agree with base at all) still correctly finds NO
+    // candidate here and falls through to own-cards, because zero shared
+    // agreement is exactly the "no evidence this is a rung of anything"
+    // case the bar exists to catch.
+    //
+    // "AT LEAST ONE" IS NOT ENOUGH -- A MAJORITY IS THE BAR (found live,
+    // 2026-09-20, third pass). `fold.agree > 0` let a single COINCIDENTAL
+    // match through: 2024 Panini Select Football's "Jumbo Rookie Swatch
+    // Prizm" (42 cards, its own numbering, its own registered key) shares
+    // exactly ONE number with Base>Base Concourse where the SAME real
+    // person happens to sit at the SAME number in both -- #29 Malik Nabers,
+    // pure coincidence across two independently-numbered 42-card and
+    // 100-card checklists -- while the other 41 disagree outright. One
+    // coincidence is not evidence a 42-card named insert is secretly a
+    // rung of base; it very nearly re-created the exact false-fold this
+    // whole bypass exists to prevent, just gated one match short of zero
+    // instead of at zero. The bar is now a genuine MAJORITY: strictly more
+    // agreements than disagreements. Verified against both measured cases:
+    // Image Variations (16 agree, 9 disagree -- 16 > 9, clears) and Jumbo
+    // Rookie Swatch Prizm (1 agree, 41 disagree -- 1 is not > 41, refused,
+    // falls through to its own registered own-cards category).
+    const rosterHasAgreeingMajority = (cand, anchor) => {
+      if (!cand.roster || !anchor.roster) return true;
+      const fold = rosterFoldAgainst(cand, anchor);
+      // No roster overlap AT ALL (fold.shared === 0) is "nothing to agree or
+      // disagree about" -- degrades to the pre-existing roster-blind numeric
+      // decision, same as the absent-roster case above.
+      return fold.shared === 0 || fold.agree > fold.disagree;
+    };
     const candidates = anchors.filter((a) =>
       a !== sec && isAutoSection(a) === isAutoSection(sec) &&
-      ((a.explicitAnchor && looksLikeFinishName(sec)) || extendsName(sec, a)));
+      ((a.explicitAnchor && looksLikeFinishName(sec) && rosterHasAgreeingMajority(sec, a)) ||
+        extendsName(sec, a)));
     let best = null;
     for (const a of candidates) {
       const hit = [...sec.numbers].filter((n) => a.numbers.has(n)).length;
@@ -656,10 +849,62 @@ function classifySections(sections) {
         });
         continue;
       }
-      sec.parallelOf = best.anchor;
-      sec.rung = rung;
-      push(sec, { role: "parallel", anchor: best.anchor.key, rung: rung });
-      continue;
+      // PARTIAL FOLD ON A DISAGREEING ROSTER (2026-09-20, review fix). The
+      // explicitAnchor+FINISH_WORD path (`a.explicitAnchor &&
+      // looksLikeFinishName(sec)`, never `extendsName`) can win `best` with
+      // 100% numeric overlap while its roster only PARTLY agrees with the
+      // anchor -- 2023 Topps Chrome Platinum's "Image Variations" is the
+      // measured case: 16 of 25 numbers are a true photo variation of the
+      // identical base card, the other 9 name a different player entirely
+      // at the same number. Held out via `foldExceptions`, the SAME
+      // mechanism the nameless-section roster-fold pass below already uses
+      // for R67's own #420 (Super Box Exclusive) shape: the agreeing
+      // numbers fold onto the anchor as the named parallel; the disagreeing
+      // numbers stay on this section's own category with a blank parallel,
+      // never silently merged into either address. Only checked for the
+      // explicitAnchor route -- an ordinary extendsName fold (Packfractor,
+      // International Refractors) has no roster-disagreement question at
+      // all once its numbers are a 100% subset, and this must never touch
+      // that path's own, already-correct all-or-nothing behaviour.
+      const viaExplicitAnchor = best.anchor.explicitAnchor && looksLikeFinishName(sec) && !extendsName(sec, best.anchor);
+      if (viaExplicitAnchor && sec.roster && best.anchor.roster) {
+        const rosterFold = rosterFoldAgainst(sec, best.anchor);
+        if (rosterFold.disagree > 0) {
+          if (rosterFold.agree <= rosterFold.disagree) {
+            // Not a genuine majority -- see rosterHasAgreeingMajority above
+            // for why "at least one agreement" is not enough (the Jumbo
+            // Rookie Swatch Prizm/Malik Nabers #29 coincidence). Falls
+            // through to own-cards below exactly as a section with no
+            // candidate would.
+            best = null;
+          } else {
+            // Genuine partial fold: hold out the disagreeing numbers under
+            // this section's own category (blank parallel, same shape every
+            // other foldExceptions case uses), fold the rest onto the anchor
+            // as the named parallel.
+            const disagreeing = new Set();
+            for (const [num, players] of sec.roster) {
+              const anchorPlayers = best.anchor.roster.get(num);
+              if (anchorPlayers && ![...players].every((p) => anchorPlayers.has(p))) disagreeing.add(num);
+            }
+            sec.foldExceptions = disagreeing;
+            sec.parallelOf = best.anchor;
+            sec.rung = rung;
+            push(sec, {
+              role: "parallel", anchor: best.anchor.key, rung: rung,
+              rosterFold: true, agree: rosterFold.agree, disagree: rosterFold.disagree,
+              heldNumbers: [...disagreeing],
+            });
+            continue;
+          }
+        }
+      }
+      if (best) {
+        sec.parallelOf = best.anchor;
+        sec.rung = rung;
+        push(sec, { role: "parallel", anchor: best.anchor.key, rung: rung });
+        continue;
+      }
     }
 
     // It folds onto nothing, so it is a run of cards in its own right — and
@@ -765,6 +1010,56 @@ function classifySections(sections) {
   const order = new Map(all.map((s, i) => [s.sheet + ">" + s.section, i]));
   report.sort((a, b) => order.get(a.sheet + ">" + a.section) - order.get(b.sheet + ">" + b.section));
   return report;
+}
+
+// CF-BECKETT-A-SHEET-THAT-EMITS-NOTHING-IS-A-FAILURE-NOT-A-QUIET-SUCCESS
+// (2026-09-19). Three converter defects found by this same audit
+// (CF-BECKETT-BASE-SHEET-IS-NOT-ONE-SECTION, the count-line/ladder-prose
+// defects, this file's own stated-range-header fix) all share one shape:
+// something makes main() silently emit FEWER rows than the sheet actually
+// has, and the run still exits 0 with a plausible-looking row count. A long-
+// standing further suspicion, never yet measured against a live workbook:
+// Beckett could print the PLAYER in column C rather than column B (row[1])
+// for some sheet, and every row on it would silently fail the `!player`
+// test in main()'s pass 1 and vanish -- zero cards from a sheet that looks,
+// to a human, exactly as populated as every other one.
+//
+// A row is "data-looking" when it is a real multi-cell row (not a header,
+// not inside a ladder, not a count line) whose own first cell reads like a
+// card number -- alphanumeric, no spaces, not a bare finish/parallel word.
+// This is deliberately looser than looksLikeCardNumber-style parsers
+// elsewhere in the repo: it only needs to prove "Beckett put something
+// row-shaped here", not decide whether it truly is one, so a false positive
+// here (counting a row that in fact was not a card) only makes the guard
+// MORE willing to fire, never less.
+const DATA_LOOKING_NUMBER = /^[A-Za-z0-9][A-Za-z0-9-]*$/;
+
+/** Count of "data-looking" rows on a raw (unfiltered) sheet -- the same
+ *  count the CF-BECKETT-A-SHEET-THAT-EMITS-NOTHING-IS-A-FAILURE guard in
+ *  main() compares against how many of that sheet's rows actually became
+ *  card records, to catch a column-shift or similar defect that would
+ *  otherwise silently zero out a whole sheet while the run still exits 0.
+ *  Exported so a fixture can exercise the guard directly without needing a
+ *  whole malformed xlsx. */
+function countDataLookingRows(rows) {
+  let inLadder = false;
+  let count = 0;
+  for (const row of rows) {
+    if (!nonEmpty(row)) continue;
+    if (isCountLine(row)) continue;
+    if (nonEmpty(row) === 1 && row[0]) {
+      const cell = String(row[0]).trim();
+      if (LADDER_HEAD.test(cell)) { inLadder = true; continue; }
+      if (PLACEHOLDER.test(cell)) continue;
+      if (inLadder) continue; // a rung or unnameable ladder prose, not a card
+      inLadder = false;
+      continue; // a section header
+    }
+    inLadder = false;
+    const a = String(row[0] || "").trim();
+    if (a && DATA_LOOKING_NUMBER.test(a)) count++;
+  }
+  return count;
 }
 
 // CF-THE-LADDER-IS-A-LADDER-NOT-A-SECTION (Drew, 2026-08-26).
@@ -894,8 +1189,29 @@ function main() {
   // ---- pass 1: read every row, remembering which section it came from -----
   const records = [];
   const sections = new Map();   // "sheet>section" -> section descriptor
+  // CF-BECKETT-A-SHEET-THAT-EMITS-NOTHING-IS-A-FAILURE-NOT-A-QUIET-SUCCESS
+  // (2026-09-19). sheet name -> { dataLooking, emitted }, checked once pass 1
+  // finishes (see the guard after this loop, and countDataLookingRows above
+  // for what "data-looking" means).
+  const sheetEmitCounts = new Map();
+  // CF-A-DISCARDED-RANGE-HEADER-IS-A-FINDING-NOT-A-SILENCE (2026-09-20,
+  // review fix). CF-BECKETT-A-STATED-RANGE-HEADER-MUST-MATCH-ITS-OWN-CARDS
+  // discards a header the moment the next card's number falls outside its
+  // own stated range (or is not a plain integer at all -- a prefixed number
+  // like "BCP-101", or a range Beckett itself mis-typed). That is the
+  // correct DEFAULT -- Illusions's own "First Impressions Autographed
+  // Memorabilia - #101-142" case needs exactly this to file its 100 base
+  // cards correctly -- but a silent discard is still a fact a human should
+  // see: it could equally be Beckett's own typo in the range, or a prefixed
+  // numbering scheme this file's Number() test cannot parse at all, either
+  // of which means the header's real cards never got their own section.
+  // Collected here, one entry per discard, and written into the manifest's
+  // sectionsReport (see main()'s own manifest-writing code) so an operator
+  // reviewing the acquisition sees it instead of a clean-looking run.
+  const discardedRangeHeaders = [];
   for (const [name, rows] of Object.entries(sheets)) {
     if (isSupersetSheet(name)) continue;
+    sheetEmitCounts.set(name, { dataLooking: countDataLookingRows(rows), emitted: 0 });
     let section = name;
     // Every OTHER header on this sheet, computed once, so
     // stripChecklistSuffix can ask "do this sheet's siblings carry the same
@@ -911,6 +1227,63 @@ function main() {
     // The ladder belongs to the section it sits under, and resets with it.
     let inLadder = false;
     let pendingLadder = [];
+    // CF-BECKETT-A-STATED-RANGE-HEADER-MUST-MATCH-ITS-OWN-CARDS (2026-09-19).
+    // 2024 Panini Illusions Football's Base sheet lists TWO section headers
+    // back-to-back -- "Base Set", then (with no card row between them)
+    // "First Impressions Autographed Memorabilia - #101-142" and its own
+    // eleven-rung "Parallels:" block -- before card #1 ever appears:
+    //
+    //     Base Set
+    //     136 cards.
+    //     First Impressions Autographed Memorabilia - #101-142   <- premature
+    //     Parallels:                 <- this ladder is BASE SET's own Trophy
+    //     Dots Trophy Collection         Collection ladder, not the auto
+    //     ... (19 rungs) ...             section's -- it sits where it does
+    //     1   Kyler Murray                only because Beckett announced the
+    //     ...                             next section's NAME early.
+    //     100 J.J. McCarthy
+    //     First Impressions Autographed Memorabilia   <- the SAME section,
+    //     Parallels:                                     named again, for real
+    //     Bronze - /299 (...)                            this time
+    //     ...
+    //     101 Michael Penix Jr.        <- NOW the autographed run's own cards
+    //
+    // The unconditional `section = cell` assignment overwrote "Base Set" the
+    // moment the second header was read, so the 100 plain base cards that
+    // followed were filed under the autograph section instead -- isAuto=true
+    // on 100 unsigned cards, the exact defect class this whole file exists to
+    // catch, just found in the header tracker rather than in categoryFor.
+    //
+    // THE FIX IS NARROW AND EVIDENCE-BASED, NOT "a header only counts once
+    // the current one has cards" -- that general rule was tried first and
+    // broke five committed, already-measured-clean workbooks. 2026 Topps
+    // Series 1 Baseball's Variations sheet has the IDENTICAL shape --
+    // "Base - Clear Variation" / "100 cards" / "Hobby Exclusive" / [cards
+    // 1-100] -- where the SECOND header, not the first, is the one whose
+    // cards these are (Hobby Exclusive is a genuine same-roster parallel of
+    // Base Set); a general "prefer the earlier still-open header" rule gets
+    // Illusions right and Series 1 wrong using the exact same row shape, so
+    // shape alone cannot decide this. The one piece of evidence Beckett
+    // actually prints that DOES decide it: "First Impressions Autographed
+    // Memorabilia - #101-142" states its own numbering range in its own
+    // text, and the cards that immediately follow (#1-100) fall OUTSIDE that
+    // stated range -- proof this header does not own them, whatever section
+    // is genuinely open when it's announced. "Hobby Exclusive" and "Base -
+    // Clear Variation" state no range at all and are untouched by this
+    // check.
+    //
+    // A header matching RANGE_PREVIEW_LINE (already defined above for the
+    // adjacent-pair case) is held PENDING rather than committed immediately.
+    // The next actual card row decides it: if the card's own number falls
+    // inside the header's stated range, the header commits (this is why the
+    // SECOND "First Impressions Autographed Memorabilia" -- Illusions row
+    // 134, this time with no range suffix at all -- is unaffected: it isn't
+    // range-shaped, so it commits immediately as it always did). If the
+    // number falls OUTSIDE the stated range, the header is a premature
+    // announcement: it is discarded, the section already open (and its
+    // ladder) stays in force, and the card row is read against THAT section
+    // instead -- exactly `section`'s pre-existing value, never overwritten.
+    let pendingRangeHeader = null; // { name, lo, hi } | null
     for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
       const row = rows[rowIndex];
       if (!nonEmpty(row)) continue;
@@ -949,9 +1322,23 @@ function main() {
           // recoverable; the section-name theft was not.
           continue;
         }
+        const rangeMatch = /^(.*\S)\s*[–—-]\s*#\s*(\d+)\s*-\s*(\d+)\s*$/.exec(cell);
+        if (rangeMatch) {
+          // Held pending, not committed -- see CF-BECKETT-A-STATED-RANGE-
+          // HEADER-MUST-MATCH-ITS-OWN-CARDS above. `section`, `pendingLadder`
+          // and `inLadder` are all left exactly as they are; only the NEXT
+          // card row's own number decides whether this header was real.
+          pendingRangeHeader = {
+            header: cell, sheetRowIndex: rowIndex,
+            name: stripChecklistSuffix(rangeMatch[1].trim(), siblingSectionNames, masterNames),
+            lo: Number(rangeMatch[2]), hi: Number(rangeMatch[3]),
+          };
+          continue;
+        }
         section = stripChecklistSuffix(cell, siblingSectionNames, masterNames);
         inLadder = false;
         pendingLadder = [];
+        pendingRangeHeader = null;
         continue;
       }
       // A card row closes the ladder: everything after it belongs to the cards.
@@ -959,15 +1346,115 @@ function main() {
       const cardNumber = String(row[0] || "").trim();
       let player = String(row[1] || "").replace(/,\s*$/, "").trim();
       if (!cardNumber || !player) continue;
+      // Counted here, before the pendingRangeHeader/League-Leaders-merge
+      // logic below -- this is "did the sheet yield a real card row at
+      // all", not a dedup-accurate final count, which is exactly what CF-
+      // BECKETT-A-SHEET-THAT-EMITS-NOTHING-IS-A-FAILURE needs to compare
+      // against countDataLookingRows.
+      sheetEmitCounts.get(name).emitted++;
+      if (pendingRangeHeader) {
+        // A card number is not always purely numeric (Illusions itself mixes
+        // in alpha-prefixed rows elsewhere), so only a row that parses as a
+        // plain integer can be tested against the stated range at all; a
+        // non-numeric number is neither confirming nor refuting evidence and
+        // is treated the same as a mismatch -- absent beats wrong.
+        const n = Number(cardNumber);
+        const inRange = Number.isFinite(n) && n >= pendingRangeHeader.lo && n <= pendingRangeHeader.hi;
+        if (inRange) {
+          section = pendingRangeHeader.name;
+          pendingLadder = [];
+        } else {
+          // A discard is a finding, not a silence -- see
+          // CF-A-DISCARDED-RANGE-HEADER-IS-A-FINDING-NOT-A-SILENCE above.
+          discardedRangeHeaders.push({
+            sheet: name, row: pendingRangeHeader.sheetRowIndex, header: pendingRangeHeader.header,
+            nextCardNumber: cardNumber,
+          });
+        }
+        // Whether confirmed or refused, the pending header is resolved --
+        // either it committed above, or it is discarded and `section` (and
+        // whatever ladder was already accumulating under it) stays exactly
+        // as it was before this header line was ever read.
+        pendingRangeHeader = null;
+      }
       // An RC flag sits in a later column; the repo's CSV convention folds it
       // into the player field ("Jacob Wilson RC").
       if (row.slice(2).some((c) => /^RC$/i.test(String(c || "").trim()))) player += " RC";
 
-      const key = name + ">" + section;
+      let key = name + ">" + section;
+      // CF-BECKETT-A-REPEATED-HEADER-WITH-A-DISAGREEING-ROSTER-IS-A-SECOND-
+      // SECTION (2026-09-19). Beckett sometimes prints the SAME bare header
+      // text twice on one sheet for two genuinely different card groups --
+      // 2024 Panini Select Football's Inserts sheet lists "Score Select
+      // Throwback" (and separately "Snapshots") ONCE for a veterans roster
+      // (#1 Jalen Hurts) and AGAIN, unchanged, for a rookies roster (#1 Caleb
+      // Williams) -- no suffix, no distinguishing word, genuinely the exact
+      // same section name repeated. The unconditional `key = name + ">" +
+      // section` lookup found the SAME section both times and merged 50 rows
+      // (25 + 25, two disjoint rosters) into one 94-distinct-number pool,
+      // producing exactly the "two different cards forced onto one id" id-
+      // collision id-collisions(...) exists to refuse -- 832 collision
+      // groups across three such pairs on this one file, none of them a
+      // fold candidate or a genuine source duplicate.
+      //
+      // THE DISCRIMINATOR IS THE ROSTER, same doctrine as every other fold
+      // decision in this file: a card row whose NUMBER already exists in
+      // this section's roster, naming a DIFFERENT player, is not this
+      // section's own card restated -- it is the second listing's first
+      // card, and belongs to a split section carrying the identical name
+      // (so its category/rung derivation is unaffected) but its own
+      // numbers/roster. Splits are named `key + "#2"`, `"#3"`, ... so a
+      // THIRD repeat (not measured on any workbook yet, but the mechanism
+      // must not silently merge into whichever split happened to exist) is
+      // still caught rather than merged into split #2 by accident.
+      //
+      // A number NOT yet seen in this section, or seen with the SAME
+      // player, is unaffected -- this never fires for the ordinary case
+      // (first mention of a number). It must ALSO never fire for a
+      // League-Leaders multi-player row (Pete Alonso / Kyle Schwarber /
+      // Juan Soto, all card #11, consecutive rows meant to MERGE into one
+      // card, not split into two sections) -- that shape is INDISTINGUISHABLE
+      // from a genuine disagreeing repeat by roster content alone (both are
+      // "same number, different player"); the one fact that tells them apart
+      // is ADJACENCY, the exact test the merge below already uses. So this
+      // check is skipped whenever the incoming row is adjacent to the prior
+      // record in this pre-split section -- that row is the merge's own
+      // candidate, decided by the merge logic below, never by this one.
+      if (sections.has(key)) {
+        const existing = sections.get(key);
+        const priorForSplitCheck = existing.lastRecordIndex >= 0 ? records[existing.lastRecordIndex] : null;
+        const isMergeCandidate = priorForSplitCheck && priorForSplitCheck.sectionKey === key &&
+          String(priorForSplitCheck.cardNumber).toUpperCase() === cardNumber.toUpperCase();
+        if (!isMergeCandidate) {
+          const existingPlayers = existing.roster.get(cardNumber.toUpperCase());
+          if (existingPlayers && existingPlayers.size &&
+              !existingPlayers.has(normalizeRosterPlayer(player))) {
+            let n = 2;
+            while (sections.has(key + "#" + n) &&
+                   sections.get(key + "#" + n).roster.get(cardNumber.toUpperCase()) &&
+                   !sections.get(key + "#" + n).roster.get(cardNumber.toUpperCase()).has(normalizeRosterPlayer(player))) {
+              n++;
+            }
+            key = key + "#" + n;
+          }
+        }
+      }
       if (!sections.has(key)) {
+        // A split section (key ends "#N") carries the SAME section name --
+        // Beckett never named the two listings differently -- so its
+        // category must be distinguishable too, or pass 3 would re-collide
+        // the two groups the split above exists to separate. Suffixed
+        // "-2"/"-3"/... on the category, same numbering as the key, flagged
+        // in the manifest (sectionsReport carries the section's own `key`)
+        // so a human can give it its real name once one is known -- absent
+        // beats wrong, and a numbered placeholder is at least never silently
+        // wrong about WHICH card it is.
+        const splitMatch = /#(\d+)$/.exec(key);
+        const baseCategory = categoryFor(name, section);
+        const category = splitMatch ? baseCategory + "-" + splitMatch[1] : baseCategory;
         sections.set(key, {
           sheet: name, section: section, key: key,
-          category: categoryFor(name, section),
+          category: category,
           numbers: new Set(), cards: 0,
           // (cardNumber -> Set of normalizeRosterPlayer(player)), for
           // classifySections's roster-based fold below. Built from the SAME
@@ -1039,6 +1526,39 @@ function main() {
       records.push({ sectionKey: key, cardNumber: cardNumber, player: player });
       sec.lastRecordIndex = records.length - 1;
     }
+  }
+
+  // CF-BECKETT-A-SHEET-THAT-EMITS-NOTHING-IS-A-FAILURE-NOT-A-QUIET-SUCCESS
+  // (2026-09-19). A sheet with plenty of data-looking rows that nonetheless
+  // emitted zero (or fewer than half) of them as real card rows is not a
+  // clean, sparse sheet -- it is the shape a column-shift defect (the long-
+  // standing "player printed in column C" suspicion, never yet measured
+  // against a live workbook, but the same failure class as the count-line
+  // and ladder-prose defects this file already fixed) would produce: every
+  // row silently fails `!player` and vanishes while the run still exits 0
+  // with a plausible-looking total row count. FAIL LOUDLY here instead of
+  // letting that possibility hide behind a smaller, still-plausible number.
+  // The threshold (>=10 data-looking rows, <50% emitted) is deliberately
+  // generous -- a genuinely thin, correctly-read sheet (five-card insert,
+  // a handful of case hits) must never trip this, only a sheet that looks
+  // substantial and came back empty or nearly so.
+  const emptySheets = [];
+  for (const [name, counts] of sheetEmitCounts) {
+    if (counts.dataLooking >= 10 && counts.emitted < counts.dataLooking * 0.5) {
+      emptySheets.push({ sheet: name, dataLooking: counts.dataLooking, emitted: counts.emitted });
+    }
+  }
+  if (emptySheets.length) {
+    for (const s of emptySheets) {
+      console.error(
+        `FATAL: sheet "${s.sheet}" looks like it has ${s.dataLooking} card rows but only ` +
+        `${s.emitted} were read as cards (player column empty, or some other column-shape ` +
+        `mismatch). Refusing to emit a plausible-looking row count from a sheet this ` +
+        `under-read -- see CF-BECKETT-A-SHEET-THAT-EMITS-NOTHING-IS-A-FAILURE-NOT-A-QUIET-` +
+        `SUCCESS in convertBeckettChecklistXlsx.cjs.`);
+    }
+    process.exitCode = 3;
+    return { emptySheets };
   }
 
   // ---- pass 2: which sections are parallels of which anchors? -------------
@@ -1159,6 +1679,10 @@ function main() {
     // changing how those are read is a separate decision from this one.
     parallelColumnAuthoritative: true,
     sectionsReport: report,
+    // Additive, opt-in: absent entirely (never an empty array) when no
+    // range header was ever discarded, so every existing manifest this
+    // converter has ever written stays byte-identical on a re-run.
+    ...(discardedRangeHeaders.length ? { discardedRangeHeaders } : {}),
   };
   fs.writeFileSync(outPath.replace(/\.csv$/, ".manifest.json"), JSON.stringify(manifest, null, 2));
 
@@ -1184,6 +1708,11 @@ function main() {
       ") overlaps " + a.anchor + " by " + a.overlapPct +
       "% — left as its own cards, needs a human ruling");
   }
+  for (const d of discardedRangeHeaders) {
+    console.log("     !! DISCARDED RANGE HEADER  " + d.sheet + " row " + d.row +
+      "  \"" + d.header + "\"  — next card #" + d.nextCardNumber +
+      " falls outside its stated range (or is not a plain integer); the header named no section");
+  }
 }
 
 if (require.main === module) main();
@@ -1193,4 +1722,5 @@ module.exports = {
   stripChecklistSuffix, masterCardSetNames, sheetSectionHeaderNames,
   normalizeRosterPlayer, rosterFoldAgainst,
   rangePreviewLineIndices, RANGE_PREVIEW_LINE,
+  countDataLookingRows,
 };

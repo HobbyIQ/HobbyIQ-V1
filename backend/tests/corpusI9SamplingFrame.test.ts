@@ -147,11 +147,11 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
   });
 
   it("passes a sample that reproduces the census shares", () => {
-    // Reproduces the 32-SLOT weighted corpus average of the 2026-09-13/14
-    // verification reference (AGREE 0.430, IMPROVE 0.098, CONFLICT 0.364,
-    // UNDERIVABLE 0.073), not slot 31's.
+    // Reproduces the 32-SLOT weighted corpus average of the 2026-09-20 PLAIN
+    // census reference (AGREE 0.484, IMPROVE 0.082, CONFLICT 0.324,
+    // UNDERIVABLE 0.077), not slot 31's.
     const health = INV.frameHealth({
-      byClass: { AGREE: 860, IMPROVE: 195, CONFLICT: 729, UNDERIVABLE: 147 },
+      byClass: { AGREE: 967, IMPROVE: 165, CONFLICT: 649, UNDERIVABLE: 154 },
       distinctCards: 850,
       sampled: 2000,
     });
@@ -171,19 +171,19 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
     // movement is visible rather than assumed.
     expect(health.healthy).toBe(true);
     expect(health.drift.CONFLICT.sampled).toBeCloseTo(0.7, 3);
-    // The corpus number, not slot 31's 0.240.
-    expect(health.drift.CONFLICT.census).toBeCloseTo(0.364, 2);
+    // The corpus number, not slot 31's 0.186.
+    expect(health.drift.CONFLICT.census).toBeCloseTo(0.324, 2);
     expect(health.drift.CONFLICT.delta).toBeGreaterThan(0.15);
   });
 
   it("carries the census reference it compares against", () => {
     // CF-THE-REFERENCE-IS-THE-WHOLE-CORPUS-NOT-ONE-SLOT (2026-09-06). The
     // reference is the ROW-WEIGHTED average over all 32 census slots
-    // (18,352,932 rows on the 2026-09-13/14 verification re-baseline), not slot
+    // (20,458,973 rows on the 2026-09-20 PLAIN-census re-baseline), not slot
     // 31 alone.
     expect(INV.CENSUS_REFERENCE_SHARES.slots).toBe(32);
-    expect(INV.CENSUS_REFERENCE_SHARES.AGREE).toBeCloseTo(0.430, 2);
-    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.364, 2);
+    expect(INV.CENSUS_REFERENCE_SHARES.AGREE).toBeCloseTo(0.484, 2);
+    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.324, 2);
     expect(INV.CENSUS_REFERENCE_SHARES.source).toMatch(/32\/32 slots/);
     expect(INV.FRAME_MIN_DISTINCT_CARDS).toBe(100);
   });
@@ -200,8 +200,8 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
     // Reverting to slot 31's numbers makes this test red: its CONFLICT share is
     // less than HALF the corpus's, which is the whole error.
     const slot31 = INV.censusSharesForSlot(31);
-    expect(slot31.CONFLICT).toBeCloseTo(0.240, 2);
-    // The corpus's CONFLICT share sits well above slot 31's: 0.364 vs 0.240.
+    expect(slot31.CONFLICT).toBeCloseTo(0.186, 2);
+    // The corpus's CONFLICT share sits well above slot 31's: 0.324 vs 0.186.
     expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeGreaterThan(slot31.CONFLICT * 1.4);
     // And the table is genuinely 32 slots, not one repeated.
     expect(INV.CENSUS_TABLE.slots).toHaveLength(32);
@@ -227,20 +227,18 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
   });
 
   it("compares each slot's draw to that slot's own census, not to the average", () => {
-    // A draw that is entirely slot 7 (pokemon; census AGREE 0.103, IMPROVE
-    // 0.402, CONFLICT 0.383, UNDERIVABLE 0.111 on the 2026-09-13/14 reference)
+    // A draw that is entirely slot 7 (pokemon; census AGREE 0.095, IMPROVE
+    // 0.297, CONFLICT 0.500, UNDERIVABLE 0.107 on the 2026-09-20 reference)
     // at 10% AGREE is NORMAL for slot 7 and would look like a collapse against
-    // the corpus average of 0.430 AGREE. The per-slot line is what says so.
-    // (Before R27 the tell was CONFLICT, 0.731 vs 0.430; the set-code rule moved
-    // most of slot 7's CONFLICT into IMPROVE, so AGREE is the tell now.)
+    // the corpus average of 0.484 AGREE. The per-slot line is what says so.
     const verdicts = [
-      ...Array.from({ length: 38 }, () => ({ klass: "CONFLICT", __frameSlot: 7 })),
-      ...Array.from({ length: 12 }, () => ({ klass: "UNDERIVABLE", __frameSlot: 7 })),
-      ...Array.from({ length: 40 }, () => ({ klass: "IMPROVE", __frameSlot: 7 })),
-      ...Array.from({ length: 10 }, () => ({ klass: "AGREE", __frameSlot: 7 })),
+      ...Array.from({ length: 50 }, () => ({ klass: "CONFLICT", __frameSlot: 7 })),
+      ...Array.from({ length: 11 }, () => ({ klass: "UNDERIVABLE", __frameSlot: 7 })),
+      ...Array.from({ length: 30 }, () => ({ klass: "IMPROVE", __frameSlot: 7 })),
+      ...Array.from({ length: 9 }, () => ({ klass: "AGREE", __frameSlot: 7 })),
     ];
     const health = INV.frameHealth({
-      byClass: { CONFLICT: 38, UNDERIVABLE: 12, IMPROVE: 40, AGREE: 10 },
+      byClass: { CONFLICT: 50, UNDERIVABLE: 11, IMPROVE: 30, AGREE: 9 },
       distinctCards: 400,
       sampled: 100,
       verdicts,
@@ -251,7 +249,7 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
     // Against slot 7's OWN census this is a near-perfect reproduction...
     expect(Math.abs(slot7.drift.CONFLICT.delta)).toBeLessThan(0.05);
     expect(Math.abs(slot7.drift.AGREE.delta)).toBeLessThan(0.05);
-    // ...while against the corpus average it looks like a 30pp AGREE collapse.
+    // ...while against the corpus average it looks like a 30pp+ AGREE collapse.
     expect(health.drift.AGREE.delta).toBeLessThan(-0.15);
   });
 
@@ -427,8 +425,12 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
     const health = INV.frameHealth({
       byClass, distinctCards: 1321, sampled: verdicts.length, verdicts,
     });
-    // The night's absolute CONFLICT level is well over the retired threshold...
-    expect(health.drift.CONFLICT.sampled).toBeGreaterThan(0.35);
+    // The night's absolute CONFLICT level sits at the corpus's own composition
+    // (0.324 on the 2026-09-20 reference, down from 0.364 pre-re-baseline) --
+    // still a level a retired 35% absolute gate would have called clean-ish,
+    // which is exactly the point: the level is the frame's composition, not a
+    // signal, at ANY value.
+    expect(health.drift.CONFLICT.sampled).toBeGreaterThan(0.30);
     // ...and every class is within a couple of points of its own reference.
     for (const c of health.bySportClass) {
       expect(Math.abs(c.conflict.delta), `${c.sportClass} moved`).toBeLessThan(0.05);
