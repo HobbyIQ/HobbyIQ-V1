@@ -233,6 +233,41 @@ on:
           # REQUIRED, no 'all' escape hatch. The pilot dispatch is
           # scope=baseball:2026 titles=topps.
           - repoint-sales-to-checklist-numbered
+          # CF-INGEST-KEEPS-STORED-IDENTITY repair (Drew, 2026-09-19, PR #2331
+          # follow-up). The R66/R67/R70 ingest-time insert re-key only ever
+          # fires for a FRESH sale being written today; a sale that landed in
+          # a BASE product's pool before #2331 shipped stays there on every
+          # re-upsert. This lane drives from a REGISTERED INSERT's own
+          # checklist (never a pool-wide title scan): `titles` (SET_KEYS,
+          # REQUIRED, no 'all'/'*') names one or more insert setKeys (e.g.
+          # panini-photogenic-rookie-pix); productParentOf resolves each
+          # one's BASE product. Candidate sales are found by
+          # STARTSWITH(c.hobbyiqCardId, "hiq:sport:year:baseSetKey:") over the
+          # base product's own cell (the same query shape rekey-product-
+          # setkey.cjs's own MODE=pool lane already runs against sold_comps),
+          # then confirmed against the insert's own checklist rows (already
+          # loaded, no per-sale Cosmos read) via the real compiled
+          # insertSetNamedInTitle + a pure mirror of insertSetChecklistConfirm
+          # .ts's FIX-1 rule -- AND the exact destination rung (number +
+          # parallel + auto flag) must itself be checklist-attested, not the
+          # number alone ("price only checklist-matched identities"). Units
+          # are (cell, BASE PRODUCT), never (cell, insert key), so a base
+          # product shared by several requested inserts is STARTSWITH-scanned
+          # exactly once. Only writes the two shapes where cardId and
+          # hobbyiqCardId AGREE (both the base slug -> relocate; cardId a raw
+          # vendor id -> patch hobbyiqCardId only) -- a PRE-EXISTING split
+          # between the two (both hiq: slugs, different products) is left
+          # untouched by name, never deepened by moving one side alone, and
+          # guardSoldCompDoc runs on the would-be doc before every write.
+          # Same-id twins (CardHedge dual-id duplicates) are grouped and
+          # handled serially within one unit, plus a last-line _etag
+          # re-read-before-write refusing `changed-since-planned` on a race.
+          # `scope` is REQUIRED sport:year cells, no 'all'. Never touches a
+          # verifiedByUser, flaggedWrong, excludedFromFmv, USER_SEED_SOURCES,
+          # or already-parked (identityUnverified) sale. The pilot dispatch is
+          # scope=football:2024 titles=panini-photogenic-rookie-pix,panini-
+          # photogenic-troops-tribute,panini-zenith-z-marquee.
+          - repoint-stored-insert-sales
           # R76 (Drew, 2026-09-19). repair-set-sport.cjs (2026-08-20) flipped
           # 183,248 sold_comps rows' sport by set-level checklist dominance,
           # vetoed only by five literal substring words -- a census judged
@@ -1743,6 +1778,17 @@ jobs:
           # sold_comps rows onto a checklist's numbered id, so "every setKey"
           # is a whole-source write that needs its own name. The pilot
           # dispatch is scope=baseball:2026 titles=topps.
+          #
+          # repoint-stored-insert-sales (2026-09-19) reads BCP_TITLES as its
+          # REQUIRED comma-separated REGISTERED INSERT setKey list (SET_KEYS)
+          # -- e.g. panini-photogenic-rookie-pix -- narrowing its required
+          # SCOPE=sport:year cells, same convention as the two lanes just
+          # above. Empty or a wildcard ('all', '*') is REFUSED (exit 2): a key
+          # with no registered parent product is ALSO refused (exit 2), since
+          # this lane repairs an insert's sales against its base product and
+          # a key naming no base product has nothing to repair away from. The
+          # pilot dispatch is scope=football:2024 titles=panini-photogenic-
+          # rookie-pix,panini-photogenic-troops-tribute,panini-zenith-z-marquee.
           USER_ID: ${{ inputs.script == 'rederive-holding-identity' && inputs.scope == 'user' && 'user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4' || '' }}
           SOURCES: ${{ inputs.sources }}
           # CF-A-SOURCE-THAT-CONTRADICTS-ITSELF-MINTS-NO-IDENTITIES (Drew,
@@ -3249,6 +3295,47 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (relocated=${R:-0} patched=${P:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-to-checklist-numbered -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+
+      # This lane's whole point is the stored insert sales the R66/R67/R70
+      # ingest-time re-key can never reach (CF-INGEST-KEEPS-STORED-IDENTITY),
+      # so a reviewer auditing which sales moved, which were left as
+      # number-is-base-number, and which were refused needs the full list,
+      # never a truncated sample -- same reason every sibling repoint/rekey
+      # log above is kept.
+      - name: Upload the repoint-stored-insert-sales log
+        if: ${{ always() && inputs.script == 'repoint-stored-insert-sales' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: repoint-stored-insert-sales-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the stored-insert-sales repoint until the scope is clean
+        # Stops at its own 110-minute budget and PRINTS its summary; a run killed
+        # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
+        # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
+        # re-run after a budget stop is idempotent by construction: a sale that
+        # already moved or was patched no longer matches
+        # STARTSWITH(c.hobbyiqCardId, "hiq:sport:year:baseSetKey:") -- its
+        # hobbyiqCardId now names the insert's own setKey segment.
+        if: ${{ !cancelled() && inputs.script == 'repoint-stored-insert-sales' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: repoint-stored-insert-sales
+          preamble: |
+            M=$(grep -aoE "(MOVED|WOULD MOVE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            P=$(grep -aoE "(PATCHED|WOULD PATCH) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "moved=${M:-0} patched=${P:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (moved=${M:-0} patched=${P:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${M:-0} patched=${P:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-stored-insert-sales -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
       # R76's whole point is a reviewer being able to audit every wrongly-
       # flipped sale that moved (or was refused, and why) -- never a
