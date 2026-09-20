@@ -1,0 +1,17 @@
+{
+  "scrapedAt": "2026-09-20T22:09:36.597Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/02/2025-Topps-Series-1-Baseball-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-20",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Topps Series 1 Baseball",
+  "productKey": "2025-topps",
+  "setKey": "topps",
+  "rowCount": 4,
+  "parallelColumnAuthoritative": true,
+  "heldRows": {
+    "reason": "CF-BASE-SET-IS-NOT-A-SUBSET-style page inconsistency, held rather than guessed. Beckett's own Dancing Dodgers Variations section lists 10 cards (#1, #53, #146, #176, #201, #204, #212, #214, #231, #239); 6 of the 10 name the SAME player as this workbook's own Base Set at that exact number (Shohei Ohtani #1, Chris Taylor #53, Teoscar Hernandez #176, Will Smith #212, Tommy Edman #214, Freddie Freeman #239) and fold cleanly as a `Dancing Dodgers Variation` parallel of Base -- see the sibling 2025-topps-series1-baseball.csv, where those 6 rows already carry that parallel. The other 4 (#146 Mookie Betts, #201 Kike Hernandez, #204 Gavin Lux, #231 Max Muncy) name a DIFFERENT player than this same workbook's own Base Set at that number (#146 Base is Clayton Kershaw, #201 is Tyler Glasnow, #204 is Justin Wrobleski, #231 is Yoshinobu Yamamoto) -- a genuine disagreement between two sections of the SAME source page, not a second card set with its own numbering (Dancing Dodgers states no number range or prefix of its own; it is presented as a straight parallel section throughout). Neither folding these 4 onto Base's card at that number (wrong player) nor minting them as their own address (collides with Base's real card at that number, computing the identical id hiq:baseball:2025:topps:<N>:base:no-auto) is defensible from this source alone. Held pending either a second source confirming which side of the disagreement is correct, or Beckett publishing an erratum -- absent beats wrong.",
+    "rows": 4
+  },
+  "sha256": "a58e09468882fad8712a027f34e52420fb2e9723c3bffa4d4a69e9302b064034"
+}

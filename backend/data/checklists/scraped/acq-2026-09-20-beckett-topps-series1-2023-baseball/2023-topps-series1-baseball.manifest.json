@@ -1,0 +1,288 @@
+{
+  "scrapedAt": "2026-09-20T22:14:39.235Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2023/02/2023-Topps-Series-1-Baseball-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-20",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Topps Series 1 Baseball",
+  "productKey": "2023-topps",
+  "setKey": "topps",
+  "rowCount": 9900,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 330,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Clear Checklist",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1988 Topps Baseball Autographs",
+      "category": "auto-1988-topps-baseball-autographs",
+      "cards": 117,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "2022's Greatest Hits Autographs",
+      "category": "auto-2022s-greatest-hits-autographs",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "All Aces Autographs",
+      "category": "auto-all-aces-autographs",
+      "cards": 18,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Baseball Stars Autographs",
+      "category": "auto-baseball-stars-autographs",
+      "cards": 112,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Baseball Stars Dual Autographs",
+      "category": "auto-baseball-stars-dual-autographs",
+      "cards": 33,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "City Connect Manufactured Patch Cards",
+      "category": "auto-city-connect-manufactured-patch-cards",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Cut Signatures",
+      "category": "auto-cut-signatures",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Major League Material Autographs",
+      "category": "auto-major-league-material-autographs",
+      "cards": 46,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "One-Two Punch Dual Autographs",
+      "category": "auto-one-two-punch-dual-autographs",
+      "cards": 9,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Oversized 1988 Topps Baseball - League Leaders Boxtoppers Autographs",
+      "category": "auto-oversized-1988-topps-baseball-league-leaders-boxtoppers-autographs",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Postseason Performance Autograph Relics",
+      "category": "auto-postseason-performance-autograph-relics",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Team Logo Manufactured Patch Cards Autographs",
+      "category": "auto-team-logo-manufactured-patch-cards-autographs",
+      "cards": 27,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Topps Reverence Autograph Patch Cards",
+      "category": "auto-topps-reverence-autograph-patch-cards",
+      "cards": 55,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Welcome to the Club Autographs",
+      "category": "auto-welcome-to-the-club-autographs",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "World Series Champion Autograph Relics",
+      "category": "auto-world-series-champion-autograph-relics",
+      "cards": 9,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "World Series Champion Autographs",
+      "category": "auto-world-series-champion-autographs",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "1988 Topps Baseball Relics",
+      "category": "insert-1988-topps-baseball-relics",
+      "cards": 85,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "In the Name Relics",
+      "category": "insert-in-the-name-relics",
+      "cards": 42,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Major League Materials",
+      "category": "insert-major-league-materials",
+      "cards": 87,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Postseason Performance Relics",
+      "category": "insert-postseason-performance-relics",
+      "cards": 38,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "World Series Champions Relics",
+      "category": "insert-world-series-champions-relics",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1988 Topps Baseball",
+      "category": "insert-1988-topps-baseball",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "2022's Greatest Hits",
+      "category": "insert-2022s-greatest-hits",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "AKA",
+      "category": "insert-aka",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "All Aces",
+      "category": "insert-all-aces",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "City Connect Manufactured Patch Cards",
+      "category": "insert-city-connect-manufactured-patch-cards",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Heavy Lumber",
+      "category": "insert-heavy-lumber",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Home Run Challenge Code Cards",
+      "category": "insert-home-run-challenge-code-cards",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "One-Two Punch",
+      "category": "insert-one-two-punch",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Oversized 1988 Topps Baseball - League Leaders Boxtoppers",
+      "category": "insert-oversized-1988-topps-baseball-league-leaders-boxtoppers",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Patchwork of the Past Commemorative Patch Cards",
+      "category": "insert-patchwork-of-the-past-commemorative-patch-cards",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Stars of MLB",
+      "category": "insert-stars-of-mlb",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Stars of MLB Chrome",
+      "category": "insert-stars-of-mlb-chrome",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Team Logo Manufactured Patch Cards",
+      "category": "insert-team-logo-manufactured-patch-cards",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Welcome to the Club",
+      "category": "insert-welcome-to-the-club",
+      "cards": 24,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Silver Packs",
+      "section": "1988 Topps Chrome Silver Packs",
+      "category": "insert-1988-topps-chrome-silver-packs",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Silver Packs",
+      "section": "1988 Topps Chrome Silver Packs Autographs",
+      "category": "auto-1988-topps-chrome-silver-packs-autographs",
+      "cards": 75,
+      "role": "own-cards"
+    }
+  ],
+  "sha256": "22a37515616ebb65892bad4b6883f528f643acfb8af4b217c67ddf7a4646c930"
+}

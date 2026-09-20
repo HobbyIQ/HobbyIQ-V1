@@ -1,0 +1,353 @@
+{
+  "scrapedAt": "2026-09-20T22:14:38.588Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/02/2025-Topps-Series-1-Baseball-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-20",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Topps Series 1 Baseball",
+  "productKey": "2025-topps",
+  "setKey": "topps",
+  "rowCount": 2353,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 350,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Dancing Dodgers Variations",
+      "category": "insert-dancing-dodgers-variations",
+      "cards": 10,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Dancing Dodgers Variation",
+      "rosterFold": true,
+      "agree": 6,
+      "disagree": 4,
+      "heldNumbers": [
+        "146",
+        "201",
+        "204",
+        "231"
+      ]
+    },
+    {
+      "sheet": "Variations",
+      "section": "Golden Mirror Image Variations",
+      "category": "insert-golden-mirror-image-variations",
+      "cards": 350,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Golden Mirror Image Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Player Number Variations",
+      "category": "insert-player-number-variations",
+      "cards": 25,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Player Number Variation"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1990 Topps Baseball Autographs",
+      "category": "auto-1990-topps-baseball-autographs",
+      "cards": 201,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1990 Topps Baseball Chrome Autographs",
+      "category": "auto-1990-topps-baseball-chrome-autographs",
+      "cards": 92,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "2024 First Pitch Autographs",
+      "category": "auto-2024-first-pitch-autographs",
+      "cards": 9,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "2025 Topps Baseball Flagship Autograph Patch",
+      "category": "auto-2025-topps-baseball-flagship-autograph-patch",
+      "cards": 71,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Baseball Stars Autographs",
+      "category": "auto-baseball-stars-autographs",
+      "cards": 102,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Baseball Stars Dual Autographs",
+      "category": "auto-baseball-stars-dual-autographs",
+      "cards": 44,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Baseball Stars Triple Autographs",
+      "category": "auto-baseball-stars-triple-autographs",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "City Connect Swatch Collection Autograph Relics",
+      "category": "auto-city-connect-swatch-collection-autograph-relics",
+      "cards": 24,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Flagship Real One Autographs",
+      "category": "auto-flagship-real-one-autographs",
+      "cards": 47,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Flagship Real One",
+      "rosterFold": true,
+      "agree": 47,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Heavy Lumber Autograph Relics",
+      "category": "auto-heavy-lumber-autograph-relics",
+      "cards": 23,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Larry David Autographs",
+      "category": "auto-larry-david-autographs",
+      "cards": 1,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Major League Material Autographs",
+      "category": "auto-major-league-material-autographs",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Major League Material Dual Autographs",
+      "category": "auto-major-league-material-dual-autographs",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rickwood Autograph Relic Collection",
+      "category": "auto-rickwood-autograph-relic-collection",
+      "cards": 11,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Signature Tunes Dual Autographs",
+      "category": "auto-signature-tunes-dual-autographs",
+      "cards": 3,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "The Big Hurt Autographs",
+      "category": "auto-the-big-hurt-autographs",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "1990 Topps Baseball Relics",
+      "category": "insert-1990-topps-baseball-relics",
+      "cards": 98,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "City Connect Swatch Collection",
+      "category": "insert-city-connect-swatch-collection",
+      "cards": 36,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "In the Name Relics",
+      "category": "insert-in-the-name-relics",
+      "cards": 65,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Major League Material",
+      "category": "insert-major-league-material",
+      "cards": 82,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Major League Material Dual",
+      "category": "insert-major-league-material-dual",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Real One Relics",
+      "category": "insert-real-one-relics",
+      "cards": 28,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Real One Relic",
+      "rosterFold": true,
+      "agree": 28,
+      "disagree": 0
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Rickwood Relic Collection",
+      "category": "insert-rickwood-relic-collection",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1990 Topps Baseball",
+      "category": "insert-1990-topps-baseball",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1990 Topps Baseball Chrome",
+      "category": "insert-1990-topps-baseball-chrome",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "2024 All-Topps Team",
+      "category": "insert-2024-all-topps-team",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "2024 First Pitch",
+      "category": "insert-2024-first-pitch",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "2024 Greatest Hits",
+      "category": "insert-2024-greatest-hits",
+      "cards": 28,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "All Aces",
+      "category": "insert-all-aces",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Call to the Hall",
+      "category": "insert-call-to-the-hall",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Companion Cards",
+      "category": "insert-companion-cards",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Heavy Lumber",
+      "category": "insert-heavy-lumber",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Home Field Advantage",
+      "category": "insert-home-field-advantage",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Legendary Home Field Advantage",
+      "category": "insert-legendary-home-field-advantage",
+      "cards": 5,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Oversized 2025 Topps Baseball",
+      "category": "insert-oversized-2025-topps-baseball",
+      "cards": 25,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Oversized 2025 Topps Baseball",
+      "rosterFold": true,
+      "agree": 25,
+      "disagree": 0
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Plakata",
+      "category": "insert-plakata",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Social Media Follow Back Redemptions",
+      "category": "insert-social-media-follow-back-redemptions",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Stars of MLB",
+      "category": "insert-stars-of-mlb",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Topps Mega Stars",
+      "category": "insert-topps-mega-stars",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Training Grounds",
+      "category": "insert-training-grounds",
+      "cards": 25,
+      "role": "own-cards"
+    }
+  ],
+  "sha256": "a58e09468882fad8712a027f34e52420fb2e9723c3bffa4d4a69e9302b064034"
+}

@@ -1,0 +1,2354 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,,false,,Shohei Ohtani
+base,2,,false,,Thairo Estrada
+base,3,,false,,Lane Thomas
+base,4,,false,,Christian Encarnacion-Strand
+base,5,,false,,Tarik Skubal / Ronel Blanco / Framber Valdez
+base,6,,false,,Tyler Gentry
+base,7,,false,,Alec Bohm
+base,8,,false,,Seth Brown
+base,9,,false,,Luis García Jr.
+base,10,,false,,Connor Wong
+base,11,,false,,Triston Casas
+base,12,,false,,Bailey Ober
+base,13,,false,,Luis De Los Santos
+base,14,,false,,Anthony Rizzo
+base,15,,false,,Mitch Haniger
+base,16,,false,,Carlos Rodriguez
+base,17,,false,,Jack Kochanowicz
+base,18,,false,,Orelvis Martinez
+base,19,,false,,Xander Bogaerts
+base,20,,false,,Coby Mayo
+base,21,,false,,Nick Lodolo
+base,22,,false,,Masyn Winn
+base,23,,false,,Jorge Soler
+base,24,,false,,Jhonkensy Noel
+base,25,,false,,Cade Povich
+base,26,,false,,Will Brennan
+base,27,,false,,Angel Martínez
+base,28,,false,,Trevor Megill
+base,29,,false,,José Ramírez / Aaron Judge / Brent Rooker
+base,30,,false,,Pedro León
+base,31,,false,,Tyler Stephenson
+base,32,,false,,Chayce McDermott
+base,33,,false,,José Berríos
+base,34,,false,,60
+base,35,,false,,Anthony Volpe
+base,36,,false,,Greg Jones
+base,37,,false,,Spencer Steer
+base,38,,false,,Nico Hoerner
+base,39,,false,,39
+base,40,,false,,Joe Ryan
+base,41,,false,,Alec Burleson
+base,42,,false,,Andrew McCutchen
+base,43,,false,,Brady Singer
+base,44,,false,,Brenton Doyle
+base,45,,false,,Brice Turang
+base,46,,false,,Tanner Houck
+base,47,,false,,Blake Perkins
+base,48,,false,,Michael Toglia
+base,49,,false,,Christian Yelich
+base,50,,false,,Leody Taveras
+base,51,,false,,Jonah Heim
+base,52,,false,,Will Benson
+base,53,,false,,Chris Taylor
+base,54,,false,,Austin Riley
+base,55,,false,,Jake Rogers
+base,56,,false,,Ranger Suárez
+base,57,,false,,Nick Gordon
+base,58,,false,,Dylan Cease
+base,59,,false,,Royce Lewis
+base,60,,false,,67
+base,61,,false,,Freddy Peralta
+base,62,,false,,Jon Gray
+base,63,,false,,Jake Bloss
+base,64,,false,,Ian Happ
+base,65,,false,,Gunnar Henderson
+base,66,,false,,Logan Gilbert
+base,67,,false,,Trey Sweeney
+base,68,,false,,Hunter Feduccia
+base,69,,false,,Cedric Mullins
+base,70,,false,,Patrick Bailey
+base,71,,false,,Tarik Skubal
+base,72,,false,,Tyler Soderstrom
+base,73,,false,,Luis Castillo
+base,74,,false,,Dylan Crews
+base,75,,false,,Colin Rea
+base,76,,false,,56
+base,77,,false,,José Ramírez
+base,78,,false,,Corbin Carroll
+base,79,,false,,Aaron Judge / Juan Soto / Anthony Santander
+base,80,,false,,Jace Jung
+base,81,,false,,Carlos Correa
+base,82,,false,,George Springer
+base,83,,false,,Anthony Rendon
+base,84,,false,,Kameron Misner
+base,85,,false,,36
+base,86,,false,,Willy Adames / Shohei Ohtani / Manny Machado
+base,87,,false,,Shay Whitcomb
+base,88,,false,,Kevin Gausman
+base,89,,false,,Zach Dezenzo
+base,90,,false,,Eloy Jiménez
+base,91,,false,,Kenta Maeda
+base,92,,false,,Danny Jansen
+base,93,,false,,Rhys Hoskins
+base,94,,false,,Nick Sogard
+base,95,,false,,Gavin Sheets
+base,96,,false,,32
+base,97,,false,,Will Warren
+base,98,,false,,Paul Skenes
+base,99,,false,,9
+base,100,,false,,Bobby Witt Jr.
+base,101,,false,,Nolan Arenado
+base,102,,false,,Jonathan India
+base,103,,false,,Spencer Schwellenbach
+base,104,,false,,Yilber Diaz
+base,105,,false,,Dylan Moore
+base,106,,false,,Lawrence Butler
+base,107,,false,,Ryan Mountcastle
+base,108,,false,,Mitch Keller
+base,109,,false,,Cristopher Sánchez
+base,110,,false,,46
+base,111,,false,,Randy Arozarena
+base,112,,false,,Rob Refsnyder
+base,113,,false,,Marco Gonzales
+base,114,,false,,Ryan O'Hearn
+base,115,,false,,Carlos Narváez
+base,116,,false,,Amed Rosario
+base,117,,false,,Josh Jung
+base,118,,false,,Justin Verlander
+base,119,,false,,Daulton Varsho
+base,120,,false,,Cristian Mena
+base,121,,false,,Andrew Vaughn
+base,122,,false,,CJ Abrams
+base,123,,false,,30
+base,124,,false,,Richie Palacios
+base,125,,false,,Jackson Merrill
+base,126,,false,,Dillon Dingler
+base,127,,false,,Joc Pederson
+base,128,,false,,Ketel Marte
+base,129,,false,,Brent Rooker
+base,130,,false,,Nathan Eovaldi
+base,131,,false,,David Peterson
+base,132,,false,,Connor Norby
+base,133,,false,,José Caballero
+base,134,,false,,Jameson Taillon
+base,135,,false,,Maikel Garcia
+base,136,,false,,Lourdes Gurriel Jr.
+base,137,,false,,Miles Mikolas
+base,138,,false,,Isaac Paredes
+base,139,,false,,Jordan Beck
+base,140,,false,,Andrew Abbott
+base,141,,false,,Kyle Schwarber
+base,142,,false,,Jordan Westburg
+base,143,,false,,Manny Machado
+base,144,,false,,Shohei Ohtani / Marcell Ozuna / Kyle Schwarber
+base,145,,false,,Matt Olson
+base,146,,false,,Clayton Kershaw
+base,147,,false,,Bryson Stott
+base,148,,false,,Ceddanne Rafaela
+base,149,,false,,Jeff McNeil
+base,150,,false,,Elly De La Cruz
+base,151,,false,,Tarik Skubal / José Berríos / Seth Lugo
+base,152,,false,,Luis Rengifo
+base,153,,false,,Brandon Lowe
+base,154,,false,,Orlando Arcia
+base,155,,false,,Willi Castro
+base,156,,false,,Marco Luciano
+base,157,,false,,Jesús Sánchez
+base,158,,false,,Shea Langeliers
+base,159,,false,,17
+base,160,,false,,Marcell Ozuna
+base,161,,false,,Bradley Blalock
+base,162,,false,,Tanner Scott
+base,163,,false,,Vladimir Guerrero Jr.
+base,164,,false,,Tanner Bibee
+base,165,,false,,Joey Ortiz
+base,166,,false,,Matt Vierling
+base,167,,false,,Andrés Chaparro
+base,168,,false,,Connor Joe
+base,169,,false,,Cole Ragans
+base,170,,false,,41
+base,171,,false,,Francisco Alvarez
+base,172,,false,,Otto Lopez
+base,173,,false,,Starling Marte
+base,174,,false,,Mark Vientos
+base,175,,false,,Ha-Seong Kim
+base,176,,false,,Teoscar Hernández
+base,177,,false,,Kyle Harrison
+base,178,,false,,David Festa
+base,179,,false,,Ryan Pepiot
+base,180,,false,,Colt Keith
+base,181,,false,,James Wood
+base,182,,false,,Brandon Pfaadt
+base,183,,false,,Taj Bradley
+base,184,,false,,Aaron Judge
+base,185,,false,,Jazz Chisholm Jr.
+base,186,,false,,Mike Yastrzemski
+base,187,,false,,Gerrit Cole
+base,188,,false,,Zach Eflin
+base,189,,false,,Luis Robert Jr.
+base,190,,false,,Miguel Vargas
+base,191,,false,,Adael Amador
+base,192,,false,,Tyler Locklear
+base,193,,false,,Michael McGreevy
+base,194,,false,,Brayan Rocchio
+base,195,,false,,Michael King
+base,196,,false,,Aaron Schunk
+base,197,,false,,Jake Irvin
+base,198,,false,,Pete Fairbanks
+base,199,,false,,David Hamilton
+base,200,,false,,Mike Trout
+base,201,,false,,Tyler Glasnow
+base,202,,false,,Keibert Ruiz
+base,203,,false,,Lars Nootbaar
+base,204,,false,,Justin Wrobleski
+base,205,,false,,Rhett Lowder
+base,206,,false,,Seth Lugo
+base,207,,false,,Ronald Acuña Jr.
+base,208,,false,,Jacob deGrom
+base,209,,false,,Taylor Ward
+base,210,,false,,Nolan Schanuel
+base,211,,false,,Jo Adell
+base,212,,false,,Will Smith
+base,213,,false,,Grant McCray
+base,214,,false,,Tommy Edman
+base,215,,false,,Manny Machado
+base,216,,false,,Hunter Greene
+base,217,,false,,Rece Hinds
+base,218,,false,,Zack Wheeler
+base,219,,false,,LaMonte Wade Jr.
+base,220,,false,,Jackson Holliday
+base,221,,false,,Matt Chapman
+base,222,,false,,Mauricio Dubón
+base,223,,false,,Nacho Alvarez Jr.
+base,224,,false,,Reese Olson
+base,225,,false,,Tyrone Taylor
+base,226,,false,,Adrian Del Castillo
+base,227,,false,,Ty France
+base,228,,false,,Geraldo Perdomo
+base,229,,false,,Erick Fedde
+base,230,,false,,Colton Cowser
+base,231,,false,,Yoshinobu Yamamoto
+base,232,,false,,Jake Cronenworth
+base,233,,false,,Brandon Marsh
+base,234,,false,,Zack Wheeler / Chris Sale / Shota Imanaga
+base,235,,false,,Gabriel Moreno
+base,236,,false,,Christopher Morel
+base,237,,false,,Marcell Ozuna
+base,238,,false,,JJ Bleday
+base,239,,false,,Freddie Freeman
+base,240,,false,,Will Brennan
+base,241,,false,,Ryan Helsley
+base,242,,false,,Logan Webb
+base,243,,false,,Jake McCarthy
+base,244,,false,,Yordan Alvarez
+base,245,,false,,Abraham Toro
+base,246,,false,,Sean Reynolds
+base,247,,false,,Adolis García
+base,248,,false,,Ke'Bryan Hayes
+base,249,,false,,Brooks Baldwin
+base,250,,false,,Bryce Harper
+base,251,,false,,Ryan Bliss
+base,252,,false,,Pedro Pagés
+base,253,,false,,Hurston Waldrep
+base,254,,false,,Kyle Finnegan
+base,255,,false,,Andy Pages
+base,256,,false,,Jake Cave
+base,257,,false,,Korey Lee
+base,258,,false,,Xavier Edwards
+base,259,,false,,Nathaniel Lowe
+base,260,,false,,Jose Altuve
+base,261,,false,,Mike Tauchman
+base,262,,false,,Giancarlo Stanton
+base,263,,false,,Michael Busch
+base,264,,false,,23
+base,265,,false,,Ryan Thompson
+base,266,,false,,Julio Rodríguez
+base,267,,false,,Chris Bassitt
+base,268,,false,,Marcus Stroman
+base,269,,false,,Justyn-Henry Malloy
+base,270,,false,,Andrés Giménez
+base,271,,false,,Josh Hader
+base,272,,false,,Chris Sale / Zack Wheeler / Shota Imanaga
+base,273,,false,,River Ryan
+base,274,,false,,Blake Dunn
+base,275,,false,,Carlos Correa
+base,276,,false,,Jarred Kelenic
+base,277,,false,,Jung Hoo Lee
+base,278,,false,,Niko Kavadas
+base,279,,false,,Trevor Larnach
+base,280,,false,,Ky Bush
+base,281,,false,,Corey Seager
+base,282,,false,,Zach Neto
+base,283,,false,,Zebby Matthews
+base,284,,false,,Oneil Cruz
+base,285,,false,,Rafael Devers
+base,286,,false,,Edwin Díaz
+base,287,,false,,DJ Herz
+base,288,,false,,Evan Carter
+base,289,,false,,Michael Siani
+base,290,,false,,Pete Crow-Armstrong
+base,291,,false,,Taylor Walls
+base,292,,false,,Clay Holmes
+base,293,,false,,Tyler Phillips
+base,294,,false,,117
+base,295,,false,,Elly De La Cruz
+base,296,,false,,Drew Romo
+base,297,,false,,Corbin Carroll
+base,298,,false,,J.P. Crawford
+base,299,,false,,Yainer Diaz
+base,300,,false,,Aaron Judge
+base,301,,false,,Cal Quantrill
+base,302,,false,,3
+base,303,,false,,Dansby Swanson
+base,304,,false,,Raisel Iglesias
+base,305,,false,,Max Schuemann
+base,306,,false,,Sonny Gray
+base,307,,false,,Jeremy Peña
+base,308,,false,,Logan O'Hoppe
+base,309,,false,,Adam Mazur
+base,310,,false,,Jose Miranda
+base,311,,false,,Charlie Blackmon
+base,312,,false,,Jarren Duran
+base,313,,false,,Cody Bellinger
+base,314,,false,,Jacob Wilson
+base,315,,false,,Casey Mize
+base,316,,false,,Chris Sale
+base,317,,false,,Brooks Lee
+base,318,,false,,Joey Cantillo
+base,319,,false,,Ernie Clement
+base,320,,false,,Drew Thorpe
+base,321,,false,,Luis Gil
+base,322,,false,,Josh Naylor
+base,323,,false,,Yu Darvish
+base,324,,false,,Masataka Yoshida
+base,325,,false,,Travis d'Arnaud
+base,326,,false,,Emmanuel Clase
+base,327,,false,,Bryan Woo
+base,328,,false,,Eugenio Suárez
+base,329,,false,,Paul Blackburn
+base,330,,false,,Jake Burger
+base,331,,false,,Brandon Nimmo
+base,332,,false,,Riley Greene
+base,333,,false,,Bryan De La Cruz
+base,334,,false,,MacKenzie Gore
+base,335,,false,,Sandy Alcantara
+base,336,,false,,Jorge Alcala
+base,337,,false,,Ben Rice
+base,338,,false,,Mitch Garver
+base,339,,false,,Ryan Jeffers
+base,340,,false,,88
+base,341,,false,,Ronel Blanco
+base,342,,false,,Davis Schneider
+base,343,,false,,Ezequiel Tovar
+base,344,,false,,Andrew Benintendi
+base,345,,false,,Vladimir Guerrero Jr. / Aaron Judge / Bobby Witt Jr.
+base,346,,false,,Freddy Fermin
+base,347,,false,,Shohei Ohtani / Luis Arraez / Marcell Ozuna
+base,348,,false,,Brant Hurter
+base,349,,false,,Vinnie Pasquantino
+base,350,,false,,Francisco Lindor
+base,1,Dancing Dodgers Variation,false,,Shohei Ohtani
+base,53,Dancing Dodgers Variation,false,,Chris Taylor
+base,176,Dancing Dodgers Variation,false,,Teoscar Hernández
+base,212,Dancing Dodgers Variation,false,,Will Smith
+base,214,Dancing Dodgers Variation,false,,Tommy Edman
+base,239,Dancing Dodgers Variation,false,,Freddie Freeman
+base,1,Golden Mirror Image Variation,false,,Shohei Ohtani
+base,2,Golden Mirror Image Variation,false,,Thairo Estrada
+base,3,Golden Mirror Image Variation,false,,Lane Thomas
+base,4,Golden Mirror Image Variation,false,,Christian Encarnacion-Strand
+base,5,Golden Mirror Image Variation,false,,Tarik Skubal / Ronel Blanco / Framber Valdez
+base,6,Golden Mirror Image Variation,false,,Tyler Gentry
+base,7,Golden Mirror Image Variation,false,,Alec Bohm
+base,8,Golden Mirror Image Variation,false,,Seth Brown
+base,9,Golden Mirror Image Variation,false,,Luis García Jr.
+base,10,Golden Mirror Image Variation,false,,Connor Wong
+base,11,Golden Mirror Image Variation,false,,Triston Casas
+base,12,Golden Mirror Image Variation,false,,Bailey Ober
+base,13,Golden Mirror Image Variation,false,,Luis De Los Santos
+base,14,Golden Mirror Image Variation,false,,Anthony Rizzo
+base,15,Golden Mirror Image Variation,false,,Mitch Haniger
+base,16,Golden Mirror Image Variation,false,,Carlos Rodriguez
+base,17,Golden Mirror Image Variation,false,,Jack Kochanowicz
+base,18,Golden Mirror Image Variation,false,,Orelvis Martinez
+base,19,Golden Mirror Image Variation,false,,Xander Bogaerts
+base,20,Golden Mirror Image Variation,false,,Coby Mayo
+base,21,Golden Mirror Image Variation,false,,Nick Lodolo
+base,22,Golden Mirror Image Variation,false,,Masyn Winn
+base,23,Golden Mirror Image Variation,false,,Jorge Soler
+base,24,Golden Mirror Image Variation,false,,Jhonkensy Noel
+base,25,Golden Mirror Image Variation,false,,Cade Povich
+base,26,Golden Mirror Image Variation,false,,Will Brennan
+base,27,Golden Mirror Image Variation,false,,Angel Martínez
+base,28,Golden Mirror Image Variation,false,,Trevor Megill
+base,29,Golden Mirror Image Variation,false,,José Ramírez / Aaron Judge / Brent Rooker
+base,30,Golden Mirror Image Variation,false,,Pedro León
+base,31,Golden Mirror Image Variation,false,,Tyler Stephenson
+base,32,Golden Mirror Image Variation,false,,Chayce McDermott
+base,33,Golden Mirror Image Variation,false,,José Berríos
+base,34,Golden Mirror Image Variation,false,,60
+base,35,Golden Mirror Image Variation,false,,Anthony Volpe
+base,36,Golden Mirror Image Variation,false,,Greg Jones
+base,37,Golden Mirror Image Variation,false,,Spencer Steer
+base,38,Golden Mirror Image Variation,false,,Nico Hoerner
+base,39,Golden Mirror Image Variation,false,,39
+base,40,Golden Mirror Image Variation,false,,Joe Ryan
+base,41,Golden Mirror Image Variation,false,,Alec Burleson
+base,42,Golden Mirror Image Variation,false,,Andrew McCutchen
+base,43,Golden Mirror Image Variation,false,,Brady Singer
+base,44,Golden Mirror Image Variation,false,,Brenton Doyle
+base,45,Golden Mirror Image Variation,false,,Brice Turang
+base,46,Golden Mirror Image Variation,false,,Tanner Houck
+base,47,Golden Mirror Image Variation,false,,Blake Perkins
+base,48,Golden Mirror Image Variation,false,,Michael Toglia
+base,49,Golden Mirror Image Variation,false,,Christian Yelich
+base,50,Golden Mirror Image Variation,false,,Leody Taveras
+base,51,Golden Mirror Image Variation,false,,Jonah Heim
+base,52,Golden Mirror Image Variation,false,,Will Benson
+base,53,Golden Mirror Image Variation,false,,Chris Taylor
+base,54,Golden Mirror Image Variation,false,,Austin Riley
+base,55,Golden Mirror Image Variation,false,,Jake Rogers
+base,56,Golden Mirror Image Variation,false,,Ranger Suárez
+base,57,Golden Mirror Image Variation,false,,Nick Gordon
+base,58,Golden Mirror Image Variation,false,,Dylan Cease
+base,59,Golden Mirror Image Variation,false,,Royce Lewis
+base,60,Golden Mirror Image Variation,false,,67
+base,61,Golden Mirror Image Variation,false,,Freddy Peralta
+base,62,Golden Mirror Image Variation,false,,Jon Gray
+base,63,Golden Mirror Image Variation,false,,Jake Bloss
+base,64,Golden Mirror Image Variation,false,,Ian Happ
+base,65,Golden Mirror Image Variation,false,,Gunnar Henderson
+base,66,Golden Mirror Image Variation,false,,Logan Gilbert
+base,67,Golden Mirror Image Variation,false,,Trey Sweeney
+base,68,Golden Mirror Image Variation,false,,Hunter Feduccia
+base,69,Golden Mirror Image Variation,false,,Cedric Mullins
+base,70,Golden Mirror Image Variation,false,,Patrick Bailey
+base,71,Golden Mirror Image Variation,false,,Tarik Skubal
+base,72,Golden Mirror Image Variation,false,,Tyler Soderstrom
+base,73,Golden Mirror Image Variation,false,,Luis Castillo
+base,74,Golden Mirror Image Variation,false,,Dylan Crews
+base,75,Golden Mirror Image Variation,false,,Colin Rea
+base,76,Golden Mirror Image Variation,false,,56
+base,77,Golden Mirror Image Variation,false,,José Ramírez
+base,78,Golden Mirror Image Variation,false,,Corbin Carroll
+base,79,Golden Mirror Image Variation,false,,Aaron Judge / Juan Soto / Anthony Santander
+base,80,Golden Mirror Image Variation,false,,Jace Jung
+base,81,Golden Mirror Image Variation,false,,Carlos Correa
+base,82,Golden Mirror Image Variation,false,,George Springer
+base,83,Golden Mirror Image Variation,false,,Anthony Rendon
+base,84,Golden Mirror Image Variation,false,,Kameron Misner
+base,85,Golden Mirror Image Variation,false,,36
+base,86,Golden Mirror Image Variation,false,,Willy Adames / Shohei Ohtani / Manny Machado
+base,87,Golden Mirror Image Variation,false,,Shay Whitcomb
+base,88,Golden Mirror Image Variation,false,,Kevin Gausman
+base,89,Golden Mirror Image Variation,false,,Zach Dezenzo
+base,90,Golden Mirror Image Variation,false,,Eloy Jiménez
+base,91,Golden Mirror Image Variation,false,,Kenta Maeda
+base,92,Golden Mirror Image Variation,false,,Danny Jansen
+base,93,Golden Mirror Image Variation,false,,Rhys Hoskins
+base,94,Golden Mirror Image Variation,false,,Nick Sogard
+base,95,Golden Mirror Image Variation,false,,Gavin Sheets
+base,96,Golden Mirror Image Variation,false,,32
+base,97,Golden Mirror Image Variation,false,,Will Warren
+base,98,Golden Mirror Image Variation,false,,Paul Skenes
+base,99,Golden Mirror Image Variation,false,,9
+base,100,Golden Mirror Image Variation,false,,Bobby Witt Jr.
+base,101,Golden Mirror Image Variation,false,,Nolan Arenado
+base,102,Golden Mirror Image Variation,false,,Jonathan India
+base,103,Golden Mirror Image Variation,false,,Spencer Schwellenbach
+base,104,Golden Mirror Image Variation,false,,Yilber Diaz
+base,105,Golden Mirror Image Variation,false,,Dylan Moore
+base,106,Golden Mirror Image Variation,false,,Lawrence Butler
+base,107,Golden Mirror Image Variation,false,,Ryan Mountcastle
+base,108,Golden Mirror Image Variation,false,,Mitch Keller
+base,109,Golden Mirror Image Variation,false,,Cristopher Sánchez
+base,110,Golden Mirror Image Variation,false,,46
+base,111,Golden Mirror Image Variation,false,,Randy Arozarena
+base,112,Golden Mirror Image Variation,false,,Rob Refsnyder
+base,113,Golden Mirror Image Variation,false,,Marco Gonzales
+base,114,Golden Mirror Image Variation,false,,Ryan O'Hearn
+base,115,Golden Mirror Image Variation,false,,Carlos Narváez
+base,116,Golden Mirror Image Variation,false,,Amed Rosario
+base,117,Golden Mirror Image Variation,false,,Josh Jung
+base,118,Golden Mirror Image Variation,false,,Justin Verlander
+base,119,Golden Mirror Image Variation,false,,Daulton Varsho
+base,120,Golden Mirror Image Variation,false,,Cristian Mena
+base,121,Golden Mirror Image Variation,false,,Andrew Vaughn
+base,122,Golden Mirror Image Variation,false,,CJ Abrams
+base,123,Golden Mirror Image Variation,false,,30
+base,124,Golden Mirror Image Variation,false,,Richie Palacios
+base,125,Golden Mirror Image Variation,false,,Jackson Merrill
+base,126,Golden Mirror Image Variation,false,,Dillon Dingler
+base,127,Golden Mirror Image Variation,false,,Joc Pederson
+base,128,Golden Mirror Image Variation,false,,Ketel Marte
+base,129,Golden Mirror Image Variation,false,,Brent Rooker
+base,130,Golden Mirror Image Variation,false,,Nathan Eovaldi
+base,131,Golden Mirror Image Variation,false,,David Peterson
+base,132,Golden Mirror Image Variation,false,,Connor Norby
+base,133,Golden Mirror Image Variation,false,,José Caballero
+base,134,Golden Mirror Image Variation,false,,Jameson Taillon
+base,135,Golden Mirror Image Variation,false,,Maikel Garcia
+base,136,Golden Mirror Image Variation,false,,Lourdes Gurriel Jr.
+base,137,Golden Mirror Image Variation,false,,Miles Mikolas
+base,138,Golden Mirror Image Variation,false,,Isaac Paredes
+base,139,Golden Mirror Image Variation,false,,Jordan Beck
+base,140,Golden Mirror Image Variation,false,,Andrew Abbott
+base,141,Golden Mirror Image Variation,false,,Kyle Schwarber
+base,142,Golden Mirror Image Variation,false,,Jordan Westburg
+base,143,Golden Mirror Image Variation,false,,Manny Machado
+base,144,Golden Mirror Image Variation,false,,Shohei Ohtani / Marcell Ozuna / Kyle Schwarber
+base,145,Golden Mirror Image Variation,false,,Matt Olson
+base,146,Golden Mirror Image Variation,false,,Clayton Kershaw
+base,147,Golden Mirror Image Variation,false,,Bryson Stott
+base,148,Golden Mirror Image Variation,false,,Ceddanne Rafaela
+base,149,Golden Mirror Image Variation,false,,Jeff McNeil
+base,150,Golden Mirror Image Variation,false,,Elly De La Cruz
+base,151,Golden Mirror Image Variation,false,,Tarik Skubal / José Berríos / Seth Lugo
+base,152,Golden Mirror Image Variation,false,,Luis Rengifo
+base,153,Golden Mirror Image Variation,false,,Brandon Lowe
+base,154,Golden Mirror Image Variation,false,,Orlando Arcia
+base,155,Golden Mirror Image Variation,false,,Willi Castro
+base,156,Golden Mirror Image Variation,false,,Marco Luciano
+base,157,Golden Mirror Image Variation,false,,Jesús Sánchez
+base,158,Golden Mirror Image Variation,false,,Shea Langeliers
+base,159,Golden Mirror Image Variation,false,,17
+base,160,Golden Mirror Image Variation,false,,Marcell Ozuna
+base,161,Golden Mirror Image Variation,false,,Bradley Blalock
+base,162,Golden Mirror Image Variation,false,,Tanner Scott
+base,163,Golden Mirror Image Variation,false,,Vladimir Guerrero Jr.
+base,164,Golden Mirror Image Variation,false,,Tanner Bibee
+base,165,Golden Mirror Image Variation,false,,Joey Ortiz
+base,166,Golden Mirror Image Variation,false,,Matt Vierling
+base,167,Golden Mirror Image Variation,false,,Andrés Chaparro
+base,168,Golden Mirror Image Variation,false,,Connor Joe
+base,169,Golden Mirror Image Variation,false,,Cole Ragans
+base,170,Golden Mirror Image Variation,false,,41
+base,171,Golden Mirror Image Variation,false,,Francisco Alvarez
+base,172,Golden Mirror Image Variation,false,,Otto Lopez
+base,173,Golden Mirror Image Variation,false,,Starling Marte
+base,174,Golden Mirror Image Variation,false,,Mark Vientos
+base,175,Golden Mirror Image Variation,false,,Ha-Seong Kim
+base,176,Golden Mirror Image Variation,false,,Teoscar Hernández
+base,177,Golden Mirror Image Variation,false,,Kyle Harrison
+base,178,Golden Mirror Image Variation,false,,David Festa
+base,179,Golden Mirror Image Variation,false,,Ryan Pepiot
+base,180,Golden Mirror Image Variation,false,,Colt Keith
+base,181,Golden Mirror Image Variation,false,,James Wood
+base,182,Golden Mirror Image Variation,false,,Brandon Pfaadt
+base,183,Golden Mirror Image Variation,false,,Taj Bradley
+base,184,Golden Mirror Image Variation,false,,Aaron Judge
+base,185,Golden Mirror Image Variation,false,,Jazz Chisholm Jr.
+base,186,Golden Mirror Image Variation,false,,Mike Yastrzemski
+base,187,Golden Mirror Image Variation,false,,Gerrit Cole
+base,188,Golden Mirror Image Variation,false,,Zach Eflin
+base,189,Golden Mirror Image Variation,false,,Luis Robert Jr.
+base,190,Golden Mirror Image Variation,false,,Miguel Vargas
+base,191,Golden Mirror Image Variation,false,,Adael Amador
+base,192,Golden Mirror Image Variation,false,,Tyler Locklear
+base,193,Golden Mirror Image Variation,false,,Michael McGreevy
+base,194,Golden Mirror Image Variation,false,,Brayan Rocchio
+base,195,Golden Mirror Image Variation,false,,Michael King
+base,196,Golden Mirror Image Variation,false,,Aaron Schunk
+base,197,Golden Mirror Image Variation,false,,Jake Irvin
+base,198,Golden Mirror Image Variation,false,,Pete Fairbanks
+base,199,Golden Mirror Image Variation,false,,David Hamilton
+base,200,Golden Mirror Image Variation,false,,Mike Trout
+base,201,Golden Mirror Image Variation,false,,Tyler Glasnow
+base,202,Golden Mirror Image Variation,false,,Keibert Ruiz
+base,203,Golden Mirror Image Variation,false,,Lars Nootbaar
+base,204,Golden Mirror Image Variation,false,,Justin Wrobleski
+base,205,Golden Mirror Image Variation,false,,Rhett Lowder
+base,206,Golden Mirror Image Variation,false,,Seth Lugo
+base,207,Golden Mirror Image Variation,false,,Ronald Acuña Jr.
+base,208,Golden Mirror Image Variation,false,,Jacob deGrom
+base,209,Golden Mirror Image Variation,false,,Taylor Ward
+base,210,Golden Mirror Image Variation,false,,Nolan Schanuel
+base,211,Golden Mirror Image Variation,false,,Jo Adell
+base,212,Golden Mirror Image Variation,false,,Will Smith
+base,213,Golden Mirror Image Variation,false,,Grant McCray
+base,214,Golden Mirror Image Variation,false,,Tommy Edman
+base,215,Golden Mirror Image Variation,false,,Manny Machado
+base,216,Golden Mirror Image Variation,false,,Hunter Greene
+base,217,Golden Mirror Image Variation,false,,Rece Hinds
+base,218,Golden Mirror Image Variation,false,,Zack Wheeler
+base,219,Golden Mirror Image Variation,false,,LaMonte Wade Jr.
+base,220,Golden Mirror Image Variation,false,,Jackson Holliday
+base,221,Golden Mirror Image Variation,false,,Matt Chapman
+base,222,Golden Mirror Image Variation,false,,Mauricio Dubón
+base,223,Golden Mirror Image Variation,false,,Nacho Alvarez Jr.
+base,224,Golden Mirror Image Variation,false,,Reese Olson
+base,225,Golden Mirror Image Variation,false,,Tyrone Taylor
+base,226,Golden Mirror Image Variation,false,,Adrian Del Castillo
+base,227,Golden Mirror Image Variation,false,,Ty France
+base,228,Golden Mirror Image Variation,false,,Geraldo Perdomo
+base,229,Golden Mirror Image Variation,false,,Erick Fedde
+base,230,Golden Mirror Image Variation,false,,Colton Cowser
+base,231,Golden Mirror Image Variation,false,,Yoshinobu Yamamoto
+base,232,Golden Mirror Image Variation,false,,Jake Cronenworth
+base,233,Golden Mirror Image Variation,false,,Brandon Marsh
+base,234,Golden Mirror Image Variation,false,,Zack Wheeler / Chris Sale / Shota Imanaga
+base,235,Golden Mirror Image Variation,false,,Gabriel Moreno
+base,236,Golden Mirror Image Variation,false,,Christopher Morel
+base,237,Golden Mirror Image Variation,false,,Marcell Ozuna
+base,238,Golden Mirror Image Variation,false,,JJ Bleday
+base,239,Golden Mirror Image Variation,false,,Freddie Freeman
+base,240,Golden Mirror Image Variation,false,,Will Brennan
+base,241,Golden Mirror Image Variation,false,,Ryan Helsley
+base,242,Golden Mirror Image Variation,false,,Logan Webb
+base,243,Golden Mirror Image Variation,false,,Jake McCarthy
+base,244,Golden Mirror Image Variation,false,,Yordan Alvarez
+base,245,Golden Mirror Image Variation,false,,Abraham Toro
+base,246,Golden Mirror Image Variation,false,,Sean Reynolds
+base,247,Golden Mirror Image Variation,false,,Adolis García
+base,248,Golden Mirror Image Variation,false,,Ke'Bryan Hayes
+base,249,Golden Mirror Image Variation,false,,Brooks Baldwin
+base,250,Golden Mirror Image Variation,false,,Bryce Harper
+base,251,Golden Mirror Image Variation,false,,Ryan Bliss
+base,252,Golden Mirror Image Variation,false,,Pedro Pagés
+base,253,Golden Mirror Image Variation,false,,Hurston Waldrep
+base,254,Golden Mirror Image Variation,false,,Kyle Finnegan
+base,255,Golden Mirror Image Variation,false,,Andy Pages
+base,256,Golden Mirror Image Variation,false,,Jake Cave
+base,257,Golden Mirror Image Variation,false,,Korey Lee
+base,258,Golden Mirror Image Variation,false,,Xavier Edwards
+base,259,Golden Mirror Image Variation,false,,Nathaniel Lowe
+base,260,Golden Mirror Image Variation,false,,Jose Altuve
+base,261,Golden Mirror Image Variation,false,,Mike Tauchman
+base,262,Golden Mirror Image Variation,false,,Giancarlo Stanton
+base,263,Golden Mirror Image Variation,false,,Michael Busch
+base,264,Golden Mirror Image Variation,false,,23
+base,265,Golden Mirror Image Variation,false,,Ryan Thompson
+base,266,Golden Mirror Image Variation,false,,Julio Rodríguez
+base,267,Golden Mirror Image Variation,false,,Chris Bassitt
+base,268,Golden Mirror Image Variation,false,,Marcus Stroman
+base,269,Golden Mirror Image Variation,false,,Justyn-Henry Malloy
+base,270,Golden Mirror Image Variation,false,,Andrés Giménez
+base,271,Golden Mirror Image Variation,false,,Josh Hader
+base,272,Golden Mirror Image Variation,false,,Chris Sale / Zack Wheeler / Shota Imanaga
+base,273,Golden Mirror Image Variation,false,,River Ryan
+base,274,Golden Mirror Image Variation,false,,Blake Dunn
+base,275,Golden Mirror Image Variation,false,,Carlos Correa
+base,276,Golden Mirror Image Variation,false,,Jarred Kelenic
+base,277,Golden Mirror Image Variation,false,,Jung Hoo Lee
+base,278,Golden Mirror Image Variation,false,,Niko Kavadas
+base,279,Golden Mirror Image Variation,false,,Trevor Larnach
+base,280,Golden Mirror Image Variation,false,,Ky Bush
+base,281,Golden Mirror Image Variation,false,,Corey Seager
+base,282,Golden Mirror Image Variation,false,,Zach Neto
+base,283,Golden Mirror Image Variation,false,,Zebby Matthews
+base,284,Golden Mirror Image Variation,false,,Oneil Cruz
+base,285,Golden Mirror Image Variation,false,,Rafael Devers
+base,286,Golden Mirror Image Variation,false,,Edwin Díaz
+base,287,Golden Mirror Image Variation,false,,DJ Herz
+base,288,Golden Mirror Image Variation,false,,Evan Carter
+base,289,Golden Mirror Image Variation,false,,Michael Siani
+base,290,Golden Mirror Image Variation,false,,Pete Crow-Armstrong
+base,291,Golden Mirror Image Variation,false,,Taylor Walls
+base,292,Golden Mirror Image Variation,false,,Clay Holmes
+base,293,Golden Mirror Image Variation,false,,Tyler Phillips
+base,294,Golden Mirror Image Variation,false,,117
+base,295,Golden Mirror Image Variation,false,,Elly De La Cruz
+base,296,Golden Mirror Image Variation,false,,Drew Romo
+base,297,Golden Mirror Image Variation,false,,Corbin Carroll
+base,298,Golden Mirror Image Variation,false,,J.P. Crawford
+base,299,Golden Mirror Image Variation,false,,Yainer Diaz
+base,300,Golden Mirror Image Variation,false,,Aaron Judge
+base,301,Golden Mirror Image Variation,false,,Cal Quantrill
+base,302,Golden Mirror Image Variation,false,,3
+base,303,Golden Mirror Image Variation,false,,Dansby Swanson
+base,304,Golden Mirror Image Variation,false,,Raisel Iglesias
+base,305,Golden Mirror Image Variation,false,,Max Schuemann
+base,306,Golden Mirror Image Variation,false,,Sonny Gray
+base,307,Golden Mirror Image Variation,false,,Jeremy Peña
+base,308,Golden Mirror Image Variation,false,,Logan O'Hoppe
+base,309,Golden Mirror Image Variation,false,,Adam Mazur
+base,310,Golden Mirror Image Variation,false,,Jose Miranda
+base,311,Golden Mirror Image Variation,false,,Charlie Blackmon
+base,312,Golden Mirror Image Variation,false,,Jarren Duran
+base,313,Golden Mirror Image Variation,false,,Cody Bellinger
+base,314,Golden Mirror Image Variation,false,,Jacob Wilson
+base,315,Golden Mirror Image Variation,false,,Casey Mize
+base,316,Golden Mirror Image Variation,false,,Chris Sale
+base,317,Golden Mirror Image Variation,false,,Brooks Lee
+base,318,Golden Mirror Image Variation,false,,Joey Cantillo
+base,319,Golden Mirror Image Variation,false,,Ernie Clement
+base,320,Golden Mirror Image Variation,false,,Drew Thorpe
+base,321,Golden Mirror Image Variation,false,,Luis Gil
+base,322,Golden Mirror Image Variation,false,,Josh Naylor
+base,323,Golden Mirror Image Variation,false,,Yu Darvish
+base,324,Golden Mirror Image Variation,false,,Masataka Yoshida
+base,325,Golden Mirror Image Variation,false,,Travis d'Arnaud
+base,326,Golden Mirror Image Variation,false,,Emmanuel Clase
+base,327,Golden Mirror Image Variation,false,,Bryan Woo
+base,328,Golden Mirror Image Variation,false,,Eugenio Suárez
+base,329,Golden Mirror Image Variation,false,,Paul Blackburn
+base,330,Golden Mirror Image Variation,false,,Jake Burger
+base,331,Golden Mirror Image Variation,false,,Brandon Nimmo
+base,332,Golden Mirror Image Variation,false,,Riley Greene
+base,333,Golden Mirror Image Variation,false,,Bryan De La Cruz
+base,334,Golden Mirror Image Variation,false,,MacKenzie Gore
+base,335,Golden Mirror Image Variation,false,,Sandy Alcantara
+base,336,Golden Mirror Image Variation,false,,Jorge Alcala
+base,337,Golden Mirror Image Variation,false,,Ben Rice
+base,338,Golden Mirror Image Variation,false,,Mitch Garver
+base,339,Golden Mirror Image Variation,false,,Ryan Jeffers
+base,340,Golden Mirror Image Variation,false,,88
+base,341,Golden Mirror Image Variation,false,,Ronel Blanco
+base,342,Golden Mirror Image Variation,false,,Davis Schneider
+base,343,Golden Mirror Image Variation,false,,Ezequiel Tovar
+base,344,Golden Mirror Image Variation,false,,Andrew Benintendi
+base,345,Golden Mirror Image Variation,false,,Vladimir Guerrero Jr. / Aaron Judge / Bobby Witt Jr.
+base,346,Golden Mirror Image Variation,false,,Freddy Fermin
+base,347,Golden Mirror Image Variation,false,,Shohei Ohtani / Luis Arraez / Marcell Ozuna
+base,348,Golden Mirror Image Variation,false,,Brant Hurter
+base,349,Golden Mirror Image Variation,false,,Vinnie Pasquantino
+base,350,Golden Mirror Image Variation,false,,Francisco Lindor
+base,1,Player Number Variation,false,,Shohei Ohtani
+base,20,Player Number Variation,false,,Coby Mayo
+base,49,Player Number Variation,false,,Christian Yelich
+base,65,Player Number Variation,false,,Gunnar Henderson
+base,74,Player Number Variation,false,,Dylan Crews
+base,78,Player Number Variation,false,,Corbin Carroll
+base,80,Player Number Variation,false,,Jace Jung
+base,98,Player Number Variation,false,,Paul Skenes
+base,100,Player Number Variation,false,,Bobby Witt Jr.
+base,101,Player Number Variation,false,,Nolan Arenado
+base,146,Player Number Variation,false,,Clayton Kershaw
+base,150,Player Number Variation,false,,Elly De La Cruz
+base,163,Player Number Variation,false,,Vladimir Guerrero Jr.
+base,181,Player Number Variation,false,,James Wood
+base,187,Player Number Variation,false,,Gerrit Cole
+base,200,Player Number Variation,false,,Mike Trout
+base,207,Player Number Variation,false,,Ronald Acuña Jr.
+base,244,Player Number Variation,false,,Yordan Alvarez
+base,250,Player Number Variation,false,,Bryce Harper
+base,266,Player Number Variation,false,,Julio Rodríguez
+base,285,Player Number Variation,false,,Rafael Devers
+base,300,Player Number Variation,false,,Aaron Judge
+base,314,Player Number Variation,false,,Jacob Wilson
+base,317,Player Number Variation,false,,Brooks Lee
+base,350,Player Number Variation,false,,Francisco Lindor
+auto-1990-topps-baseball-autographs,90A-AA,,true,,Adael Amador
+auto-1990-topps-baseball-autographs,90A-AD,,true,,Andre Dawson
+auto-1990-topps-baseball-autographs,90A-AJ,,true,,Adam Jones
+auto-1990-topps-baseball-autographs,90A-AK,,true,,Adam Kloffenstein
+auto-1990-topps-baseball-autographs,90A-AMZ,,true,,Angel Martínez
+auto-1990-topps-baseball-autographs,90A-AN,,true,,Aaron Nola
+auto-1990-topps-baseball-autographs,90A-AP,,true,,Andy Pettitte
+auto-1990-topps-baseball-autographs,90A-AR,,true,,Anthony Rizzo
+auto-1990-topps-baseball-autographs,90A-AS,,true,,Aaron Schunk
+auto-1990-topps-baseball-autographs,90A-AT,,true,,Alan Trammell
+auto-1990-topps-baseball-autographs,90A-AV,,true,,Anthony Volpe
+auto-1990-topps-baseball-autographs,90A-AVE,,true,,Alex Verdugo
+auto-1990-topps-baseball-autographs,90A-AVS,,true,,Andy Van Slyke
+auto-1990-topps-baseball-autographs,90A-BB,,true,,Bert Blyleven
+auto-1990-topps-baseball-autographs,90A-BBA,,true,,Brady Basso
+auto-1990-topps-baseball-autographs,90A-BBN,,true,,Brooks Baldwin
+auto-1990-topps-baseball-autographs,90A-BBO,,true,,Barry Bonds
+auto-1990-topps-baseball-autographs,90A-BBO2,,true,,Barry Bonds
+auto-1990-topps-baseball-autographs,90A-BBR,,true,,Ben Brown
+auto-1990-topps-baseball-autographs,90A-BL,,true,,Brooks Lee
+auto-1990-topps-baseball-autographs,90A-BN,,true,,Brandon Nimmo
+auto-1990-topps-baseball-autographs,90A-BR,,true,,Bryan Reynolds
+auto-1990-topps-baseball-autographs,90A-BRI,,true,,Ben Rice
+auto-1990-topps-baseball-autographs,90A-BRN,,true,,Billy Ripken
+auto-1990-topps-baseball-autographs,90A-BW,,true,,Bernie Williams
+auto-1990-topps-baseball-autographs,90A-BWI,,true,,Brian Wilson
+auto-1990-topps-baseball-autographs,90A-CA,,true,,CJ Abrams
+auto-1990-topps-baseball-autographs,90A-CBE,,true,,Carlos Beltrán
+auto-1990-topps-baseball-autographs,90A-CBU,,true,,Corbin Burnes
+auto-1990-topps-baseball-autographs,90A-CC,,true,,Colton Cowser
+auto-1990-topps-baseball-autographs,90A-CED,,true,,Ceddanne Rafaela
+auto-1990-topps-baseball-autographs,90A-CF,,true,,Cecil Fielder
+auto-1990-topps-baseball-autographs,90A-CK,,true,,Colt Keith
+auto-1990-topps-baseball-autographs,90A-CL,,true,,Cliff Lee
+auto-1990-topps-baseball-autographs,90A-CM,,true,,Christopher Morel
+auto-1990-topps-baseball-autographs,90A-CMA,,true,,Coby Mayo
+auto-1990-topps-baseball-autographs,90A-CME,,true,,Cristian Mena
+auto-1990-topps-baseball-autographs,90A-CMT,,true,,Chayce McDermott
+auto-1990-topps-baseball-autographs,90A-CN,,true,,Connor Norby
+auto-1990-topps-baseball-autographs,90A-CP,,true,,Cade Povich
+auto-1990-topps-baseball-autographs,90A-CR,,true,,Cole Ragans
+auto-1990-topps-baseball-autographs,90A-CRA,,true,,Cal Raleigh
+auto-1990-topps-baseball-autographs,90A-CS,,true,,Christian Scott
+auto-1990-topps-baseball-autographs,90A-DCR,,true,,Dylan Crews
+auto-1990-topps-baseball-autographs,90A-DF,,true,,David Festa
+auto-1990-topps-baseball-autographs,90A-DH,,true,,DJ Herz
+auto-1990-topps-baseball-autographs,90A-DJ,,true,,David Justice
+auto-1990-topps-baseball-autographs,90A-DM,,true,,Dale Murphy
+auto-1990-topps-baseball-autographs,90A-DP,,true,,Dustin Pedroia
+auto-1990-topps-baseball-autographs,90A-DS,,true,,Dave Stieb
+auto-1990-topps-baseball-autographs,90A-DT,,true,,Drew Thorpe
+auto-1990-topps-baseball-autographs,90A-ED,,true,,Eric Davis
+auto-1990-topps-baseball-autographs,90A-EG,,true,,Eric Gagne
+auto-1990-topps-baseball-autographs,90A-EM,,true,,Edgar Martinez
+auto-1990-topps-baseball-autographs,90A-FJ,,true,,Fergie Jenkins
+auto-1990-topps-baseball-autographs,90A-FM,,true,,Fred McGriff
+auto-1990-topps-baseball-autographs,90A-FP,,true,,Freddy Peralta
+auto-1990-topps-baseball-autographs,90A-GG,,true,,Gordon Graceffo
+auto-1990-topps-baseball-autographs,90A-GJ,,true,,Greg Jones
+auto-1990-topps-baseball-autographs,90A-GK,,true,,George Kirby
+auto-1990-topps-baseball-autographs,90A-GS,,true,,George Springer
+auto-1990-topps-baseball-autographs,90A-GSH,,true,,Gary Sheffield
+auto-1990-topps-baseball-autographs,90A-HB,,true,,Hayden Birdsong
+auto-1990-topps-baseball-autographs,90A-HW,,true,,Hurston Waldrep
+auto-1990-topps-baseball-autographs,90A-IH,,true,,Ian Happ
+auto-1990-topps-baseball-autographs,90A-JA,,true,,Jim Abbott
+auto-1990-topps-baseball-autographs,90A-JB,,true,,Jake Bloss
+auto-1990-topps-baseball-autographs,90A-JC,,true,,Jazz Chisholm Jr.
+auto-1990-topps-baseball-autographs,90A-JCA,,true,,Junior Caminero
+auto-1990-topps-baseball-autographs,90A-JE,,true,,Jim Edmonds
+auto-1990-topps-baseball-autographs,90A-JG,,true,,Juan Gonzalez
+auto-1990-topps-baseball-autographs,90A-JH,,true,,Jackson Holliday
+auto-1990-topps-baseball-autographs,90A-JHM,,true,,Justyn-Henry Malloy
+auto-1990-topps-baseball-autographs,90A-JJ,,true,,Jared Jones
+auto-1990-topps-baseball-autographs,90A-JJE,,true,,Jackson Jobe
+auto-1990-topps-baseball-autographs,90A-JJU,,true,,Jace Jung
+auto-1990-topps-baseball-autographs,90A-JK,,true,,John Kruk
+auto-1990-topps-baseball-autographs,90A-JM,,true,,Jackson Merrill
+auto-1990-topps-baseball-autographs,90A-JN,,true,,Jhonkensy Noel
+auto-1990-topps-baseball-autographs,90A-JP,,true,,Jim Palmer
+auto-1990-topps-baseball-autographs,90A-JPO,,true,,Jorge Posada
+auto-1990-topps-baseball-autographs,90A-JRI,,true,,Jim Rice
+auto-1990-topps-baseball-autographs,90A-JRO,,true,,Jimmy Rollins
+auto-1990-topps-baseball-autographs,90A-JSA,,true,,Johan Santana
+auto-1990-topps-baseball-autographs,90A-JSM,,true,,John Smoltz
+auto-1990-topps-baseball-autographs,90A-JST,,true,,Justin Steele
+auto-1990-topps-baseball-autographs,90A-JW,,true,,Jerome Walton
+auto-1990-topps-baseball-autographs,90A-JWI,,true,,Jacob Wilson
+auto-1990-topps-baseball-autographs,90A-JWO,,true,,James Wood
+auto-1990-topps-baseball-autographs,90A-JWR,,true,,Justin Wrobleski
+auto-1990-topps-baseball-autographs,90A-KH,,true,,Ke'Bryan Hayes
+auto-1990-topps-baseball-autographs,90A-KL,,true,,Kenny Lofton
+auto-1990-topps-baseball-autographs,90A-KT,,true,,Kyle Tucker
+auto-1990-topps-baseball-autographs,90A-KW,,true,,Kerry Wood
+auto-1990-topps-baseball-autographs,90A-LG,,true,,Lourdes Gurriel Jr.
+auto-1990-topps-baseball-autographs,90A-LN,,true,,Lars Nootbaar
+auto-1990-topps-baseball-autographs,90A-MB,,true,,Mark Buehrle
+auto-1990-topps-baseball-autographs,90A-MG,,true,,Mark Grace
+auto-1990-topps-baseball-autographs,90A-MM,,true,,Mason Miller
+auto-1990-topps-baseball-autographs,90A-MMU,,true,,Max Muncy
+auto-1990-topps-baseball-autographs,90A-MS,,true,,Marcus Semien
+auto-1990-topps-baseball-autographs,90A-MY,,true,,Michael Young
+auto-1990-topps-baseball-autographs,90A-NA,,true,,Nacho Alvarez Jr.
+auto-1990-topps-baseball-autographs,90A-NC,,true,,Nestor Cortes
+auto-1990-topps-baseball-autographs,90A-NG,,true,,Nomar Garciaparra
+auto-1990-topps-baseball-autographs,90A-OM,,true,,Orelvis Martinez
+auto-1990-topps-baseball-autographs,90A-PK,,true,,Paul Konerko
+auto-1990-topps-baseball-autographs,90A-PM,,true,,Paul Molitor
+auto-1990-topps-baseball-autographs,90A-PO,,true,,Paul O'neill
+auto-1990-topps-baseball-autographs,90A-PS,,true,,Paul Skenes
+auto-1990-topps-baseball-autographs,90A-RH,,true,,Ryan Howard
+auto-1990-topps-baseball-autographs,90A-RHI,,true,,Rece Hinds
+auto-1990-topps-baseball-autographs,90A-RHO,,true,,Rhys Hoskins
+auto-1990-topps-baseball-autographs,90A-RL,,true,,Rhett Lowder
+auto-1990-topps-baseball-autographs,90A-RM,,true,,Ryan Mountcastle
+auto-1990-topps-baseball-autographs,90A-RR,,true,,River Ryan
+auto-1990-topps-baseball-autographs,90A-RZ,,true,,Ryan Zimmerman
+auto-1990-topps-baseball-autographs,90A-SBE,,true,,Steward Berroa
+auto-1990-topps-baseball-autographs,90A-SG,,true,,Sonny Gray
+auto-1990-topps-baseball-autographs,90A-SGA,,true,,Steve Garvey
+auto-1990-topps-baseball-autographs,90A-SK,,true,,Steven Kwan
+auto-1990-topps-baseball-autographs,90A-SSC,,true,,Spencer Schwellenbach
+auto-1990-topps-baseball-autographs,90A-TGL,,true,,Tom Glavine
+auto-1990-topps-baseball-autographs,90A-TH,,true,,Torii Hunter
+auto-1990-topps-baseball-autographs,90A-TL,,true,,Tyler Locklear
+auto-1990-topps-baseball-autographs,90A-TP,,true,,Tyler Phillips
+auto-1990-topps-baseball-autographs,90A-TSA,,true,,Tim Salmon
+auto-1990-topps-baseball-autographs,90A-TT,,true,,Trea Turner
+auto-1990-topps-baseball-autographs,90A-VB,,true,,Valente Bellozo
+auto-1990-topps-baseball-autographs,90A-VC,,true,,Vince Coleman
+auto-1990-topps-baseball-autographs,90A-WL,,true,,Wyatt Langford
+auto-1990-topps-baseball-autographs,90A-XB,,true,,Xander Bogaerts
+auto-1990-topps-baseball-autographs,90AU-AB,,true,,Adrían Beltré
+auto-1990-topps-baseball-autographs,90AU-ABR,,true,,Alex Bregman
+auto-1990-topps-baseball-autographs,90AU-AP,,true,,Albert Pujols
+auto-1990-topps-baseball-autographs,90AU-ARU,,true,,Adley Rutschman
+auto-1990-topps-baseball-autographs,90AU-BJ,,true,,Bo Jackson
+auto-1990-topps-baseball-autographs,90AU-BL,,true,,Barry Larkin
+auto-1990-topps-baseball-autographs,90AU-BP,,true,,Buster Posey
+auto-1990-topps-baseball-autographs,90AU-BW,,true,,Bobby Witt Jr.
+auto-1990-topps-baseball-autographs,90AU-CB,,true,,Craig Biggio
+auto-1990-topps-baseball-autographs,90AU-CC,,true,,Corbin Carroll
+auto-1990-topps-baseball-autographs,90AU-CF,,true,,Carlton Fisk
+auto-1990-topps-baseball-autographs,90AU-CJ,,true,,Chipper Jones
+auto-1990-topps-baseball-autographs,90AU-CK,,true,,Clayton Kershaw
+auto-1990-topps-baseball-autographs,90AU-CR,,true,,Cal Ripken Jr.
+auto-1990-topps-baseball-autographs,90AU-CYE,,true,,Christian Yelich
+auto-1990-topps-baseball-autographs,90AU-DJ,,true,,Derek Jeter
+auto-1990-topps-baseball-autographs,90AU-DM,,true,,Don Mattingly
+auto-1990-topps-baseball-autographs,90AU-DO,,true,,David Ortiz
+auto-1990-topps-baseball-autographs,90AU-DS,,true,,Darryl Strawberry
+auto-1990-topps-baseball-autographs,90AU-DSW,,true,,Dansby Swanson
+auto-1990-topps-baseball-autographs,90AU-DW,,true,,David Wright
+auto-1990-topps-baseball-autographs,90AU-ED,,true,,Elly De La Cruz
+auto-1990-topps-baseball-autographs,90AU-EM,,true,,Eddie Murray
+auto-1990-topps-baseball-autographs,90AU-FTH,,true,,Frank Thomas
+auto-1990-topps-baseball-autographs,90AU-GB,,true,,George Brett
+auto-1990-topps-baseball-autographs,90AU-GH,,true,,Gunnar Henderson
+auto-1990-topps-baseball-autographs,90AU-GMA,,true,,Greg Maddux
+auto-1990-topps-baseball-autographs,90AU-I,,true,,Ichiro
+auto-1990-topps-baseball-autographs,90AU-IR,,true,,Ivan Rodriguez
+auto-1990-topps-baseball-autographs,90AU-JA,,true,,Jose Altuve
+auto-1990-topps-baseball-autographs,90AU-JB,,true,,Johnny Bench
+auto-1990-topps-baseball-autographs,90AU-JBA,,true,,Jeff Bagwell
+auto-1990-topps-baseball-autographs,90AU-JD,,true,,Jasson Domínguez
+auto-1990-topps-baseball-autographs,90AU-JRA,,true,,José Ramírez
+auto-1990-topps-baseball-autographs,90AU-JS,,true,,Juan Soto
+auto-1990-topps-baseball-autographs,90AU-JV,,true,,Jason Varitek
+auto-1990-topps-baseball-autographs,90AU-LW,,true,,Larry Walker
+auto-1990-topps-baseball-autographs,90AU-MH,,true,,Michael Harris II
+auto-1990-topps-baseball-autographs,90AU-MMC,,true,,Mark McGwire
+auto-1990-topps-baseball-autographs,90AU-MO,,true,,Matt Olson
+auto-1990-topps-baseball-autographs,90AU-MP,,true,,Mike Piazza
+auto-1990-topps-baseball-autographs,90AU-MSC,,true,,Mike Schmidt
+auto-1990-topps-baseball-autographs,90AU-MT,,true,,Mike Trout
+auto-1990-topps-baseball-autographs,90AU-NA,,true,,Nolan Arenado
+auto-1990-topps-baseball-autographs,90AU-NRN,,true,,Nolan Ryan
+auto-1990-topps-baseball-autographs,90AU-OA,,true,,Ozzie Albies
+auto-1990-topps-baseball-autographs,90AU-OS,,true,,Ozzie Smith
+auto-1990-topps-baseball-autographs,90AU-PA,,true,,Pete Alonso
+auto-1990-topps-baseball-autographs,90AU-PMA,,true,,Pedro Martinez
+auto-1990-topps-baseball-autographs,90AU-RAJ,,true,,Ronald Acuña Jr.
+auto-1990-topps-baseball-autographs,90AU-RC,,true,,Rod Carew
+auto-1990-topps-baseball-autographs,90AU-RCL,,true,,Roger Clemens
+auto-1990-topps-baseball-autographs,90AU-RD,,true,,Rafael Devers
+auto-1990-topps-baseball-autographs,90AU-RH,,true,,Rickey Henderson
+auto-1990-topps-baseball-autographs,90AU-RJ,,true,,Randy Johnson
+auto-1990-topps-baseball-autographs,90AU-RJA,,true,,Reggie Jackson
+auto-1990-topps-baseball-autographs,90AU-RJN,,true,,Reggie Jackson
+auto-1990-topps-baseball-autographs,90AU-ROH,,true,,Randy Johnson
+auto-1990-topps-baseball-autographs,90AU-RS,,true,,Ryne Sandberg
+auto-1990-topps-baseball-autographs,90AU-RY,,true,,Robin Yount
+auto-1990-topps-baseball-autographs,90AU-SC,,true,,Steve Carlton
+auto-1990-topps-baseball-autographs,90AU-SI,,true,,Shota Imanaga
+auto-1990-topps-baseball-autographs,90AU-SK,,true,,Sandy Koufax
+auto-1990-topps-baseball-autographs,90AU-SO,,true,,Shohei Ohtani
+auto-1990-topps-baseball-autographs,90AU-SST,,true,,Spencer Strider
+auto-1990-topps-baseball-autographs,90AU-VGJ,,true,,Vladimir Guerrero Jr.
+auto-1990-topps-baseball-autographs,90AU-WB,,true,,Wade Boggs
+auto-1990-topps-baseball-autographs,90AU-WC,,true,,Will Clark
+auto-1990-topps-baseball-autographs,90AU-YY,,true,,Yoshinobu Yamamoto
+auto-1990-topps-baseball-chrome-autographs,90CA-AA,,true,,Adael Amador
+auto-1990-topps-baseball-chrome-autographs,90CA-AD,,true,,Adrian Del Castillo
+auto-1990-topps-baseball-chrome-autographs,90CA-AJ,,true,,Aaron Judge
+auto-1990-topps-baseball-chrome-autographs,90CA-AM,,true,,Adam Mazur
+auto-1990-topps-baseball-chrome-autographs,90CA-AMA,,true,,Angel Martínez
+auto-1990-topps-baseball-chrome-autographs,90CA-AP,,true,,Albert Pujols
+auto-1990-topps-baseball-chrome-autographs,90CA-AR,,true,,Adley Rutschman
+auto-1990-topps-baseball-chrome-autographs,90CA-AV,,true,,Anthony Volpe
+auto-1990-topps-baseball-chrome-autographs,90CA-BB,,true,,Byron Buxton
+auto-1990-topps-baseball-chrome-autographs,90CA-BD,,true,,Brenton Doyle
+auto-1990-topps-baseball-chrome-autographs,90CA-BJ,,true,,Bo Jackson
+auto-1990-topps-baseball-chrome-autographs,90CA-BL,,true,,Barry Larkin
+auto-1990-topps-baseball-chrome-autographs,90CA-BLE,,true,,Brooks Lee
+auto-1990-topps-baseball-chrome-autographs,90CA-BN,,true,,Brandon Nimmo
+auto-1990-topps-baseball-chrome-autographs,90CA-BR,,true,,Bryan Reynolds
+auto-1990-topps-baseball-chrome-autographs,90CA-BRI,,true,,Ben Rice
+auto-1990-topps-baseball-chrome-autographs,90CA-BW,,true,,Bobby Witt Jr.
+auto-1990-topps-baseball-chrome-autographs,90CA-CB,,true,,Craig Biggio
+auto-1990-topps-baseball-chrome-autographs,90CA-CC,,true,,Corbin Carroll
+auto-1990-topps-baseball-chrome-autographs,90CA-CCO,,true,,Carlos Correa
+auto-1990-topps-baseball-chrome-autographs,90CA-CJ,,true,,Chipper Jones
+auto-1990-topps-baseball-chrome-autographs,90CA-CK,,true,,Clayton Kershaw
+auto-1990-topps-baseball-chrome-autographs,90CA-CMA,,true,,Coby Mayo
+auto-1990-topps-baseball-chrome-autographs,90CA-CMC,,true,,Chayce McDermott
+auto-1990-topps-baseball-chrome-autographs,90CA-CMO,,true,,Christopher Morel
+auto-1990-topps-baseball-chrome-autographs,90CA-CN,,true,,Connor Norby
+auto-1990-topps-baseball-chrome-autographs,90CA-CP,,true,,Cade Povich
+auto-1990-topps-baseball-chrome-autographs,90CA-CR,,true,,Cal Ripken Jr.
+auto-1990-topps-baseball-chrome-autographs,90CA-CY,,true,,Christian Yelich
+auto-1990-topps-baseball-chrome-autographs,90CA-DC,,true,,Dylan Crews
+auto-1990-topps-baseball-chrome-autographs,90CA-DF,,true,,David Festa
+auto-1990-topps-baseball-chrome-autographs,90CA-DJ,,true,,David Justice
+auto-1990-topps-baseball-chrome-autographs,90CA-DJE,,true,,Derek Jeter
+auto-1990-topps-baseball-chrome-autographs,90CA-DM,,true,,Don Mattingly
+auto-1990-topps-baseball-chrome-autographs,90CA-DMU,,true,,Dale Murphy
+auto-1990-topps-baseball-chrome-autographs,90CA-DR,,true,,Drew Romo
+auto-1990-topps-baseball-chrome-autographs,90CA-DT,,true,,Drew Thorpe
+auto-1990-topps-baseball-chrome-autographs,90CA-FT,,true,,Frank Thomas
+auto-1990-topps-baseball-chrome-autographs,90CA-FTJ,,true,,Fernando Tatis Jr.
+auto-1990-topps-baseball-chrome-autographs,90CA-GB,,true,,George Brett
+auto-1990-topps-baseball-chrome-autographs,90CA-GC,,true,,Gerrit Cole
+auto-1990-topps-baseball-chrome-autographs,90CA-GG,,true,,Gordon Graceffo
+auto-1990-topps-baseball-chrome-autographs,90CA-HB,,true,,Hayden Birdsong
+auto-1990-topps-baseball-chrome-autographs,90CA-HW,,true,,Hurston Waldrep
+auto-1990-topps-baseball-chrome-autographs,90CA-I,,true,,Ichiro
+auto-1990-topps-baseball-chrome-autographs,90CA-JB,,true,,Jeff Bagwell
+auto-1990-topps-baseball-chrome-autographs,90CA-JBL,,true,,Jake Bloss
+auto-1990-topps-baseball-chrome-autographs,90CA-JCH,,true,,Jackson Chourio
+auto-1990-topps-baseball-chrome-autographs,90CA-JG,,true,,Juan Gonzalez
+auto-1990-topps-baseball-chrome-autographs,90CA-JJ,,true,,Jace Jung
+auto-1990-topps-baseball-chrome-autographs,90CA-JMM,,true,,Justyn-Henry Malloy
+auto-1990-topps-baseball-chrome-autographs,90CA-JR,,true,,José Ramírez
+auto-1990-topps-baseball-chrome-autographs,90CA-JS,,true,,Johan Santana
+auto-1990-topps-baseball-chrome-autographs,90CA-JSO,,true,,Juan Soto
+auto-1990-topps-baseball-chrome-autographs,90CA-JW,,true,,Jacob Wilson
+auto-1990-topps-baseball-chrome-autographs,90CA-JWO,,true,,James Wood
+auto-1990-topps-baseball-chrome-autographs,90CA-KG,,true,,Ken Griffey Jr.
+auto-1990-topps-baseball-chrome-autographs,90CA-LW,,true,,Larry Walker
+auto-1990-topps-baseball-chrome-autographs,90CA-MMC,,true,,Mark McGwire
+auto-1990-topps-baseball-chrome-autographs,90CA-MMY,,true,,Michael McGreevy
+auto-1990-topps-baseball-chrome-autographs,90CA-MO,,true,,Matt Olson
+auto-1990-topps-baseball-chrome-autographs,90CA-MS,,true,,Mike Schmidt
+auto-1990-topps-baseball-chrome-autographs,90CA-MT,,true,,Mike Trout
+auto-1990-topps-baseball-chrome-autographs,90CA-NA,,true,,Nolan Arenado
+auto-1990-topps-baseball-chrome-autographs,90CA-NAJ,,true,,Nacho Alvarez Jr.
+auto-1990-topps-baseball-chrome-autographs,90CA-NR,,true,,Nolan Ryan
+auto-1990-topps-baseball-chrome-autographs,90CA-OM,,true,,Orelvis Martinez
+auto-1990-topps-baseball-chrome-autographs,90CA-PA,,true,,Pete Alonso
+auto-1990-topps-baseball-chrome-autographs,90CA-PG,,true,,Paul Goldschmidt
+auto-1990-topps-baseball-chrome-autographs,90CA-RAJ,,true,,Ronald Acuña Jr.
+auto-1990-topps-baseball-chrome-autographs,90CA-RD,,true,,Rafael Devers
+auto-1990-topps-baseball-chrome-autographs,90CA-RH,,true,,Rickey Henderson
+auto-1990-topps-baseball-chrome-autographs,90CA-RL,,true,,Rhett Lowder
+auto-1990-topps-baseball-chrome-autographs,90CA-RR,,true,,River Ryan
+auto-1990-topps-baseball-chrome-autographs,90CA-RS,,true,,Ryne Sandberg
+auto-1990-topps-baseball-chrome-autographs,90CA-RY,,true,,Robin Yount
+auto-1990-topps-baseball-chrome-autographs,90CA-SG,,true,,Sonny Gray
+auto-1990-topps-baseball-chrome-autographs,90CA-SS,,true,,Spencer Steer
+auto-1990-topps-baseball-chrome-autographs,90CA-SSC,,true,,Spencer Schwellenbach
+auto-1990-topps-baseball-chrome-autographs,90CA-SW,,true,,Shay Whitcomb
+auto-1990-topps-baseball-chrome-autographs,90CA-TL,,true,,Tyler Locklear
+auto-1990-topps-baseball-chrome-autographs,90CA-TT,,true,,Trea Turner
+auto-1990-topps-baseball-chrome-autographs,90CA-VGJ,,true,,Vladimir Guerrero Jr.
+auto-1990-topps-baseball-chrome-autographs,90CA-VGU,,true,,Vladimir Guerrero
+auto-1990-topps-baseball-chrome-autographs,90CA-WB,,true,,Wade Boggs
+auto-1990-topps-baseball-chrome-autographs,90CA-WC,,true,,Will Clark
+auto-1990-topps-baseball-chrome-autographs,90CA-WL,,true,,Wyatt Langford
+auto-1990-topps-baseball-chrome-autographs,90CA-WW,,true,,Will Wagner
+auto-1990-topps-baseball-chrome-autographs,90CA-WWA,,true,,Will Warren
+auto-1990-topps-baseball-chrome-autographs,90CA-XB,,true,,Xander Bogaerts
+auto-1990-topps-baseball-chrome-autographs,90CA-ZD,,true,,Zach Dezenzo
+auto-1990-topps-baseball-chrome-autographs,90CA-ZM,,true,,Zebby Matthews
+auto-2024-first-pitch-autographs,FPA-AB,,true,,Adrían Beltré
+auto-2024-first-pitch-autographs,FPA-CR,,true,,Carl Radke
+auto-2024-first-pitch-autographs,FPA-CS,,true,,C.J. Stroud
+auto-2024-first-pitch-autographs,FPA-JK,,true,,Jason Kelce
+auto-2024-first-pitch-autographs,FPA-JT,,true,,Jayson Tatum
+auto-2024-first-pitch-autographs,FPA-JW,,true,,Juju Watkins
+auto-2024-first-pitch-autographs,FPA-LA,,true,,Lauren Alaina
+auto-2024-first-pitch-autographs,FPA-MM,,true,,Masanori Murakami
+auto-2024-first-pitch-autographs,FPA-NC,,true,,Coach Al
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-AB,,true,,Alex Bregman
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-AJ,,true,,Aaron Judge
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-AN,,true,,Aaron Nola
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-AP,,true,,Andy Pettitte
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-AR,,true,,Anthony Rizzo
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-ARU,,true,,Adley Rutschman
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-BB,,true,,Bert Blyleven
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-BH,,true,,Bryce Harper
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-BL,,true,,Brooks Lee
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-BN,,true,,Brandon Nimmo
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-BP,,true,,Buster Posey
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-BRY,,true,,Bryce Miller
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-BW,,true,,Bobby Witt Jr.
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-CA,,true,,CJ Abrams
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-CAR,,true,,Carlos Beltrán
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-CBE,,true,,Carlos Beltrán
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-CBU,,true,,Corbin Burnes
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-CC,,true,,Corbin Carroll
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-CK,,true,,Clayton Kershaw
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-CY,,true,,Christian Yelich
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-DO,,true,,David Ortiz
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-DP,,true,,Dustin Pedroia
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-DS,,true,,Dansby Swanson
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-FM,,true,,Fred McGriff
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-FT,,true,,Fernando Tatis Jr.
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-GARY,,true,,Gary Sheffield
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-GK,,true,,George Kirby
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-GLA,,true,,Tom Glavine
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-GM,,true,,Greg Maddux
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-GSH,,true,,Gary Sheffield
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-JAZZ,,true,,Jazz Chisholm Jr.
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-JD,,true,,Jasson Domínguez
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-JRA,,true,,José Ramírez
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-JSM,,true,,John Smoltz
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-JTR,,true,,J.T. Realmuto
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-JW,,true,,James Wood
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-KG,,true,,Ken Griffey Jr.
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-KT,,true,,Kyle Tucker
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-MMU,,true,,Max Muncy
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-MT,,true,,Mike Trout
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-MTE,,true,,Mark Teixeira
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-NA,,true,,Nolan Arenado
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-NC,,true,,Nestor Cortes
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-NR,,true,,Nolan Ryan
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-OA,,true,,Ozzie Albies
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-PA,,true,,Pete Alonso
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-PED,,true,,Pedro Martinez
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-PG,,true,,Paul Goldschmidt
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-PMA,,true,,Pedro Martinez
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-RAL,,true,,Cal Raleigh
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-RC,,true,,Rod Carew
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-RJ,,true,,Randy Johnson
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-RJA,,true,,Reggie Jackson
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-RM,,true,,Ryan Mountcastle
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-RS,,true,,Ryne Sandberg
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-SB,,true,,Shane Bieber
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-SC,,true,,Steve Carlton
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-SHEF,,true,,Gary Sheffield
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-SI,,true,,Shota Imanaga
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-SK,,true,,Steven Kwan
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-SOTO,,true,,Juan Soto
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-SS,,true,,Spencer Strider
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-TEX,,true,,Mark Teixeira
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-TGL,,true,,Tom Glavine
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-TH,,true,,Torii Hunter
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-TT,,true,,Trea Turner
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-VG,,true,,Vladimir Guerrero Jr.
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-VOL,,true,,Anthony Volpe
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-WB,,true,,Wade Boggs
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-XB,,true,,Xander Bogaerts
+auto-2025-topps-baseball-flagship-autograph-patch,TFAP-ZW,,true,,Zack Wheeler
+auto-baseball-stars-autographs,BSA-AA,,true,,Adael Amador
+auto-baseball-stars-autographs,BSA-AB,,true,,Alec Burleson
+auto-baseball-stars-autographs,BSA-AD,,true,,Adrian Del Castillo
+auto-baseball-stars-autographs,BSA-ADI,,true,,Alexis Díaz
+auto-baseball-stars-autographs,BSA-AG,,true,,Andrés Giménez
+auto-baseball-stars-autographs,BSA-AJ,,true,,Andruw Jones
+auto-baseball-stars-autographs,BSA-AMA,,true,,Adam Mazur
+auto-baseball-stars-autographs,BSA-BB,,true,,Byron Buxton
+auto-baseball-stars-autographs,BSA-BD,,true,,Bryan De La Cruz
+auto-baseball-stars-autographs,BSA-BDO,,true,,Brenton Doyle
+auto-baseball-stars-autographs,BSA-BDU,,true,,Blake Dunn
+auto-baseball-stars-autographs,BSA-BJ,,true,,Ben Joyce
+auto-baseball-stars-autographs,BSA-BL,,true,,Brooks Lee
+auto-baseball-stars-autographs,BSA-BM,,true,,Bryce Miller
+auto-baseball-stars-autographs,BSA-BP,,true,,Brandon Pfaadt
+auto-baseball-stars-autographs,BSA-BT,,true,,Brice Turang
+auto-baseball-stars-autographs,BSA-CA,,true,,CJ Alexander
+auto-baseball-stars-autographs,BSA-CDA,,true,,Caden Dana
+auto-baseball-stars-autographs,BSA-CFI,,true,,Cecil Fielder
+auto-baseball-stars-autographs,BSA-CL,,true,,Cliff Lee
+auto-baseball-stars-autographs,BSA-CMA,,true,,Coby Mayo
+auto-baseball-stars-autographs,BSA-CMC,,true,,Chayce McDermott
+auto-baseball-stars-autographs,BSA-CMO,,true,,Christopher Morel
+auto-baseball-stars-autographs,BSA-CN,,true,,Connor Norby
+auto-baseball-stars-autographs,BSA-COOK,,true,,Billy Cook
+auto-baseball-stars-autographs,BSA-CP,,true,,Cade Povich
+auto-baseball-stars-autographs,BSA-CR,,true,,Carlos Rodriguez
+auto-baseball-stars-autographs,BSA-DB,,true,,Darren Baker
+auto-baseball-stars-autographs,BSA-DC,,true,,Dylan Crews
+auto-baseball-stars-autographs,BSA-DDI,,true,,Dillon Dingler
+auto-baseball-stars-autographs,BSA-DF,,true,,David Festa
+auto-baseball-stars-autographs,BSA-DJ,,true,,David Justice
+auto-baseball-stars-autographs,BSA-DM,,true,,Dale Murphy
+auto-baseball-stars-autographs,BSA-DR,,true,,Drew Romo
+auto-baseball-stars-autographs,BSA-DS,,true,,Darryl Strawberry
+auto-baseball-stars-autographs,BSA-DT,,true,,Drew Thorpe
+auto-baseball-stars-autographs,BSA-GG,,true,,Gordon Graceffo
+auto-baseball-stars-autographs,BSA-GM,,true,,Grant McCray
+auto-baseball-stars-autographs,BSA-GMO,,true,,Gabriel Moreno
+auto-baseball-stars-autographs,BSA-GR,,true,,Grayson Rodriguez
+auto-baseball-stars-autographs,BSA-GS,,true,,Gavin Stone
+auto-baseball-stars-autographs,BSA-HB,,true,,Hayden Birdsong
+auto-baseball-stars-autographs,BSA-HJ,,true,,Howard Johnson
+auto-baseball-stars-autographs,BSA-JB,,true,,José Berríos
+auto-baseball-stars-autographs,BSA-JBL,,true,,Jake Bloss
+auto-baseball-stars-autographs,BSA-JC,,true,,Joey Cantillo
+auto-baseball-stars-autographs,BSA-JG,,true,,Juan Gonzalez
+auto-baseball-stars-autographs,BSA-JHM,,true,,Justyn-Henry Malloy
+auto-baseball-stars-autographs,BSA-JI,,true,,Jake Irvin
+auto-baseball-stars-autographs,BSA-JJ,,true,,Jace Jung
+auto-baseball-stars-autographs,BSA-JJO,,true,,Jackson Jobe
+auto-baseball-stars-autographs,BSA-JK,,true,,John Kruk
+auto-baseball-stars-autographs,BSA-JKO,,true,,Jack Kochanowicz
+auto-baseball-stars-autographs,BSA-JMI,,true,,Jose Miranda
+auto-baseball-stars-autographs,BSA-JN,,true,,Jhonkensy Noel
+auto-baseball-stars-autographs,BSA-JO,,true,,Joey Ortiz
+auto-baseball-stars-autographs,BSA-JS,,true,,Johan Santana
+auto-baseball-stars-autographs,BSA-JW,,true,,Justin Wrobleski
+auto-baseball-stars-autographs,BSA-JWO,,true,,James Wood
+auto-baseball-stars-autographs,BSA-KAL,,true,,Kevin Alcántara
+auto-baseball-stars-autographs,BSA-KB,,true,,Ky Bush
+auto-baseball-stars-autographs,BSA-KC,,true,,Kerry Carpenter
+auto-baseball-stars-autographs,BSA-KF,,true,,Kyle Finnegan
+auto-baseball-stars-autographs,BSA-KH,,true,,Ke'Bryan Hayes
+auto-baseball-stars-autographs,BSA-KM,,true,,Keider Montero
+auto-baseball-stars-autographs,BSA-LA,,true,,Luisangel Acuña
+auto-baseball-stars-autographs,BSA-LEO,,true,,Leo Jiménez
+auto-baseball-stars-autographs,BSA-LT,,true,,Lane Thomas
+auto-baseball-stars-autographs,BSA-LW,,true,,Larry Walker
+auto-baseball-stars-autographs,BSA-MBU,,true,,Michael Busch
+auto-baseball-stars-autographs,BSA-MG,,true,,Maikel Garcia
+auto-baseball-stars-autographs,BSA-MH,,true,,Michael Harris II
+auto-baseball-stars-autographs,BSA-MMC,,true,,Michael McGreevy
+auto-baseball-stars-autographs,BSA-MME,,true,,Michael Mercado
+auto-baseball-stars-autographs,BSA-MT,,true,,Michael Toglia
+auto-baseball-stars-autographs,BSA-MW,,true,,Matt Williams
+auto-baseball-stars-autographs,BSA-NAR,,true,,Carlos Narváez
+auto-baseball-stars-autographs,BSA-NE,,true,,Nate Eovaldi
+auto-baseball-stars-autographs,BSA-NK,,true,,Niko Kavadas
+auto-baseball-stars-autographs,BSA-NL,,true,,Nick Lodolo
+auto-baseball-stars-autographs,BSA-OM,,true,,Orelvis Martinez
+auto-baseball-stars-autographs,BSA-PM,,true,,Paul Molitor
+auto-baseball-stars-autographs,BSA-RB,,true,,Ryan Bliss
+auto-baseball-stars-autographs,BSA-RL,,true,,Rhett Lowder
+auto-baseball-stars-autographs,BSA-RR,,true,,Robbie Ray
+auto-baseball-stars-autographs,BSA-RRY,,true,,River Ryan
+auto-baseball-stars-autographs,BSA-SA,,true,,Samuel Aldegheri
+auto-baseball-stars-autographs,BSA-SAG,,true,,Thomas Saggese
+auto-baseball-stars-autographs,BSA-SL,,true,,Shea Langeliers
+auto-baseball-stars-autographs,BSA-SSC,,true,,Spencer Schwellenbach
+auto-baseball-stars-autographs,BSA-SW,,true,,Shay Whitcomb
+auto-baseball-stars-autographs,BSA-TL,,true,,Tyler Locklear
+auto-baseball-stars-autographs,BSA-TRE,,true,,Trey Sweeney
+auto-baseball-stars-autographs,BSA-TS,,true,,Tyler Stephenson
+auto-baseball-stars-autographs,BSA-VG,,true,,Vladimir Guerrero Jr.
+auto-baseball-stars-autographs,BSA-VP,,true,,Vinnie Pasquantino
+auto-baseball-stars-autographs,BSA-WW,,true,,Will Wagner
+auto-baseball-stars-autographs,BSA-WWA,,true,,Will Warren
+auto-baseball-stars-autographs,BSA-YD,,true,,Yilber Diaz
+auto-baseball-stars-autographs,BSA-YOR,,true,,Nick Yorke
+auto-baseball-stars-autographs,BSA-ZD,,true,,Zach Dezenzo
+auto-baseball-stars-autographs,BSA-ZM,,true,,Zebby Matthews
+auto-baseball-stars-dual-autographs,BSDA-ARG,,true,,Nolan Arenado / Paul Goldschmidt
+auto-baseball-stars-dual-autographs,BSDA-BB,,true,,Craig Biggio / Jeff Bagwell
+auto-baseball-stars-dual-autographs,BSDA-BOC,,true,,Wade Boggs / Roger Clemens
+auto-baseball-stars-dual-autographs,BSDA-BSE,,true,,Corey Seager / Adrián Beltré
+auto-baseball-stars-dual-autographs,BSDA-BWJ,,true,,George Brett / Bobby Witt Jr.
+auto-baseball-stars-dual-autographs,BSDA-CCB,,true,,Carlos Correa / Byron Buxton
+auto-baseball-stars-dual-autographs,BSDA-CLP,,true,,Buster Posey / Will Clark
+auto-baseball-stars-dual-autographs,BSDA-FVA,,true,,Carlton Fisk / Jason Varitek
+auto-baseball-stars-dual-autographs,BSDA-GJR,,true,,Ken Griffey Jr. / Julio Rodríguez
+auto-baseball-stars-dual-autographs,BSDA-GJT,,true,,Mike Trout / Ken Griffey Jr.
+auto-baseball-stars-dual-autographs,BSDA-HRO,,true,,Ryan Howard / Jimmy Rollins
+auto-baseball-stars-dual-autographs,BSDA-JAH,,true,,Reggie Jackson / Rickey Henderson
+auto-baseball-stars-dual-autographs,BSDA-JAJ,,true,,Chipper Jones / Ronald Acuña Jr.
+auto-baseball-stars-dual-autographs,BSDA-JER,,true,,Mariano Rivera / Derek Jeter
+auto-baseball-stars-dual-autographs,BSDA-JHE,,true,,Félix Hernández / Randy Johnson
+auto-baseball-stars-dual-autographs,BSDA-JJ,,true,,Andruw Jones / David Justice
+auto-baseball-stars-dual-autographs,BSDA-JJU,,true,,Derek Jeter / Aaron Judge
+auto-baseball-stars-dual-autographs,BSDA-JSO,,true,,Juan Soto / Aaron Judge
+auto-baseball-stars-dual-autographs,BSDA-JSOT,,true,,Reggie Jackson / Juan Soto
+auto-baseball-stars-dual-autographs,BSDA-JWJ,,true,,Bo Jackson / Bobby Witt Jr.
+auto-baseball-stars-dual-autographs,BSDA-KRS,,true,,Kyle Schwarber / John Kruk
+auto-baseball-stars-dual-autographs,BSDA-LD,,true,,Eric Davis / Barry Larkin
+auto-baseball-stars-dual-autographs,BSDA-MAJ,,true,,Chipper Jones / Greg Maddux
+auto-baseball-stars-dual-autographs,BSDA-MAS,,true,,Johan Santana / Joe Mauer
+auto-baseball-stars-dual-autographs,BSDA-MAX,,true,,Greg Maddux / Ryne Sandberg
+auto-baseball-stars-dual-autographs,BSDA-MBO,,true,,Wade Boggs / Don Mattingly
+auto-baseball-stars-dual-autographs,BSDA-MGU,,true,,Pedro Martinez / Vladimir Guerrero
+auto-baseball-stars-dual-autographs,BSDA-MJO,,true,,Dale Murphy / Chipper Jones
+auto-baseball-stars-dual-autographs,BSDA-MR,,true,,Edgar Martinez / Julio Rodríguez
+auto-baseball-stars-dual-autographs,BSDA-OMA,,true,,Pedro Martinez / David Ortiz
+auto-baseball-stars-dual-autographs,BSDA-OPE,,true,,Dustin Pedroia / David Ortiz
+auto-baseball-stars-dual-autographs,BSDA-PIW,,true,,David Wright / Mike Piazza
+auto-baseball-stars-dual-autographs,BSDA-POW,,true,,Buster Posey / Brian Wilson
+auto-baseball-stars-dual-autographs,BSDA-RAR,,true,,Scott Rolen / Nolan Arenado
+auto-baseball-stars-dual-autographs,BSDA-RJM,,true,,Cal Ripken Jr. / Eddie Murray
+auto-baseball-stars-dual-autographs,BSDA-RJO,,true,,Nolan Ryan / Randy Johnson
+auto-baseball-stars-dual-autographs,BSDA-SMM,,true,,Ozzie Smith / Yadier Molina
+auto-baseball-stars-dual-autographs,BSDA-SMT,,true,,Spencer Strider / John Smoltz
+auto-baseball-stars-dual-autographs,BSDA-TJM,,true,,Fernando Tatis Jr. / Manny Machado
+auto-baseball-stars-dual-autographs,BSDA-TRS,,true,,Mike Trout / Tim Salmon
+auto-baseball-stars-dual-autographs,BSDA-UH,,true,,Ryan Howard / Chase Utley
+auto-baseball-stars-dual-autographs,BSDA-YAI,,true,,Yoshinobu Yamamoto / Shota Imanaga
+auto-baseball-stars-dual-autographs,BSDA-YY,,true,,Robin Yount / Christian Yelich
+auto-baseball-stars-dual-autographs,BSDA-ZIW,,true,,James Wood / Ryan Zimmerman
+auto-baseball-stars-triple-autographs,BSTA-AGT,,true,,Ronald Acuña Jr. / Fernando Tatis Jr. / Vladimir Guerrero Jr.
+auto-baseball-stars-triple-autographs,BSTA-APB,,true,,Jose Altuve / Jeremy Peña / Alex Bregman
+auto-baseball-stars-triple-autographs,BSTA-BCH,,true,,Ian Happ / Cody Bellinger / Pete Crow-Armstrong
+auto-baseball-stars-triple-autographs,BSTA-BCL,,true,,Carlos Correa / Royce Lewis / Byron Buxton
+auto-baseball-stars-triple-autographs,BSTA-BKS,,true,,Jim Kaat / Bert Blyleven / Johan Santana
+auto-baseball-stars-triple-autographs,BSTA-BMC,,true,,Wade Boggs / Jose Canseco / Fred McGriff
+auto-baseball-stars-triple-autographs,BSTA-BPM,,true,,Johnny Bench / Buster Posey / Yadier Molina
+auto-baseball-stars-triple-autographs,BSTA-BPR,,true,,Albert Pujols / Alex Rodriguez / Barry Bonds
+auto-baseball-stars-triple-autographs,BSTA-CPB,,true,,Roger Clemens / Andy Pettitte / Jeff Bagwell
+auto-baseball-stars-triple-autographs,BSTA-CTG,,true,,Lourdes Gurriel Jr. / Alek Thomas / Corbin Carroll
+auto-baseball-stars-triple-autographs,BSTA-FVO,,true,,Jason Varitek / Carlton Fisk / David Ortiz
+auto-baseball-stars-triple-autographs,BSTA-GIR,,true,,Ken Griffey Jr. / Julio Rodríguez / Ichiro
+auto-baseball-stars-triple-autographs,BSTA-GTS,,true,,Ken Griffey Jr. / Jim Thome / Sammy Sosa
+auto-baseball-stars-triple-autographs,BSTA-HMZ,,true,,Tim Hudson / Barry Zito / Mark Mulder
+auto-baseball-stars-triple-autographs,BSTA-HSP,,true,,Dansby Swanson / Isaac Paredes / Nico Hoerner
+auto-baseball-stars-triple-autographs,BSTA-HUR,,true,,Jimmy Rollins / Chase Utley / Ryan Howard
+auto-baseball-stars-triple-autographs,BSTA-JMJ,,true,,Fred McGriff / Chipper Jones / David Justice
+auto-baseball-stars-triple-autographs,BSTA-JMS,,true,,John Smoltz / Greg Maddux / Chipper Jones
+auto-baseball-stars-triple-autographs,BSTA-JRT,,true,,Nolan Ryan / Mike Trout / Reggie Jackson
+auto-baseball-stars-triple-autographs,BSTA-JSC,,true,,Juan Soto / Jazz Chisholm Jr. / Aaron Judge
+auto-baseball-stars-triple-autographs,BSTA-JWP,,true,,Fergie Jenkins / Kerry Wood / Mark Prior
+auto-baseball-stars-triple-autographs,BSTA-KVK,,true,,Fernando Valenzuela / Sandy Koufax / Clayton Kershaw
+auto-baseball-stars-triple-autographs,BSTA-LDO,,true,,Barry Larkin / Paul O'Neill / Eric Davis
+auto-baseball-stars-triple-autographs,BSTA-MAG,,true,,Nolan Arenado / Paul Goldschmidt / Mark McGwire
+auto-baseball-stars-triple-autographs,BSTA-MGS,,true,,Greg Maddux / John Smoltz / Tom Glavine
+auto-baseball-stars-triple-autographs,BSTA-MOR,,true,,Anthony Rizzo / Paul O'Neill / Don Mattingly
+auto-baseball-stars-triple-autographs,BSTA-MRR,,true,,Eddie Murray / Adley Rutschman / Cal Ripken Jr.
+auto-baseball-stars-triple-autographs,BSTA-OHB,,true,,Tony Oliva / Byron Buxton / Torii Hunter
+auto-baseball-stars-triple-autographs,BSTA-ORD,,true,,David Ortiz / Manny Ramirez / Johnny Damon
+auto-baseball-stars-triple-autographs,BSTA-RBS,,true,,Jose Reyes / Johan Santana / Carlos Beltrán
+auto-baseball-stars-triple-autographs,BSTA-REH,,true,,Trevor Hoffman / Mariano Rivera / Dennis Eckersley
+auto-baseball-stars-triple-autographs,BSTA-RGK,,true,,José Ramírez / Andrés Giménez / Steven Kwan
+auto-baseball-stars-triple-autographs,BSTA-RRI,,true,,Alex Rodriguez / Julio Rodríguez / Ichiro
+auto-baseball-stars-triple-autographs,BSTA-SGS,,true,,Sammy Sosa / Ryne Sandberg / Mark Grace
+auto-baseball-stars-triple-autographs,BSTA-SMM,,true,,Yadier Molina / Mark McGwire / Ozzie Smith
+auto-baseball-stars-triple-autographs,BSTA-TBR,,true,,Luis Robert Jr. / Harold Baines / Frank Thomas
+auto-baseball-stars-triple-autographs,BSTA-TCJ,,true,,Miguel Tejada / David Justice / Eric Chavez
+auto-baseball-stars-triple-autographs,BSTA-TJR,,true,,Julio Rodríguez / Mike Trout / Aaron Judge
+auto-baseball-stars-triple-autographs,BSTA-VRM,,true,,Eddie Murray / Fernando Valenzuela / Willie Randolph
+auto-baseball-stars-triple-autographs,BSTA-WDB,,true,,Bobby Witt Jr. / Johnny Damon / Carlos Beltrán
+auto-city-connect-swatch-collection-autograph-relics,CCAR-AA,,true,,Andrew Abbott
+auto-city-connect-swatch-collection-autograph-relics,CCAR-AB,,true,,Alex Bregman
+auto-city-connect-swatch-collection-autograph-relics,CCAR-BB,,true,,Byron Buxton
+auto-city-connect-swatch-collection-autograph-relics,CCAR-BR,,true,,Bryan Reynolds
+auto-city-connect-swatch-collection-autograph-relics,CCAR-CA,,true,,CJ Abrams
+auto-city-connect-swatch-collection-autograph-relics,CCAR-CC,,true,,Colton Cowser
+auto-city-connect-swatch-collection-autograph-relics,CCAR-CR,,true,,Ceddanne Rafaela
+auto-city-connect-swatch-collection-autograph-relics,CCAR-FT,,true,,Fernando Tatis Jr.
+auto-city-connect-swatch-collection-autograph-relics,CCAR-JC,,true,,J.P. Crawford
+auto-city-connect-swatch-collection-autograph-relics,CCAR-JD,,true,,Jarren Duran
+auto-city-connect-swatch-collection-autograph-relics,CCAR-JM,,true,,Joe Musgrove
+auto-city-connect-swatch-collection-autograph-relics,CCAR-JW,,true,,Jordan Westburg
+auto-city-connect-swatch-collection-autograph-relics,CCAR-KH,,true,,Ke'Bryan Hayes
+auto-city-connect-swatch-collection-autograph-relics,CCAR-KT,,true,,Kyle Tucker
+auto-city-connect-swatch-collection-autograph-relics,CCAR-MB,,true,,Michael Busch
+auto-city-connect-swatch-collection-autograph-relics,CCAR-MMA,,true,,Manny Machado
+auto-city-connect-swatch-collection-autograph-relics,CCAR-MT,,true,,Mike Trout
+auto-city-connect-swatch-collection-autograph-relics,CCAR-MY,,true,,Masataka Yoshida
+auto-city-connect-swatch-collection-autograph-relics,CCAR-SF,,true,,Sal Frelick
+auto-city-connect-swatch-collection-autograph-relics,CCAR-WA,,true,,Wilyer Abreu
+auto-city-connect-swatch-collection-autograph-relics,CCAR-WP,,true,,Wenceel Perez
+auto-city-connect-swatch-collection-autograph-relics,CCAR-XB,,true,,Xander Bogaerts
+auto-city-connect-swatch-collection-autograph-relics,CCAR-YA,,true,,Yordan Alvarez
+auto-city-connect-swatch-collection-autograph-relics,CCAR-ZN,,true,,Zach Neto
+base,1,Flagship Real One,true,,Shohei Ohtani
+base,18,Flagship Real One,true,,Orelvis Martinez
+base,20,Flagship Real One,true,,Coby Mayo
+base,25,Flagship Real One,true,,Cade Povich
+base,38,Flagship Real One,true,,Nico Hoerner
+base,49,Flagship Real One,true,,Christian Yelich
+base,65,Flagship Real One,true,,Gunnar Henderson
+base,74,Flagship Real One,true,,Dylan Crews
+base,77,Flagship Real One,true,,José Ramírez
+base,78,Flagship Real One,true,,Corbin Carroll
+base,80,Flagship Real One,true,,Jace Jung
+base,98,Flagship Real One,true,,Paul Skenes
+base,100,Flagship Real One,true,,Bobby Witt Jr.
+base,103,Flagship Real One,true,,Spencer Schwellenbach
+base,125,Flagship Real One,true,,Jackson Merrill
+base,132,Flagship Real One,true,,Connor Norby
+base,141,Flagship Real One,true,,Kyle Schwarber
+base,145,Flagship Real One,true,,Matt Olson
+base,146,Flagship Real One,true,,Clayton Kershaw
+base,150,Flagship Real One,true,,Elly De La Cruz
+base,163,Flagship Real One,true,,Vladimir Guerrero Jr.
+base,178,Flagship Real One,true,,David Festa
+base,181,Flagship Real One,true,,James Wood
+base,187,Flagship Real One,true,,Gerrit Cole
+base,191,Flagship Real One,true,,Adael Amador
+base,192,Flagship Real One,true,,Tyler Locklear
+base,200,Flagship Real One,true,,Mike Trout
+base,205,Flagship Real One,true,,Rhett Lowder
+base,207,Flagship Real One,true,,Ronald Acuña Jr.
+base,213,Flagship Real One,true,,Grant McCray
+base,217,Flagship Real One,true,,Rece Hinds
+base,220,Flagship Real One,true,,Jackson Holliday
+base,221,Flagship Real One,true,,Matt Chapman
+base,223,Flagship Real One,true,,Nacho Alvarez Jr.
+base,231,Flagship Real One,true,,Yoshinobu Yamamoto
+base,244,Flagship Real One,true,,Yordan Alvarez
+base,250,Flagship Real One,true,,Bryce Harper
+base,253,Flagship Real One,true,,Hurston Waldrep
+base,260,Flagship Real One,true,,Jose Altuve
+base,266,Flagship Real One,true,,Julio Rodríguez
+base,273,Flagship Real One,true,,River Ryan
+base,283,Flagship Real One,true,,Zebby Matthews
+base,300,Flagship Real One,true,,Aaron Judge
+base,314,Flagship Real One,true,,Jacob Wilson
+base,317,Flagship Real One,true,,Brooks Lee
+base,320,Flagship Real One,true,,Drew Thorpe
+base,337,Flagship Real One,true,,Ben Rice
+auto-heavy-lumber-autograph-relics,HLAR-AD,,true,,Andre Dawson
+auto-heavy-lumber-autograph-relics,HLAR-AJU,,true,,Aaron Judge
+auto-heavy-lumber-autograph-relics,HLAR-ARZ,,true,,Anthony Rizzo
+auto-heavy-lumber-autograph-relics,HLAR-BW,,true,,Bobby Witt Jr.
+auto-heavy-lumber-autograph-relics,HLAR-CC,,true,,Corbin Carroll
+auto-heavy-lumber-autograph-relics,HLAR-EMU,,true,,Eddie Murray
+auto-heavy-lumber-autograph-relics,HLAR-FM,,true,,Fred McGriff
+auto-heavy-lumber-autograph-relics,HLAR-JB,,true,,Johnny Bench
+auto-heavy-lumber-autograph-relics,HLAR-JBA,,true,,Jeff Bagwell
+auto-heavy-lumber-autograph-relics,HLAR-JR,,true,,Jim Rice
+auto-heavy-lumber-autograph-relics,HLAR-JRA,,true,,José Ramírez
+auto-heavy-lumber-autograph-relics,HLAR-JS,,true,,Juan Soto
+auto-heavy-lumber-autograph-relics,HLAR-KG,,true,,Ken Griffey Jr.
+auto-heavy-lumber-autograph-relics,HLAR-KT,,true,,Kyle Tucker
+auto-heavy-lumber-autograph-relics,HLAR-MM,,true,,Mark McGwire
+auto-heavy-lumber-autograph-relics,HLAR-MS,,true,,Mike Schmidt
+auto-heavy-lumber-autograph-relics,HLAR-MT,,true,,Mike Trout
+auto-heavy-lumber-autograph-relics,HLAR-RH,,true,,Ryan Howard
+auto-heavy-lumber-autograph-relics,HLAR-RS,,true,,Ryne Sandberg
+auto-heavy-lumber-autograph-relics,HLAR-SO,,true,,Shohei Ohtani
+auto-heavy-lumber-autograph-relics,HLAR-TT,,true,,Trea Turner
+auto-heavy-lumber-autograph-relics,HLAR-VG,,true,,Vladimir Guerrero Jr.
+auto-heavy-lumber-autograph-relics,HLAR-WC,,true,,Will Clark
+auto-larry-david-autographs,LD-1,,true,,Larry David
+auto-major-league-material-autographs,MLMAR-AN,,true,,Aaron Nola
+auto-major-league-material-autographs,MLMAR-AR,,true,,Adley Rutschman
+auto-major-league-material-autographs,MLMAR-ARI,,true,,Anthony Rizzo
+auto-major-league-material-autographs,MLMAR-AV,,true,,Anthony Volpe
+auto-major-league-material-autographs,MLMAR-BB,,true,,Byron Buxton
+auto-major-league-material-autographs,MLMAR-BL,,true,,Brooks Lee
+auto-major-league-material-autographs,MLMAR-BN,,true,,Brandon Nimmo
+auto-major-league-material-autographs,MLMAR-BW,,true,,Bobby Witt Jr.
+auto-major-league-material-autographs,MLMAR-CB,,true,,Corbin Burnes
+auto-major-league-material-autographs,MLMAR-CC,,true,,Corbin Carroll
+auto-major-league-material-autographs,MLMAR-CMA,,true,,Coby Mayo
+auto-major-league-material-autographs,MLMAR-CY,,true,,Christian Yelich
+auto-major-league-material-autographs,MLMAR-DC,,true,,Dylan Crews
+auto-major-league-material-autographs,MLMAR-DS,,true,,Dansby Swanson
+auto-major-league-material-autographs,MLMAR-FT,,true,,Fernando Tatis Jr.
+auto-major-league-material-autographs,MLMAR-GR,,true,,Grayson Rodriguez
+auto-major-league-material-autographs,MLMAR-HB,,true,,Hayden Birdsong
+auto-major-league-material-autographs,MLMAR-JA,,true,,Jose Altuve
+auto-major-league-material-autographs,MLMAR-JC,,true,,Jackson Chourio
+auto-major-league-material-autographs,MLMAR-JCJ,,true,,Jazz Chisholm Jr.
+auto-major-league-material-autographs,MLMAR-JD,,true,,Jarren Duran
+auto-major-league-material-autographs,MLMAR-JL,,true,,Jung Hoo Lee
+auto-major-league-material-autographs,MLMAR-JRA,,true,,José Ramírez
+auto-major-league-material-autographs,MLMAR-JS,,true,,Juan Soto
+auto-major-league-material-autographs,MLMAR-JWO,,true,,James Wood
+auto-major-league-material-autographs,MLMAR-KH,,true,,Ke'Bryan Hayes
+auto-major-league-material-autographs,MLMAR-KS,,true,,Kyle Schwarber
+auto-major-league-material-autographs,MLMAR-KT,,true,,Kyle Tucker
+auto-major-league-material-autographs,MLMAR-LR,,true,,Luis Robert Jr.
+auto-major-league-material-autographs,MLMAR-LW,,true,,Logan Webb
+auto-major-league-material-autographs,MLMAR-MF,,true,,Max Fried
+auto-major-league-material-autographs,MLMAR-MH,,true,,Michael Harris II
+auto-major-league-material-autographs,MLMAR-MMU,,true,,Max Muncy
+auto-major-league-material-autographs,MLMAR-MO,,true,,Matt Olson
+auto-major-league-material-autographs,MLMAR-MS,,true,,Marcus Semien
+auto-major-league-material-autographs,MLMAR-MT,,true,,Mike Trout
+auto-major-league-material-autographs,MLMAR-NH,,true,,Nico Hoerner
+auto-major-league-material-autographs,MLMAR-OM,,true,,Orelvis Martinez
+auto-major-league-material-autographs,MLMAR-PG,,true,,Paul Goldschmidt
+auto-major-league-material-autographs,MLMAR-RA,,true,,Ronald Acuña Jr.
+auto-major-league-material-autographs,MLMAR-RM,,true,,Ryan Mountcastle
+auto-major-league-material-autographs,MLMAR-SI,,true,,Shota Imanaga
+auto-major-league-material-autographs,MLMAR-SK,,true,,Steven Kwan
+auto-major-league-material-autographs,MLMAR-SM,,true,,Shane McClanahan
+auto-major-league-material-autographs,MLMAR-SS,,true,,Spencer Strider
+auto-major-league-material-autographs,MLMAR-SST,,true,,Spencer Steer
+auto-major-league-material-autographs,MLMAR-VG,,true,,Vladimir Guerrero Jr.
+auto-major-league-material-autographs,MLMAR-WL,,true,,Wyatt Langford
+auto-major-league-material-autographs,MLMAR-XB,,true,,Xander Bogaerts
+auto-major-league-material-autographs,MLMAR-YA,,true,,Yordan Alvarez
+auto-major-league-material-dual-autographs,MLMDA-AA,,true,,Yordan Alvarez / Jose Altuve
+auto-major-league-material-dual-autographs,MLMDA-ALN,,true,,Brandon Nimmo / Pete Alonso
+auto-major-league-material-dual-autographs,MLMDA-BOA,,true,,Xander Bogaerts / Luis Arraez
+auto-major-league-material-dual-autographs,MLMDA-BXL,,true,,Royce Lewis / Byron Buxton
+auto-major-league-material-dual-autographs,MLMDA-CAL,,true,,Corbin Carroll / Jordan Lawlar
+auto-major-league-material-dual-autographs,MLMDA-CLE,,true,,Carlos Correa / Royce Lewis
+auto-major-league-material-dual-autographs,MLMDA-DRA,,true,,Jarren Duran / Ceddanne Rafaela
+auto-major-league-material-dual-autographs,MLMDA-JUM,,true,,Shane McClanahan / Junior Caminero
+auto-major-league-material-dual-autographs,MLMDA-LAC,,true,,Wyatt Langford / Evan Carter
+auto-major-league-material-dual-autographs,MLMDA-MCJ,,true,,Jazz Chisholm Jr. / Anthony Volpe
+auto-major-league-material-dual-autographs,MLMDA-RAK,,true,,José Ramírez / Steven Kwan
+auto-major-league-material-dual-autographs,MLMDA-SCN,,true,,Nolan Schanuel / Zach Neto
+auto-major-league-material-dual-autographs,MLMDA-SCR,,true,,Kyle Schwarber / J.T. Realmuto
+auto-major-league-material-dual-autographs,MLMDA-SFR,,true,,Max Fried / Spencer Strider
+auto-major-league-material-dual-autographs,MLMDA-SPB,,true,,José Berríos / George Springer
+auto-major-league-material-dual-autographs,MLMDA-SWH,,true,,Nico Hoerner / Dansby Swanson
+auto-major-league-material-dual-autographs,MLMDA-TWJ,,true,,Mike Trout / Bobby Witt Jr.
+auto-major-league-material-dual-autographs,MLMDA-WOC,,true,,Dylan Crews / James Wood
+auto-major-league-material-dual-autographs,MLMDA-YCH,,true,,Jackson Chourio / Christian Yelich
+auto-rickwood-autograph-relic-collection,RWAR-BC,,true,,Brandon Crawford
+auto-rickwood-autograph-relic-collection,RWAR-BD,,true,,Brendan Donovan
+auto-rickwood-autograph-relic-collection,RWAR-BUR,,true,,Alec Burleson
+auto-rickwood-autograph-relic-collection,RWAR-DC,,true,,Dylan Carlson
+auto-rickwood-autograph-relic-collection,RWAR-LWE,,true,,Logan Webb
+auto-rickwood-autograph-relic-collection,RWAR-MW,,true,,Masyn Winn
+auto-rickwood-autograph-relic-collection,RWAR-MY,,true,,Mike Yastrzemski
+auto-rickwood-autograph-relic-collection,RWAR-NG,,true,,Nolan Gorman
+auto-rickwood-autograph-relic-collection,RWAR-PB,,true,,Patrick Bailey
+auto-rickwood-autograph-relic-collection,RWAR-TES,,true,,Thairo Estrada
+auto-rickwood-autograph-relic-collection,RWAR-WF,,true,,Wilmer Flores
+auto-signature-tunes-dual-autographs,TUNE-CB,,true,,Corbin Carroll / Metro Boomin
+auto-signature-tunes-dual-autographs,TUNE-JWH,,true,,Aaron Judge / A Boogie Wit Da Hoodie
+auto-signature-tunes-dual-autographs,TUNE-SV,,true,,Bryson Stott / Tai Verdes
+auto-the-big-hurt-autographs,HURTA-1,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-2,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-3,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-4,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-5,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-6,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-7,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-8,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-9,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-10,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-11,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-12,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-13,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-14,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-15,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-16,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-17,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-18,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-19,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-20,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-21,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-22,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-23,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-24,,true,,Frank Thomas
+auto-the-big-hurt-autographs,HURTA-25,,true,,Frank Thomas
+insert-1990-topps-baseball-relics,T90R-AB,,false,,Alex Bregman
+insert-1990-topps-baseball-relics,T90R-AJ,,false,,Aaron Judge
+insert-1990-topps-baseball-relics,T90R-AN,,false,,Aaron Nola
+insert-1990-topps-baseball-relics,T90R-AP,,false,,Albert Pujols
+insert-1990-topps-baseball-relics,T90R-AR,,false,,Austin Riley
+insert-1990-topps-baseball-relics,T90R-ARU,,false,,Adley Rutschman
+insert-1990-topps-baseball-relics,T90R-ARZ,,false,,Anthony Rizzo
+insert-1990-topps-baseball-relics,T90R-AV,,false,,Anthony Volpe
+insert-1990-topps-baseball-relics,T90R-BH,,false,,Bryce Harper
+insert-1990-topps-baseball-relics,T90R-BL,,false,,Brooks Lee
+insert-1990-topps-baseball-relics,T90R-BN,,false,,Brandon Nimmo
+insert-1990-topps-baseball-relics,T90R-BRE,,false,,Bryan Reynolds
+insert-1990-topps-baseball-relics,T90R-BS,,false,,Bryson Stott
+insert-1990-topps-baseball-relics,T90R-CA,,false,,CJ Abrams
+insert-1990-topps-baseball-relics,T90R-CBU,,false,,Corbin Burnes
+insert-1990-topps-baseball-relics,T90R-CC,,false,,Corbin Carroll
+insert-1990-topps-baseball-relics,T90R-CCO,,false,,Carlos Correa
+insert-1990-topps-baseball-relics,T90R-CJ,,false,,Chipper Jones
+insert-1990-topps-baseball-relics,T90R-CM,,false,,Coby Mayo
+insert-1990-topps-baseball-relics,T90R-CR,,false,,Cal Ripken Jr.
+insert-1990-topps-baseball-relics,T90R-CY,,false,,Christian Yelich
+insert-1990-topps-baseball-relics,T90R-DC,,false,,Dylan Crews
+insert-1990-topps-baseball-relics,T90R-DJ,,false,,Derek Jeter
+insert-1990-topps-baseball-relics,T90R-DO,,false,,David Ortiz
+insert-1990-topps-baseball-relics,T90R-DS,,false,,Dansby Swanson
+insert-1990-topps-baseball-relics,T90R-ED,,false,,Elly De La Cruz
+insert-1990-topps-baseball-relics,T90R-FF,,false,,Freddie Freeman
+insert-1990-topps-baseball-relics,T90R-FL,,false,,Francisco Lindor
+insert-1990-topps-baseball-relics,T90R-FT,,false,,Frank Thomas
+insert-1990-topps-baseball-relics,T90R-FTJ,,false,,Fernando Tatis Jr.
+insert-1990-topps-baseball-relics,T90R-GC,,false,,Gerrit Cole
+insert-1990-topps-baseball-relics,T90R-GH,,false,,Gunnar Henderson
+insert-1990-topps-baseball-relics,T90R-GKI,,false,,George Kirby
+insert-1990-topps-baseball-relics,T90R-GS,,false,,George Springer
+insert-1990-topps-baseball-relics,T90R-HBR,,false,,Hunter Brown
+insert-1990-topps-baseball-relics,T90R-HG,,false,,Hunter Greene
+insert-1990-topps-baseball-relics,T90R-HKT,,false,,Heston Kjerstad
+insert-1990-topps-baseball-relics,T90R-I,,false,,Ichiro
+insert-1990-topps-baseball-relics,T90R-JAJ,,false,,Jace Jung
+insert-1990-topps-baseball-relics,T90R-JC,,false,,Junior Caminero
+insert-1990-topps-baseball-relics,T90R-JCH,,false,,Jackson Chourio
+insert-1990-topps-baseball-relics,T90R-JCJ,,false,,Jazz Chisholm Jr.
+insert-1990-topps-baseball-relics,T90R-JD,,false,,Jasson Domínguez
+insert-1990-topps-baseball-relics,T90R-JDU,,false,,Jarren Duran
+insert-1990-topps-baseball-relics,T90R-JH,,false,,Jackson Holliday
+insert-1990-topps-baseball-relics,T90R-JLA,,false,,Jordan Lawlar
+insert-1990-topps-baseball-relics,T90R-JM,,false,,Jackson Merrill
+insert-1990-topps-baseball-relics,T90R-JOW,,false,,Jordan Westburg
+insert-1990-topps-baseball-relics,T90R-JR,,false,,Julio Rodríguez
+insert-1990-topps-baseball-relics,T90R-JRA,,false,,José Ramírez
+insert-1990-topps-baseball-relics,T90R-JS,,false,,Juan Soto
+insert-1990-topps-baseball-relics,T90R-JTR,,false,,J.T. Realmuto
+insert-1990-topps-baseball-relics,T90R-JWO,,false,,James Wood
+insert-1990-topps-baseball-relics,T90R-KB,,false,,Kris Bryant
+insert-1990-topps-baseball-relics,T90R-KP,,false,,Kirby Puckett
+insert-1990-topps-baseball-relics,T90R-KS,,false,,Kyle Schwarber
+insert-1990-topps-baseball-relics,T90R-KT,,false,,Kyle Tucker
+insert-1990-topps-baseball-relics,T90R-LBU,,false,,Lawrence Butler
+insert-1990-topps-baseball-relics,T90R-LR,,false,,Luis Robert Jr.
+insert-1990-topps-baseball-relics,T90R-MAS,,false,,Masyn Winn
+insert-1990-topps-baseball-relics,T90R-MB,,false,,Mookie Betts
+insert-1990-topps-baseball-relics,T90R-MC,,false,,Matt Chapman
+insert-1990-topps-baseball-relics,T90R-MMA,,false,,Manny Machado
+insert-1990-topps-baseball-relics,T90R-MMU,,false,,Max Muncy
+insert-1990-topps-baseball-relics,T90R-MO,,false,,Matt Olson
+insert-1990-topps-baseball-relics,T90R-MP,,false,,Mike Piazza
+insert-1990-topps-baseball-relics,T90R-MR,,false,,Mariano Rivera
+insert-1990-topps-baseball-relics,T90R-MS,,false,,Mike Schmidt
+insert-1990-topps-baseball-relics,T90R-MSE,,false,,Marcus Semien
+insert-1990-topps-baseball-relics,T90R-MT,,false,,Mike Trout
+insert-1990-topps-baseball-relics,T90R-NAR,,false,,Nolan Arenado
+insert-1990-topps-baseball-relics,T90R-NS,,false,,Nolan Schanuel
+insert-1990-topps-baseball-relics,T90R-OC,,false,,Oneil Cruz
+insert-1990-topps-baseball-relics,T90R-PA,,false,,Pete Alonso
+insert-1990-topps-baseball-relics,T90R-PC,,false,,Pete Crow-Armstrong
+insert-1990-topps-baseball-relics,T90R-PG,,false,,Paul Goldschmidt
+insert-1990-topps-baseball-relics,T90R-PS,,false,,Paul Skenes
+insert-1990-topps-baseball-relics,T90R-RAJ,,false,,Ronald Acuña Jr.
+insert-1990-topps-baseball-relics,T90R-RD,,false,,Rafael Devers
+insert-1990-topps-baseball-relics,T90R-RG,,false,,Riley Greene
+insert-1990-topps-baseball-relics,T90R-RL,,false,,Royce Lewis
+insert-1990-topps-baseball-relics,T90R-SI,,false,,Shota Imanaga
+insert-1990-topps-baseball-relics,T90R-SM,,false,,Shane McClanahan
+insert-1990-topps-baseball-relics,T90R-SO,,false,,Shohei Ohtani
+insert-1990-topps-baseball-relics,T90R-SP,,false,,Salvador Perez
+insert-1990-topps-baseball-relics,T90R-SSO,,false,,Sammy Sosa
+insert-1990-topps-baseball-relics,T90R-SST,,false,,Spencer Strider
+insert-1990-topps-baseball-relics,T90R-SSU,,false,,Seiya Suzuki
+insert-1990-topps-baseball-relics,T90R-TG,,false,,Tony Gwynn
+insert-1990-topps-baseball-relics,T90R-TRS,,false,,Tarik Skubal
+insert-1990-topps-baseball-relics,T90R-TT,,false,,Trea Turner
+insert-1990-topps-baseball-relics,T90R-VG,,false,,Vladimir Guerrero Jr.
+insert-1990-topps-baseball-relics,T90R-WC,,false,,William Contreras
+insert-1990-topps-baseball-relics,T90R-WL,,false,,Wyatt Langford
+insert-1990-topps-baseball-relics,T90R-XB,,false,,Xander Bogaerts
+insert-1990-topps-baseball-relics,T90R-YA,,false,,Yordan Alvarez
+insert-1990-topps-baseball-relics,T90R-YM,,false,,Yadier Molina
+insert-1990-topps-baseball-relics,T90R-YY,,false,,Yoshinobu Yamamoto
+insert-city-connect-swatch-collection,CC-AA,,false,,Andrew Abbott
+insert-city-connect-swatch-collection,CC-AB,,false,,Alex Bregman
+insert-city-connect-swatch-collection,CC-BB,,false,,Byron Buxton
+insert-city-connect-swatch-collection,CC-BR,,false,,Bryan Reynolds
+insert-city-connect-swatch-collection,CC-CA,,false,,CJ Abrams
+insert-city-connect-swatch-collection,CC-CC,,false,,Colton Cowser
+insert-city-connect-swatch-collection,CC-CR,,false,,Ceddanne Rafaela
+insert-city-connect-swatch-collection,CC-CRU,,false,,Oneil Cruz
+insert-city-connect-swatch-collection,CC-FL,,false,,Francisco Lindor
+insert-city-connect-swatch-collection,CC-FT,,false,,Fernando Tatis Jr.
+insert-city-connect-swatch-collection,CC-FV,,false,,Framber Valdez
+insert-city-connect-swatch-collection,CC-GH,,false,,Gunnar Henderson
+insert-city-connect-swatch-collection,CC-JD,,false,,Jarren Duran
+insert-city-connect-swatch-collection,CC-JM,,false,,Joe Musgrove
+insert-city-connect-swatch-collection,CC-JP,,false,,Jeremy Peña
+insert-city-connect-swatch-collection,CC-JPC,,false,,J.P. Crawford
+insert-city-connect-swatch-collection,CC-JR,,false,,Julio Rodríguez
+insert-city-connect-swatch-collection,CC-JV,,false,,Justin Verlander
+insert-city-connect-swatch-collection,CC-JW,,false,,Jordan Westburg
+insert-city-connect-swatch-collection,CC-KH,,false,,Ke'Bryan Hayes
+insert-city-connect-swatch-collection,CC-KT,,false,,Kyle Tucker
+insert-city-connect-swatch-collection,CC-LC,,false,,Luis Castillo
+insert-city-connect-swatch-collection,CC-MB,,false,,Michael Busch
+insert-city-connect-swatch-collection,CC-MMA,,false,,Manny Machado
+insert-city-connect-swatch-collection,CC-MT,,false,,Mike Trout
+insert-city-connect-swatch-collection,CC-MY,,false,,Masataka Yoshida
+insert-city-connect-swatch-collection,CC-PL,,false,,Pablo López
+insert-city-connect-swatch-collection,CC-RLO,,false,,Reynaldo López
+insert-city-connect-swatch-collection,CC-SF,,false,,Sal Frelick
+insert-city-connect-swatch-collection,CC-VGJ,,false,,Vladimir Guerrero Jr.
+insert-city-connect-swatch-collection,CC-WA,,false,,Wilyer Abreu
+insert-city-connect-swatch-collection,CC-WP,,false,,Wenceel Pérez
+insert-city-connect-swatch-collection,CC-XB,,false,,Xander Bogaerts
+insert-city-connect-swatch-collection,CC-YA,,false,,Yordan Alvarez
+insert-city-connect-swatch-collection,CC-YD,,false,,Yu Darvish
+insert-city-connect-swatch-collection,CC-ZN,,false,,Zach Neto
+insert-in-the-name-relics,ITN-AB,,false,,Alec Bohm
+insert-in-the-name-relics,ITN-AJ,,false,,Aaron Judge
+insert-in-the-name-relics,ITN-AM,,false,,Andrés Muñoz
+insert-in-the-name-relics,ITN-AR,,false,,Adley Rutschman
+insert-in-the-name-relics,ITN-AS,,false,,Anthony Santander
+insert-in-the-name-relics,ITN-BH,,false,,Bryce Harper
+insert-in-the-name-relics,ITN-BR,,false,,Bryan Reynolds
+insert-in-the-name-relics,ITN-BW,,false,,Bobby Witt Jr.
+insert-in-the-name-relics,ITN-CA,,false,,CJ Abrams
+insert-in-the-name-relics,ITN-CB,,false,,Corbin Burnes
+insert-in-the-name-relics,ITN-CC,,false,,Carlos Correa
+insert-in-the-name-relics,ITN-CH,,false,,Clay Holmes
+insert-in-the-name-relics,ITN-CR,,false,,Cole Ragans
+insert-in-the-name-relics,ITN-CS,,false,,Chris Sale
+insert-in-the-name-relics,ITN-CSA,,false,,Cristopher Sánchez
+insert-in-the-name-relics,ITN-CY,,false,,Christian Yelich
+insert-in-the-name-relics,ITN-DF,,false,,David Fry
+insert-in-the-name-relics,ITN-EC,,false,,Emmanuel Clase
+insert-in-the-name-relics,ITN-FF,,false,,Freddie Freeman
+insert-in-the-name-relics,ITN-GC,,false,,Garrett Crochet
+insert-in-the-name-relics,ITN-GH,,false,,Gunnar Henderson
+insert-in-the-name-relics,ITN-HG,,false,,Hunter Greene
+insert-in-the-name-relics,ITN-HR,,false,,Heliot Ramos
+insert-in-the-name-relics,ITN-IP,,false,,Isaac Paredes
+insert-in-the-name-relics,ITN-JD,,false,,Jarren Duran
+insert-in-the-name-relics,ITN-JH,,false,,Jeff Hoffman
+insert-in-the-name-relics,ITN-JM,,false,,Jackson Merrill
+insert-in-the-name-relics,ITN-JN,,false,,Josh Naylor
+insert-in-the-name-relics,ITN-JP,,false,,Jurickson Profar
+insert-in-the-name-relics,ITN-JR,,false,,José Ramírez
+insert-in-the-name-relics,ITN-JS,,false,,Juan Soto
+insert-in-the-name-relics,ITN-JW,,false,,Jordan Westburg
+insert-in-the-name-relics,ITN-KM,,false,,Ketel Marte
+insert-in-the-name-relics,ITN-KY,,false,,Kirby Yates
+insert-in-the-name-relics,ITN-LA,,false,,Luis Arraez
+insert-in-the-name-relics,ITN-LG,,false,,Logan Gilbert
+insert-in-the-name-relics,ITN-MF,,false,,Max Fried
+insert-in-the-name-relics,ITN-MM,,false,,Mason Miller
+insert-in-the-name-relics,ITN-MO,,false,,Marcell Ozuna
+insert-in-the-name-relics,ITN-MS,,false,,Matt Strahm
+insert-in-the-name-relics,ITN-MSE,,false,,Marcus Semien
+insert-in-the-name-relics,ITN-PA,,false,,Pete Alonso
+insert-in-the-name-relics,ITN-PS,,false,,Paul Skenes
+insert-in-the-name-relics,ITN-RG,,false,,Riley Greene
+insert-in-the-name-relics,ITN-RH,,false,,Ryan Helsley
+insert-in-the-name-relics,ITN-RL,,false,,Reynaldo López
+insert-in-the-name-relics,ITN-RM,,false,,Ryan McMahon
+insert-in-the-name-relics,ITN-RS,,false,,Robert Suarez
+insert-in-the-name-relics,ITN-SI,,false,,Shota Imanaga
+insert-in-the-name-relics,ITN-SK,,false,,Steven Kwan
+insert-in-the-name-relics,ITN-SL,,false,,Seth Lugo
+insert-in-the-name-relics,ITN-SO,,false,,Shohei Ohtani
+insert-in-the-name-relics,ITN-SP,,false,,Salvador Perez
+insert-in-the-name-relics,ITN-TA,,false,,Tyler Anderson
+insert-in-the-name-relics,ITN-TG,,false,,Tyler Glasnow
+insert-in-the-name-relics,ITN-TH,,false,,Tanner Houck
+insert-in-the-name-relics,ITN-THE,,false,,Teoscar Hernández
+insert-in-the-name-relics,ITN-TS,,false,,Tarik Skubal
+insert-in-the-name-relics,ITN-TSC,,false,,Tanner Scott
+insert-in-the-name-relics,ITN-TT,,false,,Trea Turner
+insert-in-the-name-relics,ITN-VG,,false,,Vladimir Guerrero Jr.
+insert-in-the-name-relics,ITN-WC,,false,,William Contreras
+insert-in-the-name-relics,ITN-WCA,,false,,Willi Castro
+insert-in-the-name-relics,ITN-WS,,false,,Will Smith
+insert-in-the-name-relics,ITN-YA,,false,,Yordan Alvarez
+insert-major-league-material,MLM-AB,,false,,Alec Burleson
+insert-major-league-material,MLM-AJ,,false,,Aaron Judge
+insert-major-league-material,MLM-AM,,false,,Angel Martínez
+insert-major-league-material,MLM-AR,,false,,Anthony Rizzo
+insert-major-league-material,MLM-AVO,,false,,Anthony Volpe
+insert-major-league-material,MLM-BH,,false,,Bryce Harper
+insert-major-league-material,MLM-BL,,false,,Brooks Lee
+insert-major-league-material,MLM-BR,,false,,Ben Rice
+insert-major-league-material,MLM-BRE,,false,,Bryan Reynolds
+insert-major-league-material,MLM-CC,,false,,Carlos Correa
+insert-major-league-material,MLM-CCO,,false,,Colton Cowser
+insert-major-league-material,MLM-CMA,,false,,Coby Mayo
+insert-major-league-material,MLM-CR,,false,,Ceddanne Rafaela
+insert-major-league-material,MLM-CY,,false,,Christian Yelich
+insert-major-league-material,MLM-DC,,false,,Dylan Crews
+insert-major-league-material,MLM-FF,,false,,Freddie Freeman
+insert-major-league-material,MLM-FT,,false,,Fernando Tatis Jr.
+insert-major-league-material,MLM-GH,,false,,Gunnar Henderson
+insert-major-league-material,MLM-GK,,false,,George Kirby
+insert-major-league-material,MLM-GM,,false,,Gabriel Moreno
+insert-major-league-material,MLM-GMC,,false,,Grant McCray
+insert-major-league-material,MLM-GS,,false,,George Springer
+insert-major-league-material,MLM-HB,,false,,Hayden Birdsong
+insert-major-league-material,MLM-HBR,,false,,Hunter Brown
+insert-major-league-material,MLM-HK,,false,,Heston Kjerstad
+insert-major-league-material,MLM-JC,,false,,Jackson Chourio
+insert-major-league-material,MLM-JCA,,false,,Junior Caminero
+insert-major-league-material,MLM-JD,,false,,Jasson Domínguez
+insert-major-league-material,MLM-JH,,false,,Jackson Holliday
+insert-major-league-material,MLM-JI,,false,,Jonathan India
+insert-major-league-material,MLM-JJ,,false,,Jace Jung
+insert-major-league-material,MLM-JL,,false,,Jung Hoo Lee
+insert-major-league-material,MLM-JLA,,false,,Jordan Lawlar
+insert-major-league-material,MLM-JN,,false,,Jhonkensy Noel
+insert-major-league-material,MLM-JP,,false,,Jeremy Peña
+insert-major-league-material,MLM-JR,,false,,José Ramírez
+insert-major-league-material,MLM-JS,,false,,Juan Soto
+insert-major-league-material,MLM-JTR,,false,,J.T. Realmuto
+insert-major-league-material,MLM-JV,,false,,Joey Votto
+insert-major-league-material,MLM-JW,,false,,Jordan Westburg
+insert-major-league-material,MLM-JWO,,false,,James Wood
+insert-major-league-material,MLM-JWR,,false,,Justin Wrobleski
+insert-major-league-material,MLM-KS,,false,,Kyle Schwarber
+insert-major-league-material,MLM-KT,,false,,Kyle Tucker
+insert-major-league-material,MLM-LB,,false,,Lawrence Butler
+insert-major-league-material,MLM-MH,,false,,Michael Harris II
+insert-major-league-material,MLM-MMA,,false,,Manny Machado
+insert-major-league-material,MLM-MME,,false,,Max Meyer
+insert-major-league-material,MLM-MMU,,false,,Max Muncy
+insert-major-league-material,MLM-MO,,false,,Matt Olson
+insert-major-league-material,MLM-MS,,false,,Marcus Semien
+insert-major-league-material,MLM-MT,,false,,Mike Trout
+insert-major-league-material,MLM-MW,,false,,Masyn Winn
+insert-major-league-material,MLM-NC,,false,,Nick Castellanos
+insert-major-league-material,MLM-NJ,,false,,Nolan Jones
+insert-major-league-material,MLM-NS,,false,,Nolan Schanuel
+insert-major-league-material,MLM-OC,,false,,Oneil Cruz
+insert-major-league-material,MLM-OM,,false,,Orelvis Martinez
+insert-major-league-material,MLM-PA,,false,,Pete Alonso
+insert-major-league-material,MLM-PC,,false,,Pete Crow-Armstrong
+insert-major-league-material,MLM-PG,,false,,Paul Goldschmidt
+insert-major-league-material,MLM-PS,,false,,Paul Skenes
+insert-major-league-material,MLM-RA,,false,,Ronald Acuña Jr.
+insert-major-league-material,MLM-RD,,false,,Rafael Devers
+insert-major-league-material,MLM-RLE,,false,,Royce Lewis
+insert-major-league-material,MLM-SI,,false,,Shota Imanaga
+insert-major-league-material,MLM-SP,,false,,Salvador Perez
+insert-major-league-material,MLM-SSU,,false,,Seiya Suzuki
+insert-major-league-material,MLM-SW,,false,,Shay Whitcomb
+insert-major-league-material,MLM-TL,,false,,Tyler Locklear
+insert-major-league-material,MLM-TSK,,false,,Tarik Skubal
+insert-major-league-material,MLM-TT,,false,,Trea Turner
+insert-major-league-material,MLM-VG,,false,,Vladimir Guerrero Jr.
+insert-major-league-material,MLM-WA,,false,,Willy Adames
+insert-major-league-material,MLM-WC,,false,,William Contreras
+insert-major-league-material,MLM-WL,,false,,Wyatt Langford
+insert-major-league-material,MLM-WS,,false,,Will Smith
+insert-major-league-material,MLM-WW,,false,,Will Warren
+insert-major-league-material,MLM-XB,,false,,Xander Bogaerts
+insert-major-league-material,MLM-YA,,false,,Yordan Alvarez
+insert-major-league-material,MLM-YY,,false,,Yoshinobu Yamamoto
+insert-major-league-material,MLM-ZG,,false,,Zack Gelof
+insert-major-league-material-dual,MLMDR-AA,,false,,Yordan Alvarez / Jose Altuve
+insert-major-league-material-dual,MLMDR-AJO,,false,,Ozzie Albies / Ronald Acuña Jr.
+insert-major-league-material-dual,MLMDR-ALB,,false,,Bryce Harper / Alec Bohm
+insert-major-league-material-dual,MLMDR-ALL,,false,,Francisco Lindor / Pete Alonso
+insert-major-league-material-dual,MLMDR-ARG,,false,,Paul Goldschmidt / Nolan Arenado
+insert-major-league-material-dual,MLMDR-BRT,,false,,Kris Bryant / Ezequiel Tovar
+insert-major-league-material-dual,MLMDR-BUR,,false,,Brent Rooker / Lawrence Butler
+insert-major-league-material-dual,MLMDR-DED,,false,,Jarren Duran / Rafael Devers
+insert-major-league-material-dual,MLMDR-FRB,,false,,Mookie Betts / Freddie Freeman
+insert-major-league-material-dual,MLMDR-GJB,,false,,Vladimir Guerrero Jr. / Bo Bichette
+insert-major-league-material-dual,MLMDR-JSO,,false,,Aaron Judge / Juan Soto
+insert-major-league-material-dual,MLMDR-JUT,,false,,Aaron Judge / Mike Trout
+insert-major-league-material-dual,MLMDR-LDI,,false,,Jonathan India / Elly De La Cruz
+insert-major-league-material-dual,MLMDR-LEC,,false,,Royce Lewis / Carlos Correa
+insert-major-league-material-dual,MLMDR-MCC,,false,,Oneil Cruz / Andrew McCutchen
+insert-major-league-material-dual,MLMDR-OB,,false,,Shohei Ohtani / Mookie Betts
+insert-major-league-material-dual,MLMDR-RAK,,false,,Steven Kwan / José Ramírez
+insert-major-league-material-dual,MLMDR-RHE,,false,,Gunnar Henderson / Adley Rutschman
+insert-major-league-material-dual,MLMDR-RJB,,false,,Luis Robert Jr. / Andrew Benintendi
+insert-major-league-material-dual,MLMDR-ROA,,false,,Randy Arozarena / Julio Rodríguez
+insert-major-league-material-dual,MLMDR-SEJ,,false,,Josh Jung / Corey Seager
+insert-major-league-material-dual,MLMDR-SKG,,false,,Tarik Skubal / Riley Greene
+insert-major-league-material-dual,MLMDR-SKJ,,false,,Paul Skenes / Jared Jones
+insert-major-league-material-dual,MLMDR-SUI,,false,,Shota Imanaga / Seiya Suzuki
+insert-major-league-material-dual,MLMDR-TJM,,false,,Fernando Tatis Jr. / Jackson Merrill
+insert-major-league-material-dual,MLMDR-TJMA,,false,,Manny Machado / Fernando Tatis Jr.
+insert-major-league-material-dual,MLMDR-TRB,,false,,Mookie Betts / Mike Trout
+insert-major-league-material-dual,MLMDR-TRH,,false,,Mike Trout / Bryce Harper
+insert-major-league-material-dual,MLMDR-WOC,,false,,James Wood / Dylan Crews
+insert-major-league-material-dual,MLMDR-YEC,,false,,Jackson Chourio / Christian Yelich
+base,49,Real One Relic,false,,Christian Yelich
+base,65,Real One Relic,false,,Gunnar Henderson
+base,74,Real One Relic,false,,Dylan Crews
+base,77,Real One Relic,false,,José Ramírez
+base,78,Real One Relic,false,,Corbin Carroll
+base,101,Real One Relic,false,,Nolan Arenado
+base,125,Real One Relic,false,,Jackson Merrill
+base,145,Real One Relic,false,,Matt Olson
+base,163,Real One Relic,false,,Vladimir Guerrero Jr.
+base,181,Real One Relic,false,,James Wood
+base,185,Real One Relic,false,,Jazz Chisholm Jr.
+base,189,Real One Relic,false,,Luis Robert Jr.
+base,200,Real One Relic,false,,Mike Trout
+base,207,Real One Relic,false,,Ronald Acuña Jr.
+base,221,Real One Relic,false,,Matt Chapman
+base,239,Real One Relic,false,,Freddie Freeman
+base,244,Real One Relic,false,,Yordan Alvarez
+base,250,Real One Relic,false,,Bryce Harper
+base,260,Real One Relic,false,,Jose Altuve
+base,266,Real One Relic,false,,Julio Rodríguez
+base,277,Real One Relic,false,,Jung Hoo Lee
+base,300,Real One Relic,false,,Aaron Judge
+base,303,Real One Relic,false,,Dansby Swanson
+base,314,Real One Relic,false,,Jacob Wilson
+base,317,Real One Relic,false,,Brooks Lee
+base,332,Real One Relic,false,,Riley Greene
+base,337,Real One Relic,false,,Ben Rice
+base,350,Real One Relic,false,,Francisco Lindor
+insert-rickwood-relic-collection,RWR-AB,,false,,Alec Burleson
+insert-rickwood-relic-collection,RWR-BC,,false,,Brandon Crawford
+insert-rickwood-relic-collection,RWR-BD,,false,,Brendan Donovan
+insert-rickwood-relic-collection,RWR-DC,,false,,Dylan Carlson
+insert-rickwood-relic-collection,RWR-JS,,false,,Jorge Soler
+insert-rickwood-relic-collection,RWR-LWE,,false,,Logan Webb
+insert-rickwood-relic-collection,RWR-MCH,,false,,Matt Chapman
+insert-rickwood-relic-collection,RWR-MW,,false,,Masyn Winn
+insert-rickwood-relic-collection,RWR-MY,,false,,Mike Yastrzemski
+insert-rickwood-relic-collection,RWR-NA,,false,,Nolan Arenado
+insert-rickwood-relic-collection,RWR-NG,,false,,Nolan Gorman
+insert-rickwood-relic-collection,RWR-PB,,false,,Patrick Bailey
+insert-rickwood-relic-collection,RWR-PG,,false,,Paul Goldschmidt
+insert-rickwood-relic-collection,RWR-TES,,false,,Thairo Estrada
+insert-rickwood-relic-collection,RWR-VS,,false,,Victor Scott II
+insert-rickwood-relic-collection,RWR-WF,,false,,Wilmer Flores
+insert-1990-topps-baseball,T90-1,,false,,Mike Trout
+insert-1990-topps-baseball,T90-2,,false,,Mike Schmidt
+insert-1990-topps-baseball,T90-3,,false,,Barry Larkin
+insert-1990-topps-baseball,T90-4,,false,,Corey Seager
+insert-1990-topps-baseball,T90-5,,false,,Yadier Molina
+insert-1990-topps-baseball,T90-6,,false,,Tyler Locklear
+insert-1990-topps-baseball,T90-7,,false,,Wade Boggs
+insert-1990-topps-baseball,T90-8,,false,,Drew Thorpe
+insert-1990-topps-baseball,T90-9,,false,,Jose Altuve
+insert-1990-topps-baseball,T90-10,,false,,Juan Soto
+insert-1990-topps-baseball,T90-11,,false,,Jackie Robinson
+insert-1990-topps-baseball,T90-12,,false,,Vladimir Guerrero Jr.
+insert-1990-topps-baseball,T90-13,,false,,Matt Olson
+insert-1990-topps-baseball,T90-14,,false,,Hank Aaron
+insert-1990-topps-baseball,T90-15,,false,,Bryce Harper
+insert-1990-topps-baseball,T90-16,,false,,Chipper Jones
+insert-1990-topps-baseball,T90-17,,false,,Christian Yelich
+insert-1990-topps-baseball,T90-18,,false,,Hurston Waldrep
+insert-1990-topps-baseball,T90-19,,false,,Ben Rice
+insert-1990-topps-baseball,T90-20,,false,,Elly De La Cruz
+insert-1990-topps-baseball,T90-21,,false,,Angel Martínez
+insert-1990-topps-baseball,T90-22,,false,,Justyn-Henry Malloy
+insert-1990-topps-baseball,T90-23,,false,,Bobby Witt Jr.
+insert-1990-topps-baseball,T90-24,,false,,Brooks Lee
+insert-1990-topps-baseball,T90-25,,false,,Orelvis Martinez
+insert-1990-topps-baseball,T90-26,,false,,Ted Williams
+insert-1990-topps-baseball,T90-27,,false,,Roberto Clemente
+insert-1990-topps-baseball,T90-28,,false,,George Brett
+insert-1990-topps-baseball,T90-29,,false,,Jacob Wilson
+insert-1990-topps-baseball,T90-30,,false,,Pete Alonso
+insert-1990-topps-baseball,T90-31,,false,,Kyle Schwarber
+insert-1990-topps-baseball,T90-32,,false,,Gunnar Henderson
+insert-1990-topps-baseball,T90-33,,false,,Connor Norby
+insert-1990-topps-baseball,T90-34,,false,,Spencer Schwellenbach
+insert-1990-topps-baseball,T90-35,,false,,Larry Walker
+insert-1990-topps-baseball,T90-36,,false,,Ichiro
+insert-1990-topps-baseball,T90-37,,false,,Jackson Chourio
+insert-1990-topps-baseball,T90-38,,false,,Francisco Lindor
+insert-1990-topps-baseball,T90-39,,false,,James Wood
+insert-1990-topps-baseball,T90-40,,false,,Tony Gwynn
+insert-1990-topps-baseball,T90-41,,false,,Robin Yount
+insert-1990-topps-baseball,T90-42,,false,,Julio Rodríguez
+insert-1990-topps-baseball,T90-43,,false,,Trea Turner
+insert-1990-topps-baseball,T90-44,,false,,Riley Greene
+insert-1990-topps-baseball,T90-45,,false,,Corbin Carroll
+insert-1990-topps-baseball,T90-46,,false,,Rickey Henderson
+insert-1990-topps-baseball,T90-47,,false,,Babe Ruth
+insert-1990-topps-baseball,T90-48,,false,,Vladimir Guerrero
+insert-1990-topps-baseball,T90-49,,false,,River Ryan
+insert-1990-topps-baseball,T90-50,,false,,Frank Thomas
+insert-1990-topps-baseball,T90-51,,false,,José Ramírez
+insert-1990-topps-baseball,T90-52,,false,,Nolan Arenado
+insert-1990-topps-baseball,T90-53,,false,,Adley Rutschman
+insert-1990-topps-baseball,T90-54,,false,,Mike Piazza
+insert-1990-topps-baseball,T90-55,,false,,Jace Jung
+insert-1990-topps-baseball,T90-56,,false,,Rece Hinds
+insert-1990-topps-baseball,T90-57,,false,,Aaron Judge
+insert-1990-topps-baseball,T90-58,,false,,Gordon Graceffo
+insert-1990-topps-baseball,T90-59,,false,,Cal Ripken Jr.
+insert-1990-topps-baseball,T90-60,,false,,Mookie Betts
+insert-1990-topps-baseball,T90-61,,false,,Clayton Kershaw
+insert-1990-topps-baseball,T90-62,,false,,Bo Jackson
+insert-1990-topps-baseball,T90-63,,false,,Paul Skenes
+insert-1990-topps-baseball,T90-64,,false,,Jackson Merrill
+insert-1990-topps-baseball,T90-65,,false,,Don Mattingly
+insert-1990-topps-baseball,T90-66,,false,,Mark McGwire
+insert-1990-topps-baseball,T90-67,,false,,David Festa
+insert-1990-topps-baseball,T90-68,,false,,Albert Pujols
+insert-1990-topps-baseball,T90-69,,false,,Cade Povich
+insert-1990-topps-baseball,T90-70,,false,,Hayden Birdsong
+insert-1990-topps-baseball,T90-71,,false,,Ryne Sandberg
+insert-1990-topps-baseball,T90-72,,false,,Carlos Correa
+insert-1990-topps-baseball,T90-73,,false,,Randy Arozarena
+insert-1990-topps-baseball,T90-74,,false,,Zebby Matthews
+insert-1990-topps-baseball,T90-75,,false,,Ronald Acuña Jr.
+insert-1990-topps-baseball,T90-76,,false,,Ken Griffey Jr.
+insert-1990-topps-baseball,T90-77,,false,,Seiya Suzuki
+insert-1990-topps-baseball,T90-78,,false,,Manny Machado
+insert-1990-topps-baseball,T90-79,,false,,Nacho Alvarez Jr.
+insert-1990-topps-baseball,T90-80,,false,,Nolan Ryan
+insert-1990-topps-baseball,T90-81,,false,,Fernando Tatis Jr.
+insert-1990-topps-baseball,T90-82,,false,,Yordan Alvarez
+insert-1990-topps-baseball,T90-83,,false,,Adael Amador
+insert-1990-topps-baseball,T90-84,,false,,Yoshinobu Yamamoto
+insert-1990-topps-baseball,T90-85,,false,,Shota Imanaga
+insert-1990-topps-baseball,T90-86,,false,,Matt Chapman
+insert-1990-topps-baseball,T90-87,,false,,Derek Jeter
+insert-1990-topps-baseball,T90-88,,false,,Luis Robert Jr
+insert-1990-topps-baseball,T90-89,,false,,Dylan Crews
+insert-1990-topps-baseball,T90-90,,false,,Rafael Devers
+insert-1990-topps-baseball,T90-91,,false,,Rhett Lowder
+insert-1990-topps-baseball,T90-92,,false,,Zach Dezenzo
+insert-1990-topps-baseball,T90-93,,false,,Coby Mayo
+insert-1990-topps-baseball,T90-94,,false,,Adrián Beltré
+insert-1990-topps-baseball,T90-95,,false,,Stan Musial
+insert-1990-topps-baseball,T90-96,,false,,Willie Mays
+insert-1990-topps-baseball,T90-97,,false,,Will Clark
+insert-1990-topps-baseball,T90-98,,false,,Andrew McCutchen
+insert-1990-topps-baseball,T90-99,,false,,Jazz Chisholm Jr.
+insert-1990-topps-baseball,T90-100,,false,,Shohei Ohtani
+insert-1990-topps-baseball-chrome,T90C-1,,false,,Gunnar Henderson
+insert-1990-topps-baseball-chrome,T90C-2,,false,,Don Mattingly
+insert-1990-topps-baseball-chrome,T90C-3,,false,,Hurston Waldrep
+insert-1990-topps-baseball-chrome,T90C-4,,false,,Frank Thomas
+insert-1990-topps-baseball-chrome,T90C-5,,false,,Derek Jeter
+insert-1990-topps-baseball-chrome,T90C-6,,false,,Wade Boggs
+insert-1990-topps-baseball-chrome,T90C-7,,false,,Steven Kwan
+insert-1990-topps-baseball-chrome,T90C-8,,false,,Rafael Devers
+insert-1990-topps-baseball-chrome,T90C-9,,false,,Nolan Ryan
+insert-1990-topps-baseball-chrome,T90C-10,,false,,Jackie Robinson
+insert-1990-topps-baseball-chrome,T90C-11,,false,,Francisco Lindor
+insert-1990-topps-baseball-chrome,T90C-12,,false,,Fernando Tatis Jr.
+insert-1990-topps-baseball-chrome,T90C-13,,false,,Clayton Kershaw
+insert-1990-topps-baseball-chrome,T90C-14,,false,,Bryce Harper
+insert-1990-topps-baseball-chrome,T90C-15,,false,,Elly De La Cruz
+insert-1990-topps-baseball-chrome,T90C-16,,false,,Jacob Wilson
+insert-1990-topps-baseball-chrome,T90C-17,,false,,Rece Hinds
+insert-1990-topps-baseball-chrome,T90C-18,,false,,Jazz Chisholm Jr.
+insert-1990-topps-baseball-chrome,T90C-19,,false,,Juan Soto
+insert-1990-topps-baseball-chrome,T90C-20,,false,,Drew Thorpe
+insert-1990-topps-baseball-chrome,T90C-21,,false,,Coby Mayo
+insert-1990-topps-baseball-chrome,T90C-22,,false,,Jarren Duran
+insert-1990-topps-baseball-chrome,T90C-23,,false,,Matt Olson
+insert-1990-topps-baseball-chrome,T90C-24,,false,,Adael Amador
+insert-1990-topps-baseball-chrome,T90C-25,,false,,Gordon Graceffo
+insert-1990-topps-baseball-chrome,T90C-26,,false,,Carlos Correa
+insert-1990-topps-baseball-chrome,T90C-27,,false,,Ryne Sandberg
+insert-1990-topps-baseball-chrome,T90C-28,,false,,Nacho Alvarez Jr.
+insert-1990-topps-baseball-chrome,T90C-29,,false,,Rhett Lowder
+insert-1990-topps-baseball-chrome,T90C-30,,false,,Vladimir Guerrero Jr.
+insert-1990-topps-baseball-chrome,T90C-31,,false,,Jeff Bagwell
+insert-1990-topps-baseball-chrome,T90C-32,,false,,Paul Skenes
+insert-1990-topps-baseball-chrome,T90C-33,,false,,Hayden Birdsong
+insert-1990-topps-baseball-chrome,T90C-34,,false,,Jackson Merrill
+insert-1990-topps-baseball-chrome,T90C-35,,false,,Adley Rutschman
+insert-1990-topps-baseball-chrome,T90C-36,,false,,River Ryan
+insert-1990-topps-baseball-chrome,T90C-37,,false,,Ken Griffey Jr.
+insert-1990-topps-baseball-chrome,T90C-38,,false,,Barry Larkin
+insert-1990-topps-baseball-chrome,T90C-39,,false,,Trea Turner
+insert-1990-topps-baseball-chrome,T90C-40,,false,,Rickey Henderson
+insert-1990-topps-baseball-chrome,T90C-41,,false,,Jackson Chourio
+insert-1990-topps-baseball-chrome,T90C-42,,false,,Orelvis Martinez
+insert-1990-topps-baseball-chrome,T90C-43,,false,,Shota Imanaga
+insert-1990-topps-baseball-chrome,T90C-44,,false,,Dylan Crews
+insert-1990-topps-baseball-chrome,T90C-45,,false,,Ronald Acuña Jr.
+insert-1990-topps-baseball-chrome,T90C-46,,false,,Dale Murphy
+insert-1990-topps-baseball-chrome,T90C-47,,false,,Seiya Suzuki
+insert-1990-topps-baseball-chrome,T90C-48,,false,,Nolan Arenado
+insert-1990-topps-baseball-chrome,T90C-49,,false,,Brooks Lee
+insert-1990-topps-baseball-chrome,T90C-50,,false,,Shohei Ohtani
+insert-1990-topps-baseball-chrome,T90C-51,,false,,Yordan Alvarez
+insert-1990-topps-baseball-chrome,T90C-52,,false,,Mark McGwire
+insert-1990-topps-baseball-chrome,T90C-53,,false,,Justyn-Henry Malloy
+insert-1990-topps-baseball-chrome,T90C-54,,false,,Mike Trout
+insert-1990-topps-baseball-chrome,T90C-55,,false,,James Wood
+insert-1990-topps-baseball-chrome,T90C-56,,false,,Bobby Witt Jr.
+insert-1990-topps-baseball-chrome,T90C-57,,false,,Julio Rodríguez
+insert-1990-topps-baseball-chrome,T90C-58,,false,,Tony Gwynn
+insert-1990-topps-baseball-chrome,T90C-59,,false,,Chayce McDermott
+insert-1990-topps-baseball-chrome,T90C-60,,false,,Spencer Schwellenbach
+insert-1990-topps-baseball-chrome,T90C-61,,false,,Brandon Nimmo
+insert-1990-topps-baseball-chrome,T90C-62,,false,,Chipper Jones
+insert-1990-topps-baseball-chrome,T90C-63,,false,,Jake Bloss
+insert-1990-topps-baseball-chrome,T90C-64,,false,,Tyler Locklear
+insert-1990-topps-baseball-chrome,T90C-65,,false,,Adam Mazur
+insert-1990-topps-baseball-chrome,T90C-66,,false,,Angel Martínez
+insert-1990-topps-baseball-chrome,T90C-67,,false,,Vladimir Guerrero
+insert-1990-topps-baseball-chrome,T90C-68,,false,,Robin Yount
+insert-1990-topps-baseball-chrome,T90C-69,,false,,Cade Povich
+insert-1990-topps-baseball-chrome,T90C-70,,false,,Corey Seager
+insert-1990-topps-baseball-chrome,T90C-71,,false,,Manny Machado
+insert-1990-topps-baseball-chrome,T90C-72,,false,,Larry Walker
+insert-1990-topps-baseball-chrome,T90C-73,,false,,Sonny Gray
+insert-1990-topps-baseball-chrome,T90C-74,,false,,Byron Buxton
+insert-1990-topps-baseball-chrome,T90C-75,,false,,Will Clark
+insert-1990-topps-baseball-chrome,T90C-76,,false,,Yoshinobu Yamamoto
+insert-1990-topps-baseball-chrome,T90C-77,,false,,Christian Yelich
+insert-1990-topps-baseball-chrome,T90C-78,,false,,Luis Robert Jr.
+insert-1990-topps-baseball-chrome,T90C-79,,false,,Jose Altuve
+insert-1990-topps-baseball-chrome,T90C-80,,false,,Corbin Carroll
+insert-1990-topps-baseball-chrome,T90C-81,,false,,Mookie Betts
+insert-1990-topps-baseball-chrome,T90C-82,,false,,Aaron Judge
+insert-1990-topps-baseball-chrome,T90C-83,,false,,Pete Alonso
+insert-1990-topps-baseball-chrome,T90C-84,,false,,Paul Goldschmidt
+insert-1990-topps-baseball-chrome,T90C-85,,false,,Wyatt Langford
+insert-1990-topps-baseball-chrome,T90C-86,,false,,Ben Rice
+insert-1990-topps-baseball-chrome,T90C-87,,false,,Connor Norby
+insert-1990-topps-baseball-chrome,T90C-88,,false,,Cal Ripken Jr.
+insert-1990-topps-baseball-chrome,T90C-89,,false,,Riley Greene
+insert-1990-topps-baseball-chrome,T90C-90,,false,,David Festa
+insert-1990-topps-baseball-chrome,T90C-91,,false,,Randy Arozarena
+insert-1990-topps-baseball-chrome,T90C-92,,false,,Bo Jackson
+insert-1990-topps-baseball-chrome,T90C-93,,false,,Ichiro
+insert-1990-topps-baseball-chrome,T90C-94,,false,,José Ramírez
+insert-1990-topps-baseball-chrome,T90C-95,,false,,Andrew McCutchen
+insert-1990-topps-baseball-chrome,T90C-96,,false,,George Brett
+insert-1990-topps-baseball-chrome,T90C-97,,false,,Matt Chapman
+insert-1990-topps-baseball-chrome,T90C-98,,false,,Gerrit Cole
+insert-1990-topps-baseball-chrome,T90C-99,,false,,Albert Pujols
+insert-1990-topps-baseball-chrome,T90C-100,,false,,Mike Schmidt
+insert-2024-all-topps-team,ATT-1,,false,,Aaron Judge
+insert-2024-all-topps-team,ATT-2,,false,,Juan Soto
+insert-2024-all-topps-team,ATT-3,,false,,Shohei Ohtani
+insert-2024-all-topps-team,ATT-4,,false,,Emmanuel Clase
+insert-2024-all-topps-team,ATT-5,,false,,Bryce Harper
+insert-2024-all-topps-team,ATT-6,,false,,William Contreras
+insert-2024-all-topps-team,ATT-7,,false,,Paul Skenes
+insert-2024-all-topps-team,ATT-8,,false,,Jarren Duran
+insert-2024-all-topps-team,ATT-9,,false,,Tarik Skubal
+insert-2024-all-topps-team,ATT-10,,false,,Ketel Marte
+insert-2024-all-topps-team,ATT-11,,false,,Bobby Witt Jr.
+insert-2024-all-topps-team,ATT-12,,false,,José Ramírez
+insert-2024-first-pitch,FP-1,,false,,Jason Kelce
+insert-2024-first-pitch,FP-2,,false,,Masanori Murakami
+insert-2024-first-pitch,FP-3,,false,,Juju Watkins
+insert-2024-first-pitch,FP-4,,false,,Coach Al
+insert-2024-first-pitch,FP-5,,false,,Jayson Tatum
+insert-2024-first-pitch,FP-6,,false,,Carl Radke
+insert-2024-first-pitch,FP-7,,false,,Chipper Jones
+insert-2024-first-pitch,FP-8,,false,,Adrían Beltré
+insert-2024-first-pitch,FP-9,,false,,Lauren Alaina
+insert-2024-first-pitch,FP-10,,false,,C.J. Stroud
+insert-2024-greatest-hits,GH-1,,false,,Aaron Judge
+insert-2024-greatest-hits,GH-2,,false,,Ben Rice
+insert-2024-greatest-hits,GH-3,,false,,Bryce Harper
+insert-2024-greatest-hits,GH-4,,false,,Cal Raleigh
+insert-2024-greatest-hits,GH-5,,false,,Nolan Arenado
+insert-2024-greatest-hits,GH-6,,false,,Bobby Witt Jr.
+insert-2024-greatest-hits,GH-7,,false,,Corbin Carroll
+insert-2024-greatest-hits,GH-8,,false,,Shohei Ohtani
+insert-2024-greatest-hits,GH-9,,false,,Fernando Tatis Jr.
+insert-2024-greatest-hits,GH-10,,false,,Freddie Freeman
+insert-2024-greatest-hits,GH-11,,false,,Jackson Holliday
+insert-2024-greatest-hits,GH-12,,false,,Jackson Merrill
+insert-2024-greatest-hits,GH-13,,false,,James Wood
+insert-2024-greatest-hits,GH-14,,false,,Jazz Chisholm Jr.
+insert-2024-greatest-hits,GH-15,,false,,Juan Soto
+insert-2024-greatest-hits,GH-16,,false,,Aaron Judge
+insert-2024-greatest-hits,GH-17,,false,,Manny Machado
+insert-2024-greatest-hits,GH-18,,false,,Mike Tauchman
+insert-2024-greatest-hits,GH-19,,false,,Mike Yastrzemski
+insert-2024-greatest-hits,GH-20,,false,,Cedric Mullins
+insert-2024-greatest-hits,GH-21,,false,,Paul Goldschmidt
+insert-2024-greatest-hits,GH-22,,false,,Rece Hinds
+insert-2024-greatest-hits,GH-23,,false,,Shohei Ohtani
+insert-2024-greatest-hits,GH-24,,false,,Paul Skenes
+insert-2024-greatest-hits,GH-25,,false,,Shohei Ohtani
+insert-2024-greatest-hits,GH-26,,false,,Travis d'Arnaud
+insert-2024-greatest-hits,GH-27,,false,,Wyatt Langford
+insert-2024-greatest-hits,GH-28,,false,,Elly De La Cruz
+insert-all-aces,AA-1,,false,,Sandy Koufax
+insert-all-aces,AA-2,,false,,Nolan Ryan
+insert-all-aces,AA-3,,false,,Babe Ruth
+insert-all-aces,AA-4,,false,,Roger Clemens
+insert-all-aces,AA-5,,false,,Greg Maddux
+insert-all-aces,AA-6,,false,,Bob Gibson
+insert-all-aces,AA-7,,false,,Pedro Martinez
+insert-all-aces,AA-8,,false,,Randy Johnson
+insert-all-aces,AA-9,,false,,Satchel Paige
+insert-all-aces,AA-10,,false,,Clayton Kershaw
+insert-all-aces,AA-11,,false,,Justin Verlander
+insert-all-aces,AA-12,,false,,Shohei Ohtani
+insert-all-aces,AA-13,,false,,Sonny Gray
+insert-all-aces,AA-14,,false,,Steve Carlton
+insert-all-aces,AA-15,,false,,Tom Seaver
+insert-all-aces,AA-16,,false,,Chris Sale
+insert-all-aces,AA-17,,false,,Yoshinobu Yamamoto
+insert-all-aces,AA-18,,false,,Jacob deGrom
+insert-all-aces,AA-19,,false,,Shota Imanaga
+insert-all-aces,AA-20,,false,,Paul Skenes
+insert-all-aces,AA-21,,false,,Jackson Jobe
+insert-all-aces,AA-22,,false,,Corbin Burnes
+insert-all-aces,AA-23,,false,,Tarik Skubal
+insert-all-aces,AA-24,,false,,Gerrit Cole
+insert-all-aces,AA-25,,false,,Rhett Lowder
+insert-call-to-the-hall,CTH-1,,false,,Randy Johnson
+insert-call-to-the-hall,CTH-2,,false,,Chipper Jones
+insert-call-to-the-hall,CTH-3,,false,,Ty Cobb
+insert-call-to-the-hall,CTH-4,,false,,Hank Aaron
+insert-call-to-the-hall,CTH-5,,false,,Cal Ripken Jr.
+insert-call-to-the-hall,CTH-6,,false,,Stan Musial
+insert-call-to-the-hall,CTH-7,,false,,Ted Williams
+insert-call-to-the-hall,CTH-8,,false,,Jackie Robinson
+insert-call-to-the-hall,CTH-9,,false,,Johnny Bench
+insert-call-to-the-hall,CTH-10,,false,,Ernie Banks
+insert-call-to-the-hall,CTH-11,,false,,Nolan Ryan
+insert-call-to-the-hall,CTH-12,,false,,George Brett
+insert-call-to-the-hall,CTH-13,,false,,Sandy Koufax
+insert-call-to-the-hall,CTH-14,,false,,Babe Ruth
+insert-call-to-the-hall,CTH-15,,false,,Mickey Mantle
+insert-call-to-the-hall,CTH-16,,false,,Reggie Jackson
+insert-call-to-the-hall,CTH-17,,false,,Derek Jeter
+insert-call-to-the-hall,CTH-18,,false,,Rickey Henderson
+insert-call-to-the-hall,CTH-19,,false,,Mike Schmidt
+insert-call-to-the-hall,CTH-20,,false,,Roberto Clemente
+insert-call-to-the-hall,CTH-21,,false,,Tony Gwynn
+insert-call-to-the-hall,CTH-22,,false,,Willie Mays
+insert-call-to-the-hall,CTH-23,,false,,Ken Griffey Jr.
+insert-call-to-the-hall,CTH-24,,false,,Ichiro
+insert-call-to-the-hall,CTH-25,,false,,Albert Pujols
+insert-companion-cards,CC-1,,false,,Shohei Ohtani
+insert-companion-cards,CC-2,,false,,Mike Trout
+insert-companion-cards,CC-3,,false,,Ronald Acuña Jr.
+insert-companion-cards,CC-4,,false,,Aaron Judge
+insert-companion-cards,CC-5,,false,,Bryce Harper
+insert-companion-cards,CC-6,,false,,Julio Rodríguez
+insert-companion-cards,CC-7,,false,,Corbin Carroll
+insert-companion-cards,CC-8,,false,,Bobby Witt Jr.
+insert-companion-cards,CC-9,,false,,Rafael Devers
+insert-companion-cards,CC-10,,false,,Vladimir Guerrero Jr.
+insert-companion-cards,CC-11,,false,,Gunnar Henderson
+insert-companion-cards,CC-12,,false,,Nolan Arenado
+insert-companion-cards,CC-13,,false,,Corey Seager
+insert-companion-cards,CC-14,,false,,Carlos Correa
+insert-companion-cards,CC-15,,false,,Yordan Alvarez
+insert-companion-cards,CC-16,,false,,Christian Yelich
+insert-companion-cards,CC-17,,false,,James Wood
+insert-companion-cards,CC-18,,false,,Brooks Lee
+insert-companion-cards,CC-19,,false,,Dylan Crews
+insert-companion-cards,CC-20,,false,,Coby Mayo
+insert-companion-cards,CC-21,,false,,Paul Skenes
+insert-companion-cards,CC-22,,false,,Jace Jung
+insert-companion-cards,CC-23,,false,,Jacob Wilson
+insert-companion-cards,CC-24,,false,,Francisco Lindor
+insert-companion-cards,CC-25,,false,,Manny Machado
+insert-heavy-lumber,HL-1,,false,,Juan Soto
+insert-heavy-lumber,HL-2,,false,,Julio Rodríguez
+insert-heavy-lumber,HL-3,,false,,Aaron Judge
+insert-heavy-lumber,HL-4,,false,,Ronald Acuña Jr.
+insert-heavy-lumber,HL-5,,false,,Bryce Harper
+insert-heavy-lumber,HL-6,,false,,Shohei Ohtani
+insert-heavy-lumber,HL-7,,false,,Mike Trout
+insert-heavy-lumber,HL-8,,false,,Gunnar Henderson
+insert-heavy-lumber,HL-9,,false,,Bobby Witt Jr.
+insert-heavy-lumber,HL-10,,false,,Vladimir Guerrero Jr.
+insert-heavy-lumber,HL-11,,false,,Elly De La Cruz
+insert-heavy-lumber,HL-12,,false,,James Wood
+insert-heavy-lumber,HL-13,,false,,Fernando Tatis Jr.
+insert-heavy-lumber,HL-14,,false,,Willie Mays
+insert-heavy-lumber,HL-15,,false,,Ken Griffey Jr.
+insert-heavy-lumber,HL-16,,false,,Barry Bonds
+insert-heavy-lumber,HL-17,,false,,Mickey Mantle
+insert-heavy-lumber,HL-18,,false,,Jackie Robinson
+insert-heavy-lumber,HL-19,,false,,Roberto Clemente
+insert-heavy-lumber,HL-20,,false,,Coby Mayo
+insert-home-field-advantage,HA-1,,false,,Aaron Judge
+insert-home-field-advantage,HA-2,,false,,Ronald Acuña Jr.
+insert-home-field-advantage,HA-3,,false,,Julio Rodríguez
+insert-home-field-advantage,HA-4,,false,,Bryce Harper
+insert-home-field-advantage,HA-5,,false,,Shohei Ohtani
+insert-home-field-advantage,HA-6,,false,,Mike Trout
+insert-home-field-advantage,HA-7,,false,,Gunnar Henderson
+insert-home-field-advantage,HA-8,,false,,Bobby Witt Jr.
+insert-home-field-advantage,HA-9,,false,,James Wood
+insert-home-field-advantage,HA-10,,false,,Fernando Tatis Jr.
+insert-home-field-advantage,HA-11,,false,,Matt Chapman
+insert-home-field-advantage,HA-12,,false,,Brooks Lee
+insert-home-field-advantage,HA-13,,false,,Cody Bellinger
+insert-home-field-advantage,HA-14,,false,,Coby Mayo
+insert-home-field-advantage,HA-15,,false,,Jace Jung
+insert-home-field-advantage,HA-16,,false,,Elly De La Cruz
+insert-home-field-advantage,HA-17,,false,,Francisco Lindor
+insert-home-field-advantage,HA-18,,false,,Rafael Devers
+insert-home-field-advantage,HA-19,,false,,Riley Greene
+insert-home-field-advantage,HA-20,,false,,Ketel Marte
+insert-legendary-home-field-advantage,LHA-1,,false,,Chipper Jones
+insert-legendary-home-field-advantage,LHA-2,,false,,Tony Gwynn
+insert-legendary-home-field-advantage,LHA-3,,false,,Ryne Sandberg
+insert-legendary-home-field-advantage,LHA-4,,false,,Lou Gehrig
+insert-legendary-home-field-advantage,LHA-5,,false,,Adrian Beltré
+base,1,Oversized 2025 Topps Baseball,false,,Shohei Ohtani
+base,20,Oversized 2025 Topps Baseball,false,,Coby Mayo
+base,49,Oversized 2025 Topps Baseball,false,,Christian Yelich
+base,65,Oversized 2025 Topps Baseball,false,,Gunnar Henderson
+base,74,Oversized 2025 Topps Baseball,false,,Dylan Crews
+base,78,Oversized 2025 Topps Baseball,false,,Corbin Carroll
+base,80,Oversized 2025 Topps Baseball,false,,Jace Jung
+base,98,Oversized 2025 Topps Baseball,false,,Paul Skenes
+base,100,Oversized 2025 Topps Baseball,false,,Bobby Witt Jr.
+base,101,Oversized 2025 Topps Baseball,false,,Nolan Arenado
+base,163,Oversized 2025 Topps Baseball,false,,Vladimir Guerrero Jr.
+base,181,Oversized 2025 Topps Baseball,false,,James Wood
+base,200,Oversized 2025 Topps Baseball,false,,Mike Trout
+base,207,Oversized 2025 Topps Baseball,false,,Ronald Acuña Jr.
+base,215,Oversized 2025 Topps Baseball,false,,Manny Machado
+base,244,Oversized 2025 Topps Baseball,false,,Yordan Alvarez
+base,250,Oversized 2025 Topps Baseball,false,,Bryce Harper
+base,266,Oversized 2025 Topps Baseball,false,,Julio Rodríguez
+base,275,Oversized 2025 Topps Baseball,false,,Carlos Correa
+base,281,Oversized 2025 Topps Baseball,false,,Corey Seager
+base,285,Oversized 2025 Topps Baseball,false,,Rafael Devers
+base,300,Oversized 2025 Topps Baseball,false,,Aaron Judge
+base,314,Oversized 2025 Topps Baseball,false,,Jacob Wilson
+base,317,Oversized 2025 Topps Baseball,false,,Brooks Lee
+base,350,Oversized 2025 Topps Baseball,false,,Francisco Lindor
+insert-plakata,PLAK-1,,false,,Carlos Peña
+insert-plakata,PLAK-2,,false,,Albert Pujols
+insert-plakata,PLAK-3,,false,,Ronald Acuña Jr.
+insert-plakata,PLAK-4,,false,,Elly De La Cruz
+insert-plakata,PLAK-5,,false,,Oneil Cruz
+insert-plakata,PLAK-6,,false,,Vladimir Guerrero Jr.
+insert-plakata,PLAK-7,,false,,Juan Soto
+insert-plakata,PLAK-8,,false,,Fernando Tatis Jr.
+insert-plakata,PLAK-9,,false,,Julio Rodríguez
+insert-plakata,PLAK-10,,false,,Manny Machado
+insert-plakata,PLAK-11,,false,,Francisco Lindor
+insert-plakata,PLAK-12,,false,,José Ramírez
+insert-plakata,PLAK-13,,false,,Carlos Correa
+insert-plakata,PLAK-14,,false,,Yordan Alvarez
+insert-plakata,PLAK-15,,false,,Rafael Devers
+insert-plakata,PLAK-16,,false,,David Ortiz
+insert-plakata,PLAK-17,,false,,Adrian Beltré
+insert-plakata,PLAK-18,,false,,Vladimir Guerrero
+insert-plakata,PLAK-19,,false,,Jackson Chourio
+insert-plakata,PLAK-20,,false,,Teoscar Hernández
+insert-plakata,PLAK-21,,false,,Ketel Marte
+insert-plakata,PLAK-22,,false,,Marcell Ozuna
+insert-plakata,PLAK-23,,false,,Sammy Sosa
+insert-plakata,PLAK-24,,false,,Roberto Clemente
+insert-plakata,PLAK-25,,false,,Adolis García
+insert-social-media-follow-back-redemptions,FBR-CM,,false,,Coby Mayo
+insert-social-media-follow-back-redemptions,FBR-FT,,false,,Frank Thomas
+insert-social-media-follow-back-redemptions,FBR-JC,,false,,Jackson Chourio
+insert-social-media-follow-back-redemptions,FBR-JM,,false,,Jackson Merrill
+insert-social-media-follow-back-redemptions,FBR-JR,,false,,Julio Rodríguez
+insert-social-media-follow-back-redemptions,FBR-JS,,false,,Juan Soto
+insert-social-media-follow-back-redemptions,FBR-JW,,false,,James Wood
+insert-social-media-follow-back-redemptions,FBR-KG,,false,,Ken GriffeyJr.
+insert-social-media-follow-back-redemptions,FBR-PS,,false,,Paul Skenes
+insert-social-media-follow-back-redemptions,FBR-RJ,,false,,Reggie Jackson
+insert-stars-of-mlb,SMLB-1,,false,,Nolan Arenado
+insert-stars-of-mlb,SMLB-2,,false,,Aaron Judge
+insert-stars-of-mlb,SMLB-3,,false,,Bryce Harper
+insert-stars-of-mlb,SMLB-4,,false,,Fernando Tatis Jr.
+insert-stars-of-mlb,SMLB-5,,false,,Julio Rodríguez
+insert-stars-of-mlb,SMLB-6,,false,,Bobby Witt Jr.
+insert-stars-of-mlb,SMLB-7,,false,,Vladimir Guerrero Jr.
+insert-stars-of-mlb,SMLB-8,,false,,Mike Trout
+insert-stars-of-mlb,SMLB-9,,false,,Yordan Alvarez
+insert-stars-of-mlb,SMLB-10,,false,,Shohei Ohtani
+insert-stars-of-mlb,SMLB-11,,false,,Francisco Lindor
+insert-stars-of-mlb,SMLB-12,,false,,Gunnar Henderson
+insert-stars-of-mlb,SMLB-13,,false,,Elly De La Cruz
+insert-stars-of-mlb,SMLB-14,,false,,Corey Seager
+insert-stars-of-mlb,SMLB-15,,false,,Corbin Carroll
+insert-stars-of-mlb,SMLB-16,,false,,Ronald Acuña Jr.
+insert-stars-of-mlb,SMLB-17,,false,,Mookie Betts
+insert-stars-of-mlb,SMLB-18,,false,,James Wood
+insert-stars-of-mlb,SMLB-19,,false,,Brooks Lee
+insert-stars-of-mlb,SMLB-20,,false,,José Ramírez
+insert-stars-of-mlb,SMLB-21,,false,,Rafael Devers
+insert-stars-of-mlb,SMLB-22,,false,,Juan Soto
+insert-stars-of-mlb,SMLB-23,,false,,Coby Mayo
+insert-stars-of-mlb,SMLB-24,,false,,Christian Yelich
+insert-stars-of-mlb,SMLB-25,,false,,Luis Robert Jr.
+insert-stars-of-mlb,SMLB-26,,false,,Shota Imanaga
+insert-stars-of-mlb,SMLB-27,,false,,Paul Skenes
+insert-stars-of-mlb,SMLB-28,,false,,Carlos Correa
+insert-stars-of-mlb,SMLB-29,,false,,Matt Chapman
+insert-stars-of-mlb,SMLB-30,,false,,Dylan Crews
+insert-topps-mega-stars,MEGA-1,,false,,Mike Trout
+insert-topps-mega-stars,MEGA-2,,false,,Shohei Ohtani
+insert-topps-mega-stars,MEGA-3,,false,,Ronald Acuña Jr.
+insert-topps-mega-stars,MEGA-4,,false,,Gunnar Henderson
+insert-topps-mega-stars,MEGA-5,,false,,Elly De La Cruz
+insert-topps-mega-stars,MEGA-6,,false,,Yordan Alvarez
+insert-topps-mega-stars,MEGA-7,,false,,Mookie Betts
+insert-topps-mega-stars,MEGA-8,,false,,Aaron Judge
+insert-topps-mega-stars,MEGA-9,,false,,Juan Soto
+insert-topps-mega-stars,MEGA-10,,false,,Bryce Harper
+insert-topps-mega-stars,MEGA-11,,false,,Fernando Tatis Jr.
+insert-topps-mega-stars,MEGA-12,,false,,Julio Rodríguez
+insert-topps-mega-stars,MEGA-13,,false,,Nolan Arenado
+insert-topps-mega-stars,MEGA-14,,false,,Bobby Witt Jr.
+insert-topps-mega-stars,MEGA-15,,false,,Vladimir Guerrero Jr.
+insert-topps-mega-stars,MEGA-16,,false,,James Wood
+insert-topps-mega-stars,MEGA-17,,false,,Brooks Lee
+insert-topps-mega-stars,MEGA-18,,false,,Paul Skenes
+insert-topps-mega-stars,MEGA-19,,false,,Corbin Carroll
+insert-topps-mega-stars,MEGA-20,,false,,Dylan Crews
+insert-training-grounds,TG-1,,false,,Nolan Arenado
+insert-training-grounds,TG-2,,false,,Aaron Judge
+insert-training-grounds,TG-3,,false,,Bryce Harper
+insert-training-grounds,TG-4,,false,,Fernando Tatis Jr.
+insert-training-grounds,TG-5,,false,,Julio Rodríguez
+insert-training-grounds,TG-6,,false,,Bobby Witt Jr.
+insert-training-grounds,TG-7,,false,,Vladimir Guerrero Jr.
+insert-training-grounds,TG-8,,false,,Mike Trout
+insert-training-grounds,TG-9,,false,,Jose Altuve
+insert-training-grounds,TG-10,,false,,Shohei Ohtani
+insert-training-grounds,TG-11,,false,,Francisco Lindor
+insert-training-grounds,TG-12,,false,,Gunnar Henderson
+insert-training-grounds,TG-13,,false,,Elly De La Cruz
+insert-training-grounds,TG-14,,false,,Corey Seager
+insert-training-grounds,TG-15,,false,,Corbin Carroll
+insert-training-grounds,TG-16,,false,,Ronald Acuña Jr.
+insert-training-grounds,TG-17,,false,,Mookie Betts
+insert-training-grounds,TG-18,,false,,James Wood
+insert-training-grounds,TG-19,,false,,Brooks Lee
+insert-training-grounds,TG-20,,false,,Dylan Crews
+insert-training-grounds,TG-21,,false,,Rafael Devers
+insert-training-grounds,TG-22,,false,,Juan Soto
+insert-training-grounds,TG-23,,false,,Paul Skenes
+insert-training-grounds,TG-24,,false,,Dansby Swanson
+insert-training-grounds,TG-25,,false,,Matt Chapman
