@@ -545,6 +545,34 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // stops the catch-all before it can answer, and the alias folds the vendor
   // spelling onto the checklist's.
   S("topps-3", { names: ["topps-three"], family: "topps", parent: "topps", refines: "topps" }),
+  // TOPPS FLAGSHIP FOOTBALL, R-CENSUS-2026-09-20. Topps regained the NFL
+  // license and "2026 Topps Flagship Football" is a real, standalone product
+  // name Topps itself uses (topps.com/pages/topps-flagship-football; also
+  // Heavy.com, MSN/SI, Yahoo Sports coverage of the Aug 21 2026 release),
+  // distinct from 2026 Topps Heritage Football (retro reissue) and 2026
+  // Bowman Football (prospects) -- NOT informal shorthand for a bare "Topps"
+  // base football set the way "Topps Flagship" functions for baseball.
+  //
+  // Own family, not a `refines: "topps"` refinement: the checklist carries
+  // its own numbered subsets (91TC-#, 91TRC-#, TD-#, NFLS-# alongside plain
+  // base numbers) that do not exist on the bare `topps` football checklist,
+  // and resolveSetKeyForSlug / normalizeSetKey already treat
+  // `topps-flagship` as a stable fixed point today -- this registers what the
+  // deriver already answers, it does not change any answer.
+  //
+  // Measured read-only against card_catalog on 2026-09-20: 34,027 rows carry
+  // the setKey FIELD `topps-flagship` for football/2026 (checklistinsider +
+  // hobbymonitor), of which 10,929 are also stemmed `hiq:football:2026:
+  // topps-flagship:` in their id (checklist-backed at that exact address);
+  // the remaining 23,098 are stemmed `hiq:football:2026:topps:` with a
+  // setKey field that has drifted from the id -- a separate data-hygiene gap
+  // (CF-CANDIDATE-ID-IS-WHAT-WE-ADOPT: the id is the product, not reported
+  // further here). sold_comps carries real CardHedge-sourced sales already
+  // landing at the `hiq:football:2026:topps-flagship:` address (census
+  // figure: 28,434 rows), unaddressable as a product until this entry
+  // exists; a bounded sample directly against prod on 2026-09-20 confirmed
+  // rows exist at that exact id prefix with real CardHedge sale data.
+  P("topps-flagship", { parent: "topps" }),
   P("topps-chrome", { parent: "topps" }),
   S("topps-chrome-update-series", { names: ["topps-chrome-update"], family: "topps-chrome", parent: "topps-chrome", refines: "topps-chrome" }),
   S("topps-chrome-updates-and-highlights", { names: ["topps-chrome-updates-highlights"], family: "topps-chrome", parent: "topps-chrome", refines: "topps-chrome" }),
@@ -1128,6 +1156,32 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
     // already a normalizeSetKey fixed point via the corpus fallback (pinned by
     // aBrandSubstringIsNotAProduct.test.ts); this makes it a table entry too.
     "panini-photogenic"].map((k) => P(k, { parent: "panini" })),
+  // PANINI SELECT WNBA, R-CENSUS-2026-09-20. Mirrors the `panini-prizm-wnba`
+  // precedent (line ~1136 above): WNBA lines are their own family and never
+  // borrow the NBA ladder (Drew, ruling 2026-09-05). "Panini Select WNBA" is
+  // a real, standalone WNBA-specific Panini release with its own checklist
+  // (confirmed for the 2024 and 2025 releases measured below; Panini's own
+  // storefront lists WNBA as a licensed line separate from mainline NBA
+  // "Basketball"), not a parallel or subset of Panini Select Basketball.
+  //
+  // A prior PR's own comment on the Select tier-registration (`panini-select-
+  // concourse` et al., above in this file) already asserted this key was
+  // "already-registered" -- it was not: no P()/S() entry for
+  // `panini-select-wnba` existed anywhere in this table before this line.
+  // That comment's roster-overlap argument (WNBA's "Courtside" is a named
+  // insert, not a base-tier partition, so it correctly stayed unregistered
+  // for WNBA) is unaffected; only the bare product key was missing.
+  //
+  // Measured read-only against card_catalog on 2026-09-20: basketball/2024
+  // 3,117 rows (checklistinsider + checklistcenter), roster overlap against
+  // `panini-select` (NBA) same sport/year 29.5% by (player, cardNumber) --
+  // non-zero because WNBA players who also have NBA-branded cards in the
+  // same numbering range collide on the naive (player, number) check, not
+  // because the products share a checklist; basketball/2025 5,488 rows,
+  // overlap 0.1%. resolveSetKeyForSlug / normalizeSetKey already treat
+  // `panini-select-wnba` as a stable fixed point; this registers what the
+  // deriver already answers.
+  P("panini-select-wnba", { family: "panini-select", parent: "panini-select" }),
   // R50 / R52 / GREATS-OF-THE-GAME (Drew, 2026-09-15). A named product is its
   // own card set, and these four were never registered — so the two that
   // survived did so only because no family catch-all happened to name them,
