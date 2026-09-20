@@ -31,6 +31,15 @@
 
 const path = require("path");
 const backend = __dirname + "/..";
+// CF-CH-DAILY-DOUBLE-WRITE (2026-09-20). Shared id shape with
+// backfill-sold-comps-from-ch.cjs and (transitively, via recordSoldComp)
+// chRowToSoldComp.ts. This script already goes through recordSoldComp's
+// own makeId(), so this only replaces the literal template string with
+// the shared function -- same output, one fewer place the shape is typed.
+// No dist/ dependency, so safe to require at top level (does not affect
+// the loadDist() deferral below -- see its own comment for why THAT one
+// is deferred).
+const { canonicalSourceExternalId } = require(path.join(__dirname, "lib", "chSoldCompId.cjs"));
 
 // CF-THE-MODULE-MUST-BE-EVALUABLE-WITHOUT-A-BUILD (2026-09-08). Everything this
 // lane needs out of dist/ is used inside main() and nowhere else, so the
@@ -524,7 +533,7 @@ async function main() {
         price,
         soldAt: row.sale_date,
         source: "cardhedge",
-        sourceExternalId: `ch-daily::${row.price_history_id}`,
+        sourceExternalId: canonicalSourceExternalId(row.price_history_id),
         contributorUserId: null,
         title: chTitle,
         imageUrl: row.image_url || null,
