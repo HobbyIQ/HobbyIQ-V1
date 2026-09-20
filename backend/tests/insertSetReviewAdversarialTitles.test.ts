@@ -77,14 +77,31 @@ describe("Downtown seller-boilerplate ×3 -- named, but never confirmed, never r
   });
 });
 
-describe("Kaleidoscopic -- real, unregistered insert, never re-keys (nothing to confirm against)", () => {
-  it("panini-mosaic football 2024 'Kaleidoscopic' has no registered key at all -- R70 park path, confirmation is not even reached", () => {
+describe("an insert word the reader recognizes with no registered key, never re-keys (nothing to confirm against)", () => {
+  // #2342 (2026-09-19) registered `panini-mosaic-kaleidoscopic` for real (2024
+  // Panini Mosaic Football's own "Kaleidoscopic" insert, 25 rows, own roster,
+  // no fold candidate -- see productSetKeys.ts's own registration comment),
+  // which is exactly why this test no longer uses the real corpus for its
+  // example: "a real word the reader finds with no registered key" is a fact
+  // about the SHIPPED corpus at a moment in time, and registering more of it
+  // (as #2342 correctly does) must not retroactively break the case this test
+  // exists to pin. The override seam (already used by the other adversarial
+  // cases below and by insertSetTitleReader.test.ts) points this one test at
+  // a synthetic fixture product instead, carrying a "Kaleidoscopic Fixture"
+  // insert set that can never be a real registered key by construction (the
+  // "-fixture" suffix on its own setKey is not a real product).
+  beforeEach(() => {
+    process.env.INSERT_SET_CORPUS_OVERRIDE = FIXTURE_PATH;
+    _resetInsertSetTitleReaderIndex();
+  });
+
+  it("panini-mosaic-fixture football 2024 'Kaleidoscopic Fixture' has no registered key at all -- R70 park path, confirmation is not even reached", () => {
     const matches = insertSetNamedInTitle({
-      title: "2024 Panini Mosaic Kaleidoscopic Some Player #6",
-      sport: "football", year: 2024, setKey: "panini-mosaic",
+      title: "2024 Panini Mosaic Fixture Kaleidoscopic Fixture Some Player #6",
+      sport: "football", year: 2024, setKey: "panini-mosaic-fixture",
     });
     expect(matches).toHaveLength(1);
-    expect(matches[0].root).toBe("kaleidoscopic");
+    expect(matches[0].root).toBe("kaleidoscopic fixture");
     // No registered key -- this is R70's park path (insert-named-no-key or,
     // per F4, insert-word-but-base-confirmed), never the F3+F5 confirmation
     // gate, because there is no registered product to confirm a re-key onto.
