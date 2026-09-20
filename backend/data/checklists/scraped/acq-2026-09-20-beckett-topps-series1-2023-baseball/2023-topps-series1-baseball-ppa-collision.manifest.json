@@ -1,0 +1,28 @@
+{
+  "scrapedAt": "2026-09-20T22:11:29.925Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2023/02/2023-Topps-Series-1-Baseball-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-20",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Topps Series 1 Baseball",
+  "productKey": "2023-topps",
+  "setKey": "topps",
+  "rowCount": 49,
+  "parallelColumnAuthoritative": true,
+  "heldRows": {
+    "reason": "CF-A-CROSS-PRODUCT-INITIALS-COLLISION (2026-09-20). `PPA-` is shared by THREE unrelated 2023 Topps Series 1 autograph subsets: Postseason Performance Autographs (30 rows), Patchwork of the Past Commemorative Patch Cards Autographs (18 rows), and a second same-named Patchwork repeat with a disagreeing roster (1 row, split by the converter's own roster-disagreement guard). All three compute the identical bare address hiq:baseball:2023:topps:ppa-<initials>:base:auto -- 6 ids collide across the three (e.g. #PPA-AR resolves to Adley Rutschman in one subset, Austin Riley in a second, and Anthony Rizzo in a third). This is the same class as the known Bowman UAC-1/CPA-* and 2026 Topps Finest Futures/Phenoms initials traps this build was briefed to expect. NOT registered here per instructions -- registering a key is a separate, small PR against productSetKeys.ts with a fixed-point test. Roster-overlap evidence for that future PR: Postseason Performance Autographs' roster (#PPA-AN..#PPA-YA, 30 players: Aaron Nola, Anthony Rizzo, Bryce Harper, Jose Altuve, Jose Ramirez, ...) and Patchwork of the Past Commemorative Patch Cards Autographs' roster (#PPA-AB..#PPA-YA, 18 players: Alex Bregman, Fernando Tatis Jr., Julio Rodriguez, Pete Alonso, ...) share NO player at any colliding number (#PPA-JR is Julio Rodriguez in Patchwork and Jose Ramirez in Postseason Performance) -- confirming these are two genuinely distinct card sets that both need their own registered key, not one set spelled two ways that could fold. Staged separately from the rest of this product (see the sibling 2023-topps-series1-baseball.csv, 9,670 clean rows) so this one initials clash does not block the base set, its parallels, or every other autograph/insert subset in the same workbook.",
+    "rows": 49
+  },
+  "collisionEvidence": {
+    "ids": [
+      { "id": "hiq:baseball:2023:topps:ppa-ar:base:auto", "players": ["Adley Rutschman (auto-patchwork-of-the-past-commemorative-patch-cards-autographs)", "Austin Riley (auto-patchwork-of-the-past-commemorative-patch-cards-autographs-2)", "Anthony Rizzo (auto-postseason-performance-autographs)"] },
+      { "id": "hiq:baseball:2023:topps:ppa-bh:base:auto", "players": ["Bryce Harper (auto-patchwork-of-the-past-commemorative-patch-cards-autographs)", "Bryce Harper (auto-postseason-performance-autographs)"] },
+      { "id": "hiq:baseball:2023:topps:ppa-ja:base:auto", "players": ["Jose Altuve (auto-patchwork-of-the-past-commemorative-patch-cards-autographs)", "Jose Altuve (auto-postseason-performance-autographs)"] },
+      { "id": "hiq:baseball:2023:topps:ppa-jr:base:auto", "players": ["Julio Rodriguez (auto-patchwork-of-the-past-commemorative-patch-cards-autographs)", "Jose Ramirez (auto-postseason-performance-autographs)"] },
+      { "id": "hiq:baseball:2023:topps:ppa-js:base:auto", "players": ["Juan Soto (auto-patchwork-of-the-past-commemorative-patch-cards-autographs)", "Juan Soto (auto-postseason-performance-autographs)"] },
+      { "id": "hiq:baseball:2023:topps:ppa-ya:base:auto", "players": ["Yordan Alvarez (auto-patchwork-of-the-past-commemorative-patch-cards-autographs)", "Yordan Alvarez (auto-postseason-performance-autographs)"] }
+    ],
+    "measuredVia": "planStagedDirectory (ingest-checklist-csv-to-catalog.cjs), run offline against this file alone before the split"
+  },
+  "sha256": "22a37515616ebb65892bad4b6883f528f643acfb8af4b217c67ddf7a4646c930"
+}
