@@ -922,7 +922,7 @@ on:
         default: ""
         type: string
       titles:
-        description: "For ingest-checklists-end-to-end (bcp phase): extra baseballcardpedia page titles, comma-separated (e.g. 2012_Topps_Allen_and_Ginter,1990_Donruss). Empty = the per-year flagship list. For rekey-product-setkey: the TO setKey -- the product the rows move ONTO (e.g. japanese-rocket-gang); `setkey_like` is the FROM key. For repair-rc-marker-playername: an OPTIONAL comma-separated setKey filter narrowing `scope`'s sport:year cells. For rekey-catalog-id-to-setkey: the REQUIRED comma-separated target setKey list whose id should adopt its own setKey field (e.g. upper-deck-extended-series) -- empty or a wildcard ('all','*') is refused; `scope` carries the required sport:year cells (e.g. hockey:2024,hockey:2025). For resolve-split-identity-parks: OPTIONAL comma-separated substring filter matched case-insensitively against the sale's own title (e.g. topps now,panini prizm) -- narrows a `scope` sweep to one product family for a pilot; empty = no filter."
+        description: "For ingest-checklists-end-to-end (bcp phase): extra baseballcardpedia page titles, comma-separated (e.g. 2012_Topps_Allen_and_Ginter,1990_Donruss). Empty = the per-year flagship list. For rekey-product-setkey: the TO setKey -- the product the rows move ONTO (e.g. japanese-rocket-gang); `setkey_like` is the FROM key. For repair-rc-marker-playername: an OPTIONAL comma-separated setKey filter narrowing `scope`'s sport:year cells. For rekey-catalog-id-to-setkey: the REQUIRED comma-separated target setKey list whose id should adopt its own setKey field (e.g. upper-deck-extended-series) -- empty or a wildcard ('all','*') is refused; `scope` carries the required sport:year cells (e.g. hockey:2024,hockey:2025). For resolve-split-identity-parks: OPTIONAL comma-separated substring filter matched case-insensitively against the sale's own title (e.g. topps now,panini prizm) -- narrows a `scope` sweep to one product family for a pilot; empty = no filter. ALSO for resolve-split-identity-parks (2026-09-20): a single token of the form `exclude-winner:<id>[,<id>...]` (e.g. exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto) names one or more WINNER candidate ids to leave PARKED untouched this run instead of resolving to them -- named `excluded-by-operator`, counted, reconciled; mutually exclusive with the title-substring filter on one dispatch (whichever form the value matches wins)."
         required: false
         default: ""
         type: string
@@ -2057,6 +2057,28 @@ jobs:
           # A fixed path, not an input -- this workflow is at 24 of 25 and
           # a knob nobody sets is a knob that drifts.
           REPORT_OUT: /tmp/market-index-rebuild/report.json
+          # resolve-split-identity-parks (2026-09-20). The script's own module
+          # header has always documented reading a plain TITLES env var (an
+          # optional title-substring filter, or -- as of this same date --
+          # the exclude-winner:<id>[,...] syntax), but this workflow never
+          # actually set it: only BCP_TITLES (a DIFFERENT env var, read by
+          # other lanes riding the same `titles` dispatch input) existed
+          # above. Guarded on script so this cannot leak a value into any
+          # other lane's own env -- every other script here already reads
+          # BCP_TITLES for its own `titles`-carried meaning, and TITLES was
+          # simply never wired for this one.
+          TITLES: ${{ inputs.script == 'resolve-split-identity-parks' && inputs.titles || '' }}
+          # resolve-split-identity-parks (2026-09-20). The banner's own
+          # samples cap at 20-60 lines per bucket and, until now, the banner
+          # claimed a fuller list lived "in the uploaded artifact" when the
+          # artifact was only ever /tmp/backfill.log -- the SAME capped text.
+          # PLAN_OUT is a fixed directory (not a new input; the 25-input cap
+          # is spent) the script writes one NDJSON record per in-scope row
+          # into, guarded on script for the same one-name-one-meaning reason
+          # as CENSUS_OUT/REPORT_OUT above so no path can leak sideways into
+          # a script that would honour it. Uploaded by the SAME step that
+          # already uploads this lane's backfill.log, below.
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -3422,12 +3444,23 @@ jobs:
       # collapsed, left (named, why) or refused (named, why), never a
       # truncated sample. Same reason the revert-set-sport-repair log and the
       # checklist-numbered fold log are both kept in full.
+      #
+      # 2026-09-20: the banner's own samples cap at 20-60 lines per bucket and
+      # used to claim "full list in the uploaded artifact" when the artifact
+      # was ONLY EVER /tmp/backfill.log -- the same capped text, never
+      # auditable row-by-row before a matching APPLY. PLAN_OUT (env, set
+      # above, guarded on script) now has the script itself write one NDJSON
+      # record per in-scope row to /tmp/resolve-split-identity-parks-plan/,
+      # and that directory is added to THIS SAME step's path list -- no new
+      # upload-artifact step, no new workflow_dispatch input.
       - name: Upload the resolve-split-identity-parks log
         if: ${{ always() && inputs.script == 'resolve-split-identity-parks' }}
         uses: actions/upload-artifact@v4
         with:
           name: resolve-split-identity-parks-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
-          path: /tmp/backfill.log
+          path: |
+            /tmp/backfill.log
+            /tmp/resolve-split-identity-parks-plan/
           if-no-files-found: warn
           retention-days: 90
 
