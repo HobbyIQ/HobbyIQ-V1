@@ -268,6 +268,40 @@ on:
           # scope=football:2024 titles=panini-photogenic-rookie-pix,panini-
           # photogenic-troops-tribute,panini-zenith-z-marquee.
           - repoint-stored-insert-sales
+          # CONFUSABLE-SIBLING repair (census decomposition, 2026-09-20). Many
+          # stored sales carry a hobbyiqCardId whose card NUMBER does not exist
+          # in that product's strict checklist at all, but exists VERBATIM
+          # under a confusable SIBLING setKey of the same sport+year: baseball
+          # 2025 `topps` holds Update Series `US###` numbers (~12% of that
+          # cell's unbacked sales) while those rows live under
+          # `topps-update-series`; football 2023 `donruss-optic` holds
+          # base-Donruss insert numbers (BS-, CIH-, SM-, SBD-) that live under
+          # `panini-donruss`. Neither existing repoint lane reaches this:
+          # repoint-stored-insert-sales asks whether the TITLE names an
+          # insert (a US-number sale's title usually says only "2025 Topps"),
+          # and repoint-sales-to-checklist-numbered moves along the print-run
+          # axis inside ONE product and never changes the setKey segment.
+          # This lane moves exactly ONE axis -- the setKey -- via
+          # withProductSetKey, keeping number/parallel/auto byte-identical.
+          # THE SIBLING PAIRS ARE OPERATOR-RULED, NEVER INFERRED: `titles`
+          # carries an explicit `fromSetKey>toSetKey` list (see the
+          # SET_KEYS/BCP_TITLES comment block below); empty, a wildcard, or a
+          # token with no '>' is REFUSED (exit 2). A sale MOVES only when all
+          # four gates hold -- (1) the FROM product's strict checklist does NOT
+          # list that number at any parallel, (2) the TO product (or a
+          # registered insert whose parent is TO) DOES, at the EXACT (number,
+          # parallel, auto) rung, (3) the destination row's roster names the
+          # sale's player and the title does not contradict the row, (4) the
+          # title does not name the FROM product -- otherwise it refuses by a
+          # named class. `scope` is REQUIRED sport:year cells, no 'all'. Never
+          # touches a verifiedByUser, flaggedWrong, excludedFromFmv,
+          # USER_SEED_SOURCES, or already-parked sale; a pre-existing split
+          # identity refuses from whichever side reaches it (#2339); a
+          # DIFFERENT sale already at the destination is left as
+          # possible-twin-at-destination, never deleted on a guess. The pilot
+          # dispatches are scope=baseball:2025 titles=topps>topps-update-series
+          # and scope=football:2023 titles=donruss-optic>panini-donruss.
+          - repoint-sales-to-sibling-product
           # R76 (Drew, 2026-09-19). repair-set-sport.cjs (2026-08-20) flipped
           # 183,248 sold_comps rows' sport by set-level checklist dominance,
           # vetoed only by five literal substring words -- a census judged
@@ -1834,6 +1868,31 @@ jobs:
           # a key naming no base product has nothing to repair away from. The
           # pilot dispatch is scope=football:2024 titles=panini-photogenic-
           # rookie-pix,panini-photogenic-troops-tribute,panini-zenith-z-marquee.
+          #
+          # repoint-sales-to-sibling-product (2026-09-20) reads BCP_TITLES as
+          # its REQUIRED SIBLING PAIR LIST (SET_KEYS) -- and this is the ONE
+          # lane whose `titles` value is NOT a plain comma list of keys. Each
+          # comma-separated token is a PAIR, `fromSetKey>toSetKey` (a literal
+          # '>'; whitespace either side is trimmed, so `topps > topps-update-
+          # series` is accepted). A token with no '>', more than one '>', an
+          # empty half, halves that are the same key, or a wildcard ('', 'all',
+          # '*') on either side is REFUSED (exit 2) before any Cosmos read.
+          #
+          # WHY A PAIR AND NOT AN INFERENCE. "These two products are
+          # confusable siblings" is a collector-taxonomy RULING, not something
+          # a script may derive from name similarity (feedback_ratio_
+          # similarity_is_not_identity). The lane owns no sibling heuristic at
+          # all: the operator's list is the only source of truth, which is also
+          # what makes a dispatch auditable -- the banner echoes the pairs it
+          # parsed, and a REPORT with PLAN_OUT set writes one NDJSON record per
+          # in-scope row so the move list can be read row-by-row before the
+          # matching APPLY runs.
+          #
+          # The pilot dispatches (both REPORT first):
+          #   -f scope=baseball:2025 -f titles=topps>topps-update-series
+          #   -f scope=football:2023 -f titles=donruss-optic>panini-donruss
+          # Several pairs in one dispatch are comma-separated, and every pair
+          # is run against every `scope` cell.
           USER_ID: ${{ inputs.script == 'rederive-holding-identity' && inputs.scope == 'user' && 'user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4' || '' }}
           SOURCES: ${{ inputs.sources }}
           # CF-A-SOURCE-THAT-CONTRADICTS-ITSELF-MINTS-NO-IDENTITIES (Drew,
@@ -2089,7 +2148,7 @@ jobs:
           # as CENSUS_OUT/REPORT_OUT above so no path can leak sideways into
           # a script that would honour it. Uploaded by the SAME step that
           # already uploads this lane's backfill.log, below.
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || '' }}
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -3447,6 +3506,50 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${M:-0} patched=${P:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-stored-insert-sales -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+
+      # This lane decides a cross-PRODUCT move on the strength of a card
+      # number the FROM product does not list at all, so a reviewer auditing
+      # a REPORT needs every refusal by name AND the row-level plan -- the
+      # banner's sample lists are capped, so /tmp/repoint-sales-to-sibling-
+      # product-plan/ (one NDJSON record per in-scope row, written by the
+      # PLAN_OUT wiring above, guarded on script) is uploaded alongside the
+      # log, exactly as resolve-split-identity-parks' own artifact does.
+      - name: Upload the repoint-sales-to-sibling-product log
+        if: ${{ always() && inputs.script == 'repoint-sales-to-sibling-product' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: repoint-sales-to-sibling-product-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/repoint-sales-to-sibling-product-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the sibling-product repoint until the scope is clean
+        # Stops at its own 110-minute budget and PRINTS its summary; a run killed
+        # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
+        # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
+        # re-run after a budget stop is idempotent by construction: a sale that
+        # already moved or was patched no longer matches
+        # STARTSWITH(c.hobbyiqCardId, "hiq:sport:year:fromSetKey:") -- its
+        # hobbyiqCardId now carries the TO product's setKey segment.
+        if: ${{ !cancelled() && inputs.script == 'repoint-sales-to-sibling-product' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: repoint-sales-to-sibling-product
+          preamble: |
+            R=$(grep -aoE "(RELOCATED|WOULD RELOCATE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            P=$(grep -aoE "(PATCHED|WOULD PATCH) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "relocated=${R:-0} patched=${P:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (relocated=${R:-0} patched=${P:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (relocated=${R:-0} patched=${P:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-to-sibling-product -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
       # R76's whole point is a reviewer being able to audit every wrongly-
       # flipped sale that moved (or was refused, and why) -- never a
