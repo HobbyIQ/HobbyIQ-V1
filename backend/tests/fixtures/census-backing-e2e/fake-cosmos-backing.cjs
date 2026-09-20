@@ -49,6 +49,15 @@ const path = require("path");
 
 const FAIL_CATALOG_CELL = process.env.FAIL_CATALOG_CELL === "true";
 const FAILING_PREFIX = "hiq:baseball:1953:bowman:";
+// A cell whose query NEVER settles -- the fixture's own stand-in for the
+// real defect this PR fixes (a Cosmos SDK query that spins forever). Used to
+// prove the hard timeout actually bounds the wait rather than hanging the
+// test process itself, which is why it is a SEPARATE knob from
+// FAIL_CATALOG_CELL (a load that throws) -- a promise that never resolves is
+// a different failure shape than one that rejects, and this PR's whole point
+// is that the OLD code had no way to bound the former at all.
+const HANG_CATALOG_CELL = process.env.HANG_CATALOG_CELL === "true";
+const HANGING_PREFIX = "hiq:baseball:1953:bowman:";
 
 const CATALOG_ROWS = [
   { id: "hiq:baseball:1953:topps:1:base:no-auto", source: "beckett", sport: "baseball" },
@@ -95,8 +104,47 @@ function fakeContainer(name) {
         // STARTSWITH(c.id, @prefix) predicate -- the fixture keys its
         // response off the `@prefix` parameter's VALUE, matching the
         // corrected id-prefix design (never a `@sk`/setKey-field match).
-        query: (spec) => {
+        query: (spec, feedOptions) => {
           const prefix = (spec.parameters ?? []).find((p) => p.name === "@prefix")?.value;
+          // ORDER MARKER (2026-09-20, the warm-phase pin). Printed for EVERY
+          // BACKING-PRELOAD card_catalog query this fixture serves (i.e. one
+          // keyed by `@prefix` -- the pre-existing, unrelated
+          // `clashSubsetsFor(stored)` baseline query the ordinary classify
+          // path already issues per product uses a DIFFERENT parameter shape
+          // and is deliberately excluded here, or this marker would count
+          // the wrong query and make the ordering assertion meaningless),
+          // success or failure, BEFORE the fixture does anything else -- so a
+          // test can grep stdout and assert every one of these lines landed
+          // before the classify loop's first "rows classified > 0"
+          // heartbeat, proving the preload happened in the warm phase and
+          // not inside the row loop's own per-row await.
+          if (prefix !== undefined) process.stdout.write(`FAKE_CATALOG_QUERY_ORDER ${prefix}\n`);
+          if (HANG_CATALOG_CELL && prefix === HANGING_PREFIX) {
+            // Simulates the ACTUAL defect this PR fixes: a query whose
+            // promise never settles (the real bug was `maxItemCount: -1`
+            // cross-partition DISTINCT spinning forever at 0 RU/0 rows per
+            // page -- see backingCellPreloadRaw's own comment). A fixture
+            // that just throws would only prove the pre-existing failure
+            // path; this proves the NEW hard timeout actually bounds an
+            // unresolved promise. `feedOptions.abortSignal`, if the
+            // implementation wires it through (it does), fires this handle's
+            // own reject on abort -- exactly what a real Cosmos abort would
+            // do -- so the hang does not outlive the timeout even in-process.
+            bowmanCellQueryCount++;
+            return {
+              hasMoreResults: () => true,
+              fetchNext: () => new Promise((_resolve, reject) => {
+                const signal = feedOptions && feedOptions.abortSignal;
+                if (signal) {
+                  if (signal.aborted) { reject(new Error("aborted")); return; }
+                  signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+                }
+                // Otherwise: never resolves, never rejects. The test's own
+                // process-level timeout is the backstop if the
+                // implementation regressed to not wiring abortSignal at all.
+              }),
+            };
+          }
           if (FAIL_CATALOG_CELL && prefix === FAILING_PREFIX) {
             bowmanCellQueryCount++;
             return {
@@ -106,7 +154,7 @@ function fakeContainer(name) {
             };
           }
           catalogQueryCount++;
-          const rows = CATALOG_ROWS.filter((r) => r.id.startsWith(prefix ?? " "));
+          const rows = CATALOG_ROWS.filter((r) => r.id.startsWith(prefix ?? " "));
           let served = false;
           return {
             hasMoreResults: () => !served,

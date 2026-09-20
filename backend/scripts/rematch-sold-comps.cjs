@@ -1438,10 +1438,50 @@ async function main() {
   const backingCellFailCounts = new Map(); // cell key -> attempts failed so far
   const backingPermanentlyFailedCells = new Set(); // cell key -> never queried again this slot
   const backingFailedCellSamples = []; // [{ cell, error }], capped
-  let backingPreloadQueries = 0, backingPreloadRowsRead = 0;
+  let backingPreloadQueries = 0, backingPreloadRowsRead = 0, backingPreloadRUSpent = 0;
+  let backingPreloadTimeouts = 0;
+  /** Hard wall-clock cap on ONE cell's preload query (2026-09-20, the census
+   *  batch #2346 hang). MEASURED read-only against prod: `STARTSWITH` +
+   *  `SELECT DISTINCT` with `maxItemCount: -1` and no `maxDegreeOfParallelism`
+   *  does not merely run slow -- the Node SDK (@azure/cosmos 4.9.3) spins in a
+   *  non-terminating `hasMoreResults()===true` / `fetchNext()` loop that
+   *  resolves immediately with 0 RU and 0 rows on EVERY page, reproduced on
+   *  the SMALLEST measured cell (1,446 rows) exactly as on the largest
+   *  (203,058 rows) -- confirming it is independent of result size and is a
+   *  client-side defect, not network latency. `retry()`'s own 8-try backoff
+   *  and the SDK's 30-try/120s throttle retry NEVER see this: the promise the
+   *  loop is awaiting keeps resolving, it just never makes progress, so
+   *  nothing here ever throws to trigger either retry layer. This is why 32
+   *  slots hung 150 minutes with zero output instead of failing fast. The fix
+   *  (below) is `maxItemCount` bounded to a real page size + explicit
+   *  `maxDegreeOfParallelism: -1` -- measured to complete every one of the 5
+   *  real cells in the PR's report in well under a second per page. This
+   *  timeout is kept anyway as the backstop for any OTHER stall shape (a real
+   *  network partition, a throttled container that never recovers, a future
+   *  SDK regression) -- it must never again be "no cap at all". */
+  const BACKING_PRELOAD_QUERY_TIMEOUT_MS = Math.max(1000, Number(process.env.BACKING_PRELOAD_QUERY_TIMEOUT_MS || 20000));
   /** `hiq:<sport>:<year>:<setKey>:` -- the SAME prefix a sale's own
    *  hobbyiqCardId carries under this cell, and the query predicate. */
   const backingCellIdPrefix = (sport, year, setKey) => `hiq:${sport}:${year}:${setKey}:`;
+  /** Run `fn(signal)` under a hard, CANCELLABLE deadline. `fn` receives an
+   *  `AbortSignal` it must pass into the Cosmos call (`abortSignal` is a
+   *  supported `FeedOptions` field on this SDK version) so a timeout here
+   *  actually tears down the underlying network request instead of merely
+   *  abandoning the promise -- a bare `Promise.race` leaves the loser's
+   *  socket open, which is precisely the defect `runner-budget.cjs`'s own
+   *  header documents for the Cosmos SDK ("the loser was a query inside the
+   *  lane's `retry()`, which keeps sleeping on REF'd timers and re-issuing
+   *  the request"). NAMES itself in the thrown error (which cell, which
+   *  budget) so a BACKING_LOAD_FAILED sample is diagnosable, and the losing
+   *  timer is always cleared. */
+  const withHardTimeout = (fn, ms, label) => {
+    const controller = new AbortController();
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => { controller.abort(); reject(new Error(`BACKING_PRELOAD_TIMEOUT after ${ms}ms: ${label}`)); }, ms);
+    });
+    return Promise.race([fn(controller.signal), timeout]).finally(() => clearTimeout(timer));
+  };
   const backingCellPreloadRaw = async (year, setKey, sport) => {
     if (!sport || !setKey || year === null || year === undefined) return null;
     const prefix = backingCellIdPrefix(sport, year, setKey);
@@ -1451,14 +1491,41 @@ async function main() {
     // before throwing, so anything that reaches this function's caller is
     // either a permanent error or a transient one retry() gave up on; both
     // are this cell's problem to track, never silently swallowed into "no
-    // rows exist".
-    const { resources } = await retry(() => cat.items.query({
-      query: "SELECT DISTINCT c.id, c.source, c.sourceSystem, c.sources, c.sport FROM c WHERE STARTSWITH(c.id, @prefix)",
-      parameters: [{ name: "@prefix", value: prefix }],
-    }, { maxItemCount: -1 }).fetchAll());
+    // rows exist". ONE bounded retry only (not `retry()`'s stacked 8) -- see
+    // BACKING_PRELOAD_QUERY_TIMEOUT_MS's header: a stall here is a client-side
+    // spin, not a transient 429, so retrying it many times inside `retry()`
+    // was never going to help and only cost 150 minutes proving that.
+    const runOnce = async (signal) => {
+      const iter = cat.items.query({
+        query: "SELECT DISTINCT c.id, c.source, c.sourceSystem, c.sources, c.sport FROM c WHERE STARTSWITH(c.id, @prefix)",
+        parameters: [{ name: "@prefix", value: prefix }],
+      }, {
+        // BOUNDED maxItemCount + explicit maxDegreeOfParallelism: -1 IS THE
+        // FIX. See BACKING_PRELOAD_QUERY_TIMEOUT_MS's header comment above --
+        // `maxItemCount: -1` on a cross-partition DISTINCT query is what
+        // spins; a real page size lets the SDK's parallel fan-out actually
+        // terminate. Measured: the same query text at maxItemCount:500 with
+        // maxDegreeOfParallelism:-1 completed the census batch's 5 real
+        // cells in 175ms-4.6s total (all pages), 196-21,714 RU.
+        maxItemCount: 500, maxDegreeOfParallelism: -1, abortSignal: signal,
+      });
+      let resources = [], ru = 0;
+      while (iter.hasMoreResults()) {
+        const page = await iter.fetchNext();
+        resources = resources.concat(page.resources ?? []);
+        ru += page.requestCharge || 0;
+      }
+      return { resources, ru };
+    };
+    const { resources, ru } = await withHardTimeout(
+      (signal) => retry(() => runOnce(signal), 1),
+      BACKING_PRELOAD_QUERY_TIMEOUT_MS,
+      `${sport}:${year}:${setKey}`,
+    );
     const out = resources ?? [];
     backingPreloadQueries++;
     backingPreloadRowsRead += out.length;
+    backingPreloadRUSpent += ru;
     // Sport-filtered IN MEMORY, exactly like flagshipNumbers/checklistNames
     // above -- the prefix already scopes to this (sport, year, setKey), so
     // this is now a belt-and-suspenders check against a row whose id lies
@@ -1494,6 +1561,13 @@ async function main() {
         const failed = (backingCellFailCounts.get(key) ?? 0) + 1;
         backingCellFailCounts.set(key, failed);
         const message = String(e?.message ?? e);
+        // Named separately from the generic fail count (never silent, never
+        // folded away): a timeout says "this cell's own query would not
+        // terminate inside its budget", a DIFFERENT fact from a real Cosmos
+        // error, and the two must be tellable apart in the artifact -- see
+        // BACKING_PRELOAD_QUERY_TIMEOUT_MS's header for why this path exists
+        // at all.
+        if (/^BACKING_PRELOAD_TIMEOUT/.test(message)) backingPreloadTimeouts++;
         if (backingFailedCellSamples.length < BACKING_FAILED_CELLS_SAMPLE_CAP) {
           backingFailedCellSamples.push({ cell: key, attempt: failed, error: message });
         }
@@ -2948,6 +3022,33 @@ async function main() {
     : `concurrency ${CLASSIFY_CONCURRENCY}, ${f(pagesPrefetched)} page(s) warmed, ` +
       `${f(prefetchHitsTotal)} row(s) served from the warm identity cache (parsed once, not twice)`);
 
+  /** THE ROW-LOOP HEARTBEAT (2026-09-20, the census hang fix). 32 backing
+   *  slots ran 150 minutes and were killed printing NOTHING -- not even the
+   *  periodic page checkpoint's own save, because a checkpoint only fires
+   *  after a page's rows finish and the stalled preload never let a page
+   *  finish. This line is checked inside the row loop itself (not only at
+   *  page/unit boundaries) so a stall INSIDE a page is still visible before
+   *  the run is killed. `HEARTBEAT_MS` defaults under the 60s DELIVER asks
+   *  for; `budget()`'s own 5-minute lane-level keepalive in runner-budget.cjs
+   *  is a DIFFERENT, coarser signal (this process is alive at all) -- this
+   *  one says what the row loop itself is doing right now, which is what a
+   *  reader needs to tell "warming a big cell" from "wedged". */
+  const HEARTBEAT_MS = Math.max(1, Number(process.env.CENSUS_HEARTBEAT_MS || 60000));
+  const fmtMsLocal = (ms) => (ms >= 60000 ? `${Math.round(ms / 60000)}m` : `${Math.round(ms / 1000)}s`);
+  let lastHeartbeatAt = Date.now();
+  const emitHeartbeat = (force = false) => {
+    const now = Date.now();
+    if (!force && now - lastHeartbeatAt < HEARTBEAT_MS) return;
+    lastHeartbeatAt = now;
+    const mins = Math.round((now - started) / 60000);
+    const backingNote = CENSUS_BACKING
+      ? `, backing: ${f(backingPreloadCache.size + backingPermanentlyFailedCells.size)} cell(s) preloaded, `
+        + `${f(backingPermanentlyFailedCells.size)} permanently failed, ${f(backingPreloadTimeouts)} timed out, `
+        + `${Math.round(backingPreloadRUSpent).toLocaleString()} RU spent on backing`
+      : "";
+    console.log(`  heartbeat: ${mins}m elapsed, ${f(stats.seen)} row(s) classified, ${f(pagesPrefetched)} page(s) warmed${backingNote}, ${fmtMsLocal(Math.max(0, budgetLeft()))} of budget left`);
+  };
+
   page: for (const unit of unitsThisPass) {
     if (MODE === "census" && budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget`; break; }
     // `unit` already survived slotQuery's own YEARS filter once, when `q.units`
@@ -3062,8 +3163,60 @@ async function main() {
         { length: Math.min(CLASSIFY_CONCURRENCY, Math.max(toWarm.length, 1)) },
         warmOne,
       ));
+      // ── BACKING PRELOAD, WARMED HERE TOO (2026-09-20, the census hang fix) ──
+      //
+      // `backingCellPreload` used to be awaited for the FIRST TIME inside the
+      // row loop below, one row at a time, serially -- the exact defect the
+      // PR this comment ships with exists to end. The row loop's own
+      // `await backingCellPreload(...)` is UNCHANGED (same cache, same
+      // sentinels, same counting) -- what moves is only WHEN the network
+      // round trip happens, identically to how `checklistBacked` etc. above
+      // are warmed here and re-read (free) in the loop.
+      //
+      // Distinct CELLS of the page, not distinct rows: `pageIdentity`'s
+      // `stored` already carries `sport`/`year`/`setKey` per row (the SAME
+      // fields the row loop's own CENSUS_BACKING block reads off `stored`),
+      // so this collects the page's distinct (sport, year, setKey) cells
+      // ONCE and preloads each ONCE, bounded by CLASSIFY_CONCURRENCY -- never
+      // once per row, which would just move the N-fold cost here instead of
+      // removing it.
+      if (CENSUS_BACKING) {
+        const cellsToWarm = new Map(); // cellKey -> { sport, year, setKey }
+        for (const row of toWarm) {
+          const warmed = pageIdentity.get(row.id);
+          const stored = warmed ? warmed.stored : null;
+          if (!stored) continue; // prefilter-skipped or a caught failure above; the row loop re-derives it and preloads on its own miss
+          const sport = String(stored?.sport ?? row?.sport ?? "").trim().toLowerCase() || null;
+          const year = stored?.year ?? stored?.cardYear ?? null;
+          const setKey = stored?.setKey ?? null;
+          if (!sport || year == null || !setKey) continue; // same "absent beats wrong" refusal the row loop's own unparseable bucket uses
+          const cellKey = `${year}|${setKey}|${sport}`;
+          if (!cellsToWarm.has(cellKey)) cellsToWarm.set(cellKey, { sport, year, setKey });
+        }
+        const cellList = [...cellsToWarm.values()];
+        if (cellList.length) {
+          let ci = 0;
+          const warmCell = async () => {
+            while (ci < cellList.length) {
+              const { sport, year, setKey } = cellList[ci++];
+              try { await backingCellPreload(year, setKey, sport); }
+              catch { /* best effort: backingCellPreload itself never throws (see its own try/catch); this guard is belt-and-suspenders only */ }
+              // A big or slow-loading cell can eat most of HEARTBEAT_MS on
+              // its own inside this warm phase, before the row loop below
+              // even starts -- checked here too, not only in the row loop,
+              // so a heartbeat still lands during a long warm phase.
+              emitHeartbeat();
+            }
+          };
+          await Promise.all(Array.from(
+            { length: Math.min(CLASSIFY_CONCURRENCY, cellList.length) },
+            warmCell,
+          ));
+        }
+      }
     }
     for (const row of resources ?? []) {
+      emitHeartbeat();
       if (!rowInSlot(row, q.units)) { stats.otherSlot++; continue; }
       // THE IN-SLOT ROW FILTER, applied after slot membership and before any
       // derivation: a row this dispatch was not asked to look at costs no
@@ -3227,6 +3380,26 @@ async function main() {
           // not to spend.
           sb.unparseable++;
           if (cb) cb.unparseable++;
+        } else if (!backingPreloadCache.has(cellKey) && !backingPermanentlyFailedCells.has(cellKey) && budgetLeft() < BACKING_PRELOAD_QUERY_TIMEOUT_MS + 90000) {
+          // BUDGET CHECK BEFORE A COLD PRELOAD, NOT ONLY AT THE PAGE/UNIT
+          // BOUNDARY. On a warmed page this branch never runs -- the warm
+          // phase above already populated `backingPreloadCache` for every
+          // distinct cell before the row loop started, so every row here
+          // hits the cache and costs no network wait at all (the row loop
+          // performs ZERO backing queries on a warmed page -- see the
+          // preload-warm-phase test). This guard exists for the page(s)
+          // that do NOT go through the warm phase (a one-row page, or
+          // CLASSIFY_CONCURRENCY=1): a cold preload can still cost up to
+          // BACKING_PRELOAD_QUERY_TIMEOUT_MS, and starting one with less
+          // than that plus margin left on the clock is exactly how a slot
+          // gets killed mid-query instead of stopping at a checkpoint. Bail
+          // out to `unknown` (never `noRow` -- this says nothing about
+          // whether a catalog row exists, only that this run chose not to
+          // spend its last budget finding out) and let the ordinary
+          // page-boundary budget check below write the checkpoint.
+          sb.unknown++;
+          if (cb) cb.unknown++;
+          stopReason = stopReason ?? `stopped at the ${RUN_MINUTES}-minute budget`;
         } else {
           const idMap = await backingCellPreload(year, setKey, sport);
           if (idMap === BACKING_LOAD_FAILED || idMap === BACKING_LOAD_PERMANENTLY_FAILED) {
@@ -4035,10 +4208,28 @@ async function main() {
       preload: {
         cellCap: BACKING_PRELOAD_CELL_CAP,
         failRetries: BACKING_PRELOAD_CELL_FAIL_RETRIES,
+        queryTimeoutMs: BACKING_PRELOAD_QUERY_TIMEOUT_MS,
         distinctCellQueries: backingPreloadQueries,
         distinctCellsTouched: backingPreloadCache.size + backingPermanentlyFailedCells.size,
         catalogRowsRead: backingPreloadRowsRead,
+        // MEASURED, not estimated (2026-09-20 follow-up to the census hang
+        // fix): the actual RU this slot's backing queries charged, summed
+        // as each query returns -- see backingCellPreloadRaw. Real RU
+        // varies by cell size (a whole-product id-prefix, not a flat cost
+        // -- see the runbook's step 0b for the measured 197-21,933 RU/cell
+        // range across 5 real cells), so a per-slot total read directly off
+        // the artifact is the only trustworthy number, never an estimate
+        // multiplied by a query count.
+        ruSpent: Math.round(backingPreloadRUSpent),
         failedCells: backingPermanentlyFailedCells.size,
+        // How many of this slot's failed attempts (across ALL cells, not
+        // just permanently-failed ones) were specifically a
+        // BACKING_PRELOAD_QUERY_TIMEOUT_MS timeout, as opposed to a real
+        // Cosmos error -- the two are different facts (see
+        // BACKING_PRELOAD_QUERY_TIMEOUT_MS's own header) and an operator
+        // triaging a run needs to tell them apart without parsing
+        // failedCellSamples' free-text error strings.
+        timeouts: backingPreloadTimeouts,
         failedCellSamples: backingFailedCellSamples,
         note: "distinctCellQueries is the count of card_catalog queries this "
           + "slot issued for backing (one per (sport,year,setKey) cell, "
@@ -4047,14 +4238,18 @@ async function main() {
           + "counts 3 here); distinctCellsTouched is the count of DISTINCT "
           + "cells this slot asked about at all, successful or not. "
           + "catalogRowsRead is the total c.id rows the SUCCESSFUL queries "
-          + "returned. failedCells is how many distinct cells hit "
-          + "BACKING_PRELOAD_CELL_FAIL_RETRIES failures and were marked "
-          + "permanently failed for the rest of this slot -- every sale of "
-          + "one lands in the unknown bucket, never noRow. "
+          + "returned. ruSpent is the REAL measured RU this slot's backing "
+          + "queries charged -- read it directly, never estimate it "
+          + "(RU scales with each cell's matched-row count, not a flat "
+          + "per-query cost; see the 2026-09-20 runbook update). failedCells "
+          + "is how many distinct cells hit BACKING_PRELOAD_CELL_FAIL_RETRIES "
+          + "failures and were marked permanently failed for the rest of "
+          + "this slot -- every sale of one lands in the unknown bucket, "
+          + "never noRow. timeouts is how many of those failed attempts "
+          + "were specifically a query that did not terminate inside "
+          + "queryTimeoutMs, as opposed to a real Cosmos error. "
           + "failedCellSamples lists up to 50 (cell key, attempt number, "
-          + "error message) entries for triage. Multiply distinctCellQueries "
-          + "by the PR's offline RU-per-page estimate to get this slot's "
-          + "added RU.",
+          + "error message) entries for triage.",
       },
     } : null,
     // The filter is part of the census's identity: two censuses of the same
