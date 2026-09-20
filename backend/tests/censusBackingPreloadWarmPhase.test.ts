@@ -16,7 +16,7 @@
  * the SDK's 30-try/120s throttle retry ever saw it, because nothing ever
  * threw -- the promise kept resolving, just never made progress.
  *
- * This file pins the four fixes that close it:
+ * This file pins the fixes that close it:
  *   1. A hard per-query timeout (BACKING_PRELOAD_QUERY_TIMEOUT_MS, default
  *      20s) via AbortController + Promise.race, feeding the EXISTING
  *      BACKING_LOAD_FAILED path -- counted, never silent, the row is still
@@ -33,11 +33,39 @@
  *      the pre-existing page/unit checkpoint save a resumable cursor,
  *      instead of being killed mid-query.
  *
+ * PLUS TWO review follow-ups, added 2026-09-20 same day:
+ *   5. THE SPIN GUARD. `withHardTimeout` (fix #1 above) is an
+ *      AbortController/Promise.race timer -- and a reviewer proved that
+ *      CANNOT stop the actual defect: the old query shape resolves
+ *      `fetchNext()` via a MICROTASK ONLY (0 rows, 0 RU, every page), and a
+ *      `setTimeout` registered before a tight microtask loop never fires --
+ *      Node's timer phase only runs BETWEEN macrotasks, and a microtask loop
+ *      never yields one. `backingCellPreloadRaw`'s `runOnce` now checks,
+ *      SYNCHRONOUSLY, on every page-fetch iteration: the wall clock via
+ *      `Date.now()`, and a counter of CONSECUTIVE empty (0-row, 0-RU) pages
+ *      against `BACKING_PRELOAD_SPIN_GUARD_PAGES` (default 50) -- either
+ *      trip throws immediately, counted separately as `preload.spinGuardTrips`
+ *      (never folded into `preload.timeouts`, which is the OTHER guard, for a
+ *      genuine network stall that DOES yield macrotask ticks).
+ *   6. ROW-BUDGETED CACHE EVICTION. The preload cache's eviction used to be
+ *      by CELL COUNT only (`BACKING_PRELOAD_CELL_CAP`, default 500) -- but
+ *      one cell can be 203,058 rows and another 1,446 (measured against
+ *      prod), so a cell-count cap alone cannot bound memory; census mode
+ *      gets no `NODE_OPTIONS` heap override in backfill-runner.yml, so many
+ *      large cells is a real OOM risk. Eviction is now PRIMARILY by total
+ *      cached ROWS (`BACKING_PRELOAD_ROW_BUDGET`, default 1,200,000), LRU by
+ *      cell's last use, whole cells evicted -- the cell-count cap remains as
+ *      a SECONDARY bound. Pages are also streamed directly into the per-cell
+ *      verdict Map (never accumulated into a raw array first), halving the
+ *      transient peak per cell.
+ *
  * censusBackingE2E.test.ts already pins the query SHAPE (id-prefix,
  * per-cell, bucket semantics, the pre-existing fail-then-permanently-fail
- * retry accounting) -- this file is additive, pinning only the four NEW
+ * retry accounting) -- this file is additive, pinning only the NEW
  * behaviours above, against the SAME fixture (extended with an
- * FAKE_CATALOG_QUERY_ORDER marker and a HANG_CATALOG_CELL knob).
+ * FAKE_CATALOG_QUERY_ORDER marker, a HANG_CATALOG_CELL knob, a
+ * SPIN_CATALOG_CELL knob for the microtask-only repro, and BIG_CELLS/
+ * BIG_CELL_ROWS knobs for the row-budget eviction scenario).
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -54,9 +82,10 @@ const TEST_TIMEOUT_MS = 60_000;
 
 function runCensus(opts: {
   censusOut: string; controlStateFile: string;
-  hangCatalogCell?: boolean; failCatalogCell?: boolean;
+  hangCatalogCell?: boolean; failCatalogCell?: boolean; spinCatalogCell?: boolean;
   backingTimeoutMs?: number; heartbeatMs?: number; runMinutes?: string;
-  classifyConcurrency?: string;
+  classifyConcurrency?: string; spinGuardPages?: number;
+  bigCells?: number; bigCellRows?: number; rowBudget?: number; cellCap?: number;
 }) {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -71,12 +100,21 @@ function runCensus(opts: {
   };
   if (opts.hangCatalogCell) env.HANG_CATALOG_CELL = "true"; else delete env.HANG_CATALOG_CELL;
   if (opts.failCatalogCell) env.FAIL_CATALOG_CELL = "true"; else delete env.FAIL_CATALOG_CELL;
+  if (opts.spinCatalogCell) env.SPIN_CATALOG_CELL = "true"; else delete env.SPIN_CATALOG_CELL;
   if (opts.backingTimeoutMs !== undefined) env.BACKING_PRELOAD_QUERY_TIMEOUT_MS = String(opts.backingTimeoutMs);
   else delete env.BACKING_PRELOAD_QUERY_TIMEOUT_MS;
   if (opts.heartbeatMs !== undefined) env.CENSUS_HEARTBEAT_MS = String(opts.heartbeatMs);
   else delete env.CENSUS_HEARTBEAT_MS;
   if (opts.classifyConcurrency !== undefined) env.CLASSIFY_CONCURRENCY = opts.classifyConcurrency;
   else delete env.CLASSIFY_CONCURRENCY;
+  if (opts.spinGuardPages !== undefined) env.BACKING_PRELOAD_SPIN_GUARD_PAGES = String(opts.spinGuardPages);
+  else delete env.BACKING_PRELOAD_SPIN_GUARD_PAGES;
+  if (opts.bigCells !== undefined) env.BIG_CELLS = String(opts.bigCells); else delete env.BIG_CELLS;
+  if (opts.bigCellRows !== undefined) env.BIG_CELL_ROWS = String(opts.bigCellRows); else delete env.BIG_CELL_ROWS;
+  if (opts.rowBudget !== undefined) env.BACKING_PRELOAD_ROW_BUDGET = String(opts.rowBudget);
+  else delete env.BACKING_PRELOAD_ROW_BUDGET;
+  if (opts.cellCap !== undefined) env.BACKING_PRELOAD_CELL_CAP = String(opts.cellCap);
+  else delete env.BACKING_PRELOAD_CELL_CAP;
   return spawnSync(process.execPath, ["-r", PRELOAD, SCRIPT], {
     cwd: backend, env, encoding: "utf8", timeout: TEST_TIMEOUT_MS,
   });
@@ -255,5 +293,113 @@ describe("rematch-sold-comps.cjs MODE=census SOURCES=backing -- the 2026-09-20 h
     // for every other budget stop in this file.
     const out = res.stdout ?? "";
     expect(out).toMatch(/stopped at the 5-minute budget/);
+  }, TEST_TIMEOUT_MS);
+
+  itIfBuilt("a query that spins via MICROTASKS ONLY (0-row, 0-RU pages, no real timer/socket tick) is stopped by the SYNCHRONOUS spin guard, which a setTimeout-based timeout provably cannot do", () => {
+    const { censusOut, controlStateFile } = freshPaths();
+    // A SHORT spin-guard threshold so the test itself stays fast (the
+    // production default, 50, would still work -- the fixture's spinning
+    // cell never yields a macrotask tick either way, so it trips at
+    // whichever page count is configured, in low single-digit milliseconds).
+    // BACKING_PRELOAD_QUERY_TIMEOUT_MS is set LONG (60s) specifically so
+    // that if the spin guard regressed and stopped catching this, the ONLY
+    // thing left to stop the run would be the AbortController timeout --
+    // which this scenario proves cannot fire against a microtask-only spin,
+    // so a regression here would show up as the test hitting vitest's own
+    // TEST_TIMEOUT_MS, not as a clean assertion failure. That is the whole
+    // point: this scenario is unsurvivable without the synchronous guard.
+    const res = runCensus({
+      censusOut, controlStateFile, spinCatalogCell: true,
+      spinGuardPages: 10, backingTimeoutMs: 60000,
+    });
+
+    expect(res.status).toBe(0); // the slot finishes -- the spin must not hang or crash it
+    const artifact = JSON.parse(readFileSync(join(censusOut, "census-slot-0.json"), "utf8"));
+    expect(artifact.backing).not.toBeNull();
+
+    // The spinning (bowman) cell's sales all land in `unknown` -- a spin
+    // says nothing about whether a catalog row exists.
+    const bowmanCell = artifact.backing.byCell["baseball|1953|bowman"];
+    expect(bowmanCell.unknown).toBe(4);
+    expect(bowmanCell.backedStrict).toBe(0);
+    expect(bowmanCell.rowExistsNonStrict).toBe(0);
+    expect(bowmanCell.noRow).toBe(0);
+
+    // The topps cell is UNAFFECTED.
+    const toppsCell = artifact.backing.byCell["baseball|1953|topps"];
+    expect(toppsCell).toEqual({
+      backedStrict: 1, rowExistsNonStrict: 1, noRow: 1, unparseable: 1,
+      parked: 1, notPricedFlagged: 1, unknown: 0,
+    });
+
+    // Counted as a SPIN GUARD trip specifically -- never folded into the
+    // generic `timeouts` counter, which is reserved for a genuine network
+    // stall the AbortController guard actually catches.
+    expect(artifact.backing.preload.spinGuardTrips).toBeGreaterThan(0);
+    expect(artifact.backing.preload.failedCellSamples.length).toBeGreaterThan(0);
+    for (const sample of artifact.backing.preload.failedCellSamples) {
+      expect(String(sample.error)).toMatch(/BACKING_PRELOAD_SPIN_GUARD/);
+    }
+
+    // The whole run finished fast (proving the guard actually fired quickly,
+    // not that it eventually gave up some other way) -- spawnSync's own
+    // TEST_TIMEOUT_MS is the only thing that would catch a regression back
+    // to "no synchronous guard", and a clean exit well under it is the
+    // positive proof this scenario exists to provide.
+  }, TEST_TIMEOUT_MS);
+
+  itIfBuilt("row-budgeted eviction: loading cells past the row budget evicts the least-recently-used WHOLE cell and never exceeds the budget; an evicted cell reloads correctly", () => {
+    const { censusOut, controlStateFile } = freshPaths();
+    // 4 synthetic cells (big-0..big-3), each 400 rows -- a row budget of
+    // 1,000 can hold at most 2 of them (800 rows) comfortably but not 3
+    // (1,200 > 1,000), so loading all 4 in cell order must evict big-0 (the
+    // least-recently-used at the point big-2 or big-3 arrives) while big-1
+    // through big-3 (and the topps/bowman cells, each tiny) stay resident.
+    // cellCap is set generously high (100) so ONLY the row budget is under
+    // test here -- the pre-existing cell-count cap is covered by
+    // censusBackingE2E.test.ts and is not this test's subject.
+    const res = runCensus({
+      censusOut, controlStateFile, bigCells: 4, bigCellRows: 400,
+      rowBudget: 1000, cellCap: 100, classifyConcurrency: "1",
+    });
+    expect(res.status).toBe(0);
+
+    const artifact = JSON.parse(readFileSync(join(censusOut, "census-slot-0.json"), "utf8"));
+    expect(artifact.backing).not.toBeNull();
+
+    // The budget was never exceeded at report time (the artifact's own
+    // gauge, read after every insert/evict this slot performed).
+    expect(artifact.backing.preload.cachedRows).toBeLessThanOrEqual(1000);
+    expect(artifact.backing.preload.rowBudget).toBe(1000);
+    // At least one whole-cell eviction happened -- 4 cells x 400 rows
+    // = 1,600 total, over the 1,000 budget, so eviction MUST have fired at
+    // least once (loading big-2 or big-3 pushes the running total over
+    // budget with big-0/big-1 still resident).
+    expect(artifact.backing.preload.evictions).toBeGreaterThan(0);
+
+    // EVERY big cell still answers correctly (backedStrict/rowExistsNonStrict
+    // /noRow bucketing is unaffected by eviction -- an evicted cell's next
+    // sale simply RE-QUERIES and gets the same right answer, per the
+    // pre-existing "eviction costs RU, never correctness" design). Each big
+    // cell's one synthetic sale (cardNumber "0") is present in the canned
+    // rows the fixture serves for that cell (id `<prefix>0:base:no-auto`,
+    // source "cardhedge" -- present in CATALOG_ROWS' shape but NOT a strict
+    // source), so every big cell's sale lands in `rowExistsNonStrict`, never
+    // `unknown` and never `noRow` -- proving a RELOAD after eviction still
+    // returns the right verdict, not a stale or missing one.
+    for (let i = 0; i < 4; i++) {
+      const cell = artifact.backing.byCell[`baseball|1953|big-${i}`];
+      expect(cell, `big-${i} cell missing from artifact`).toBeDefined();
+      expect(cell.unknown).toBe(0);
+      expect(cell.rowExistsNonStrict).toBe(1);
+      expect(cell.backedStrict).toBe(0);
+      expect(cell.noRow).toBe(0);
+    }
+
+    // Zero backing load failures -- eviction is a COST event, never a
+    // correctness one, so it must never show up as a failed cell.
+    expect(artifact.backing.preload.failedCells).toBe(0);
+    expect(artifact.backing.preload.spinGuardTrips).toBe(0);
+    expect(artifact.backing.preload.timeouts).toBe(0);
   }, TEST_TIMEOUT_MS);
 });
