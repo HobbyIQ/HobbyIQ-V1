@@ -342,6 +342,26 @@ function rungKeyOf(row) {
 }
 
 /**
+ * REVIEW FIX (coordinator, post-#2366): the print run a catalog row carries,
+ * from its own `printRun` field or its id's trailing `:num-N` segment --
+ * mirrors foldTwinRuleChecklistNumbered.js's own `printRunOf`, reproduced
+ * here rather than imported for the same "this lane's doctrine, not
+ * necessarily the literal export" reason classifySaleForRelocation already
+ * gives. Returns null for an un-numbered row -- and null is itself a
+ * distinct, real variant (the un-numbered rung), never "no data".
+ */
+function catalogPrintRunOf(row) {
+  const pr = Number(row.printRun);
+  if (Number.isFinite(pr) && pr > 0) return pr;
+  const m = String(row.id ?? "").match(/:num-(\d+)$/);
+  return m ? Number(m[1]) : null;
+}
+/** The print-run KEY this lane groups variants under -- "none" for an
+ *  un-numbered row, else the numeric string. A plain string key (not the
+ *  number itself) so it can be a Map key without float/NaN surprises. */
+const printRunKeyOf = (printRun) => (printRun === null || printRun === undefined ? "none" : String(printRun));
+
+/**
  * classifySaleForRelocation -- IDENTICAL shape and doctrine to
  * repoint-sales-to-checklist-numbered.cjs's own function of the same name
  * (see that file's header for the full four-shape proof). Copied here
@@ -464,6 +484,17 @@ async function main() {
     refusedEtagChanged: 0, refusedTitleContradiction: 0,
     refusedTwoCandidates: 0, refusedOriginalAlsoStrict: 0, refusedPlayerMismatch: 0,
     refusedBothSlugsRealRungs: 0, refusedNoSuffixWord: 0,
+    // REVIEW FIX (coordinator, post-#2366): two-candidates is now split --
+    // a same-underlying-rung spelling twin on the checklist itself
+    // (catalog-duplicate-rung) is counted SEPARATELY from a genuine
+    // two-target ambiguity (refusedTwoCandidates), so the banner's yield
+    // number tells the truth about WHY a pair did not move.
+    refusedCatalogDuplicateRung: 0,
+    // REVIEW FIX (coordinator, post-#2366): the sale's own print-run
+    // variant (numbered /N, or unnumbered) has no matching checklist row
+    // under the candidate slug -- refused rather than landed on a DIFFERENT
+    // print-run variant that merely shares the slug.
+    refusedDestinationPrintRunVariantAbsent: 0,
     salesFailed: 0, salesLeftAlone: 0,
     notReached: 0,
     hobbyiqCardIdQueries: 0,
@@ -475,11 +506,20 @@ async function main() {
     "title-states-print-run": [], "split-identity": [], "guard-parked": [], "destination-collision": [],
     "stale-since-plan": [], "title-contradicts-target": [], "two-candidates": [], "original-also-strict": [],
     "player-mismatch": [], "both-slugs-are-real-rungs": [],
+    "catalog-duplicate-rung": [], "destination-printrun-variant-absent": [],
   };
   const failures = [];
   const examples = [];
   const pairTable = new Map(); // "from -> to" -> count
   const bothSlugsPairs = new Set(); // "setKey|slugA|slugB" already reported product-wide
+  // REVIEW FIX (coordinator, post-#2366): top-40-by-count reporting for the
+  // two new refusal classes, keyed per CELL (setKey) since the same slug
+  // pair can be a real spelling-twin in one product and unrelated in
+  // another. Declared once, per the WHOLE run (every cell/setKey shares
+  // these two maps) -- `pairIsBothRealRungs`'s own `bothSlugsPairs` is the
+  // model this follows.
+  const catalogDuplicateRungByCell = new Map(); // "setKey|slugA|slugB" -> { count }
+  const printRunVariantAbsentPairs = new Map(); // "setKey|from -> to" -> { count }
   let stoppedAtBudget = false;
 
   const seenSaleAddresses = new Map();
@@ -682,13 +722,36 @@ async function main() {
       }
 
       // ── PASS 1: every STRICT checklist row for this cell, grouped by
-      // rungKey (number|auto[|sub]) and indexed by its own parallel slug --
-      // both used to test a candidate's existence AND to detect
-      // both-slugs-are-real-rungs product-wide (ANY card number carrying
-      // both P and a candidate slug as distinct real rows).
+      // rungKey (number|auto[|sub]), THEN by its own parallel slug, THEN by
+      // its own print-run variant -- both the slug and the print-run axis
+      // are needed to test a candidate's existence, to detect
+      // both-slugs-are-real-rungs product-wide, AND (REVIEW FIX, coordinator
+      // post-#2366) to pick the ONE correct print-run VARIANT of a candidate
+      // rather than an arbitrary one.
+      //
+      // MEASURED DEFECT THIS FIXES: `bySlug.set(slug, r)` used to be
+      // last-write-wins per (rungKey, slug) -- a card whose checklist states
+      // BOTH an unnumbered and a numbered row for the exact same
+      // number/auto/slug (e.g. basketball 2024 panini-prizm #19
+      // blue-wave-prizm exists both /125 and unnumbered; measured 1,672 such
+      // (number, auto, slug) triples in that one cell) silently picked
+      // whichever page order happened to land last -- a possible WRONG-CARD
+      // move, since a sale carrying its own `:num-N` segment must land on
+      // the checklist row carrying THAT SAME print run, never a different
+      // one that merely shares the slug.
       const strictRows = [];
-      const rowsByRung = new Map(); // rungKey -> Map(slug -> row)
+      const rowsByRung = new Map(); // rungKey -> Map(slug -> Map(printRunKey -> row))
       const slugsSeenAnywhere = new Set(); // every distinct parallelSlug on a strict row in this cell
+      // CATALOG-DUPLICATE-RUNG DETECTION (REVIEW FIX): a (rungKey,
+      // printRunKey) that already holds ONE slug and now sees a SECOND,
+      // DIFFERENT slug for the SAME player is not "two real rungs" (that
+      // claim needs a DIFFERENT print run or a genuinely different card) --
+      // it is the checklist itself carrying a spelling-twin of the identical
+      // physical rung (same number, same auto, same print run, same
+      // player). Recorded here, at scan time, once per (rungKey,
+      // printRunKey) collision -- cheap, no extra I/O, the same rows already
+      // read.
+      const duplicateRungPairs = new Map(); // "slugA|slugB" -> { count, cardNumbers: Set }
       await forEachPage(cat, catalogCellSpec(sport, year, setKey), async (page) => {
         for (const r of page) {
           if (CLOCK.outOfClock()) { stoppedAtBudget = true; return false; }
@@ -708,22 +771,62 @@ async function main() {
           const slug = slugify(String(r.parallelSlug ?? "Base")).toLowerCase() || "base";
           slugsSeenAnywhere.add(slug);
           const rungKey = rungKeyOf(r);
+          const printRunKey = printRunKeyOf(catalogPrintRunOf(r));
           const bySlug = rowsByRung.get(rungKey) ?? new Map();
-          bySlug.set(slug, r);
+          const byPrintRun = bySlug.get(slug) ?? new Map();
+
+          // CATALOG-DUPLICATE-RUNG: does this EXACT (rungKey, printRunKey)
+          // already carry a DIFFERENT slug, same player? That is the SAME
+          // physical card spelled twice, not a rival rung.
+          for (const [otherSlug, otherBySlug] of bySlug.entries()) {
+            if (otherSlug === slug) continue;
+            const otherRow = otherBySlug.get(printRunKey);
+            if (!otherRow) continue;
+            const samePlayer = playerIdentityKey(otherRow.playerName) === playerIdentityKey(r.playerName) && playerIdentityKey(r.playerName);
+            if (!samePlayer) continue;
+            const pairKey = [slug, otherSlug].sort().join("|");
+            const entry = duplicateRungPairs.get(pairKey) ?? { count: 0, cardNumbers: new Set() };
+            entry.count++;
+            entry.cardNumbers.add(String(r.cardNumber ?? ""));
+            duplicateRungPairs.set(pairKey, entry);
+          }
+
+          byPrintRun.set(printRunKey, r);
+          bySlug.set(slug, byPrintRun);
           rowsByRung.set(rungKey, bySlug);
         }
         return true;
       });
 
       /** True iff the cell's own strict checklist rows carry BOTH `a` and
-       *  `b` as distinct real rows, on ANY card number -- i.e. this pair is
-       *  not a spelling gap at all, it is two real rungs of this product's
-       *  ladder. Checked once per pair and cached in `bothSlugsPairs`. */
+       *  `b` as distinct real rows (any print-run variant), on ANY card
+       *  number -- i.e. this pair is not a spelling gap at all, it is two
+       *  real rungs of this product's ladder. Checked once per pair and
+       *  cached in `bothSlugsPairs`. */
       function pairIsBothRealRungs(a, b) {
         for (const bySlug of rowsByRung.values()) {
           if (bySlug.has(a) && bySlug.has(b)) return true;
         }
         return false;
+      }
+
+      /**
+       * REVIEW FIX (coordinator, post-#2366). Resolve the print-run VARIANT
+       * of `candidateSlug` this SALE must land on, never an arbitrary one:
+       *   - the sale carries its own `:num-N` -> the target must carry that
+       *     SAME print run;
+       *   - the sale carries no `:num-` -> the target must be the UNNUMBERED
+       *     row (printRunKey "none");
+       *   - the required variant does not exist -> refuse, never fall back
+       *     to a different variant that merely shares the slug.
+       * Returns `{ target }` or `{ missing: true }`.
+       */
+      function resolvePrintRunVariant(bySlug, candidateSlug, salePrintRunKey) {
+        const byPrintRun = bySlug.get(candidateSlug);
+        if (!byPrintRun) return { missing: true };
+        const target = byPrintRun.get(salePrintRunKey);
+        if (!target) return { missing: true };
+        return { target };
       }
 
       // ── PASS 2: sales in this cell whose hobbyiqCardId/cardId names a
@@ -738,20 +841,56 @@ async function main() {
         const parsedRungKey = rungKeyFromHobbyIqCardId(currentId);
         const saleSlug = parsedRungKey ? parsedRungKey.parallelSlug : null;
         const rungKey = parsedRungKey ? parsedRungKey.rungKey : null;
-        if (!saleSlug || !rungKey) { s.notReached++; return; }
+        const salePrintRunKey = parsedRungKey ? parsedRungKey.printRunKey : null;
+        if (!saleSlug || !rungKey || !salePrintRunKey) { s.notReached++; return; }
 
         const bySlug = rowsByRung.get(rungKey);
-        // Already strict at its OWN slug -- this lane has nothing to do
-        // (it exists to close a spelling gap, not to move a backed sale).
+        // Already strict at its OWN slug (ANY print-run variant) -- this
+        // lane has nothing to do (it exists to close a spelling gap, not to
+        // move a backed sale).
         if (bySlug && bySlug.has(saleSlug)) return;
 
         const candidates = suffixCandidatesOf(saleSlug, word);
         if (!candidates.length) return;
 
-        // EXACTLY ONE candidate must be a strict row on THIS rung.
+        // EXACTLY ONE candidate must be a strict row on THIS rung (any
+        // print-run variant -- the print-run VARIANT itself is resolved
+        // below, once the candidate slug is known).
         const strictCandidates = candidates.filter((c) => bySlug && bySlug.has(c));
         if (strictCandidates.length === 0) return; // no candidate backed -- not this lane's gap
         if (strictCandidates.length > 1) {
+          // CATALOG-DUPLICATE-RUNG SPLIT (coordinator review, post-#2366).
+          // "Two candidates are strict" can mean two genuinely DIFFERENT
+          // targets -- or it can mean the checklist itself carries a
+          // spelling-twin of the SAME physical rung (same number, same
+          // auto, same print run, same player) under two of this sale's own
+          // candidate spellings, e.g. "white-prizm" + "white-prizms",
+          // "green-mosaic" + "mosaic-green". The catalog must be
+          // de-duplicated first in that shape -- this lane refuses either
+          // way, but the banner must say WHICH shape it saw so the yield
+          // number is not silently inflated by a defect this lane cannot
+          // fix by picking a side.
+          const isDuplicateRung = strictCandidates.some((a) => strictCandidates.some((b) => {
+            if (a === b) return false;
+            const key = [a, b].sort().join("|");
+            return duplicateRungPairs.has(key);
+          }));
+          if (isDuplicateRung) {
+            s.refusedCatalogDuplicateRung++;
+            for (let i = 0; i < strictCandidates.length; i++) {
+              for (let j = i + 1; j < strictCandidates.length; j++) {
+                const key = [strictCandidates[i], strictCandidates[j]].sort().join("|");
+                if (!duplicateRungPairs.has(key)) continue;
+                const cellKey = `${setKey}|${key}`;
+                const entry = catalogDuplicateRungByCell.get(cellKey) ?? { count: 0 };
+                entry.count++;
+                catalogDuplicateRungByCell.set(cellKey, entry);
+              }
+            }
+            refusals["catalog-duplicate-rung"].push(`  ${sale.id}@${currentId}: candidates ${strictCandidates.join(", ")} are the SAME checklist rung spelled twice (same number/auto/print-run/player) -- the catalog needs de-duplicating first, this lane never chooses a side`);
+            emitPlanRow(sale, "refused", "catalog-duplicate-rung", { fromSlug: saleSlug });
+            return;
+          }
           s.refusedTwoCandidates++;
           refusals["two-candidates"].push(`  ${sale.id}@${currentId}: candidates ${strictCandidates.join(", ")} are ALL strict on this rung -- ambiguous, refused`);
           emitPlanRow(sale, "refused", "two-candidates", { fromSlug: saleSlug });
@@ -771,7 +910,25 @@ async function main() {
           return;
         }
 
-        const target = bySlug.get(candidateSlug);
+        // REVIEW FIX (coordinator, post-#2366): pick the print-run VARIANT
+        // of `candidateSlug` that carries the SAME print run this SALE's own
+        // id states (or the unnumbered variant, when the sale states none)
+        // -- never an arbitrary variant that merely shares the slug. A
+        // checklist that states this candidate slug only under a DIFFERENT
+        // print run than the sale's own is not a match for this sale at
+        // all; refuse, never guess between variants.
+        const variant = resolvePrintRunVariant(bySlug, candidateSlug, salePrintRunKey);
+        if (variant.missing) {
+          s.refusedDestinationPrintRunVariantAbsent++;
+          const pairKey = `${setKey}|${saleSlug} -> ${candidateSlug}`;
+          const entry = printRunVariantAbsentPairs.get(pairKey) ?? { count: 0 };
+          entry.count++;
+          printRunVariantAbsentPairs.set(pairKey, entry);
+          refusals["destination-printrun-variant-absent"].push(`  ${sale.id}@${currentId}: sale's own print run (${salePrintRunKey}) has no "${candidateSlug}" checklist row on this rung -- the checklist carries "${candidateSlug}" only under a DIFFERENT print-run variant; refused, never guessed`);
+          emitPlanRow(sale, "refused", "destination-printrun-variant-absent", { fromSlug: saleSlug, toSlug: candidateSlug });
+          return;
+        }
+        const target = variant.target;
 
         // The original P must exist on NO strict row for this number --
         // i.e. `saleSlug` itself must not be `bySlug`'s key (already checked
@@ -926,16 +1083,30 @@ async function main() {
         }
       }
 
-      /** Parse an hiq: slug into { parallelSlug, rungKey } -- number/auto/sub
-       *  read the SAME way rungKeyOf reads a catalog row, so a sale and a
-       *  catalog row on the same number/auto/sub always agree on rungKey.
-       *  Slug shape: hiq:sport:year:setKey:cardNumber:parallel:auto[:sub-...][:num-N].
+      /** Parse an hiq: slug into { parallelSlug, rungKey, printRunKey } --
+       *  number/auto/sub read the SAME way rungKeyOf reads a catalog row, so
+       *  a sale and a catalog row on the same number/auto/sub always agree
+       *  on rungKey. Slug shape:
+       *  hiq:sport:year:setKey:cardNumber:parallel:auto[:sub-...][:num-N].
        *  Segment 6 (index 6, zero-based) is the parallel slug; segment 7 is
-       *  the auto flag ("auto"/"no-auto"); an optional trailing `:num-N` is
-       *  stripped first (this lane never compares across print-run
-       *  granularity, only the parallel spelling on the SAME rung). */
+       *  the auto flag ("auto"/"no-auto").
+       *
+       *  REVIEW FIX (coordinator, post-#2366): the trailing `:num-N` used to
+       *  be stripped and DISCARDED before the rung was even read -- so a
+       *  sale carrying its own print run and a sale with none collapsed
+       *  onto the SAME rungKey with no way to tell them apart at the target
+       *  lookup, and whichever catalog row happened to be stored last under
+       *  that (rungKey, slug) won regardless of whether IT carried the same
+       *  print run the sale did. `printRunKey` now travels alongside
+       *  `rungKey`/`parallelSlug` so the caller can demand the target carry
+       *  the IDENTICAL print-run variant -- "none" for an unnumbered sale,
+       *  the numeric string for a numbered one -- and refuse rather than
+       *  guess when that exact variant is not on the checklist. */
       function rungKeyFromHobbyIqCardId(id) {
-        const stripped = String(id ?? "").replace(/:num-\d+$/, "");
+        const raw = String(id ?? "");
+        const m = raw.match(/:num-(\d+)$/);
+        const printRunKey = m ? String(Number(m[1])) : "none";
+        const stripped = m ? raw.slice(0, raw.length - m[0].length) : raw;
         const parts = stripped.split(":");
         if (parts.length < 7 || parts[0] !== "hiq") return null;
         const cardNumber = String(parts[4] ?? "").trim().toLowerCase();
@@ -944,7 +1115,7 @@ async function main() {
         const auto = autoFlag === "auto" ? "auto" : "no-auto";
         const sub = subsetSegmentOf(stripped);
         const rungKey = sub ? `${cardNumber}|${auto}|${sub}` : `${cardNumber}|${auto}`;
-        return { parallelSlug, rungKey };
+        return { parallelSlug, rungKey, printRunKey };
       }
 
       // ── shape 1: sales whose PARTITION KEY (cardId) is an hiq: slug in
@@ -1006,6 +1177,8 @@ async function main() {
   console.log(`  REFUSED: stale since the planning read      ${f(s.refusedEtagChanged)}`);
   console.log(`  REFUSED: title contradicts the target       ${f(s.refusedTitleContradiction)}`);
   console.log(`  REFUSED: two candidates strict at once      ${f(s.refusedTwoCandidates)}`);
+  console.log(`  REFUSED: catalog-duplicate-rung (spelling twin, same rung)  ${f(s.refusedCatalogDuplicateRung)}   <- the catalog itself needs de-duplicating; never a two-target ambiguity`);
+  console.log(`  REFUSED: destination print-run variant absent  ${f(s.refusedDestinationPrintRunVariantAbsent)}   <- sale's own /N (or unnumbered) has no matching checklist row under the candidate slug`);
   console.log(`  REFUSED: player mismatch                    ${f(s.refusedPlayerMismatch)}`);
   console.log(`  REFUSED: both-slugs-are-real-rungs (pairs)  ${f(s.refusedBothSlugsRealRungs)}`);
   console.log(`  failed                                      ${f(s.salesFailed)}`);
@@ -1024,6 +1197,28 @@ async function main() {
   for (const [pair, n] of pairRows) console.log(`    ${String(n).padStart(9)}  ${pair}`);
   if (!pairRows.length) console.log(`    (none)`);
 
+  // REVIEW FIX (coordinator, post-#2366): top 40 catalog-duplicate-rung
+  // (slugA, slugB) pairs by count, per cell -- the banner must tell the
+  // truth about which pairs are a CATALOG defect (same rung spelled twice)
+  // rather than a genuine two-target ambiguity, since this lane never picks
+  // a side for either shape.
+  if (catalogDuplicateRungByCell.size) {
+    console.log(`\n  top 40 catalog-duplicate-rung pairs (setKey | slugA, slugB | count) -- the catalog needs de-duplicating, this lane never chooses a side:`);
+    const top40 = [...catalogDuplicateRungByCell.entries()].sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0])).slice(0, 40);
+    for (const [key, { count }] of top40) {
+      const [cellSetKey, slugA, slugB] = key.split("|");
+      console.log(`    ${String(count).padStart(9)}  ${cellSetKey} | ${slugA}, ${slugB}`);
+    }
+  }
+  if (printRunVariantAbsentPairs.size) {
+    console.log(`\n  top 40 destination-printrun-variant-absent pairs (setKey | from -> to | count):`);
+    const top40 = [...printRunVariantAbsentPairs.entries()].sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0])).slice(0, 40);
+    for (const [key, { count }] of top40) {
+      const [cellSetKey, pair] = key.split("|");
+      console.log(`    ${String(count).padStart(9)}  ${cellSetKey} | ${pair}`);
+    }
+  }
+
   for (const [reason, list] of Object.entries(refusals)) {
     if (list.length) {
       console.log(`\n  REFUSED (${reason}), every one listed (${f(list.length)}):`);
@@ -1039,7 +1234,8 @@ async function main() {
   const salesBefore = s.unbackedSalesFoundByCardId + s.unbackedSalesFoundByHobbyiqCardId - s.salesFoundDuplicateAcrossTargets;
   const moved = s.salesRelocated + s.salesPatched + s.collapsedOntoResident;
   const refused = s.refusedTitlePrintRun + s.refusedSplitIdentity + s.refusedGuardParked + s.refusedDestinationCollision
-    + s.refusedEtagChanged + s.refusedTitleContradiction + s.refusedTwoCandidates + s.refusedPlayerMismatch + s.refusedBothSlugsRealRungs;
+    + s.refusedEtagChanged + s.refusedTitleContradiction + s.refusedTwoCandidates + s.refusedPlayerMismatch + s.refusedBothSlugsRealRungs
+    + s.refusedCatalogDuplicateRung + s.refusedDestinationPrintRunVariantAbsent;
   const untouched = salesBefore - moved - refused - s.salesFailed; // every sale that was already strict, or had no suffix candidate at all
   console.log("");
   console.log(`CF-A-SALE-IS-NEVER-LOST`);
@@ -1082,6 +1278,7 @@ async function main() {
 module.exports = {
   SUFFIX_WORD_BY_SETKEY_PREFIX, suffixWordFor, suffixCandidatesOf,
   classifySaleForRelocation, rungKeyOf, subsetSegmentOf,
+  catalogPrintRunOf, printRunKeyOf,
   INHERITED_SCOPES, CELL_RE, WILDCARDS,
 };
 
