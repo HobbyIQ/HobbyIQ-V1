@@ -290,6 +290,40 @@ on:
           # for `all-repaired`. No new dispatch input; `titles` is unused by
           # this lane. The pilot dispatch is scope=fleer|1988.
           - revert-set-sport-repair
+          # R80 (Drew, 2026-09-19). The 2026-09-07 split-identity write guard
+          # (splitIdentityWriteGuard.ts) parks a sold_comps sale whenever its
+          # cardId (the Cosmos partition, vendor-derived) and hobbyiqCardId
+          # (the field pricing pools key on) name DIFFERENT SPORTS and
+          # nothing attests either side -- ~87,542 rows, all still flagged
+          # identityUnverified. PR #2341 (live) prices a parked row via
+          # hobbyiqCardId anyway, correct roughly two-thirds of the time per
+          # the 2026-09-07 census (backend/data/pool-relocations/2026-09-07-
+          # split-identity-sport-segment-*.json), leaving the rest in the
+          # WRONG pool and every one still flagged. This lane resolves them:
+          # THE CHECKLIST DECIDES, WITH THE PLAYER -- builds the two
+          # candidate ids (H=hobbyiqCardId, C=cardId), asks card_catalog
+          # which one (if either) a checklist-authority row backs for the
+          # SAME player as the sale (multi-player rows: any listed name), and
+          # either resolves (RESOLVE-TO-H: relocates the partition to H,
+          # cardId:=hobbyiqCardId:=sport:=H's own values -- the pricing id
+          # was right; RESOLVE-TO-C: patches hobbyiqCardId/sport to C, cardId
+          # never moves) or leaves it parked, named
+          # (`both-sides-name-the-player`, `neither-side-names-the-player`,
+          # `two-sport-athlete`, `title-contradicts-winner`). A title can only
+          # VETO a checklist-backed winner it actively contradicts, never
+          # decide on its own. Selection is equality/STARTSWITH only
+          # (identityUnverified=true, both ids hiq: slugs that differ, reason
+          # split-identity or the PARK. cardId vertical sentence) -- never a
+          # COUNT/GROUP BY, and duplicate-partition-copy / insert-named parks
+          # carry a different reason and are never selected. SCOPE is
+          # REQUIRED: the literal `all-splits` or a comma list of `sport:year`
+          # cells (matched against EITHER side's own sport/year -- a split
+          # row disagrees on sport by definition), e.g.
+          # basketball:2023,baseball:2023 -- the inherited defaults ('',
+          # 'refractor', 'all') are all refused. `titles` is an optional
+          # freeform substring filter against the sale's own title. The pilot
+          # dispatch (the Wembanyama cells) is scope=basketball:2023.
+          - resolve-split-identity-parks
           # CF-A-WRONG-IDENTITY-IS-NOT-A-MISSING-ONE (Drew, 2026-09-04, R2).
           # Re-derives the identity of holdings that HAVE one and have the
           # WRONG one -- the population `recheck-holding-identity`'s own sweep
@@ -873,7 +907,7 @@ on:
         required: false
         default: "16"
       scope:
-        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool). For rename-setkey-to-product MODE=product: comma-separated ruled product keys (e.g. topps-series-1,leaf-metal); the default here or 'all' = every ruled product. NOTE the default is 'refractor' and it is INHERITED, not chosen -- for triage-contenthash-collisions and consolidate-catalog-duplicates it narrows NOTHING (both read SCOPE only as the 'all' escape hatch for the no-sports/no-years refusal), so the triage now REFUSES any non-'all' value rather than ignoring it: pass scope=all with those two and narrow with sports/years/slot instead. For rematch-sold-comps MODE=apply-improve this is the APPLY CLASS SCOPE: 'base-eviction' | 'improve' | 'both' -- REQUIRED, and the inherited default 'refractor' is REFUSED (exit 2), because an apply names the class it writes. MODE=census ignores it. ALSO the three RULED SCOPES of 2026-09-06, each armed ONLY by its own name and deliberately NOT by 'improve'/'both'/'all' (every fleet dispatch in flight predates the rulings): 'grade-from-title' -- a FIELD BACKFILL, not a re-key: stamps gradeCompany/gradeValue on rows whose title states a grader token and whose grade fields are empty, at the row's EXISTING address (the slug carries no grade segment; see CF-CARD-IDENTITY-VS-GRADE). 'year-from-title-vintage' -- moves a vintage sale off the slug year that is really its SALE year onto the title's issue year (#1890's class). 'sport-from-product' -- a card's sport is the PRODUCT's sport, read from the product's own checklist; multi-sport products are refused by name. ALSO 'revert-eviction' on the SAME script and mode: the UNDO. It moves the rows a base-eviction wave wrote whose titles G6 now refuses back to the slug their own rekeyedFrom marker recorded, arms NO write class, and is refused if combined with one (a run cannot revert and write at once). It shards on sha1(id) rather than the 32-slot year table, so slots=1 is correct for it. For repair-rc-marker-playername and rekey-catalog-id-to-setkey: REQUIRED comma-separated `sport:year` cells (e.g. hockey:2024,hockey:2025) -- the inherited default 'refractor' and the values '' / 'all' are all REFUSED (exit 2) for both; there is no whole-source sweep. For revert-set-sport-repair (R76): REQUIRED, either the literal 'all-repaired' (typed explicitly -- sweeps every row this lane can reach) or a comma-separated list of `setKey|year` cells (note the pipe, not a colon -- e.g. fleer|1988,score|1989) parsed from each row's OWN hobbyiqCardIdBefore; the inherited defaults ('', 'refractor', 'all') are all REFUSED (exit 2), and 'all' is deliberately NOT accepted as a synonym for 'all-repaired' -- a whole-source restore needs its own name. The pilot dispatch is scope=fleer|1988."
+        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool). For rename-setkey-to-product MODE=product: comma-separated ruled product keys (e.g. topps-series-1,leaf-metal); the default here or 'all' = every ruled product. NOTE the default is 'refractor' and it is INHERITED, not chosen -- for triage-contenthash-collisions and consolidate-catalog-duplicates it narrows NOTHING (both read SCOPE only as the 'all' escape hatch for the no-sports/no-years refusal), so the triage now REFUSES any non-'all' value rather than ignoring it: pass scope=all with those two and narrow with sports/years/slot instead. For rematch-sold-comps MODE=apply-improve this is the APPLY CLASS SCOPE: 'base-eviction' | 'improve' | 'both' -- REQUIRED, and the inherited default 'refractor' is REFUSED (exit 2), because an apply names the class it writes. MODE=census ignores it. ALSO the three RULED SCOPES of 2026-09-06, each armed ONLY by its own name and deliberately NOT by 'improve'/'both'/'all' (every fleet dispatch in flight predates the rulings): 'grade-from-title' -- a FIELD BACKFILL, not a re-key: stamps gradeCompany/gradeValue on rows whose title states a grader token and whose grade fields are empty, at the row's EXISTING address (the slug carries no grade segment; see CF-CARD-IDENTITY-VS-GRADE). 'year-from-title-vintage' -- moves a vintage sale off the slug year that is really its SALE year onto the title's issue year (#1890's class). 'sport-from-product' -- a card's sport is the PRODUCT's sport, read from the product's own checklist; multi-sport products are refused by name. ALSO 'revert-eviction' on the SAME script and mode: the UNDO. It moves the rows a base-eviction wave wrote whose titles G6 now refuses back to the slug their own rekeyedFrom marker recorded, arms NO write class, and is refused if combined with one (a run cannot revert and write at once). It shards on sha1(id) rather than the 32-slot year table, so slots=1 is correct for it. For repair-rc-marker-playername and rekey-catalog-id-to-setkey: REQUIRED comma-separated `sport:year` cells (e.g. hockey:2024,hockey:2025) -- the inherited default 'refractor' and the values '' / 'all' are all REFUSED (exit 2) for both; there is no whole-source sweep. For revert-set-sport-repair (R76): REQUIRED, either the literal 'all-repaired' (typed explicitly -- sweeps every row this lane can reach) or a comma-separated list of `setKey|year` cells (note the pipe, not a colon -- e.g. fleer|1988,score|1989) parsed from each row's OWN hobbyiqCardIdBefore; the inherited defaults ('', 'refractor', 'all') are all REFUSED (exit 2), and 'all' is deliberately NOT accepted as a synonym for 'all-repaired' -- a whole-source restore needs its own name. The pilot dispatch is scope=fleer|1988. For resolve-split-identity-parks (R80): REQUIRED, either the literal 'all-splits' (typed explicitly) or a comma-separated list of `sport:year` cells (colon, not the model lane's pipe -- e.g. basketball:2023,baseball:2023), matched against EITHER candidate id's own sport/year since a parked split-identity row disagrees on sport by definition; the inherited defaults ('', 'refractor', 'all') are all REFUSED (exit 2), and 'all' is deliberately NOT a synonym for 'all-splits'. The pilot dispatch (the Wembanyama cells) is scope=basketball:2023."
         required: false
         default: "refractor"
         type: string
@@ -888,7 +922,7 @@ on:
         default: ""
         type: string
       titles:
-        description: "For ingest-checklists-end-to-end (bcp phase): extra baseballcardpedia page titles, comma-separated (e.g. 2012_Topps_Allen_and_Ginter,1990_Donruss). Empty = the per-year flagship list. For rekey-product-setkey: the TO setKey -- the product the rows move ONTO (e.g. japanese-rocket-gang); `setkey_like` is the FROM key. For repair-rc-marker-playername: an OPTIONAL comma-separated setKey filter narrowing `scope`'s sport:year cells. For rekey-catalog-id-to-setkey: the REQUIRED comma-separated target setKey list whose id should adopt its own setKey field (e.g. upper-deck-extended-series) -- empty or a wildcard ('all','*') is refused; `scope` carries the required sport:year cells (e.g. hockey:2024,hockey:2025)."
+        description: "For ingest-checklists-end-to-end (bcp phase): extra baseballcardpedia page titles, comma-separated (e.g. 2012_Topps_Allen_and_Ginter,1990_Donruss). Empty = the per-year flagship list. For rekey-product-setkey: the TO setKey -- the product the rows move ONTO (e.g. japanese-rocket-gang); `setkey_like` is the FROM key. For repair-rc-marker-playername: an OPTIONAL comma-separated setKey filter narrowing `scope`'s sport:year cells. For rekey-catalog-id-to-setkey: the REQUIRED comma-separated target setKey list whose id should adopt its own setKey field (e.g. upper-deck-extended-series) -- empty or a wildcard ('all','*') is refused; `scope` carries the required sport:year cells (e.g. hockey:2024,hockey:2025). For resolve-split-identity-parks: OPTIONAL comma-separated substring filter matched case-insensitively against the sale's own title (e.g. topps now,panini prizm) -- narrows a `scope` sweep to one product family for a pilot; empty = no filter."
         required: false
         default: ""
         type: string
@@ -3383,6 +3417,44 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (restored=${R:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=revert-set-sport-repair -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f mode="${{ inputs.mode }}"
+
+      # R80's own audit trail -- every parked sale this run resolved,
+      # collapsed, left (named, why) or refused (named, why), never a
+      # truncated sample. Same reason the revert-set-sport-repair log and the
+      # checklist-numbered fold log are both kept in full.
+      - name: Upload the resolve-split-identity-parks log
+        if: ${{ always() && inputs.script == 'resolve-split-identity-parks' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: resolve-split-identity-parks-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the split-identity resolver until the scope is clean
+        # Stops at its own 110-minute budget and PRINTS its summary; a run killed
+        # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
+        # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
+        # re-run after a budget stop is idempotent by construction: a row this
+        # run resolves clears its park fields and drops out of the next run's
+        # selection.
+        if: ${{ !cancelled() && inputs.script == 'resolve-split-identity-parks' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: resolve-split-identity-parks
+          preamble: |
+            H=$(grep -aoE "(RESOLVE-TO-H \(relocate\)|RESOLVE-TO-H \(patch\)) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            C=$(grep -aoE "(RESOLVE-TO-C \(patch\)) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "resolvedH=${H:-0} resolvedC=${C:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (resolvedH=${H:-0} resolvedC=${C:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (resolvedH=${H:-0} resolvedC=${C:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=resolve-split-identity-parks -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}" -f mode="${{ inputs.mode }}"
 
       - name: Self-relaunch the isAuto-from-card-number repair until the slot is clean
         # Stops at its own 140-minute budget and PRINTS its summary; a run killed
