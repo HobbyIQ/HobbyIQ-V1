@@ -1,0 +1,2261 @@
+{
+ "generatedAt": "2026-09-20",
+ "forLane": "relocate-pool-rows-by-list",
+ "finding": "Victor Wembanyama 2023 Topps Allen & Ginter baseball #271 base sales are addressed under two wrong-axis populations: (a) hobbyiqCardId reads the unregistered allen-and-ginter alias while cardId is already correct (72 REPOINT), and (b) both cardId and hobbyiqCardId read hiq:basketball:2023:topps:271:base:no-auto, a basketball placeholder that is itself an ingest-auto-seed catalog row naming the same wrong card (96 RELOCATE).",
+ "rulings": [
+  "R-WEMBY-271 (2026-09-20, Drew/Claude census, ruled axis = product/sport only): a sale is moved when its title plainly states Allen & Ginter + Victor Wembanyama + #271 and names no parallel, mini, X, silver portrait, hot box, World's Champions, foil, chrome-stock, numbered print run, autograph or relic. The destination is hiq:baseball:2023:topps-allen-ginter:271:base:no-auto, the checklist-backed row (source checklistcenter-2026-08-29, card_catalog). cardNumber (271), parallel (base) and isAuto (no-auto) are carried through unchanged for every entry -- only the product/sport segment of the address moves.",
+  "TWO SHAPES. RELOCATE: cardId=hiq:basketball:2023:topps:271:base:no-auto (own partition; card_catalog point read there is source=ingest-auto-seed, not a real 2023-24 Topps Basketball product row -- both cardId and hobbyiqCardId already agreed on this wrong address, so these rows were invisible to any split-identity or repoint sweep). REPOINT: cardId=hiq:baseball:2023:topps-allen-ginter:271:base:no-auto (already correct) but hobbyiqCardId=hiq:baseball:2023:topps-allen-and-ginter:271:base:no-auto, an UNREGISTERED alias (topps-allen-ginter is the sole entry in productSetKeys.ts's P()-list; topps-allen-and-ginter is folded only at ingest time in hobbyIqCardId.service.ts's /allen-(and-)?ginter/ regex, so these 80 rows bypassed that normalizer at write time).",
+  "DELIBERATELY LEFT (not in this list, verified individually): 57 rows already carry identityUnverified=true (park) -- confirmed to include all 41 basketball-hobbyiqCardId rows and all 5 unknown-hobbyiqCardId rows inside the main A&G partition, plus 3 parked rows inside the basketball:topps:271 partition, plus 2 parked topps-now-hobbyiqCardId rows inside that same partition, plus 4 parked rows inside the basketball:unknown:271 own-partition, plus 2 parked rows inside the topps-series-1-hobbyiqCardId bucket. 2 rows already carry flaggedWrong=true. 368 rows in the main partition already read hobbyiqCardId=cardId=the canonical A&G id and are TRUE NO-OPS -- excluded entirely so a re-upsert never touches a row that needs no write. 41 rows name an A&G parallel (Mini/X/Silver Portrait/Hot Box/World's Champions/an SP-labelled ambiguous row) and are listed in needsAnAGParallelRow for a future catalog-backed parallel row, not moved. 12 rows are a different card and are listed in excludedDifferentCard (5 are the real 2023 Topps Series 1 #271 Cleveland Guardians team card by generic title, 1 is a 2023 Topps Now Draft rookie card under the allen-and-ginter alias bucket, 6 are 2023 Topps Now Draft #D-1 cards under the basketball:topps:271 bucket).",
+  "PRODUCT-WIDE FINDING, NOT ADDRESSED HERE: card_catalog carries the full 2023 Allen & Ginter checklist under BOTH hiq:baseball:2023:topps-allen-ginter: (9,577 rows, registered setKey) and hiq:baseball:2023:topps-allen-and-ginter: (9,808 rows, unregistered alias) for the 2023 product year -- a whole-checklist twin, not a single-card collision. Left as a follow-up; this list changes only the #271 Wembanyama sales axis."
+ ],
+ "census": {
+  "container": "sold_comps",
+  "readOnly": true,
+  "rowsRead": 648,
+  "relocate": 96,
+  "repoint": 72,
+  "alreadyCorrectExcluded": 368,
+  "parkedExcluded": 57,
+  "flaggedWrongExcluded": 2,
+  "needsAnAGParallelRowExcluded": 41,
+  "excludedDifferentCard": 12,
+  "reconcile": "648 = 96 relocate + 72 repoint + 368 already-correct + 57 parked + 2 flagged + 41 needs-parallel-row + 12 different-card"
+ },
+ "entries": [
+  {
+   "id": "tca-ebay::198334419099",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 PSA 9",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 30
+  },
+  {
+   "id": "tca-ebay::377208317927",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC) PSA 9",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 35
+  },
+  {
+   "id": "tca-ebay::318364784695",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023-24 Topps Allen & Ginter  #271  Victor Wembanyama  Spurs Rookie Card (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 27
+  },
+  {
+   "id": "tca-ebay::318365109230",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023-24 Topps Allen & Ginter  #271  Victor Wembanyama  Spurs Rookie Card (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 29
+  },
+  {
+   "id": "tca-ebay::198391550071",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter VICTOR WEMBANYAMA Base Rookie #271 Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 16.99
+  },
+  {
+   "id": "tca-ebay::389812273229",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps Allen & Ginter 2023 Victor Wembanyama #271 NBA Basketball Card",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 15
+  },
+  {
+   "id": "tca-ebay::116367655373",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter #271 Victor Wembanyama RC - San Antonio Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 9.95
+  },
+  {
+   "id": "tca-ebay::256678566024",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - #271 Victor Wembanyama (RC) Near Mint Condition",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 9.99
+  },
+  {
+   "id": "tca-ebay::358094508758",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama RC Basketball Card #271 Base",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 10
+  },
+  {
+   "id": "tca-ebay::156510581088",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - #271 Victor Wembanyama (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 7.95
+  },
+  {
+   "id": "tca-ebay::168416778942",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 Rookie RC San Antonio Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 8.99
+  },
+  {
+   "id": "tca-ebay::287352846862",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023-24 Topps Allen & Ginter  #271  Victor Wembanyama  Spurs Rookie Card (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 10.29
+  },
+  {
+   "id": "tca-ebay::127846439428",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 6
+  },
+  {
+   "id": "tca-ebay::316157138839",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - #271 Victor Wembanyama (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 7.25
+  },
+  {
+   "id": "tca-ebay::389687743574",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 5
+  },
+  {
+   "id": "tca-ebay::366451341773",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 9
+  },
+  {
+   "id": "tca-ebay::377224258382",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 129.99
+  },
+  {
+   "id": "tca-ebay::377210549693",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 TOPPS ALLEN & GINTER VICTOR WEMBANYAMA #271 ROOKIE CARD SAN ANTONIO SPURS",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 34
+  },
+  {
+   "id": "tca-ebay::318318323184",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - #271 Victor Wembanyama (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 11.24
+  },
+  {
+   "id": "tca-ebay::226732578767",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - #271 Victor Wembanyama (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 7
+  },
+  {
+   "id": "tca-ebay::204948278336",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - #271 Victor Wembanyama (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 9.99
+  },
+  {
+   "id": "tca-ebay::305764190866",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama RC 2023 Topps Allen & Ginter ROOKIE Card #271 Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 9.95
+  },
+  {
+   "id": "tca-ebay::298298906493",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 RC Spurs PSA DPOY Rookie",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 34.5
+  },
+  {
+   "id": "tca-ebay::134954786201",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - #271 Victor Wembanyama (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 65
+  },
+  {
+   "id": "tca-ebay::166458789569",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 TOPPS ALLEN & GINTER VICTOR WEMBANYAMA ROOKIE CARD RC SAN ANTONIO SPURS",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 10
+  },
+  {
+   "id": "tca-ebay::178348268977",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama rookie card 2023 Topps A/G",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 10.5
+  },
+  {
+   "id": "tca-ebay::128001678905",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 White Sox",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 12.5
+  },
+  {
+   "id": "tca-ebay::398225109407",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter #271 Victor Wembanyama *Bent Corner*",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 5.59
+  },
+  {
+   "id": "tca-ebay::366601767997",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama Rookie Card #271 RC Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 6
+  },
+  {
+   "id": "tca-ebay::128021699555",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter VICTOR WEMBANYAMA #271 Rookie Card RC",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 9.99
+  },
+  {
+   "id": "tca-ebay::358890178970",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 5.5
+  },
+  {
+   "id": "tca-ebay::147453906883",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen &amp; Ginter Rookie Victor Wembanyama #271 Basketball Card",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 7.99
+  },
+  {
+   "id": "tca-ebay::157957155648",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 TOPPS ALLEN & GINTER VICTOR WEMBANYAMA PSA 10 GEM MINT #271 INVESTMENT RC",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 104.95
+  },
+  {
+   "id": "tca-ebay::298585482233",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Rookie Victor Wembanyama #271 Basketball Card",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 9.99
+  },
+  {
+   "id": "tca-ebay::188778878905",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC) PSA 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 89
+  },
+  {
+   "id": "tca-ebay::298586172641",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 TOPPS ALLEN & GINTER #271 VICTOR WEMBANYAMA PSA 10 ROOKIE RC SPURS",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 100
+  },
+  {
+   "id": "tca-ebay::178360374631",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 9.99
+  },
+  {
+   "id": "tca-ebay::168572939243",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 9.99
+  },
+  {
+   "id": "tca-ebay::298559787876",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama (RC) San Antonio Spurs #271",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 8
+  },
+  {
+   "id": "tca-ebay::298346339465",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 TOPPS ALLEN & GINTER #271 VICTOR WEMBANYAMA ROOKIE RC PSA 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 202
+  },
+  {
+   "id": "tca-ebay::326113668615",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter VICTOR WEMBANYAMA #271 Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 13.06
+  },
+  {
+   "id": "tca-ebay::398051205311",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC) ISA 9 Mint",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 25
+  },
+  {
+   "id": "tca-ebay::128018048802",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama RC #271 PSA 10 Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 101
+  },
+  {
+   "id": "tca-ebay::298573949312",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 PSA 10 RC Spurs NBA Wemby",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 100
+  },
+  {
+   "id": "tca-ebay::188774423377",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama RC #271 Rookie Spurs Wemby",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 12
+  },
+  {
+   "id": "tca-ebay::168615660319",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama RC #271 San Antonio Spurs Rookie",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 11.99
+  },
+  {
+   "id": "tca-ebay::298531587962",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama #271 PSA 10 Graded Card",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 90
+  },
+  {
+   "id": "tca-ebay::188763450895",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023-24 VICTOR WEMBANYAMA RC Topps Allen & Ginter - #271",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 3.2
+  },
+  {
+   "id": "tca-ebay::318720630826",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023-24 Topps Allen & Ginter  #271  Victor Wembanyama  Spurs Rookie Card (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 19.99
+  },
+  {
+   "id": "tca-ebay::168619409976",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 TOPPS ALLEN & GINTER VICTOR WEMBANYAMA #271",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 10
+  },
+  {
+   "id": "tca-ebay::336737687304",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter-Victor Wembanyama #271 RC",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 7
+  },
+  {
+   "id": "tca-ebay::236578436196",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter #271 Victor Wembanyama SGC 9.5",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 49
+  },
+  {
+   "id": "tca-ebay::307087887023",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 12
+  },
+  {
+   "id": "tca-ebay::327315461481",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama RC 2023 Topps Allen & Ginter Rookie #271 - San Antonio Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 8.27
+  },
+  {
+   "id": "tca-ebay::137530256797",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama Rookie #271 PSA 10 Graded",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 110
+  },
+  {
+   "id": "tca-ebay::800220785449",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 RC Base PSA 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 100
+  },
+  {
+   "id": "tca-ebay::278188176110",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 Chicago White Sox",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 10.67
+  },
+  {
+   "id": "tca-ebay::377259265950",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271  RC Psa 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 95
+  },
+  {
+   "id": "tca-ebay::318737368315",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023-24 Topps Allen & Ginter  #271  Victor Wembanyama  Spurs Rookie Card (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 19.99
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|377420054835|0",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 White Sox",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 17.54
+  },
+  {
+   "id": "tca-ebay::167143685846",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "#271 Victor Wembanyama 2023 Topps Allen & Ginter",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 4.49
+  },
+  {
+   "id": "tca-ebay::206490724548",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023-24 VICTOR WEMBANYAMA RC Topps Allen & Ginter - #271",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 4
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|198576331476|0",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 (RC) CGC MINT 10!! 🔥",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 62.75
+  },
+  {
+   "id": "tca-ebay::198576331476",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 (RC) CGC MINT 10!! 🔥",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 45
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|278274219639|0",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 13.08
+  },
+  {
+   "id": "tca-ebay::278274219639",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 9.38
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|407161060683|0",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 San Antonio Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 18.39
+  },
+  {
+   "id": "tca-ebay::407161060683",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 San Antonio Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 10
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|206504734499|0",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 TOPPS ALLEN & GINTER #271 VICTOR WEMBANYAMA ROOKIE RC",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 15.5
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|178445115053|0",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 7.99
+  },
+  {
+   "id": "tca-ebay::117225120584",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC) PSA GEM MT 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 80
+  },
+  {
+   "id": "tca-ebay::397994148014",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter  🔥Victor Wembanyama 🔥ROOKIE #271 RC BGS 10 PRISTINE",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 211.5
+  },
+  {
+   "id": "tca-ebay::126235290014",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter VICTOR WEMBANYAMA #271 Rookie Card PSA 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 100
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|237029396534|0",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 CGC 10 Gem Mint Rookie RC 02lw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 59.39
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|318782791115|0",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 RC Rookie Wemby",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 8.49
+  },
+  {
+   "id": "tca-ebay::297726595239",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama RC #271 PSA 10 Wemby Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 70
+  },
+  {
+   "id": "tca-ebay::267653699490",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama (RC) #271   PSA 9 \\",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 53.99
+  },
+  {
+   "id": "tca-ebay::287364429624",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter VICTOR WEMBANYAMA Rookie #271 PSA 10 SPURS",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 89.99
+  },
+  {
+   "id": "tca-ebay::198255330610",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama (RC) #271   PSA 9 \\",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 45
+  },
+  {
+   "id": "tca-ebay::287365857456",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter VICTOR WEMBANYAMA Rookie #271 PSA 10 SPURS",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 109.99
+  },
+  {
+   "id": "tca-ebay::377387843700",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama RC #271 IGS 10 Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 42
+  },
+  {
+   "id": "tca-ebay::198392568143",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 150
+  },
+  {
+   "id": "tca-ebay::287365911289",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter VICTOR WEMBANYAMA Rookie #271 PSA 10 SPURS",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 109.99
+  },
+  {
+   "id": "tca-ebay::287365781892",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter VICTOR WEMBANYAMA Rookie #271 PSA 10 SPURS",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 99.99
+  },
+  {
+   "id": "tca-ebay::147190403422",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama Basketball Card #271 rookie card",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 60
+  },
+  {
+   "id": "tca-ebay::236827492695",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter VICTOR WEMBANYAMA #271 PSA 10 Rookie Card GEM MINT",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 129.99
+  },
+  {
+   "id": "tca-ebay::117225161372",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC) PSA GEM MT 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 85
+  },
+  {
+   "id": "tca-ebay::198373412622",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama Rookie Card RC 271 PSA 10 Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 125
+  },
+  {
+   "id": "tca-ebay::287365486238",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter VICTOR WEMBANYAMA Rookie #271 PSA 10 SPURS",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 94.99
+  },
+  {
+   "id": "tca-ebay::318370702918",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter VICTOR WEMBANYAMA Rookie #271 PSA 10 SPURS",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 98.99
+  },
+  {
+   "id": "tca-ebay::178178994065",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter VICTOR WEMBANYAMA #271 RC PSA 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 100
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|287471967236|0",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps Allen & Ginter 2023 Victor Wembanyama #271 Spurs SGC 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 85
+  },
+  {
+   "id": "tca-ebay::315254934533",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - #271 Victor Wembanyama (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 7
+  },
+  {
+   "id": "tca-ebay::257717049117",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 CGC 10 Gem Mint Rookie RC",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 33
+  },
+  {
+   "id": "tca-ebay::278157255530",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC)",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 90
+  },
+  {
+   "id": "tca-ebay::237052185694",
+   "fromCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "toCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama RC Spurs #271 PSA 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; sale sits at cardId=hiq:basketball:2023:topps:271:base:no-auto where BOTH cardId and hobbyiqCardId agree on the wrong product (basketball topps placeholder, source=ingest-auto-seed, not a real 2023-24 Topps Basketball catalog row) -- invisible to the split-identity/repoint lanes since neither axis disagreed",
+   "price": 99
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-10T17:09:31.000Z::1999",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023-24 Topps Allen & Ginter #271 Victor Wembanyama Spurs Rookie Card (RC) - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 19.99
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-10T16:16:21.000Z::7500",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Topps Allen & Ginter #271 (RC) - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 75
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-10T16:06:01.000Z::1000",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - #271 Victor Wembanyama (RC) - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 10
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-10T14:55:31.000Z::600",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - #271 Victor Wembanyama RC - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 6
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-10T14:51:48.000Z::1000",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps Allen & Ginter 2023 Victor Wembanyama #271 Rookie Card - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 10
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-09T17:44:27.000Z::1500",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama Rookie Card #271, Wemby RC, Spurs - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 15
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-09T02:22:39.000Z::850",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama RC #271 Rookie - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 8.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-07T21:06:13.000Z::1100",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC) - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 11
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-07T17:29:31.000Z::1999",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023-24 Topps Allen & Ginter #271 Victor Wembanyama Spurs Rookie Card (RC) - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 19.99
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-07T11:21:51.000Z::800",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Topps Allen & Ginter - #271 (RC) - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 8
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-06T23:09:33.000Z::800",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC) - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 8
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-05T09:33:53.000Z::999",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC) - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 9.99
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-05T02:02:22.000Z::1050",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 10.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-05T01:58:48.000Z::1250",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 12.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-03T16:17:24.000Z::4200",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama RC #271 IGS 10 Spurs - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 42
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-02T20:50:39.000Z::750",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC) - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 7.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-01T05:22:24.000Z::999",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 (RC) - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 9.99
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-07-26T15:31:07.000Z::950",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama , 2023 Allen & Ginter #271 Rookie Card, San Antonio Spurs MINT - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 9.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-07-03T10:30:55.000Z::999",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen Ginter Victor Wembanyama RC #271 Wemby Rookie - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 9.99
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-07-01T18:14:36.000Z::2000",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen Ginter Victor Wembanyama RC #271 Wemby Rookie - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 20
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-07-01T00:38:41.000Z::899",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen Ginter #271 Victor Wembanyama NRMT + - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 8.99
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-07T02:06:19.000Z::5500",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 PSA 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 55
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-02T21:08:55.000Z::9200",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama RC Base #271 Spurs PSA 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 92
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-07-24T07:47:25.000Z::10000",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen And Ginter Victor Wembanyama #271 Rookie Card PSA 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 100
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-07-17T13:28:57.000Z::11280",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen and Ginter Victor Wembanyama #271 PSA 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 112.8
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-07-03T20:22:25.000Z::8500",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Allen & Ginter #271 Rookie PSA 10 GEM MINT Fresh grade",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 85
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-06-29T05:01:39.000Z::12000",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama Rookie Card 2023-24 Allen Ginter #271 PSA 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 120
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-06-22T20:40:21.000Z::8900",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Allen & Ginter Victor Wembanyama #271 PSA 10 GEM MINT RC ROOKIE",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 89
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-06-14T21:06:23.000Z::8100",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Allen & Ginter Rookie #271 PSA 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 81
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-06-11T20:34:54.000Z::11250",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 VICTOR WEMBANYAMA ROOKIE PSA 10 Allen & Ginter #271 RARE Rookie Card🔥",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 112.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-06-07T22:13:56.000Z::10250",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama RC 2023 Allen & Ginter #271 PSA 10 Rookie Card",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 102.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-06-02T23:09:54.000Z::11999",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 VICTOR WEMBANYAMA ROOKIE PSA 10 Allen & Ginter #271 Rookie Card",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 119.99
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-06-01T19:17:53.000Z::11499",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 VICTOR WEMBANYAMA ROOKIE PSA 10 Allen & Ginter #271 RARE Rookie Card🔥",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 114.99
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-06-01T16:33:28.000Z::10000",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 VICTOR WEMBANYAMA ROOKIE PSA 10 Allen & Ginter #271 RARE Rookie Card🔥",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 100
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-05-30T20:09:25.000Z::12050",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 VICTOR WEMBANYAMA ROOKIE PSA 10 Allen & Ginter #271 RARE Rookie Card🔥",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 120.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-07-14T00:48:10.000Z::3400",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "VICTOR WEMBANYAMA 2023-24 ALLEN & GINTER ROOKIE #271 SPURS PSA 9 Q7347",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 34
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-07-06T05:08:18.000Z::5000",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama Rookie Card 2023-24 Allen Ginter #271 PSA 9",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 50
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-07-01T01:13:45.000Z::6400",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "VICTOR WEMBANYAMA 2023-24 ALLEN & GINTER ROOKIE #271 SPURS PSA 9 Q7347",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 64
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-01-13T19:53:04.000Z::5500",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023-24 Panini NBA Hoops Victor Wembanyama Purple #298 PSA 9 Allen & Ginter #271",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 55
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-10-13T20:52:53.000Z::1550",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 ALLEN & GINTER #271 VICTOR WEMBANYAMA ROOKIE RC PSA 9",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 15.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-10-10T20:00:00.000Z::2088",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Topps Allen and Ginter #271 RC PSA 9 ",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 20.880000000000003
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-08-23T11:08:27.000Z::1900",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "VICTOR WEMBANYAMA 2023 Allen & Ginter PSA 9 #271 Rookie Card 🔥📈🐐🥈",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 19
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-06-02T20:00:00.000Z::3744",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Topps Allen and Ginter #271 RC PSA 9 ",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 37.44
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-04-26T20:24:44.000Z::1750",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Allen & Ginter Victor Wembanyama Rookie #271 PSA 9 Mint",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 17.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-04-07T18:12:41.000Z::1250",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama PSA 9 2023 Allen & Ginter #271 Rookie Card RC",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 12.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-04-01T19:40:41.000Z::1800",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen and Ginter #271 Victor Wembanyama ROOKIE Spurs PSA 9 MINT",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 18
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-03-20T20:40:40.000Z::2176",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Allen & Ginter VICTOR WEMBANYAMA #271 Rookie Card PSA 9",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 21.76
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-03-18T20:53:07.000Z::1938",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Allen & Ginter Victor Wembanyama PSA 9 Mint #271 RC Rookie",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 19.38
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-01-14T20:21:59.000Z::1464",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 ALLEN & GINTER VICTOR WEMBANYAMA Rookie Card RC #271 PSA 8 NM-MT Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 14.64
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2025-04-09T22:18:39.000Z::4300",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen and Ginter #271 Victor Wembanyama RC BGS 10 Pristine POP 39",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 43
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-09-29T20:00:00.000Z::3931",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "VICTOR WEMBANYAMA 2023 TOPPS ALLEN AND GINTER #271 RC BGS 9.5 ",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 39.31
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-08-04T20:53:48.000Z::4000",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "VICTOR WEMBANYAMA 2023 TOPPS ALLEN GINTER ROOKIE BGS 9.5 GEM MINT #271 SUBS 95+",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 40
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-06-12T17:30:00.000Z::13268",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "VICTOR WEMBANYAMA 2023 TOPPS ALLEN AND GINTER #271 RC BGS 9.5 ",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 132.68
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-04-26T20:48:32.000Z::3100",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 TOPPS ALLEN GINTER VICTOR WEMBANYAMA #271 RC ROOKIE BGS 9.5",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 31
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2025-10-26T19:24:45.000Z::3499",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Victor Wembanyama SGC 10 Allen And Ginter #271 Rookie RC Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 34.99
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2025-04-17T17:41:39.000Z::2679",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Topps Allen and Ginter #271 RC SGC 10 ",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 26.79
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-08-20T20:30:00.000Z::4914",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Topps Allen and Ginter #271 RC SGC 10 ",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 49.14
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-08-01T06:44:39.000Z::1500",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen Ginter #271 Victor Wembanyama SGC Gem Mint 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 15
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-07-31T08:32:39.000Z::1500",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen Ginter #271 Victor Wembanyama SGC Gem Mint 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 15
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-07-21T18:52:38.000Z::2450",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen Ginter #271 Victor Wembanyama SGC Gem Mint 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 24.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-06-22T17:40:00.000Z::5222",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Topps Allen and Ginter #271 RC SGC 10 ",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 52.22
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-06-15T17:30:00.000Z::3735",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Topps Allen and Ginter #271 RC SGC 10 ",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 37.35
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-05-11T16:20:00.000Z::7373",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Topps Allen and Ginter #271 RC SGC 10 ",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 73.73
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-05-09T17:04:27.000Z::2250",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen Ginter VICTOR WEMBANYAMA 271 SGC 10 Rookie RC San Antonio Spurs",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 22.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-05-03T19:28:58.000Z::3000",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Allen and Ginter Victor Wembanyama #271 SGC 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 30
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-05-03T08:52:51.000Z::2600",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen Ginter #271 Victor Wembanyama SGC Gem Mint 10",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 26
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-03-28T20:04:34.000Z::3112",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Allen Ginter Victor Wembanyama Rookie Rookie Card #271 SGC 10 GEM MINT",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 31.12
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-03-13T20:00:00.000Z::7834",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Topps Allen and Ginter #271 RC SGC 10 ",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 78.33999999999999
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-03-10T20:00:00.000Z::6774",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Topps Allen and Ginter #271 RC SGC 10 ",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 67.74
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-03-08T20:00:00.000Z::3627",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "Victor Wembanyama 2023 Topps Allen and Ginter #271 RC SGC 10 ",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 36.269999999999996
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-05-31T07:10:21.000Z::4499",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "🔥2023 Victor Wembanyama Allen & Ginter #271 RC Rookie SGC 9.5 Mint Plus",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 44.99
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-12T01:44:28.000Z::650",
+   "fromCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "repointHobbyiqCardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "cardNumberRaw": "271",
+   "playerName": "Victor Wembanyama",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 - Raw",
+   "verdict": "topps-allen-ginter",
+   "evidence": "title names Allen & Ginter + Wembanyama #271, no parallel/mini/X/silver-portrait/hot-box/champions/auto/relic named; cardId already sits at the canonical A&G partition but hobbyiqCardId reads the unregistered allen-and-ginter alias (topps-allen-ginter is the registered setKey, productSetKeys.ts) -- pricing engine reads hobbyiqCardId, so this row is invisible under its own product until repointed",
+   "price": 6.5
+  }
+ ],
+ "needsAnAGParallelRow": [
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-04T01:04:17.000Z::1240",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-allen-and-ginter:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 The World's Champions - Raw",
+   "price": 12.4
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2026-08-02T03:02:02.000Z::805",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-allen-and-ginter:271:base:no-auto",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama The World's Champions RC #271 - Raw",
+   "price": 8.05
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2025-07-24T19:46:27.000Z::1539",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-allen-and-ginter:271:base:no-auto",
+   "title": "2023 Allen & Ginter X Victor Wembanyama #271 San Antonio Spurs PSA 8 Rookie Card",
+   "price": 15.39
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-06-25T17:52:27.000Z::2999",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-allen-and-ginter:271:base:no-auto",
+   "title": "Victor Wembanyama 2023 Allen & Ginter X Spurs RC Rookie #271 PSA 8 (CB)",
+   "price": 29.99
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2024-04-20T14:28:43.000Z::3000",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-allen-and-ginter:271:base:no-auto",
+   "title": "2023 Allen & Ginter X Victor Wembanyama Spurs RC Rookie #271 PSA 8",
+   "price": 30
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2025-05-01T21:10:30.000Z::1950",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-allen-and-ginter:271:base:no-auto",
+   "title": "2023 Topps Allen And Ginter X # 271 Victor Wembanyama Rookie RC SGC 10 GEM MINT",
+   "price": 19.5
+  },
+  {
+   "id": "cardhedge::ch-fill::1696404425047x713141937632706600::2025-03-01T21:52:48.000Z::3729",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-allen-and-ginter:271:base:no-auto",
+   "title": "DA91013 2023 Topps Allen and Ginter X #271 Victor Wembanyama  SGC 10",
+   "price": 37.29
+  },
+  {
+   "id": "tca-ebay::236840589862",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter Hot Box Silver Portrait Victor Wembanyama #271 n1u",
+   "price": 29.57
+  },
+  {
+   "id": "tca-ebay::168397649778",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 Mini (RC)",
+   "price": 22.99
+  },
+  {
+   "id": "tca-ebay::287364332146",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "🔥Victor Wembanyama 2023 Topps Allen & Ginter Rare RC and SP #271 🔥",
+   "price": 13.49
+  },
+  {
+   "id": "tca-ebay::146268569617",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter -  Silver Portrait #271 Victor Wembanyama (RC)",
+   "price": 225
+  },
+  {
+   "id": "tca-ebay::298349411499",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter X Victor Wembanyama 271  PSA GEM MT 10",
+   "price": 325
+  },
+  {
+   "id": "tca-ebay::336609953902",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter X - Victor Wembanyama #271 (RC)",
+   "price": 120
+  },
+  {
+   "id": "tca-ebay::336688809140",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen &amp; Ginter Silver Portrait Hot Box  #271 Victor Wembanyama",
+   "price": 12.5
+  },
+  {
+   "id": "tca-ebay::188778890731",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 Mini (RC) PSA 10",
+   "price": 135
+  },
+  {
+   "id": "tca-ebay::257652272344",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama The World\\'s Champions RC #271",
+   "price": 8.05
+  },
+  {
+   "id": "tca-ebay::318646853936",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 Mini (RC)",
+   "price": 8.65
+  },
+  {
+   "id": "tca-ebay::236944287117",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "Topps 2023 Allen &amp; Ginter Victor Wembanyama RC The World's Champions #271",
+   "price": 3.19
+  },
+  {
+   "id": "tca-ebay::298552025975",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "Topps 2023 Allen & Ginter World’s Champions Victor Wembanyama RC #271 Spurs",
+   "price": 8
+  },
+  {
+   "id": "tca-ebay::377385029286",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "Victor Wembanyama 2023 Topps Allen & Ginter Foil Filigree PSA 10 #271",
+   "price": 275
+  },
+  {
+   "id": "tca-ebay::178410209551",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama Mini Rookie #271 Spurs",
+   "price": 13
+  },
+  {
+   "id": "tca-ebay::168618540444",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama #271 RC World\\'s Champions SGC 10",
+   "price": 56
+  },
+  {
+   "id": "tca-ebay::336744591164",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama #271 Mini RC PSA 10",
+   "price": 115
+  },
+  {
+   "id": "tca-ebay::398271002635",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "Topps 2023 Allen & Ginter X Victor Wembanyama RC #271 Base PSA 9",
+   "price": 50
+  },
+  {
+   "id": "tca-ebay::358914872525",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama Spurs #271 Mini Rookie (RC)",
+   "price": 16
+  },
+  {
+   "id": "tca-ebay::128025491971",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 Silver Portrait Hot Box (RC)",
+   "price": 17
+  },
+  {
+   "id": "tca-ebay::188784093081",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginterc Silver Victor Wembanyama Portrait Hot Box #271 PSA 9",
+   "price": 53.15
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|318756296995|0",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 Mini Rookie Card",
+   "price": 23.19
+  },
+  {
+   "id": "tca-ebay::318756296995",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter - Victor Wembanyama #271 Mini Rookie Card",
+   "price": 12.5
+  },
+  {
+   "id": "tca-ebay::128027648376",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter X Victor Wembanyama #271 White Sox SGC 10",
+   "price": 52.05
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|407164832982|0",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps A&G - Victor Wembanyama #271 (RC) Free Shipping/Magnetic Holder",
+   "price": 8
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|206518201226|0",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "Topps Allen & Ginter 2023 Victor Wembanyama The World's Champions #271",
+   "price": 9
+  },
+  {
+   "id": "tca-ebay::287355637610",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter X - Victor Wembanyama #271 Rookie (RC) Black",
+   "price": 100
+  },
+  {
+   "id": "tca-ebay::358294633267",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter Victor Wembanyama #271 Silver Portrait Hot Box PSA 10",
+   "price": 149.99
+  },
+  {
+   "id": "tca-ebay::305526883281",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Allen & Ginter X Victor Wembanyama #271 Grade 10 Spurs",
+   "price": 129.95
+  },
+  {
+   "id": "tca-ebay::157956319359",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama RC Silver Portrait #271 PSA 9 Spurs",
+   "price": 80
+  },
+  {
+   "id": "tca-ebay::307171338553",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "Topps 2023 Allen & Ginter Victor Wembanyama The World's Champions RC #271",
+   "price": 7
+  },
+  {
+   "id": "tca-ebay::386863832130",
+   "cardId": "hiq:basketball:2023:unknown:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:unknown:271:base:no-auto",
+   "title": "2023 Allen & Ginter VICTOR WEMBANYAMA World\\'s Champions #271 PSA 10 GM 🔥",
+   "price": 99.99
+  },
+  {
+   "id": "tca-ebay::358840082321",
+   "cardId": "hiq:basketball:2023:unknown:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:unknown:271:base:no-auto",
+   "title": "2023 Allen & Ginter #271 Victor Wembanyama Silver Portrait Hot Box PSA 10 GEM MT",
+   "price": 176.95
+  },
+  {
+   "id": "tca-ebay::178432289564",
+   "cardId": "hiq:basketball:2023:unknown:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:unknown:271:base:no-auto",
+   "title": "2023 Allen & Ginter Victor Wembanyama #271 Silver Portrait Hot Box Rookie PSA 10",
+   "price": 155
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|287538765181|0",
+   "cardId": "hiq:basketball:2023:unknown:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:unknown:271:base:no-auto",
+   "title": "2023 Allen & Ginter Victor Wembanyama Silver Portrait Hot Box Rookie PSA 10 #271",
+   "price": 171.5
+  }
+ ],
+ "excludedDifferentCard": [
+  {
+   "id": "cardhedge::ch-daily::1696404425047x713141937632706600::2026-07-17T01:03:00+00:00::8600",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-allen-and-ginter:271:base:no-auto",
+   "title": "2023 2023 Topps Allen & Ginter Baseball #271 Base",
+   "price": 86,
+   "reason": "different-card-no-wembanyama"
+  },
+  {
+   "id": "cardhedge::ch-daily::1696404425047x713141937632706600::2026-07-12T00:11:00+00:00::950",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-series-1:271:base:no-auto",
+   "title": "2023 2023 Topps Allen & Ginter Baseball #271 Base",
+   "price": 9.5,
+   "reason": "different-card-no-wembanyama"
+  },
+  {
+   "id": "cardhedge::ch-daily::1696404425047x713141937632706600::2026-07-12T04:33:00+00:00::934",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-series-1:271:base:no-auto",
+   "title": "2023 2023 Topps Allen & Ginter Baseball #271 Base",
+   "price": 9.34,
+   "reason": "different-card-no-wembanyama"
+  },
+  {
+   "id": "cardhedge::ch-daily::1696404425047x713141937632706600::2026-07-17T04:23:00+00:00::1099",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-series-1:271:base:no-auto",
+   "title": "2023 2023 Topps Allen & Ginter Baseball #271 Base",
+   "price": 10.99,
+   "reason": "different-card-no-wembanyama"
+  },
+  {
+   "id": "cardhedge::ch-daily::1696404425047x713141937632706600::2026-07-12T04:31:00+00:00::1099",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-series-1:271:base:no-auto",
+   "title": "2023 2023 Topps Allen & Ginter Baseball #271 Base",
+   "price": 10.99,
+   "reason": "different-card-no-wembanyama"
+  },
+  {
+   "id": "cardhedge::ch-daily::1696404425047x713141937632706600::2026-07-16T02:42:00+00:00::1000",
+   "cardId": "hiq:baseball:2023:topps-allen-ginter:271:base:no-auto",
+   "hobbyiqCardId": "hiq:baseball:2023:topps-series-1:271:base:no-auto",
+   "title": "2023 2023 Topps Allen & Ginter Baseball #271 Base",
+   "price": 10,
+   "reason": "different-card-no-wembanyama"
+  },
+  {
+   "id": "tca-ebay::366431781611",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Now Draft - Victor Wembanyama #D-1 /72171 (RC)",
+   "price": 14.99,
+   "reason": "different-card-no-ag"
+  },
+  {
+   "id": "tca-ebay::178187462875",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "Topps 2023 Topps Now Draft Victor Wembanyama #D-1 Basketball Card",
+   "price": 15,
+   "reason": "different-card-no-ag"
+  },
+  {
+   "id": "tca-ebay::197098208544",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Now Victor Wembanyama 1st Draft Pick Rookie RC (Gem Mint 10)",
+   "price": 19.99,
+   "reason": "different-card-no-ag"
+  },
+  {
+   "id": "tca-ebay::227366435459",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 TOPPS NOW DRAFT #D-1 VICTOR WEMBANYAMA RC 1st PICK SAN ANTONIO SPURS",
+   "price": 16,
+   "reason": "different-card-no-ag"
+  },
+  {
+   "id": "tca-ebay::198524019055",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Now Draft - Victor Wembanyama #D-1 /72171 (RC)",
+   "price": 16,
+   "reason": "different-card-no-ag"
+  },
+  {
+   "id": "tca-ebay::398200337194",
+   "cardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "hobbyiqCardId": "hiq:basketball:2023:topps:271:base:no-auto",
+   "title": "2023 Topps Now Draft - Victor Wembanyama #D-1 /72171 (RC)",
+   "price": 18,
+   "reason": "different-card-no-ag"
+  }
+ ]
+}
