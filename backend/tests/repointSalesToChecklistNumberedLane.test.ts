@@ -88,6 +88,16 @@ function shim(opts: {
    *  address -- simulating it having already been moved or removed by
    *  something else entirely before this lane's re-read-before-write. */
   deleteSaleAfterMutate?: boolean;
+  /** CONDITIONAL WRITES (review, 2026-09-19): a DETERMINISTIC alternative to
+   *  the wall-clock `mutateAfterMs` timer, for a race this lane's own
+   *  SECOND window (between the last-line re-read and the actual delete/
+   *  patch) needs to land in exactly -- node startup overhead makes a
+   *  fixed-ms timer's landing point too variable run to run to hit that
+   *  narrow a window reliably. Mutates `mutateSaleId`'s doc the instant the
+   *  Nth sold_comps container call (read, patch, delete OR upsert, counted
+   *  together in call order) RETURNS -- so "mutate after call 2" always
+   *  lands between call 2 and call 3, on every run, regardless of timing. */
+  mutateAfterNthSoldCompsCall?: number;
 } = {}): { requirePath: string; ledger: string } {
   const ledger = path.join(tmp, `ledger-${Math.random().toString(36).slice(2)}.json`);
   const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
@@ -100,6 +110,7 @@ function shim(opts: {
   const mutateSaleId = opts.mutateSaleId ?? null;
   const mutateAfterMs = opts.mutateAfterMs ?? 0;
   const deleteSaleAfterMutate = opts.deleteSaleAfterMutate ?? false;
+  const mutateAfterNthSoldCompsCall = opts.mutateAfterNthSoldCompsCall ?? 0;
 
   fs.writeFileSync(p, `
 const Module = require("node:module");
@@ -142,15 +153,31 @@ save();
 const MUTATE_SALE_ID = ${JSON.stringify(mutateSaleId)};
 const MUTATE_AFTER_MS = ${JSON.stringify(mutateAfterMs)};
 const DELETE_SALE_AFTER_MUTATE = ${JSON.stringify(deleteSaleAfterMutate)};
-if (MUTATE_SALE_ID) {
-  setTimeout(() => {
-    for (const [key, d] of [...state.sales.entries()]) {
-      if (d.id === MUTATE_SALE_ID) {
-        if (DELETE_SALE_AFTER_MUTATE) { state.sales.delete(key); }
-        else { stampEtag(d); d.title = "mutated by another writer"; }
-      }
+function applyMutation() {
+  for (const [key, d] of [...state.sales.entries()]) {
+    if (d.id === MUTATE_SALE_ID) {
+      if (DELETE_SALE_AFTER_MUTATE) { state.sales.delete(key); }
+      else { stampEtag(d); d.title = "mutated by another writer"; }
     }
-  }, MUTATE_AFTER_MS);
+  }
+}
+if (MUTATE_SALE_ID && MUTATE_AFTER_MS > 0) {
+  setTimeout(applyMutation, MUTATE_AFTER_MS);
+}
+
+// CONDITIONAL WRITES (review, 2026-09-19): a DETERMINISTIC alternative to the
+// wall-clock timer above -- mutates the instant the Nth sold_comps container
+// call (read, patch, delete, upsert, counted together in call order)
+// RETURNS, so the mutation always lands in the gap between call N and call
+// N+1 regardless of process startup timing. Counted here, once, and checked
+// at the end of EVERY sold_comps call below.
+const MUTATE_AFTER_NTH_SOLD_COMPS_CALL = ${JSON.stringify(mutateAfterNthSoldCompsCall)};
+let soldCompsCallCount = 0;
+function noteSoldCompsCallAndMaybeMutate() {
+  soldCompsCallCount++;
+  if (MUTATE_SALE_ID && MUTATE_AFTER_NTH_SOLD_COMPS_CALL > 0 && soldCompsCallCount === MUTATE_AFTER_NTH_SOLD_COMPS_CALL) {
+    applyMutation();
+  }
 }
 
 // CONCURRENCY (review, 2026-09-19): counts how many card_catalog point reads
@@ -182,23 +209,58 @@ function makeContainer(name, store, onUpsert, onDelete, onPatch, keyOf) {
         // this read runs.
         if (name === "sold_comps" && WRITE_LATENCY_MS > 0) await sleep(WRITE_LATENCY_MS);
         const d = store.get(key(id, pk));
-        if (!d) throw notFound();
-        return { resource: structuredClone(d) };
+        // The clone is taken BEFORE the mutation hook -- d is the LIVE
+        // stored object (never copied on the way in), so a mutation hook
+        // that ran before this clone would mutate d in place and this
+        // call would return the ALREADY-mutated snapshot to its caller,
+        // defeating the whole point of "mutate after THIS call returns".
+        const resultDoc = d ? structuredClone(d) : null;
+        // noteSoldCompsCallAndMaybeMutate() fires AFTER this call's own data
+        // access, right before it returns -- so THIS call sees the
+        // pre-mutation state, and only the NEXT sold_comps call (whichever
+        // one it is) can observe the mutation. That is what makes "mutate
+        // after call N" land deterministically in the gap between call N
+        // and call N+1, never inside call N itself.
+        if (name === "sold_comps") noteSoldCompsCallAndMaybeMutate();
+        if (!resultDoc) throw notFound();
+        return { resource: resultDoc };
       },
-      patch: async (ops) => {
+      patch: async (ops, options) => {
         if (name === "sold_comps" && WRITE_LATENCY_MS > 0) await sleep(WRITE_LATENCY_MS);
         const d = store.get(key(id, pk));
-        if (!d) throw notFound();
+        if (!d) { if (name === "sold_comps") noteSoldCompsCallAndMaybeMutate(); throw notFound(); }
+        // CONDITIONAL WRITES (review, 2026-09-19): IfMatch on the patch
+        // shape -- a 412-shaped error, same as real Cosmos, when the
+        // caller's etag no longer matches what is actually stored.
+        const cond = options?.accessCondition;
+        if (cond && cond.type === "IfMatch" && String(d._etag ?? "") !== String(cond.condition ?? "")) {
+          if (name === "sold_comps") noteSoldCompsCallAndMaybeMutate();
+          throw Object.assign(new Error("etag mismatch"), { code: 412 });
+        }
         for (const o of ops) { if (o.op === "set" || o.op === "add") d[o.path.slice(1)] = o.value; }
         if (name === "sold_comps") stampEtag(d);
         if (onPatch) onPatch(id, ops);
-        return { resource: structuredClone(d) };
+        const resultDoc = structuredClone(d);
+        if (name === "sold_comps") noteSoldCompsCallAndMaybeMutate();
+        return { resource: resultDoc };
       },
-      delete: async () => {
+      delete: async (options) => {
         if (name === "sold_comps" && WRITE_LATENCY_MS > 0) await sleep(WRITE_LATENCY_MS);
-        if (!store.has(key(id, pk))) throw notFound();
+        if (!store.has(key(id, pk))) { if (name === "sold_comps") noteSoldCompsCallAndMaybeMutate(); throw notFound(); }
+        // CONDITIONAL WRITES (review, 2026-09-19): IfMatch on the delete --
+        // relocateSoldComp's own conditional-delete path (an OPTIONAL
+        // ifMatchEtag per drop item).
+        const cond = options?.accessCondition;
+        if (cond && cond.type === "IfMatch") {
+          const d = store.get(key(id, pk));
+          if (String(d._etag ?? "") !== String(cond.condition ?? "")) {
+            if (name === "sold_comps") noteSoldCompsCallAndMaybeMutate();
+            throw Object.assign(new Error("etag mismatch"), { code: 412 });
+          }
+        }
         store.delete(key(id, pk));
         if (onDelete) onDelete(id);
+        if (name === "sold_comps") noteSoldCompsCallAndMaybeMutate();
         return {};
       },
     }),
@@ -206,13 +268,16 @@ function makeContainer(name, store, onUpsert, onDelete, onPatch, keyOf) {
       upsert: async (doc) => {
         if (name === "sold_comps" && WRITE_LATENCY_MS > 0) await sleep(WRITE_LATENCY_MS);
         if (name === "sold_comps" && FAIL_SALES_UPSERT_FOR_IDS.has(doc.id)) {
+          if (name === "sold_comps") noteSoldCompsCallAndMaybeMutate();
           throw new Error("simulated upsert failure for " + doc.id);
         }
         const stored = structuredClone(doc);
         if (name === "sold_comps") stampEtag(stored);
         store.set(key(doc.id, doc.cardId), stored);
         if (onUpsert) onUpsert(doc);
-        return { resource: structuredClone(stored) };
+        const resultDoc = structuredClone(stored);
+        if (name === "sold_comps") noteSoldCompsCallAndMaybeMutate();
+        return { resource: resultDoc };
       },
       query: (spec) => {
         const q = typeof spec === "string" ? spec : spec.query;
@@ -937,6 +1002,323 @@ describe("LAST-LINE DEFENCE -- a source doc that changed since the planning read
     expect(r.led.salesUpserts.length).toBe(0);
     expect(r.out).toMatch(/REFUSED: stale since the planning read\s+1/);
     expect(r.out).toMatch(/gone from .* since the planning read/);
+  });
+});
+
+// ── TITLE-CONTRADICTION VETO (review, 2026-09-19) ───────────────────────────
+// An audit of tonight's 107 serial relocations found 4 sales whose TITLE
+// names a different card than the checklist address they were carried onto.
+// This lane must not launder a mis-identified sale onto a checklist-backed
+// address. These are the four REAL titles from that audit, pinned as
+// refusals, plus 6 normal titles that must still move (no false positives).
+describe("TITLE-CONTRADICTION VETO -- refuses a sale whose own title contradicts the checklist target", () => {
+  const REAL_AUDIT_CASES: Array<{ title: string; target: Record<string, unknown>; rule: string }> = [
+    {
+      title: "Aaron Judge 2026 Donruss Elite Orange Foil #61",
+      target: { setKey: "topps", cardNumber: "61", parallelSlug: "Purple Holo Foil", playerName: "Aaron Judge" },
+      rule: "product", // Donruss Elite is unrelated to Topps -- caught by product, ahead of parallel
+    },
+    {
+      title: "2025-26 Topps Match Attax Ace Bailey #125 Rare Purple SP",
+      target: { setKey: "topps", cardNumber: "125", parallelSlug: "Image Variation", playerName: "Ace Bailey" },
+      // "topps-match-attax-uefa" (inferSetKeyFromTitle's own reading)
+      // registers as a CHILD of "topps" -- measured: productAncestry("topps-
+      // match-attax-uefa") includes "topps", so the DIRECTIONAL product rule
+      // (title-is-descendant-of-target) refuses it BEFORE the parallel check
+      // even runs (rules run in order: card-number, product, parallel,
+      // player -- the first that fires wins). "Purple" vs "Image Variation"
+      // is a SECOND, independent signal that would also catch this title,
+      // but the product rule fires first, so this is caught with rule:
+      // "product", not "parallel" -- both signals agree, only one gets named.
+      rule: "product",
+    },
+    {
+      title: "Livvy Dunne 2025 Topps Allen & Ginter X #225",
+      target: { setKey: "topps", cardNumber: "225", parallelSlug: "Image Variation", playerName: "Livvy Dunne" },
+      rule: "product", // "Topps Allen Ginter" is a registered CHILD of the target ("topps") --
+      // the DIRECTIONAL exemption (title-is-ancestor-of-target only) does not cover this
+      // shape, so it refuses -- see titleContradictsTarget's own header for why the
+      // symmetric reading in the review's prose cannot be right against this example.
+    },
+  ];
+
+  it.each(REAL_AUDIT_CASES)("REFUSES the real audit title: $title", ({ title, target, rule }) => {
+    const shortId = "hiq:baseball:2026:topps:99:gold:no-auto";
+    const numberedId = `${shortId}:num-2026`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      printRun: 2026, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+      cardNumber: target.cardNumber, setKey: target.setKey, parallelSlug: target.parallelSlug, playerName: target.playerName, isAuto: false,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title, sport: "baseball", price: 5, parallel: String(target.parallelSlug), isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+1/);
+    expect(r.out).toMatch(/title-contradicts-target/);
+    expect(r.out).toMatch(new RegExp(`rule: ${rule}`));
+  });
+
+  it("case 4 (SHORT PRINTS SERIES 2) is a KNOWN, ACCEPTED gap: number and product both agree, and the finish reader cannot distinguish a bare short-print marker from image-variation -- NOT refused, pinned as today's actual behaviour", () => {
+    // "2025 TOPPS #700 Kristian Campbell SHORT PRINTS SERIES 2" -- see
+    // titleContradictsTarget's own header for the full measured proof
+    // (statedFinishFromChecklist returns null in every phrasing tried, and
+    // readVariationFromTitle's own "short-print" marker CORROBORATES an
+    // image-variation tag per parallelTheTitleAllows's own D22 rule, it does
+    // not contradict it). This is the review's own caveat ("if it cannot
+    // [distinguish], leave (c) to number/product") landing exactly where it
+    // predicted -- documented here so the gap is pinned, not silently untested.
+    const shortId = "hiq:baseball:2025:topps:700:image-variation:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      cardNumber: "700", setKey: "topps", parallelSlug: "Image Variation", playerName: "Kristian Campbell", isAuto: false,
+      printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title: "2025 TOPPS #700 Kristian Campbell SHORT PRINTS SERIES 2", sport: "baseball", price: 5, parallel: "Image Variation", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+0/);
+    expect(r.out).toMatch(/RELOCATED 1/);
+  });
+
+  const NORMAL_TITLES_THAT_MUST_STILL_MOVE: Array<{ title: string; target: Record<string, unknown> }> = [
+    { title: "2026 Topps #20 Gold PSA 10", target: { setKey: "topps", cardNumber: "20", parallelSlug: "Gold", playerName: "Test Player" } },
+    { title: "2026 Topps Gold Refractor Aaron Judge #20", target: { setKey: "topps", cardNumber: "20", parallelSlug: "Gold", playerName: "Aaron Judge" } },
+    { title: "2026 Topps Chrome #20 Refractor", target: { setKey: "topps-chrome", cardNumber: "20", parallelSlug: "Refractor", playerName: "Test Player" } },
+    { title: "Aaron Judge 2026 Topps #20", target: { setKey: "topps", cardNumber: "20", parallelSlug: "Base", playerName: "Aaron Judge" } },
+    // "Topps Update" is an UNREGISTERED product spelling (measured:
+    // isRegisteredProduct("topps-update") === false), so the product check
+    // stays silent -- this title exercises THAT silence, not the player
+    // check, so the target's playerName is set to agree with what the title
+    // actually names ("Judge") rather than an unrelated placeholder, which
+    // would otherwise be a REAL player contradiction and refuse correctly.
+    { title: "2026 Topps Update #20 Judge", target: { setKey: "topps", cardNumber: "20", parallelSlug: "Base", playerName: "Aaron Judge" } },
+    { title: "2026 Bowman Chrome Prospect #20", target: { setKey: "bowman-chrome", cardNumber: "20", parallelSlug: "Base", playerName: "Test Player" } },
+  ];
+
+  it.each(NORMAL_TITLES_THAT_MUST_STILL_MOVE)("does NOT refuse an ordinary title: $title", ({ title, target }) => {
+    const shortId = `hiq:baseball:2026:${target.setKey}:88:gold:no-auto`;
+    const numberedId = `${shortId}:num-2026`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2026, cardYear: 2026,
+      printRun: 2026, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+      cardNumber: target.cardNumber, setKey: target.setKey, parallelSlug: target.parallelSlug, playerName: target.playerName, isAuto: false,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title, sport: "baseball", price: 5, parallel: String(target.parallelSlug), isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      // SET_KEYS matches the TARGET's own setKey (topps, topps-chrome, or
+      // bowman-chrome across this table's rows) -- candidateSpec's own query
+      // filters card_catalog by `c.setKey = @setKey`, so a target row whose
+      // setKey the dispatch does not name is never found at all.
+      { SCOPE: "baseball:2026", SET_KEYS: String(target.setKey), BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+0/);
+  });
+
+  it("REPORT and APPLY agree on the title-contradiction refusal (same fixture)", () => {
+    const { target, title } = REAL_AUDIT_CASES[0];
+    const shortId = "hiq:baseball:2026:topps:99:gold:no-auto";
+    const numberedId = `${shortId}:num-2026`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      printRun: 2026, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+      cardNumber: target.cardNumber, setKey: target.setKey, parallelSlug: target.parallelSlug, playerName: target.playerName, isAuto: false,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title, sport: "baseball", price: 5, parallel: String(target.parallelSlug), isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const fixture = { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY };
+    const report = drive({ SCOPE: "baseball:2025", SET_KEYS: "topps" }, fixture);
+    const apply = drive({ SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" }, fixture);
+    expect(report.out).toMatch(/REFUSED: title contradicts the target\s+1/);
+    expect(apply.out).toMatch(/REFUSED: title contradicts the target\s+1/);
+    expect(report.led.salesUpserts.length).toBe(0);
+    expect(apply.led.salesUpserts.length).toBe(0);
+  });
+
+  it("REFUSES on a genuinely contradicting player (irreconcilable, confident title parse)", () => {
+    const shortId = "hiq:baseball:2026:topps:20:gold:no-auto";
+    const numberedId = `${shortId}:num-2026`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2026, cardYear: 2026,
+      cardNumber: "20", setKey: "topps", parallelSlug: "Gold", playerName: "Aaron Judge", isAuto: false,
+      printRun: 2026, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title: "Mike Trout 2026 Topps #20 Gold", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+1/);
+    expect(r.out).toMatch(/rule: player/);
+  });
+
+  it("does NOT refuse on a garbage/unparseable title (confidence 0) even though parseCardQuery's own fallback would otherwise name a 'player'", () => {
+    // Regression pin for the confidence-floor fix found while writing this
+    // suite: parseCardQuery("plain") returns { playerName: "Plain",
+    // confidence: 0 } -- without the floor, EVERY fixture using a placeholder
+    // "plain" title anywhere in this file would false-positive as an
+    // irreconcilable player contradiction against any real playerName.
+    const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+0/);
+  });
+});
+
+// ── CONDITIONAL WRITES (review, 2026-09-19) ─────────────────────────────────
+// The reviewer's own follow-up: the _etag re-read still leaves a window,
+// because relocateSoldComp's upsert and delete were unconditional. The
+// planning-read etag is now passed as an IfMatch access condition on the
+// source DELETE (relocate shape) and on the PATCH (patch shape) -- a 412
+// refuses (stale-since-plan), no retry. These tests force a mutation to land
+// in the SECOND window specifically -- AFTER this lane's own last-line
+// re-read confirms a match, but BEFORE the conditional delete/patch actually
+// runs -- which the etag re-read alone cannot close (two round trips), and
+// which the IfMatch condition closes because Cosmos itself, not another
+// round trip on this lane's side, evaluates the match atomically with the
+// write.
+describe("CONDITIONAL WRITES -- IfMatch closes the window the etag re-read alone cannot", () => {
+  it("relocate: a mutation landing between the last-line re-read and the actual DELETE is caught by the IfMatch condition (412), not silently missed", () => {
+    const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true", CONCURRENCY: "1" },
+      // DETERMINISTIC race, not wall-clock: the relocate sequence issues
+      // sold_comps calls in a fixed order -- (1) destination-collision check
+      // read, (2) THIS lane's own last-line re-read, (3) relocateSoldComp's
+      // own existedBefore read, (4) upsert, (5) verify read-back, (6) the
+      // conditional delete. Mutating right after call 2 returns means call 2
+      // itself still sees the ORIGINAL etag (passes the first-window check),
+      // but call 6's IfMatch condition -- built from call 2's now-stale
+      // snapshot -- sees the container's post-mutation etag and is refused
+      // with a 412. Verified empirically against the real lane's own call
+      // sequence, not assumed.
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY, writeLatencyMs: 10, mutateSaleId: "s1", mutateAfterNthSoldCompsCall: 2 },
+    );
+    expect(r.code).toBe(0);
+    // The keeper WAS upserted (relocateSoldComp's own order: upsert, verify,
+    // THEN delete -- the mutation lands too late to stop the upsert, which
+    // already ran before the delete this test targets), but the OLD row's
+    // delete was refused -- so the short-id copy is NOT deleted.
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: stale since the planning read\s+1/);
+    expect(r.out).toMatch(/delete refused \(412\)/);
+  });
+
+  it("patch: a mutation landing between the last-line re-read and the actual PATCH is caught by the IfMatch condition (412), not silently missed", () => {
+    const sale = { id: "s2", cardId: "vendor-xyz", hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 6 };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true", CONCURRENCY: "1" },
+      // The patch shape issues exactly ONE sold_comps call before the patch
+      // itself -- the last-line re-read (call 1) -- so mutating right after
+      // call 1 returns lands the mutation between that re-read (which still
+      // sees the original etag) and the patch call (whose IfMatch condition
+      // then sees the container's post-mutation etag and is refused).
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY, writeLatencyMs: 10, mutateSaleId: "s2", mutateAfterNthSoldCompsCall: 1 },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesPatches.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: stale since the planning read\s+1/);
+    expect(r.out).toMatch(/patch refused \(412\)/);
+  });
+
+  it("relocate: no interference means no 412 -- the ordinary conditional delete still succeeds", () => {
+    const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.led.salesDeletes).toContain("s1");
+    expect(r.out).toMatch(/REFUSED: stale since the planning read\s+0/);
+  });
+
+  it("patch: no interference means no 412 -- the ordinary conditional patch still succeeds", () => {
+    const sale = { id: "s2", cardId: "vendor-xyz", hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 6 };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/PATCHED 1/);
+    expect(r.led.salesPatches.some((p: any) => p.id === "s2")).toBe(true);
+    expect(r.out).toMatch(/REFUSED: stale since the planning read\s+0/);
+  });
+});
+
+describe("relocateSoldComp (scripts/lib/relocate-sold-comp.cjs) -- conditional delete is OPTIONAL and additive", () => {
+  it("every existing caller (no ifMatchEtag on any drop) is unaffected: unconditional delete, no accessCondition built at all", async () => {
+    const relocateSoldCompModule = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+    const calls: Array<{ id: string; cardId: string; options: unknown }> = [];
+    const fakePool = {
+      item: (id: string, cardId: string) => ({
+        read: async () => ({ resource: { id, cardId, _etag: "e1" } }),
+        delete: async (options: unknown) => { calls.push({ id, cardId, options }); return {}; },
+      }),
+      items: { upsert: async (doc: any) => ({ resource: doc }) },
+    };
+    const keep = { id: "k1", cardId: "hiq:new", hobbyiqCardId: "hiq:new" };
+    const res = await relocateSoldCompModule.relocateSoldComp(fakePool, {
+      keep,
+      drop: [{ id: "k1", cardId: "hiq:old" }], // NO ifMatchEtag -- every existing caller's shape
+      guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(true);
+    expect(res.staleSincePlan).toEqual([]);
+    expect(calls.length).toBe(1);
+    // The delete was called with NO options at all (undefined) -- proving no
+    // accessCondition object is built when the caller supplies no etag.
+    expect(calls[0].options).toBeUndefined();
+  });
+
+  it("a drop WITH ifMatchEtag builds an IfMatch accessCondition, and a 412 lands in staleSincePlan, never duplicatesLeft", async () => {
+    const relocateSoldCompModule = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+    const fakePool = {
+      item: (id: string, cardId: string) => ({
+        read: async () => ({ resource: { id, cardId, _etag: "e1" } }),
+        delete: async (options: any) => {
+          if (options?.accessCondition?.type === "IfMatch") {
+            throw Object.assign(new Error("etag mismatch"), { code: 412 });
+          }
+          return {};
+        },
+      }),
+      items: { upsert: async (doc: any) => ({ resource: doc }) },
+    };
+    const keep = { id: "k1", cardId: "hiq:new", hobbyiqCardId: "hiq:new" };
+    const res = await relocateSoldCompModule.relocateSoldComp(fakePool, {
+      keep,
+      drop: [{ id: "k1", cardId: "hiq:old", ifMatchEtag: "e1" }],
+      guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(false);
+    expect(res.staleSincePlan.length).toBe(1);
+    expect(res.duplicatesLeft).toEqual([]);
+    expect(res.deleted).toEqual([]);
+  });
+
+  it("is412 is exported and recognises a Cosmos-shaped 412 by code or statusCode", () => {
+    const { is412 } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+    expect(is412({ code: 412 })).toBe(true);
+    expect(is412({ statusCode: 412 })).toBe(true);
+    expect(is412({ code: 404 })).toBe(false);
+    expect(is412(new Error("plain"))).toBe(false);
   });
 });
 

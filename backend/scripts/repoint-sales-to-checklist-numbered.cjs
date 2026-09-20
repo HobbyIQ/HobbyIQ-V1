@@ -483,6 +483,20 @@ function decideSaleAction(sale, shape, ctx) {
     };
   }
 
+  // TITLE-CONTRADICTION VETO (review, 2026-09-19): computed once per sale at
+  // the call site (titleContradictsTarget, in main()) and handed in the same
+  // way titlePrintRun already is, so this function stays pure and I/O-free
+  // and REPORT/APPLY still run the identical decision. Refuses in BOTH
+  // shapes -- a title that contradicts the checklist target is evidence this
+  // sale never belonged there, whether it was found by cardId or
+  // hobbyiqCardId.
+  if (ctx.titleContradiction && ctx.titleContradiction.contradicts) {
+    return {
+      action: "refuse", reason: "title-contradicts-target",
+      detail: `${ctx.titleContradiction.detail} -- refused, not laundered onto a checklist-backed address (rule: ${ctx.titleContradiction.rule})`,
+    };
+  }
+
   // `classified.action` and `shape` always agree (shape "cardId" only ever
   // classifies "relocate"; shape "hobbyiqCardId" only ever classifies
   // "patch") -- classifySaleForRelocation's own shape (1)/(3)/(4) require
@@ -536,9 +550,52 @@ async function main() {
   const {
     identityKeyOf, pickChecklistNumberedTarget, printRunOf, shortIdChecklistVeto, statesProsePrintRun, DEFAULT_FORCE_AUTO_PREFIXES,
   } = require(path.join(backend, "dist/services/catalog/foldTwinRuleChecklistNumbered.js"));
-  const { parseListingIdentity } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
+  const { parseListingIdentity, inferSetKeyFromTitle } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
-  const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+  const { relocateSoldComp, stripSystem, contentHashOf, is412 } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+
+  // TITLE-CONTRADICTION VETO (review, 2026-09-19): every helper reused
+  // read-only, EXISTING title machinery -- none of these five files is a
+  // declared derivation-stamp input (scripts/lib/derivation-version.cjs's
+  // DERIVATION_INPUTS names parseTitleIdentity.service.ts and
+  // hobbyIqCardId.service.ts among the six, but only their EXPORTED
+  // functions are called here, nothing in them is edited).
+  const { extractCardNumberFromTitle } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js"));
+  const { sameCardNumber, slugify } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+  const { isRegisteredProduct } = require(path.join(backend, "dist/services/catalog/resolveProductByChecklist.js"));
+  const { productAncestry } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
+  const { statedFinishFromChecklist } = require(path.join(backend, "dist/services/portfolioiq/statedFinishFromChecklist.js"));
+  const { parallelTheTitleAllows } = require(path.join(backend, "dist/services/portfolioiq/titleOutranksVendorTag.js"));
+  const { playerTheTitleAllows } = require(path.join(backend, "dist/services/portfolioiq/playerTheTitleAllows.js"));
+  // guessPlayerFromTitle (persistVendorSalesToPool.service.ts:2867) is not
+  // exported; this mirrors its EXACT pattern (lazy require of the same
+  // compiled parser, same .playerName?.trim() read, same fail-to-null),
+  // rather than reimplementing a title-to-player reader.
+  //
+  // LOCAL CONFIDENCE FLOOR (found while testing this veto, 2026-09-19):
+  // measured -- parseCardQuery("plain") returns { playerName: "Plain",
+  // confidence: 0 }, i.e. its OWN fallback treats an unparseable single word
+  // as if it named a player, with confidence 0 flagging exactly that it has
+  // no real evidence. `guessPlayerFromTitle`'s shipped pattern does not
+  // check `confidence` at all (grepped: no caller of parseCardQuery in this
+  // repo gates on it either), which is an accepted risk on a REAL eBay title
+  // that rarely reduces to one word -- but this veto's OWN refusal is
+  // exactly the shape that turns a garbage title into a false contradiction
+  // rather than "no evidence, don't refuse." So this LOCAL copy adds a
+  // `confidence > 0` floor on top of the shared reader's own output --
+  // reading a field parseCardQuery already returns, never editing
+  // cardQueryParser.js itself -- the same "local adjustment over a shared
+  // reader" precedent insertSetChecklistConfirm.ts already sets for
+  // cardNumberVariants's own leading-zero fold.
+  function guessPlayerFromTitleLocal(title) {
+    try {
+      const { parseCardQuery } = require(path.join(backend, "dist/services/compiq/cardQueryParser.js"));
+      const parsed = parseCardQuery(String(title || ""));
+      if (!parsed || !(Number(parsed.confidence) > 0)) return null;
+      const player = parsed.playerName;
+      return typeof player === "string" && player.trim().length > 0 ? player.trim() : null;
+    } catch { return null; }
+  }
 
   const isChecklist = (source) => catalogAuthorityOf(source) === "checklist";
 
@@ -583,6 +640,11 @@ async function main() {
     // read and the point it was about to write -- a re-read-before-write
     // refusal, never a decision made on stale data.
     refusedEtagChanged: 0,
+    // TITLE-CONTRADICTION VETO (review, 2026-09-19): a sale whose OWN title
+    // names a different card number, product, parallel, or player than the
+    // checklist target -- refused rather than laundered onto a
+    // checklist-backed address on the strength of the address alone.
+    refusedTitleContradiction: 0,
     salesFailed: 0, salesLeftAlone: 0,
     holdingsRepointed: 0, holdingsWalked: 0, holdingDocsWalked: 0,
     // RULING (review, 2026-09-19): a holding whose cardId/hobbyiqCardId
@@ -617,7 +679,7 @@ async function main() {
   const hobbyiqCardIdQueryMs = [];
   const bySetKey = new Map();
   const byYear = new Map();
-  const refusals = { "title-states-print-run": [], "split-identity": [], "guard-parked": [], "destination-collision": [], "stale-since-plan": [] };
+  const refusals = { "title-states-print-run": [], "split-identity": [], "guard-parked": [], "destination-collision": [], "stale-since-plan": [], "title-contradicts-target": [] };
   const vetoedTargets = [];
   const collapsedExamples = [];
   const failures = [];
@@ -796,6 +858,180 @@ async function main() {
       });
       return parsed?.printRun ?? null;
     } catch { return null; }
+  }
+
+  /**
+   * TITLE-CONTRADICTION VETO (review, 2026-09-19, audit of tonight's 107
+   * serial relocations: 4 of them carried a sale onto a checklist-backed
+   * address the sale's OWN title contradicts -- "Aaron Judge 2026 Donruss
+   * Elite Orange Foil #61" relocated onto a Topps purple-holo-foil row,
+   * "2025-26 Topps Match Attax Ace Bailey #125 Rare Purple SP" onto an
+   * image-variation row, etc. This lane must not launder a mis-identified
+   * sale onto a checklist-backed address just because it happened to sit at
+   * the short id first.
+   *
+   * NO NEW PARSER. Every check below reuses EXISTING, ALREADY-SHIPPED title
+   * machinery, read-only:
+   *   (a) card number   -- extractCardNumberFromTitle + sameCardNumber
+   *                         (soldCompsStore.service.ts / hobbyIqCardId.service.ts,
+   *                         the SAME case/hyphen-insensitive comparison the
+   *                         confirm module (insertSetChecklistConfirm.ts) uses)
+   *   (b) product/setKey -- inferSetKeyFromTitle (parseTitleIdentity.service.ts,
+   *                         the ~40-brand-regex reader every reslug/repair
+   *                         script already imports) + isRegisteredProduct /
+   *                         productAncestry (resolveProductByChecklist.ts /
+   *                         productSetKeys.ts, R29's own registry)
+   *   (c) parallel/finish -- statedFinishFromChecklist (statedFinishFromChecklist.ts),
+   *                         the checklist-corpus reader that reports ONLY a
+   *                         finish name actually witnessed in the title
+   *   (player) -- SKIPPED. "R69"/"clean-share judge" named in the review does
+   *                         not exist under that name anywhere in this repo
+   *                         (verified: no match for R69 or clean-share/cleanShare
+   *                         in backend/src or backend/scripts). The real
+   *                         shipped equivalent is playerTheTitleAllows
+   *                         (playerTheTitleAllows.ts), already the production
+   *                         ingest-time player-contradiction gate -- reused
+   *                         here the SAME way persistVendorSalesToPool.service.ts
+   *                         calls it, paired with a LOCAL mirror of that same
+   *                         file's un-exported guessPlayerFromTitle (lazy
+   *                         require of dist/services/compiq/cardQueryParser.js,
+   *                         identical read). This is reuse, not a new player
+   *                         reader -- the review's own "if it lives only in a
+   *                         scratchpad, skip player" caveat does not apply,
+   *                         since playerTheTitleAllows is compiled, exported,
+   *                         and already the production decision.
+   *
+   * NONE of the six derivation-stamp inputs (scripts/lib/derivation-version.cjs
+   * DERIVATION_INPUTS) are edited by this lane -- parseTitleIdentity.service.ts
+   * and hobbyIqCardId.service.ts are two of the six, and only their EXPORTED
+   * functions are CALLED here (inferSetKeyFromTitle, sameCardNumber, slugify),
+   * exactly the "read from it, never patch it" precedent
+   * insertSetChecklistConfirm.ts already sets for the same file.
+   *
+   * PRODUCT DIRECTION (a judgment call the review's own examples force,
+   * documented so it is not silently different from the review's prose).
+   * The review's literal text exempts "the target setKey or its registered
+   * parent/child" SYMMETRICALLY, but its own example 3 --
+   * "Topps Allen & Ginter X #225" relocated onto a plain `topps` row -- is a
+   * title-inferred key (topps-allen-ginter) that IS a registered CHILD of the
+   * target (topps) under a symmetric reading, and a symmetric exemption would
+   * therefore never refuse it, contradicting the example. Measured: every
+   * specialized product (topps-chrome, topps-heritage, topps-allen-ginter,
+   * bowman-chrome, ...) registers with `parent: <flagship>`, so a symmetric
+   * "target's parent or child" exemption would ALSO exempt a title that reads
+   * as a MORE SPECIFIC product than a flagship target -- exactly backwards
+   * from what a contradiction veto should catch. The examples, not the prose,
+   * are the ground truth here: the exemption is DIRECTIONAL --
+   *   - titleKey IS an ancestor of targetSetKey (title under-specifies a
+   *     more-specific address, e.g. a lazy "Topps" title on a topps-chrome
+   *     row) -- EXEMPT, the common and expected shape;
+   *   - titleKey IS a DESCENDANT of targetSetKey (title claims a MORE
+   *     specific product than the address, e.g. "Allen & Ginter" on a plain
+   *     topps row) -- REFUSE, this is example 3's own shape;
+   *   - unrelated entirely (Donruss Elite vs Topps, example 1) -- REFUSE.
+   * `productAncestry` (one exported function, called twice with the
+   * arguments swapped) is the whole primitive both directions need; nothing
+   * new is invented past it.
+   *
+   * WHY EXAMPLE 2 (Match Attax) IS CAUGHT BY (b), THE PRODUCT RULE -- AND
+   * WOULD ALSO BE CAUGHT BY (c) IF IT WERE NOT. Measured:
+   * inferSetKeyFromTitle("...Topps Match Attax Ace Bailey #125 Rare Purple
+   * SP") returns "topps-match-attax-uefa", whose registered parent IS
+   * "topps" -- i.e. it IS a registered child of the target, which is exactly
+   * the DESCENDANT-of-target shape the directional rule above refuses (a
+   * title claiming a more specific product than the address). Rules run in
+   * a fixed order (card-number, product, parallel, player) and the FIRST
+   * one that fires wins, so this refuses on `rule: "product"` before the
+   * parallel check ("Purple" != the target's Image Variation finish) ever
+   * runs. Both signals independently agree this title contradicts the
+   * target -- this is not a case where the rules disagree on the verdict,
+   * only on which one gets to name it.
+   *
+   * WHY EXAMPLE 4 IS NOT CAUGHT AT ALL, ON PURPOSE. "2025 TOPPS #700
+   * Kristian Campbell SHORT PRINTS SERIES 2" states card #700 (agrees),
+   * infers plain "Topps" (agrees, same key as target), and
+   * statedFinishFromChecklist returns null for "Short Print"/"Series 2"
+   * against an image-variation target -- measured, in every phrasing tried.
+   * readVariationFromTitle (variationVocabulary.ts) DOES read a "short-print"
+   * MARKER off this exact title, but parallelTheTitleAllows's own documented
+   * rule (D22, CF-A-VARIATION-IS-A-CARD) treats a bare SP/SSP marker as
+   * CORROBORATING an image-variation tag, never contradicting it -- measured:
+   * parallelTheTitleAllows(null, "Image Variation", { variationMarker:
+   * "short-print" }) returns { vendorTagOverruled: null }, i.e. agreement.
+   * So the existing, shipped machinery genuinely cannot distinguish this
+   * one from a normal image-variation short print, and the review's own
+   * caveat ("if it cannot, leave (c) to number/product") applies exactly:
+   * number and product both agree, so (c) is the only rule that COULD catch
+   * it, and it correctly does not. This is a known, accepted gap, pinned by
+   * its own test below (asserting today's behaviour: NOT refused) rather
+   * than silently left untested.
+   *
+   * Returns `{ contradicts: false }` or `{ contradicts: true, rule, detail }`
+   * -- `rule` is one of "card-number" | "product" | "parallel" | "player",
+   * for the refusal detail and the pinned tests. Never throws: every reader
+   * called here already fails open to null/false on its own, and this
+   * function adds no further parsing of its own past them.
+   */
+  function titleContradictsTarget(sale, target) {
+    const title = String(sale.title ?? "");
+    if (!title.trim()) return { contradicts: false };
+
+    // (a) CARD NUMBER -- extractCardNumberFromTitle + sameCardNumber, the
+    // SAME case/hyphen-insensitive comparison the confirm module uses.
+    const titleCardNumber = extractCardNumberFromTitle(title);
+    if (titleCardNumber && target.cardNumber && !sameCardNumber(titleCardNumber, target.cardNumber)) {
+      return { contradicts: true, rule: "card-number", detail: `title states #${titleCardNumber}, target is #${target.cardNumber}` };
+    }
+
+    // (b) PRODUCT/SETKEY -- inferSetKeyFromTitle + the R29 registry's own
+    // ancestry primitive, directional (see this function's own header for
+    // why: an ancestor-of-target title is a common under-specified silence,
+    // never a contradiction; a descendant-of-target title claims a MORE
+    // specific product than the address and IS a contradiction).
+    const inferred = inferSetKeyFromTitle(title, target.cardNumber ?? undefined);
+    const titleSetKey = inferred && inferred !== "Unknown" ? slugify(inferred) : "";
+    const targetSetKey = slugify(String(target.setKey ?? ""));
+    if (titleSetKey && targetSetKey && isRegisteredProduct(titleSetKey) && titleSetKey !== targetSetKey) {
+      const titleIsAncestorOfTarget = productAncestry(targetSetKey).includes(titleSetKey);
+      if (!titleIsAncestorOfTarget) {
+        return { contradicts: true, rule: "product", detail: `title names product "${inferred}" (${titleSetKey}), target is "${target.setKey}" (${targetSetKey}) -- neither the same product nor an under-specified ancestor of it` };
+      }
+    }
+
+    // (c) PARALLEL/FINISH -- statedFinishFromChecklist, product-scoped by
+    // the target's own setKey/year so the checklist corpus consulted is the
+    // target's own, THEN parallelTheTitleAllows (titleOutranksVendorTag.ts)
+    // to judge agreement vs contradiction -- the SAME refinement logic
+    // repair-parallel-from-title.cjs already reuses, rather than a hand-
+    // rolled word-overlap check. `vendorTagOverruled` (non-null) is exactly
+    // "the title's finish contradicts the target's own tag" -- a refinement
+    // either way ("Gold Refractor" vs "Gold", "Purple" vs "Purple Holo Foil")
+    // returns null (agreement/respelling, never a contradiction). Silence
+    // (statedFinishFromChecklist returns null) never reaches this call at
+    // all -- the guard below skips it, matching the review's own caveat
+    // ("if it cannot [distinguish], leave (c) to number/product").
+    const titleFinish = statedFinishFromChecklist(title, { setKey: target.setKey ?? null, year: target.year ?? target.cardYear ?? null });
+    if (titleFinish) {
+      const finishDecision = parallelTheTitleAllows(titleFinish, String(target.parallelSlug ?? "Base"));
+      if (finishDecision.vendorTagOverruled) {
+        return { contradicts: true, rule: "parallel", detail: `title states finish "${titleFinish}", target is "${target.parallelSlug ?? "Base"}"` };
+      }
+    }
+
+    // (player) -- playerTheTitleAllows, the same production ingest-time
+    // gate, fed by the SAME title reader guessPlayerFromTitle uses.
+    // "irreconcilable" is the ONLY outcome that refuses here: every other
+    // outcome (agree, vendor-only, title-only, neither) is a normal case
+    // this lane's own move must not second-guess.
+    const titlePlayer = guessPlayerFromTitleLocal(title);
+    if (titlePlayer && target.playerName) {
+      const playerDecision = playerTheTitleAllows(target.playerName, titlePlayer);
+      if (playerDecision.outcome === "irreconcilable") {
+        return { contradicts: true, rule: "player", detail: `title names "${titlePlayer}", target is "${target.playerName}"` };
+      }
+    }
+
+    return { contradicts: false };
   }
 
   /**
@@ -1019,7 +1255,8 @@ async function main() {
       const { duplicate } = noteSaleFound(sale);
       const titlePrintRun = titlePrintRunOf(sale, shortId);
       const titleStatesProsePrintRun = statesProsePrintRun(sale.title);
-      const plan = decideSaleAction(sale, "cardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, targetPrintRun: printRunOf(target) });
+      const titleContradiction = titleContradictsTarget(sale, target);
+      const plan = decideSaleAction(sale, "cardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, titleContradiction, targetPrintRun: printRunOf(target) });
       if (plan.action === "refuse") {
         // RULING (review, 2026-09-19): a document already found by ANOTHER
         // target (only possible for a split-identity sale -- see
@@ -1031,6 +1268,7 @@ async function main() {
         if (!duplicate) {
           s.salesLeftAlone++;
           if (plan.reason === "title-states-print-run") s.refusedTitlePrintRun++;
+          else if (plan.reason === "title-contradicts-target") s.refusedTitleContradiction++;
           else s.refusedSplitIdentity++;
           const list = refusals[plan.reason];
           if (list) list.push(`  ${sale.id}@${sale.cardId}: ${plan.detail}`);
@@ -1111,10 +1349,36 @@ async function main() {
           continue;
         }
 
-        const res = await relocateSoldComp(pool, { keep, drop: [{ id: sale.id, cardId: shortId }], retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY });
+        // CONDITIONAL WRITES (review, 2026-09-19): the re-read above proved
+        // the etag matched AT THAT MOMENT, but the re-read and the delete
+        // below are still two separate round trips -- a document could
+        // change in the gap between them without this. Passing
+        // `freshBeforeWrite._etag` as `ifMatchEtag` closes that SECOND
+        // window: relocateSoldComp issues the delete with an IfMatch
+        // condition, so Cosmos itself (not another round trip on this
+        // lane's side) refuses the delete with a 412 if the document
+        // changed again between this line and the actual delete call.
+        const res = await relocateSoldComp(pool, { keep, drop: [{ id: sale.id, cardId: shortId, ifMatchEtag: freshBeforeWrite._etag }], retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY });
         if (res.guard?.verdict === "park") {
           s.refusedGuardParked++;
           refusals["guard-parked"].push(`  ${sale.id}@${shortId}: ${res.error ?? res.guard.reason}`);
+          continue;
+        }
+        // CONDITIONAL WRITES (review, 2026-09-19): a 412 on the delete lands
+        // in `res.staleSincePlan`, never `res.duplicatesLeft` -- checked
+        // BEFORE the generic `!res.ok` failure branch below, so a document
+        // that changed a SECOND time (after the last-line re-read above,
+        // between it and the actual delete) is named the same way as the
+        // FIRST window's own refusal, not miscounted as a generic failure.
+        // The keeper is already upserted at this point (relocateSoldComp's
+        // own order: upsert, verify, THEN delete) -- a 412 here means the
+        // source doc changed, not that the move failed; the sale is safely
+        // at its new address either way, and the drop is simply not deleted
+        // this run (a later idempotent pass finds it moved and does nothing).
+        if (res.staleSincePlan?.length) {
+          s.refusedEtagChanged++;
+          s.salesLeftAlone++;
+          refusals["stale-since-plan"].push(`  ${sale.id}@${shortId} -> ${numberedId}: delete refused (412) -- source changed between the last-line re-read and the delete itself; the keeper is already at ${numberedId}, the short-id copy is left for a later pass`);
           continue;
         }
         if (!res.ok && res.stage !== "dry-run") {
@@ -1152,7 +1416,8 @@ async function main() {
       const { duplicate } = noteSaleFound(sale);
       const titlePrintRun = titlePrintRunOf(sale, shortId);
       const titleStatesProsePrintRun = statesProsePrintRun(sale.title);
-      const plan = decideSaleAction(sale, "hobbyiqCardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, targetPrintRun: printRunOf(target) });
+      const titleContradiction = titleContradictsTarget(sale, target);
+      const plan = decideSaleAction(sale, "hobbyiqCardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, titleContradiction, targetPrintRun: printRunOf(target) });
       if (plan.action === "refuse") {
         // RULING (review, 2026-09-19): same dedup as the cardId-shape loop
         // above -- see its comment. A document reached from BOTH shapes
@@ -1162,6 +1427,7 @@ async function main() {
         if (!duplicate) {
           s.salesLeftAlone++;
           if (plan.reason === "title-states-print-run") s.refusedTitlePrintRun++;
+          else if (plan.reason === "title-contradicts-target") s.refusedTitleContradiction++;
           else s.refusedSplitIdentity++;
           const list = refusals[plan.reason];
           if (list) list.push(`  ${sale.id}@${sale.cardId} (hobbyiqCardId=${shortId}): ${plan.detail}`);
@@ -1169,13 +1435,45 @@ async function main() {
         continue;
       }
       try {
+        // CONDITIONAL WRITES / LAST-LINE DEFENCE (review, 2026-09-19): the
+        // patch shape gets the SAME last-line re-read the relocate shape
+        // already has, run in BOTH modes (REPORT reads the same live
+        // container APPLY would, exactly as the relocate shape's own
+        // unconditional re-read already does -- REPORT-first doctrine, this
+        // file's own header) -- only the actual patch call below is gated on
+        // APPLY. The patch never goes through relocateSoldComp (it is not a
+        // rekey, just a field update at the sale's own existing address), so
+        // the IfMatch condition is built here rather than in that helper.
+        let freshBeforeWrite = null;
+        try { freshBeforeWrite = await residentAt(sale.id, sale.cardId); }
+        catch (e) { s.salesFailed++; failures.push(`  FAILED patch ${sale.id}@${sale.cardId}: could not re-read before write: ${String(e?.message ?? e)}`); continue; }
+        const etagChanged = !freshBeforeWrite || String(freshBeforeWrite._etag ?? "") !== String(sale._etag ?? "");
+        if (etagChanged) {
+          s.refusedEtagChanged++;
+          s.salesLeftAlone++;
+          const why = freshBeforeWrite
+            ? `_etag changed since the planning read (${sale._etag ?? "?"} -> ${freshBeforeWrite._etag ?? "?"})`
+            : `gone from ${sale.cardId} since the planning read (already moved or deleted by something else)`;
+          refusals["stale-since-plan"].push(`  ${sale.id}@${sale.cardId} (hobbyiqCardId=${shortId}): ${why} -- refused, not patched on stale data`);
+          continue;
+        }
         if (APPLY) {
-          await retry(() => pool.item(sale.id, sale.cardId).patch([
-            { op: "set", path: "/hobbyiqCardId", value: numberedId },
-            { op: "set", path: "/reslugedFrom", value: shortId },
-            { op: "set", path: "/reslugedReason", value: "sale at the short (un-numbered) id follows the checklist's :num-N row (repoint-sales-to-checklist-numbered)" },
-            { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
-          ]));
+          try {
+            await retry(() => pool.item(sale.id, sale.cardId).patch([
+              { op: "set", path: "/hobbyiqCardId", value: numberedId },
+              { op: "set", path: "/reslugedFrom", value: shortId },
+              { op: "set", path: "/reslugedReason", value: "sale at the short (un-numbered) id follows the checklist's :num-N row (repoint-sales-to-checklist-numbered)" },
+              { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
+            ], { accessCondition: { type: "IfMatch", condition: freshBeforeWrite._etag } }));
+          } catch (e) {
+            if (is412(e)) {
+              s.refusedEtagChanged++;
+              s.salesLeftAlone++;
+              refusals["stale-since-plan"].push(`  ${sale.id}@${sale.cardId} (hobbyiqCardId=${shortId}): patch refused (412) -- source changed between the last-line re-read and the patch itself`);
+              continue;
+            }
+            throw e;
+          }
         }
         s.salesPatched++;
         bump(bySetKey, setKey); bump(byYear, String(year));
@@ -1273,6 +1571,7 @@ async function main() {
   console.log(`  REFUSED: destination collision       ${f(s.refusedDestinationCollision)}   <- a DIFFERENT sale already resides at the numbered address; neither moved`);
   console.log(`  REFUSED: guard parked (malformed key) ${f(s.refusedGuardParked)}`);
   console.log(`  REFUSED: stale since the planning read ${f(s.refusedEtagChanged)}   <- source doc changed or vanished between plan and write; re-read before every relocate`);
+  console.log(`  REFUSED: title contradicts the target ${f(s.refusedTitleContradiction)}   <- title names a different card number, product, parallel, or player; never laundered onto a checklist-backed address`);
   console.log(`  failed                              ${f(s.salesFailed)}`);
   console.log(`  not reached                         ${f(s.notReached)}`);
   console.log("");
@@ -1346,7 +1645,7 @@ async function main() {
   // balance holds whether a split sale was found by one target or two.
   const salesBefore = s.salesFoundByCardId + s.salesFoundByHobbyiqCardId - s.salesFoundDuplicateAcrossTargets;
   const written = s.salesRelocated + s.salesPatched + s.collapsedOntoResident;
-  const refused = s.refusedTitlePrintRun + s.refusedSplitIdentity + s.refusedGuardParked + s.refusedDestinationCollision + s.refusedEtagChanged;
+  const refused = s.refusedTitlePrintRun + s.refusedSplitIdentity + s.refusedGuardParked + s.refusedDestinationCollision + s.refusedEtagChanged + s.refusedTitleContradiction;
   const left = salesBefore - written - refused - s.salesFailed;
   console.log("");
   console.log(`CF-A-SALE-IS-NEVER-LOST`);
