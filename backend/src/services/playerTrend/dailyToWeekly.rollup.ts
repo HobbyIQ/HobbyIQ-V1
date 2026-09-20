@@ -11,6 +11,15 @@
  * the current week, or the earliest week if data doesn't start on a
  * Monday) are dropped so downstream never has to think about
  * partial-week noise.
+ *
+ * CF-DEDUPE-SOLD-COMPS-EVERY-READER (2026-09-20): NOT wired to
+ * `dedupeSoldComps`, and cannot be. Its input here is CardHedge's live
+ * `/cards/prices-by-card` API (called from cardHedgeMatchedCohortProvider.ts
+ * and parallelTierTrend.service.ts) — CH's own pre-aggregated daily median
+ * per card, already collapsed to one point per closingDate before this
+ * module ever sees it. It never reads our `sold_comps` container, so a
+ * CardHedge dual-id twin stored THERE cannot reach this path at all; there
+ * is no per-sale row here for a 60-minute/gradeKey rule to key on.
  */
 
 import type { CardWeeklySalesBucket } from "./matchedCohort.types.js";
