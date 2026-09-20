@@ -275,6 +275,24 @@
  * resolve-split-identity-parks log" step) -- no new upload-artifact step, no
  * new workflow_dispatch input.
  *
+ * PLAN_OUT COVERS ONE RUN, NOT ONE SLOT (fix, 2026-09-20). The plan file is
+ * TRUNCATED at open (`fs.openSync(path, "w")`) every time this script
+ * starts -- there is no append-across-relaunches mode, on purpose: each
+ * relaunch's own selection is disjoint from the last (a row this run
+ * resolves clears its park fields and drops out of the NEXT run's own
+ * query), so an append would silently accumulate rows from a query that no
+ * longer matches the live corpus. The consequence: a slot that hits its own
+ * 110-minute budget and self-relaunches (backfill-runner.yml's own
+ * relaunch-on-marker action) starts a BRAND NEW runner, a BRAND NEW
+ * `${{ github.run_id }}`, and therefore a BRAND NEW plan file uploaded under
+ * a BRAND NEW artifact name -- this lane's own upload step names its
+ * artifact `resolve-split-identity-parks-<apply|report>-slot-<N>-
+ * ${{ github.run_id }}`. A slot's FULL plan across a multi-run relaunch
+ * chain is therefore the UNION of every run's own artifact in that chain,
+ * never one file to download -- printed in the closing banner as its own
+ * line so an operator reading one run's artifact does not mistake it for
+ * the whole slot's history.
+ *
  * Requires dist/ (splitIdentityWriteGuard, catalogAuthority.service.js,
  * playerIdentityKey.js) and scripts/lib (relocate-sold-comp, runner-budget,
  * runner-shard-scope, two-sport-athletes, sport-title-evidence).
@@ -366,16 +384,53 @@ const SCOPE_REJECTED = SCOPE_IS_ALL ? [] : RAW_SCOPE.filter((p) => !CELL_RE.test
 //
 // `parseTitlesInput` is pure (no process.env read) so it can be unit tested
 // directly; the module-scope constants below are its one, real call.
+//
+// CASE/WHITESPACE FAILS OPEN, NOT CLOSED (fix, 2026-09-20). `winner` (the
+// value this lane actually compares against, at the EXCLUDED_WINNERS.has()
+// call site) is an hiq: slug read verbatim off `doc.hobbyiqCardId`/
+// `doc.cardId` -- both minted lowercase by hobbyIqCardId.service.ts today,
+// but this lane has no license to assume every id it will ever compare
+// against was minted by that exact path, and an operator retyping an id by
+// hand (or pasting one with a trailing space) is a realistic slip. A set
+// this lane FAILS TO MATCH on a case/whitespace difference is a set that
+// silently resolves the very winner an operator meant to hold back --
+// fails OPEN. Both sides are therefore normalised (trim + lowercase) before
+// either goes into the Set or is compared against it, and the raw (as
+// dispatched) ids are kept separately (see below) purely for the banner --
+// an operator should see back the exact text they typed, not a silently
+// folded copy, when reading whether their exclude landed.
 const EXCLUDE_WINNER_PREFIX = /^exclude-winner:/i;
 function parseTitlesInput(raw) {
   const rawStr = str(raw);
   if (EXCLUDE_WINNER_PREFIX.test(rawStr)) {
-    const excludedWinners = new Set(csv(rawStr.replace(EXCLUDE_WINNER_PREFIX, "")));
-    return { excludedWinners, titlesFilter: [] };
+    const rawIds = csv(rawStr.replace(EXCLUDE_WINNER_PREFIX, ""));
+    // ── ZERO PARSED IDS FAILS OPEN INTO A FULL UNFILTERED SWEEP (fix,
+    // 2026-09-20). `titles=exclude-winner:` (nothing after the colon, or
+    // only commas/whitespace) used to parse to an EMPTY excludedWinners set
+    // -- which excludes nothing, so every row resolves normally, exactly as
+    // if the operator had typed no exclude at all. That is the opposite of
+    // what typing the prefix signals: an operator who typed it meant to
+    // HOLD BACK at least one winner, so a prefix match with nothing usable
+    // after it is a NAMED error, refused loudly before any Cosmos read,
+    // rather than a silent full sweep.
+    if (!rawIds.length) {
+      return { error: `titles="exclude-winner:" carries no ids after the prefix -- pass at least one winner candidate id, e.g. exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto` };
+    }
+    const excludedWinners = new Set(rawIds.map(lower));
+    return { excludedWinners, rawExcludedWinnerIds: rawIds, titlesFilter: [] };
   }
-  return { excludedWinners: new Set(), titlesFilter: csv(rawStr).map(lower) };
+  return { excludedWinners: new Set(), rawExcludedWinnerIds: [], titlesFilter: csv(rawStr).map(lower) };
 }
-const { excludedWinners: EXCLUDED_WINNERS, titlesFilter: TITLES_FILTER } = parseTitlesInput(process.env.TITLES);
+// Read at module scope (importing this file for its pure helpers must never
+// pay a Cosmos-shaped cost -- same discipline RAW_MODE/RAW_SCOPE already
+// use), but the `error` case is VALIDATED inside main() only, for the same
+// reason: several test runners set their own process.env.TITLES/MODE for
+// unrelated reasons, and a module-load-time process.exit(2) would break
+// every pure-function unit test that merely requires this file.
+const TITLES_PARSE = parseTitlesInput(process.env.TITLES);
+const EXCLUDED_WINNERS = TITLES_PARSE.excludedWinners ?? new Set();
+const RAW_EXCLUDED_WINNER_IDS = TITLES_PARSE.rawExcludedWinnerIds ?? [];
+const TITLES_FILTER = TITLES_PARSE.titlesFilter ?? [];
 
 /** Unset every park field on a resolve. Read from splitIdentityWriteGuard.ts's
  *  GuardedSoldCompDoc and relocate-pool-rows-by-list.cjs's own PARK stamp --
@@ -937,6 +992,17 @@ async function main() {
     console.error("       has no modes; leave MODE empty.");
     process.exit(2);
   }
+  // ── titles=exclude-winner: WITH NOTHING PARSED FAILS OPEN (fix,
+  // 2026-09-20). A prefix match with zero usable ids used to silently
+  // become an EMPTY excludedWinners set -- excluding nothing, i.e. a full
+  // unfiltered sweep, exactly the OPPOSITE of what typing the prefix at
+  // all signals. Refused loudly, before the Cosmos connection is even
+  // read, same as every other named-scope refusal above.
+  if (TITLES_PARSE.error) {
+    console.error("");
+    console.error(`FATAL: ${TITLES_PARSE.error}`);
+    process.exit(2);
+  }
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING required"); process.exit(1); }
@@ -970,7 +1036,12 @@ async function main() {
 
   console.log(`  scope            ${SCOPE_IS_ALL ? "all-splits (every parked split-identity row this lane can reach)" : SCOPE_CELLS.join(", ")}`);
   if (TITLES_FILTER.length) console.log(`  titles filter     ${TITLES_FILTER.join(", ")}`);
-  if (EXCLUDED_WINNERS.size) console.log(`  exclude-winner    ${[...EXCLUDED_WINNERS].join(", ")}`);
+  // Echo the ids EXACTLY as dispatched (never the case-folded compare form)
+  // -- an operator reading this banner should see back their own text, so
+  // a case/whitespace mismatch against the resident data (which would
+  // otherwise fail OPEN and silently exclude nothing) is visible by eye
+  // even before the closing per-id match-count line below.
+  if (RAW_EXCLUDED_WINNER_IDS.length) console.log(`  exclude-winner    ${RAW_EXCLUDED_WINNER_IDS.join(", ")}`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  ${CLOCK.describe()}`);
   console.log("");
@@ -999,6 +1070,14 @@ async function main() {
     if (map[k].length < cap) map[k].push(line);
   };
   let stoppedAtBudget = false;
+
+  // ── PER-EXCLUDED-ID MATCH COUNT (fix, 2026-09-20). Keyed on the SAME
+  // case-folded id every EXCLUDED_WINNERS.has() compare uses, seeded at zero
+  // for every dispatched id up front -- so an id that never matches a single
+  // row (a typo, or a winner this run's own scope never reaches) still has
+  // an entry to report zero against, rather than being silently absent from
+  // the closing banner.
+  const excludedWinnerMatchCounts = new Map([...EXCLUDED_WINNERS].map((id) => [id, 0]));
 
   // ── PLAN_OUT: one NDJSON record per in-scope row, written into the SAME
   // fixed path the runner already uploads (see module header). A synchronous
@@ -1254,10 +1333,18 @@ async function main() {
     // bucket. Checked AFTER the verdict (so an excluded winner is reported
     // against the SAME winner id the verdict actually computed) but BEFORE
     // the title veto and any write, so an excluded row never reaches Cosmos.
-    if (EXCLUDED_WINNERS.has(winner)) {
+    //
+    // CASE-FOLDED BOTH SIDES (fix, 2026-09-20): EXCLUDED_WINNERS is already
+    // lowercased at parse time; `winner` is folded here, at the compare, so
+    // a resident id minted with different casing than an operator retyped
+    // still matches -- a fold mismatch previously failed OPEN (silently
+    // excluding nothing) rather than closed.
+    const winnerFold = lower(winner);
+    if (EXCLUDED_WINNERS.has(winnerFold)) {
       bumpReason(s.leave, "excluded-by-operator");
       pushExample(leaveExamples, "excluded-by-operator", `  ${doc.id}@${doc.cardId}: winner ${winner} is named in this run's exclude-winner list -- left parked untouched`);
       bumpRollup(fromWinnerRollup, `${doc.hobbyiqCardId}${ROLLUP_DELIM}${winner}`);
+      excludedWinnerMatchCounts.set(winnerFold, (excludedWinnerMatchCounts.get(winnerFold) || 0) + 1);
       emitPlanRow(doc, "leave", "excluded-by-operator", planExtra);
       return;
     }
@@ -1635,8 +1722,34 @@ async function main() {
   }
   if (failures.length) { console.log(`\n  FAILURES (${f(failures.length)}):`); for (const fl of failures) console.log(fl); }
 
+  // ── PER-EXCLUDED-ID MATCH COUNT, loud on a ZERO (fix, 2026-09-20). An
+  // operator who typed exclude-winner:<id> and gets back zero matches has,
+  // almost always, mistyped the id or named a winner this run's own scope/
+  // shard/titles-filter never reaches -- a silent zero is indistinguishable
+  // from "worked as intended, this run just never hit it," so it is called
+  // out with ::warning:: rather than folded quietly into the ordinary
+  // excluded-by-operator count line above.
+  if (excludedWinnerMatchCounts.size) {
+    console.log(`\n  exclude-winner match counts:`);
+    for (const [id, n] of excludedWinnerMatchCounts) {
+      if (n === 0) {
+        console.log(`  ::warning::exclude-winner:${id} matched ZERO rows this run -- check for a typo, or a winner outside this run's own SCOPE/SHARD/TITLES/LIMIT`);
+      } else {
+        console.log(`    ${String(n).padStart(7)}  ${id}`);
+      }
+    }
+  }
+
   if (planFd) {
     console.log(`\n  plan file rows written  ${f(planRowsWritten)}  (one NDJSON record per in-scope row -- resolve/collapse/leave/refused/failed, every one auditable, not just the samples above)`);
+    // PLAN scope is THIS RUN ONLY (fix, 2026-09-20). Truncated at open
+    // (`fs.openSync(..., "w")`, module header), so a relaunch after a
+    // budget stop starts a NEW file, on a NEW runner, uploaded under a NEW
+    // run-id-scoped artifact name (see backfill-runner.yml's own upload
+    // step, keyed on `${{ github.run_id }}`) -- a slot's FULL plan across a
+    // multi-run relaunch chain is therefore spread across N artifacts, one
+    // per run in the chain, never one file to download.
+    console.log(`  plan covers THIS run only -- a relaunched slot's full plan = every run in its chain (each relaunch uploads its OWN run-id-scoped artifact; there is no single file spanning a chain)`);
     try { fs.closeSync(planFd); } catch { /* best effort */ }
   } else if (PLAN_OUT) {
     console.log(`\n  ::warning::PLAN_OUT was set but no plan file was opened -- see the warning above.`);

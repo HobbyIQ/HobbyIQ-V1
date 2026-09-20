@@ -1191,3 +1191,91 @@ describe("resolve-split-identity-parks -- exclude-by-operator via titles=exclude
     expect(r.out).toMatch(/RESOLVE-TO-H \(relocate\)\s+1/); // "other" is untouched by the exclude and still resolves
   });
 });
+
+describe("resolve-split-identity-parks -- coordinator review fix #1 (HIGH): exclude case/whitespace fails CLOSED, not open", () => {
+  it("excludes a winner even when the dispatched id differs in CASE from the resident hiq: slug", () => {
+    const r = drive(
+      { SCOPE: "all-splits", BACKFILL_APPLY: "true", TITLES: "exclude-winner:HIQ:Basketball:2023:Topps:VW3:Base:No-Auto" },
+      { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/LEAVE: excluded-by-operator\s+1/);
+    expect(r.out).not.toMatch(/RESOLVE-TO-H \(relocate\)\s+1/);
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("the startup banner echoes the id EXACTLY as dispatched (not case-folded)", () => {
+    const r = drive(
+      { SCOPE: "all-splits", TITLES: "exclude-winner:HIQ:Basketball:2023:Topps:VW3:Base:No-Auto" },
+      { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/exclude-winner {4}HIQ:Basketball:2023:Topps:VW3:Base:No-Auto/);
+  });
+
+  it("the closing banner reports a per-id match count for an id that DID match", () => {
+    const r = drive(
+      { SCOPE: "all-splits", BACKFILL_APPLY: "true", TITLES: "exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto" },
+      { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/exclude-winner match counts/);
+    expect(r.out).toMatch(/1\s+hiq:basketball:2023:topps:vw3:base:no-auto/);
+    expect(r.out).not.toMatch(/::warning::exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto matched ZERO/);
+  });
+
+  it("the closing banner WARNS loudly on an excluded id that matched ZERO rows (a likely typo)", () => {
+    const r = drive(
+      { SCOPE: "all-splits", BACKFILL_APPLY: "true", TITLES: "exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto,hiq:basketball:1999:typo:9:base:no-auto" },
+      { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] },
+    );
+    expect(r.code).toBe(0);
+    // The real id matched once and is reported as a plain count line...
+    expect(r.out).toMatch(/1\s+hiq:basketball:2023:topps:vw3:base:no-auto/);
+    // ...while the typo'd id matched zero and is called out loudly.
+    expect(r.out).toMatch(/::warning::exclude-winner:hiq:basketball:1999:typo:9:base:no-auto matched ZERO rows/);
+  });
+});
+
+describe("resolve-split-identity-parks -- coordinator review fix #2 (HIGH): an empty exclude-winner list REFUSES rather than sweeping unfiltered", () => {
+  it("REFUSES (exit 2, named error) titles=exclude-winner: with nothing after the colon, before any Cosmos read", () => {
+    const r = drive({ SCOPE: "all-splits", TITLES: "exclude-winner:" }, { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(2);
+    expect(r.out).toMatch(/FATAL:.*carries no ids after the prefix/);
+    // Never reached the point of reading anything -- no catalog point-reads,
+    // no sales writes, nothing scanned.
+    expect(r.led.catalogReads.length).toBe(0);
+    expect(r.led.salesPatches.length).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("REFUSES titles=exclude-winner: followed by only commas/whitespace the same way", () => {
+    const r = drive({ SCOPE: "all-splits", TITLES: "exclude-winner:  ,  ," }, { sales: [], catalog: [] });
+    expect(r.code).toBe(2);
+    expect(r.out).toMatch(/FATAL:.*carries no ids after the prefix/);
+  });
+
+  it("does NOT refuse when at least one real id follows the prefix, even amid empty entries", () => {
+    const r = drive(
+      { SCOPE: "all-splits", BACKFILL_APPLY: "true", TITLES: "exclude-winner:,hiq:basketball:2023:topps:vw3:base:no-auto," },
+      { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/LEAVE: excluded-by-operator\s+1/);
+  });
+});
+
+describe("resolve-split-identity-parks -- coordinator review fix #3 (MEDIUM): the banner says PLAN_OUT covers this run only", () => {
+  it("prints the 'plan covers THIS run only' line when PLAN_OUT is set and a plan file is opened", () => {
+    const planDir = fs.mkdtempSync(path.join(tmp, "plan-scope-note-"));
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true", PLAN_OUT: planDir }, { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/plan covers THIS run only -- a relaunched slot's full plan = every run in its chain/);
+  });
+
+  it("does NOT print the scope note when PLAN_OUT is unset (no plan file at all)", () => {
+    const r = drive({ SCOPE: "all-splits" }, { sales: [VW3_SALE], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/plan covers THIS run only/);
+  });
+});
