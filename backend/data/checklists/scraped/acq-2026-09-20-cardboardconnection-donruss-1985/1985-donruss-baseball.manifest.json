@@ -1,0 +1,42 @@
+{
+  "source": "cardboardconnection-2026-09-20",
+  "sourceUrl": "https://www.cardboardconnection.com/1985-donruss-baseball-cards",
+  "sourceHtmlSha256": "8025cd5cd1ef0c0a96182accb2752a3b30d9422c1ecba985aaa21c1bcba823b0",
+  "fetchedAt": "2026-09-20",
+  "sport": "baseball",
+  "year": 1985,
+  "setName": "1985 Donruss Baseball",
+  "productKey": "1985-donruss-baseball",
+  "setKey": "donruss",
+  "rowCount": 653,
+  "parallelColumnAuthoritative": false,
+  "readyToIngest": false,
+  "readyToIngestNote": "Documentation only -- ingest-checklist-csv-to-catalog.cjs and ingest-scraped-checklist.cjs do not read this field; the real gate is that this directory sits under backend/data/checklists/scraped/ where a human/workflow chooses which directories to point DIR at.",
+  "stagedNote": "STAGED, not ingested. planStagedDirectory (real ingest lane, read-only, no Cosmos) PASSES on this file: verdict 'pass', 653 batch rows, 653 distinct ids, 0 collisions, 0 unregistered keys. setKey resolves to bare 'donruss' via the filename fallback, matching the pre-2009 Donruss convention already used by every sibling Donruss package under acq-2026-09-13-bcp/. No productSetKeys.ts registrations were needed.",
+  "gapThisFills": "2026-09-20 census target: Donruss baseball 1982-1990 (~121k total unbacked sales across the run). 1985 was NOT staged anywhere in the repo before this package (siblings cover 1983, 1986-89, 2001-03 only -- this and the sibling 1982 package close two of the three remaining named-year holes before 1990).",
+  "sourcePageShape": "Same Cardboard Connection vintage layout as the sibling 1982 package, but rows carry team names inline ('NUMBER Player - Team [DK|RR] [RC]') rather than a bare 'NUMBER Player [Subset]' -- the page's own KEY line states 'DK=Diamond Kings; RR=Rated Rookie.' Team text after the dash was NOT kept in the player field (the checklist-csv contract's player column is the player named on the card, not the team).",
+  "converterNote": "One-off Node script in the builder's scratch directory (same shape/precedent as the 1982 sibling's scratch parser, not committed): splits on <br>, matches '^(\\d{1,4})\\s+(.+)$', strips trailing ' RC' (rookie marker) before the subset check, then strips a trailing ' DK' -> category=insert-diamond-kings or trailing ' RR' -> category=insert-rated-rookie (both stated by the page's own KEY line), then keeps only the text before ' - ' as the player (team name dropped, not part of the contract's player field).",
+  "sectionsReport": [
+    { "category": "insert-diamond-kings", "cardRange": "1-26", "cards": 26, "note": "OWN numbering at the head of the checklist, per the page's own KEY line -- no separate plain-base row exists for these numbers. Zero overlap with Rated Rookie or Base." },
+    { "category": "insert-rated-rookie", "cardRange": "27-46", "cards": 20, "note": "OWN numbering immediately after Diamond Kings, per the page's own KEY line -- no separate plain-base row exists for these numbers either. Zero overlap with Diamond Kings or Base." },
+    { "category": "base", "cardRange": "47-653 (this year's base checklist tops out at 653, not 660; page states '653 cards and 6 checklists')", "cards": 607 }
+  ],
+  "heldOut": [
+    {
+      "section": "NNO Diamond Kings Checklist + the 6 numbered 'Checklist (#N-N)' filler cards",
+      "rows": 7,
+      "reason": "Unnumbered/range-described checklist filler cards, not real player cards -- no card number to key on (or the 'number' names a card RANGE, not a card). Same exclusion rule as the sibling 1982 package's seven unnumbered checklists."
+    },
+    {
+      "section": "Base Variations Set Checklist",
+      "rows": 5,
+      "reason": "Photo/name misprint variants of already-staged base numbers (74, 424, 534, 640, 651 -- e.g. '424 Tom Seaver ... Shows Floyd Bannister' / '... Shows Tom Seaver'). Same 'not a named parallel, no synthetic parallel axis' rule as the sibling 1982 package's Errors and Variations Checklist. Not staged; needs a human ruling on an error-variant axis before acquisition."
+    },
+    {
+      "section": "Lou Gehrig Puzzle Set Checklist, Wax Box Panel Set Checklist",
+      "rows": "21 puzzle pieces + PC1-PC4 panel cards (not individually counted)",
+      "reason": "Genuine own-numbered inserts (own prefix/no base-number overlap, so no collision risk) but held OUT of this package deliberately to keep the diff small and value-dense -- the task brief ranks Donruss baseball by unbacked BASE-set sales, and these small novelty inserts are not part of that ranking. Not staged; a follow-on package could add them without touching this one."
+    }
+  ],
+  "salesUnlockedEstimate": "Part of the ~121k Donruss baseball 1982-1990 unbacked-sales figure in the 2026-09-20 census; this package's exact share was not separately measured (no Cosmos access in this pass) -- 653 checklist-backed cardNumbers now exist for 1985 where zero existed before."
+}
