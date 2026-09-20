@@ -235,3 +235,143 @@ describe("rematch-sold-comps.cjs MODE=census SOURCES=backing -- end to end again
     expect(artifact.backing.byCell["baseball|1953|bowman"].unknown).toBe(4);
   });
 });
+
+/**
+ * SOURCES=backing SURVIVES A STOP-MID-SHARD RESUME (2026-09-20, the census
+ * self-relaunch backing-loss fix -- the end-to-end pin for all three pieces
+ * together: the workflow forwards `sources`, the cursor signature keys on
+ * it, and the checkpoint carries the backing tallies forward).
+ *
+ * Drives the REAL main() as two separate child-process passes over slot 0,
+ * the same two-pass shape rematchCensusCursorE2E.test.ts uses for the
+ * unit-boundary cursor -- but stopped via LIMIT rather than a simulated
+ * budget exhaustion. LIMIT sets `stopReason` through the EXACT SAME
+ * checkpoint code path a real budget stop does (main()'s cursor-save block
+ * branches only on whether `stopReason` is set, never on its text), so this
+ * proves the same resume machinery -- and LIMIT is the only stop mechanism
+ * that can land cleanly BETWEEN unit A's 3 rows finishing (each with a full,
+ * un-throttled backing budget) and unit B's first row, without also
+ * starving the backing preload's own margin check
+ * (`budgetLeft() < BACKING_PRELOAD_QUERY_TIMEOUT_MS + 90000`) the way an
+ * artificially slowed fetch would: shrinking the clock to trip the ordinary
+ * page-boundary check ALSO trips backing's stricter one first, which would
+ * make unit A's own sales bucket `unknown` (this run "chose not to spend
+ * its last budget" on the preload) rather than exercising the resume this
+ * test exists to prove.
+ *
+ *   PASS 1  LIMIT=3 -- classifies unit A's exactly 3 sales (one
+ *           backedStrict, two noRow, all in the pokemon|2025|some-set cell)
+ *           with a full backing budget, then stops on touching unit B's
+ *           first row. Unit A is marked done; unit B is untouched.
+ *   PASS 2  resumes, reads pass 1's cursor (now carrying the backing tally
+ *           too), classifies ONLY unit B's 2 sales (baseball|1953|topps
+ *           cell, both noRow), and its FINAL artifact must show BOTH
+ *           cells' tallies -- proving the merge, not an overwrite -- with
+ *           the backing total equal to `classified` (5), never short.
+ */
+describe("rematch-sold-comps.cjs MODE=census SOURCES=backing -- a resumed pass merges the PRIOR pass's backing tally, not just its counts", () => {
+  const RESUME_PRELOAD = join(backend, "tests", "fixtures", "census-backing-resume-e2e", "fake-cosmos-backing-resume.cjs");
+  const RESUME_TIMEOUT_MS = 60_000;
+
+  function runResumePass(opts: { censusOut: string; controlStateFile: string; limit?: number }) {
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      MODE: "census",
+      SLOT: "0",
+      SLOTS: "32",
+      SOURCES: "backing",
+      COSMOS_CONNECTION_STRING: "AccountEndpoint=https://fake.invalid:443/;AccountKey=ZmFrZQ==;",
+      RUN_MINUTES: "10",
+      CENSUS_OUT: opts.censusOut,
+      CONTROL_STATE_FILE: opts.controlStateFile,
+    };
+    if (opts.limit !== undefined) env.LIMIT = String(opts.limit); else delete env.LIMIT;
+    return spawnSync(process.execPath, ["-r", RESUME_PRELOAD, SCRIPT], {
+      cwd: backend, env, encoding: "utf8", timeout: RESUME_TIMEOUT_MS,
+    });
+  }
+
+  let dir: string;
+  afterEach(() => { if (dir) { try { rmSync(dir, { recursive: true, force: true }); } catch { /* best effort */ } } });
+
+  itIfBuilt("pass 1 stops after unit A (LIMIT=3) with unit A's backing tally checkpointed", () => {
+    dir = mkdtempSync(join(tmpdir(), "census-backing-resume-e2e-"));
+    const censusOut = join(dir, "census");
+    const controlStateFile = join(dir, "control-state.json");
+
+    const res = runResumePass({ censusOut, controlStateFile, limit: 3 });
+    expect(res.status).toBe(0);
+    expect(res.stdout ?? "").toMatch(/stopped at the LIMIT of 3 rows/);
+
+    const artifact = JSON.parse(readFileSync(join(censusOut, "census-slot-0.json"), "utf8"));
+    expect(artifact.classified).toBe(3); // unit A only
+    expect(artifact.backing).not.toBeNull();
+    expect(artifact.backing.bySport.pokemon).toEqual({
+      backedStrict: 1, rowExistsNonStrict: 0, noRow: 2, unparseable: 0,
+      parked: 0, notPricedFlagged: 0, unknown: 0,
+    });
+
+    // The checkpoint itself carries the backing maps -- the actual fix,
+    // proven directly against the persisted cursor doc rather than inferred
+    // only from pass 2's behaviour below.
+    const controlState = JSON.parse(readFileSync(controlStateFile, "utf8"));
+    const cursor = controlState["census-cursor::slot-0"];
+    expect(cursor.aggregate.backingBySport).toBeTruthy();
+    expect(cursor.aggregate.backingBySport.pokemon).toEqual({
+      backedStrict: 1, rowExistsNonStrict: 0, noRow: 2, unparseable: 0,
+      parked: 0, notPricedFlagged: 0, unknown: 0,
+    });
+    expect(cursor.aggregate.backingByCell["pokemon|2025|some-set"]).toBeTruthy();
+    // The signature carries the new sourcesMode field, "backing".
+    expect(cursor.signature.sourcesMode).toBe("backing");
+  }, RESUME_TIMEOUT_MS + 10_000);
+
+  itIfBuilt("pass 2 resumes, classifies only unit B, and the FINAL artifact's backing total equals classified (5) -- both cells present, neither overwritten", () => {
+    dir = mkdtempSync(join(tmpdir(), "census-backing-resume-e2e-"));
+    const censusOut = join(dir, "census");
+    const controlStateFile = join(dir, "control-state.json");
+
+    const first = runResumePass({ censusOut, controlStateFile, limit: 3 });
+    expect(first.status).toBe(0);
+
+    // Pass 2 -- what the workflow fix makes possible: SOURCES=backing is
+    // still set (a real relaunch now forwards it verbatim), so this pass
+    // arms CENSUS_BACKING exactly as pass 1 did, and its signature matches
+    // pass 1's cursor (same sourcesMode: "backing"). No LIMIT this time --
+    // the relaunch's own LIMIT would in practice be forwarded unchanged too,
+    // but this test only needs pass 2 to run unit B to completion.
+    const second = runResumePass({ censusOut, controlStateFile });
+    expect(second.status).toBe(0);
+    const out = second.stdout ?? "";
+    expect(out).toMatch(/CENSUS CURSOR: resuming slot 0/);
+    expect(out).not.toMatch(/INCOMPLETE BACKING/);
+
+    const artifact = JSON.parse(readFileSync(join(censusOut, "census-slot-0.json"), "utf8"));
+    expect(artifact.classified).toBe(5); // both units: 3 + 2
+    expect(artifact.stoppedAtBudget).toBe(false);
+
+    // BOTH cells present in the FINAL artifact -- pass 1's (pokemon cell)
+    // merged in, pass 2's own (baseball|topps cell) added, neither lost.
+    expect(artifact.backing.byCell["pokemon|2025|some-set"]).toEqual({
+      backedStrict: 1, rowExistsNonStrict: 0, noRow: 2, unparseable: 0,
+      parked: 0, notPricedFlagged: 0, unknown: 0,
+    });
+    expect(artifact.backing.byCell["baseball|1953|topps"]).toEqual({
+      backedStrict: 0, rowExistsNonStrict: 0, noRow: 2, unparseable: 0,
+      parked: 0, notPricedFlagged: 0, unknown: 0,
+    });
+
+    // THE ACCEPTANCE CRITERION: backing-classified total (summed across
+    // bySport) EQUALS classified (5) -- the exact invariant the
+    // INCOMPLETE BACKING assertion in main() checks. Before the fix (backing
+    // maps absent from the cursor), this pass's OWN merge would have started
+    // its backing tally at zero and finished with only unit B's 2 rows
+    // backing-tallied against a `classified` of 5 -- short by 3, and this
+    // assertion is exactly what would have caught it.
+    const t = artifact.backing.bySport;
+    const backingTotal = Object.values(t as Record<string, Record<string, number>>).reduce(
+      (sum, b) => sum + Object.values(b).reduce((a, n) => a + n, 0), 0,
+    );
+    expect(backingTotal).toBe(artifact.classified);
+  }, RESUME_TIMEOUT_MS + 10_000);
+});

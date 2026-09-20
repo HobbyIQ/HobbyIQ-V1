@@ -263,6 +263,26 @@ describe("the runner contract", () => {
     expect(runner).toContain("id: canary_after");
   });
 
+  it("the relaunch forwards sources verbatim -- CF-A-RELAUNCH-THAT-DROPS-AN-INPUT-INHERITS-A-DEFAULT (2026-09-20)", () => {
+    // THE DEFECT. A census self-relaunch (MODE=census SOURCES=backing) forwarded
+    // script/mode/apply/concurrency/slot/slots/years/limit/scope/sports/
+    // setkey_like on its re-dispatch but NOT sources -- so a slot that budget-
+    // stopped mid-run and relaunched came back up with SOURCES unset, which
+    // reads as the workflow_dispatch default (empty string), NOT "backing".
+    // `CENSUS_BACKING` in rematch-sold-comps.cjs is `MODE === "census" &&
+    // SOURCES.trim().toLowerCase() === "backing"` -- an empty SOURCES fails
+    // that check, so the resumed pass's own artifact carries `backing: null`,
+    // silently losing backing classification for every row THIS pass
+    // classifies, exactly the composite action's own header warns about
+    // (relaunch-on-marker's `dispatch` input doc, "rematch-sold-comps omitted
+    // `scope`... 18 slots of that fleet died"). This is the same shape of bug,
+    // one input over: `sources` was simply never added to the -f list when
+    // SOURCES=backing was introduced.
+    const step = runner.slice(runner.indexOf("Self-relaunch rematch-sold-comps"));
+    const dispatch = step.slice(0, step.indexOf("\n      - name:") + 1);
+    expect(dispatch).toContain('-f sources="${{ inputs.sources }}"');
+  });
+
   it("the relaunch survives a banner that never says the re-key phrase (CF-CENSUS-THROUGHPUT)", () => {
     // MEASURED 2026-09-03. Every wave-1 census run stopped at its budget and
     // then FAILED to relaunch -- not because the marker was missing, but

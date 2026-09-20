@@ -384,8 +384,11 @@ const REMATCH_CONTROL_CONTAINER = String(process.env.COSMOS_REMATCH_CONTROL_CONT
 /** This file's exit codes so far: 3 (uncaught exception, via finishLane's
  *  catch), 4 (reconcile/class drift), 6 (apply class-scope failure). 5 is
  *  free and is what a census pass exits when its cursor save failed -- see
- *  saveCensusCursor's header comment and the checkpoint block in main(). */
+ *  saveCensusCursor's header comment and the checkpoint block in main(). 7 is
+ *  the apply class-scope VERIFY INCOMPLETE code. 8 is INCOMPLETE BACKING --
+ *  see the backing-total assertion in main(), just before the artifact write. */
 const CENSUS_CURSOR_SAVE_FAILED_EXIT_CODE = 5;
+const INCOMPLETE_BACKING_EXIT_CODE = 8;
 /**
  * THE APPLY CLASS SCOPE (audit gate item 8, 2026-09-03).
  *
@@ -2358,6 +2361,31 @@ async function main() {
     return t;
   };
 
+  /**
+   * MERGE A PRIOR PASS'S SAVED backing MAP INTO THE LIVE ONE (2026-09-20, the
+   * census self-relaunch backing-loss fix). Adds bucket by bucket, key by
+   * key, using the SAME `backingBucketsOf` accessor the live per-row tally
+   * uses -- so a key this pass has not seen yet is created with all-zero
+   * buckets before the prior pass's counts are added in, exactly like a
+   * fresh live bump. `byCell` additionally respects `BACKING_CELL_CAP`: a
+   * key that would overflow the cap on FIRST SIGHT (this pass never saw it
+   * live, only via the merge) folds into "other" rather than growing the
+   * map past its documented cap. A cell already present (this pass's own
+   * live tally already created it, or an earlier merged key did) always
+   * adds into its own bucket, cap or not -- the cap only ever gates NEW keys.
+   */
+  const mergeBackingMapInto = (liveMap, savedObj, { capAt } = {}) => {
+    if (!savedObj || typeof savedObj !== "object") return;
+    for (const [key, saved] of Object.entries(savedObj)) {
+      if (!saved || typeof saved !== "object") continue;
+      const overflowing = capAt != null && key !== "other" && !liveMap.has(key) && liveMap.size >= capAt;
+      const b = backingBucketsOf(liveMap, overflowing ? "other" : key);
+      for (const bucket of ["backedStrict", "rowExistsNonStrict", "noRow", "unparseable", "parked", "notPricedFlagged", "unknown"]) {
+        b[bucket] += Number(saved[bucket]) || 0;
+      }
+    }
+  };
+
   // ── page the shard ────────────────────────────────────────────────────────
   const counts = { [K.AGREE]: 0, [K.IMPROVE]: 0, [K.CONFLICT]: 0, [K.UNDERIVABLE]: 0 };
   const byTier = new Map(), defects = new Map(), reasons = new Map(), samples = new Map(), subclasses = new Map();
@@ -2588,6 +2616,21 @@ async function main() {
     // small object per armed kind -- nothing that can grow with row count.
     out.perClass = JSON.parse(JSON.stringify(perClass));
     out.disarmed = { ...disarmed };
+    // THE CENSUS BACKING TALLIES (2026-09-20, the census self-relaunch
+    // backing-loss fix). Before this, `backing`'s bySport/byCell maps were
+    // NOT in CENSUS_CURSOR_AGGREGATE_FIELDS at all -- a budget-stopped
+    // backing pass's checkpoint carried `sources` forward correctly (once
+    // the workflow fix above lands) but the RESUMED pass still started its
+    // backing tally from zero, because nothing about it survived the
+    // cursor. Only checkpointed when this pass actually armed the block
+    // (CENSUS_BACKING) -- a plain census's cursor stays exactly the small
+    // shape it always was, and the size guard sees the same bounded byCell
+    // (BACKING_CELL_CAP entries, 7 numeric fields each) a live pass already
+    // bounds itself to.
+    if (CENSUS_BACKING) {
+      out.backingBySport = Object.fromEntries(backingBySport);
+      out.backingByCell = Object.fromEntries(backingByCell);
+    }
     return out;
   };
   /** Merge a PRIOR pass's saved aggregate into the live in-memory one, BEFORE
@@ -2665,6 +2708,19 @@ async function main() {
     // treated as zero, same as any other never-yet-saved counter.
     if (prior.scopeCounts && typeof prior.scopeCounts === "object") {
       for (const k of Object.keys(scopeCounts)) scopeCounts[k] += Number(prior.scopeCounts[k]) || 0;
+    }
+    // backingBySport/backingByCell travel OUTSIDE AGGREGATE_FIELDS too (same
+    // reason as scopeCounts -- see censusAggregateToCompactJSON above), and
+    // ONLY when THIS pass is itself armed with CENSUS_BACKING: the cursor
+    // SIGNATURE check above already refuses a cross-mode resume (a backing
+    // pass can never load a plain census's cursor or vice versa), so by the
+    // time this runs, a prior aggregate that carries these fields is
+    // guaranteed to be from another backing pass of the SAME slot. Absent on
+    // a cursor written before this fix (or a plain census's cursor, which
+    // never has it) -- treated as "nothing to merge", never an error.
+    if (CENSUS_BACKING) {
+      mergeBackingMapInto(backingBySport, prior.backingBySport, {});
+      mergeBackingMapInto(backingByCell, prior.backingByCell, { capAt: BACKING_CELL_CAP });
     }
   };
   const sample = (klass, cardId, line) => {
@@ -4553,6 +4609,35 @@ async function main() {
     },
     stoppedAtBudget: !!stopReason, generatedAt: new Date().toISOString(),
   };
+  // *** THE BACKING-COMPLETENESS ASSERTION (2026-09-20, the census
+  // self-relaunch backing-loss fix). *** Every row this slot classified
+  // (`total`, i.e. `stats.seen`) passes through EXACTLY ONE of the seven
+  // backing buckets, unconditionally, the moment `CENSUS_BACKING` is armed
+  // (see the per-row block feeding `backingBucketsOf(backingBySport, ...)`)
+  // -- there is no path that classifies a row but skips its backing tally.
+  // So `backedStrict + rowExistsNonStrict + noRow + unparseable + parked +
+  // notPricedFlagged + unknown`, summed across every sport, MUST equal
+  // `total` exactly, on a cold pass AND on a resumed one (the cursor now
+  // merges `stats` and the backing maps together -- see mergeCensusAggregate
+  // above -- so both sides of this equality climb by the same resumed
+  // amount). A mismatch means backing under-reports relative to what this
+  // slot actually classified -- exactly what forwarding-`sources` alone,
+  // without also checkpointing the backing tallies, would still produce on
+  // a resumed pass: `sources` restores CENSUS_BACKING correctly, but a
+  // resumed pass's OWN units add fresh rows to `total` while the merged-in
+  // backing maps only ever cover the PRIOR pass's units, permanently short
+  // by whatever this pass classifies that a stale backing merge cannot see.
+  // Loud and non-zero rather than a silently short artifact a merge could
+  // use without anyone noticing.
+  if (CENSUS_BACKING) {
+    const t = backingOverallTotals();
+    const backingTotal = t.backedStrict + t.rowExistsNonStrict + t.noRow + t.unparseable
+      + t.parked + t.notPricedFlagged + t.unknown;
+    if (backingTotal !== total) {
+      console.error(`\n  !! INCOMPLETE BACKING: slot ${SLOT} classified ${f(total)} row(s) but its backing tally only covers ${f(backingTotal)} (short by ${f(total - backingTotal)}). This artifact's backing block MUST NOT be trusted by merge-census-backing.cjs -- it under-reports this slot's true coverage.`);
+      process.exitCode = INCOMPLETE_BACKING_EXIT_CODE;
+    }
+  }
   if (r32ExportStream) {
     try { r32ExportStream.end(); } catch { /* a report must not fail the run */ }
     console.log(`\n  R32 would-move export -> ${r32ExportPath}  (${r32ExportWritten} rows, uncapped, REPORT ONLY)`);
@@ -4961,6 +5046,22 @@ function censusCursorSignature() {
     // census, which is exactly the mode every pre-existing cursor was
     // written by.
     mode: MODE === "apply-improve" ? MODE : undefined,
+    // THE SOURCES MODE IS PART OF THE SIGNATURE TOO (2026-09-20, the census
+    // self-relaunch backing-loss defect). A census's cursor id is shared by
+    // EVERY `sources=` value -- there is no separate id per SOURCES the way
+    // there is per MODE -- so without this field a plain census's checkpoint
+    // and a SOURCES=backing census's checkpoint were the exact same
+    // document, and either could resume the other's cursor: a backing run
+    // reading a plain census's checkpoint silently carried forward zero
+    // backing tallies (this pass's `backing` block only ever counts ITS OWN
+    // units), and a plain census reading a backing run's checkpoint resumed
+    // fine but wasted the backing preload work the prior pass already paid
+    // for. `undefined` when SOURCES is not `backing` -- so a legacy cursor
+    // (written before this field existed, always a plain census) still
+    // matches a plain census's resume exactly as before, and only a
+    // SOURCES=backing pass's signature carries the literal string "backing",
+    // which no pre-existing cursor can ever accidentally equal.
+    sourcesMode: CENSUS_BACKING ? "backing" : undefined,
     measuredAt: SHARD_TABLE.measuredAt,
     scope: APPLY_SCOPE_RAW,
     sports: SPORTS_FILTER.slice().sort(),
@@ -5346,6 +5447,10 @@ module.exports = {
   // its exit-code contract, exported so both are pinned on the SHIPPED
   // functions/constants rather than a test's re-implementation of them.
   getOrCreateControlContainer, CENSUS_CURSOR_SAVE_FAILED_EXIT_CODE,
+  // 2026-09-20 (the census self-relaunch backing-loss fix): the backing-
+  // completeness assertion's exit code, exported so a test pins the SHIPPED
+  // constant rather than a hardcoded 8 that could silently drift from it.
+  INCOMPLETE_BACKING_EXIT_CODE,
 };
 
 if (require.main === module) // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane

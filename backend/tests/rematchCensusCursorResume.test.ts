@@ -316,3 +316,99 @@ describe("the resume cursor is keyed by MODE -- an apply and a census never coll
     expect(S.censusCursorSignature().mode).toBe("apply-improve");
   });
 });
+
+/**
+ * CF-A-BACKING-CENSUS-AND-A-PLAIN-CENSUS-SHARE-ONE-CURSOR-ID (2026-09-20).
+ *
+ * THE DEFECT (second half of the census self-relaunch backing-loss report).
+ * `censusCursorId` is keyed by MODE alone, never by SOURCES -- so a plain
+ * census (MODE=census, no SOURCES) and a SOURCES=backing census of the SAME
+ * slot address the EXACT SAME cursor document. Before this fix, either could
+ * resume the other's checkpoint: a backing pass reading a plain census's
+ * cursor would merge in a `stats`/`counts` total with NO backing tallies
+ * behind it (the plain pass's `backing` block was never armed, so its
+ * compact cursor JSON never carried one), and a plain census reading a
+ * backing pass's cursor would resume fine but re-pay none of the backing
+ * preload cost the prior pass already spent.
+ *
+ * THE FIX. `censusCursorSignature()` now also carries `sourcesMode: "backing"`
+ * when `CENSUS_BACKING` is armed, `undefined` otherwise -- the same
+ * "undefined matches only the mode every pre-existing cursor was written
+ * under" trick `mode` already uses, so a cursor written before this field
+ * existed (always a plain census, since SOURCES=backing shipped later) still
+ * resumes under a plain census, and NEVER under a backing one.
+ */
+describe("the resume cursor's signature also carries the SOURCES mode -- backing and plain census never share a checkpoint", () => {
+  it("a plain census (no SOURCES) signature carries sourcesMode: undefined", () => {
+    const S = loadScript({ MODE: "census" });
+    expect(S.censusCursorSignature().sourcesMode).toBeUndefined();
+  });
+
+  it("MODE=census SOURCES=backing carries sourcesMode: 'backing'", () => {
+    const S = loadScript({ MODE: "census", SOURCES: "backing" });
+    expect(S.censusCursorSignature().sourcesMode).toBe("backing");
+  });
+
+  it("a wrong SOURCES value (not literally 'backing') is the SAME signature as a plain census", () => {
+    const plain = loadScript({ MODE: "census" });
+    const wrong = loadScript({ MODE: "census", SOURCES: "some-other-thing" });
+    expect(wrong.censusCursorSignature().sourcesMode).toBeUndefined();
+    expect(plain.signaturesMatch(plain.censusCursorSignature(), wrong.censusCursorSignature())).toBe(true);
+  });
+
+  it("a backing pass refuses (starts fresh) a cursor written by a plain census of the SAME slot", async () => {
+    const plainS = loadScript({ MODE: "census" });
+    const control = fakeControl();
+    await plainS.saveCensusCursor(control, 7, { unitsDone: ["a"], aggregate: { counts: {} }, classified: 500 });
+    // Same id -- the defect this test pins is that the id alone is not
+    // enough to keep the two modes apart.
+    expect(plainS.censusCursorId(7)).toBe("census-cursor::slot-7");
+    const backingS = loadScript({ MODE: "census", SOURCES: "backing" });
+    expect(backingS.censusCursorId(7)).toBe("census-cursor::slot-7");
+    // The backing pass reads the SAME document (proving the id collision is
+    // real) but the signature check inside loadCensusCursor refuses it.
+    expect(await backingS.loadCensusCursor(control, 7)).toBeNull();
+  });
+
+  it("a plain census refuses (starts fresh) a cursor written by a SOURCES=backing pass of the SAME slot", async () => {
+    const backingS = loadScript({ MODE: "census", SOURCES: "backing" });
+    const control = fakeControl();
+    await backingS.saveCensusCursor(control, 3, { unitsDone: ["a"], aggregate: { counts: {}, backingBySport: { baseball: { backedStrict: 1, rowExistsNonStrict: 0, noRow: 0, unparseable: 0, parked: 0, notPricedFlagged: 0, unknown: 0 } } }, classified: 1 });
+    const plainS = loadScript({ MODE: "census" });
+    expect(await plainS.loadCensusCursor(control, 3)).toBeNull();
+  });
+
+  it("a backing pass DOES resume its own prior backing checkpoint -- the signature matches itself", async () => {
+    const backingS = loadScript({ MODE: "census", SOURCES: "backing" });
+    const control = fakeControl();
+    await backingS.saveCensusCursor(control, 9, { unitsDone: ["a"], aggregate: { counts: {} }, classified: 1 });
+    const backingS2 = loadScript({ MODE: "census", SOURCES: "backing" });
+    expect(await backingS2.loadCensusCursor(control, 9)).not.toBeNull();
+  });
+
+  it("a legacy cursor with no sourcesMode key at all still resumes a plain census (no migration)", async () => {
+    const S = loadScript({ MODE: "census" });
+    const control = fakeControl();
+    await S.saveCensusCursor(control, 0, { unitsDone: ["a"], aggregate: {}, classified: 1 });
+    const doc = control.store.get("census-cursor::slot-0");
+    // Round-tripped through JSON first, the same way the `mode` field's own
+    // test above does: `fakeControl`'s upsert spreads the doc rather than
+    // serializing it, so an `undefined`-valued key survives as a KEY here
+    // even though a real Cosmos write (and JSON.stringify) would drop it --
+    // matching what a genuinely pre-existing cursor document looks like.
+    expect(JSON.parse(JSON.stringify(doc.signature))).not.toHaveProperty("sourcesMode");
+    expect(await S.loadCensusCursor(control, 0)).not.toBeNull();
+    // ...and a cursor stored with NO sourcesMode key at all (a genuinely old
+    // document) loads too.
+    const legacy = JSON.parse(JSON.stringify(doc));
+    delete legacy.signature.sourcesMode;
+    control.store.set("census-cursor::slot-0", legacy);
+    expect(await S.loadCensusCursor(control, 0)).not.toBeNull();
+  });
+});
+
+// THE ACTUAL CHECKPOINT/RESTORE OF THE BACKING TALLIES (`censusAggregateToCompactJSON`
+// / `mergeCensusAggregate`'s backing branch) closes over main()'s locals and is
+// not exported -- it is proven end to end, driving the real `main()` across a
+// simulated budget stop and resume, in censusBackingE2E.test.ts
+// ("SOURCES=backing survives a budget-stop resume").
