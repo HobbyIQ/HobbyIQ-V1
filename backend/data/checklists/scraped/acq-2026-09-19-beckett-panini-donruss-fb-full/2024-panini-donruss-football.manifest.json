@@ -1,0 +1,591 @@
+{
+  "scrapedAt": "2026-09-20T02:46:03.224Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/12/2024-Donruss-Football-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "football",
+  "year": 2024,
+  "setName": "2024 Panini Donruss Football",
+  "productKey": "2024-panini-donruss",
+  "setKey": "panini-donruss",
+  "rowCount": 6369,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 300,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Rated Rookies",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "No #7, 14, 28, 47, 108",
+      "category": "base",
+      "cards": 395,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Season Stat Line",
+      "category": "base",
+      "cards": 400,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Action All-Pros Autographs",
+      "category": "auto-action-all-pros-autographs",
+      "cards": 9,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "All Pro Kings Autographs",
+      "category": "auto-all-pro-kings-autographs",
+      "cards": 7,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "All-Time Gridiron Kings Autographs",
+      "category": "auto-all-time-gridiron-kings-autographs",
+      "cards": 11,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Best of Instant Autographs",
+      "category": "auto-best-of-instant-autographs",
+      "cards": 7,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Bomb Squad Autographs",
+      "category": "auto-bomb-squad-autographs",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Canton Kings Autographs",
+      "category": "auto-canton-kings-autographs",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Champ Is Here Autographs",
+      "category": "auto-champ-is-here-autographs",
+      "cards": 8,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Dominators Autographs",
+      "category": "auto-dominators-autographs",
+      "cards": 9,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Gridiron Kings Autographs",
+      "category": "auto-gridiron-kings-autographs",
+      "cards": 7,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Inducted Autographs",
+      "category": "auto-inducted-autographs",
+      "cards": 2,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Jersey Kings Autographs",
+      "category": "auto-jersey-kings-autographs",
+      "cards": 18,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Leather Kings Autographs",
+      "category": "auto-leather-kings-autographs",
+      "cards": 9,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Optic Rated Rookies Preview Autographs",
+      "category": "auto-optic-rated-rookies-preview-autographs",
+      "cards": 60,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Rated Rookies Autographs",
+      "overlapPct": 98.3
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rated Rookies Autographs",
+      "category": "auto-rated-rookies-autographs",
+      "cards": 63,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rated Rookies Autographs Orange",
+      "category": "auto-rated-rookies-autographs-orange",
+      "cards": 51,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Rated Rookies Autographs",
+      "overlapPct": 98
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rated Rookies Autographs Purple",
+      "category": "auto-rated-rookies-autographs-purple",
+      "cards": 52,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Rated Rookies Autographs",
+      "overlapPct": 94.2
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rated Rookies Retro Autographs",
+      "category": "auto-rated-rookies-retro-autographs",
+      "cards": 9,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rated Rookies Throwback Autographs",
+      "category": "auto-rated-rookies-throwback-autographs",
+      "cards": 32,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Red Hot Rookies Autographs",
+      "category": "auto-red-hot-rookies-autographs",
+      "cards": 7,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Retro 1994 Autographs",
+      "category": "auto-retro-1994-autographs",
+      "cards": 26,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Retro 2004 Autographs",
+      "category": "auto-retro-2004-autographs",
+      "cards": 27,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Gridiron Kings Autographs",
+      "category": "auto-rookie-gridiron-kings-autographs",
+      "cards": 13,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Phenom Jersey Autographs",
+      "category": "auto-rookie-phenom-jersey-autographs",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Signature Marks",
+      "category": "auto-signature-marks",
+      "cards": 48,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Signature Series",
+      "category": "auto-signature-series",
+      "cards": 47,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "The Elite Series Autographs",
+      "category": "auto-the-elite-series-autographs",
+      "cards": 7,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "The Elite Series Rookies Autographs",
+      "category": "auto-the-elite-series-rookies-autographs",
+      "cards": 25,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>The Rookies Autographs",
+      "overlapPct": 80
+    },
+    {
+      "sheet": "Autographs",
+      "section": "The Legends Series Autographs",
+      "category": "auto-the-legends-series-autographs",
+      "cards": 18,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "The Rookies Autographs",
+      "category": "auto-the-rookies-autographs",
+      "cards": 26,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "White Hot Rookies Autographs",
+      "category": "auto-white-hot-rookies-autographs",
+      "cards": 5,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "All Pro Kings",
+      "category": "insert-all-pro-kings",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Canton Kings",
+      "category": "insert-canton-kings",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Donruss Threads",
+      "category": "insert-donruss-threads",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Jersey Kings",
+      "category": "insert-jersey-kings",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Leather Kings",
+      "category": "insert-leather-kings",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Passing the Torch Jerseys",
+      "category": "insert-passing-the-torch-jerseys",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Rookie Holiday Sweater",
+      "category": "insert-rookie-holiday-sweater",
+      "cards": 42,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Rookie Holiday Sweater Dual",
+      "category": "insert-rookie-holiday-sweater-dual",
+      "cards": 8,
+      "role": "parallel",
+      "anchor": "Memorabilia>Rookie Holiday Sweater",
+      "rung": "Dual"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Rookie Phenom Jerseys",
+      "category": "insert-rookie-phenom-jerseys",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Action All-Pros",
+      "category": "insert-action-all-pros",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "All-Time Gridiron Kings",
+      "category": "insert-all-time-gridiron-kings",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Best of Instant",
+      "category": "insert-best-of-instant",
+      "cards": 27,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Bomb Squad",
+      "category": "insert-bomb-squad",
+      "cards": 35,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Champ Is Here",
+      "category": "insert-champ-is-here",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Champions",
+      "category": "insert-champions",
+      "cards": 1,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Crunch Time",
+      "category": "insert-crunch-time",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Dominators",
+      "category": "insert-dominators",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Downtown!",
+      "category": "insert-downtown",
+      "cards": 21,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Downtown! Horizontal",
+      "category": "insert-downtown-horizontal",
+      "cards": 20,
+      "role": "parallel",
+      "anchor": "Inserts>Downtown!",
+      "rung": "Horizontal"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1 per Costco bundle.",
+      "category": "insert-1-per-costco-bundle",
+      "cards": 21,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Galaxy of Stars",
+      "category": "insert-galaxy-of-stars",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Gridiron Kings",
+      "category": "insert-gridiron-kings",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Gridiron Marvels",
+      "category": "insert-gridiron-marvels",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Inducted",
+      "category": "insert-inducted",
+      "cards": 3,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Optic Rated Rookies Preview Holo",
+      "category": "insert-optic-rated-rookies-preview-holo",
+      "cards": 100,
+      "role": "parallel",
+      "anchor": "Base>Rated Rookies",
+      "rung": "Optic Preview Holo"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Production Line",
+      "category": "insert-production-line",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Rated Rookies Retro",
+      "category": "insert-rated-rookies-retro",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Rated Rookies Throwback",
+      "category": "insert-rated-rookies-throwback",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Red Hot Rookies",
+      "category": "insert-red-hot-rookies",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Retro 1994",
+      "category": "insert-retro-1994",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Retro 2004",
+      "category": "insert-retro-2004",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Road to the Super Bowl Championship",
+      "category": "insert-road-to-the-super-bowl-championship",
+      "cards": 1,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Road to the Super Bowl Conference Championship",
+      "category": "insert-road-to-the-super-bowl-conference-championship",
+      "cards": 2,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Road to the Super Bowl Divisional Round",
+      "category": "insert-road-to-the-super-bowl-divisional-round",
+      "cards": 4,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Road to the Super Bowl Wild Card",
+      "category": "insert-road-to-the-super-bowl-wild-card",
+      "cards": 6,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Rookie Gridiron Kings",
+      "category": "insert-rookie-gridiron-kings",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Rookie Revolution",
+      "category": "insert-rookie-revolution",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Super Bowl MVP",
+      "category": "insert-super-bowl-mvp",
+      "cards": 1,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "The Elite Series",
+      "category": "insert-the-elite-series",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "The Elite Series Rookies",
+      "category": "insert-the-elite-series-rookies",
+      "cards": 30,
+      "role": "parallel",
+      "anchor": "Inserts>The Elite Series",
+      "rung": "Rookie"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "The Legends Series",
+      "category": "insert-the-legends-series",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "The Rookies",
+      "category": "insert-the-rookies",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Unleashed",
+      "category": "insert-unleashed",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Vortex",
+      "category": "insert-vortex",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "White Hot Rookies",
+      "category": "insert-white-hot-rookies",
+      "cards": 10,
+      "role": "own-cards"
+    }
+  ],
+  "discardedRangeHeaders": [
+    {
+      "sheet": "Base",
+      "row": 3,
+      "header": "Rated Rookies - #301-400",
+      "nextCardNumber": "1"
+    }
+  ]
+}
