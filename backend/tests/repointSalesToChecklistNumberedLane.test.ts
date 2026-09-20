@@ -1181,6 +1181,300 @@ describe("TITLE-CONTRADICTION VETO -- refuses a sale whose own title contradicts
   });
 });
 
+// ── TITLE-CONTRADICTION VETO -- FALSE-POSITIVE PASS (review, 2026-09-20) ────
+// Production run 35483730823 (baseball:2025 topps, first REPORT after the
+// veto merged) refused 575 sales as title-contradicts-target: 312
+// card-number, 126 product, 76 parallel, 61 player. The product refusals
+// (Donruss Elite / A&G / Cosmic Chrome vs a plain Topps target) are CORRECT
+// and stay refused -- already pinned above. This block pins the three false
+// classes so they now pass through, and re-pins each rule's true positives
+// so the fix does not overcorrect into silence.
+describe("TITLE-CONTRADICTION VETO false-positive pass -- card-number: a boundary-prefix is the SAME ladder, not a different card", () => {
+  const UNDER_SPECIFIED_CARD_NUMBER_CASES: Array<{ title: string; targetCardNumber: string }> = [
+    // The title states only the parent code of a hyphenated insert number --
+    // the checklist's own more specific rung, not a different card.
+    { title: "2025 Topps Rare Insert #90ASC Refractor Auto", targetCardNumber: "90ASC-3" },
+    { title: "2025 Topps Rare Insert #90B2 The Real One", targetCardNumber: "90B2-39" },
+    { title: "2025 Topps Base Card #BCP Chrome", targetCardNumber: "BCP-12" },
+    // The title carries an extra suffix (-SP) the checklist's bare number
+    // does not -- same ladder, finer grain on the title's side.
+    { title: "2025 Topps #19-SP Image Variation", targetCardNumber: "19" },
+    { title: "2025 Topps #71-SP Image Variation", targetCardNumber: "71" },
+  ];
+
+  it.each(UNDER_SPECIFIED_CARD_NUMBER_CASES)("does NOT refuse '$title' against target #$targetCardNumber (boundary prefix)", ({ title, targetCardNumber }) => {
+    const shortId = "hiq:baseball:2025:topps:88:image-variation:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      cardNumber: targetCardNumber, setKey: "topps", parallelSlug: "Image Variation", playerName: "Test Player", isAuto: false,
+      printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title, sport: "baseball", price: 5, parallel: "Image Variation", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+0/);
+  });
+
+  it("STILL REFUSES a genuinely different card number (#61 vs target #125 -- no boundary-prefix relationship at all)", () => {
+    const shortId = "hiq:baseball:2025:topps:99:purple-holo-foil:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      cardNumber: "125", setKey: "topps", parallelSlug: "Purple Holo Foil", playerName: "Test Player", isAuto: false,
+      printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title: "2026 Topps Purple Holo Foil #61", sport: "baseball", price: 5, parallel: "Purple Holo Foil", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+1/);
+    expect(r.out).toMatch(/rule: card-number/);
+  });
+
+  it("STILL REFUSES an unrelated non-boundary prefix ('6' is not a boundary-safe prefix of '61' -- both digits)", () => {
+    const shortId = "hiq:baseball:2025:topps:99:gold:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      cardNumber: "61", setKey: "topps", parallelSlug: "Gold", playerName: "Test Player", isAuto: false,
+      printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title: "2026 Topps Gold #6", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+1/);
+    expect(r.out).toMatch(/rule: card-number/);
+  });
+});
+
+describe("TITLE-CONTRADICTION VETO false-positive pass -- player: a checklist marker or parser noise is not a different person", () => {
+  const UNDER_SPECIFIED_PLAYER_CASES: Array<{ title: string; targetPlayerName: string }> = [
+    // The catalog's stored playerName still carries a checklist marker the
+    // title never states -- cleanPlayerName strips it on both sides.
+    { title: "2025 Topps Mason Montgomery Big Apple", targetPlayerName: "Mason Montgomery RC" },
+    { title: "2025 Topps Andy Pages Big Apple", targetPlayerName: "Andy Pages FS" },
+    { title: "2025 Topps Masyn Winn Big Apple", targetPlayerName: "Masyn Winn RCup" },
+    // The title-side guess is a loose parse that grabbed an EXTRA trailing
+    // token the vendor's structured field never had -- title is the
+    // superset here, target the subset.
+    { title: "2025 Topps Roki Sasaki Ff Nyc Big Apple", targetPlayerName: "Roki Sasaki RC" },
+    // The title-side guess is a BARE first name -- a subset of the target's
+    // fuller name, not a different player.
+    { title: "2025 Topps James Big Apple", targetPlayerName: "James Wood RC" },
+    // Accent difference (Jasson Domínguez / Jasson Dominguez) folds through
+    // playerIdentityKey's own NFD accent strip.
+    { title: "2025 Topps Jasson Dominguez Big Apple", targetPlayerName: "Jasson Domínguez FS" },
+    // Initials punctuation: "J.T." vs "Jt" -- one person, two conventions.
+    { title: "2025 Topps Jt Realmuto Big Apple", targetPlayerName: "J.T. Realmuto" },
+    { title: "2025 Topps Jt Ginn Big Apple", targetPlayerName: "J.T. Ginn RC" },
+  ];
+
+  it.each(UNDER_SPECIFIED_PLAYER_CASES)("does NOT refuse '$title' against target playerName '$targetPlayerName'", ({ title, targetPlayerName }) => {
+    const shortId = "hiq:baseball:2025:topps:77:big-apple:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      cardNumber: "77", setKey: "topps", parallelSlug: "Big Apple", playerName: targetPlayerName, isAuto: false,
+      printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title, sport: "baseball", price: 5, parallel: "Big Apple", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+0/);
+  });
+
+  it("does NOT refuse when the title agrees with ANY listed name on a multi-player target row", () => {
+    const shortId = "hiq:baseball:2025:topps:66:gold:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      cardNumber: "66", setKey: "topps", parallelSlug: "Gold", playerName: "Eddie Murray / Cal Ripken Jr.", isAuto: false,
+      printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title: "2025 Topps Cal Ripken Gold", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+0/);
+  });
+
+  it("STILL REFUSES a genuine mismatch sharing no surname token (Clayton Kershaw vs target Mookie Betts)", () => {
+    const shortId = "hiq:baseball:2025:topps:55:gold:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      cardNumber: "55", setKey: "topps", parallelSlug: "Gold", playerName: "Mookie Betts", isAuto: false,
+      printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title: "2025 Topps Clayton Kershaw Gold", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+1/);
+    expect(r.out).toMatch(/rule: player/);
+  });
+
+  it("STILL REFUSES a multi-player target row when the title agrees with NEITHER listed name", () => {
+    const shortId = "hiq:baseball:2025:topps:66:gold:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      cardNumber: "66", setKey: "topps", parallelSlug: "Gold", playerName: "Eddie Murray / Cal Ripken Jr.", isAuto: false,
+      printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title: "2025 Topps Mike Trout Gold", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+1/);
+    expect(r.out).toMatch(/rule: player/);
+  });
+
+  // PIN (2026-09-20 false-positive pass, its own real audit line, run
+  // 35483730823): "Salvador Ff Nyc" vs target "Salvador Perez" -- ONLY the
+  // first token matches ("salvador"); the title's remaining tokens ("ff",
+  // "nyc") share NO surname with the target's own last token ("perez"). This
+  // is NOT the same shape as "Roki Sasaki Ff Nyc" ⊃ "Roki Sasaki" (there,
+  // BOTH of the target's tokens are a prefix of the title's) -- here only
+  // ONE of the target's two tokens is present, so neither key contains the
+  // other as a whole-token subset, and per the review's own floor
+  // ("contradict only when the two keys share NO surname token AND the
+  // title guess has >= 2 name tokens and confidence above the floor") this
+  // one legitimately stays refused: a genuinely different-looking name, not
+  // an under-specification of the same one. Pinned as a TRUE positive this
+  // fix does NOT release, not silently dropped from the suite.
+  it("STILL REFUSES 'Salvador Ff Nyc' against target 'Salvador Perez' -- only the first token matches, no shared surname", () => {
+    const shortId = "hiq:baseball:2025:topps:508:image-variation:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      cardNumber: "508", setKey: "topps", parallelSlug: "Image Variation", playerName: "Salvador Perez", isAuto: false,
+      printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title: "2025 Topps Salvador Ff Nyc Image Variation", sport: "baseball", price: 5, parallel: "Image Variation", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+1/);
+    expect(r.out).toMatch(/rule: player/);
+  });
+});
+
+describe("TITLE-CONTRADICTION VETO false-positive pass -- parallel: a terse CardHedge title stating only a bare colour is under-specified, not wrong", () => {
+  it("does NOT refuse a bare 'Gold' CardHedge-style title against a 'gold-diamante-foil' target WHEN the card number has only that one gold-family rung", () => {
+    const shortId = "hiq:baseball:2025:topps:520:gold-diamante-foil:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      cardNumber: "520", setKey: "topps", parallelSlug: "gold-diamante-foil", playerName: "Aaron Judge", isAuto: false,
+      printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "cardhedge::ch-daily::1", cardId: shortId, hobbyiqCardId: shortId, title: "2025 Topps Aaron Judge Gold #520", sport: "baseball", price: 5, parallel: "gold-diamante-foil", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+0/);
+  });
+
+  it("does NOT refuse a bare 'Orange' CardHedge-style title against an 'orange-diamante-foil' target under the same single-rung condition", () => {
+    const shortId = "hiq:baseball:2025:topps:485:orange-diamante-foil:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      cardNumber: "485", setKey: "topps", parallelSlug: "orange-diamante-foil", playerName: "Aaron Judge", isAuto: false,
+      printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "cardhedge::ch-daily::2", cardId: shortId, hobbyiqCardId: shortId, title: "2025 Topps Aaron Judge Orange #485", sport: "baseball", price: 5, parallel: "orange-diamante-foil", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+0/);
+  });
+
+  it("STILL REFUSES a bare 'Gold' title when the SAME card number ALSO carries a plain 'gold' rung on this ladder (genuinely ambiguous)", () => {
+    const shortId = "hiq:baseball:2025:topps:520:gold-diamante-foil:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const plainGoldShortId = "hiq:baseball:2025:topps:520:gold:no-auto";
+    const plainGoldNumberedId = `${plainGoldShortId}:num-2025`;
+    const catalog = [
+      {
+        id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+        cardNumber: "520", setKey: "topps", parallelSlug: "gold-diamante-foil", playerName: "Aaron Judge", isAuto: false,
+        printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+      },
+      // A SIBLING checklist row at the SAME card number, a DIFFERENT rung on
+      // the same ladder (plain "gold") -- the ambiguity this test exists for.
+      {
+        id: plainGoldNumberedId, cardId: plainGoldNumberedId, sport: "baseball", year: 2025, cardYear: 2025,
+        cardNumber: "520", setKey: "topps", parallelSlug: "gold", playerName: "Aaron Judge", isAuto: false,
+        printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+      },
+    ];
+    const sale = { id: "cardhedge::ch-daily::3", cardId: shortId, hobbyiqCardId: shortId, title: "2025 Topps Aaron Judge Gold #520", sport: "baseball", price: 5, parallel: "gold-diamante-foil", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+1/);
+    expect(r.out).toMatch(/rule: parallel/);
+  });
+
+  it("STILL REFUSES a title naming an UNRELATED finish family (a real disagreement, not under-specification)", () => {
+    const shortId = "hiq:baseball:2025:topps:520:purple-holo-foil:no-auto";
+    const numberedId = `${shortId}:num-2025`;
+    const catalog = [{
+      id: numberedId, cardId: numberedId, sport: "baseball", year: 2025, cardYear: 2025,
+      cardNumber: "520", setKey: "topps", parallelSlug: "purple-holo-foil", playerName: "Aaron Judge", isAuto: false,
+      printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
+    }];
+    const sale = { id: "cardhedge::ch-daily::4", cardId: shortId, hobbyiqCardId: shortId, title: "2025 Topps Aaron Judge Orange Foil #520", sport: "baseball", price: 5, parallel: "purple-holo-foil", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2025", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+1/);
+    expect(r.out).toMatch(/rule: parallel/);
+  });
+});
+
 // ── CONDITIONAL WRITES (review, 2026-09-19) ─────────────────────────────────
 // The reviewer's own follow-up: the _etag re-read still leaves a window,
 // because relocateSoldComp's upsert and delete were unconditional. The

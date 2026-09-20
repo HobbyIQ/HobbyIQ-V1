@@ -561,12 +561,14 @@ async function main() {
   // hobbyIqCardId.service.ts among the six, but only their EXPORTED
   // functions are called here, nothing in them is edited).
   const { extractCardNumberFromTitle } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js"));
-  const { sameCardNumber, slugify } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+  const { sameCardNumber, slugify, foldCardNumber } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { isRegisteredProduct } = require(path.join(backend, "dist/services/catalog/resolveProductByChecklist.js"));
   const { productAncestry } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
   const { statedFinishFromChecklist } = require(path.join(backend, "dist/services/portfolioiq/statedFinishFromChecklist.js"));
   const { parallelTheTitleAllows } = require(path.join(backend, "dist/services/portfolioiq/titleOutranksVendorTag.js"));
-  const { playerTheTitleAllows } = require(path.join(backend, "dist/services/portfolioiq/playerTheTitleAllows.js"));
+  const { playerTheTitleAllows, playerNameKey } = require(path.join(backend, "dist/services/portfolioiq/playerTheTitleAllows.js"));
+  const { cleanPlayerName } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
+  const { playerIdentityKey } = require(path.join(backend, "dist/services/catalog/playerIdentityKey.js"));
   // guessPlayerFromTitle (persistVendorSalesToPool.service.ts:2867) is not
   // exported; this mirrors its EXACT pattern (lazy require of the same
   // compiled parser, same .playerName?.trim() read, same fail-to-null),
@@ -861,6 +863,60 @@ async function main() {
   }
 
   /**
+   * CARD-NUMBER PREFIX EXEMPTION (review, 2026-09-19 false-positive pass).
+   * `sameCardNumber` is an EQUALITY test (folds case AND hyphens, then
+   * compares byte-for-byte) -- exactly right for "is this the same number",
+   * wrong for "does the title's number CONTRADICT the target's", because a
+   * title that states only the parent code of a hyphenated insert number
+   * (#90ASC on a #90ASC-3 target, #90B2 on a #90B2-39 target) or the
+   * checklist's bare number where the title carries an extra hyphenated
+   * suffix (#19-SP on a #19 target) is not naming a different card -- it is
+   * naming the SAME ladder at a coarser or finer grain than the checklist.
+   * Measured: 312 of the run's refusals are this shape, ALL of them one code
+   * being the other PLUS a trailing "-something" `sameCardNumber`'s own fold
+   * already discards by removing every hyphen before comparing.
+   *
+   * Normalizes case/whitespace but DELIBERATELY KEEPS hyphens (unlike
+   * `foldCardNumber`) so the hyphen position itself -- not a character-class
+   * guess reconstructed after it is gone -- decides the boundary: "the
+   * shorter code, plus a literal hyphen, is a PREFIX of the longer one".
+   * This is why "90B2" vs "90B2-39" (both sides end in a DIGIT, so any
+   * digit/letter-transition heuristic on the folded strings alone cannot
+   * tell this apart from "6" vs "61") still exempts correctly -- the hyphen
+   * that marks the boundary is read directly, not inferred.
+   *
+   * Deliberately NOT exempted: a prefix with no hyphen at the join point
+   * ("6" vs "61" -- "61" is not "6-something") and a title/target pair that
+   * are simply DIFFERENT numbers throughout ("61" vs "125") -- those still
+   * contradict, per the review's own example.
+   */
+  function normalizeKeepHyphens(raw) {
+    return String(raw ?? "").toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  }
+  function isHyphenSuffixOf(shorter, longer) {
+    return Boolean(shorter) && longer.length > shorter.length && longer.startsWith(`${shorter}-`);
+  }
+
+  /**
+   * True when the title's stated number and the target's number are the
+   * SAME print-run ladder at different grains -- one hyphen-preserved,
+   * case-normalized code is the other plus a trailing "-suffix" (either
+   * direction), OR the target's own folded number appears verbatim
+   * somewhere in the title's full text (the extractor grabbed the wrong
+   * token, but the real target number is still stated). Never true for two
+   * codes that are simply unrelated numbers.
+   */
+  function cardNumberIsUnderSpecified(titleCardNumber, targetCardNumber, fullTitle) {
+    const nt = normalizeKeepHyphens(titleCardNumber);
+    const ng = normalizeKeepHyphens(targetCardNumber);
+    if (!nt || !ng) return false;
+    if (isHyphenSuffixOf(nt, ng) || isHyphenSuffixOf(ng, nt)) return true;
+    const foldedTitleText = foldCardNumber(fullTitle);
+    const foldedTarget = foldCardNumber(targetCardNumber);
+    return Boolean(foldedTarget) && foldedTitleText.includes(foldedTarget);
+  }
+
+  /**
    * TITLE-CONTRADICTION VETO (review, 2026-09-19, audit of tonight's 107
    * serial relocations: 4 of them carried a sale onto a checklist-backed
    * address the sale's OWN title contradicts -- "Aaron Judge 2026 Donruss
@@ -884,8 +940,9 @@ async function main() {
    *   (c) parallel/finish -- statedFinishFromChecklist (statedFinishFromChecklist.ts),
    *                         the checklist-corpus reader that reports ONLY a
    *                         finish name actually witnessed in the title
-   *   (player) -- SKIPPED. "R69"/"clean-share judge" named in the review does
-   *                         not exist under that name anywhere in this repo
+   *   (player) -- NO new reader written for this either. "R69"/"clean-share
+   *                         judge" named in the original review does not
+   *                         exist under that name anywhere in this repo
    *                         (verified: no match for R69 or clean-share/cleanShare
    *                         in backend/src or backend/scripts). The real
    *                         shipped equivalent is playerTheTitleAllows
@@ -899,7 +956,11 @@ async function main() {
    *                         reader -- the review's own "if it lives only in a
    *                         scratchpad, skip player" caveat does not apply,
    *                         since playerTheTitleAllows is compiled, exported,
-   *                         and already the production decision.
+   *                         and already the production decision. A SUBSET
+   *                         exemption sits in front of it as of the
+   *                         2026-09-20 false-positive pass (see the call
+   *                         site below) -- see that comment for why
+   *                         `playerTheTitleAllows` alone over-refused.
    *
    * NONE of the six derivation-stamp inputs (scripts/lib/derivation-version.cjs
    * DERIVATION_INPUTS) are edited by this lane -- parseTitleIdentity.service.ts
@@ -972,14 +1033,23 @@ async function main() {
    * called here already fails open to null/false on its own, and this
    * function adds no further parsing of its own past them.
    */
-  function titleContradictsTarget(sale, target) {
+  function titleContradictsTarget(sale, target, parallelsByCardNumber) {
     const title = String(sale.title ?? "");
     if (!title.trim()) return { contradicts: false };
 
     // (a) CARD NUMBER -- extractCardNumberFromTitle + sameCardNumber, the
-    // SAME case/hyphen-insensitive comparison the confirm module uses.
+    // SAME case/hyphen-insensitive comparison the confirm module uses, widened
+    // by the boundary-prefix exemption above: a title stating only the
+    // parent code of a hyphenated insert number (#90ASC on a #90ASC-3
+    // target), or the checklist's bare number where the title carries an
+    // extra suffix (#19-SP on a #19 target), is the SAME ladder at a coarser
+    // or finer grain -- not a different card -- and is not refused here.
     const titleCardNumber = extractCardNumberFromTitle(title);
-    if (titleCardNumber && target.cardNumber && !sameCardNumber(titleCardNumber, target.cardNumber)) {
+    if (
+      titleCardNumber && target.cardNumber
+      && !sameCardNumber(titleCardNumber, target.cardNumber)
+      && !cardNumberIsUnderSpecified(titleCardNumber, target.cardNumber, title)
+    ) {
       return { contradicts: true, rule: "card-number", detail: `title states #${titleCardNumber}, target is #${target.cardNumber}` };
     }
 
@@ -1014,7 +1084,40 @@ async function main() {
     if (titleFinish) {
       const finishDecision = parallelTheTitleAllows(titleFinish, String(target.parallelSlug ?? "Base"));
       if (finishDecision.vendorTagOverruled) {
-        return { contradicts: true, rule: "parallel", detail: `title states finish "${titleFinish}", target is "${target.parallelSlug ?? "Base"}"` };
+        // BARE-COLOUR UNDER-SPECIFICATION EXEMPTION (review, 2026-09-19
+        // false-positive pass, 76 of the run's refusals, ALL cardhedge rows:
+        // "Gold" vs "gold-diamante-foil", "Orange" vs "orange-diamante-foil").
+        // parallelTheTitleAllows's own vendorAddsADifferentFinishFamily guard
+        // exists to stop "Green" adopting an UNRELATED finish family ("Green
+        // Wave", "Green Shimmer") -- correct when a checklist genuinely has
+        // several distinct green-family rungs. It over-applies to a terse
+        // CardHedge product-record title that NEVER carries the compound
+        // finish name at all -- measured against 20 of the refused titles
+        // directly: bare colour, no "Diamante"/"Foil" token anywhere, a
+        // known CardHedge title shape, not a truncation of a fuller title
+        // the parser failed to read.
+        //
+        // The distinguishing fact this lane CAN see cheaply (no new I/O --
+        // `parallelsByCardNumber` is built once per cell from the SAME
+        // catalog rows already scanned into `groups`, see the call site):
+        // does this card NUMBER carry more than one rung on this exact
+        // ladder? A bare "Gold" is safely under-specified only when the
+        // number's checklist has exactly ONE gold-family rung to mean --
+        // if it ALSO carries a plain "gold" rung alongside "gold-diamante-
+        // foil", "Gold" is genuinely ambiguous between them and this stays
+        // refused (absent beats wrong), per the review's own caveat.
+        const titleFinishTokens = slugify(titleFinish).split("-").filter(Boolean);
+        const targetTokens = slugify(String(target.parallelSlug ?? "Base")).split("-").filter(Boolean);
+        const isTokenSubsetOfCompound = titleFinishTokens.length > 0 && targetTokens.length > titleFinishTokens.length
+          && titleFinishTokens.every((t) => targetTokens.includes(t));
+        const cardNumberKey = String(target.cardNumber ?? "").trim().toLowerCase();
+        const siblingRungs = parallelsByCardNumber instanceof Map ? parallelsByCardNumber.get(cardNumberKey) : null;
+        const onlyOneRungOnThisLadder = !siblingRungs || siblingRungs.size <= 1;
+        if (isTokenSubsetOfCompound && onlyOneRungOnThisLadder) {
+          // Under-specified, not contradicting -- fall through without refusing.
+        } else {
+          return { contradicts: true, rule: "parallel", detail: `title states finish "${titleFinish}", target is "${target.parallelSlug ?? "Base"}"` };
+        }
       }
     }
 
@@ -1023,11 +1126,78 @@ async function main() {
     // "irreconcilable" is the ONLY outcome that refuses here: every other
     // outcome (agree, vendor-only, title-only, neither) is a normal case
     // this lane's own move must not second-guess.
+    //
+    // PLAYER FALSE-POSITIVE EXEMPTION (review, 2026-09-19 false-positive
+    // pass, 61 of the run's refusals): playerTheTitleAllows compares the two
+    // NAMES verbatim (playerNameKey strips only jr/sr/ii/iii/iv/v), but the
+    // catalog's stored playerName still carries checklist markers --
+    // "Mason Montgomery RC", "Andy Pages FS" -- that the title's own guess
+    // never states, and the title-side extraction is itself a loose parse
+    // that can grab an EXTRA trailing token the vendor's structured field
+    // never had ("Roki Sasaki Ff Nyc", "Salvador Ff Nyc" against a catalog
+    // "Roki Sasaki RC" / "Salvador Perez"). Neither side is wrong; the
+    // stored marker and the parser's noise are both real, unrelated to
+    // WHO is on the card. `playerIdentityKey` (playerIdentityKey.ts) is the
+    // repo's ONE shared reduction that already strips those checklist
+    // markers (RC/RR/DP/TC/UER/SP/SSP) before folding to a-z0-9 -- reused
+    // here read-only, exactly as inferSetKeyFromTitle and sameCardNumber
+    // already are, rather than adding a second marker-stripper.
+    //
+    // A key CONTAINING the other as a whole-token subset/prefix is silence,
+    // not disagreement -- "james" ⊂ "jameswood" is checked on the SPACED
+    // reduction (playerNameKey) so token boundaries stay whole-word ("James"
+    // must not match inside "Jameson"). Multi-player target rows ("Eddie
+    // Murray / Cal Ripken") are split on the same separators cleanPlayerName's
+    // own header documents seeing in the wild (/, &, " and ") and ANY listed
+    // name clearing the check is enough -- the title only ever depicts one
+    // player at a time, so agreeing with one listed name is agreeing with
+    // the row.
+    //
+    // Only fires (returns to the ordinary playerTheTitleAllows verdict) when
+    // this exemption does NOT apply; contradict still requires the two keys
+    // to share NO surname token, matching the review's own floor.
     const titlePlayer = guessPlayerFromTitleLocal(title);
     if (titlePlayer && target.playerName) {
-      const playerDecision = playerTheTitleAllows(target.playerName, titlePlayer);
-      if (playerDecision.outcome === "irreconcilable") {
-        return { contradicts: true, rule: "player", detail: `title names "${titlePlayer}", target is "${target.playerName}"` };
+      const targetNames = String(target.playerName).split(/\s*(?:\/|&|\band\b)\s*/i).map((n) => n.trim()).filter(Boolean);
+      const namesToCheck = targetNames.length ? targetNames : [String(target.playerName)];
+      const titleKey = playerIdentityKey(titlePlayer);
+      const isSubsetMatch = namesToCheck.some((name) => {
+        const nameKey = playerIdentityKey(name);
+        if (!nameKey || !titleKey) return false;
+        if (nameKey === titleKey) return true;
+        // Whole-TOKEN containment, not raw substring (never let "james"
+        // match inside "jameson"). Reduced through cleanPlayerName FIRST (the
+        // SAME order playerIdentityKey itself uses, see that file's header)
+        // so a checklist marker ("RC", "FS") is stripped from a TOKEN before
+        // comparison rather than surviving as an unmatched leftover token --
+        // playerNameKey alone only strips jr/sr/ii/iii/iv/v, never the
+        // checklist markers this exemption exists for. `collapseInitials`
+        // additionally joins RUNS of single-letter tokens ("j", "t") into one
+        // ("jt"), so "J.T. Realmuto" and "Jt Realmuto" -- one person, two
+        // punctuation conventions -- fold to the same token sequence.
+        const collapseInitials = (tokens) => {
+          const out = []; let buf = "";
+          for (const t of tokens) {
+            if (t.length === 1) buf += t;
+            else { if (buf) { out.push(buf); buf = ""; } out.push(t); }
+          }
+          if (buf) out.push(buf);
+          return out;
+        };
+        const tokensOf = (raw) => collapseInitials(
+          playerNameKey(cleanPlayerName(String(raw ?? ""))).split(" ").filter(Boolean).map((t) => playerIdentityKey(t)),
+        );
+        const nameTokens = tokensOf(name);
+        const titleTokens = tokensOf(titlePlayer);
+        if (!nameTokens.length || !titleTokens.length) return false;
+        const isSubsequence = (shorter, longer) => shorter.length > 0 && shorter.every((t) => longer.includes(t));
+        return isSubsequence(nameTokens, titleTokens) || isSubsequence(titleTokens, nameTokens);
+      });
+      if (!isSubsetMatch) {
+        const playerDecision = playerTheTitleAllows(target.playerName, titlePlayer);
+        if (playerDecision.outcome === "irreconcilable") {
+          return { contradicts: true, rule: "player", detail: `title names "${titlePlayer}", target is "${target.playerName}"` };
+        }
       }
     }
 
@@ -1193,7 +1363,7 @@ async function main() {
    * modulo the counts and rows that actually differ.
    */
   async function processTarget(rows, ctx) {
-    const { sport, year, setKey } = ctx;
+    const { sport, year, setKey, parallelsByCardNumber } = ctx;
     if (CLOCK.outOfClock()) { stoppedAtBudget = true; s.notReached++; return; }
     const picked = pickChecklistNumberedTarget(rows, isChecklist);
     if ("skip" in picked) {
@@ -1255,7 +1425,7 @@ async function main() {
       const { duplicate } = noteSaleFound(sale);
       const titlePrintRun = titlePrintRunOf(sale, shortId);
       const titleStatesProsePrintRun = statesProsePrintRun(sale.title);
-      const titleContradiction = titleContradictsTarget(sale, target);
+      const titleContradiction = titleContradictsTarget(sale, target, parallelsByCardNumber);
       const plan = decideSaleAction(sale, "cardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, titleContradiction, targetPrintRun: printRunOf(target) });
       if (plan.action === "refuse") {
         // RULING (review, 2026-09-19): a document already found by ANOTHER
@@ -1416,7 +1586,7 @@ async function main() {
       const { duplicate } = noteSaleFound(sale);
       const titlePrintRun = titlePrintRunOf(sale, shortId);
       const titleStatesProsePrintRun = statesProsePrintRun(sale.title);
-      const titleContradiction = titleContradictsTarget(sale, target);
+      const titleContradiction = titleContradictsTarget(sale, target, parallelsByCardNumber);
       const plan = decideSaleAction(sale, "hobbyiqCardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, titleContradiction, targetPrintRun: printRunOf(target) });
       if (plan.action === "refuse") {
         // RULING (review, 2026-09-19): same dedup as the cardId-shape loop
@@ -1536,6 +1706,31 @@ async function main() {
 
       s.identityGroups += groups.size;
 
+      // PARALLEL RULE SIBLING-RUNG INDEX (review, 2026-09-19 false-positive
+      // pass): `groups` already holds EVERY catalog row this cell scanned,
+      // just keyed by the full identity (including parallel) rather than by
+      // cardNumber alone -- so "does this card NUMBER have more than one
+      // parallel rung on this checklist ladder" is answerable from data
+      // already in memory, with NO new Cosmos I/O. Built once per (sport,
+      // year, setKey) cell, reused by every target's titleContradictsTarget
+      // call below: cardNumber -> Set of distinct parallelSlugs seen at that
+      // number across every group. A bare-colour title against a target
+      // whose number ALSO carries a compound rung on the SAME ladder
+      // ("gold" AND "gold-diamante-foil" both present) stays ambiguous and
+      // still refuses (absent beats wrong); a number with only ONE rung on
+      // this ladder is what makes a bare colour "under-specified" rather
+      // than "wrong", since there is nothing else it could mean.
+      const parallelsByCardNumber = new Map();
+      for (const rows of groups.values()) {
+        for (const r of rows) {
+          const num = String(r.cardNumber ?? "").trim().toLowerCase();
+          if (!num) continue;
+          const set = parallelsByCardNumber.get(num) ?? new Set();
+          set.add(slugify(String(r.parallelSlug ?? "base")));
+          parallelsByCardNumber.set(num, set);
+        }
+      }
+
       // ── THE BOUNDED-CONCURRENCY POOL (review, 2026-09-19) ─────────────────
       // Every group's target is independent of every other group's (see
       // processTarget's own header comment for the proof), so this setKey's
@@ -1546,7 +1741,7 @@ async function main() {
       // claimed are left unclaimed -- matching the old loop's own
       // claim-before-check discipline, just with up to CONCURRENCY claims
       // outstanding at once instead of one.
-      await runTargetsPool([...groups.values()], { sport, year, setKey });
+      await runTargetsPool([...groups.values()], { sport, year, setKey, parallelsByCardNumber });
     }
   }
 
