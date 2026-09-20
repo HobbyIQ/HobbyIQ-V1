@@ -190,8 +190,25 @@ export const ERA_SPLIT_TABLE: ReadonlyArray<EraRule> = Object.freeze([
   // 72,302 checklist rows across 1981-2026 and `panini-donruss` 194,915 across
   // 1990-2026. Two live spellings, one product line, so a year is the only
   // thing that can choose between them.
+  // RULED (Drew, 2026-09-20): pre-2009 Donruss is `donruss`, never
+  // `panini-donruss` — Panini did not own Donruss then. This closes the
+  // "date unruled" assumption below; the 2009 boundary and makerKey are
+  // unchanged by the ruling, only the "ASSUMPTION" status is. Investigation
+  // that day traced every sale-ingest call site that reaches
+  // `computeHobbyIqCardId` (CardHedge daily, TCA/eBay title-derived,
+  // cardsight, the bulk/backfill .cjs scripts) and found each one threads the
+  // row's raw setName/setKey text plus its year into `resolveSetKeyForSlug`,
+  // which applies this table's rule via `spellForEra` AFTER
+  // `normalizeSetKey`'s era-blind vocabulary match — so no ingest call site
+  // was found stamping `panini-donruss` on a pre-2009 sale today. The
+  // 619,890-row `panini-donruss` / 0-row `donruss` pool split the census
+  // measured (setkey-reconciliation.json) predates D23 (#1540, 2026-08-30),
+  // which is when this table's rule first had a code consumer; the stored
+  // rows are the backlog `rename-setkey-to-product.cjs`'s MODE=product
+  // (HEAL path) targets, not a live defect. See
+  // tests/donrussEraAcrossIngestSources.test.ts for the per-source pin.
   { brand: "donruss", bareBeforeYear: 2009, makerKey: "panini-donruss",
-    why: "ASSUMPTION (date unruled): Panini acquired Donruss-Playoff in 2009. Pinned by 1,450 checklist rows on baseball|1987|donruss against 0 on panini-donruss; measured 2026-09-03 the two spellings hold 72,302 and 194,915 checklist rows." },
+    why: "RULED (Drew, 2026-09-20): Panini acquired Donruss-Playoff in 2009; a Donruss card printed before 2009 is `donruss`, from 2009 it is `panini-donruss`. Pinned by 1,450 checklist rows on baseball|1987|donruss against 0 on panini-donruss; measured 2026-09-03 the two spellings hold 72,302 and 194,915 checklist rows." },
 
   // NEVER-ACQUIRED brands. `makerKey: null` means the bare key is right in
   // EVERY year, so these entries exist to STOP a maker prefix, never to add
