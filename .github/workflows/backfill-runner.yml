@@ -326,6 +326,35 @@ on:
           # dispatches are scope=baseball:2025 titles=topps>topps-update-series
           # and scope=football:2023 titles=donruss-optic>panini-donruss.
           - repoint-sales-to-sibling-product
+          # GAP ROUTER (census decomposition, 2026-09-20). sold_comps is only
+          # 60.4% strict-checklist-backed for sports; the 120 biggest gap
+          # cells hold 51% of the gap and were triaged BY HAND
+          # (gap-classes-top120.json) -- the rest is a long tail too large for
+          # that. THIS LANE IS READ-ONLY / DECISION-ONLY: it makes NO Cosmos
+          # writes in any mode (there is no apply branch in the script at
+          # all) and dispatches nothing itself. For every unbacked cell in
+          # the committed backend/data/census/backing-cells.json table
+          # (publish-census-backing.cjs's own trimmed output), it classifies
+          # the CELL (PRESENT / MISSING-PRODUCT / UNREGISTERED-KEY / ALIAS-KEY
+          # / PRESENT-MISMATCH) and, for cells with real gap left to explain,
+          # SAMPLES the cell's own unbacked sales (bounded, several soldAt
+          # windows, never a cross-partition scan) to name the sale-level
+          # shape -- NUMBER-IN-SIBLING, INSERT-UNDER-PARENT, PARALLEL-SUFFIX,
+          # PRINTRUN-VARIANT-ABSENT, RUNG-ABSENT, ROW-EXISTS-NON-STRICT,
+          # JUNK-PARALLEL, PHRASE-LEAK, AUTO-MISMATCH, UNPARSEABLE -- and names
+          # the EXISTING repair lane (repoint-sales-to-sibling-product,
+          # repoint-stored-insert-sales, repoint-sales-parallel-suffix,
+          # rekey-product-setkey, or rematch-sold-comps for a title-parser
+          # defect) that cell's dominant shape belongs to. Output is a
+          # console banner rollup plus a PLAN_OUT NDJSON queue (one record per
+          # in-scope cell), same mechanism as resolve-split-identity-parks.
+          # `scope` is REQUIRED: a bare sport (baseball) sweeps every cell of
+          # that sport, or sport:year (baseball:2025) narrows to one year; no
+          # 'all'. `titles` is an OPTIONAL setKey filter (comma list, NOT a
+          # from>to pair like the sibling repoint lanes) -- empty means every
+          # cell in scope. `limit` caps the number of cells processed this
+          # run. The pilot dispatch is scope=baseball limit=150.
+          - route-backing-gaps
           # R76 (Drew, 2026-09-19). repair-set-sport.cjs (2026-08-20) flipped
           # 183,248 sold_comps rows' sport by set-level checklist dominance,
           # vetoed only by five literal substring words -- a census judged
@@ -2172,6 +2201,20 @@ jobs:
           # BCP_TITLES for its own `titles`-carried meaning, and TITLES was
           # simply never wired for this one.
           TITLES: ${{ inputs.script == 'resolve-split-identity-parks' && inputs.titles || '' }}
+          # route-backing-gaps (2026-09-20). The GAP ROUTER reads `titles` as
+          # an OPTIONAL comma-separated setKey filter (SET_KEYS) -- NOT a
+          # from>to pair list like the sibling repoint lanes above: this lane
+          # decides which lane applies, it does not carry that lane's own
+          # dispatch arguments. Empty (the common case) means every in-scope
+          # cell, filtered only by SCOPE/LIMIT/slot-shard.
+          SET_KEYS: ${{ inputs.script == 'route-backing-gaps' && inputs.titles || '' }}
+          # route-backing-gaps is READ-ONLY / decision-only and needs no RU
+          # cap input of its own (there is no existing RU_BUDGET-shaped
+          # workflow_dispatch input to reuse and the 25-input cap is spent),
+          # so a sane default ships with the script and this only exists so
+          # an operator COULD override it via a manual re-dispatch env, not
+          # because the runner needs to set it per run.
+          RU_BUDGET_MAX: ${{ inputs.script == 'route-backing-gaps' && '2000000' || '' }}
           # resolve-split-identity-parks (2026-09-20). The banner's own
           # samples cap at 20-60 lines per bucket and, until now, the banner
           # claimed a fuller list lived "in the uploaded artifact" when the
@@ -2188,7 +2231,7 @@ jobs:
           # PLAN_OUT, and the SAME fixed-path-guarded-on-script convention
           # (no new input; workflow_dispatch is at 24 of 25). Uploaded by the
           # SAME step that already uploads this lane's backfill.log, below.
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || '' }}
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -3634,6 +3677,48 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (relocated=${R:-0} patched=${P:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-to-sibling-product -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+
+      # GAP ROUTER (2026-09-20). READ-ONLY / decision-only -- the plan (one
+      # NDJSON record per in-scope cell, naming the suggestedLane + the exact
+      # dispatch line a human/steward would run) is the whole point of this
+      # lane's output, so it is uploaded alongside the log exactly as the
+      # other PLAN_OUT lanes above are.
+      - name: Upload the route-backing-gaps log
+        if: ${{ always() && inputs.script == 'route-backing-gaps' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: route-backing-gaps-report-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/route-backing-gaps-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the gap router until the scope is clean
+        # Stops at its own 110-minute budget and PRINTS its summary; a run
+        # killed by the 150-minute step ceiling prints nothing.
+        # CF-RELAUNCH-ONLY-ON-BUDGET (#1361): relaunch iff the marker printed,
+        # never on a count. This lane is READ ONLY, so `apply` is irrelevant
+        # to it and is forwarded verbatim only because every other lane's
+        # dispatch line does the same (a stray apply=true on this lane's own
+        # dispatch is simply never read -- there is no APPLY branch in the
+        # script to read it).
+        if: ${{ !cancelled() && inputs.script == 'route-backing-gaps' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: route-backing-gaps
+          preamble: |
+            N=$(grep -aoE "cells processed +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "cellsProcessed=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (cellsProcessed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (cellsProcessed=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=route-backing-gaps -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}" -f limit="${{ inputs.limit }}"
 
       # R76's whole point is a reviewer being able to audit every wrongly-
       # flipped sale that moved (or was refused, and why) -- never a
