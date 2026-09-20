@@ -10,22 +10,45 @@
  * `sold_comps`: one unit, cardYear=1953 (slot 0's OWN measured shard unit --
  * see data/rematch-shard-table.json slot 0, `y=1953`, any sport -- a row
  * with a different year/sport would be filtered out by `rowInSlot` before
- * it ever reached the classify loop, which is exactly the bug the first
- * draft of this fixture had), sport=baseball, 5 rows -- blank titles
- * (deriveIdentity -> UNDERIVABLE, no parser dependency), all in the SAME
- * (baseball, 1953, topps) cell:
- *   row 1  hobbyiqCardId hiq:baseball:1953:topps:1:base:no-auto   -> catalog row, source "beckett"    (strict)
- *   row 2  hobbyiqCardId hiq:baseball:1953:topps:2:base:no-auto   -> catalog row, source "cardhedge"  (row exists, not strict)
- *   row 3  hobbyiqCardId hiq:baseball:1953:topps:3:base:no-auto   -> no catalog row at all             (noRow)
- *   row 4  hobbyiqCardId null                                     -> no id to look up                 (unparseable)
- *   row 5  identityUnverified: true                                -> parked, never reaches the lookup
+ * it ever reached the classify loop), sport=baseball, 10 rows -- blank
+ * titles (deriveIdentity -> UNDERIVABLE, no parser dependency). Six sit in
+ * the (baseball, 1953, topps) cell (a normal, successfully-loading cell);
+ * FOUR sit in a SEPARATE (baseball, 1953, bowman) cell used only to
+ * exercise the load-failure path -- four sales, not one, because the retry
+ * budget (BACKING_PRELOAD_CELL_FAIL_RETRIES) is spent one attempt PER SALE
+ * OF THE CELL, never in a tight loop by the preload itself; a single-sale
+ * cell can only ever produce ONE attempt no matter how the retry budget is
+ * configured, so proving "retried up to K times, THEN marked permanently
+ * failed" needs at least K sales sharing the failing cell:
+ *   row 1  hiq:baseball:1953:topps:1:base:no-auto    -> catalog row, source "beckett"    (strict)
+ *   row 2  hiq:baseball:1953:topps:2:base:no-auto    -> catalog row, source "cardhedge"  (row exists, not strict)
+ *   row 3  hiq:baseball:1953:topps:3:base:no-auto    -> no catalog row at all             (noRow)
+ *   row 4  hobbyiqCardId null                        -> no id to look up                 (unparseable)
+ *   row 5  identityUnverified: true                  -> parked, never reaches the lookup
+ *   row 6  flaggedWrong: true                        -> notPricedFlagged, never reaches the lookup
+ *   rows 7-10  hiq:baseball:1953:bowman:1..4:base:no-auto -> all four in the SEPARATE
+ *          bowman cell, whose card_catalog query is made to fail EVERY
+ *          attempt when FAIL_CATALOG_CELL=true (no row exists for bowman in
+ *          CATALOG_ROWS either way, so a successful load would answer noRow
+ *          for all four -- the failure test asserts `unknown`, never noRow,
+ *          which is exactly the distinction this fix exists to prove)
  *
- * card_catalog is queried ONCE (this fixture counts every `items.query` call
- * and echoes the total to stdout on process exit) for the whole cell --
- * proving 5 sales cost ONE projected query, never five point reads.
+ * card_catalog is queried by ID PREFIX (STARTSWITH(c.id, @prefix)), matching
+ * the corrected preload -- the fixture keys its canned rows off the
+ * `@prefix` parameter, never off a `setKey` FIELD equality, so a fixture
+ * bug that regresses to field-equality would be caught by a query for the
+ * wrong prefix returning the wrong (or no) rows.
+ *
+ * FAIL_CATALOG_CELL=true makes the bowman cell's query throw on every
+ * attempt (a permanent failure, exercising BACKING_PRELOAD_CELL_FAIL_RETRIES
+ * exhaustion); unset, every query succeeds normally (and answers noRow for
+ * bowman, since CATALOG_ROWS holds no bowman entries).
  */
 "use strict";
 const path = require("path");
+
+const FAIL_CATALOG_CELL = process.env.FAIL_CATALOG_CELL === "true";
+const FAILING_PREFIX = "hiq:baseball:1953:bowman:";
 
 const CATALOG_ROWS = [
   { id: "hiq:baseball:1953:topps:1:base:no-auto", source: "beckett", sport: "baseball" },
@@ -38,9 +61,15 @@ const SOLD_COMPS_ROWS = [
   { id: "s3", cardId: "hiq:baseball:1953:topps:3:base:no-auto", hobbyiqCardId: "hiq:baseball:1953:topps:3:base:no-auto", title: "", sport: "baseball", cardYear: 1953, setKey: "topps", setName: "Topps", cardNumber: "3", parallel: "Base", isAuto: false, printRun: null, source: "cardhedge" },
   { id: "s4", cardId: "hiq:baseball:1953:topps:4:base:no-auto", hobbyiqCardId: null, title: "", sport: "baseball", cardYear: 1953, setKey: "topps", setName: "Topps", cardNumber: "4", parallel: "Base", isAuto: false, printRun: null, source: "cardhedge" },
   { id: "s5", cardId: "hiq:baseball:1953:topps:5:base:no-auto", hobbyiqCardId: "hiq:baseball:1953:topps:5:base:no-auto", title: "", sport: "baseball", cardYear: 1953, setKey: "topps", setName: "Topps", cardNumber: "5", parallel: "Base", isAuto: false, printRun: null, source: "cardhedge", identityUnverified: true },
+  { id: "s6", cardId: "hiq:baseball:1953:topps:6:base:no-auto", hobbyiqCardId: "hiq:baseball:1953:topps:6:base:no-auto", title: "", sport: "baseball", cardYear: 1953, setKey: "topps", setName: "Topps", cardNumber: "6", parallel: "Base", isAuto: false, printRun: null, source: "cardhedge", flaggedWrong: true },
+  { id: "s7", cardId: "hiq:baseball:1953:bowman:1:base:no-auto", hobbyiqCardId: "hiq:baseball:1953:bowman:1:base:no-auto", title: "", sport: "baseball", cardYear: 1953, setKey: "bowman", setName: "Bowman", cardNumber: "1", parallel: "Base", isAuto: false, printRun: null, source: "cardhedge" },
+  { id: "s8", cardId: "hiq:baseball:1953:bowman:2:base:no-auto", hobbyiqCardId: "hiq:baseball:1953:bowman:2:base:no-auto", title: "", sport: "baseball", cardYear: 1953, setKey: "bowman", setName: "Bowman", cardNumber: "2", parallel: "Base", isAuto: false, printRun: null, source: "cardhedge" },
+  { id: "s9", cardId: "hiq:baseball:1953:bowman:3:base:no-auto", hobbyiqCardId: "hiq:baseball:1953:bowman:3:base:no-auto", title: "", sport: "baseball", cardYear: 1953, setKey: "bowman", setName: "Bowman", cardNumber: "3", parallel: "Base", isAuto: false, printRun: null, source: "cardhedge" },
+  { id: "s10", cardId: "hiq:baseball:1953:bowman:4:base:no-auto", hobbyiqCardId: "hiq:baseball:1953:bowman:4:base:no-auto", title: "", sport: "baseball", cardYear: 1953, setKey: "bowman", setName: "Bowman", cardNumber: "4", parallel: "Base", isAuto: false, printRun: null, source: "cardhedge" },
 ];
 
 let catalogQueryCount = 0;
+let bowmanCellQueryCount = 0;
 
 function fakeContainer(name) {
   if (name === "sold_comps") {
@@ -62,14 +91,22 @@ function fakeContainer(name) {
   if (name === "card_catalog") {
     return {
       items: {
-        // backingCellPreloadRaw calls `.query(...).fetchAll()` -- the same
-        // method checklistCells/flagshipNumbers/etc. already call on this
-        // container -- so the fake must implement fetchAll(), not just the
-        // fetchNext()-only iterator sold_comps's fixture uses.
+        // backingCellPreloadRaw calls `.query(...).fetchAll()` with a
+        // STARTSWITH(c.id, @prefix) predicate -- the fixture keys its
+        // response off the `@prefix` parameter's VALUE, matching the
+        // corrected id-prefix design (never a `@sk`/setKey-field match).
         query: (spec) => {
+          const prefix = (spec.parameters ?? []).find((p) => p.name === "@prefix")?.value;
+          if (FAIL_CATALOG_CELL && prefix === FAILING_PREFIX) {
+            bowmanCellQueryCount++;
+            return {
+              hasMoreResults: () => true,
+              fetchAll: async () => { throw new Error(`simulated card_catalog outage for ${prefix}`); },
+              fetchNext: async () => { throw new Error(`simulated card_catalog outage for ${prefix}`); },
+            };
+          }
           catalogQueryCount++;
-          const sk = (spec.parameters ?? []).find((p) => p.name === "@sk")?.value;
-          const rows = sk === "topps" ? CATALOG_ROWS : [];
+          const rows = CATALOG_ROWS.filter((r) => r.id.startsWith(prefix ?? " "));
           let served = false;
           return {
             hasMoreResults: () => !served,
@@ -103,10 +140,11 @@ function FakeCosmosClient() {
 }
 
 process.on("exit", () => {
-  // Echoed as its own line so the test can assert on the query count
+  // Echoed as their own lines so the test can assert on query counts
   // without a second IPC channel -- the child process's stdout is already
   // captured by spawnSync.
   process.stdout.write(`FAKE_CATALOG_QUERY_COUNT ${catalogQueryCount}\n`);
+  process.stdout.write(`FAKE_BOWMAN_CELL_QUERY_COUNT ${bowmanCellQueryCount}\n`);
 });
 
 const azureCosmosPath = require.resolve("@azure/cosmos", { paths: [path.join(__dirname, "..", "..", "..", "scripts")] });

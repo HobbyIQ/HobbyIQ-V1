@@ -20,7 +20,10 @@ const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const M = require_(path.join(backend, "scripts", "merge-census-backing.cjs"));
 
 function bucket(overrides: Partial<Record<string, number>> = {}) {
-  return { backedStrict: 0, rowExistsNonStrict: 0, noRow: 0, unparseable: 0, parked: 0, ...overrides };
+  return {
+    backedStrict: 0, rowExistsNonStrict: 0, noRow: 0, unparseable: 0,
+    parked: 0, notPricedFlagged: 0, unknown: 0, ...overrides,
+  };
 }
 
 function writeSlotArtifact(dir: string, slot: number, backing: any) {
@@ -35,16 +38,41 @@ function tmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "census-backing-test-"));
 }
 
-describe("addInto / totalOf — the bucket arithmetic", () => {
-  it("sums each of the five buckets independently", () => {
+describe("addInto / totalOf / denominatorOf / excludedOf — the bucket arithmetic", () => {
+  it("sums each of the seven buckets independently", () => {
     const acc = M.emptyBuckets();
     M.addInto(acc, bucket({ backedStrict: 3, noRow: 1 }));
     M.addInto(acc, bucket({ backedStrict: 2, rowExistsNonStrict: 5 }));
-    expect(acc).toEqual({ backedStrict: 5, rowExistsNonStrict: 5, noRow: 1, unparseable: 0, parked: 0 });
+    expect(acc).toEqual(bucket({ backedStrict: 5, rowExistsNonStrict: 5, noRow: 1 }));
   });
 
-  it("totalOf is the sum across all five buckets, including parked", () => {
-    expect(M.totalOf(bucket({ backedStrict: 1, rowExistsNonStrict: 2, noRow: 3, unparseable: 4, parked: 5 }))).toBe(15);
+  it("totalOf is the sum across all seven buckets, including parked/notPricedFlagged/unknown", () => {
+    const b = bucket({ backedStrict: 1, rowExistsNonStrict: 2, noRow: 3, unparseable: 4, parked: 5, notPricedFlagged: 6, unknown: 7 });
+    expect(M.totalOf(b)).toBe(28);
+  });
+
+  it("denominatorOf excludes parked, notPricedFlagged and unknown", () => {
+    const b = bucket({ backedStrict: 1, rowExistsNonStrict: 2, noRow: 3, unparseable: 4, parked: 100, notPricedFlagged: 200, unknown: 300 });
+    expect(M.denominatorOf(b)).toBe(10); // 1+2+3+4, none of the excluded three
+  });
+
+  it("excludedOf is exactly parked + notPricedFlagged + unknown", () => {
+    const b = bucket({ backedStrict: 1, rowExistsNonStrict: 2, noRow: 3, unparseable: 4, parked: 10, notPricedFlagged: 20, unknown: 30 });
+    expect(M.excludedOf(b)).toBe(60);
+  });
+
+  it("denominatorOf + excludedOf == totalOf, always", () => {
+    const b = bucket({ backedStrict: 5, rowExistsNonStrict: 6, noRow: 7, unparseable: 8, parked: 9, notPricedFlagged: 10, unknown: 11 });
+    expect(M.denominatorOf(b) + M.excludedOf(b)).toBe(M.totalOf(b));
+  });
+
+  it("an unknown-heavy bucket never inflates or deflates the denominator", () => {
+    // The whole point of the fix: a cell that failed to load repeatedly
+    // (all its sales land in `unknown`) must not silently count toward
+    // "no catalog row exists" (noRow) or toward the denominator at all.
+    const b = bucket({ backedStrict: 0, rowExistsNonStrict: 0, noRow: 0, unknown: 1000 });
+    expect(M.denominatorOf(b)).toBe(0);
+    expect(M.excludedOf(b)).toBe(1000);
   });
 });
 
@@ -113,6 +141,34 @@ describe("mergeSlots — the sum across slots", () => {
     expect(byCell.get("other")).toEqual(bucket({ noRow: 75 }));
     expect(anyOverflowed).toBe(true);
   });
+
+  it("sums preload.failedCells and collects failedCellSamples across slots, tagged with the slot number", () => {
+    const dir = tmpDir();
+    writeSlotArtifact(dir, 0, {
+      bySport: { baseball: bucket({ unknown: 5 }) }, byCell: {},
+      preload: { failedCells: 1, failedCellSamples: [{ cell: "baseball|2020|topps", attempt: 3, error: "cosmos boom" }] },
+    });
+    writeSlotArtifact(dir, 1, {
+      bySport: { baseball: bucket({ unknown: 2 }) }, byCell: {},
+      preload: { failedCells: 2, failedCellSamples: [{ cell: "pokemon|2021|base", attempt: 3, error: "timeout" }] },
+    });
+    const { slots } = M.readSlotArtifacts([dir]);
+    const { totalFailedCells, failedCellSamples, bySport } = M.mergeSlots(slots);
+    expect(totalFailedCells).toBe(3);
+    expect(failedCellSamples).toHaveLength(2);
+    expect(failedCellSamples.find((s: any) => s.slot === 0)?.cell).toBe("baseball|2020|topps");
+    expect(failedCellSamples.find((s: any) => s.slot === 1)?.cell).toBe("pokemon|2021|base");
+    expect(bySport.get("baseball")?.unknown).toBe(7);
+  });
+
+  it("a slot with no preload block at all (defensive: an older artifact shape) does not throw and contributes zero failed cells", () => {
+    const dir = tmpDir();
+    writeSlotArtifact(dir, 0, { bySport: { baseball: bucket({ backedStrict: 1 }) }, byCell: {} });
+    const { slots } = M.readSlotArtifacts([dir]);
+    const { totalFailedCells, failedCellSamples } = M.mergeSlots(slots);
+    expect(totalFailedCells).toBe(0);
+    expect(failedCellSamples).toHaveLength(0);
+  });
 });
 
 describe("topUnbackedCells — ranking, and the 'other' exclusion", () => {
@@ -151,6 +207,25 @@ describe("topUnbackedCells — ranking, and the 'other' exclusion", () => {
     const byCell = new Map<string, any>();
     for (let i = 0; i < 50; i++) byCell.set(`baseball|2018|set-${i}`, bucket({ noRow: i + 1 }));
     expect(M.topUnbackedCells(byCell, 5)).toHaveLength(5);
+  });
+
+  it("a cell that is ENTIRELY unknown (every sale's load failed) is excluded from the unbacked ranking — unknown is not evidence of noRow", () => {
+    const byCell = new Map<string, any>([
+      ["baseball|2018|topps", bucket({ unknown: 999 })],
+      ["baseball|2019|donruss", bucket({ noRow: 5 })],
+    ]);
+    const top = M.topUnbackedCells(byCell, 10);
+    expect(top).toHaveLength(1);
+    expect(top[0].cell).toBe("baseball|2019|donruss");
+  });
+
+  it("carries the cell's `unknown` count through into the ranked row, for the reader to see alongside unbacked volume", () => {
+    const byCell = new Map<string, any>([
+      ["baseball|2018|topps", bucket({ noRow: 10, unknown: 7 })],
+    ]);
+    const top = M.topUnbackedCells(byCell, 10);
+    expect(top[0].unknown).toBe(7);
+    expect(top[0].unbacked).toBe(10); // unknown never contributes to `unbacked`
   });
 });
 

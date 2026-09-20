@@ -12,10 +12,30 @@
  * without SOURCES=backing, which this script reports rather than silently
  * treats as zero):
  *   { bySport: { "<sport>": {backedStrict, rowExistsNonStrict, noRow,
- *                             unparseable, parked}, ... },
- *     byCell:  { "<sport>|<year>|<setKey>": {same 5 buckets}, ...,
- *                "other"?: {same 5 buckets} },
- *     cellCap, cellOverflowed }
+ *                             unparseable, parked, notPricedFlagged,
+ *                             unknown}, ... },
+ *     byCell:  { "<sport>|<year>|<setKey>": {same 7 buckets}, ...,
+ *                "other"?: {same 7 buckets} },
+ *     cellCap, cellOverflowed, preload: {failedCells, failedCellSamples, ...} }
+ *
+ * THE SEVEN BUCKETS, corrected 2026-09-19 per review:
+ *   backedStrict        card_catalog row exists, strict-checklist-sourced
+ *   rowExistsNonStrict  card_catalog row exists, not strict
+ *   noRow               the cell loaded successfully; no row for this id
+ *   unparseable         no hobbyiqCardId, or no readable cell (the U class)
+ *   parked              identityUnverified===true
+ *   notPricedFlagged    flaggedWrong===true or excludedFromFmv===true
+ *   unknown             the cell's card_catalog load FAILED this census run
+ *                        (retries exhausted) -- NEVER folded into noRow
+ *
+ * THE HEADLINE DENOMINATOR EXCLUDES parked, notPricedFlagged AND unknown.
+ * Every printed share and every `report.overall*` field states BOTH the
+ * included-in-denominator total and the excluded total explicitly, by name
+ * -- never a single unlabelled percentage. A merge that only prints one
+ * number invites exactly the ambiguity this design is trying to avoid: an
+ * `unknown` share hidden inside `noRow` would silently overstate "the
+ * catalog doesn't have this card" when the real fact is "this run could not
+ * find out."
  *
  * CLASS SPLIT ON THE TOP-N UNBACKED CELLS (P0/P1/N/R), per the go:
  *   P0  no product rows at all               noRow === cell total (rowExistsNonStrict+backedStrict === 0)
@@ -23,7 +43,7 @@
  *   N   number missing from the loaded set    (see NOTE below -- needs the per-cell id set, not just counts)
  *   R   rung missing (number present under another parallel)
  *
- * NOTE ON N vs R. The per-slot artifact carries ONLY THE FIVE BUCKET COUNTS
+ * NOTE ON N vs R. The per-slot artifact carries ONLY THE SEVEN BUCKET COUNTS
  * for a cell, not the set of card numbers/parallels the census loaded to
  * decide `noRow`/`rowExistsNonStrict` for each sale -- deliberately: carrying
  * a per-cell id set through 32 artifacts and a merge would be exactly the
@@ -45,7 +65,15 @@
 const fs = require("fs");
 const path = require("path");
 
-const BUCKETS = ["backedStrict", "rowExistsNonStrict", "noRow", "unparseable", "parked"];
+const BUCKETS = [
+  "backedStrict", "rowExistsNonStrict", "noRow", "unparseable",
+  "parked", "notPricedFlagged", "unknown",
+];
+/** The four buckets a headline "backed" share is computed OVER. Every other
+ *  bucket (parked, notPricedFlagged, unknown) is a sale nothing prices or a
+ *  sale this run could not answer for -- excluded by name, never silently. */
+const DENOMINATOR_BUCKETS = ["backedStrict", "rowExistsNonStrict", "noRow", "unparseable"];
+const EXCLUDED_BUCKETS = ["parked", "notPricedFlagged", "unknown"];
 
 function args() {
   const out = { from: [], top: 300, out: null };
@@ -59,7 +87,9 @@ function args() {
 }
 
 function emptyBuckets() {
-  return { backedStrict: 0, rowExistsNonStrict: 0, noRow: 0, unparseable: 0, parked: 0 };
+  const b = {};
+  for (const k of BUCKETS) b[k] = 0;
+  return b;
 }
 
 function addInto(acc, b) {
@@ -67,8 +97,27 @@ function addInto(acc, b) {
   return acc;
 }
 
+/** Sum of ALL seven buckets -- "every sale backing saw", denominator and
+ *  excluded together. Use `denominatorOf`/`excludedOf` when the question is
+ *  "what fraction is backed", never this for a share computation. */
 function totalOf(b) {
   return BUCKETS.reduce((a, k) => a + Number(b?.[k] ?? 0), 0);
+}
+
+/** The headline denominator: backedStrict + rowExistsNonStrict + noRow +
+ *  unparseable. Named so a caller cannot compute "backed / totalOf(b)" by
+ *  accident and silently understate the share by diluting it with
+ *  parked/flagged/unknown sales that were never eligible to be "backed" in
+ *  the first place. */
+function denominatorOf(b) {
+  return DENOMINATOR_BUCKETS.reduce((a, k) => a + Number(b?.[k] ?? 0), 0);
+}
+
+/** parked + notPricedFlagged + unknown -- the sales the headline share
+ *  excludes, stated by name so a reader can see exactly what was left out
+ *  and why, never inferred from a gap between two other numbers. */
+function excludedOf(b) {
+  return EXCLUDED_BUCKETS.reduce((a, k) => a + Number(b?.[k] ?? 0), 0);
 }
 
 /** Every ".json" file `spec` resolves to -- a single file, or every ".json"
@@ -98,14 +147,17 @@ function readSlotArtifacts(fromSpecs) {
   return { slots, skipped };
 }
 
-/** Sums every slot's bySport/byCell into one table. A cell keyed "other" in
- *  more than one slot is the SAME overflow bucket and sums correctly; a cell
- *  that overflowed in one slot but not another is still summed correctly --
- *  it is simply slightly more visible in the slot(s) where it did not. */
+/** Sums every slot's bySport/byCell into one table, plus the failed-cell
+ *  reporting from each slot's `preload` block. A cell keyed "other" in more
+ *  than one slot is the SAME overflow bucket and sums correctly; a cell that
+ *  overflowed in one slot but not another is still summed correctly -- it is
+ *  simply slightly more visible in the slot(s) where it did not. */
 function mergeSlots(slots) {
   const bySport = new Map();
   const byCell = new Map();
   let anyOverflowed = false;
+  let totalFailedCells = 0;
+  const failedCellSamples = [];
   for (const s of slots) {
     for (const [sport, b] of Object.entries(s.backing.bySport ?? {})) {
       addInto(bySport.get(sport) ?? bySport.set(sport, emptyBuckets()).get(sport), b);
@@ -114,16 +166,20 @@ function mergeSlots(slots) {
       addInto(byCell.get(cell) ?? byCell.set(cell, emptyBuckets()).get(cell), b);
     }
     if (s.backing.cellOverflowed) anyOverflowed = true;
+    totalFailedCells += Number(s.backing.preload?.failedCells ?? 0);
+    for (const sample of s.backing.preload?.failedCellSamples ?? []) {
+      failedCellSamples.push({ slot: s.slot, ...sample });
+    }
   }
-  return { bySport, byCell, anyOverflowed };
+  return { bySport, byCell, anyOverflowed, totalFailedCells, failedCellSamples };
 }
 
-/** Every non-parked, non-unparseable row that ISN'T backedStrict, ranked by
- *  volume -- the census's own unbacked worklist. `other` (the overflow
- *  bucket) is EXCLUDED from ranking: it is a real number but names no single
- *  product, and mixing it into a per-cell top-N would misattribute volume to
- *  whichever real cell happens to sort next to it. It is reported once,
- *  separately, as its own line. */
+/** Every non-parked, non-unparseable, non-flagged, non-unknown row that
+ *  ISN'T backedStrict, ranked by volume -- the census's own unbacked
+ *  worklist. `other` (the overflow bucket) is EXCLUDED from ranking: it is a
+ *  real number but names no single product, and mixing it into a per-cell
+ *  top-N would misattribute volume to whichever real cell happens to sort
+ *  next to it. It is reported once, separately, as its own line. */
 function topUnbackedCells(byCell, topN) {
   const rows = [];
   for (const [cell, b] of byCell) {
@@ -131,7 +187,11 @@ function topUnbackedCells(byCell, topN) {
     const unbacked = b.noRow + b.rowExistsNonStrict;
     if (unbacked <= 0) continue;
     const [sport, year, setKey] = cell.split("|");
-    rows.push({ cell, sport, year, setKey, unbacked, noRow: b.noRow, rowExistsNonStrict: b.rowExistsNonStrict, total: totalOf(b) });
+    rows.push({
+      cell, sport, year, setKey, unbacked,
+      noRow: b.noRow, rowExistsNonStrict: b.rowExistsNonStrict,
+      unknown: b.unknown, total: totalOf(b),
+    });
   }
   rows.sort((a, b) => b.unbacked - a.unbacked);
   return rows.slice(0, topN);
@@ -195,10 +255,12 @@ async function main() {
   const seenSlots = new Set(slots.map((s) => s.slot));
   const missing = Array.from({ length: 32 }, (_, i) => i).filter((i) => !seenSlots.has(i));
 
-  const { bySport, byCell, anyOverflowed } = mergeSlots(slots);
+  const { bySport, byCell, anyOverflowed, totalFailedCells, failedCellSamples } = mergeSlots(slots);
 
   const grandTotal = emptyBuckets();
   for (const b of bySport.values()) addInto(grandTotal, b);
+  const grandDenominator = denominatorOf(grandTotal);
+  const grandExcluded = excludedOf(grandTotal);
   const grandTotalRows = totalOf(grandTotal);
 
   console.log(`CENSUS BACKING MERGE  ${new Date().toISOString()}`);
@@ -206,16 +268,34 @@ async function main() {
   console.log(`  rows tallied         ${grandTotalRows.toLocaleString()}`);
   if (anyOverflowed) console.log(`  NOTE: at least one slot's byCell hit its cellCap -- the "other" bucket absorbs its overflow.`);
 
+  // *** PRINT unknown LOUDLY, ALWAYS, EVEN AT ZERO. *** A silent zero here is
+  // indistinguishable from "this script forgot to check" -- printing it
+  // unconditionally is what makes a NON-zero unknown impossible to miss.
+  console.log(`\n  LOAD FAILURES (backing.preload.failedCells, summed across slots): ${totalFailedCells.toLocaleString()} distinct cell(s) permanently failed this run.`);
+  if (totalFailedCells > 0) {
+    console.log(`  !! ${grandTotal.unknown.toLocaleString()} sale(s) are bucketed 'unknown' because their cell's card_catalog load failed -- NOT counted as noRow, NOT in the headline denominator.`);
+    console.log(`  Failed-cell samples (up to 20 shown; full list in the written report):`);
+    for (const s of failedCellSamples.slice(0, 20)) {
+      console.log(`    slot ${s.slot}  ${s.cell}  attempt ${s.attempt}  ${s.error}`);
+    }
+  } else {
+    console.log(`  none -- every cell this census touched loaded successfully.`);
+  }
+
   console.log(`\n  OVERALL (sports + pokemon combined):`);
   for (const k of BUCKETS) console.log(`    ${k.padEnd(20)} ${grandTotal[k].toLocaleString().padStart(12)}  ${fmtPct(grandTotal[k], grandTotalRows)}`);
-  const strictClean = fmtPct(grandTotal.backedStrict, grandTotalRows - grandTotal.parked);
-  console.log(`    strict-clean share (excl. parked)   ${strictClean}`);
+  console.log(`    ---`);
+  console.log(`    denominator (backedStrict+rowExistsNonStrict+noRow+unparseable) = ${grandDenominator.toLocaleString()}`);
+  console.log(`    excluded    (parked+notPricedFlagged+unknown)                   = ${grandExcluded.toLocaleString()}`);
+  const strictClean = fmtPct(grandTotal.backedStrict, grandDenominator);
+  console.log(`    strict-clean share, OF THE ${grandDenominator.toLocaleString()}-SALE DENOMINATOR (excludes parked/flagged/unknown): ${strictClean}`);
 
   console.log(`\n  BY SPORT:`);
   const bySportSorted = [...bySport.entries()].sort((a, b) => totalOf(b[1]) - totalOf(a[1]));
   for (const [sport, b] of bySportSorted) {
-    const total = totalOf(b);
-    console.log(`    ${sport.padEnd(12)} total ${total.toLocaleString().padStart(10)}   backedStrict ${fmtPct(b.backedStrict, total - b.parked)}   noRow ${fmtPct(b.noRow, total)}   parked ${b.parked.toLocaleString()}`);
+    const denom = denominatorOf(b);
+    const excl = excludedOf(b);
+    console.log(`    ${sport.padEnd(12)} total ${totalOf(b).toLocaleString().padStart(10)}   denom ${denom.toLocaleString().padStart(9)}   backedStrict ${fmtPct(b.backedStrict, denom)}   noRow ${fmtPct(b.noRow, denom)}   excluded(parked+flagged+unknown) ${excl.toLocaleString()}   unparseable(U) ${b.unparseable.toLocaleString()}`);
   }
 
   const topRows = topUnbackedCells(byCell, top);
@@ -235,20 +315,46 @@ async function main() {
 
   console.log(`\n  TOP ${topRows.length} UNBACKED CELLS (by sport|year|setKey, excl. "other"):`);
   for (const r of topRows.slice(0, 20)) {
-    console.log(`    ${r.class.padEnd(3)} ${r.cell.padEnd(40)} unbacked ${r.unbacked.toLocaleString().padStart(9)}  (noRow ${r.noRow.toLocaleString()}, rowExistsNonStrict ${r.rowExistsNonStrict.toLocaleString()})`);
+    console.log(`    ${r.class.padEnd(3)} ${r.cell.padEnd(40)} unbacked ${r.unbacked.toLocaleString().padStart(9)}  (noRow ${r.noRow.toLocaleString()}, rowExistsNonStrict ${r.rowExistsNonStrict.toLocaleString()}, unknown ${r.unknown.toLocaleString()})`);
   }
   if (topRows.length > 20) console.log(`    ... ${topRows.length - 20} more in the written report`);
 
   const otherBucket = byCell.get("other") ?? null;
   if (otherBucket) {
     console.log(`\n  "other" overflow cell (beyond cellCap, not attributable to one product):`);
-    console.log(`    total ${totalOf(otherBucket).toLocaleString()}  noRow ${otherBucket.noRow.toLocaleString()}  rowExistsNonStrict ${otherBucket.rowExistsNonStrict.toLocaleString()}`);
+    console.log(`    total ${totalOf(otherBucket).toLocaleString()}  noRow ${otherBucket.noRow.toLocaleString()}  rowExistsNonStrict ${otherBucket.rowExistsNonStrict.toLocaleString()}  unknown ${otherBucket.unknown.toLocaleString()}`);
   }
+
+  // *** COMPARABLE WITH THE 15,418-SALE SAMPLE. *** Per the go: the sample
+  // measured 49.9% backed, with the unbacked 50.1% split V 19% / N+R 35% /
+  // P 28% / U 11%. This full-population run's OWN class split -- backed /
+  // row-non-strict / no-row / unparseable(U) / parked / flagged / unknown --
+  // is printed per sport AND overall so the two can be set side by side; the
+  // sample's V/N/R/P vocabulary does not map one-to-one onto this run's
+  // buckets (this run has no per-sale title-contradiction check, so it
+  // cannot itself distinguish V from N/R/P the way the sample did), so the
+  // comparison is stated as "our U (unparseable) vs the sample's U", not
+  // claimed as a full V/N/R/P reproduction.
+  console.log(`\n  FULL-POPULATION CLASS SPLIT, for comparison against the 15,418-sale sample (49.9% backed; unbacked 50.1% split V 19% / N+R 35% / P 28% / U 11%):`);
+  for (const [sport, b] of bySportSorted) {
+    const denom = denominatorOf(b);
+    console.log(`    ${sport.padEnd(12)} backed ${fmtPct(b.backedStrict, denom)}   rowExistsNonStrict ${fmtPct(b.rowExistsNonStrict, denom)}   noRow ${fmtPct(b.noRow, denom)}   U(unparseable) ${fmtPct(b.unparseable, denom)}   [of ${denom.toLocaleString()} in-denominator]`);
+  }
+  console.log(`    OVERALL      backed ${strictClean}   U(unparseable) ${fmtPct(grandTotal.unparseable, grandDenominator)}   [of ${grandDenominator.toLocaleString()} in-denominator]`);
+  console.log(`    NOTE: this run's U is "no hobbyiqCardId or no readable (sport,year,setKey) cell" -- comparable in KIND to the sample's U class, not necessarily identical in definition (the sample's V/N/R split requires a per-sale title-contradiction check this census does not run -- see the module's own P0/P1 vs N/R note above).`);
+
+  const distinctCellsAcrossSlots = new Set([...byCell.keys()].filter((k) => k !== "other")).size;
 
   const report = {
     _doc: "merge-census-backing.cjs output. bySport/overall are the SUM of every "
       + "backing-armed slot's bucket counts (see rematch-sold-comps.cjs SOURCES="
-      + "backing). topUnbackedCells is ranked by (noRow+rowExistsNonStrict) volume, "
+      + "backing). Seven buckets: backedStrict, rowExistsNonStrict, noRow, "
+      + "unparseable (the U class), parked, notPricedFlagged, unknown (a "
+      + "FAILED card_catalog load for that cell -- never folded into noRow). "
+      + "THE HEADLINE DENOMINATOR (overallDenominator/bySport[].denominator) "
+      + "EXCLUDES parked+notPricedFlagged+unknown BY NAME -- every share in "
+      + "this report is computed over that denominator, never over totalOf(). "
+      + "topUnbackedCells is ranked by (noRow+rowExistsNonStrict) volume, "
       + "excluding the 'other' overflow bucket, which is reported separately. "
       + "P0/P1 are computed from the cell's own bucket counts; N/R require a "
       + "per-sale card number this merge step does not carry -- see the module "
@@ -257,8 +363,19 @@ async function main() {
     generatedAt: new Date().toISOString(),
     slotsRead: slots.length, missingSlots: missing,
     cellCap: slots[0]?.backing?.cellCap ?? null, anyOverflowed,
-    overall: grandTotal, overallRows: grandTotalRows,
-    bySport: Object.fromEntries(bySportSorted),
+    distinctCellsTouched: distinctCellsAcrossSlots,
+    loadFailures: { totalFailedCells, failedCellSamples },
+    overall: grandTotal,
+    overallTotalRows: grandTotalRows,
+    overallDenominator: grandDenominator,
+    overallExcluded: grandExcluded,
+    overallBackedStrictShareOfDenominator: grandDenominator > 0 ? Number((grandTotal.backedStrict / grandDenominator).toFixed(4)) : null,
+    bySport: Object.fromEntries(bySportSorted.map(([sport, b]) => [sport, {
+      ...b,
+      denominator: denominatorOf(b),
+      excluded: excludedOf(b),
+      backedStrictShareOfDenominator: denominatorOf(b) > 0 ? Number((b.backedStrict / denominatorOf(b)).toFixed(4)) : null,
+    }])),
     otherOverflow: otherBucket,
     topUnbackedCells: topRows,
   };
@@ -270,4 +387,8 @@ async function main() {
 if (require.main === module) {
   main().catch((e) => { console.error(`FATAL: ${String(e?.stack ?? e)}`); process.exit(1); });
 }
-module.exports = { BUCKETS, emptyBuckets, addInto, totalOf, mergeSlots, topUnbackedCells, readSlotArtifacts, filesOf };
+module.exports = {
+  BUCKETS, DENOMINATOR_BUCKETS, EXCLUDED_BUCKETS,
+  emptyBuckets, addInto, totalOf, denominatorOf, excludedOf,
+  mergeSlots, topUnbackedCells, readSlotArtifacts, filesOf,
+};

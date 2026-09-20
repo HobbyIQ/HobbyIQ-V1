@@ -166,11 +166,55 @@ more rows — see `data/rematch-shard-table.json` for the per-slot row counts,
 
 See `CENSUS_BACKING`'s own comment block in `rematch-sold-comps.cjs` for the
 full design. Summary: a **projected** `card_catalog` query per distinct
-(sport, year, setKey) cell a slot's rows fall into (`SELECT c.id, c.source,
-c.sourceSystem, c.sources, c.sport`), never a point read per sale or per
-distinct id — a point read was measured at ~49 RU on this container's real
-documents (523,104 RU / 10,664 ids in a real re-score), which would be tens
-of millions of RU across 16.3M sales even folded down to distinct ids.
+(sport, year, setKey) cell a slot's rows fall into, never a point read per
+sale or per distinct id — a point read was measured at ~49 RU on this
+container's real documents (523,104 RU / 10,664 ids in a real re-score),
+which would be tens of millions of RU across 16.3M sales even folded down to
+distinct ids.
+
+**CORRECTED 2026-09-19 per independent review — the query loads by ID PREFIX,
+not by the setKey FIELD.** The metric's actual question is "does a catalog
+row exist whose `id` EQUALS this sale's hobbyiqCardId" — a row's `id` and its
+`setKey` FIELD are not the same fact and can disagree (this repo's own
+`catalogIdentityResolver.ts` documents exactly this: "the …:cpa-bm:
+red-refractor:auto twin carries setKey \"bowman\" while its id says
+bowman-chrome... rows disagree with their own fields"). The query is now:
+
+```sql
+SELECT DISTINCT c.id, c.source, c.sourceSystem, c.sources
+FROM c WHERE STARTSWITH(c.id, @prefix)
+-- @prefix = "hiq:<sport>:<year>:<setKey>:", the same prefix the sale's
+-- own hobbyiqCardId carries under this cell
+```
+
+**This is CHEAPER than the field-equality version it replaces, not more
+expensive.** `catalogIdentityResolver.ts`'s own measured history (read-only
+against prod, 2026-08-30): `card_catalog` is cross-partition (40 physical
+partitions), so ANY cross-partition query pays the per-partition floor —
+`STARTSWITH(c.id, @stem)` measured a **flat 112 RU, whatever the predicate**,
+while equality on indexed fields (sport, year, setKey, ...) measured
+**184–274 RU** for the SAME question, and additionally returned MORE rows
+(every graded child) and could be WRONG (the field/id disagreement above).
+`SELECT DISTINCT` on the id-prefix predicate additionally cuts wall-clock
+(150–340ms vs 1.7–2.4s in that same measurement) for the identical RU, by
+letting the SDK fan the 40 partitions out in parallel instead of walking them
+serially — the shipped query uses `SELECT DISTINCT` for exactly this reason.
+
+Re-estimated cost table (same coupon-collector model as before, corrected RU
+per query from 5+3×matched-rows to the measured flat **112 RU per query**,
+independent of how many rows match):
+
+| | per-slot avg | total (32 slots) |
+|---|---|---|
+| distinct-cell queries | ~1,374 | ~44,000 |
+| est. RU (flat 112 RU/query, cross-partition floor) | ~154,000 RU | ~4,930,000 RU |
+
+**This does not change the conclusion materially** — ~154,000 RU/slot vs the
+prior estimate's ~188,000 RU/slot, both a small fraction of `card_catalog`'s
+100,000+ RU/s ceiling spread across a ~50-90 minute slot walk. The flat-RU
+model is if anything a tighter, more defensible bound than the prior
+matched-rows-dependent one, since it does not depend on guessing how many
+catalog rows a typical product carries.
 
 **The cache is bounded in SIZE (`BACKING_PRELOAD_CELL_CAP`, default 500,
 LRU), not in QUERY COUNT.** Under an adversarial ordering (sales that
@@ -183,20 +227,8 @@ pre-existing, UNCAPPED `checklistCells`/`flagshipNumbers`/`checklistNames`/
 `checklistAutos` product caches already rely on and have never needed a cap
 for.
 
-Offline estimate, modelling per-slot distinct-cell MISSES as a
-coupon-collector curve over each shard unit's own row count (from
-`data/rematch-shard-table.json`, 32 slots / 158 units / 6,804 real
-(year,setKey) products per the repo's own census docs), NOT the naive "every
-distinct product in the corpus gets touched" model (which overstates it by
-~5x and ignores the cap):
-
-| | per-slot avg | total (32 slots) |
-|---|---|---|
-| distinct-cell queries | ~1,374 | ~44,000 |
-| est. RU (80/20 thin/thick-checklist split, 5 base + 3 RU/matched-row) | ~188,000 RU | ~6,000,000 RU |
-
 `card_catalog` is provisioned at 100,000+ RU/s (per `cosmos-ru-rollback.md`).
-~188,000 RU spread across one slot's ~50-90 minute walk is a small fraction
+~154,000 RU spread across one slot's ~50-90 minute walk is a small fraction
 of even ONE SECOND of that ceiling — the real constraint this batch is
 designed around is `sold_comps`'s 40,000 RU cap (see step 0), which this
 backing addition never touches: it reads `card_catalog` exclusively. It hits
@@ -217,6 +249,52 @@ wildly above this estimate (evidence the locality assumption broke down for
 that slot's row ordering), that is visible in the collected artifacts before
 the merge step runs, and is worth a second look before trusting that slot's
 backing numbers.
+
+### A cell's card_catalog load can fail — corrected 2026-09-19
+
+The FIRST version of this design wrapped the query in `catch { out = [] }` —
+so a load that failed for ANY reason (an outage, auth, a syntax error) was
+silently treated as "the catalog has no rows here" and CACHED as if it were a
+real answer, permanently bucketing every sale of that cell `noRow` with no
+signal anything went wrong. **Fixed**: a failed load returns a sentinel that
+is never cached as a value. The NEXT sale of that cell tries again (up to
+`BACKING_PRELOAD_CELL_FAIL_RETRIES`, default 3, attempts — one per SALE of the
+cell, never a tight retry loop inside the preload itself); every sale that
+sees a failure is bucketed **`unknown`**, never `noRow`; once the retry budget
+is spent the cell is marked permanently failed for the rest of the slot and
+every remaining sale of it is `unknown` with no further queries issued.
+`backing.preload.failedCells` and `.failedCellSamples` (cell key, attempt
+number, error message, up to 50 entries) report this per slot; `merge-census
+-backing.cjs` sums `failedCells` across slots and prints the samples loudly
+(never buried) if any are non-zero.
+
+### Buckets, corrected/added 2026-09-19
+
+Seven buckets now, not five: `backedStrict`, `rowExistsNonStrict`, `noRow`,
+`unparseable` (the U class), `parked` (identityUnverified), **`notPricedFlagged`**
+(`flaggedWrong===true` or `excludedFromFmv===true` — NEW, its own bucket, same
+reasoning as parked: a sale nothing prices is not a "coverage gap" in the same
+sense a live sale's missing catalog row is), and **`unknown`** (NEW — a
+FAILED load, see above). **The headline denominator excludes parked,
+notPricedFlagged AND unknown** — every share `merge-census-backing.cjs`
+prints states both the included-in-denominator total and the excluded total
+by name, never a single unlabelled percentage.
+
+### Comparison against the 15,418-sale sample
+
+The sample measured 49.9% backed, with the unbacked 50.1% split V 19% / N+R
+35% / P 28% / U 11%. Since we walk every sale anyway, the merge script now
+also prints the full-population class split (backed / rowExistsNonStrict /
+noRow / U(unparseable) / parked / notPricedFlagged / unknown) per sport and
+overall, over the same denominator convention, so the two numbers can be set
+side by side. The sample's V/N/R/P vocabulary does not map one-to-one onto
+this run's buckets — this census has no per-sale title-contradiction check,
+so it cannot itself distinguish V (title contradicts a real catalog row) from
+N/R/P the way the sample did — the comparison is stated as "this run's U vs
+the sample's U", never claimed as a full V/N/R/P reproduction. See
+`merge-census-backing.cjs`'s own printed section and `distinctCellsTouched`
+in its output for the two population-scale figures (class split, distinct
+products actually touched) the sample could not measure at this scale.
 
 ---
 
@@ -314,13 +392,20 @@ under `MIN_ROWS` (default 20,000) — will not happen at a full 32-slot walk
 node backend/scripts/merge-census-backing.cjs --from /tmp/census-2026-09-20 --top 300 --out /tmp/census-2026-09-20/backing-report.json
 ```
 
-Prints the overall strict-clean share, per-sport breakdown, and the top 300
-unbacked (sport, year, setKey) cells (P0 = no product rows at all, P1 =
-product rows exist but none strict; N/R need a per-sale card number this
-merge step does not carry — see the script's own header "NOTE ON N vs R" — so
-by default they print `unknown`). To also compute a best-effort N/R split for
-just the top cells (one extra `card_catalog` COUNT query per flagged cell,
-never per sale):
+Prints, always FIRST, whether any cell's card_catalog load failed this
+census (`backing.preload.failedCells`, summed across slots) — loudly, even
+at zero, so a non-zero count is impossible to miss before reading any share.
+Then the overall strict-clean share (explicitly labelled with its
+denominator — backedStrict+rowExistsNonStrict+noRow+unparseable — and the
+excluded total — parked+notPricedFlagged+unknown — printed by name, never a
+bare percentage), per-sport breakdown, the full-population class split for
+comparison against the 15,418-sale sample, and the top 300 unbacked (sport,
+year, setKey) cells (P0 = no product rows at all, P1 = product rows exist
+but none strict; N/R need a per-sale card number this merge step does not
+carry — see the script's own header "NOTE ON N vs R" — so by default they
+print `unknown`). To also compute a best-effort N/R split for just the top
+cells (one extra `card_catalog` COUNT query per flagged cell, never per
+sale):
 
 ```bash
 CATALOG_CHECK=true COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
@@ -338,6 +423,17 @@ it is a different, larger-sample number than I9's sample-based
 title-contradiction "strict clean" check, and the two must not be quoted
 interchangeably. Say so explicitly in whatever the merged number is reported
 as (Slack, a PR description, a follow-up issue).
+
+**Check `loadFailures.totalFailedCells` in the written report before trusting
+the headline share.** A non-zero count means some cells could not be
+answered this run (transient Cosmos issues, etc.) — their sales are correctly
+excluded from the denominator as `unknown`, so the SHARE itself is still
+honest, but a large `totalFailedCells` relative to `distinctCellsTouched`
+is worth a look (a systemic issue during the run, e.g. a card_catalog outage
+window) before publishing the number as the batch's headline figure. Re-run
+just the affected slots (see step 3, "Re-running just one slot") if the
+failure rate looks abnormal, rather than accepting a headline share that
+silently excludes more sales than expected.
 
 ---
 
