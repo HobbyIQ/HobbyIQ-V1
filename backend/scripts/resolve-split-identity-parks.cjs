@@ -150,22 +150,54 @@
  * check (a point read at `(doc.id, destCardId)`) catches before the upsert
  * ever runs.
  *
- * PHYSICAL-SALE TWINS (REVIEW #1, HIGH, 2026-09-19). A same-id check cannot
- * see a CardHedge dual-id twin of the SAME physical sale, because a twin
- * carries a DIFFERENT `id` by construction (project_cardhedge_dual_id_
- * duplicates_and_graded_in_raw_pool). Before EITHER write shape, this lane
- * additionally runs `physicalTwinAtPartition` -- one single-partition query
- * at the destination filtered on price + soldAt(day), then `isSameSale`
- * (the SAME contentHashOf compare) in memory across the small candidate
- * set -- and: RELOCATE, a twin found -> COLLAPSE (delete the moving copy,
- * the twin survives, same as the same-id case); PATCH, a twin ALREADY
- * resident at this row's OWN (unmoving) partition -> the row is left
- * PARKED (not patched), named `duplicate-of-resolved-resident`, because
- * patching this row's identity fields does not collapse a duplicate that
- * was already double-counted before this lane ran. Serialised WITHIN a run
- * by a PHYSICAL-SALE KEY (price|soldAt-day|normalised title), not by `id`
- * -- two twins share no `id` to group on, so without this lock both could
- * pass the destination scan concurrently and both write.
+ * PHYSICAL-SALE TWINS (REVIEW #1, HIGH, 2026-09-19; REVISED delta review,
+ * HIGH, 2026-09-20 -- OWNER RULE: deletes need the owner; absent beats
+ * wrong; never destroy a sale on a guess). A same-id check cannot see a
+ * CardHedge dual-id twin of the SAME physical sale, because a twin carries a
+ * DIFFERENT `id` by construction (project_cardhedge_dual_id_duplicates_and_
+ * graded_in_raw_pool). Before EITHER write shape, this lane additionally
+ * runs `physicalTwinAtPartition` -- one single-partition query at the
+ * destination filtered on price + soldAt(day), then `isSameSale` (the SAME
+ * contentHashOf compare) in memory across the small candidate set.
+ *
+ * `contentHashOf` (cardId, parallel, isAuto, grade, price-cents, soldAt-day
+ * ONLY -- no listing identity, no title) is NOT, on its own, proof that two
+ * rows are the SAME LISTING filed twice: two DISTINCT real sales of the same
+ * card, at the same price, on the same day (many $1.99 raw copies with
+ * templated CardHedge titles is the measured shape) hash identically and are
+ * NOT duplicates. This lane therefore never deletes on a contentHash match
+ * alone -- collapse additionally requires `sameListingIdentity`, a non-empty
+ * EXTERNAL LISTING id shared by both docs (`sourceExternalId`, or the same
+ * `${source}::${externalId}` shape parsed out of `id` when that field is
+ * absent -- see `listingIdOf`'s own doc): an eBay item id embedded in two
+ * differently-sourced ids proves it; CardHedge's own `ch-daily::
+ * {price_history_id}` never equalling an eBay item id correctly proves
+ * nothing, so a cross-vendor pair with no shared listing id NEVER collapses,
+ * even when price+day+contentHash all agree.
+ *
+ *   RELOCATE, a contentHash-matching twin found, listing id PROVEN shared
+ *     -> COLLAPSE (delete the moving copy, the twin survives, same as the
+ *        same-id case).
+ *   RELOCATE, contentHash matches but NO shared listing id provable
+ *     -> the MOVING row is left PARKED, untouched, named
+ *        `possible-twin-at-destination` -- never relocated, never deleted.
+ *   PATCH, a contentHash-matching row ALREADY resident at this row's OWN
+ *     (unmoving) partition, listing id PROVEN shared
+ *     -> left PARKED (not patched), named `duplicate-of-resolved-resident`
+ *        (patching identity fields does not collapse a duplicate that was
+ *        already double-counted before this lane ran, and this lane still
+ *        never deletes from the PATCH shape either way).
+ *   PATCH, same, but NO shared listing id provable
+ *     -> left PARKED, named `possible-twin-at-destination`.
+ *
+ * Both PARKED-by-guess buckets are counted in the run banner (REFUSED:) with
+ * a sample naming both docs' id + source + title, and fold into the
+ * RECONCILE line's `refused` total like every other named refusal.
+ *
+ * Serialised WITHIN a run by a PHYSICAL-SALE KEY (price|soldAt-day -- `title`
+ * dropped from this key, see `physicalSaleKeyOf`'s own doc), not by `id` --
+ * two twins share no `id` to group on, so without this lock both could pass
+ * the destination scan concurrently and both write.
  *
  * TWO WRITE SHAPES:
  *   PATCH      RESOLVE-TO-C always; RESOLVE-TO-H when the row's cardId
@@ -443,25 +475,88 @@ function checklistMatchOf(catalogRow, salePlayerName, catalogAuthorityOf, player
 }
 
 /**
- * REVIEW #1. A physical sale's own signature -- price (cents, to avoid a
- * float-equality footgun), soldAt floored to the DAY (matching relocate-
- * sold-comp.cjs's own `contentHashOf`/`day()` helper), and the title
- * normalised (trimmed, lowercased, whitespace-collapsed). Two rows sharing
- * this key are candidates for "the same underlying physical sale, filed
- * twice under different ids" -- a CardHedge dual-id twin, most often --
- * and this key is what serialises this run's own writes against each
- * other (see `withPhysicalSaleLock` in main()) and what the destination
- * scan (`physicalTwinAtPartition`) narrows its query on. It is NOT itself
- * the identity test: `isSameSale`/`contentHashOf` (relocate-sold-comp.cjs)
- * still decide identity from the small candidate set this key's query
- * returns -- this is a narrowing filter, never a second, looser definition
- * of "same sale."
+ * REVIEW #1 (delta review, HIGH, follow-up). A physical sale's own LOCK
+ * signature -- destination cardId, price (cents, to avoid a float-equality
+ * footgun), soldAt floored to the DAY (matching relocate-sold-comp.cjs's own
+ * `contentHashOf`/`day()` helper). Two rows sharing this key are candidates
+ * for "the same underlying physical sale, filed twice under different ids"
+ * and this key is what serialises this run's own writes against each other
+ * (see `withPhysicalSaleLock` in main()).
+ *
+ * `title` is DELIBERATELY NOT part of this key (dropped from the delta
+ * review's own finding): a CardHedge bulk-import title and a tca-ebay title
+ * for the exact same physical sale are independently templated by each
+ * vendor's own scraper and do not byte-match, so keying the lock on title
+ * let two differently-formatted titles for the SAME sale serialize under
+ * TWO different keys -- defeating the lock precisely when it mattered most.
+ * The lock's own job is only to stop two CONCURRENT calls from racing the
+ * destination scan for the same (destination, price, day) triple; it is
+ * never the identity test itself (that is `sameListingIdentity`, below, plus
+ * `isSameSale`/`contentHashOf`), so a coarser key here costs nothing but a
+ * few sales with genuinely different content sharing a lock queue.
  */
 function physicalSaleKeyOf(d) {
   const price = Number.isFinite(Number(d?.price)) ? Math.round(Number(d.price) * 100) : "?";
   const soldDay = String(d?.soldAt ?? "").slice(0, 10);
-  const normTitle = String(d?.title ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-  return `${price}|${soldDay}|${normTitle}`;
+  return `${price}|${soldDay}`;
+}
+
+/**
+ * REVIEW #1 (delta review, HIGH). The listing identity a physical-sale twin
+ * must PROVE before this lane collapses (deletes) one of two rows sharing a
+ * price+day signature. `contentHashOf` alone (cardId, parallel, isAuto,
+ * grade, price-cents, soldAt-day) cannot tell "the same listing filed twice"
+ * from "two distinct real sales that happen to match on those coarse fields"
+ * -- e.g. many $1.99 raw copies of a common card sold the same day, each
+ * with its own CardHedge-templated title that also collapses to the same
+ * normalised string. Deleting on that guess is exactly the defect this
+ * fixes: absent beats wrong, and a delete needs an owner (a real, provable
+ * shared listing), never a guess.
+ *
+ * THE PROOF: a non-empty EXTERNAL LISTING id shared by both docs.
+ *   1. `sourceExternalId` (soldCompsStore.service.ts's own field -- the
+ *      vendor's own external id: an eBay item id for tca-ebay/ebay-user rows,
+ *      `ch-daily::{price_history_id}` for CardHedge daily rows, `holding::
+ *      {id}` for an eBay-import-created holding sale, etc, per makeId's own
+ *      `${source}::${externalId}` id-shape and chRowToSoldComp.ts's own
+ *      `ch-daily::` prefix doc). Preferred because it is the field the
+ *      ingest path itself populates with the vendor's own listing/sale id,
+ *      never re-derived here.
+ *   2. Falls back to parsing the SAME shape out of `doc.id` itself when
+ *      `sourceExternalId` is absent on an older row: `makeId` mints
+ *      `${source}::${externalId}` whenever a source provides one, so the
+ *      substring after the FIRST `::` is that same externalId, byte for
+ *      byte -- e.g. `tca-ebay::168568127039` yields listing id
+ *      `168568127039`, the eBay item id embedded in the id.
+ *
+ * Two docs share listing identity ONLY when both resolve to a non-empty
+ * string and those strings are EQUAL (exact, case-sensitive -- vendor ids
+ * are opaque tokens, never text to fuzz-match). This is deliberately
+ * cross-vendor-capable: two tca-ebay rows (or an eBay-sourced row filed
+ * under any other source label) that embed the SAME eBay item id collapse,
+ * exactly the shipped test's "same listing id under two id shapes" case.
+ * But CardHedge's `ch-daily::{price_history_id}` is a CardHedge-internal
+ * counter that never equals an eBay item id or another vendor's own id --
+ * so a `cardhedge` row and a `tca-ebay` row for what LOOKS like the same
+ * physical sale (same price, same day, similarly-templated title) have NO
+ * shared listing proof today, and correctly do NOT collapse: that gap is
+ * real (there is no cross-vendor listing linkage field in this schema
+ * today), not a bug in this function.
+ */
+function listingIdOf(doc) {
+  const ext = str(doc?.sourceExternalId);
+  if (ext) return ext;
+  const id = str(doc?.id);
+  const i = id.indexOf("::");
+  if (i < 0) return "";
+  const tail = id.slice(i + 2).trim();
+  return tail;
+}
+
+function sameListingIdentity(a, b) {
+  const ka = listingIdOf(a);
+  const kb = listingIdOf(b);
+  return ka !== "" && kb !== "" && ka === kb;
 }
 
 /**
@@ -1025,17 +1120,30 @@ async function main() {
       }
 
       if (alreadyResolved || verdict.verdict === "resolve-to-c" || doc.cardId === winner) {
-        // ── REVIEW #1: a physical-sale twin ALREADY resident at this SAME
-        // partition (a different `id`, same underlying sale -- the dual-id
-        // shape) is a duplicate this lane must not cement under a patch:
-        // patching this row's identity fields does nothing to collapse a
-        // twin that was already double-counted before this lane ran, so it
-        // is left PARKED (reason unchanged) and counted separately rather
-        // than written.
+        // ── REVIEW #1 (delta review, HIGH): a row sharing this sale's
+        // physical signature (price+soldAt-day) may already be resident at
+        // this SAME partition under a different id. `contentHashOf` matching
+        // is NOT, on its own, proof it is the SAME LISTING filed twice --
+        // many distinct $1.99 raw copies of a common card, sold the same
+        // day at the same price with templated CardHedge titles, hash
+        // identically and are NOT duplicates. This lane NEVER deletes a sale
+        // on that guess (owner rule: deletes need the owner; absent beats
+        // wrong). It only ever leaves the row PARKED here -- a patch never
+        // deletes anything regardless, so there is nothing to collapse; the
+        // only question is whether to write the identity fix at all -- and
+        // it does not, because patching this row's identity onto a
+        // pre-existing physical-sale match (proven-twin or not) would still
+        // leave two rows resolved to the same address, which a human should
+        // look at named, not have this lane guess through.
         const patchTwin = await physicalTwinAtPartition(doc.cardId, doc);
         if (patchTwin) {
-          bumpReason(s.refused, "duplicate-of-resolved-resident");
-          pushExample(refuseExamples, "duplicate-of-resolved-resident", `  ${doc.id}@${doc.cardId}: a physical-sale twin already resides at this SAME partition under a different id (${patchTwin.id}) -- left parked, not patched, to avoid cementing the pre-existing duplicate`);
+          const provenTwin = sameListingIdentity(doc, patchTwin);
+          const reason = provenTwin ? "duplicate-of-resolved-resident" : "possible-twin-at-destination";
+          const detail = provenTwin
+            ? `a physical-sale twin already resides at this SAME partition under a different id (${patchTwin.id}), and both share listing id "${listingIdOf(doc)}" -- left parked, not patched, to avoid cementing the pre-existing duplicate`
+            : `a row matching this sale's price+soldAt-day already resides at this SAME partition under a different id (${patchTwin.id} source=${patchTwin.source ?? "?"}), but NEITHER doc proves a shared external listing id (this=${listingIdOf(doc) || "(none)"} source=${doc.source ?? "?"}, other=${listingIdOf(patchTwin) || "(none)"}) -- could be a genuine twin OR two distinct sales (e.g. two different $1.99 raw copies sold the same day); left parked for a human, never resolved on a guess`;
+          bumpReason(s.refused, reason);
+          pushExample(refuseExamples, reason, `  ${doc.id}@${doc.cardId} (source=${doc.source ?? "?"}, title="${str(doc.title).slice(0, 60)}") vs ${patchTwin.id}@${patchTwin.cardId} (source=${patchTwin.source ?? "?"}, title="${str(patchTwin.title).slice(0, 60)}"): ${detail}`);
           return;
         }
 
@@ -1124,20 +1232,43 @@ async function main() {
         return;
       }
 
-      // ── REVIEW #1: a PHYSICAL-SALE TWIN (different id, same underlying
-      // sale) may already be resident at the RELOCATE destination -- the
-      // `residentAt` check above only ever matches `doc.id` itself, which
-      // a dual-id twin never shares. Collapse onto it exactly as the
-      // same-id case does: verify (isSameSale, the same contentHashOf
-      // predicate), delete the MOVING copy, leave the resident twin as the
-      // one survivor at H.
+      // ── REVIEW #1 (delta review, HIGH): a row matching this sale's
+      // physical signature (price+soldAt-day) may already be resident at the
+      // RELOCATE destination under a different id -- the `residentAt` check
+      // above only ever matches `doc.id` itself, which a dual-id twin never
+      // shares. `contentHashOf` agreeing is NOT proof it is the SAME LISTING
+      // filed twice -- two DISTINCT real sales (same card, same price, same
+      // day: many $1.99 raw copies with templated CardHedge titles) hash
+      // identically and are NOT duplicates. This lane NEVER deletes the
+      // moving copy on that guess alone (owner rule: deletes need the owner;
+      // absent beats wrong):
+      //
+      //   - contentHash matches AND a non-empty external listing id is
+      //     SHARED (sameListingIdentity -- sourceExternalId, or the same
+      //     shape parsed from `id`, per makeId's own `${source}::
+      //     ${externalId}`) -> PROVEN twin -> collapse: delete the moving
+      //     copy, the resident survives, exactly as the same-id case does.
+      //   - contentHash matches but NO shared listing id is provable
+      //     (including every cross-vendor pair today: CardHedge's own
+      //     `ch-daily::{price_history_id}` never equals an eBay item id) ->
+      //     leave the MOVING row PARKED, untouched, named
+      //     `possible-twin-at-destination` -- never relocated, never
+      //     deleted, counted for a human to resolve by hand.
+      //   - contentHash disagrees entirely -> a coincidence, not a twin --
+      //     fall through to the ordinary relocate below, exactly as if no
+      //     candidate had matched the narrower scan at all.
       const physicalTwin = await physicalTwinAtPartition(destCardId, doc);
       if (physicalTwin) {
         if (isSameSale(physicalTwin, { ...keep, cardId: destCardId })) {
-          if (APPLY) await retry(() => pool.item(doc.id, doc.cardId).delete());
-          s.collapsedOntoResident++;
-          bump(byCell, cellKey);
-          if (resolveExamples.length < 60) resolveExamples.push(`  COLLAPSE ${str(doc.title).slice(0, 70)} -- a physical-sale twin (${physicalTwin.id}) already resides at ${destCardId}; this copy (${doc.id}) deleted, one survivor remains`);
+          if (sameListingIdentity(doc, physicalTwin)) {
+            if (APPLY) await retry(() => pool.item(doc.id, doc.cardId).delete());
+            s.collapsedOntoResident++;
+            bump(byCell, cellKey);
+            if (resolveExamples.length < 60) resolveExamples.push(`  COLLAPSE ${str(doc.title).slice(0, 70)} -- a physical-sale twin (${physicalTwin.id}) already resides at ${destCardId}, both share listing id "${listingIdOf(doc)}"; this copy (${doc.id}) deleted, one survivor remains`);
+            return;
+          }
+          bumpReason(s.refused, "possible-twin-at-destination");
+          pushExample(refuseExamples, "possible-twin-at-destination", `  ${doc.id}@${doc.cardId} (source=${doc.source ?? "?"}, title="${str(doc.title).slice(0, 60)}") -> ${destCardId} vs resident ${physicalTwin.id} (source=${physicalTwin.source ?? "?"}, title="${str(physicalTwin.title).slice(0, 60)}"): same price+soldAt-day+contentHash, but NEITHER doc proves a shared external listing id (this=${listingIdOf(doc) || "(none)"}, other=${listingIdOf(physicalTwin) || "(none)"}) -- could be a genuine twin OR two distinct sales (e.g. two different $1.99 raw copies sold the same day); left PARKED, never moved or deleted on a guess`);
           return;
         }
         // A physical-sale-signature (price+soldAt-day) match that FAILS the
@@ -1308,7 +1439,7 @@ module.exports = {
   CANDIDATE_SPEC, segmentsOf, sportSegmentOf, yearSegmentOf, setKeySegmentOf,
   withSportSegment, cellsOf, checklistMatchOf, multiPlayerKeysOf,
   judgeSplitIdentityVerdict, titleVetoes, guessTitlePlayer, playerIdentityTokens,
-  physicalSaleKeyOf, isPinnedOrFlagged, USER_SEED_SOURCES,
+  physicalSaleKeyOf, listingIdOf, sameListingIdentity, isPinnedOrFlagged, USER_SEED_SOURCES,
   ALL_SPLITS, CELL_RE, PARK_FIELDS,
 };
 

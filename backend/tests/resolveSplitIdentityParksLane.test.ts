@@ -516,24 +516,60 @@ describe("resolve-split-identity-parks -- collapse / refuse on relocate destinat
   });
 });
 
-describe("resolve-split-identity-parks -- REVIEW #1 (HIGH): physical-sale twins (different id, same underlying sale)", () => {
+describe("resolve-split-identity-parks -- REVIEW #1 (HIGH, delta review 2026-09-20): physical-sale twins need PROVEN shared listing identity before a collapse deletes anything", () => {
   // A CardHedge dual-id twin of ONE physical sale: same price, same sold
   // day, same title -- but a DIFFERENT id (a tca-ebay id vs a cardhedge
   // id), and here already resident at H under its OWN id. `residentAt`
   // (same-id check) never sees this, because it only ever probes
   // `(doc.id, destCardId)` -- a DIFFERENT id at that exact address.
+  //
+  // contentHashOf (cardId, parallel, isAuto, grade, price-cents, soldAt-day)
+  // matching is NOT proof of "same listing" -- two DISTINCT real sales (many
+  // $1.99 raw copies, templated CardHedge titles) match it too. Collapse
+  // (delete) is allowed ONLY when both docs additionally share a non-empty
+  // external listing id (sourceExternalId, or the same shape parsed from
+  // `id`). Cross-vendor pairs with no shared listing id must PARK, named
+  // `possible-twin-at-destination`, never collapse.
   const TWIN_PRICE = 12.5;
   const TWIN_SOLD_AT = "2026-06-02T02:59:03.000Z";
   const TWIN_TITLE = "Pikachu V - Holo Promo SWSH061";
 
-  it("RELOCATE: COLLAPSES onto a physical-sale twin already resident at H under a DIFFERENT id -- exactly one document survives at H, the moving copy is deleted", () => {
+  it("RELOCATE: two DISTINCT sales (same card/price/day, different ids & sources, NO shared listing id) are NEITHER deleted -- the mover is left PARKED, named possible-twin-at-destination", () => {
     const moving = {
-      ...VW3_SALE, id: "cardhedge::twin-moving", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, title: TWIN_TITLE,
+      ...VW3_SALE, id: "cardhedge::twin-moving", source: "cardhedge", sourceExternalId: "ch-daily::555001",
+      price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, title: TWIN_TITLE,
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null,
+    };
+    const resident = {
+      id: "tca-ebay::twin-resident-999", cardId: "hiq:basketball:2023:topps:vw3:base:no-auto",
+      sport: "basketball", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto",
+      source: "tca-ebay", sourceExternalId: "168568127039",
+      price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, title: TWIN_TITLE,
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null,
+    };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [moving, resident], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED: possible-twin-at-destination\s+1/);
+    expect(r.out).not.toMatch(/COLLAPSED onto a resident \(same sale, by hash\)\s+1/);
+    // NEITHER row is touched -- absent beats wrong, no delete without proof.
+    expect(r.led.salesDeletes).not.toContain("cardhedge::twin-moving");
+    expect(r.led.salesDeletes).not.toContain("tca-ebay::twin-resident-999");
+    expect(r.led.salesUpserts.length).toBe(0);
+    // The banner sample names both docs' id + source + title.
+    expect(r.out).toMatch(/cardhedge::twin-moving.*source=cardhedge.*Pikachu V/);
+    expect(r.out).toMatch(/twin-resident-999.*source=tca-ebay.*Pikachu V/);
+  });
+
+  it("RELOCATE: the SAME listing id under two id shapes (sourceExternalId shared) COLLAPSES -- exactly one document survives at H, the moving copy is deleted", () => {
+    const moving = {
+      ...VW3_SALE, id: "cardhedge::twin-moving-proven", source: "cardhedge", sourceExternalId: "168568127039",
+      price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, title: TWIN_TITLE,
       parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null,
     };
     const residentTwin = {
-      id: "tca-ebay::twin-resident-999", cardId: "hiq:basketball:2023:topps:vw3:base:no-auto",
+      id: "tca-ebay::168568127039", cardId: "hiq:basketball:2023:topps:vw3:base:no-auto",
       sport: "basketball", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto",
+      source: "tca-ebay",
       price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, title: TWIN_TITLE,
       parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null,
     };
@@ -542,8 +578,8 @@ describe("resolve-split-identity-parks -- REVIEW #1 (HIGH): physical-sale twins 
     expect(r.out).toMatch(/COLLAPSED onto a resident \(same sale, by hash\)\s+1/);
     // The MOVING copy is deleted; the pre-existing twin (different id) is
     // never touched -- exactly one survivor remains at H.
-    expect(r.led.salesDeletes).toContain("cardhedge::twin-moving");
-    expect(r.led.salesDeletes).not.toContain("tca-ebay::twin-resident-999");
+    expect(r.led.salesDeletes).toContain("cardhedge::twin-moving-proven");
+    expect(r.led.salesDeletes).not.toContain("tca-ebay::168568127039");
     expect(r.led.salesUpserts.length).toBe(0);
   });
 
@@ -565,7 +601,7 @@ describe("resolve-split-identity-parks -- REVIEW #1 (HIGH): physical-sale twins 
     expect(r.led.salesDeletes).not.toContain("tca-ebay::coincidence-1"); // the coincidence is untouched
   });
 
-  it("PATCH (RESOLVE-TO-C): a physical-sale twin ALREADY resident at this row's OWN (unmoving) partition is left PARKED, named duplicate-of-resolved-resident -- never patched", () => {
+  it("PATCH (RESOLVE-TO-C): two distinct sales sharing this row's OWN (unmoving) partition, NO shared listing id, are left PARKED named possible-twin-at-destination -- never patched, never deleted", () => {
     const sale = {
       id: "cardhedge::patch-twin-moving",
       cardId: "hiq:football:1989:score:257:base:no-auto",
@@ -576,24 +612,59 @@ describe("resolve-split-identity-parks -- REVIEW #1 (HIGH): physical-sale twins 
       identityUnverifiedDetail: "no source attests either side",
       title: "1989 Score Barry Sanders Detroit Lions Rookie RC #257",
       playerName: "Barry Sanders", price: 40, soldAt: "2026-06-02T00:00:00.000Z",
-      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "cardhedge", cardNumber: "257",
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "cardhedge", sourceExternalId: "ch-daily::777123", cardNumber: "257",
     };
-    // A DIFFERENT id, but the SAME physical sale, already resident at
-    // cardId's OWN (unmoving) partition -- a dual-id twin filed on the
-    // SAME address as the row this lane is about to patch.
-    const residentTwin = {
+    // A DIFFERENT id, a DIFFERENT vendor listing, but the SAME price+day+
+    // contentHash, already resident at cardId's OWN (unmoving) partition --
+    // no shared listing id proves this is the same physical sale rather
+    // than two distinct $40 raw copies sold the same day.
+    const resident = {
       id: "tca-ebay::patch-twin-resident", cardId: "hiq:football:1989:score:257:base:no-auto",
       sport: "football", hobbyiqCardId: "hiq:football:1989:score:257:base:no-auto",
       title: "1989 Score Barry Sanders Detroit Lions Rookie RC #257",
       playerName: "Barry Sanders", price: 40, soldAt: "2026-06-02T00:00:00.000Z",
       parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null,
+      source: "tca-ebay", sourceExternalId: "271998887766",
     };
     const catalogFootball = { id: "hiq:football:1989:score:257:base:no-auto", cardId: "hiq:football:1989:score:257:base:no-auto", source: "checklistcenter", playerName: "Barry Sanders" };
-    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale, residentTwin], catalog: [catalogFootball] });
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale, resident], catalog: [catalogFootball] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED: possible-twin-at-destination\s+1/);
+    expect(r.out).not.toMatch(/RESOLVE-TO-C \(patch\)\s+1/);
+    expect(r.led.salesPatches.some((p: any) => p.id === "cardhedge::patch-twin-moving")).toBe(false);
+    expect(r.led.salesDeletes.length).toBe(0);
+  });
+
+  it("PATCH (RESOLVE-TO-C): a PROVEN twin (shared listing id) ALREADY resident at this row's OWN (unmoving) partition is left PARKED, named duplicate-of-resolved-resident -- never patched (a patch never deletes either way)", () => {
+    const sale = {
+      id: "cardhedge::patch-proven-twin-moving",
+      cardId: "hiq:football:1989:score:258:base:no-auto",
+      hobbyiqCardId: "hiq:baseball:1989:score:258:base:no-auto",
+      sport: "baseball",
+      identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z",
+      identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity",
+      identityUnverifiedDetail: "no source attests either side",
+      title: "1989 Score Barry Sanders Detroit Lions Rookie RC #258",
+      playerName: "Barry Sanders", price: 41, soldAt: "2026-06-02T00:00:00.000Z",
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "cardhedge", sourceExternalId: "310998887799", cardNumber: "258",
+    };
+    // Same listing id (an eBay item id CardHedge also recorded), a
+    // DIFFERENT id shape, already resident at cardId's OWN partition.
+    const resident = {
+      id: "tca-ebay::310998887799", cardId: "hiq:football:1989:score:258:base:no-auto",
+      sport: "football", hobbyiqCardId: "hiq:football:1989:score:258:base:no-auto",
+      title: "1989 Score Barry Sanders Detroit Lions Rookie RC #258",
+      playerName: "Barry Sanders", price: 41, soldAt: "2026-06-02T00:00:00.000Z",
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null,
+      source: "tca-ebay",
+    };
+    const catalogFootball = { id: "hiq:football:1989:score:258:base:no-auto", cardId: "hiq:football:1989:score:258:base:no-auto", source: "checklistcenter", playerName: "Barry Sanders" };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale, resident], catalog: [catalogFootball] });
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/REFUSED: duplicate-of-resolved-resident\s+1/);
     expect(r.out).not.toMatch(/RESOLVE-TO-C \(patch\)\s+1/);
-    expect(r.led.salesPatches.some((p: any) => p.id === "cardhedge::patch-twin-moving")).toBe(false);
+    expect(r.led.salesPatches.some((p: any) => p.id === "cardhedge::patch-proven-twin-moving")).toBe(false);
+    expect(r.led.salesDeletes.length).toBe(0);
   });
 
   it("does NOT collapse two DIFFERENT sales that merely share the day (different price)", () => {
@@ -610,12 +681,39 @@ describe("resolve-split-identity-parks -- REVIEW #1 (HIGH): physical-sale twins 
     expect(r.led.salesDeletes).not.toContain("tca-ebay::genuine-2");
   });
 
-  it("CONCURRENCY: two twins dispatched at once resolve to exactly one survivor at H, reconcile balances, and a re-run is a no-op", () => {
-    const twinA = { id: "cardhedge::conc-a", cardId: "hiq:baseball:2023:topps:vw-3:base:no-auto", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto", sport: "baseball", identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z", identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity", identityUnverifiedDetail: "x", title: TWIN_TITLE, playerName: "Victor Wembanyama", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "cardhedge" };
-    const twinB = { id: "tca-ebay::conc-b-dup", cardId: "hiq:baseball:2023:topps:vw-3:base:no-auto", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto", sport: "baseball", identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z", identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity", identityUnverifiedDetail: "x", title: TWIN_TITLE, playerName: "Victor Wembanyama", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "tca-ebay" };
+  it("CONCURRENCY: two movers racing the SAME destination with NO shared listing id yield no duplicate write and no delete without listing proof", () => {
+    const twinA = { id: "cardhedge::conc-a", cardId: "hiq:baseball:2023:topps:vw-3:base:no-auto", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto", sport: "baseball", identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z", identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity", identityUnverifiedDetail: "x", title: TWIN_TITLE, playerName: "Victor Wembanyama", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "cardhedge", sourceExternalId: "ch-daily::900111" };
+    const twinB = { id: "tca-ebay::conc-b-dup", cardId: "hiq:baseball:2023:topps:vw-3:base:no-auto", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto", sport: "baseball", identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z", identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity", identityUnverifiedDetail: "x", title: TWIN_TITLE, playerName: "Victor Wembanyama", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "tca-ebay", sourceExternalId: "900222333444" };
     const first = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true", CONCURRENCY: "16" }, { sales: [twinA, twinB], catalog: [VW3_CHECKLIST_BASKETBALL] });
     expect(first.code).toBe(0);
-    // Exactly one RELOCATE and one COLLAPSE -- one survivor at H, not two.
+    // Neither twin proves a shared listing id against the other -- one
+    // relocates to H (there is no resident yet when it runs first in the
+    // lock queue), the other finds it there under a different id at the
+    // SAME price+day and, lacking listing proof, PARKS rather than
+    // collapsing or double-writing.
+    expect(first.out).toMatch(/RESOLVE-TO-H \(relocate\)\s+1/);
+    expect(first.out).toMatch(/REFUSED: possible-twin-at-destination\s+1/);
+    expect(first.out).not.toMatch(/COLLAPSED onto a resident \(same sale, by hash\)\s+1/);
+    expect(first.out).toMatch(/RECONCILE BALANCES/);
+    // Exactly one survivor at the destination -- no duplicate write.
+    const survivingIds = new Set(first.led.salesUpserts as string[]);
+    expect(survivingIds.size).toBe(1);
+    // Exactly one delete: the successful relocate's OWN old-partition
+    // cleanup (its mover, now living at H under its own id, still upserted
+    // above). The PARKED twin -- whichever one lost the lock race and found
+    // the other already at the destination with no shared listing id -- is
+    // NEVER deleted without listing proof.
+    const deletedIds = new Set(first.led.salesDeletes as string[]);
+    expect(deletedIds.size).toBe(1);
+    const relocatedId = [...survivingIds][0];
+    expect(deletedIds).toEqual(new Set([relocatedId]));
+  });
+
+  it("CONCURRENCY: two twins PROVING a shared listing id still resolve to exactly one survivor at H (collapse legitimately fires under the race)", () => {
+    const twinA = { id: "cardhedge::conc-proven-a", cardId: "hiq:baseball:2023:topps:vw-3:base:no-auto", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto", sport: "baseball", identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z", identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity", identityUnverifiedDetail: "x", title: TWIN_TITLE, playerName: "Victor Wembanyama", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "cardhedge", sourceExternalId: "555666777888" };
+    const twinB = { id: "tca-ebay::555666777888", cardId: "hiq:baseball:2023:topps:vw-3:base:no-auto", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto", sport: "baseball", identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z", identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity", identityUnverifiedDetail: "x", title: TWIN_TITLE, playerName: "Victor Wembanyama", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "tca-ebay" };
+    const first = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true", CONCURRENCY: "16" }, { sales: [twinA, twinB], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(first.code).toBe(0);
     expect(first.out).toMatch(/RESOLVE-TO-H \(relocate\)\s+1/);
     expect(first.out).toMatch(/COLLAPSED onto a resident \(same sale, by hash\)\s+1/);
     expect(first.out).toMatch(/RECONCILE BALANCES/);

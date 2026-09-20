@@ -23,6 +23,8 @@ const mod = require("../scripts/resolve-split-identity-parks.cjs") as {
   guessTitlePlayer: (title: string, deps: Record<string, unknown>) => string | null;
   playerIdentityTokens: (name: unknown, deps: Record<string, unknown>) => string[];
   physicalSaleKeyOf: (doc: Record<string, unknown>) => string;
+  listingIdOf: (doc: Record<string, unknown>) => string;
+  sameListingIdentity: (a: Record<string, unknown>, b: Record<string, unknown>) => boolean;
   isPinnedOrFlagged: (doc: Record<string, unknown>) => boolean;
   USER_SEED_SOURCES: Set<string>;
   CELL_RE: RegExp;
@@ -341,14 +343,18 @@ describe("resolve-split-identity-parks: REVIEW #2 -- guessTitlePlayer + playerId
 });
 
 describe("resolve-split-identity-parks: REVIEW #1 -- physicalSaleKeyOf", () => {
-  it("keys on price (cents) + soldAt (day) + normalised title", () => {
+  it("keys on price (cents) + soldAt (day) ONLY -- title is deliberately NOT part of this key", () => {
     expect(mod.physicalSaleKeyOf({ price: 12.5, soldAt: "2026-06-02T02:59:03.000Z", title: "  Pikachu   V  Holo  " }))
-      .toBe("1250|2026-06-02|pikachu v holo");
+      .toBe("1250|2026-06-02");
   });
 
-  it("two CardHedge dual-id twins of the SAME physical sale (different id, same price/day/title) share one key", () => {
-    const a = { id: "cardhedge::abc", price: 12.5, soldAt: "2026-06-02T02:59:03.000Z", title: "Pikachu V Holo" };
-    const b = { id: "tca-ebay::999-dup", price: 12.5, soldAt: "2026-06-02T18:00:00.000Z", title: "Pikachu V Holo" };
+  it("two differently-titled twins of the SAME physical sale (different id, same price/day, DIFFERENT title formatting) still share one lock key", () => {
+    // The delta review's own finding: a CardHedge-templated title and a
+    // tca-ebay title for the exact same physical sale do not byte-match, so
+    // keying the LOCK on title let two such twins serialize under different
+    // keys. Dropping title from the key fixes that.
+    const a = { id: "cardhedge::abc", price: 12.5, soldAt: "2026-06-02T02:59:03.000Z", title: "2023 Topps Now Victor Wembanyama RC #VW3 PSA-clean raw" };
+    const b = { id: "tca-ebay::999-dup", price: 12.5, soldAt: "2026-06-02T18:00:00.000Z", title: "Wembanyama 2023 Topps Now Rookie VW3 Basketball Card" };
     expect(mod.physicalSaleKeyOf(a)).toBe(mod.physicalSaleKeyOf(b));
   });
 
@@ -356,6 +362,42 @@ describe("resolve-split-identity-parks: REVIEW #1 -- physicalSaleKeyOf", () => {
     const a = { id: "a", price: 12.5, soldAt: "2026-06-02T00:00:00.000Z", title: "Pikachu V Holo" };
     const b = { id: "b", price: 99.99, soldAt: "2026-06-02T00:00:00.000Z", title: "Pikachu V Holo" };
     expect(mod.physicalSaleKeyOf(a)).not.toBe(mod.physicalSaleKeyOf(b));
+  });
+});
+
+describe("resolve-split-identity-parks: REVIEW #1 (delta review) -- listingIdOf / sameListingIdentity", () => {
+  it("prefers sourceExternalId when present", () => {
+    expect(mod.listingIdOf({ id: "cardhedge::internal-1", sourceExternalId: "168568127039" })).toBe("168568127039");
+  });
+
+  it("falls back to the substring after the first '::' in id when sourceExternalId is absent", () => {
+    expect(mod.listingIdOf({ id: "tca-ebay::168568127039" })).toBe("168568127039");
+  });
+
+  it("returns empty string for an id with no '::' and no sourceExternalId", () => {
+    expect(mod.listingIdOf({ id: "no-separator-here" })).toBe("");
+  });
+
+  it("returns empty string when sourceExternalId is blank/whitespace and id has no separator", () => {
+    expect(mod.listingIdOf({ id: "plainid", sourceExternalId: "   " })).toBe("");
+  });
+
+  it("sameListingIdentity: TRUE for two docs sharing a non-empty eBay item id under different id shapes/sources", () => {
+    const a = { id: "cardhedge::internal-1", sourceExternalId: "168568127039", source: "cardhedge" };
+    const b = { id: "tca-ebay::168568127039", source: "tca-ebay" };
+    expect(mod.sameListingIdentity(a, b)).toBe(true);
+  });
+
+  it("sameListingIdentity: FALSE for a CardHedge sale id vs an eBay item id -- no cross-vendor listing id proof exists", () => {
+    const a = { id: "cardhedge::ch-daily-1", sourceExternalId: "ch-daily::555001", source: "cardhedge" };
+    const b = { id: "tca-ebay::168568127039", source: "tca-ebay" };
+    expect(mod.sameListingIdentity(a, b)).toBe(false);
+  });
+
+  it("sameListingIdentity: FALSE when either side has no derivable listing id (absent beats wrong -- never guess)", () => {
+    expect(mod.sameListingIdentity({ id: "no-sep" }, { id: "tca-ebay::123" })).toBe(false);
+    expect(mod.sameListingIdentity({ id: "tca-ebay::123" }, { id: "also-no-sep" })).toBe(false);
+    expect(mod.sameListingIdentity({ id: "no-sep-a" }, { id: "no-sep-b" })).toBe(false);
   });
 });
 
