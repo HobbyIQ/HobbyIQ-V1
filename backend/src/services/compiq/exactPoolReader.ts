@@ -173,24 +173,12 @@ export async function readExactPoolRows(input: {
   // absent on the overwhelming majority of rows, so the IS_DEFINED disjunct is
   // what keeps those rows in, and `!= true` additionally tolerates a row that
   // stored the flag as something other than a strict boolean.
-  //
-  // R70 (owner ruling, 2026-09-19): `identityUnverified` is the write guard's
-  // PARK stamp (`splitIdentityWriteGuard.ts`'s `guardSoldCompDoc` /
-  // `parkSoldCompDoc`) for split-identity / sport-unresolved / malformed-key /
-  // insert-named-no-key / two-inserts-named rows -- the row's OWN identity is
-  // unverified, so it must not price ANY card, including the one its
-  // `cardId`/`hobbyiqCardId` happen to name. This reader filtered only the
-  // adjudicated-wrong flags above and never this one (confirmed pre-existing
-  // gap, PR #2329's insertSetTitleReader.test.ts POOL-EXCLUSION GAP test). A
-  // parked row is out of EVERY pool, same undefined-tolerant `!= true` shape
-  // as its neighbours.
   const parts: string[] = [
     "c.soldAt >= @cutoff",
     "c.price > 0",
     "(NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)",
     "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)",
     "(NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv != true)",
-    "(NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified != true)",
   ];
   const params: Array<{ name: string; value: string | number | boolean | null }> = [
     { name: "@cutoff", value: cutoff },

@@ -3147,20 +3147,9 @@ export async function readCompsByCardId(input: {
   const idClause = readIds.length > 1
     ? `(${matchField} = @cid OR ${matchField} = @cid1)`
     : `${matchField} = @cid`;
-  // R70 (owner ruling, 2026-09-19): this is the read behind the recent-sales
-  // display (GET /api/compiq/cards/:cardId/recent-sales) — it previously
-  // carried NO adjudication filter at all, so an adjudicated flaggedWrong/
-  // excludedFromFmv row, and a PARKED (identityUnverified) row whose own
-  // identity is unverified, both showed up as a "sale" under this card. A
-  // parked row's identity is unverified, so displaying it here is wrong the
-  // same way pricing off it is wrong. Same undefined-tolerant shape as the
-  // FMV readers (exactPoolReader.ts / hobbyIqFmv.service.ts).
   const q = {
     query:
-      `SELECT * FROM c WHERE ${idClause} AND c.soldAt >= @from AND c.soldAt <= @to`
-      + ` AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)`
-      + ` AND (NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv != true)`
-      + ` AND (NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified != true)${orderClause}`,
+      `SELECT * FROM c WHERE ${idClause} AND c.soldAt >= @from AND c.soldAt <= @to${orderClause}`,
     parameters: [
       { name: "@cid", value: readIds[0] },
       ...(readIds.length > 1 ? [{ name: "@cid1", value: readIds[1] }] : []),

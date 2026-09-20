@@ -111,14 +111,6 @@ export async function readSoldCompsForGrade(
     "c.price > 0",
     "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)",
     "(NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv = false)",
-    // R70 (owner ruling, 2026-09-19): a row PARKED by the write guard
-    // (`identityUnverified: true` — split-identity / sport-unresolved /
-    // malformed-key / insert-named-no-key / two-inserts-named) has an
-    // unverified identity and must not price any card, the same way an
-    // adjudicated flaggedWrong/excludedFromFmv row does not. Mirrors the
-    // neighbouring flags' undefined-tolerant shape (`= false`, not `!= true`,
-    // to match how this file already wrote the two above).
-    "(NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified = false)",
     looksLikeHiqSlug ? "c.hobbyiqCardId = @cid" : "c.cardId = @cid",
   ];
   const params: Array<{ name: string; value: string | number | null | boolean }> = [
