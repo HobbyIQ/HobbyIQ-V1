@@ -111,7 +111,15 @@ describe("readCompsByCardId -- an un-numbered hiq id whose one catalog row is it
   it("never a STARTSWITH union: exactly two equalities, never a third id", async () => {
     resolver.resolveIdentityToCatalogRow.mockResolvedValue(resolution(MWI, "numbered-twin", MWI_499, [MWI_499]));
     await readCompsByCardId({ cardId: MWI });
-    expect(calls[0].spec.query).not.toMatch(/STARTSWITH/);
+    // The IDENTITY fields specifically must never be matched via STARTSWITH —
+    // that is the invariant this test pins (a stem match would wrongly merge
+    // two distinct numbered twins). R71 (2026-09-19) added a STARTSWITH on an
+    // UNRELATED field (identityUnverifiedReason, inside the park-carve-out
+    // clause), which is not the union this test guards, so the check is
+    // scoped to the identity fields rather than forbidding STARTSWITH anywhere
+    // in the query string.
+    expect(calls[0].spec.query).not.toContain("STARTSWITH(c.hobbyiqCardId,");
+    expect(calls[0].spec.query).not.toContain("STARTSWITH(c.cardId,");
     expect(calls[0].spec.parameters.filter((p) => p.name.startsWith("@cid"))).toHaveLength(2);
   });
   it("ambiguous (two twins): queries the id AS GIVEN only — two cards are never merged", async () => {
@@ -175,7 +183,9 @@ describe("readCompsByHobbyIqCardId -- the same rule", () => {
     expect(calls[0].spec.query).toMatch(/\(c\.hobbyiqCardId = @hiq OR c\.hobbyiqCardId = @hiq1\)/);
     expect(param(0, "@hiq")).toBe(MWI);
     expect(param(0, "@hiq1")).toBe(MWI_499);
-    expect(calls[0].spec.query).not.toMatch(/STARTSWITH/);
+    // See the identical comment above -- scoped to the identity fields only.
+    expect(calls[0].spec.query).not.toContain("STARTSWITH(c.hobbyiqCardId,");
+    expect(calls[0].spec.query).not.toContain("STARTSWITH(c.cardId,");
     expect(resolver.resolveIdentityToCatalogRow).toHaveBeenCalledWith(MWI, { printRun: null });
   });
   it("ambiguous stays as given", async () => {
@@ -206,7 +216,8 @@ describe("readCompsByCardId -- REVERSE: a numbered id whose sales sit under its 
     pool = [...TWIN_ROWS, ...UN_ROWS];
     resolver.resolveIdentityToCatalogRow.mockResolvedValue(resolution(MWI_499, "exact", MWI_499, [], MWI));
     expect(await readCompsByCardId({ cardId: MWI_499, fromDate: daysAgo(365) })).toHaveLength(49);
-    expect(calls[0].spec.query).not.toMatch(/STARTSWITH/);
+    expect(calls[0].spec.query).not.toContain("STARTSWITH(c.hobbyiqCardId,");
+    expect(calls[0].spec.query).not.toContain("STARTSWITH(c.cardId,");
     expect(calls[0].spec.parameters.filter((p) => p.name.startsWith("@cid"))).toHaveLength(2);
   });
   it("a stem that IS a catalog row of its own is never unioned in (#1509 stays)", async () => {

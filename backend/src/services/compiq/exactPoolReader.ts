@@ -38,7 +38,7 @@
  */
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { asOfCutoffString, isBeforeAsOf } from "./asOfCutoff.js";
-import { mayUnionIdentities, productIdentityOf } from "./identityUnionGuard.js";
+import { mayUnionIdentities, productIdentityOf, PARK_REASON_ADMITS_HOBBYIQ_MATCH_SQL } from "./identityUnionGuard.js";
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
@@ -184,13 +184,35 @@ export async function readExactPoolRows(input: {
   // gap, PR #2329's insertSetTitleReader.test.ts POOL-EXCLUSION GAP test). A
   // parked row is out of EVERY pool, same undefined-tolerant `!= true` shape
   // as its neighbours.
+  //
+  // R71 (owner ruling, 2026-09-19), refining R70. R70 over-corrected: it also
+  // dropped the ~87K sport-segment PARK rows (2026-09-07
+  // `relocate-pool-rows-by-list` tranche, e.g. every Wembanyama
+  // `…:topps:vw3:…` sale) whose `hobbyiqCardId` is the title-plausible
+  // identity and only `cardId` (the vendor-derived partition key) names the
+  // wrong sport. Before #2330 these rows priced correctly in the
+  // hobbyiqCardId pool via this reader's own OR-union below, and ALSO leaked
+  // into the wrong-sport cardId pool through the SAME union — the leak R70
+  // fixed and this refinement must NOT reopen.
+  //
+  // So the carve-out is scoped to WHICH SIDE OF THE UNION MATCHED, per row,
+  // via a SQL CASE: a row is re-admitted from park only when its stored
+  // `c.hobbyiqCardId` is what matched one of the `@hiq*` union params AND its
+  // stored `c.cardId` did NOT independently match `@cid` (a row where BOTH
+  // sides match — cardId and hobbyiqCardId agree with the query, or the
+  // stored cardId itself equals a queried hiq id — was never split-identity
+  // parked in the first place, so this is belt-and-braces, not the common
+  // case). A row matched only via `c.cardId = @cid` gets no carve-out and
+  // stays excluded when parked, which is exactly the R70 fix for the union
+  // leak. See identityUnionGuard.ts's PARK_REASON_ADMITS_HOBBYIQ_MATCH_SQL
+  // doc for the measured population (duplicate-partition-copy / malformed-key
+  // / sport-unresolved / insert-named-* stay excluded on every path).
   const parts: string[] = [
     "c.soldAt >= @cutoff",
     "c.price > 0",
     "(NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)",
     "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)",
     "(NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv != true)",
-    "(NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified != true)",
   ];
   const params: Array<{ name: string; value: string | number | boolean | null }> = [
     { name: "@cutoff", value: cutoff },
@@ -237,6 +259,14 @@ export async function readExactPoolRows(input: {
   parts.push(`(c.cardId = @cid${hiqClauses})`);
   params.push({ name: "@cid", value: input.cardId });
   hiqIds.forEach((v, i) => params.push({ name: `@hiq${i === 0 ? "" : i}`, value: v }));
+  // R71's per-row union-side test (see the block comment above): a park is
+  // excluded UNLESS it matched by hobbyiqCardId (one of the @hiq* union
+  // params) and did not ALSO match by cardId (@cid) — the latter is the
+  // wrong-sport vendor partition key the R70 leak rode in on.
+  const matchedByHiqOnly = hiqIds.length > 0
+    ? `(c.cardId != @cid AND (${hiqIds.map((_, i) => `c.hobbyiqCardId = @hiq${i === 0 ? "" : i}`).join(" OR ")}))`
+    : "false";
+  parts.push(`(NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified != true OR (${matchedByHiqOnly} AND ${PARK_REASON_ADMITS_HOBBYIQ_MATCH_SQL}))`);
   try {
     const { resources } = await cont.items.query<ExactPoolRow>({
       // R58's superset: it already carries R59's `c.cardId, c.hobbyiqCardId`

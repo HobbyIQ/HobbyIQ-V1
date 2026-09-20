@@ -100,7 +100,11 @@ describe("GET /cards/:cardId/recent-sales -- an un-numbered id reads itself AND 
     expect(h.queries).toHaveLength(1);
     expect(h.queries[0].parameters.find((p) => p.name === "@cid")?.value).toBe(MWI);
     expect(h.queries[0].parameters.find((p) => p.name === "@cid1")?.value).toBe(MWI_499);
-    expect(h.queries[0].query).not.toMatch(/STARTSWITH/);
+    // Scoped to the IDENTITY fields (R71, 2026-09-19 added an unrelated
+    // STARTSWITH on identityUnverifiedReason inside the park-carve-out
+    // clause) -- see readCompsByCardIdNumberedTwin.test.ts for the same note.
+    expect(h.queries[0].query).not.toContain("STARTSWITH(c.hobbyiqCardId,");
+    expect(h.queries[0].query).not.toContain("STARTSWITH(c.cardId,");
   });
   it("the un-numbered key's own sales are listed too: 14 under the id and 0 under the twin -> 14; both -> 49", async () => {
     const own = Array.from({ length: 14 }, (_, i) => ({ ...sale(MWI, i + 100), printRun: null }));
@@ -177,7 +181,8 @@ describe("GET /cards/:cardId/recent-sales -- no guess on two twins, no resolve f
     expect(res.body.resolvedCardId).toBe(MWI_499);
     expect(res.body.poolCardIds).toEqual([MWI_499, MWI]);
     expect(h.queries[0].parameters.find((p) => p.name === "@cid1")?.value).toBe(MWI);
-    expect(h.queries[0].query).not.toMatch(/STARTSWITH/);
+    expect(h.queries[0].query).not.toContain("STARTSWITH(c.hobbyiqCardId,");
+    expect(h.queries[0].query).not.toContain("STARTSWITH(c.cardId,");
   });
   it("REVERSE: the two forms of one card list the SAME sales — an FMV can never cite more comps than are listed", async () => {
     h.rows = [...Array.from({ length: 14 }, (_, i) => sale(MWI, i)), ...Array.from({ length: 35 }, (_, i) => sale(MWI_499, i + 100))];

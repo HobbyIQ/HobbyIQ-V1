@@ -121,3 +121,142 @@ export function decideIdentityUnion(
   }));
   return { allowed: false, partner: null, refusedReason, aProduct, bProduct };
 }
+
+/**
+ * R71 (owner ruling, 2026-09-19). #2330 (R70) made every reader drop every
+ * `identityUnverified: true` row, full stop. That over-corrected: the 2026-
+ * 09-07 `relocate-pool-rows-by-list` sport-segment tranche (~87K rows, e.g.
+ * every Wembanyama `…:topps:vw3:…` sale) PARKS a row whose `hobbyiqCardId` —
+ * the field the pricing engine keys pools on — is the title-plausible side,
+ * while only `cardId` (the vendor-derived partition key) names the wrong
+ * sport. Before #2330 these rows priced correctly in the `hobbyiqCardId`
+ * pool (and ALSO leaked into the wrong-sport `cardId` pool through
+ * `exactPoolReader`'s OR-union — the R70 defect this repair does not
+ * reopen). #2330 threw both the leak and the correct pricing out together.
+ *
+ * THE CENSUS THAT BOUNDS THIS CARVE-OUT (read-only, 2026-09-19, against the
+ * shipped `2026-09-07-split-identity-sport-segment-*.json` lists —
+ * `emit-split-identity-lists.cjs` / `classify-split-identity-rows.cjs`,
+ * which stamped `identityUnverifiedReason` with the FULL evidence sentence
+ * verbatim, not a short enum):
+ *
+ *   87,542 sport-segment PARK rows total. Of those:
+ *     46,675 + 21,253  "NEITHER side carries a checklist-backed catalog row
+ *                       (cardId=no-catalog-row, hobbyiqCardId=no-catalog-row)"
+ *                       — INCLUDES EVERY VW3 ROW (387/387 sampled). The
+ *                       catalog has NO row on either side; hobbyiqCardId is
+ *                       only the title-parse's guess, not a verified card.
+ *      17,662           "BOTH sides carry a checklist-backed catalog row" —
+ *                       the catalog names a real card on BOTH addresses and
+ *                       cannot say which one this sale is.
+ *       1,059            the title states a DIFFERENT vertical than the
+ *                       catalog-backed hobbyiqCardId side outright (a title
+ *                       veto) — un-parking these would refile a sale under a
+ *                       sport its own title contradicts.
+ *         893           malformed / key-defect addresses.
+ *
+ * NONE of these are the "exactly one side is checklist-backed and the title
+ * doesn't contradict it" case — that combination was never parked at all;
+ * `classify-split-identity-rows.cjs` ships it as a RELOCATE/REPOINT list
+ * instead (10,045 + 3,660 rows, already applied, not stamped
+ * `identityUnverified`). So there is no live population where this
+ * predicate's `IDENTITY_UNVERIFIED_CATALOG_BACKED_HOBBYIQ_SIDE` clause below
+ * would actually fire on the sport-segment tranche — it exists for the
+ * SHAPE (a future or as-yet-unmeasured park whose reason DOES record a
+ * catalog-backed hobbyiqCardId side with no contradicting title), and it is
+ * deliberately narrow: it requires the reason to affirmatively say
+ * `hobbyiqCardId=checklist-backed` and must not also carry `cardId=
+ * checklist-backed` (both-backed) or the title-veto phrase.
+ *
+ * THE ACTUAL FIX FOR THE VW3 REGRESSION IS THE READ-SHAPE CARVE-OUT, NOT A
+ * REASON-TEXT ONE: readers that resolve an identity EXCLUSIVELY through
+ * `hobbyiqCardId` (soldCompsGradeReader, soldCompsStore.readCompsByCardId,
+ * and every hobbyIqFmv.service `queryPool` call site — all of them branch to
+ * `c.hobbyiqCardId = @id` for an `hiq:` slug and NEVER also match on
+ * `c.cardId`) can safely re-admit the sport-segment PARK class wholesale,
+ * because every row such a reader could ever return was already selected
+ * BY its hobbyiqCardId — the wrong-sport leak #2330 fixed only ever
+ * happened through the `cardId OR hobbyiqCardId` UNION in exactPoolReader,
+ * which this predicate does NOT touch (see exactPoolReader.ts's own
+ * comment). Those readers get `PARK_REASON_ADMITS_HOBBYIQ_MATCH` below.
+ *
+ * `exactPoolReader` keeps the union, so it cannot use the wholesale
+ * carve-out without reopening the leak; it applies this SAME predicate only
+ * on rows whose `hobbyiqCardId` side matched, via a CASE-shaped clause (see
+ * exactPoolReader.ts) — a `cardId`-only match stays excluded regardless of
+ * reason.
+ *
+ * duplicate-partition-copy, malformed-key, sport-unresolved (no usable
+ * hobbyiqCardId), and the insert-named-* reasons are NEVER admitted by
+ * either helper — they are excluded by construction below (the prefix list)
+ * and additionally can never be true for a park whose only evidence is a
+ * sport/product disagreement.
+ */
+
+/** Free-text/enum prefixes that must NEVER be un-parked, regardless of which
+ *  field matched. Matches both write-guard enum reasons
+ *  (`splitIdentityWriteGuard.ts`'s `SplitIdentityReason`) and the 2026-09-07
+ *  list lane's free-text `identityUnverifiedReason` sentences
+ *  (`relocate-pool-rows-by-list.cjs` / `classify-split-identity-rows.cjs`). */
+const NEVER_ADMIT_REASON_PREFIXES = [
+  "duplicate-partition-copy",
+  "malformed-key",
+  "sport-unresolved",
+  "insert-named-no-key",
+  "two-inserts-named",
+  "insert-named-unconfirmed",
+] as const;
+
+/**
+ * A Cosmos SQL boolean expression: true when `c.identityUnverifiedReason`
+ * names the split-identity/sport-mismatch class in a way that affirmatively
+ * documents `hobbyiqCardId` as the checklist-backed (or at least not
+ * contradicted-by-title) side, and is NOT one of the never-admit classes.
+ *
+ * Deliberately a STRING PREFIX/CONTENT test, not a parse of the free-text
+ * evidence sentence — Cosmos SQL has no regex-capture, and the two producers
+ * of this field (the live write guard's short enum, the list lane's long
+ * sentence) do not share a machine-readable shape beyond substrings. See the
+ * module comment above for the measured population this was checked
+ * against: the current sport-segment tranche never actually satisfies the
+ * positive `hobbyiqCardId=checklist-backed`-without-title-veto branch (that
+ * combination ships as RELOCATE/REPOINT, never PARK), so on TODAY's data
+ * this clause only matters for whichever reader ALSO uses the wholesale
+ * carve-out below; it is still asserted because a future PARK list may
+ * populate it and the clause must already refuse the classes that must
+ * never pass.
+ */
+export const PARK_REASON_STRUCTURAL_CARVEOUT_SQL =
+  "IS_DEFINED(c.identityUnverifiedReason)" +
+  " AND CONTAINS(c.identityUnverifiedReason, 'hobbyiqCardId=checklist-backed')" +
+  " AND NOT CONTAINS(c.identityUnverifiedReason, 'cardId=checklist-backed')" +
+  " AND NOT CONTAINS(c.identityUnverifiedReason, 'the title states the vertical')" +
+  NEVER_ADMIT_REASON_PREFIXES.map((p) => ` AND NOT STARTSWITH(c.identityUnverifiedReason, '${p}')`).join("");
+
+/**
+ * The WHOLESALE carve-out for a reader that resolves identity EXCLUSIVELY
+ * through `hobbyiqCardId` (never unions against `cardId`). Safe to admit the
+ * whole split-identity/sport-mismatch PARK class here — see the module
+ * comment's "READ-SHAPE CARVE-OUT" section — because a reader with this
+ * shape can only ever have matched the row BY its hobbyiqCardId in the first
+ * place, so #2330's fixed leak (the `cardId OR hobbyiqCardId` union in
+ * exactPoolReader) cannot recur through this path.
+ *
+ * Still refuses duplicate-partition-copy / malformed-key / sport-unresolved
+ * / insert-named-* — those are never a sport-mismatch and their exclusion
+ * must hold on every path.
+ */
+export const PARK_REASON_ADMITS_HOBBYIQ_MATCH_SQL =
+  "(" +
+  // The live write-guard's short-enum reason for a genuine, undecidable
+  // sport split.
+  "c.identityUnverifiedReason = 'split-identity'" +
+  // The 2026-09-07 list lane's free-text evidence sentence for the SAME
+  // class always opens with "PARK. cardId vertical" (see
+  // classify-split-identity-rows.cjs's `pair` template) and is never one of
+  // the never-admit classes (checked again below, belt-and-braces with the
+  // prefix list already ruling out the literal duplicate-partition-copy /
+  // malformed-key / insert-named-* strings, which never start with "PARK.").
+  " OR STARTSWITH(c.identityUnverifiedReason, 'PARK. cardId vertical')" +
+  ")" +
+  NEVER_ADMIT_REASON_PREFIXES.map((p) => ` AND NOT STARTSWITH(c.identityUnverifiedReason, '${p}')`).join("");

@@ -33,6 +33,7 @@ import { findNeighborComps, compositeFilterFromCardId, summarizeByDistance } fro
 import { computeAxisAdjustment, getLatestMomentum } from "./marketMomentum.service.js";
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 import { LadderBudget, DEFAULT_LADDER_BUDGET, withEnrichmentTimeout } from "../compiq/ladderBudget.service.js";
+import { PARK_REASON_ADMITS_HOBBYIQ_MATCH_SQL } from "../compiq/identityUnionGuard.js";
 
 // CF-HOBBYIQ-FMV-INCLUDE-USER-PURCHASE (Drew, 2026-07-27). Reverses the
 // 2026-07-24 exclusion of source="ebay-user-purchase". The rationale
@@ -324,6 +325,22 @@ async function queryPool(
     // guard (`identityUnverified: true`) — the row's own identity is
     // unverified, so it must not price this pool either. Same
     // undefined-tolerant shape as the flaggedWrong clause above it.
+    //
+    // R71 (owner ruling, 2026-09-19), refining R70. Every `whereClause` this
+    // function is ever called with (every rung in this file — direct-slug,
+    // cross-setkey, sibling-parallel, print-run, family-baseline, the rare-
+    // card anchor) matches on `c.hobbyiqCardId` and/or the composite fields
+    // (`cardYear`/`cardNumber`/`sport`/`isAuto`) that describe the SAME
+    // target identity being priced — never on the vendor-side `c.cardId`
+    // (grep confirms zero `c.cardId =` in this file). So a row this function
+    // can return was always found BY hobbyiqCardId, and R70's blanket
+    // exclusion over-corrected the same way it did in soldCompsGradeReader:
+    // the ~87K sport-segment PARK rows (e.g. Wembanyama `…:topps:vw3:…`)
+    // whose hobbyiqCardId is the title-plausible identity are safe to
+    // re-admit here wholesale — see identityUnionGuard.ts's
+    // PARK_REASON_ADMITS_HOBBYIQ_MATCH_SQL doc for the measured population
+    // and the never-admit exclusions (duplicate-partition-copy /
+    // malformed-key / sport-unresolved / insert-named-*) it still enforces.
     const { resources } = await container.items.query({
       query: `SELECT TOP ${POOL_ROW_CEILING} c.price, c.soldAt, c.source, c.parallel, c.autoStyle, c.gradeQualifier, c.url,
                      c.isAuto, c.printRun, c.gradeCompany, c.gradeValue, c.qualityFlags,
@@ -331,7 +348,7 @@ async function queryPool(
               FROM c
               WHERE ${whereClause} AND c.soldAt > @from${asOfIso ? " AND c.soldAt < @asOf" : ""}${sourceClause}
                 AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)
-                AND (NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified = false)
+                AND (NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified = false OR ${PARK_REASON_ADMITS_HOBBYIQ_MATCH_SQL})
               ORDER BY c.soldAt DESC`,
       parameters: params,
     }, {

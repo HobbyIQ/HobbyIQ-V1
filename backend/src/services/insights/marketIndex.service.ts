@@ -494,6 +494,15 @@ export async function fetchSales(
     // (`identityUnverified: true`) has an unverified identity and must not
     // move a published index level, the same way a `flaggedWrong` row must
     // not. Mirrors this query's own undefined-tolerant shape.
+    //
+    // R71 (owner ruling, 2026-09-19) deliberately does NOT extend the
+    // hobbyiqCardId carve-out here — same reasoning as
+    // marketMoversSnapshot.service.ts's raw-scan path: this query groups by
+    // `c.sport`, the row's own PRE-correction vendor-derived stamp, never by
+    // `c.hobbyiqCardId`. Admitting the carve-out would attribute a
+    // sport-segment split row to its WRONG (vendor) sport's index rather
+    // than its corrected one, which is not a fix — it is the same
+    // wrong-sport attribution R70 removed, just re-opened on this surface.
     query: `SELECT c.cardId, c.price, c.soldAt
             FROM c
             WHERE c.sport = @sport
