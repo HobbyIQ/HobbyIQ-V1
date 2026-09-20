@@ -9,6 +9,10 @@
   "setKey": "panini-select",
   "rowCount": 19586,
   "parallelColumnAuthoritative": true,
+  "heldRows": {
+    "rows": 19586,
+    "reason": "two Beckett sections -- Score Select Throwback, Snapshots -- are printed twice with disjoint rosters; key naming for the second roster awaits owner ruling"
+  },
   "sectionsReport": [
     {
       "sheet": "Base",
