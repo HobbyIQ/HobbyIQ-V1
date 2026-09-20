@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-09-19T23:38:14.616Z",
+  "scrapedAt": "2026-09-20T02:07:35.639Z",
   "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/01/2024-Panini-Illusions-Football-Checklist.xlsx",
   "source": "beckett-s3-2026-09-19",
   "sport": "football",
@@ -399,6 +399,14 @@
       "category": "insert-trophy-hunters-all-pro",
       "cards": 50,
       "role": "own-cards"
+    }
+  ],
+  "discardedRangeHeaders": [
+    {
+      "sheet": "Base",
+      "row": 3,
+      "header": "First Impressions Autographed Memorabilia - #101-142",
+      "nextCardNumber": "1"
     }
   ]
 }

@@ -28,6 +28,23 @@
 
 const fs = require("fs");
 const path = require("path");
+// CF-A-TRANSCRIPTION-VARIANT-IS-NOT-A-DISAGREEMENT (2026-09-20, review fix).
+// normalizeRosterPlayer's own `.toLowerCase()` reduction treats "Ja'Marr"
+// and "JaMarr", or an accented spelling and its plain-ASCII transcription,
+// as two different players -- and now that a roster disagreement actively
+// SUPPRESSES a fold (Defect 2's explicitAnchor gate) and SPLITS a repeated
+// section into two (Defect 4), a punctuation/accent transcription variant
+// would wrongly read as a real disagreement and either block a genuine
+// colour rung's fold or mint a fake second insert set out of one card
+// spelled two ways across two sheets. `player-identity.cjs` is the shared
+// reduction the rest of the repo already uses for exactly this question
+// (playerIdentityKey.ts's own header: accents fold to their base letter,
+// identity-bearing symbols transliterate to the market's own spelling,
+// then everything else outside a-z0-9 is deleted) -- loaded the same
+// defensive way `player-evidence.cjs`/`market-guard.cjs` already do, so a
+// tree without `dist/` built degrades to the pre-fix bare reduction rather
+// than throwing.
+const { playerIdentityKey } = require(path.join(__dirname, "lib", "player-identity.cjs"));
 const zlib = require("zlib");
 
 const args = process.argv.slice(2);
@@ -397,23 +414,39 @@ const PLAIN_SECTION = /^(base[- ]?set|base|chrome[- ]prospects?|base[- ]prospect
 // for keys that already have a registered sibling -- not a general finish-
 // word stripper, and not something a future acquisition should extend
 // without first checking the registered key table the same way.
+//
+// SCOPED BY PRODUCT SET KEY (2026-09-20, review fix). A flat, unscoped map
+// keyed on the slug ALONE would rewrite an unrelated product's own
+// coincidentally-identical category the same way -- nothing stops some
+// future workbook's own "Sparks Prizm" section (a different product, a
+// different roster, no relationship to Select's registered
+// panini-select-sparks at all) from silently landing on
+// panini-select-sparks's address the moment its raw slug happens to match.
+// Each entry is therefore keyed `${SET_KEY}::${rawSlug}`, so a fold only
+// ever fires for the EXACT product it was hand-verified against.
 const CANONICAL_CATEGORY_SLUG = {
-  "insert-sparks-prizm": "insert-sparks",
-  "insert-jumbo-rookie-swatch-prizm": "insert-jumbo-rookie-swatch",
-  "insert-draft-selections-memorabilia-prizm": "insert-draft-selections-memorabilia",
-  "insert-rookie-swatches-prizm": "insert-rookie-swatches",
-  "auto-select-signatures-prizm": "auto-select-signatures",
-  "auto-signatures-prizm": "auto-signatures",
-  "auto-rookie-signature-memorabilia-prizm": "auto-rookie-signature-memorabilia",
-  "auto-jumbo-rookie-signature-swatches-prizm": "auto-jumbo-rookie-signature-swatches",
-  "auto-2025-xrc-mystery-autograph-prizm": "auto-2025-xrc-mystery-autograph",
-  "auto-jumbo-signature-swatches-prizm": "auto-jumbo-signature-swatches",
-  "insert-center-stage-mosaic": "insert-center-stage",
-  "insert-overdrive-mosaic": "insert-overdrive",
+  "panini-select::insert-sparks-prizm": "insert-sparks",
+  "panini-select::insert-jumbo-rookie-swatch-prizm": "insert-jumbo-rookie-swatch",
+  "panini-select::insert-draft-selections-memorabilia-prizm": "insert-draft-selections-memorabilia",
+  "panini-select::insert-rookie-swatches-prizm": "insert-rookie-swatches",
+  "panini-select::auto-select-signatures-prizm": "auto-select-signatures",
+  "panini-select::auto-signatures-prizm": "auto-signatures",
+  "panini-select::auto-rookie-signature-memorabilia-prizm": "auto-rookie-signature-memorabilia",
+  "panini-select::auto-jumbo-rookie-signature-swatches-prizm": "auto-jumbo-rookie-signature-swatches",
+  "panini-select::auto-2025-xrc-mystery-autograph-prizm": "auto-2025-xrc-mystery-autograph",
+  "panini-select::auto-jumbo-signature-swatches-prizm": "auto-jumbo-signature-swatches",
+  "panini-mosaic::insert-center-stage-mosaic": "insert-center-stage",
+  "panini-mosaic::insert-overdrive-mosaic": "insert-overdrive",
 };
 
-function categoryFor(sheetName, section) {
-  return CANONICAL_CATEGORY_SLUG[categoryForRaw(sheetName, section)] || categoryForRaw(sheetName, section);
+// `setKeyOverride` lets a test (or a future caller) exercise the scoping
+// directly without going through the CLI arg parser; main()'s own call
+// sites never pass it, so they always scope on the real `--set-key`.
+function categoryFor(sheetName, section, setKeyOverride) {
+  const raw = categoryForRaw(sheetName, section);
+  const setKey = setKeyOverride !== undefined ? setKeyOverride : SET_KEY;
+  const scoped = CANONICAL_CATEGORY_SLUG[`${setKey}::${raw}`];
+  return scoped || raw;
 }
 
 function categoryForRaw(sheetName, section) {
@@ -577,17 +610,22 @@ function rungName(section, anchorSection) {
 // R67 (Drew, ruling round of 2026-09-19): same numbers + a same-or-subset
 // roster is a PARALLEL, whatever word the section used for the variant.
 // normalizeRosterPlayer is the shared comparison: split on "/", trim,
-// lowercase, de-duplicate, sort (players split so "Will Shipley/Xavier
-// Legette" and "Xavier Legette / Will Shipley" agree) -- AND strip a trailing
-// " RC" first, because Beckett's own RC flag (appended in pass 1 above,
-// `player += " RC"`) is stamped onto the player field by SOME sheets (the
-// Base sheet, and any parallel section built from the same sheet layout) and
-// never by others for the identical card, which would otherwise read as a
-// disagreement that is really a formatting artifact, not a different player.
+// reduce EACH name through playerIdentityKey (accents fold, identity
+// symbols transliterate, punctuation/case become noise -- see the
+// player-identity.cjs require above), de-duplicate, sort (players split so
+// "Will Shipley/Xavier Legette" and "Xavier Legette / Will Shipley" agree)
+// -- AND strip a trailing " RC" first, because Beckett's own RC flag
+// (appended in pass 1 above, `player += " RC"`) is stamped onto the player
+// field by SOME sheets (the Base sheet, and any parallel section built from
+// the same sheet layout) and never by others for the identical card, which
+// would otherwise read as a disagreement that is really a formatting
+// artifact, not a different player. The explicit RC strip stays even though
+// playerIdentityKey's own cleanPlayerName pass also strips it -- belt and
+// suspenders, and it keeps this function's contract readable on its own.
 function normalizeRosterPlayer(player) {
   return String(player || "")
     .split("/")
-    .map((p) => p.trim().replace(/\s+RC$/i, "").trim().toLowerCase())
+    .map((p) => playerIdentityKey(p.trim().replace(/\s+RC$/i, "")))
     .filter(Boolean)
     .sort()
     .join("/");
@@ -735,18 +773,54 @@ function classifySections(sections) {
     // The FIRST version of this fix treated `shared > 0` as the gate, which
     // made an absent roster read as "roster refuses" and broke every one of
     // those pre-existing tests -- fold something can't be more disagreeable
-    // than what it never SAW. The fix is looser but still faithful to R67:
-    // refuse ONLY when there is roster evidence AND it actually disagrees;
-    // no evidence at all falls through to the pre-existing numeric-overlap
-    // decision unchanged, exactly as before this bypass existed.
-    const rosterAgreesWithAnchor = (cand, anchor) => {
+    // than what it never SAW.
+    //
+    // PARTIAL AGREEMENT IS NOT THE SAME QUESTION AS ZERO AGREEMENT (2026-09-20,
+    // second review round). The bar here decides whether `a` is even a fold
+    // CANDIDATE at all -- it must stay permissive for "at least some genuine
+    // evidence of agreement, whatever the rest of the roster says", because
+    // the actual per-number split (fold the agreeing numbers, hold out the
+    // rest) is a SEPARATE decision made once a fold is chosen as `best`,
+    // below, via the same foldExceptions mechanism the nameless-section
+    // roster-fold pass already uses for its own #420 (R67 Super Box
+    // Exclusive) shape. 2023 Topps Chrome Platinum's "Image Variations" (25
+    // rows, 16 agree with base as a true photo variation, 9 name a
+    // completely different card at the same number) needs exactly this: a
+    // bar of "zero agreement" here would have refused the whole section, but
+    // the 16 genuine variations are real evidence the fold IS live and only
+    // 9 rows need holding out. 2026 Topps Series 1's "Golden Mirror Legend
+    // Variations" (0/51 agree with base at all) still correctly finds NO
+    // candidate here and falls through to own-cards, because zero shared
+    // agreement is exactly the "no evidence this is a rung of anything"
+    // case the bar exists to catch.
+    //
+    // "AT LEAST ONE" IS NOT ENOUGH -- A MAJORITY IS THE BAR (found live,
+    // 2026-09-20, third pass). `fold.agree > 0` let a single COINCIDENTAL
+    // match through: 2024 Panini Select Football's "Jumbo Rookie Swatch
+    // Prizm" (42 cards, its own numbering, its own registered key) shares
+    // exactly ONE number with Base>Base Concourse where the SAME real
+    // person happens to sit at the SAME number in both -- #29 Malik Nabers,
+    // pure coincidence across two independently-numbered 42-card and
+    // 100-card checklists -- while the other 41 disagree outright. One
+    // coincidence is not evidence a 42-card named insert is secretly a
+    // rung of base; it very nearly re-created the exact false-fold this
+    // whole bypass exists to prevent, just gated one match short of zero
+    // instead of at zero. The bar is now a genuine MAJORITY: strictly more
+    // agreements than disagreements. Verified against both measured cases:
+    // Image Variations (16 agree, 9 disagree -- 16 > 9, clears) and Jumbo
+    // Rookie Swatch Prizm (1 agree, 41 disagree -- 1 is not > 41, refused,
+    // falls through to its own registered own-cards category).
+    const rosterHasAgreeingMajority = (cand, anchor) => {
       if (!cand.roster || !anchor.roster) return true;
       const fold = rosterFoldAgainst(cand, anchor);
-      return fold.disagree === 0;
+      // No roster overlap AT ALL (fold.shared === 0) is "nothing to agree or
+      // disagree about" -- degrades to the pre-existing roster-blind numeric
+      // decision, same as the absent-roster case above.
+      return fold.shared === 0 || fold.agree > fold.disagree;
     };
     const candidates = anchors.filter((a) =>
       a !== sec && isAutoSection(a) === isAutoSection(sec) &&
-      ((a.explicitAnchor && looksLikeFinishName(sec) && rosterAgreesWithAnchor(sec, a)) ||
+      ((a.explicitAnchor && looksLikeFinishName(sec) && rosterHasAgreeingMajority(sec, a)) ||
         extendsName(sec, a)));
     let best = null;
     for (const a of candidates) {
@@ -775,10 +849,62 @@ function classifySections(sections) {
         });
         continue;
       }
-      sec.parallelOf = best.anchor;
-      sec.rung = rung;
-      push(sec, { role: "parallel", anchor: best.anchor.key, rung: rung });
-      continue;
+      // PARTIAL FOLD ON A DISAGREEING ROSTER (2026-09-20, review fix). The
+      // explicitAnchor+FINISH_WORD path (`a.explicitAnchor &&
+      // looksLikeFinishName(sec)`, never `extendsName`) can win `best` with
+      // 100% numeric overlap while its roster only PARTLY agrees with the
+      // anchor -- 2023 Topps Chrome Platinum's "Image Variations" is the
+      // measured case: 16 of 25 numbers are a true photo variation of the
+      // identical base card, the other 9 name a different player entirely
+      // at the same number. Held out via `foldExceptions`, the SAME
+      // mechanism the nameless-section roster-fold pass below already uses
+      // for R67's own #420 (Super Box Exclusive) shape: the agreeing
+      // numbers fold onto the anchor as the named parallel; the disagreeing
+      // numbers stay on this section's own category with a blank parallel,
+      // never silently merged into either address. Only checked for the
+      // explicitAnchor route -- an ordinary extendsName fold (Packfractor,
+      // International Refractors) has no roster-disagreement question at
+      // all once its numbers are a 100% subset, and this must never touch
+      // that path's own, already-correct all-or-nothing behaviour.
+      const viaExplicitAnchor = best.anchor.explicitAnchor && looksLikeFinishName(sec) && !extendsName(sec, best.anchor);
+      if (viaExplicitAnchor && sec.roster && best.anchor.roster) {
+        const rosterFold = rosterFoldAgainst(sec, best.anchor);
+        if (rosterFold.disagree > 0) {
+          if (rosterFold.agree <= rosterFold.disagree) {
+            // Not a genuine majority -- see rosterHasAgreeingMajority above
+            // for why "at least one agreement" is not enough (the Jumbo
+            // Rookie Swatch Prizm/Malik Nabers #29 coincidence). Falls
+            // through to own-cards below exactly as a section with no
+            // candidate would.
+            best = null;
+          } else {
+            // Genuine partial fold: hold out the disagreeing numbers under
+            // this section's own category (blank parallel, same shape every
+            // other foldExceptions case uses), fold the rest onto the anchor
+            // as the named parallel.
+            const disagreeing = new Set();
+            for (const [num, players] of sec.roster) {
+              const anchorPlayers = best.anchor.roster.get(num);
+              if (anchorPlayers && ![...players].every((p) => anchorPlayers.has(p))) disagreeing.add(num);
+            }
+            sec.foldExceptions = disagreeing;
+            sec.parallelOf = best.anchor;
+            sec.rung = rung;
+            push(sec, {
+              role: "parallel", anchor: best.anchor.key, rung: rung,
+              rosterFold: true, agree: rosterFold.agree, disagree: rosterFold.disagree,
+              heldNumbers: [...disagreeing],
+            });
+            continue;
+          }
+        }
+      }
+      if (best) {
+        sec.parallelOf = best.anchor;
+        sec.rung = rung;
+        push(sec, { role: "parallel", anchor: best.anchor.key, rung: rung });
+        continue;
+      }
     }
 
     // It folds onto nothing, so it is a run of cards in its own right — and
@@ -1068,6 +1194,21 @@ function main() {
   // finishes (see the guard after this loop, and countDataLookingRows above
   // for what "data-looking" means).
   const sheetEmitCounts = new Map();
+  // CF-A-DISCARDED-RANGE-HEADER-IS-A-FINDING-NOT-A-SILENCE (2026-09-20,
+  // review fix). CF-BECKETT-A-STATED-RANGE-HEADER-MUST-MATCH-ITS-OWN-CARDS
+  // discards a header the moment the next card's number falls outside its
+  // own stated range (or is not a plain integer at all -- a prefixed number
+  // like "BCP-101", or a range Beckett itself mis-typed). That is the
+  // correct DEFAULT -- Illusions's own "First Impressions Autographed
+  // Memorabilia - #101-142" case needs exactly this to file its 100 base
+  // cards correctly -- but a silent discard is still a fact a human should
+  // see: it could equally be Beckett's own typo in the range, or a prefixed
+  // numbering scheme this file's Number() test cannot parse at all, either
+  // of which means the header's real cards never got their own section.
+  // Collected here, one entry per discard, and written into the manifest's
+  // sectionsReport (see main()'s own manifest-writing code) so an operator
+  // reviewing the acquisition sees it instead of a clean-looking run.
+  const discardedRangeHeaders = [];
   for (const [name, rows] of Object.entries(sheets)) {
     if (isSupersetSheet(name)) continue;
     sheetEmitCounts.set(name, { dataLooking: countDataLookingRows(rows), emitted: 0 });
@@ -1188,6 +1329,7 @@ function main() {
           // and `inLadder` are all left exactly as they are; only the NEXT
           // card row's own number decides whether this header was real.
           pendingRangeHeader = {
+            header: cell, sheetRowIndex: rowIndex,
             name: stripChecklistSuffix(rangeMatch[1].trim(), siblingSectionNames, masterNames),
             lo: Number(rangeMatch[2]), hi: Number(rangeMatch[3]),
           };
@@ -1217,9 +1359,17 @@ function main() {
         // non-numeric number is neither confirming nor refuting evidence and
         // is treated the same as a mismatch -- absent beats wrong.
         const n = Number(cardNumber);
-        if (Number.isFinite(n) && n >= pendingRangeHeader.lo && n <= pendingRangeHeader.hi) {
+        const inRange = Number.isFinite(n) && n >= pendingRangeHeader.lo && n <= pendingRangeHeader.hi;
+        if (inRange) {
           section = pendingRangeHeader.name;
           pendingLadder = [];
+        } else {
+          // A discard is a finding, not a silence -- see
+          // CF-A-DISCARDED-RANGE-HEADER-IS-A-FINDING-NOT-A-SILENCE above.
+          discardedRangeHeaders.push({
+            sheet: name, row: pendingRangeHeader.sheetRowIndex, header: pendingRangeHeader.header,
+            nextCardNumber: cardNumber,
+          });
         }
         // Whether confirmed or refused, the pending header is resolved --
         // either it committed above, or it is discarded and `section` (and
@@ -1529,6 +1679,10 @@ function main() {
     // changing how those are read is a separate decision from this one.
     parallelColumnAuthoritative: true,
     sectionsReport: report,
+    // Additive, opt-in: absent entirely (never an empty array) when no
+    // range header was ever discarded, so every existing manifest this
+    // converter has ever written stays byte-identical on a re-run.
+    ...(discardedRangeHeaders.length ? { discardedRangeHeaders } : {}),
   };
   fs.writeFileSync(outPath.replace(/\.csv$/, ".manifest.json"), JSON.stringify(manifest, null, 2));
 
@@ -1553,6 +1707,11 @@ function main() {
     console.log("     !! AMBIGUOUS  " + a.sheet + " > " + a.section + " (" + a.cards +
       ") overlaps " + a.anchor + " by " + a.overlapPct +
       "% — left as its own cards, needs a human ruling");
+  }
+  for (const d of discardedRangeHeaders) {
+    console.log("     !! DISCARDED RANGE HEADER  " + d.sheet + " row " + d.row +
+      "  \"" + d.header + "\"  — next card #" + d.nextCardNumber +
+      " falls outside its stated range (or is not a plain integer); the header named no section");
   }
 }
 

@@ -281,6 +281,107 @@ describe("DEFECT 2: the explicitAnchor+FINISH_WORD bypass requires the roster to
     const refr = report.find((r: any) => r.section === "Prospect Refractors");
     expect(refr.role, JSON.stringify(refr)).not.toBe("parallel");
   });
+
+  it("PARTIAL FOLD (review fix, 2026-09-20): folds the agreeing numbers, holds out the disagreeing ones — 2023 Topps Chrome Platinum's Image Variations shape", () => {
+    // Minimal reproduction of the real measured split (16 agree / 9 disagree
+    // on the real 25-card section): a genuine MAJORITY agrees (same player
+    // as base, a true photo variation), the rest disagree (a different card
+    // entirely at the same number). A majority is the bar -- see
+    // rosterHasAgreeingMajority's own header for why "at least one" is not
+    // enough (a single coincidental match must never fold a whole section).
+    const sections = buildSections([
+      {
+        sheet: "Base", section: "Base Set", category: "base",
+        rows: [
+          { cardNumber: "2", player: "Brett Baty" },
+          { cardNumber: "43", player: "Greg Maddux" },
+          { cardNumber: "100", player: "Anthony Volpe" },
+          { cardNumber: "67", player: "Michael Conforto" },
+          { cardNumber: "77", player: "Brandon Hughes" },
+        ],
+      },
+      {
+        sheet: "Variations", section: "Image Variations Prizm",
+        category: "insert-image-variations-prizm",
+        rows: [
+          { cardNumber: "2", player: "Brett Baty" },       // agrees
+          { cardNumber: "43", player: "Greg Maddux" },     // agrees
+          { cardNumber: "100", player: "Anthony Volpe" },  // agrees
+          { cardNumber: "67", player: "Corbin Carroll" },  // disagrees
+          { cardNumber: "77", player: "Adley Rutschman" }, // disagrees
+        ],
+      },
+    ]);
+    const report = classifySections(sections);
+    const iv = report.find((r: any) => r.section === "Image Variations Prizm");
+    expect(iv.role, JSON.stringify(iv)).toBe("parallel");
+    expect(iv.agree).toBe(3);
+    expect(iv.disagree).toBe(2);
+    expect(new Set(iv.heldNumbers)).toEqual(new Set(["67", "77"]));
+
+    const map = new Map(sections);
+    const sec = map.get("Variations>Image Variations Prizm") as any;
+    expect(sec.foldExceptions).toEqual(new Set(["67", "77"]));
+    expect(sec.parallelOf).toBe(map.get("Base>Base Set"));
+  });
+
+  it("a single coincidental agreement is NOT a majority — the Jumbo Rookie Swatch Prizm/Malik Nabers #29 shape", () => {
+    // Real, measured false-positive found while implementing the majority
+    // bar: 2024 Panini Select Football's "Jumbo Rookie Swatch Prizm" (its
+    // own registered 42-card insert) shares exactly ONE number with
+    // Base>Base Concourse where the SAME real person coincidentally sits
+    // at the SAME number in both -- #29 Malik Nabers, across two
+    // independently-numbered checklists -- while every other shared number
+    // disagrees. `agree > 0` let this fold; `agree > disagree` correctly
+    // refuses it.
+    const sections = buildSections([
+      {
+        sheet: "Base", section: "Base Concourse", category: "base",
+        rows: [
+          { cardNumber: "4", player: "Bucky Irving" },
+          { cardNumber: "10", player: "Braelon Allen" },
+          { cardNumber: "29", player: "Malik Nabers" },
+        ],
+      },
+      {
+        sheet: "Memorabilia", section: "Jumbo Rookie Swatch Prizm",
+        category: "insert-jumbo-rookie-swatch-prizm",
+        rows: [
+          { cardNumber: "4", player: "Bo Nix" },           // disagrees
+          { cardNumber: "10", player: "Caleb Williams" },  // disagrees
+          { cardNumber: "29", player: "Malik Nabers" },    // agrees (coincidence)
+        ],
+      },
+    ]);
+    const report = classifySections(sections);
+    const jrsp = report.find((r: any) => r.section === "Jumbo Rookie Swatch Prizm");
+    expect(jrsp.role, JSON.stringify(jrsp)).not.toBe("parallel");
+    expect(jrsp.role, JSON.stringify(jrsp)).toBe("own-cards");
+  });
+
+  it("full disagreement (0 agree) still refuses even at 100% numeric overlap — Golden Mirror Legend Variations shape", () => {
+    const sections = buildSections([
+      {
+        sheet: "Base", section: "Base Set", category: "base",
+        rows: [
+          { cardNumber: "1", player: "Aaron Judge" },
+          { cardNumber: "5", player: "Nico Hoerner" },
+        ],
+      },
+      {
+        sheet: "Variations", section: "Base - Golden Mirror Legend Variations Prizm",
+        category: "insert-base-golden-mirror-legend-variations-prizm",
+        rows: [
+          { cardNumber: "1", player: "Babe Ruth" },
+          { cardNumber: "5", player: "Ryne Sandberg" },
+        ],
+      },
+    ]);
+    const report = classifySections(sections);
+    const gmlv = report.find((r: any) => r.section === "Base - Golden Mirror Legend Variations Prizm");
+    expect(gmlv.role, JSON.stringify(gmlv)).not.toBe("parallel");
+    expect(gmlv.role, JSON.stringify(gmlv)).toBe("own-cards");
+  });
 });
 
 describe("THIRD SUSPICION: a sheet that emits far fewer cards than it looks like it has must FAIL LOUDLY", () => {
@@ -339,35 +440,51 @@ describe("THIRD SUSPICION: a sheet that emits far fewer cards than it looks like
 });
 
 describe("FOURTH FINDING: a brand-wide finish suffix is not a new product (CANONICAL_CATEGORY_SLUG)", () => {
-  it("strips the trailing 'Prizm'/'Mosaic' suffix for the ten hand-verified spelling artefacts", () => {
-    // Select's Memorabilia/Autographs sheets.
-    expect(categoryFor("Memorabilia", "Sparks Prizm")).toBe("insert-sparks");
-    expect(categoryFor("Memorabilia", "Jumbo Rookie Swatch Prizm")).toBe("insert-jumbo-rookie-swatch");
-    expect(categoryFor("Memorabilia", "Draft Selections Memorabilia Prizm")).toBe("insert-draft-selections-memorabilia");
-    expect(categoryFor("Memorabilia", "Rookie Swatches Prizm")).toBe("insert-rookie-swatches");
-    expect(categoryFor("Autographs", "Select Signatures Prizm")).toBe("auto-select-signatures");
-    expect(categoryFor("Autographs", "Signatures Prizm")).toBe("auto-signatures");
-    expect(categoryFor("Autographs", "Rookie Signature Memorabilia Prizm")).toBe("auto-rookie-signature-memorabilia");
-    expect(categoryFor("Autographs", "Jumbo Rookie Signature Swatches Prizm")).toBe("auto-jumbo-rookie-signature-swatches");
-    expect(categoryFor("XRC Redemptions", "2025 XRC Mystery Autograph Prizm")).toBe("auto-2025-xrc-mystery-autograph");
-    expect(categoryFor("Autographs", "Jumbo Signature Swatches Prizm")).toBe("auto-jumbo-signature-swatches");
-    // Mosaic's Inserts sheet.
-    expect(categoryFor("Inserts", "Center Stage Mosaic")).toBe("insert-center-stage");
-    expect(categoryFor("Inserts", "Overdrive Mosaic")).toBe("insert-overdrive");
+  it("strips the trailing 'Prizm'/'Mosaic' suffix for the ten hand-verified spelling artefacts, SCOPED to their own product", () => {
+    // Select's Memorabilia/Autographs sheets -- scoped to panini-select.
+    expect(categoryFor("Memorabilia", "Sparks Prizm", "panini-select")).toBe("insert-sparks");
+    expect(categoryFor("Memorabilia", "Jumbo Rookie Swatch Prizm", "panini-select")).toBe("insert-jumbo-rookie-swatch");
+    expect(categoryFor("Memorabilia", "Draft Selections Memorabilia Prizm", "panini-select")).toBe("insert-draft-selections-memorabilia");
+    expect(categoryFor("Memorabilia", "Rookie Swatches Prizm", "panini-select")).toBe("insert-rookie-swatches");
+    expect(categoryFor("Autographs", "Select Signatures Prizm", "panini-select")).toBe("auto-select-signatures");
+    expect(categoryFor("Autographs", "Signatures Prizm", "panini-select")).toBe("auto-signatures");
+    expect(categoryFor("Autographs", "Rookie Signature Memorabilia Prizm", "panini-select")).toBe("auto-rookie-signature-memorabilia");
+    expect(categoryFor("Autographs", "Jumbo Rookie Signature Swatches Prizm", "panini-select")).toBe("auto-jumbo-rookie-signature-swatches");
+    expect(categoryFor("XRC Redemptions", "2025 XRC Mystery Autograph Prizm", "panini-select")).toBe("auto-2025-xrc-mystery-autograph");
+    expect(categoryFor("Autographs", "Jumbo Signature Swatches Prizm", "panini-select")).toBe("auto-jumbo-signature-swatches");
+    // Mosaic's Inserts sheet -- scoped to panini-mosaic.
+    expect(categoryFor("Inserts", "Center Stage Mosaic", "panini-mosaic")).toBe("insert-center-stage");
+    expect(categoryFor("Inserts", "Overdrive Mosaic", "panini-mosaic")).toBe("insert-overdrive");
   });
 
   it("leaves every OTHER Prizm/Mosaic-suffixed section exactly as categoryForRaw would slug it — not a blanket stripper", () => {
     // Select: no un-suffixed "Rookie Signatures" or "Jumbo Signature
     // Swatches" (non-rookie) sibling is registered, so these stay suffixed.
-    expect(categoryFor("Autographs", "Rookie Signatures Prizm")).toBe("auto-rookie-signatures-prizm");
-    expect(categoryFor("Autographs", "Prime Selections Prizm Signatures")).toBe("auto-prime-selections-prizm-signatures");
+    expect(categoryFor("Autographs", "Rookie Signatures Prizm", "panini-select")).toBe("auto-rookie-signatures-prizm");
+    expect(categoryFor("Autographs", "Prime Selections Prizm Signatures", "panini-select")).toBe("auto-prime-selections-prizm-signatures");
     // Mosaic: Capital Gains / Splash / Storm / Micro Mosaic are each their
     // OWN registered key WITH "Mosaic" in it (#2342) -- no bare sibling
     // exists to fold onto, so these must never be stripped.
-    expect(categoryFor("Inserts", "Capital Gains Mosaic")).toBe("insert-capital-gains-mosaic");
-    expect(categoryFor("Inserts", "Splash Mosaic")).toBe("insert-splash-mosaic");
-    expect(categoryFor("Inserts", "Storm Mosaic")).toBe("insert-storm-mosaic");
-    expect(categoryFor("Inserts", "Micro Mosaic")).toBe("insert-micro-mosaic");
+    expect(categoryFor("Inserts", "Capital Gains Mosaic", "panini-mosaic")).toBe("insert-capital-gains-mosaic");
+    expect(categoryFor("Inserts", "Splash Mosaic", "panini-mosaic")).toBe("insert-splash-mosaic");
+    expect(categoryFor("Inserts", "Storm Mosaic", "panini-mosaic")).toBe("insert-storm-mosaic");
+    expect(categoryFor("Inserts", "Micro Mosaic", "panini-mosaic")).toBe("insert-micro-mosaic");
+  });
+
+  it("SCOPING: an unrelated product emitting the identical raw slug is NEVER rewritten (review fix, 2026-09-20)", () => {
+    // The exact same section name, same category slug, on a DIFFERENT
+    // product's setKey -- if this ever matched, a future workbook's own
+    // "Sparks Prizm" (no relationship to Select's registered
+    // panini-select-sparks) would silently land on Select's address the
+    // moment its raw slug happened to coincide. It must not.
+    expect(categoryFor("Memorabilia", "Sparks Prizm", "some-other-product")).toBe("insert-sparks-prizm");
+    expect(categoryFor("Inserts", "Center Stage Mosaic", "some-other-mosaic-product")).toBe("insert-center-stage-mosaic");
+    // The unscoped 2-arg call form (SET_KEY empty, as it always is when a
+    // test imports this module directly rather than running it via the
+    // CLI) must ALSO never fold -- confirms main()'s own ambient-SET_KEY
+    // default degrades to "no product, no fold" rather than "fold anyway".
+    expect(categoryFor("Memorabilia", "Sparks Prizm")).toBe("insert-sparks-prizm");
+    expect(categoryFor("Inserts", "Center Stage Mosaic")).toBe("insert-center-stage-mosaic");
   });
 });
 
