@@ -93,7 +93,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
-import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
+import { dedupeSoldComps, distinctWriterShape } from "../portfolioiq/dedupeSoldComps.js";
 
 /** Sports that get an index tile. */
 export const INDEX_SPORTS = ["baseball", "basketball", "football", "hockey", "pokemon"] as const;
@@ -281,6 +281,11 @@ interface CompRow {
   // wrongly collapse into one. See `fetchSales` below.
   gradeCompany?: string | null;
   gradeValue?: number | null;
+  // CF-VOLUME-READERS-NEED-DISTINCT-WRITERS (2026-09-20). Selected so
+  // `distinctWriterShape` can tell a genuine CardHedge dual-id twin from
+  // real repeated-price volume on a liquid card. See `fetchSales` below.
+  source?: string | null;
+  sourceExternalId?: string | null;
 }
 
 let sharedSoldComps: Container | null = null;
@@ -512,7 +517,8 @@ export async function fetchSales(
     // sport-segment split row to its WRONG (vendor) sport's index rather
     // than its corrected one, which is not a fix — it is the same
     // wrong-sport attribution R70 removed, just re-opened on this surface.
-    query: `SELECT c.cardId, c.price, c.soldAt, c.gradeCompany, c.gradeValue
+    query: `SELECT c.cardId, c.price, c.soldAt, c.gradeCompany, c.gradeValue,
+                   c.source, c.sourceExternalId
             FROM c
             WHERE c.sport = @sport
               AND c.soldAt >= @from
@@ -556,6 +562,14 @@ export async function fetchSales(
   // `eligibilitySales` (the basket-selection gate in selectBasket) and its
   // `trendValue` fit — the two places this index is most exposed to the
   // same double-weighting bug unifiedPricing.service.ts fixed.
+  //
+  // CF-VOLUME-READERS-NEED-DISTINCT-WRITERS (2026-09-20). `trendValue` fits
+  // a card's OWN recent sales — a genuinely liquid common with 30 real
+  // sales at the same price in an hour must keep all 30, or the fit is
+  // computed from a fabricated near-empty pool. `distinctWriterShape`
+  // restricts the collapse to pairs that are ACTUALLY two different writer
+  // shapes for the same sale, never two rows the same feed legitimately
+  // wrote twice.
   const byCardId = new Map<string, CompRow[]>();
   for (const r of rows) {
     if (!r.cardId) continue;
@@ -564,7 +578,7 @@ export async function fetchSales(
     else byCardId.set(r.cardId, [r]);
   }
   const deduped: CompRow[] = [];
-  for (const cardRows of byCardId.values()) deduped.push(...dedupeSoldComps(cardRows));
+  for (const cardRows of byCardId.values()) deduped.push(...dedupeSoldComps(cardRows, { onlyWhen: distinctWriterShape }));
   return deduped;
 }
 

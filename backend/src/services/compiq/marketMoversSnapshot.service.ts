@@ -46,7 +46,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { moverCredibility, looksDamaged } from "./moverCredibility.service.js";
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
-import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
+import { dedupeSoldComps, distinctWriterShape } from "../portfolioiq/dedupeSoldComps.js";
 
 export interface MarketMoversParams {
   sport: string;
@@ -99,6 +99,11 @@ interface CompRow {
   soldAt: string;
   imageUrl?: string | null;
   title?: string | null;
+  // CF-VOLUME-READERS-NEED-DISTINCT-WRITERS (2026-09-20). Selected so
+  // `distinctWriterShape` can tell a genuine CardHedge dual-id twin from 30
+  // real same-price sales of a common. See the dedupe call below.
+  source?: string | null;
+  sourceExternalId?: string | null;
 }
 
 interface DailyRow {
@@ -307,7 +312,7 @@ export async function computeMarketMovers(params: MarketMoversParams): Promise<M
     // R70 was correcting. So this reader keeps R70's unqualified exclusion.
     query: `SELECT c.cardId, c.playerName, c.setName, c.parallel, c.cardNumber,
                    c.cardYear, c.gradeCompany, c.gradeValue, c.price, c.soldAt, c.imageUrl,
-                   c.title
+                   c.title, c.source, c.sourceExternalId
             FROM c
             WHERE c.sport = @sport
               AND c.soldAt >= @from
@@ -348,7 +353,16 @@ export async function computeMarketMovers(params: MarketMoversParams): Promise<M
   // input) and its prior/current medians both double-count every twin,
   // which can flip a flat card into a reported "mover" or inflate a real
   // move's magnitude.
-  for (const g of groups.values()) g.rows = dedupeSoldComps(g.rows);
+  //
+  // CF-VOLUME-READERS-NEED-DISTINCT-WRITERS (2026-09-20). This surface
+  // COUNTS sales (`salesInWindow` feeds the credibility gate directly), so
+  // the plain gradeKey|price coincidence rule is too blunt here: 30 genuine
+  // $1.99 sales of a common within an hour would collapse to 1 and
+  // misreport a high-volume card as illiquid. `distinctWriterShape`
+  // restricts the collapse to pairs that are ACTUALLY two different writer
+  // shapes for the same sale (the CardHedge dual-id bug's real signature),
+  // never two rows the same feed legitimately wrote twice.
+  for (const g of groups.values()) g.rows = dedupeSoldComps(g.rows, { onlyWhen: distinctWriterShape });
 
   const movers: Mover[] = [];
   const rejected = new Map<string, number>();

@@ -37,7 +37,7 @@ const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/w
 // and every other reader use applies HERE, at build time, per (cardId,
 // parallel, grade, day) group — the exact scope this script already groups
 // by — before count/sum/median/min/max are computed from the group's prices.
-const { dedupeSoldComps } = require(path.join(__dirname, "..", "dist/services/portfolioiq/dedupeSoldComps.js"));
+const { dedupeSoldComps, distinctWriterShape } = require(path.join(__dirname, "..", "dist/services/portfolioiq/dedupeSoldComps.js"));
 
 function parseArgs(argv) {
   const args = { apply: false, sport: null, concurrency: 6 };
@@ -114,7 +114,7 @@ async function main() {
     try {
       const iter = sc.items.query({
         query: `SELECT c.cardId, c.playerName, c.setName, c.parallel, c.gradeCompany, c.gradeValue,
-                       c.cardNumber, c.cardYear, c.price, c.source, c.sport, c.soldAt
+                       c.cardNumber, c.cardYear, c.price, c.source, c.sourceExternalId, c.sport, c.soldAt
                 FROM c
                 WHERE c.soldAt >= @from AND c.soldAt <= @to AND c.price > 0${sportFilter}`,
         parameters,
@@ -160,7 +160,19 @@ async function main() {
       // Every row in this group already shares (cardId, parallel, grade) —
       // exactly dedupeSoldComps's gradeKey scope — so this collapses a
       // dual-id twin without ever being able to merge two different grades.
-      const deduped = dedupeSoldComps(g.rows);
+      //
+      // CF-VOLUME-READERS-NEED-DISTINCT-WRITERS (2026-09-20). This is a
+      // COUNT surface (`count`/`sum`/`median` feed market-movers'
+      // salesInWindow and medians straight through), so the plain
+      // gradeKey|price coincidence rule is too blunt: 30 genuine $1.99
+      // sales of a common on the same day would collapse to 1.
+      // `distinctWriterShape` restricts the collapse to pairs that are
+      // ACTUALLY two different writer shapes for the same sale (the
+      // CardHedge dual-id bug's real signature), never two rows the same
+      // feed legitimately wrote twice. NOTE: `sources` below still counts
+      // PRE-dedupe rows — an existing, pre-dedupe informational counter, not
+      // load-bearing to the aggregates this reader change protects.
+      const deduped = dedupeSoldComps(g.rows, { onlyWhen: distinctWriterShape });
       const sorted = deduped.map((r) => Number(r.price)).sort((a, b) => a - b);
       const sum = sorted.reduce((a, b) => a + b, 0);
       rollupDocs.push({

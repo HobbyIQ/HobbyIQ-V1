@@ -189,7 +189,26 @@ router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("pr
       keys.forEach((k) => seenIdentityKeys.add(k));
       identityDeduped.push(c);
     }
-    const dedupedComps = dedupeSoldComps(identityDeduped);
+    // CF-RECENT-SALES-DEDUP-PER-PARALLEL (2026-09-20, review fix). When the
+    // caller omits ?parallel=, `rawComps` spans EVERY parallel sharing this
+    // cardId (see the comment above where `parallel` is resolved) —
+    // `dedupeSoldComps`'s key (gradeKey|price, 60-minute window) has no
+    // parallel component, so a real Blue Refractor sale and a real base
+    // sale at the same price within the hour would wrongly collapse into
+    // one. Bucket by parallel FIRST (blank/undefined parallel is its own
+    // bucket, same as every other value), dedupe each bucket independently
+    // — the same group-then-dedupe shape marketMoversSnapshot.service.ts
+    // uses for (cardId, parallel, grade) — then re-flatten. Order is
+    // restored below by the existing soldAt-DESC sort after the price gate.
+    const byParallel = new Map<string, typeof identityDeduped>();
+    for (const c of identityDeduped) {
+      const k = String(c.parallel ?? "").trim().toLowerCase();
+      const arr = byParallel.get(k) ?? [];
+      arr.push(c);
+      byParallel.set(k, arr);
+    }
+    const dedupedComps: typeof identityDeduped = [];
+    for (const bucket of byParallel.values()) dedupedComps.push(...dedupeSoldComps(bucket));
 
     // CF-RECENT-SALES-PRICE-GATE (Drew, 2026-08-06; per-tier fix 2026-08-10).
     // Drop extreme-outlier rows (< median/3 or > median*3) WITHIN EACH

@@ -124,4 +124,35 @@ describe("GET /cards/:cardId/recent-sales -- dedupeSoldComps, not the old local 
     const res = await get();
     expect(res.body.count).toBe(3);
   });
+
+  // CF-RECENT-SALES-DEDUP-PER-PARALLEL (2026-09-20, review fix). No
+  // ?parallel= on this route's `get()` helper -> readCompsByCardId returns
+  // every parallel sharing this cardId in one array. Without bucketing by
+  // parallel BEFORE dedupe, a real Blue Refractor sale and a real base sale
+  // at the same price within the hour would wrongly collapse (gradeKey|price
+  // has no parallel component).
+  it("KEEPS a real Blue Refractor sale and a real base sale at the same price/moment (different parallels never collapse)", async () => {
+    const sameMoment = daysAgo(2);
+    h.rows = [
+      baseSale({ id: "a", soldAt: sameMoment, price: 250.00, parallel: null }),
+      baseSale({ id: "b", soldAt: sameMoment, price: 250.00, parallel: "Blue Refractor" }),
+    ];
+    const res = await get();
+    expect(res.body.count).toBe(2);
+  });
+
+  it("still collapses a twin WITHIN one parallel once cross-parallel buckets are separated", async () => {
+    const twinTime = new Date(NOW - 2 * 86_400_000);
+    h.rows = [
+      // A twin pair inside "Blue Refractor" -- must collapse to 1.
+      baseSale({ id: "a", soldAt: twinTime.toISOString(), price: 250.00, parallel: "Blue Refractor" }),
+      baseSale({ id: "b", soldAt: new Date(twinTime.getTime() + 4 * 60_000).toISOString(), price: 250.00, parallel: "Blue Refractor" }),
+      // A genuinely distinct base-card sale at the SAME price/moment as the
+      // twin's cluster anchor -- must survive as its own row, in its own
+      // parallel bucket.
+      baseSale({ id: "c", soldAt: twinTime.toISOString(), price: 250.00, parallel: null }),
+    ];
+    const res = await get();
+    expect(res.body.count).toBe(2); // 1 (collapsed twin) + 1 (base sale)
+  });
 });

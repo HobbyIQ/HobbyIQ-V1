@@ -42,6 +42,9 @@ export interface DedupableComp {
   soldAt?: unknown;
   gradeCompany?: unknown;
   gradeValue?: unknown;
+  source?: unknown;
+  sourceExternalId?: unknown;
+  id?: unknown;
 }
 
 /** Measured plateau. Override per-caller only with a reason. */
@@ -57,6 +60,71 @@ function gradeKey(r: DedupableComp): string {
   return `${company}:${value}`;
 }
 
+export interface DedupeOptions {
+  windowMinutes?: number;
+  /**
+   * When set, two rows in the same (gradeKey, price) cluster collapse only
+   * when this ALSO returns true for the pair — never on the gradeKey|price
+   * coincidence alone. Undefined (the default, and the FMV path's behavior,
+   * unchanged) collapses on the coincidence alone, as documented above.
+   */
+  onlyWhen?: (a: DedupableComp, b: DedupableComp) => boolean;
+}
+
+/** `ch-daily::<price_history_id>` (bare) vs the LEGACY synthetic
+ *  `ch-daily::<cardId>::<soldAt>::<cents>` (composite — embeds soldAt as its
+ *  own "::"-delimited segment) vs `ch-comp::…` vs anything else. Mirrors
+ *  scripts/lib/chSoldCompId.cjs's `isLongSyntheticShape` / census-ch-daily-
+ *  external-id-reuse.cjs's "bare"/"composite" vocabulary — this is the SAME
+ *  writer-shape distinction, not a new one invented for this predicate. */
+function chWriterShape(r: DedupableComp): string | null {
+  const ext = typeof r.sourceExternalId === "string" ? r.sourceExternalId : "";
+  const idStr = typeof r.id === "string" ? r.id : "";
+  const s = ext || idStr;
+  if (!s) return null;
+  if (s.startsWith("ch-comp::") || s.includes("::ch-comp::")) return "ch-comp";
+  const dailyMatch = s.match(/ch-daily::(.*)$/);
+  if (!dailyMatch) return null;
+  // Bare: ch-daily::<token>, exactly one segment after the prefix. Composite
+  // (legacy synthetic): ch-daily::<cardId>::<soldAt>::<cents>, three or more.
+  const segs = dailyMatch[1].split("::");
+  return segs.length >= 3 ? "ch-daily-composite" : "ch-daily-bare";
+}
+
+/**
+ * CF-VOLUME-READERS-NEED-DISTINCT-WRITERS (2026-09-20). The gradeKey|price
+ * coincidence rule alone is right for a THIN pool (the FMV leading edge,
+ * the observed grade curve, a card-detail comp list): two sales of a
+ * $2,000 card at the identical cent within an hour really are, almost
+ * always, one CardHedge sale written twice. It is WRONG for a volume-
+ * counting surface on a common: 30 genuine $1.99 sales of the same card in
+ * one hour are 30 real sales, and collapsing them on price+time alone
+ * would misreport a real high-volume card as illiquid.
+ *
+ * This predicate is the "are these two rows actually the SAME sale, not
+ * just the same price" check for that shape: collapse only when the two
+ * rows are DIFFERENT WRITER SHAPES — the CardHedge dual-id bug's actual
+ * signature (one sale, written by two different code paths, so it carries
+ * two different id shapes) — never two rows of the identical shape, which
+ * is what 30 genuine same-price sales from the SAME feed look like.
+ *
+ * Passed as `onlyWhen` to the three volume-counting call sites
+ * (marketMoversSnapshot.service.ts's raw scan, marketIndex.service.ts's
+ * fetchSales, rollup-sold-comps-daily.cjs) — never the default, and never
+ * used by unifiedPricing.service.ts or any other thin-pool reader.
+ */
+export function distinctWriterShape(a: DedupableComp, b: DedupableComp): boolean {
+  const sourceA = typeof a.source === "string" ? a.source : "";
+  const sourceB = typeof b.source === "string" ? b.source : "";
+  if (sourceA && sourceB && sourceA !== sourceB) return true;
+  if (sourceA === "cardhedge" && sourceB === "cardhedge") {
+    const shapeA = chWriterShape(a);
+    const shapeB = chWriterShape(b);
+    if (shapeA && shapeB) return shapeA !== shapeB;
+  }
+  return false;
+}
+
 /**
  * Collapse rows that are the same sale seen more than once.
  *
@@ -64,12 +132,21 @@ function gradeKey(r: DedupableComp): string {
  * PASSED THROUGH untouched rather than dropped. This function exists to remove
  * duplicates, not to filter the pool; quality filtering is someone else's job
  * and silently eating rows here would be invisible at every call site.
+ *
+ * `windowMinutes` accepts a bare number (the pre-existing signature, kept
+ * for every call site that has never needed `onlyWhen`) or a `DedupeOptions`
+ * object.
  */
 export function dedupeSoldComps<T extends DedupableComp>(
   rows: readonly T[],
-  windowMinutes: number = DEDUPE_WINDOW_MINUTES,
+  windowMinutesOrOptions: number | DedupeOptions = DEDUPE_WINDOW_MINUTES,
 ): T[] {
   if (!Array.isArray(rows) || rows.length < 2) return rows ? [...rows] : [];
+  const opts: DedupeOptions = typeof windowMinutesOrOptions === "number"
+    ? { windowMinutes: windowMinutesOrOptions }
+    : windowMinutesOrOptions;
+  const windowMinutes = opts.windowMinutes ?? DEDUPE_WINDOW_MINUTES;
+  const onlyWhen = opts.onlyWhen;
   const windowMs = Math.max(0, windowMinutes) * 60_000;
 
   const keyable: Array<{ row: T; t: number; k: string }> = [];
@@ -95,13 +172,19 @@ export function dedupeSoldComps<T extends DedupableComp>(
   const kept: T[] = [];
   for (const bucket of byKey.values()) {
     bucket.sort((a, b) => a.t - b.t);
-    let clusterAnchor = Number.NEGATIVE_INFINITY;
+    let clusterAnchor: { row: T; t: number } | null = null;
     for (const e of bucket) {
       // Anchor on the FIRST row of the cluster, not the previous row, so a
       // dense run of real sales an hour apart each cannot chain-collapse into
       // one. Chaining would make the window silently unbounded.
-      if (e.t - clusterAnchor <= windowMs) continue;
-      clusterAnchor = e.t;
+      if (
+        clusterAnchor !== null
+        && e.t - clusterAnchor.t <= windowMs
+        && (onlyWhen === undefined || onlyWhen(clusterAnchor.row, e.row))
+      ) {
+        continue;
+      }
+      clusterAnchor = e;
       kept.push(e.row);
     }
   }
@@ -112,7 +195,7 @@ export function dedupeSoldComps<T extends DedupableComp>(
 /** How many rows a dedupe would remove, without doing it. For telemetry. */
 export function countSoldCompDuplicates(
   rows: readonly DedupableComp[],
-  windowMinutes: number = DEDUPE_WINDOW_MINUTES,
+  windowMinutesOrOptions: number | DedupeOptions = DEDUPE_WINDOW_MINUTES,
 ): number {
-  return rows.length - dedupeSoldComps(rows, windowMinutes).length;
+  return rows.length - dedupeSoldComps(rows, windowMinutesOrOptions).length;
 }
