@@ -264,21 +264,64 @@ async function readBackKeptRow(pool, keep, retry = (fn) => fn(), wait = sleep, v
   return hit ? { ...hit, __via: "query-point-read" } : null;
 }
 
+/** Does an error carry a Cosmos 412 (etag precondition failed)? */
+function is412(e) {
+  return e?.code === 412 || e?.statusCode === 412;
+}
+
 /**
- * Keep `keep` (a full document), then delete every `drop` ({ id, cardId })
- * that is not `keep` itself. `retry` wraps each Cosmos call (429s); pass the
- * script's own. `verifyFields` are compared between `keep` and the read-back
- * on top of id/cardId, so a stale document at the same address cannot pass
- * as the write. `dryRun` touches nothing and describes the plan.
+ * Keep `keep` (a full document), then delete every `drop` ({ id, cardId,
+ * ifMatchEtag? }) that is not `keep` itself. `retry` wraps each Cosmos call
+ * (429s); pass the script's own. `verifyFields` are compared between `keep`
+ * and the read-back on top of id/cardId, so a stale document at the same
+ * address cannot pass as the write. `dryRun` touches nothing and describes
+ * the plan.
+ *
+ * CONDITIONAL DELETE (review, 2026-09-19, OPTIONAL, additive). A `drop` item
+ * may carry `ifMatchEtag`: the `_etag` the CALLER's own planning read saw at
+ * that address. When present, the delete is issued with an `IfMatch` access
+ * condition -- Cosmos itself refuses the delete with a 412 if the document
+ * changed since that read, closing the window a caller's own re-read (this
+ * lane's own last-line defence, or any future one) cannot fully close on its
+ * own: the re-read and the delete are still two round trips, and the SAME
+ * document could change in between them without this option. A 412 is
+ * reported in the NEW `staleSincePlan` list (disjoint from `duplicatesLeft`
+ * -- a 412 means the delete was REFUSED because the address changed, not
+ * that a delete FAILED against a still-matching document) and is NOT
+ * retried: `retry()` only retries on 429/timeout-shaped errors (see its own
+ * regex), and a 412 is neither, so it already passes straight through
+ * without any change to `retry` itself.
+ *
+ * A `drop` item with no `ifMatchEtag` (every existing caller, unchanged)
+ * deletes exactly as before -- unconditional, no accessCondition object
+ * built at all, so this option is invisible to every one of the 22 other
+ * callers of this function (grepped: collapse-ch-dual-ids, consolidate-
+ * catalog-duplicates, fold-checklist-numbered-twins, fold-umbrella-to-series,
+ * normalize-tca-rows, rekey-catalog-id-to-setkey, rekey-product-setkey,
+ * rekey-user-comps, relocate-pool-rows-by-list, rematch-sold-comps, repair-
+ * bowman-product-refile, repair-card-number-from-title, repair-ch-product-
+ * label-parallel, repair-cpa-draft-refile, repair-finish-collision-refile,
+ * repair-parallel-from-title, repair-tiffany-pool-enumeration, repair-
+ * tiffany-rung-to-product, repairMegaBoxAndInsertComps, reslug-ruled-alias,
+ * revert-d30-base-onto-one-of-one, revert-set-sport-repair, tca-match-
+ * enricher -- none pass ifMatchEtag, none read `staleSincePlan`, so this
+ * change is byte-for-byte behaviorally identical for every one of them).
  *
  * Result (every list is disjoint):
  *   ok            true iff the kept row is verified AND no duplicate is left
+ *                 AND no drop was refused stale (staleSincePlan is empty)
  *   stage         "dry-run" | "upsert" | "verify" | "done"
  *   existedBefore the address already held a document (a collapse target)
  *   deleted       old rows removed
  *   alreadyGone   old rows the delete found missing (404) -- not ours to count
  *   duplicatesLeft old rows whose delete failed: the sale is now in the pool
  *                 TWICE, reported here, never retried past `retry`
+ *   staleSincePlan old rows whose CONDITIONAL delete was refused (412): the
+ *                 source changed since the caller's own planning read, so
+ *                 NOTHING was deleted for that drop -- same sale, still at
+ *                 its old address, untouched; never counted as a duplicate
+ *                 (a duplicate implies the delete failed against a document
+ *                 that still matched; a 412 means it did not match at all)
  *   readBackVia   how the write was confirmed: "point-read", a retry, or the
  *                 (id, cardId) query that defeats replica lag
  */
@@ -300,10 +343,10 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
     return {
       ok: false, stage: "guard",
       error: `relocateSoldComp: refused — ${verdict.detail}`,
-      existedBefore: null, deleted: [], alreadyGone: [], duplicatesLeft: [], guard: verdict,
+      existedBefore: null, deleted: [], alreadyGone: [], duplicatesLeft: [], staleSincePlan: [], guard: verdict,
     };
   }
-  if (dryRun) return { ok: true, stage: "dry-run", existedBefore: null, deleted: [], alreadyGone: [], duplicatesLeft: [], wouldDelete: drops.length, guard: verdict };
+  if (dryRun) return { ok: true, stage: "dry-run", existedBefore: null, deleted: [], alreadyGone: [], duplicatesLeft: [], staleSincePlan: [], wouldDelete: drops.length, guard: verdict };
 
   let existedBefore = false;
   try {
@@ -314,7 +357,7 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
   try {
     await retry(() => pool.items.upsert(keep));
   } catch (e) {
-    return { ok: false, stage: "upsert", error: String(e?.message ?? e), existedBefore, deleted: [], alreadyGone: [], duplicatesLeft: [] };
+    return { ok: false, stage: "upsert", error: String(e?.message ?? e), existedBefore, deleted: [], alreadyGone: [], duplicatesLeft: [], staleSincePlan: [] };
   }
 
   let back = null, readBackVia = "point-read";
@@ -322,7 +365,7 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
     back = await readBackKeptRow(pool, keep, retry, wait, verifyFields);
     if (back && back.__via) { readBackVia = back.__via; delete back.__via; }
   } catch (e) {
-    return { ok: false, stage: "verify", error: String(e?.message ?? e), existedBefore, deleted: [], alreadyGone: [], duplicatesLeft: [], readBackVia };
+    return { ok: false, stage: "verify", error: String(e?.message ?? e), existedBefore, deleted: [], alreadyGone: [], duplicatesLeft: [], staleSincePlan: [], readBackVia };
   }
   const mismatch = !back || back.id !== keep.id || back.cardId !== keep.cardId
     || verifyFields.some((f) => JSON.stringify(back[f] ?? null) !== JSON.stringify(keep[f] ?? null));
@@ -350,7 +393,7 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
     return {
       ok: false, stage: "verify",
       error: back ? "read-back differs from the written row" : "read-back found nothing",
-      existedBefore, deleted: [], alreadyGone: [],
+      existedBefore, deleted: [], alreadyGone: [], staleSincePlan: [],
       duplicatesLeft: drops.map((d) => ({
         ...d,
         error: "keeper upserted but read-back failed verification; old row NOT deleted — this id is now resident at two addresses",
@@ -359,12 +402,25 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
     };
   }
 
-  const deleted = [], alreadyGone = [], duplicatesLeft = [];
+  const deleted = [], alreadyGone = [], duplicatesLeft = [], staleSincePlan = [];
   for (const d of drops) {
-    try { await retry(() => pool.item(d.id, d.cardId).delete()); deleted.push(d); }
-    catch (e) { if (is404(e)) alreadyGone.push(d); else duplicatesLeft.push({ ...d, error: String(e?.message ?? e) }); }
+    // CONDITIONAL DELETE (review, 2026-09-19): only when the caller supplied
+    // an etag for THIS drop -- every existing caller's drop objects carry no
+    // `ifMatchEtag`, so `options` stays `undefined` and the call below is
+    // byte-for-byte the unconditional delete it always was.
+    const options = d.ifMatchEtag
+      ? { accessCondition: { type: "IfMatch", condition: d.ifMatchEtag } }
+      : undefined;
+    try {
+      await retry(() => pool.item(d.id, d.cardId).delete(options));
+      deleted.push(d);
+    } catch (e) {
+      if (is404(e)) alreadyGone.push(d);
+      else if (is412(e)) staleSincePlan.push({ ...d, error: "delete refused (412): source changed since the caller's own planning read; nothing deleted" });
+      else duplicatesLeft.push({ ...d, error: String(e?.message ?? e) });
+    }
   }
-  return { ok: duplicatesLeft.length === 0, stage: "done", existedBefore, deleted, alreadyGone, duplicatesLeft, readBackVia };
+  return { ok: duplicatesLeft.length === 0 && staleSincePlan.length === 0, stage: "done", existedBefore, deleted, alreadyGone, duplicatesLeft, staleSincePlan, readBackVia };
 }
 
-module.exports = { relocateSoldComp, loadGuard, readBackKeptRow, readBackShowsWrite, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef };
+module.exports = { relocateSoldComp, loadGuard, readBackKeptRow, readBackShowsWrite, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef, is412 };

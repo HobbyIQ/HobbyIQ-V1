@@ -1,4 +1,5 @@
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
+import { PARK_REASON_ADMITS_HOBBYIQ_MATCH_SQL } from "./identityUnionGuard.js";
 // CF-GRADE-CURVE-TEST-SEAM (2026-08-16).
 //
 // The raw sold_comps read behind the observed grade curve, split into its own
@@ -106,19 +107,26 @@ export async function readSoldCompsForGrade(
   // a "hiq:" slug is the canonical tag, and a vendor id never appears in
   // hobbyiqCardId.
   const looksLikeHiqSlug = typeof cardId === "string" && cardId.startsWith("hiq:");
+  // R71 (owner ruling, 2026-09-19), refining R70. This reader never ORs
+  // cardId with hobbyiqCardId (CF-GRADE-CURVE-DROP-THE-OR above) — for an
+  // hiq slug it matches BY hobbyiqCardId exclusively, so a row it returns was
+  // never found through the wrong-sport `cardId` side #2330 was fixing.
+  // R70's blanket `identityUnverified` exclusion over-corrected: it also
+  // dropped the ~87K sport-segment PARK rows (e.g. every Wembanyama
+  // `…:topps:vw3:…` sale) whose hobbyiqCardId — the field THIS reader keys
+  // on — is the title-plausible identity; only their cardId partition key
+  // named the wrong sport. Since this reader can only ever have matched by
+  // hobbyiqCardId, it is safe to re-admit that whole class here (see
+  // identityUnionGuard.ts's PARK_REASON_ADMITS_HOBBYIQ_MATCH_SQL doc for the
+  // measured population and the never-admit exclusions it still enforces:
+  // duplicate-partition-copy / malformed-key / sport-unresolved /
+  // insert-named-* stay excluded on every path, including this one).
   const clauses: string[] = [
     "c.soldAt >= @cut",
     "c.price > 0",
     "(NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)",
     "(NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv = false)",
-    // R70 (owner ruling, 2026-09-19): a row PARKED by the write guard
-    // (`identityUnverified: true` — split-identity / sport-unresolved /
-    // malformed-key / insert-named-no-key / two-inserts-named) has an
-    // unverified identity and must not price any card, the same way an
-    // adjudicated flaggedWrong/excludedFromFmv row does not. Mirrors the
-    // neighbouring flags' undefined-tolerant shape (`= false`, not `!= true`,
-    // to match how this file already wrote the two above).
-    "(NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified = false)",
+    `(NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified = false OR ${PARK_REASON_ADMITS_HOBBYIQ_MATCH_SQL})`,
     looksLikeHiqSlug ? "c.hobbyiqCardId = @cid" : "c.cardId = @cid",
   ];
   const params: Array<{ name: string; value: string | number | null | boolean }> = [

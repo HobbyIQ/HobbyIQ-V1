@@ -51,6 +51,7 @@ import { computeHobbyIqCardId, resolveSetKeyForSlug, normalizeSetKey, sameCardNu
 import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./slugGuard.service.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
 import { guardSoldCompDoc, parkSoldCompDoc, carryProductRekeyOntoCardId } from "./splitIdentityWriteGuard.js";
+import { PARK_REASON_ADMITS_HOBBYIQ_MATCH_SQL } from "../compiq/identityUnionGuard.js";
 import { insertSetNamedInTitle } from "./insertSetTitleReader.js";
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
@@ -3155,12 +3156,28 @@ export async function readCompsByCardId(input: {
   // parked row's identity is unverified, so displaying it here is wrong the
   // same way pricing off it is wrong. Same undefined-tolerant shape as the
   // FMV readers (exactPoolReader.ts / hobbyIqFmv.service.ts).
+  //
+  // R71 (owner ruling, 2026-09-19), refining R70. `matchField` above is
+  // EITHER `c.hobbyiqCardId` (an hiq slug) OR `c.cardId` (a vendor id) —
+  // this query never ORs the two (CF-RECENT-SALES-DROP-THE-OR). When the
+  // caller passed an hiq slug, every row here was found BY its hobbyiqCardId,
+  // so R70's blanket exclusion over-corrected the same way it did for
+  // soldCompsGradeReader/hobbyIqFmv: the ~87K sport-segment PARK rows (e.g.
+  // Wembanyama `…:topps:vw3:…`) whose hobbyiqCardId is the title-plausible
+  // identity are safe to re-admit HERE, because this read path can only ever
+  // have matched by that field, not by the wrong-sport cardId side. A
+  // vendor-id lookup (matchField = c.cardId) gets NO carve-out — it matched
+  // by the partition-side field the sport-mismatch class actually names
+  // wrong, so it stays on R70's strict exclusion.
+  const parkCarveOut = matchField === "c.hobbyiqCardId"
+    ? ` OR ${PARK_REASON_ADMITS_HOBBYIQ_MATCH_SQL}`
+    : "";
   const q = {
     query:
       `SELECT * FROM c WHERE ${idClause} AND c.soldAt >= @from AND c.soldAt <= @to`
       + ` AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)`
       + ` AND (NOT IS_DEFINED(c.excludedFromFmv) OR c.excludedFromFmv != true)`
-      + ` AND (NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified != true)${orderClause}`,
+      + ` AND (NOT IS_DEFINED(c.identityUnverified) OR c.identityUnverified != true${parkCarveOut})${orderClause}`,
     parameters: [
       { name: "@cid", value: readIds[0] },
       ...(readIds.length > 1 ? [{ name: "@cid1", value: readIds[1] }] : []),
