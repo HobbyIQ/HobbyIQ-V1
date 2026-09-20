@@ -252,32 +252,53 @@
  * the banner's own reconciliation is candidates found == moved + refused +
  * collapsed + failed + left (named).
  *
- * DUAL-ADDRESS RACE (REVIEW FIX, CRITICAL finding 2). CardHedge dual-id twins
- * -- the SAME sale `id`, resident at TWO different sold_comps partitions
+ * DUAL-ADDRESS RACE (REVIEW FIX, CRITICAL finding 2; corrected in a SECOND
+ * review, 2026-09-19). CardHedge dual-id twins -- the SAME sale `id`,
+ * resident at TWO different sold_comps partitions
  * (project_cardhedge_dual_id_duplicates_and_graded_in_raw_pool) -- can both
  * appear as separate candidate rows in one unit's STARTSWITH scan, and both
- * independently plan a MOVE to the SAME insert address. Fixed two ways:
+ * independently plan a write. Two DIFFERENT races, fixed two different ways:
  *
- *   (a) BY CONSTRUCTION: candidates are grouped by sale `id` before planning,
- *       and every copy of one `id` is handled SERIALLY, in one pass, within
- *       one unit (units themselves may still run concurrently -- a DIFFERENT
- *       sale id is unaffected by another unit's timing). The first copy
- *       processed that decides MOVE performs the relocate; every LATER copy
- *       of the same id then re-checks the destination (now resident) and
- *       either COLLAPSES (same content hash) or REFUSES (destination-
- *       collision) -- never a second independent upsert racing the first.
- *   (b) LAST-LINE DEFENCE: immediately before every write (upsert, patch, or
- *       delete of the SOURCE row), the source document is RE-READ and its
- *       `_etag` compared against the etag captured at planning time. A
- *       mismatch means some OTHER process (a concurrent unit, a live ingest
- *       re-upsert) wrote this exact row between the plan and the write --
- *       refused as `changed-since-planned`, nothing written, the row is left
- *       for a future run to re-evaluate fresh. The write itself is issued
- *       with `accessCondition: { type: "IfMatch", condition: etag }`
- *       (the SAME precedent backfill-holding-ebay-ids.cjs already uses for
- *       portfolio replaces), so even a race that slips past the JS re-read
- *       is caught by Cosmos itself at the storage layer and answered with a
- *       412 Precondition Failed, handled identically to a local mismatch.
+ *   RELOCATE-VS-RELOCATE (the actual race: two copies proposing to land at
+ *   the SAME destination address). BY CONSTRUCTION: candidates are grouped
+ *   by sale `id` before planning, and every copy of one `id` is handled
+ *   SERIALLY, in one pass, within one unit (units themselves may still run
+ *   concurrently -- a DIFFERENT sale id is unaffected by another unit's
+ *   timing). The first RELOCATE-shape copy processed performs the relocate;
+ *   every LATER RELOCATE-shape copy of the same id then re-checks the
+ *   destination (now resident) and either COLLAPSES (same content hash) or
+ *   REFUSES (destination-collision) -- never a second independent upsert
+ *   racing the first. `alreadyHandled` -- the flag this short-circuit reads
+ *   -- is set ONLY by a relocate, and gates ONLY the relocate branch.
+ *
+ *   PATCH IS NEVER PART OF THIS RACE (SECOND REVIEW FIX). A patch-shape
+ *   copy's document lives at its OWN vendor cardId partition -- a DIFFERENT
+ *   Cosmos document from any relocate-shape twin's destination (keyed on the
+ *   insert's hiq: slug) -- so a patch can NEVER collide with a relocate
+ *   destination and has nothing to "already be handled" by. The FIRST
+ *   version of this fix gated the patch branch on `alreadyHandled` too,
+ *   which silently skipped writing a patch-shape twin whenever ANY earlier
+ *   same-id copy (relocate OR patch) had already run: the write never
+ *   happened, was mis-counted as `collapsedOntoResident`, left a real
+ *   Cosmos document on its stale base hobbyiqCardId, and (since the flag
+ *   stayed true for the rest of that id's copies) was never retried on a
+ *   re-run either. Every patch-shape copy of a same-id group now gets its
+ *   OWN independent plan-write cycle, unconditionally -- own pre-write etag
+ *   re-read, own IfMatch, own counter. Two patch-shape twins of one id both
+ *   patch, each at its own address.
+ *
+ *   LAST-LINE DEFENCE (part b, applies to both shapes). Immediately before
+ *   every write (upsert, patch, or delete of the SOURCE row), the source
+ *   document is RE-READ and its `_etag` compared against the etag captured
+ *   at planning time. A mismatch means some OTHER process (a concurrent
+ *   unit, a live ingest re-upsert) wrote this exact row between the plan and
+ *   the write -- refused as `changed-since-planned`, nothing written, the
+ *   row is left for a future run to re-evaluate fresh. The write itself is
+ *   issued with `accessCondition: { type: "IfMatch", condition: etag }`
+ *   (the SAME precedent backfill-holding-ebay-ids.cjs already uses for
+ *   portfolio replaces), so even a race that slips past the JS re-read is
+ *   caught by Cosmos itself at the storage layer and answered with a 412
+ *   Precondition Failed, handled identically to a local mismatch.
  *
  * CONCURRENCY FROM THE START (per the brief: the model lane's serial
  * per-target loop over its one cross-partition query is a known defect, PR in
@@ -962,10 +983,16 @@ async function main() {
           continue;
         }
 
-        // ── If an EARLIER copy of this same sale id already moved/collapsed
-        // in this pass, this LATER copy must not plan an independent second
-        // write -- re-check the (now-resident) destination instead (see the
-        // `alreadyHandled` branches below).
+        // ── `alreadyHandled` gates ONLY relocate-shape copies (SECOND
+        // REVIEW FIX, 2026-09-19). If an EARLIER RELOCATE-shape copy of this
+        // same sale id already moved/collapsed in this pass, a LATER
+        // RELOCATE-shape copy must not plan an independent second write to
+        // the SAME destination -- it re-checks the (now-resident) address
+        // instead (see the `alreadyHandled` branch just below). A PATCH-shape
+        // copy's own document lives at its OWN vendor cardId partition,
+        // which a relocate destination can never collide with -- it always
+        // gets its own independent write, regardless of `alreadyHandled`
+        // (see that branch's own header comment for why).
         try {
           if (plan.action === "relocate") {
             const oldCardId = String(sale.cardId ?? "");
@@ -1044,16 +1071,26 @@ async function main() {
             await repointHoldings(oldCardId, plan.newCardId);
           } else {
             // patch: hobbyiqCardId only, cardId (a vendor partition) unchanged.
-            if (alreadyHandled) {
-              // A later copy of the SAME sale id already handled by an
-              // earlier RELOCATE/PATCH copy this pass -- nothing further to
-              // do for a patch-shape duplicate (its own address is unique to
-              // its own vendor cardId partition, so it cannot collide with a
-              // relocate destination; counted as collapsed for visibility).
-              s.collapsedOntoResident++;
-              continue;
-            }
-
+            //
+            // REVIEW FIX (2026-09-19, second review): `alreadyHandled` must
+            // NEVER gate a patch-shape copy. A patch's own document lives at
+            // its OWN vendor cardId partition -- a DIFFERENT Cosmos document
+            // from any relocate-shape twin's destination (which is keyed on
+            // the insert's hiq: slug) -- so a patch can NEVER collide with a
+            // relocate destination and has nothing to "already be handled
+            // by". The first version of this fix short-circuited a
+            // patch-shape twin to `collapsedOntoResident` whenever ANY
+            // earlier same-id copy (relocate OR patch) had already run,
+            // which silently skipped writing THIS document entirely --
+            // mis-accounting a live write as a collapse, leaving a real
+            // Cosmos row on its stale base hobbyiqCardId, and (since
+            // `alreadyHandled` stays true for the rest of this id's copies)
+            // never retried on a re-run either. Every patch-shape copy of a
+            // same-id group gets its OWN independent plan-write cycle below
+            // -- own pre-write etag re-read, own IfMatch, own counter --
+            // regardless of what any relocate-shape or other patch-shape
+            // copy of the same id already did. Two patch-shape twins of one
+            // id both patch, each at its own address.
             const wouldBeDoc = { ...stripSystem(sale), hobbyiqCardId: plan.newHiq };
             guardSoldCompDoc(wouldBeDoc, { guardedBy: "repoint-stored-insert-sales" });
             const finalHiq = wouldBeDoc.hobbyiqCardId;
@@ -1077,7 +1114,10 @@ async function main() {
               ], { accessCondition: { type: "IfMatch", condition: guardCheck.etag } }));
             }
             s.patched++;
-            alreadyHandled = true;
+            // NOT alreadyHandled = true: a patch's address is independent of
+            // any relocate destination (see the header comment above), so it
+            // must never suppress a LATER relocate-shape copy's own
+            // resident/collapse check for the same sale id.
             bump(bySetKey, plan.insertSetKey);
             if (moveExamples.length < 50) moveExamples.push(`  PATCH ${JSON.stringify(sale.title ?? "")} | ${sale.cardId}: hobbyiqCardId ${sale.hobbyiqCardId} -> ${finalHiq}`);
             await repointHoldings(String(sale.hobbyiqCardId ?? ""), finalHiq);

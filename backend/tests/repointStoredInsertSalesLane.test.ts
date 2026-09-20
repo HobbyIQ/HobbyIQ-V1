@@ -757,28 +757,75 @@ describe("repoint-stored-insert-sales -- destination collision / collapse", () =
 });
 
 describe("repoint-stored-insert-sales -- dual-address race (CardHedge same-id twins) -- REVIEW FIX CRITICAL finding 2", () => {
-  it("exactly ONE of two same-id twin copies MOVES; the other COLLAPSES onto it; reconcile balances -- CONCURRENCY=16", () => {
-    // Two documents sharing the SAME sale id, resident at TWO different
-    // sold_comps partitions -- the CardHedge dual-id-twin shape. Both would
-    // independently plan a MOVE to the exact same destination address
-    // without the by-construction serial-per-id handling this fix adds.
-    const sharedId = "cardhedge::twin::1";
-    const twinA = BASE_SALE({ id: sharedId, cardId: `${BASE_HIQ}`, hobbyiqCardId: BASE_HIQ });
-    const twinB = BASE_SALE({ id: sharedId, cardId: `${BASE_HIQ}-vendor-alt`, hobbyiqCardId: BASE_HIQ });
-    // twinB's cardId is a raw vendor-shaped id (does not start with hiq:) so
-    // it independently qualifies for a PATCH shape while twinA qualifies for
-    // a RELOCATE -- both target the exact same hobbyiqCardId destination.
+  // NOTE ON WHAT IS AND IS NOT CONSTRUCTIBLE: sold_comps is partitioned on
+  // /cardId, so two documents sharing one `id` MUST have DIFFERENT `cardId`
+  // values (id+cardId is the Cosmos primary key) -- two genuinely
+  // RELOCATE-shape twins of the same id would therefore need to plan the
+  // SAME destination from two DIFFERENT source cardIds, but `withProductSetKey`
+  // only ever rewrites the setKey segment: two different pre-move cardIds
+  // (differing anywhere past the setKey segment) compute two DIFFERENT
+  // destinations, and two IDENTICAL pre-move cardIds are, by the Cosmos
+  // primary key, the SAME document. So the actual reachable same-id-twin
+  // shapes are exactly the two below -- a relocate paired with a patch (the
+  // shape this fix's regression was in), and two patches (each an
+  // independent vendor-partitioned document) -- both pinned here.
+  it("a RELOCATE twin plus a PATCH twin of the SAME sale id: the relocate moves AND the patch patches -- SECOND REVIEW FIX (patch is never part of the relocate race)", () => {
+    // twinA is partitioned on its own hiq: base slug (RELOCATE shape);
+    // twinB shares the SAME sale id but sits at a raw VENDOR cardId
+    // partition (PATCH shape) -- a genuinely DIFFERENT Cosmos document at a
+    // DIFFERENT address that can never collide with twinA's relocate
+    // destination. Before the second review fix, twinB was silently
+    // short-circuited to `collapsedOntoResident` and never actually
+    // patched -- this pins that it now gets its own independent write.
+    const sharedId = "cardhedge::twin::mixed";
+    const twinA = BASE_SALE({ id: sharedId, cardId: BASE_HIQ, hobbyiqCardId: BASE_HIQ });
+    const twinB = BASE_SALE({ id: sharedId, cardId: "vendor-twin-mixed-123", hobbyiqCardId: BASE_HIQ });
     const r = drive(
       { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true", CONCURRENCY: "16" },
       { catalog: [CHECKLIST_ROW()], sales: [twinA, twinB], portfolio: PORTFOLIO_EMPTY },
     );
     expect(r.code).toBe(0);
-    // Exactly one MOVE/PATCH total across the two twin copies -- never two
-    // independent writes to the same destination.
-    const totalWrites = (r.out.match(/MOVED (\d+)/)?.[1] ? Number(r.out.match(/MOVED (\d+)/)![1]) : 0)
-      + (r.out.match(/PATCHED (\d+)/)?.[1] ? Number(r.out.match(/PATCHED (\d+)/)![1]) : 0);
-    expect(totalWrites).toBe(1);
-    expect(r.out).toMatch(/COLLAPSED onto a resident \(same sale, by hash\)\s+1/);
+    expect(r.out).toMatch(/MOVED 1/);
+    expect(r.out).toMatch(/PATCHED 1/);
+    expect(r.out).toMatch(/COLLAPSED onto a resident \(same sale, by hash\)\s+0/);
+    expect(r.led.salesUpserts).toContain(sharedId); // the relocate's upsert
+    expect(r.led.salesPatches.some((p: any) => p.id === sharedId)).toBe(true); // the patch's own write
+    expect(r.out).toMatch(/candidates found\s+2/);
+    expect(r.out).toMatch(/matched -- every candidate is moved, patched, collapsed, refused, failed, or left/);
+
+    // Re-run against the state AS IT NOW STANDS: the relocate's destination
+    // document (moved) plus the patch's document (hobbyiqCardId now the
+    // insert's slug) -- a re-run must be a no-op, never re-writing either.
+    const movedId = `hiq:${SPORT}:${YEAR}:${INSERT_KEY}:cpa-dm:base:no-auto`;
+    const relocatedDoc = { ...twinA, cardId: movedId, hobbyiqCardId: movedId };
+    const patchedDoc = { ...twinB, hobbyiqCardId: movedId };
+    const second = drive(
+      { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true", CONCURRENCY: "16" },
+      { catalog: [CHECKLIST_ROW()], sales: [relocatedDoc, patchedDoc], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(second.code).toBe(0);
+    expect(second.out).toMatch(/MOVED 0/);
+    expect(second.out).toMatch(/PATCHED 0/);
+    expect(second.led.salesUpserts.length).toBe(0);
+    expect(second.led.salesPatches.length).toBe(0);
+  });
+
+  it("two PATCH-shape same-id twins: BOTH patch independently -- SECOND REVIEW FIX", () => {
+    // Both copies of this shared sale id sit at raw vendor cardId
+    // partitions -- two genuinely different Cosmos documents, neither of
+    // which can ever collide with the other. Both must patch.
+    const sharedId = "cardhedge::twin::bothpatch";
+    const twinA = BASE_SALE({ id: sharedId, cardId: "vendor-twin-a-456", hobbyiqCardId: BASE_HIQ });
+    const twinB = BASE_SALE({ id: sharedId, cardId: "vendor-twin-b-789", hobbyiqCardId: BASE_HIQ });
+    const r = drive(
+      { SCOPE: "football:2024", SET_KEYS: INSERT_KEY, BACKFILL_APPLY: "true", CONCURRENCY: "16" },
+      { catalog: [CHECKLIST_ROW()], sales: [twinA, twinB], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/PATCHED 2/);
+    expect(r.out).toMatch(/MOVED 0/);
+    expect(r.out).toMatch(/COLLAPSED onto a resident \(same sale, by hash\)\s+0/);
+    expect(r.led.salesPatches.filter((p: any) => p.id === sharedId).length).toBe(2);
     expect(r.out).toMatch(/candidates found\s+2/);
     expect(r.out).toMatch(/matched -- every candidate is moved, patched, collapsed, refused, failed, or left/);
   });
