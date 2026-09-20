@@ -29,6 +29,15 @@ const path = require("path");
 //              an upsert error was only logged, and the DONE line could not
 //              tell a day that wrote nothing from a day with no comps)
 const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
+// CF-DEDUPE-SOLD-COMPS-EVERY-READER (2026-09-20). Rollups are built FROM
+// sold_comps, so a CardHedge dual-id twin baked into a rollup doc can never
+// be un-counted downstream — MARKET_MOVERS_USE_ROLLUPS reads sold_comps_daily
+// straight through with no dedupe of its own (see marketMoversSnapshot.
+// service.ts). The same shared rule the FMV path (unifiedPricing.service.ts)
+// and every other reader use applies HERE, at build time, per (cardId,
+// parallel, grade, day) group — the exact scope this script already groups
+// by — before count/sum/median/min/max are computed from the group's prices.
+const { dedupeSoldComps, distinctWriterShape } = require(path.join(__dirname, "..", "dist/services/portfolioiq/dedupeSoldComps.js"));
 
 function parseArgs(argv) {
   const args = { apply: false, sport: null, concurrency: 6 };
@@ -105,7 +114,7 @@ async function main() {
     try {
       const iter = sc.items.query({
         query: `SELECT c.cardId, c.playerName, c.setName, c.parallel, c.gradeCompany, c.gradeValue,
-                       c.cardNumber, c.cardYear, c.price, c.source, c.sport
+                       c.cardNumber, c.cardYear, c.price, c.source, c.sourceExternalId, c.sport, c.soldAt
                 FROM c
                 WHERE c.soldAt >= @from AND c.soldAt <= @to AND c.price > 0${sportFilter}`,
         parameters,
@@ -137,18 +146,34 @@ async function main() {
           gradeValue: r.gradeValue ?? null,
           cardNumber: r.cardNumber ?? null,
           cardYear: r.cardYear ?? null,
-          prices: [],
+          rows: [],
           sources: {},
         };
         groups.set(key, g);
       }
-      g.prices.push(Number(r.price));
+      g.rows.push(r);
       g.sources[r.source] = (g.sources[r.source] ?? 0) + 1;
     }
 
     const rollupDocs = [];
     for (const [key, g] of groups) {
-      const sorted = g.prices.slice().sort((a, b) => a - b);
+      // Every row in this group already shares (cardId, parallel, grade) —
+      // exactly dedupeSoldComps's gradeKey scope — so this collapses a
+      // dual-id twin without ever being able to merge two different grades.
+      //
+      // CF-VOLUME-READERS-NEED-DISTINCT-WRITERS (2026-09-20). This is a
+      // COUNT surface (`count`/`sum`/`median` feed market-movers'
+      // salesInWindow and medians straight through), so the plain
+      // gradeKey|price coincidence rule is too blunt: 30 genuine $1.99
+      // sales of a common on the same day would collapse to 1.
+      // `distinctWriterShape` restricts the collapse to pairs that are
+      // ACTUALLY two different writer shapes for the same sale (the
+      // CardHedge dual-id bug's real signature), never two rows the same
+      // feed legitimately wrote twice. NOTE: `sources` below still counts
+      // PRE-dedupe rows — an existing, pre-dedupe informational counter, not
+      // load-bearing to the aggregates this reader change protects.
+      const deduped = dedupeSoldComps(g.rows, { onlyWhen: distinctWriterShape });
+      const sorted = deduped.map((r) => Number(r.price)).sort((a, b) => a - b);
       const sum = sorted.reduce((a, b) => a + b, 0);
       rollupDocs.push({
         id: `${g.cardId}::${normalizeKey(g.parallel)}::${normalizeKey(g.gradeCompany)}::${normalizeKey(g.gradeValue)}::${dayISO}`,

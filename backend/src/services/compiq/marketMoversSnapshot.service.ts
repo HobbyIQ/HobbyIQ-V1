@@ -46,6 +46,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { moverCredibility, looksDamaged } from "./moverCredibility.service.js";
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
+import { dedupeSoldComps, distinctWriterShape } from "../portfolioiq/dedupeSoldComps.js";
 
 export interface MarketMoversParams {
   sport: string;
@@ -98,6 +99,11 @@ interface CompRow {
   soldAt: string;
   imageUrl?: string | null;
   title?: string | null;
+  // CF-VOLUME-READERS-NEED-DISTINCT-WRITERS (2026-09-20). Selected so
+  // `distinctWriterShape` can tell a genuine CardHedge dual-id twin from 30
+  // real same-price sales of a common. See the dedupe call below.
+  source?: string | null;
+  sourceExternalId?: string | null;
 }
 
 interface DailyRow {
@@ -222,6 +228,16 @@ export async function computeMarketMovers(params: MarketMoversParams): Promise<M
   let usedPath: "rollups" | "raw" = "raw";
 
   if (useRollups) {
+    // CF-DEDUPE-SOLD-COMPS-EVERY-READER (2026-09-20). sold_comps_daily is
+    // precomputed FROM sold_comps by scripts/rollup-sold-comps-daily.cjs,
+    // which now runs `dedupeSoldComps` per (cardId, parallel, grade) group
+    // BEFORE computing each day's count/sum/median/min/max — so a
+    // CardHedge dual-id twin is collapsed once, at rollup build time, and
+    // every rollup doc this path reads is already deduped. No second
+    // dedupe pass belongs here: `DailyRow` carries only day-level
+    // aggregates (count/median), not individual sale timestamps, so
+    // `dedupeSoldComps`'s 60-minute window has nothing to key on at this
+    // grain — the doc IS the unit dedupe already ran against.
     const daily = await getDailyContainer();
     if (daily) {
       const dailyIter = daily.items.query<DailyRow>({
@@ -296,7 +312,7 @@ export async function computeMarketMovers(params: MarketMoversParams): Promise<M
     // R70 was correcting. So this reader keeps R70's unqualified exclusion.
     query: `SELECT c.cardId, c.playerName, c.setName, c.parallel, c.cardNumber,
                    c.cardYear, c.gradeCompany, c.gradeValue, c.price, c.soldAt, c.imageUrl,
-                   c.title
+                   c.title, c.source, c.sourceExternalId
             FROM c
             WHERE c.sport = @sport
               AND c.soldAt >= @from
@@ -327,6 +343,26 @@ export async function computeMarketMovers(params: MarketMoversParams): Promise<M
     if (g) g.rows.push(r);
     else groups.set(key, { rows: [r], sku: r });
   }
+
+  // CF-DEDUPE-SOLD-COMPS-EVERY-READER (2026-09-20). Every row in a group
+  // already shares (cardId, parallel, gradeCompany, gradeValue) by
+  // construction, so this is the exact gradeKey scope `dedupeSoldComps`
+  // expects — a CardHedge dual-id twin collapses here the same way it does
+  // on the FMV path, and two genuinely different grades can never be
+  // merged. Without this, a mover's `salesInWindow` (the credibility gate's
+  // input) and its prior/current medians both double-count every twin,
+  // which can flip a flat card into a reported "mover" or inflate a real
+  // move's magnitude.
+  //
+  // CF-VOLUME-READERS-NEED-DISTINCT-WRITERS (2026-09-20). This surface
+  // COUNTS sales (`salesInWindow` feeds the credibility gate directly), so
+  // the plain gradeKey|price coincidence rule is too blunt here: 30 genuine
+  // $1.99 sales of a common within an hour would collapse to 1 and
+  // misreport a high-volume card as illiquid. `distinctWriterShape`
+  // restricts the collapse to pairs that are ACTUALLY two different writer
+  // shapes for the same sale (the CardHedge dual-id bug's real signature),
+  // never two rows the same feed legitimately wrote twice.
+  for (const g of groups.values()) g.rows = dedupeSoldComps(g.rows, { onlyWhen: distinctWriterShape });
 
   const movers: Mover[] = [];
   const rejected = new Map<string, number>();

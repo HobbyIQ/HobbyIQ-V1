@@ -93,6 +93,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
+import { dedupeSoldComps, distinctWriterShape } from "../portfolioiq/dedupeSoldComps.js";
 
 /** Sports that get an index tile. */
 export const INDEX_SPORTS = ["baseball", "basketball", "football", "hockey", "pokemon"] as const;
@@ -272,6 +273,19 @@ interface CompRow {
   cardId: string;
   price: number;
   soldAt: string;
+  // CF-DEDUPE-SOLD-COMPS-EVERY-READER (2026-09-20). Selected so
+  // `dedupeSoldComps`'s gradeKey has real grade evidence to key on — this
+  // index mixes every grade of a card into one value, and without these
+  // fields a raw sale and a graded sale that happen to share a price and
+  // moment would both key to the SAME default ("RAW") bucket and could
+  // wrongly collapse into one. See `fetchSales` below.
+  gradeCompany?: string | null;
+  gradeValue?: number | null;
+  // CF-VOLUME-READERS-NEED-DISTINCT-WRITERS (2026-09-20). Selected so
+  // `distinctWriterShape` can tell a genuine CardHedge dual-id twin from
+  // real repeated-price volume on a liquid card. See `fetchSales` below.
+  source?: string | null;
+  sourceExternalId?: string | null;
 }
 
 let sharedSoldComps: Container | null = null;
@@ -503,7 +517,8 @@ export async function fetchSales(
     // sport-segment split row to its WRONG (vendor) sport's index rather
     // than its corrected one, which is not a fix — it is the same
     // wrong-sport attribution R70 removed, just re-opened on this surface.
-    query: `SELECT c.cardId, c.price, c.soldAt
+    query: `SELECT c.cardId, c.price, c.soldAt, c.gradeCompany, c.gradeValue,
+                   c.source, c.sourceExternalId
             FROM c
             WHERE c.sport = @sport
               AND c.soldAt >= @from
@@ -537,7 +552,34 @@ export async function fetchSales(
     const { resources } = await iter.fetchNext();
     rows.push(...resources);
   }
-  return rows;
+  // CF-DEDUPE-SOLD-COMPS-EVERY-READER (2026-09-20). This sweep spans every
+  // basket-eligible card in the sport, so dedupe runs PER cardId — never
+  // across the whole flat array — or two different cards' sales that
+  // happen to share a price and moment could wrongly collapse into one.
+  // `dedupeSoldComps`'s gradeKey keeps a raw sale and a graded sale of the
+  // SAME card apart too, matching the FMV path's rule exactly. Without
+  // this, a CardHedge dual-id twin double-counts both a card's
+  // `eligibilitySales` (the basket-selection gate in selectBasket) and its
+  // `trendValue` fit — the two places this index is most exposed to the
+  // same double-weighting bug unifiedPricing.service.ts fixed.
+  //
+  // CF-VOLUME-READERS-NEED-DISTINCT-WRITERS (2026-09-20). `trendValue` fits
+  // a card's OWN recent sales — a genuinely liquid common with 30 real
+  // sales at the same price in an hour must keep all 30, or the fit is
+  // computed from a fabricated near-empty pool. `distinctWriterShape`
+  // restricts the collapse to pairs that are ACTUALLY two different writer
+  // shapes for the same sale, never two rows the same feed legitimately
+  // wrote twice.
+  const byCardId = new Map<string, CompRow[]>();
+  for (const r of rows) {
+    if (!r.cardId) continue;
+    const g = byCardId.get(r.cardId);
+    if (g) g.push(r);
+    else byCardId.set(r.cardId, [r]);
+  }
+  const deduped: CompRow[] = [];
+  for (const cardRows of byCardId.values()) deduped.push(...dedupeSoldComps(cardRows, { onlyWhen: distinctWriterShape }));
+  return deduped;
 }
 
 /** Group sales into per-card chronological price lists. */

@@ -17,7 +17,7 @@
  * dropping rows it cannot key.
  */
 import { describe, it, expect } from "vitest";
-import { dedupeSoldComps, countSoldCompDuplicates } from "../src/services/portfolioiq/dedupeSoldComps.js";
+import { dedupeSoldComps, countSoldCompDuplicates, distinctWriterShape } from "../src/services/portfolioiq/dedupeSoldComps.js";
 
 const at = (iso: string, price: number, extra: Record<string, unknown> = {}) =>
   ({ price, soldAt: iso, ...extra });
@@ -110,5 +110,68 @@ describe("dedupeSoldComps — collapsing one sale seen many times", () => {
   it("handles empty and single-row input", () => {
     expect(dedupeSoldComps([])).toEqual([]);
     expect(dedupeSoldComps([at("2026-07-14T23:30:00Z", 5)])).toHaveLength(1);
+  });
+});
+
+/**
+ * CF-VOLUME-READERS-NEED-DISTINCT-WRITERS (2026-09-20). The gradeKey|price
+ * coincidence rule is right for a thin pool but wrong for a volume-counting
+ * surface: 30 genuine $1.99 sales of a common in one hour must all count.
+ * `distinctWriterShape`, passed as `onlyWhen`, restricts the collapse to
+ * pairs that are ACTUALLY the CardHedge dual-id bug's signature — two
+ * different writer shapes for the same sale — never two rows the same feed
+ * legitimately wrote twice.
+ */
+describe("distinctWriterShape — used ONLY by the three volume-counting call sites", () => {
+  it("a same-shape pair (identical source, identical CH id shape) SURVIVES", () => {
+    const rows = [
+      at("2026-07-14T10:00:00Z", 1.99, { source: "cardhedge", sourceExternalId: "ch-daily::abc111" }),
+      at("2026-07-14T10:05:00Z", 1.99, { source: "cardhedge", sourceExternalId: "ch-daily::abc222" }),
+    ];
+    expect(dedupeSoldComps(rows, { onlyWhen: distinctWriterShape })).toHaveLength(2);
+    expect(distinctWriterShape(rows[0], rows[1])).toBe(false);
+  });
+
+  it("a bare + composite ch-daily pair (the writer-bug signature) COLLAPSES", () => {
+    const rows = [
+      at("2026-07-14T10:00:00Z", 250, { source: "cardhedge", sourceExternalId: "ch-daily::abc111" }),
+      at("2026-07-14T10:03:00Z", 250, { source: "cardhedge", sourceExternalId: "ch-daily::card-1::2026-07-14T10:03:00Z::25000" }),
+    ];
+    expect(dedupeSoldComps(rows, { onlyWhen: distinctWriterShape })).toHaveLength(1);
+    expect(distinctWriterShape(rows[0], rows[1])).toBe(true);
+  });
+
+  it("a tca-ebay + cardhedge pair (different source entirely) COLLAPSES", () => {
+    const rows = [
+      at("2026-07-14T10:00:00Z", 500, { source: "tca-ebay", sourceExternalId: "ebay-item-1" }),
+      at("2026-07-14T10:02:00Z", 500, { source: "cardhedge", sourceExternalId: "ch-daily::abc111" }),
+    ];
+    expect(dedupeSoldComps(rows, { onlyWhen: distinctWriterShape })).toHaveLength(1);
+    expect(distinctWriterShape(rows[0], rows[1])).toBe(true);
+  });
+
+  it("30 genuine same-shape sales of a common in one hour all SURVIVE", () => {
+    const rows = Array.from({ length: 30 }, (_, i) =>
+      at(new Date(Date.parse("2026-07-14T10:00:00Z") + i * 60_000).toISOString(), 1.99, {
+        source: "cardhedge",
+        sourceExternalId: `ch-daily::token-${i}`,
+      }));
+    expect(dedupeSoldComps(rows, { onlyWhen: distinctWriterShape })).toHaveLength(30);
+  });
+
+  it("without onlyWhen (the default, unifiedPricing's behavior), the same bare-pair still collapses on price+time alone", () => {
+    const rows = [
+      at("2026-07-14T10:00:00Z", 1.99, { source: "cardhedge", sourceExternalId: "ch-daily::abc111" }),
+      at("2026-07-14T10:05:00Z", 1.99, { source: "cardhedge", sourceExternalId: "ch-daily::abc222" }),
+    ];
+    expect(dedupeSoldComps(rows)).toHaveLength(1);
+  });
+
+  it("a bare ch-comp vs ch-daily pair COLLAPSES (the D19 dual-id shape)", () => {
+    const rows = [
+      at("2026-07-14T10:00:00Z", 75, { source: "cardhedge", sourceExternalId: "ch-daily::abc111" }),
+      at("2026-07-14T10:01:00Z", 75, { source: "cardhedge", sourceExternalId: "ch-comp::card-1::2026-07-14T10:01:00Z::7500" }),
+    ];
+    expect(distinctWriterShape(rows[0], rows[1])).toBe(true);
   });
 });
