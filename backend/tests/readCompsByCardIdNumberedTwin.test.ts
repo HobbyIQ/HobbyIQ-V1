@@ -111,7 +111,20 @@ describe("readCompsByCardId -- an un-numbered hiq id whose one catalog row is it
   it("never a STARTSWITH union: exactly two equalities, never a third id", async () => {
     resolver.resolveIdentityToCatalogRow.mockResolvedValue(resolution(MWI, "numbered-twin", MWI_499, [MWI_499]));
     await readCompsByCardId({ cardId: MWI });
-    expect(calls[0].spec.query).not.toMatch(/STARTSWITH/);
+    // THE UNION ITSELF must never be matched via STARTSWITH against a query
+    // PARAMETER — that is the invariant this test pins (a stem match on
+    // @cid/@cid1 would wrongly merge two distinct numbered twins). R71
+    // (2026-09-19 round 2, owner ruling) added a STARTSWITH on
+    // c.hobbyiqCardId INSIDE the park-carve-out clause, but only against
+    // HARDCODED sport literals ('hiq:basketball:', 'hiq:baseball:', ...),
+    // never against @cid/@cid1 — it tests "does this row's own hobbyiqCardId
+    // belong to sport X", not "does this row's hobbyiqCardId start with the
+    // REQUESTED id", so it cannot merge two twins the way a STARTSWITH on a
+    // query param would. The check is therefore scoped to STARTSWITH against
+    // the two union parameters specifically, not to every STARTSWITH in the
+    // query string.
+    expect(calls[0].spec.query).not.toContain("STARTSWITH(c.hobbyiqCardId, @cid");
+    expect(calls[0].spec.query).not.toContain("STARTSWITH(c.cardId, @cid");
     expect(calls[0].spec.parameters.filter((p) => p.name.startsWith("@cid"))).toHaveLength(2);
   });
   it("ambiguous (two twins): queries the id AS GIVEN only — two cards are never merged", async () => {
@@ -175,7 +188,10 @@ describe("readCompsByHobbyIqCardId -- the same rule", () => {
     expect(calls[0].spec.query).toMatch(/\(c\.hobbyiqCardId = @hiq OR c\.hobbyiqCardId = @hiq1\)/);
     expect(param(0, "@hiq")).toBe(MWI);
     expect(param(0, "@hiq1")).toBe(MWI_499);
-    expect(calls[0].spec.query).not.toMatch(/STARTSWITH/);
+    // See the identical comment above -- scoped to the union parameters
+    // (@hiq/@hiq1 here) specifically, not to every STARTSWITH in the query.
+    expect(calls[0].spec.query).not.toContain("STARTSWITH(c.hobbyiqCardId, @hiq");
+    expect(calls[0].spec.query).not.toContain("STARTSWITH(c.cardId, @hiq");
     expect(resolver.resolveIdentityToCatalogRow).toHaveBeenCalledWith(MWI, { printRun: null });
   });
   it("ambiguous stays as given", async () => {
@@ -206,7 +222,8 @@ describe("readCompsByCardId -- REVERSE: a numbered id whose sales sit under its 
     pool = [...TWIN_ROWS, ...UN_ROWS];
     resolver.resolveIdentityToCatalogRow.mockResolvedValue(resolution(MWI_499, "exact", MWI_499, [], MWI));
     expect(await readCompsByCardId({ cardId: MWI_499, fromDate: daysAgo(365) })).toHaveLength(49);
-    expect(calls[0].spec.query).not.toMatch(/STARTSWITH/);
+    expect(calls[0].spec.query).not.toContain("STARTSWITH(c.hobbyiqCardId, @cid");
+    expect(calls[0].spec.query).not.toContain("STARTSWITH(c.cardId, @cid");
     expect(calls[0].spec.parameters.filter((p) => p.name.startsWith("@cid"))).toHaveLength(2);
   });
   it("a stem that IS a catalog row of its own is never unioned in (#1509 stays)", async () => {

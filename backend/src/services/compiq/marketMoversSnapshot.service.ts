@@ -278,6 +278,22 @@ export async function computeMarketMovers(params: MarketMoversParams): Promise<M
     // (`identityUnverified: true`) has an unverified identity and must not
     // move a published trend surface, the same way a `flaggedWrong` row
     // must not. Mirrors this query's own undefined-tolerant shape.
+    //
+    // R71 (owner ruling, 2026-09-19) deliberately does NOT extend the
+    // hobbyiqCardId carve-out here. This query groups by `c.sport` — the
+    // row's OWN stamped vertical, never `c.hobbyiqCardId` — and reports
+    // `c.cardId` as the SKU key, so a mover here is attributed by the
+    // row's stamped sport, not by an identity match this reader controls.
+    // `persistVendorSalesToPool.service.ts` derives `cardId` (and the
+    // `sport` field) from the PRE-correction vendor slug, so on a
+    // sport-segment split row (e.g. Wembanyama `…:topps:vw3:…`) `c.sport`
+    // reads "baseball" — the WRONG side — even though `hobbyiqCardId`
+    // later corrected to "basketball". Admitting the carve-out here would
+    // not fix the VW3-shaped regression (those rows are already excluded
+    // from `sport = "basketball"` scans by construction, since `c.sport`
+    // never says basketball on them); it would only readmit them under
+    // `sport = "baseball"`, which is the WRONG attribution — exactly what
+    // R70 was correcting. So this reader keeps R70's unqualified exclusion.
     query: `SELECT c.cardId, c.playerName, c.setName, c.parallel, c.cardNumber,
                    c.cardYear, c.gradeCompany, c.gradeValue, c.price, c.soldAt, c.imageUrl,
                    c.title

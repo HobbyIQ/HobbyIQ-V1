@@ -45,9 +45,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ── hobbyIqFmv.service.ts: queryPool ───────────────────────────────────────
-describe("R70: hobbyIqFmv.service queryPool excludes parked rows", () => {
-  const captured: { query?: string } = {};
-  beforeEach(() => { captured.query = undefined; vi.resetModules(); });
+//
+// computeHobbyIqFmv fires SEVERAL distinct queries per call (a composite
+// lookup, then multiple ladder rungs each through queryPool), so the mock
+// records every query text seen rather than only the last one — otherwise a
+// later, unrelated query (the cardsight composite lookup) silently overwrites
+// the one this test actually cares about.
+describe("R70/R71: hobbyIqFmv.service queryPool excludes parked rows (with the R71 carve-out)", () => {
+  let queries: string[] = [];
+  let fixtureRows: Array<Record<string, unknown>> = [];
+  beforeEach(() => { queries = []; fixtureRows = []; vi.resetModules(); });
 
   async function loadService() {
     vi.doMock("@azure/cosmos", () => ({
@@ -57,8 +64,13 @@ describe("R70: hobbyIqFmv.service queryPool excludes parked rows", () => {
             container: () => ({
               items: {
                 query: (spec: { query: string }) => {
-                  captured.query = spec.query;
-                  return { fetchAll: async () => ({ resources: [] }) };
+                  queries.push(spec.query);
+                  // Only the queryPool-shaped queries (which SELECT
+                  // c.hobbyiqCardId among other pool columns) get the
+                  // fixture; the composite lookup (`SELECT TOP 1 c.cardId`)
+                  // gets none, matching its own shape.
+                  const isPoolQuery = spec.query.includes("c.qualityFlags");
+                  return { fetchAll: async () => ({ resources: isPoolQuery ? fixtureRows : [] }) };
                 },
               },
             }),
@@ -76,12 +88,53 @@ describe("R70: hobbyIqFmv.service queryPool excludes parked rows", () => {
       hobbyiqCardId: "hiq:baseball:2024:test-set:1:base:no-auto",
       gradeCompany: null, gradeValue: null,
     });
-    expect(captured.query).toBeDefined();
-    // MUTATION: delete this predicate from hobbyIqFmv.service.ts and this fails.
-    expect(captured.query).toContain("c.identityUnverified = false");
-    expect(captured.query).toContain("NOT IS_DEFINED(c.identityUnverified)");
-    // Unchanged neighbour.
-    expect(captured.query).toContain("c.flaggedWrong = false");
+    const poolQueries = queries.filter((q) => q.includes("c.qualityFlags"));
+    expect(poolQueries.length).toBeGreaterThan(0);
+    for (const q of poolQueries) {
+      // MUTATION: delete this predicate from hobbyIqFmv.service.ts and this fails.
+      expect(q).toContain("c.identityUnverified = false");
+      expect(q).toContain("NOT IS_DEFINED(c.identityUnverified)");
+      // Unchanged neighbour.
+      expect(q).toContain("c.flaggedWrong = false");
+      // R71: the carve-out clause is present too (this function's queryPool
+      // never matches on c.cardId — see the module comment — so the
+      // carve-out is applied wholesale, not CASE-scoped by union side).
+      expect(q).toContain("c.identityUnverifiedReason");
+    }
+  });
+
+  // R71 (owner ruling, 2026-09-19). Every queryPool call site in this file
+  // matches on hobbyiqCardId or the target identity's composite fields, never
+  // on the vendor-side cardId — so a row it returns was always found BY
+  // hobbyiqCardId, and the whole split-identity/sport-mismatch PARK class is
+  // safe to re-admit here.
+  it("VW3-shaped parked row (split-identity) is KEPT in the pool", async () => {
+    fixtureRows = [{
+      price: 22, soldAt: new Date().toISOString(), source: "cardhedge",
+      hobbyiqCardId: "hiq:basketball:2023:topps:vw-3:base:no-auto",
+      identityUnverified: true, identityUnverifiedReason: "split-identity",
+    }];
+    const { computeHobbyIqFmv } = await loadService();
+    const res = await computeHobbyIqFmv({
+      hobbyiqCardId: "hiq:basketball:2023:topps:vw-3:base:no-auto",
+      gradeCompany: null, gradeValue: null,
+    });
+    // At least one rung saw the fixture row rather than an empty pool.
+    expect(res).toBeDefined();
+    expect(res.compCount).toBeGreaterThan(0);
+  });
+
+  it("duplicate-partition-copy stays EXCLUDED even though queryPool is hobbyiqCardId-keyed", async () => {
+    fixtureRows = [];
+    const { computeHobbyIqFmv } = await loadService();
+    const res = await computeHobbyIqFmv({
+      hobbyiqCardId: "hiq:pokemon:2022:pokemon-go:005078:holo:no-auto:num-78",
+      gradeCompany: null, gradeValue: null,
+    });
+    expect(res.compCount).toBe(0);
+    const poolQueries = queries.filter((q) => q.includes("c.qualityFlags"));
+    expect(poolQueries.length).toBeGreaterThan(0);
+    for (const q of poolQueries) expect(q).toContain("c.identityUnverifiedReason");
   });
 });
 
@@ -147,6 +200,59 @@ describe("R70: readCompsByCardId (recent-sales) excludes parked rows", () => {
     });
     const rows = await soldCompsStore.readCompsByCardId({ cardId: "cs-vendor-1" });
     expect(rows.map((r) => r.id)).toEqual(["clean"]);
+  });
+});
+
+// ── soldCompsStore.service.ts: readCompsByCardId, the hiq-slug (hobbyiqCardId)
+// path — R71's union-side carve-out only applies here, never on the
+// vendor-cardId path pinned just above ─────────────────────────────────────
+describe("R71: readCompsByCardId's hiq-slug lookup carves out the sport-mismatch PARK class", () => {
+  let soldCompsStore: typeof import("../src/services/portfolioiq/soldCompsStore.service.js");
+  let captured: { query?: string };
+  let store: Map<string, Record<string, unknown>>;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    soldCompsStore = await import("../src/services/portfolioiq/soldCompsStore.service.js");
+    captured = {};
+    store = new Map();
+    const fakeContainer = {
+      items: {
+        query: (spec: { query: string }) => {
+          captured.query = spec.query;
+          return { fetchAll: async () => ({ resources: Array.from(store.values()) }) };
+        },
+      },
+    } as unknown as Container;
+    soldCompsStore._setContainerForTests(fakeContainer);
+  });
+
+  afterEach(() => { soldCompsStore._setContainerForTests(null); });
+
+  it("matchField is c.hobbyiqCardId for an hiq slug, and the carve-out clause is present", async () => {
+    await soldCompsStore.readCompsByCardId({ cardId: "hiq:basketball:2023:topps:vw-3:base:no-auto" });
+    expect(captured.query).toBeDefined();
+    expect(captured.query).toContain("c.hobbyiqCardId = @cid");
+    expect(captured.query).toContain("c.identityUnverifiedReason");
+  });
+
+  it("VW3-shaped parked row survives on the hiq-slug path", async () => {
+    store.set("vw3", {
+      id: "vw3", cardId: "hiq:baseball:2023:topps:vw-3:base:no-auto",
+      hobbyiqCardId: "hiq:basketball:2023:topps:vw-3:base:no-auto",
+      price: 25, soldAt: new Date().toISOString(), source: "cardhedge",
+      identityUnverified: true, identityUnverifiedReason: "split-identity",
+    });
+    const rows = await soldCompsStore.readCompsByCardId({ cardId: "hiq:basketball:2023:topps:vw-3:base:no-auto" });
+    expect(rows.map((r) => r.id)).toEqual(["vw3"]);
+  });
+
+  it("duplicate-partition-copy still excluded on the hiq-slug path", async () => {
+    // Nothing placed in `store` — a real container would have already
+    // removed it (never-admit prefix), matching this repo's fixture style.
+    const rows = await soldCompsStore.readCompsByCardId({ cardId: "hiq:pokemon:2022:pokemon-go:005078:holo:no-auto:num-78" });
+    expect(rows).toEqual([]);
+    expect(captured.query).toContain("duplicate-partition-copy");
   });
 });
 

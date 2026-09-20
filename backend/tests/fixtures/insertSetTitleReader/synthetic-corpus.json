@@ -119,6 +119,20 @@
           "categories": ["insert-downtown"]
         }
       ]
+    },
+    "football|2024|panini-mosaic-fixture": {
+      "sport": "football",
+      "year": 2024,
+      "setKey": "panini-mosaic-fixture",
+      "parallels": [],
+      "insertSets": [
+        {
+          "root": "Kaleidoscopic Fixture",
+          "rootKey": "kaleidoscopic fixture",
+          "children": ["Kaleidoscopic Fixture"],
+          "categories": ["insert-kaleidoscopic-fixture"]
+        }
+      ]
     }
   }
 }
