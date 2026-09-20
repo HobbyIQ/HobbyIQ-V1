@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-09-19T22:55:19.803Z",
+  "scrapedAt": "2026-09-20T00:43:15.553Z",
   "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/11/2024-Panini-Mosaic-Football-Checklist.xlsx",
   "source": "beckett-s3-2026-09-19",
   "sport": "football",
@@ -12,7 +12,7 @@
   "sectionsReport": [
     {
       "sheet": "Base",
-      "section": "Rookies - #301-400",
+      "section": "Base Set",
       "category": "base",
       "cards": 250,
       "role": "anchor"
@@ -532,7 +532,7 @@
     {
       "sheet": "Inserts",
       "section": "Center Stage Mosaic",
-      "category": "insert-center-stage-mosaic",
+      "category": "insert-center-stage",
       "cards": 30,
       "role": "own-cards"
     },
@@ -616,7 +616,7 @@
     {
       "sheet": "Inserts",
       "section": "Overdrive Mosaic",
-      "category": "insert-overdrive-mosaic",
+      "category": "insert-overdrive",
       "cards": 10,
       "role": "own-cards"
     },

@@ -1,0 +1,412 @@
+{
+  "scrapedAt": "2026-09-20T02:07:35.639Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/01/2024-Panini-Illusions-Football-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "football",
+  "year": 2024,
+  "setName": "2024 Panini Illusions Football",
+  "productKey": "2024-panini-illusions",
+  "setKey": "panini-illusions",
+  "rowCount": 7094,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "First Impressions Autographed Memorabilia",
+      "category": "auto-first-impressions-autographed-memorabilia",
+      "cards": 36,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Bright Lights Signatures",
+      "category": "auto-bright-lights-signatures",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Clutch Signatures",
+      "category": "auto-clutch-signatures",
+      "cards": 9,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Clutch Signatures Black",
+      "category": "auto-clutch-signatures-black",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Clutch Signatures Gold",
+      "category": "auto-clutch-signatures-gold",
+      "cards": 13,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Clutch Signatures Green",
+      "category": "auto-clutch-signatures-green",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Clutch Signatures Light Blue",
+      "category": "auto-clutch-signatures-light-blue",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Clutch Signatures Pink",
+      "category": "auto-clutch-signatures-pink",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Clutch Signatures Purple",
+      "category": "auto-clutch-signatures-purple",
+      "cards": 11,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Clutch Signatures Red",
+      "category": "auto-clutch-signatures-red",
+      "cards": 11,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Elusive Ink",
+      "category": "auto-elusive-ink",
+      "cards": 11,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Elusive Ink Black",
+      "category": "auto-elusive-ink-black",
+      "cards": 22,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Elusive Ink Blue",
+      "category": "auto-elusive-ink-blue",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Elusive Ink Gold",
+      "category": "auto-elusive-ink-gold",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Elusive Ink Green",
+      "category": "auto-elusive-ink-green",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Elusive Ink Purple",
+      "category": "auto-elusive-ink-purple",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Elusive Ink Red",
+      "category": "auto-elusive-ink-red",
+      "cards": 10,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Autographs>Elusive Ink",
+      "overlapPct": 90
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Illusionists Autographs",
+      "category": "auto-illusionists-autographs",
+      "cards": 6,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Immortalized Jersey Autographs",
+      "category": "auto-immortalized-jersey-autographs",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Immortalized Jersey Autographs Black",
+      "category": "auto-immortalized-jersey-autographs-black",
+      "cards": 38,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Immortalized Jersey Autographs Blue",
+      "category": "auto-immortalized-jersey-autographs-blue",
+      "cards": 24,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Immortalized Jersey Autographs Gold",
+      "category": "auto-immortalized-jersey-autographs-gold",
+      "cards": 33,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Immortalized Jersey Autographs Green",
+      "category": "auto-immortalized-jersey-autographs-green",
+      "cards": 35,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Immortalized Jersey Autographs Purple",
+      "category": "auto-immortalized-jersey-autographs-purple",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Immortalized Jersey Autographs Red",
+      "category": "auto-immortalized-jersey-autographs-red",
+      "cards": 23,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Mystique Autographs",
+      "category": "auto-mystique-autographs",
+      "cards": 27,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Prodigy Endorsements",
+      "category": "auto-prodigy-endorsements",
+      "cards": 18,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Endorsements",
+      "category": "auto-rookie-endorsements",
+      "cards": 38,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Reflections Dual Patch Autographs",
+      "category": "auto-rookie-reflections-dual-patch-autographs",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Signs",
+      "category": "auto-rookie-signs",
+      "cards": 33,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Vision Signatures",
+      "category": "auto-rookie-vision-signatures",
+      "cards": 22,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Superlatives",
+      "category": "auto-superlatives",
+      "cards": 27,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Trophy Collection Signatures",
+      "category": "auto-trophy-collection-signatures",
+      "cards": 7,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Trophy Collection Signatures",
+      "rosterFold": true,
+      "agree": 7,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Trophy Collection Signatures Black Ice",
+      "category": "auto-trophy-collection-signatures-black-ice",
+      "cards": 38,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Trophy Collection Signatures Black Ice",
+      "rosterFold": true,
+      "agree": 38,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Trophy Collection Signatures Gold",
+      "category": "auto-trophy-collection-signatures-gold",
+      "cards": 23,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Trophy Collection Signatures Gold",
+      "rosterFold": true,
+      "agree": 23,
+      "disagree": 0
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Déjà Vu",
+      "category": "insert-deja-vu",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Great Expectations",
+      "category": "insert-great-expectations",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Highlight Swatches",
+      "category": "insert-highlight-swatches",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Highlight Swatches Red",
+      "category": "insert-highlight-swatches-red",
+      "cards": 13,
+      "role": "parallel",
+      "anchor": "Memorabilia>Highlight Swatches",
+      "rung": "Red"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Instant Impact",
+      "category": "insert-instant-impact",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Rookie Idols Dual Memorabilia",
+      "category": "insert-rookie-idols-dual-memorabilia",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Abracadabra",
+      "category": "insert-abracadabra",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Amazing",
+      "category": "insert-amazing",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Clutch",
+      "category": "insert-clutch",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Game Magicians",
+      "category": "insert-game-magicians",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "HoloHeroes",
+      "category": "insert-holoheroes",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "HoloHeroes Rookies",
+      "category": "insert-holoheroes-rookies",
+      "cards": 34,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Illusionists",
+      "category": "insert-illusionists",
+      "cards": 18,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Inspirations All-Pro",
+      "category": "insert-inspirations-all-pro",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Mystique",
+      "category": "insert-mystique",
+      "cards": 42,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Shining Stars",
+      "category": "insert-shining-stars",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Trophy Hunters All-Pro",
+      "category": "insert-trophy-hunters-all-pro",
+      "cards": 50,
+      "role": "own-cards"
+    }
+  ],
+  "discardedRangeHeaders": [
+    {
+      "sheet": "Base",
+      "row": 3,
+      "header": "First Impressions Autographed Memorabilia - #101-142",
+      "nextCardNumber": "1"
+    }
+  ]
+}

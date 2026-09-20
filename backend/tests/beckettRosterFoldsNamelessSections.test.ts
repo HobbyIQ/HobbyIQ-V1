@@ -92,7 +92,10 @@ function buildSections(inputs: SectionInput[]) {
 describe("normalizeRosterPlayer strips the RC flag before comparing", () => {
   it("treats '<Name> RC' and '<Name>' as the same roster entry", () => {
     expect(normalizeRosterPlayer("Jonah Tong RC")).toBe(normalizeRosterPlayer("Jonah Tong"));
-    expect(normalizeRosterPlayer("Jonah Tong RC")).toBe("jonah tong");
+    // Reduced through playerIdentityKey (2026-09-20 review fix), which
+    // folds each name to bare a-z0-9 -- no space, same as every other
+    // punctuation/case difference the shared reduction treats as noise.
+    expect(normalizeRosterPlayer("Jonah Tong RC")).toBe("jonahtong");
   });
 
   it("still normalizes player order, spacing and case (R67's own rule) alongside the RC strip", () => {
@@ -105,7 +108,24 @@ describe("normalizeRosterPlayer strips the RC flag before comparing", () => {
     // Guard against an over-eager strip: a hypothetical surname ending "Marc"
     // must survive. The regex requires a WORD BOUNDARY before "RC", not a
     // bare substring match.
-    expect(normalizeRosterPlayer("Cedric Marc")).toBe("cedric marc");
+    expect(normalizeRosterPlayer("Cedric Marc")).toBe("cedricmarc");
+  });
+
+  it("REVIEW FIX (2026-09-20): a punctuation/case transcription variant is not a disagreement", () => {
+    // The exact shape a roster-gated fold decision (Defect 2) or a repeated-
+    // header split (Defect 4) must never mistake for two different players.
+    expect(normalizeRosterPlayer("Ja'Marr Chase")).toBe(normalizeRosterPlayer("JaMarr Chase"));
+    expect(normalizeRosterPlayer("Ja'Marr Chase")).toBe(normalizeRosterPlayer("Ja Marr Chase"));
+  });
+
+  it("a genuine generational-suffix difference still disagrees — a suffix is not an accent", () => {
+    // playerIdentityKey's own doctrine (see its header): "Charizard" vs
+    // "Charizard ex" must stay distinct because whether the bare name is a
+    // truncated transcription or a different card is a checklist question,
+    // not an orthography one. The same caution applies to a name that may
+    // or may not carry "Jr." -- this reduction does not decide it, and the
+    // roster-fold callers still see a real disagreement here, correctly.
+    expect(normalizeRosterPlayer("Michael Penix Jr.")).not.toBe(normalizeRosterPlayer("Michael Penix"));
   });
 });
 
