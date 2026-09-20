@@ -1298,6 +1298,29 @@ function parseRung(line) {
 // knows it is inside a confirmed ladder, so only that call site may use this
 // fallback; parseRung's own contract (called with no surrounding context) is
 // unchanged.
+//
+// WIDENING TO 5 WORDS WAS TRIED AND REJECTED (2026-09-20, review round).
+// 2024 Panini Mosaic Football's own base ladder declares the genuine
+// four-word rung "No Huddle Silver Mosaic" the same bare way as Phoenix's
+// sixteen names, and the 3-word cap here drops it too -- but a blind
+// "raise the cap to 5" widen, measured against all 6 workbooks this PR's own
+// regression table lists as changed, ALSO admitted two names this file has
+// already, correctly, refused and reported: Select's "Black and Blue Shock"
+// (+ 8 more "<Colour> and <Colour> Shock" siblings, 2,700 rows) and
+// Illusions' "Yellow Diamond Trophy Collection" (100 rows) -- both already
+// sitting in droppedDeclaredParallels on this same run, both explicitly
+// named in this PR's own body as the harder, deliberately-unfixed shape.
+// Every one of these three names is a bare, short, Title-Case line inside an
+// open ladder whose OTHER rungs of the identical trailing shape DO carry a
+// stated print run ("No Huddle Blue Mosaic - /75" / "Blue and Orange Shock
+// /35" / "Black Ice Trophy Collection - 1/1") -- there is no shape-only
+// rule, word-count or otherwise, that admits the Mosaic name while excluding
+// the other two; they are indistinguishable by shape alone. Per doctrine
+// (a wider name whitelist recurs every workbook; shape must do the work),
+// the cap STAYS AT 3 WORDS. "No Huddle Silver Mosaic" is left to
+// droppedDeclaredParallels, exactly like the two Shock/Trophy-Collection
+// names it cannot be told apart from -- reported, not minted, for a human
+// to resolve. See the PR report for the per-workbook verification.
 const BARE_LADDER_NAME = /^[A-Za-z][A-Za-z'.]*(?:[\s-][A-Za-z][A-Za-z'.]*){0,2}$/;
 
 /** parseRung, widened with the bare-name fallback above -- but ONLY for a
@@ -1931,6 +1954,23 @@ function main() {
     // gap even though the run did not refuse -- see CF-A-DECLARED-PARALLEL-
     // THAT-NEVER-BECOMES-A-ROW-IS-A-FINDING.
     ...(droppedDeclaredParallels.length ? { droppedDeclaredParallels } : {}),
+    // CF-AN-OVERRIDE-LEAVES-A-MARK (2026-09-20, review fix). Without this, a
+    // manifest carrying droppedDeclaredParallels looks identical whether the
+    // run refused (impossible -- refusing never reaches this point) or
+    // whether a human explicitly waved the guard through with
+    // --allow-dropped-parallels. That flag is meant to be used only after a
+    // human looked at the reported drop and confirmed it is not a
+    // card-bearing parallel (see ALLOW_DROPPED_PARALLELS's own header
+    // comment) -- an auditor reading this manifest later needs to be able to
+    // tell "this run never tripped the guard" apart from "this run tripped
+    // the guard and someone overrode it" without re-running the CLI to check
+    // which flag was passed. Stamped ONLY alongside droppedDeclaredParallels
+    // (never on its own -- ALLOW_DROPPED_PARALLELS with nothing dropped has
+    // nothing to have overridden) and only true, never false, so it stays
+    // additive/opt-in like every other field in this block: a run that never
+    // passes the flag, or passes it with nothing dropped, writes a manifest
+    // byte-identical to before this stamp existed.
+    ...(droppedDeclaredParallels.length && ALLOW_DROPPED_PARALLELS ? { allowDroppedParallelsUsed: true } : {}),
   };
   fs.writeFileSync(outPath.replace(/\.csv$/, ".manifest.json"), JSON.stringify(manifest, null, 2));
 

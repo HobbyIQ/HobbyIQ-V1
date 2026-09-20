@@ -254,6 +254,59 @@ describe("DEFECT A guard: droppedDeclaredParallels", () => {
     expect(fs.existsSync(out)).toBe(true);
   });
 
+  // CF-AN-OVERRIDE-LEAVES-A-MARK (2026-09-20, review fix). The manifest must
+  // distinguish "a human explicitly waved this guard through" from "this run
+  // never had anything to wave through" -- an auditor reading the manifest
+  // later has no other way to tell them apart without re-running the CLI.
+  it("stamps allowDroppedParallelsUsed:true in the manifest when the override actually suppressed a drop", () => {
+    const wb = XLSX.utils.book_new();
+    const rows: unknown[][] = [
+      ["Base Set"], ["1 cards."], ["Parallels:"],
+      ["7 Colour Special"],
+      ["1", "Kyler Murray", "Arizona Cardinals"],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "Base");
+    const xlsxPath = path.join(TMP, "guard-stamp-in.xlsx");
+    XLSX.writeFile(wb, xlsxPath, { bookType: "xlsx" });
+    const out = path.join(TMP, "guard-stamp-out.csv");
+
+    const res = spawnSync(process.execPath, [
+      CONVERTER, "--xlsx", xlsxPath, "--year", "2024", "--set-key", "test-guard-stamp",
+      "--sport", "football", "--set-name", "test", "--out", out,
+      "--allow-dropped-parallels",
+    ], { encoding: "utf8" });
+    expect(res.status, res.stderr).toBe(0);
+
+    const manifest = JSON.parse(
+      fs.readFileSync(out.replace(/\.csv$/, ".manifest.json"), "utf8"),
+    );
+    expect(manifest.allowDroppedParallelsUsed).toBe(true);
+    expect(manifest.droppedDeclaredParallels).toEqual([
+      { sheet: "Base", section: "Base Set", parallel: "7 Colour Special" },
+    ]);
+  });
+
+  it("never stamps allowDroppedParallelsUsed when the flag is passed but nothing was dropped", () => {
+    // Passing --allow-dropped-parallels on a clean workbook has nothing to
+    // override; the stamp must stay absent, not falsely claim an override
+    // happened, and the manifest must stay byte-identical to a run that
+    // never passed the flag at all (additive-only contract, same as
+    // droppedDeclaredParallels itself).
+    const rows = convert({
+      Base: [
+        ["Base Set"], ["1 cards."],
+        ["1", "Kyler Murray,", "Arizona Cardinals"],
+      ],
+    }, "test-guard-no-drop-no-stamp");
+    expect(rows.length).toBeGreaterThan(0);
+
+    const manifestPath = path.join(TMP, "test-guard-no-drop-no-stamp.manifest.json");
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    expect(manifest.allowDroppedParallelsUsed).toBeUndefined();
+    expect(manifest.droppedDeclaredParallels).toBeUndefined();
+  });
+
   it("does not fire on an ordinary fold -- a section that folds onto an anchor is exempt from its own ladder check", () => {
     // "Base Autographs Silver" folds onto "Base Autographs" as the Silver
     // rung; it declares no ladder of its own here, and even if it did, a
@@ -272,6 +325,61 @@ describe("DEFECT A guard: droppedDeclaredParallels", () => {
       ],
     }, "test-fold-exempt");
     expect(rows.length).toBeGreaterThan(0);
+  });
+});
+
+// CF-BECKETT-A-BARE-LADDER-NAME-IS-ITS-OWN-RUNG-NOT-ITS-NEIGHBOUR'S
+// (2026-09-20, review fix). 2024 Panini Illusions Football's Base sheet
+// declares its "Parallels:" ladder with "Retail" sitting bare, between
+// "Dots Trophy Collection" and "Sunburst Trophy Collection" (row 11 of a
+// block that is otherwise entirely "<Colour> Trophy Collection[ - /NNN]").
+// A reviewer flagged this as a possible false parallel BY LAYOUT -- "Retail"
+// merely sits inside the Trophy Collection block, so a fold that (wrongly)
+// concatenated a bare ladder line onto its ladder neighbour's name, or that
+// let the surrounding "Trophy Collection" lines bleed into rungName's own
+// anchor-token-stripping, could mint "Retail Trophy Collection" instead of
+// plain "Retail" -- attaching a genuine base-set retail parallel to the
+// unrelated Trophy Collection insert. Measured against the real workbook
+// (sha256 4685243ee6...49eb58b8, matches beckett-s3-manifest-2026-09.json):
+// parseLadderLine reads each ladder line independently (one line, one rung,
+// never joined with a neighbour), so "Retail" is minted as its own,
+// unqualified rung, folds onto Base Set via the ordinary 100%-numeric-match
+// path, and every one of its 100 rows carries category=base,
+// parallel="Retail" -- never "Retail Trophy Collection" and never
+// insert-trophy-collection. This test pins that shape with a minimal
+// synthetic fixture reproducing the same layout (a bare "Retail" line
+// sandwiched between two real "<Colour> Trophy Collection" ladder rungs).
+describe("Illusions' bare 'Retail' ladder line is its own rung, never folded into its Trophy Collection neighbours", () => {
+  it("mints parallel=\"Retail\" of BASE, never \"Retail Trophy Collection\" or an insert-trophy-collection row", () => {
+    const rows = convert({
+      Base: [
+        ["Base Set"],
+        ["2 cards."],
+        ["Parallels:"],
+        ["Dots Trophy Collection"],
+        ["Retail"],
+        ["Sunburst Trophy Collection"],
+        ["Mirrored Trophy Collection - /499"],
+        ["1", "Kyler Murray,", "Arizona Cardinals"],
+        ["2", "James Conner,", "Arizona Cardinals"],
+      ],
+    }, "test-illusions-retail-shape");
+
+    const retailRows = rows.filter((r) => r.parallel === "Retail");
+    expect(retailRows).toHaveLength(2); // one per base card
+    for (const r of retailRows) {
+      expect(r.category, JSON.stringify(r)).toBe("base");
+    }
+    // The exact false-fold shape the reviewer flagged must never appear.
+    expect(rows.some((r) => r.parallel === "Retail Trophy Collection")).toBe(false);
+    expect(rows.some((r) => /trophy-collection/.test(r.category) && r.player.includes("Kyler Murray"))).toBe(false);
+
+    // Its real ladder neighbours are still their own, correctly-named
+    // rungs -- this test must not pass merely because the whole ladder
+    // collapsed onto one name.
+    expect(rows.some((r) => r.parallel === "Dots Trophy Collection")).toBe(true);
+    expect(rows.some((r) => r.parallel === "Sunburst Trophy Collection")).toBe(true);
+    expect(rows.some((r) => r.parallel === "Mirrored Trophy Collection")).toBe(true);
   });
 });
 
