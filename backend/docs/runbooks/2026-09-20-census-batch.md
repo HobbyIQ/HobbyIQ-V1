@@ -17,12 +17,16 @@ untouched by this batch.
 
 ## 0. Preconditions — read before dispatching anything
 
-- [ ] The three PRs below are merged, **in this exact order**, into `main`.
+- [ ] The two PRs below (#2348, #2323) are merged into `main` — **order does
+      not matter between them**, they touch disjoint files and both are
+      independently mergeable against current `main` (re-verified 2026-09-19
+      23:14 ET, after #2309 merged and #2310 was superseded — see UPDATE
+      below).
 - [ ] `data/rematch-census-shares.json` is **not yet re-baselined** — do that
       AFTER this census, never before (a reference recorded before the census
       would describe last week's derivation, not the one the census walks
       under).
-- [ ] This PR (the backing-count addition) is merged BEFORE the census
+- [ ] This PR (the backing-count addition, #2346) is merged BEFORE the census
       dispatch — `SOURCES=backing` does not exist on `main` until it lands.
 - [ ] `sold_comps` autoscale max is still 40,000 RU/s (the 09-07 wave-elevated
       ceiling; see `project_cosmos_ru_state_2026_09_07`) — confirm with
@@ -35,46 +39,55 @@ untouched by this batch.
       `cosmos-60s-failures-2026-09-15.md`) — this is the container the new
       backing preload reads from, not `sold_comps`.
 
+> **UPDATE 2026-09-19 23:14 ET.** #2309 merged to `main` (squash,
+> `eace4042`) earlier today. #2310, stacked on #2309's branch, was retargeted
+> to `main` and went CONFLICTING — its diff re-carried #2309's own already-
+> merged changes. Replaced by **#2348** ("HELD for census: strict
+> checklist-source list (replaces #2310)"): a fresh branch off current
+> `main` carrying only #2310's own commit, cherry-picked cleanly (`git diff
+> origin/main --stat` shows exactly #2310's original 3 files, nothing from
+> #2309 re-applied or reverted). #2310 is closed with a pointer to #2348.
+> The section below is updated for #2348 in #2310's place; #2309 is dropped
+> from the merge-order table because it is already on `main`.
+
 ---
 
 ## 1. Merge order and expected stamp
 
-Computed locally (fresh clone, no push) by merging each branch onto `main` and
-running `derivation-version.cjs`'s `currentStamp()`:
+Computed locally (fresh clone, no push) by merging/diffing each branch
+against current `main` and running `derivation-version.cjs`'s
+`currentStamp()`:
 
-| Order | PR | Branch | Touches (DERIVATION_INPUTS) | Base |
+| PR | Branch | Touches (DERIVATION_INPUTS) | Base | State (2026-09-19 23:14 ET) |
 |---|---|---|---|---|
-| 1 | #2309 | `fix/catalog-authority-official-checklist-source-20260919-102832` | `catalogAuthority.service.ts` (loose classifier only — **not** a DERIVATION_INPUT) | `main` |
-| 2 | #2310 | `held/rematch-classify-official-checklist-strict-20260919-103459` | `scripts/lib/rematch-classify.cjs` | #2309 (**not** `main` directly) |
-| 3 | #2323 | `r75-year-aware-routing-20260919-161500` | `src/services/portfolioiq/hobbyIqCardId.service.ts` | `main` |
+| ~~#2309~~ | `fix/catalog-authority-official-checklist-source-...` | `catalogAuthority.service.ts` (loose classifier — **not** a DERIVATION_INPUT) | — | **MERGED** to `main` (squash `eace4042`), no longer part of this batch's dispatch |
+| **#2348** (replaces #2310) | `held/rematch-classify-strict-checklist-source-20260919-231449` | `scripts/lib/rematch-classify.cjs` | `main` | OPEN, MERGEABLE, no conflicts (fresh branch, #2310's own commit cherry-picked cleanly) |
+| #2323 | `r75-year-aware-routing-20260919-161500` | `src/services/portfolioiq/hobbyIqCardId.service.ts` | `main` | OPEN, MERGEABLE, re-verified against current `main` — still no conflicts (touches `productSetKeys.ts`/`hobbyIqCardId.service.ts`/`setKeyReconciliation.test.ts`, disjoint from #2348's files) |
 
-**#2310's base is #2309, not `main`** — it is a stacked PR ("the mergeable
-half" per its own description). Merge #2309 first, then #2310 onto it (or
-merge #2309 to `main` first and let #2310 auto-target `main` — either order
-lands the same tree), then #2323 (independent, no shared files with the other
-two beyond nothing — confirmed no conflicts in a local merge).
+#2348 and #2323 touch disjoint files and can merge in either order.
 
 ```
-main @ 02090811 stamp:           dcb4008caa05d+2026-09-06.a
-+ #2309                          (no DERIVATION_INPUTS file touched — stamp unchanged)
-+ #2310 (onto #2309)             daf5d3f8cdb17+2026-09-06.a   (per #2310's own PR body)
-+ #2323                          d2e3edcb791c7+2026-09-06.a   (per #2323's own PR body, computed from main alone)
-= all three merged, verified locally:
-                                  d89719f819430+2026-09-06.a
+main (current, post-#2309) stamp:  dcb4008caa05d+2026-09-06.a   (#2309 touched no DERIVATION_INPUTS file, so this is unchanged from before #2309 merged)
++ #2348 alone on main:             daf5d3f8cdb17+2026-09-06.a   (identical to #2310's original stated stamp — same net change, correctly rebased)
++ #2323 alone on main:             d2e3edcb791c7+2026-09-06.a   (unchanged from #2323's own PR body — #2309/#2348 never touched its files)
++ #2348 + #2323 together:          d89719f819430+2026-09-06.a   (unchanged from the original inventory's combined figure — same final tree either way)
 ```
 
-Verified: cloned `main`, merged #2309 → #2310 → #2323 with `git merge --no-edit`
-at each step, zero conflicts, `node -e "console.log(require('./backend/scripts/lib/derivation-version.cjs').currentStamp())"`
-prints `d89719f819430+2026-09-06.a`. Ran the affected pin tests
+Verified 2026-09-19 23:14 ET, fresh clone off current `main` (`349c233c`):
+`git cherry-pick c404db10` (2310's own commit) applied with zero conflicts;
+`git diff origin/main --stat` showed exactly 2310's original 3 files and diff
+stat. Separately test-merged #2323's branch on top with `git merge --no-commit
+--no-ff` — clean, only `productSetKeys.ts` needed auto-merging (no manual
+resolution). Ran the affected pin tests on #2348 alone
 (`tests/i9ReferenceStamp.test.ts`, `tests/derivationStampNarrowedToIdentity.test.ts`,
-`tests/manufacturerOfficialChecklistSourceIsAuthoritative.test.ts`,
-`tests/setKeyReconciliation.test.ts`) at that merge: **124 pass, 2 fail** —
-exactly the two stamp-drift alarms both PRs' own descriptions say will fail
-until the re-baseline lands (`"and that stamp IS this tree's — the re-baseline
-re-armed the alarm"` and `"PROPERTY 3 — the six v2 inputs on disk hash to the
-recorded reference"`). No other test in either file regresses.
+`tests/manufacturerOfficialChecklistSourceIsAuthoritative.test.ts`): **55 pass,
+2 fail** — exactly the two stamp-drift alarms
+(`"and that stamp IS this tree's — the re-baseline re-armed the alarm"` and
+`"PROPERTY 3 — the six v2 inputs on disk hash to the recorded reference"`). No
+other test in any of the three files regresses. `npx tsc --noEmit` clean;
+byte-checked (0x08/0x00) clean on all three changed files.
 
-**This backing-count PR does NOT move the stamp.** `rematch-sold-comps.cjs` is
+**This backing-count PR (#2346) does NOT move the stamp.** `rematch-sold-comps.cjs` is
 **not** a `DERIVATION_INPUTS` entry (v2 dropped it — see
 `derivation-version.cjs`'s own v1→v2 history) — only
 `scripts/lib/rematch-derive-identity.cjs` and `scripts/lib/rematch-classify.cjs`
@@ -83,7 +96,7 @@ before dispatch:
 
 ```bash
 node -e "console.log(require('./backend/scripts/lib/derivation-version.cjs').currentStamp())"
-# must read d89719f819430+2026-09-06.a on the dispatch commit — same as above
+# must read d89719f819430+2026-09-06.a on the dispatch commit, after #2348 + #2323 are merged
 ```
 
 The census can run "from main" after merge regardless: `mode=census` **never
