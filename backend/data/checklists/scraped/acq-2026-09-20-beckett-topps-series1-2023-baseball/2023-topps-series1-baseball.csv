@@ -30,7 +30,6 @@ base,2,Black,false,72,Zach Thompson
 base,2,Father’s Day Powder Blue,false,50,Zach Thompson
 base,2,Mother’s Day Hot Pink,false,50,Zach Thompson
 base,2,Memorial Day Camo,false,25,Zach Thompson
-base,2,Clear,false,10,Zach Thompson
 base,2,Printing Plates,false,1,Zach Thompson
 base,2,Platinum,false,1,Zach Thompson
 base,3,,false,,Bryce Harper
@@ -98,7 +97,6 @@ base,6,Black,false,72,Paul Blackburn
 base,6,Father’s Day Powder Blue,false,50,Paul Blackburn
 base,6,Mother’s Day Hot Pink,false,50,Paul Blackburn
 base,6,Memorial Day Camo,false,25,Paul Blackburn
-base,6,Clear,false,10,Paul Blackburn
 base,6,Printing Plates,false,1,Paul Blackburn
 base,6,Platinum,false,1,Paul Blackburn
 base,7,,false,,Bobby Witt Jr.
@@ -132,7 +130,6 @@ base,8,Black,false,72,Sam Moll
 base,8,Father’s Day Powder Blue,false,50,Sam Moll
 base,8,Mother’s Day Hot Pink,false,50,Sam Moll
 base,8,Memorial Day Camo,false,25,Sam Moll
-base,8,Clear,false,10,Sam Moll
 base,8,Printing Plates,false,1,Sam Moll
 base,8,Platinum,false,1,Sam Moll
 base,9,,false,,Scott Barlow
@@ -149,7 +146,6 @@ base,9,Black,false,72,Scott Barlow
 base,9,Father’s Day Powder Blue,false,50,Scott Barlow
 base,9,Mother’s Day Hot Pink,false,50,Scott Barlow
 base,9,Memorial Day Camo,false,25,Scott Barlow
-base,9,Clear,false,10,Scott Barlow
 base,9,Printing Plates,false,1,Scott Barlow
 base,9,Platinum,false,1,Scott Barlow
 base,10,,false,,Trevor Story
@@ -200,7 +196,6 @@ base,12,Black,false,72,Jeffrey Springs
 base,12,Father’s Day Powder Blue,false,50,Jeffrey Springs
 base,12,Mother’s Day Hot Pink,false,50,Jeffrey Springs
 base,12,Memorial Day Camo,false,25,Jeffrey Springs
-base,12,Clear,false,10,Jeffrey Springs
 base,12,Printing Plates,false,1,Jeffrey Springs
 base,12,Platinum,false,1,Jeffrey Springs
 base,13,,false,,Giovanny Gallegos
@@ -217,7 +212,6 @@ base,13,Black,false,72,Giovanny Gallegos
 base,13,Father’s Day Powder Blue,false,50,Giovanny Gallegos
 base,13,Mother’s Day Hot Pink,false,50,Giovanny Gallegos
 base,13,Memorial Day Camo,false,25,Giovanny Gallegos
-base,13,Clear,false,10,Giovanny Gallegos
 base,13,Printing Plates,false,1,Giovanny Gallegos
 base,13,Platinum,false,1,Giovanny Gallegos
 base,14,,false,,Brandon Drury
@@ -234,7 +228,6 @@ base,14,Black,false,72,Brandon Drury
 base,14,Father’s Day Powder Blue,false,50,Brandon Drury
 base,14,Mother’s Day Hot Pink,false,50,Brandon Drury
 base,14,Memorial Day Camo,false,25,Brandon Drury
-base,14,Clear,false,10,Brandon Drury
 base,14,Printing Plates,false,1,Brandon Drury
 base,14,Platinum,false,1,Brandon Drury
 base,15,,false,,Michael Grove
@@ -302,7 +295,6 @@ base,18,Black,false,72,Tanner Scott
 base,18,Father’s Day Powder Blue,false,50,Tanner Scott
 base,18,Mother’s Day Hot Pink,false,50,Tanner Scott
 base,18,Memorial Day Camo,false,25,Tanner Scott
-base,18,Clear,false,10,Tanner Scott
 base,18,Printing Plates,false,1,Tanner Scott
 base,18,Platinum,false,1,Tanner Scott
 base,19,,false,,Joey Votto
@@ -438,7 +430,6 @@ base,26,Black,false,72,Trent Grisham
 base,26,Father’s Day Powder Blue,false,50,Trent Grisham
 base,26,Mother’s Day Hot Pink,false,50,Trent Grisham
 base,26,Memorial Day Camo,false,25,Trent Grisham
-base,26,Clear,false,10,Trent Grisham
 base,26,Printing Plates,false,1,Trent Grisham
 base,26,Platinum,false,1,Trent Grisham
 base,27,,false,,Mike Trout
@@ -472,7 +463,6 @@ base,28,Black,false,72,Corey Knebel
 base,28,Father’s Day Powder Blue,false,50,Corey Knebel
 base,28,Mother’s Day Hot Pink,false,50,Corey Knebel
 base,28,Memorial Day Camo,false,25,Corey Knebel
-base,28,Clear,false,10,Corey Knebel
 base,28,Printing Plates,false,1,Corey Knebel
 base,28,Platinum,false,1,Corey Knebel
 base,29,,false,,Trevor Rogers
@@ -489,7 +479,6 @@ base,29,Black,false,72,Trevor Rogers
 base,29,Father’s Day Powder Blue,false,50,Trevor Rogers
 base,29,Mother’s Day Hot Pink,false,50,Trevor Rogers
 base,29,Memorial Day Camo,false,25,Trevor Rogers
-base,29,Clear,false,10,Trevor Rogers
 base,29,Printing Plates,false,1,Trevor Rogers
 base,29,Platinum,false,1,Trevor Rogers
 base,30,,false,,Kenley Jansen
@@ -506,7 +495,6 @@ base,30,Black,false,72,Kenley Jansen
 base,30,Father’s Day Powder Blue,false,50,Kenley Jansen
 base,30,Mother’s Day Hot Pink,false,50,Kenley Jansen
 base,30,Memorial Day Camo,false,25,Kenley Jansen
-base,30,Clear,false,10,Kenley Jansen
 base,30,Printing Plates,false,1,Kenley Jansen
 base,30,Platinum,false,1,Kenley Jansen
 base,31,,false,,Riley Greene
@@ -540,7 +528,6 @@ base,32,Black,false,72,Jordan Montgomery
 base,32,Father’s Day Powder Blue,false,50,Jordan Montgomery
 base,32,Mother’s Day Hot Pink,false,50,Jordan Montgomery
 base,32,Memorial Day Camo,false,25,Jordan Montgomery
-base,32,Clear,false,10,Jordan Montgomery
 base,32,Printing Plates,false,1,Jordan Montgomery
 base,32,Platinum,false,1,Jordan Montgomery
 base,33,,false,,Kyle Farmer
@@ -557,7 +544,6 @@ base,33,Black,false,72,Kyle Farmer
 base,33,Father’s Day Powder Blue,false,50,Kyle Farmer
 base,33,Mother’s Day Hot Pink,false,50,Kyle Farmer
 base,33,Memorial Day Camo,false,25,Kyle Farmer
-base,33,Clear,false,10,Kyle Farmer
 base,33,Printing Plates,false,1,Kyle Farmer
 base,33,Platinum,false,1,Kyle Farmer
 base,34,,false,,Zack Thompson
@@ -574,7 +560,6 @@ base,34,Black,false,72,Zack Thompson
 base,34,Father’s Day Powder Blue,false,50,Zack Thompson
 base,34,Mother’s Day Hot Pink,false,50,Zack Thompson
 base,34,Memorial Day Camo,false,25,Zack Thompson
-base,34,Clear,false,10,Zack Thompson
 base,34,Printing Plates,false,1,Zack Thompson
 base,34,Platinum,false,1,Zack Thompson
 base,35,,false,,CJ Abrams
@@ -608,7 +593,6 @@ base,36,Black,false,72,Brandon Lowe
 base,36,Father’s Day Powder Blue,false,50,Brandon Lowe
 base,36,Mother’s Day Hot Pink,false,50,Brandon Lowe
 base,36,Memorial Day Camo,false,25,Brandon Lowe
-base,36,Clear,false,10,Brandon Lowe
 base,36,Printing Plates,false,1,Brandon Lowe
 base,36,Platinum,false,1,Brandon Lowe
 base,37,,false,,Josh Smith
@@ -642,7 +626,6 @@ base,38,Black,false,72,Jorge Mateo
 base,38,Father’s Day Powder Blue,false,50,Jorge Mateo
 base,38,Mother’s Day Hot Pink,false,50,Jorge Mateo
 base,38,Memorial Day Camo,false,25,Jorge Mateo
-base,38,Clear,false,10,Jorge Mateo
 base,38,Printing Plates,false,1,Jorge Mateo
 base,38,Platinum,false,1,Jorge Mateo
 base,39,,false,,Adam Wainwright
@@ -659,7 +642,6 @@ base,39,Black,false,72,Adam Wainwright
 base,39,Father’s Day Powder Blue,false,50,Adam Wainwright
 base,39,Mother’s Day Hot Pink,false,50,Adam Wainwright
 base,39,Memorial Day Camo,false,25,Adam Wainwright
-base,39,Clear,false,10,Adam Wainwright
 base,39,Printing Plates,false,1,Adam Wainwright
 base,39,Platinum,false,1,Adam Wainwright
 base,40,,false,,Keegan Thompson
@@ -676,7 +658,6 @@ base,40,Black,false,72,Keegan Thompson
 base,40,Father’s Day Powder Blue,false,50,Keegan Thompson
 base,40,Mother’s Day Hot Pink,false,50,Keegan Thompson
 base,40,Memorial Day Camo,false,25,Keegan Thompson
-base,40,Clear,false,10,Keegan Thompson
 base,40,Printing Plates,false,1,Keegan Thompson
 base,40,Platinum,false,1,Keegan Thompson
 base,41,,false,,Brian Serven
@@ -693,7 +674,6 @@ base,41,Black,false,72,Brian Serven
 base,41,Father’s Day Powder Blue,false,50,Brian Serven
 base,41,Mother’s Day Hot Pink,false,50,Brian Serven
 base,41,Memorial Day Camo,false,25,Brian Serven
-base,41,Clear,false,10,Brian Serven
 base,41,Printing Plates,false,1,Brian Serven
 base,41,Platinum,false,1,Brian Serven
 base,42,,false,,Franchy Cordero
@@ -710,7 +690,6 @@ base,42,Black,false,72,Franchy Cordero
 base,42,Father’s Day Powder Blue,false,50,Franchy Cordero
 base,42,Mother’s Day Hot Pink,false,50,Franchy Cordero
 base,42,Memorial Day Camo,false,25,Franchy Cordero
-base,42,Clear,false,10,Franchy Cordero
 base,42,Printing Plates,false,1,Franchy Cordero
 base,42,Platinum,false,1,Franchy Cordero
 base,43,,false,,Paul Goldschmidt / Freddie Freeman / Jeff McNeil
@@ -727,7 +706,6 @@ base,43,Black,false,72,Paul Goldschmidt / Freddie Freeman / Jeff McNeil
 base,43,Father’s Day Powder Blue,false,50,Paul Goldschmidt / Freddie Freeman / Jeff McNeil
 base,43,Mother’s Day Hot Pink,false,50,Paul Goldschmidt / Freddie Freeman / Jeff McNeil
 base,43,Memorial Day Camo,false,25,Paul Goldschmidt / Freddie Freeman / Jeff McNeil
-base,43,Clear,false,10,Paul Goldschmidt / Freddie Freeman / Jeff McNeil
 base,43,Printing Plates,false,1,Paul Goldschmidt / Freddie Freeman / Jeff McNeil
 base,43,Platinum,false,1,Paul Goldschmidt / Freddie Freeman / Jeff McNeil
 base,44,,false,,Jesús Sánchez
@@ -744,7 +722,6 @@ base,44,Black,false,72,Jesús Sánchez
 base,44,Father’s Day Powder Blue,false,50,Jesús Sánchez
 base,44,Mother’s Day Hot Pink,false,50,Jesús Sánchez
 base,44,Memorial Day Camo,false,25,Jesús Sánchez
-base,44,Clear,false,10,Jesús Sánchez
 base,44,Printing Plates,false,1,Jesús Sánchez
 base,44,Platinum,false,1,Jesús Sánchez
 base,45,,false,,Gerrit Cole
@@ -778,7 +755,6 @@ base,46,Black,false,72,Jorge Alfaro
 base,46,Father’s Day Powder Blue,false,50,Jorge Alfaro
 base,46,Mother’s Day Hot Pink,false,50,Jorge Alfaro
 base,46,Memorial Day Camo,false,25,Jorge Alfaro
-base,46,Clear,false,10,Jorge Alfaro
 base,46,Printing Plates,false,1,Jorge Alfaro
 base,46,Platinum,false,1,Jorge Alfaro
 base,47,,false,,Ryan Mountcastle
@@ -829,7 +805,6 @@ base,49,Black,false,72,Mitch Haniger
 base,49,Father’s Day Powder Blue,false,50,Mitch Haniger
 base,49,Mother’s Day Hot Pink,false,50,Mitch Haniger
 base,49,Memorial Day Camo,false,25,Mitch Haniger
-base,49,Clear,false,10,Mitch Haniger
 base,49,Printing Plates,false,1,Mitch Haniger
 base,49,Platinum,false,1,Mitch Haniger
 base,50,,false,,Mookie Betts
@@ -863,7 +838,6 @@ base,51,Black,false,72,Chas McCormick
 base,51,Father’s Day Powder Blue,false,50,Chas McCormick
 base,51,Mother’s Day Hot Pink,false,50,Chas McCormick
 base,51,Memorial Day Camo,false,25,Chas McCormick
-base,51,Clear,false,10,Chas McCormick
 base,51,Printing Plates,false,1,Chas McCormick
 base,51,Platinum,false,1,Chas McCormick
 base,52,,false,,Matthew Liberatore
@@ -914,7 +888,6 @@ base,54,Black,false,72,Marcus Stroman
 base,54,Father’s Day Powder Blue,false,50,Marcus Stroman
 base,54,Mother’s Day Hot Pink,false,50,Marcus Stroman
 base,54,Memorial Day Camo,false,25,Marcus Stroman
-base,54,Clear,false,10,Marcus Stroman
 base,54,Printing Plates,false,1,Marcus Stroman
 base,54,Platinum,false,1,Marcus Stroman
 base,55,,false,,Cristian Javier
@@ -931,7 +904,6 @@ base,55,Black,false,72,Cristian Javier
 base,55,Father’s Day Powder Blue,false,50,Cristian Javier
 base,55,Mother’s Day Hot Pink,false,50,Cristian Javier
 base,55,Memorial Day Camo,false,25,Cristian Javier
-base,55,Clear,false,10,Cristian Javier
 base,55,Printing Plates,false,1,Cristian Javier
 base,55,Platinum,false,1,Cristian Javier
 base,56,,false,,Jermaine Palacios
@@ -948,7 +920,6 @@ base,56,Black,false,72,Jermaine Palacios
 base,56,Father’s Day Powder Blue,false,50,Jermaine Palacios
 base,56,Mother’s Day Hot Pink,false,50,Jermaine Palacios
 base,56,Memorial Day Camo,false,25,Jermaine Palacios
-base,56,Clear,false,10,Jermaine Palacios
 base,56,Printing Plates,false,1,Jermaine Palacios
 base,56,Platinum,false,1,Jermaine Palacios
 base,57,,false,,Ha-Seong Kim
@@ -965,7 +936,6 @@ base,57,Black,false,72,Ha-Seong Kim
 base,57,Father’s Day Powder Blue,false,50,Ha-Seong Kim
 base,57,Mother’s Day Hot Pink,false,50,Ha-Seong Kim
 base,57,Memorial Day Camo,false,25,Ha-Seong Kim
-base,57,Clear,false,10,Ha-Seong Kim
 base,57,Printing Plates,false,1,Ha-Seong Kim
 base,57,Platinum,false,1,Ha-Seong Kim
 base,58,,false,,Iván Herrera
@@ -999,7 +969,6 @@ base,59,Black,false,72,Eduardo Rodriguez
 base,59,Father’s Day Powder Blue,false,50,Eduardo Rodriguez
 base,59,Mother’s Day Hot Pink,false,50,Eduardo Rodriguez
 base,59,Memorial Day Camo,false,25,Eduardo Rodriguez
-base,59,Clear,false,10,Eduardo Rodriguez
 base,59,Printing Plates,false,1,Eduardo Rodriguez
 base,59,Platinum,false,1,Eduardo Rodriguez
 base,60,,false,,Josh Rojas
@@ -1016,7 +985,6 @@ base,60,Black,false,72,Josh Rojas
 base,60,Father’s Day Powder Blue,false,50,Josh Rojas
 base,60,Mother’s Day Hot Pink,false,50,Josh Rojas
 base,60,Memorial Day Camo,false,25,Josh Rojas
-base,60,Clear,false,10,Josh Rojas
 base,60,Printing Plates,false,1,Josh Rojas
 base,60,Platinum,false,1,Josh Rojas
 base,61,,false,,Tyrone Taylor
@@ -1033,7 +1001,6 @@ base,61,Black,false,72,Tyrone Taylor
 base,61,Father’s Day Powder Blue,false,50,Tyrone Taylor
 base,61,Mother’s Day Hot Pink,false,50,Tyrone Taylor
 base,61,Memorial Day Camo,false,25,Tyrone Taylor
-base,61,Clear,false,10,Tyrone Taylor
 base,61,Printing Plates,false,1,Tyrone Taylor
 base,61,Platinum,false,1,Tyrone Taylor
 base,62,,false,,Aaron Judge
@@ -1067,7 +1034,6 @@ base,63,Black,false,72,C.J. Cron
 base,63,Father’s Day Powder Blue,false,50,C.J. Cron
 base,63,Mother’s Day Hot Pink,false,50,C.J. Cron
 base,63,Memorial Day Camo,false,25,C.J. Cron
-base,63,Clear,false,10,C.J. Cron
 base,63,Printing Plates,false,1,C.J. Cron
 base,63,Platinum,false,1,C.J. Cron
 base,64,,false,,Josh Donaldson
@@ -1084,7 +1050,6 @@ base,64,Black,false,72,Josh Donaldson
 base,64,Father’s Day Powder Blue,false,50,Josh Donaldson
 base,64,Mother’s Day Hot Pink,false,50,Josh Donaldson
 base,64,Memorial Day Camo,false,25,Josh Donaldson
-base,64,Clear,false,10,Josh Donaldson
 base,64,Printing Plates,false,1,Josh Donaldson
 base,64,Platinum,false,1,Josh Donaldson
 base,65,,false,,Triston McKenzie
@@ -1118,7 +1083,6 @@ base,66,Black,false,72,Brandon Crawford
 base,66,Father’s Day Powder Blue,false,50,Brandon Crawford
 base,66,Mother’s Day Hot Pink,false,50,Brandon Crawford
 base,66,Memorial Day Camo,false,25,Brandon Crawford
-base,66,Clear,false,10,Brandon Crawford
 base,66,Printing Plates,false,1,Brandon Crawford
 base,66,Platinum,false,1,Brandon Crawford
 base,67,,false,,Travis Swaggerty
@@ -1135,7 +1099,6 @@ base,67,Black,false,72,Travis Swaggerty
 base,67,Father’s Day Powder Blue,false,50,Travis Swaggerty
 base,67,Mother’s Day Hot Pink,false,50,Travis Swaggerty
 base,67,Memorial Day Camo,false,25,Travis Swaggerty
-base,67,Clear,false,10,Travis Swaggerty
 base,67,Printing Plates,false,1,Travis Swaggerty
 base,67,Platinum,false,1,Travis Swaggerty
 base,68,,false,,William Contreras
@@ -1152,7 +1115,6 @@ base,68,Black,false,72,William Contreras
 base,68,Father’s Day Powder Blue,false,50,William Contreras
 base,68,Mother’s Day Hot Pink,false,50,William Contreras
 base,68,Memorial Day Camo,false,25,William Contreras
-base,68,Clear,false,10,William Contreras
 base,68,Printing Plates,false,1,William Contreras
 base,68,Platinum,false,1,William Contreras
 base,69,,false,,Caleb Kilian
@@ -1169,7 +1131,6 @@ base,69,Black,false,72,Caleb Kilian
 base,69,Father’s Day Powder Blue,false,50,Caleb Kilian
 base,69,Mother’s Day Hot Pink,false,50,Caleb Kilian
 base,69,Memorial Day Camo,false,25,Caleb Kilian
-base,69,Clear,false,10,Caleb Kilian
 base,69,Printing Plates,false,1,Caleb Kilian
 base,69,Platinum,false,1,Caleb Kilian
 base,70,,false,,Darin Ruf
@@ -1186,7 +1147,6 @@ base,70,Black,false,72,Darin Ruf
 base,70,Father’s Day Powder Blue,false,50,Darin Ruf
 base,70,Mother’s Day Hot Pink,false,50,Darin Ruf
 base,70,Memorial Day Camo,false,25,Darin Ruf
-base,70,Clear,false,10,Darin Ruf
 base,70,Printing Plates,false,1,Darin Ruf
 base,70,Platinum,false,1,Darin Ruf
 base,71,,false,,Merrill Kelly
@@ -1203,7 +1163,6 @@ base,71,Black,false,72,Merrill Kelly
 base,71,Father’s Day Powder Blue,false,50,Merrill Kelly
 base,71,Mother’s Day Hot Pink,false,50,Merrill Kelly
 base,71,Memorial Day Camo,false,25,Merrill Kelly
-base,71,Clear,false,10,Merrill Kelly
 base,71,Printing Plates,false,1,Merrill Kelly
 base,71,Platinum,false,1,Merrill Kelly
 base,72,,false,,Jon Berti
@@ -1220,7 +1179,6 @@ base,72,Black,false,72,Jon Berti
 base,72,Father’s Day Powder Blue,false,50,Jon Berti
 base,72,Mother’s Day Hot Pink,false,50,Jon Berti
 base,72,Memorial Day Camo,false,25,Jon Berti
-base,72,Clear,false,10,Jon Berti
 base,72,Printing Plates,false,1,Jon Berti
 base,72,Platinum,false,1,Jon Berti
 base,73,,false,,Jon Gray
@@ -1237,7 +1195,6 @@ base,73,Black,false,72,Jon Gray
 base,73,Father’s Day Powder Blue,false,50,Jon Gray
 base,73,Mother’s Day Hot Pink,false,50,Jon Gray
 base,73,Memorial Day Camo,false,25,Jon Gray
-base,73,Clear,false,10,Jon Gray
 base,73,Printing Plates,false,1,Jon Gray
 base,73,Platinum,false,1,Jon Gray
 base,74,,false,,Tarik Skubal
@@ -1254,7 +1211,6 @@ base,74,Black,false,72,Tarik Skubal
 base,74,Father’s Day Powder Blue,false,50,Tarik Skubal
 base,74,Mother’s Day Hot Pink,false,50,Tarik Skubal
 base,74,Memorial Day Camo,false,25,Tarik Skubal
-base,74,Clear,false,10,Tarik Skubal
 base,74,Printing Plates,false,1,Tarik Skubal
 base,74,Platinum,false,1,Tarik Skubal
 base,75,,false,,JT Brubaker
@@ -1271,7 +1227,6 @@ base,75,Black,false,72,JT Brubaker
 base,75,Father’s Day Powder Blue,false,50,JT Brubaker
 base,75,Mother’s Day Hot Pink,false,50,JT Brubaker
 base,75,Memorial Day Camo,false,25,JT Brubaker
-base,75,Clear,false,10,JT Brubaker
 base,75,Printing Plates,false,1,JT Brubaker
 base,75,Platinum,false,1,JT Brubaker
 base,76,,false,,Josh Winckowski
@@ -1288,7 +1243,6 @@ base,76,Black,false,72,Josh Winckowski
 base,76,Father’s Day Powder Blue,false,50,Josh Winckowski
 base,76,Mother’s Day Hot Pink,false,50,Josh Winckowski
 base,76,Memorial Day Camo,false,25,Josh Winckowski
-base,76,Clear,false,10,Josh Winckowski
 base,76,Printing Plates,false,1,Josh Winckowski
 base,76,Platinum,false,1,Josh Winckowski
 base,77,,false,,Kyle Bradish
@@ -1305,7 +1259,6 @@ base,77,Black,false,72,Kyle Bradish
 base,77,Father’s Day Powder Blue,false,50,Kyle Bradish
 base,77,Mother’s Day Hot Pink,false,50,Kyle Bradish
 base,77,Memorial Day Camo,false,25,Kyle Bradish
-base,77,Clear,false,10,Kyle Bradish
 base,77,Printing Plates,false,1,Kyle Bradish
 base,77,Platinum,false,1,Kyle Bradish
 base,78,,false,,Sonny Gray
@@ -1339,7 +1292,6 @@ base,79,Black,false,72,Tyler O'Neill
 base,79,Father’s Day Powder Blue,false,50,Tyler O'Neill
 base,79,Mother’s Day Hot Pink,false,50,Tyler O'Neill
 base,79,Memorial Day Camo,false,25,Tyler O'Neill
-base,79,Clear,false,10,Tyler O'Neill
 base,79,Printing Plates,false,1,Tyler O'Neill
 base,79,Platinum,false,1,Tyler O'Neill
 base,80,,false,,Tanner Rainey
@@ -1356,7 +1308,6 @@ base,80,Black,false,72,Tanner Rainey
 base,80,Father’s Day Powder Blue,false,50,Tanner Rainey
 base,80,Mother’s Day Hot Pink,false,50,Tanner Rainey
 base,80,Memorial Day Camo,false,25,Tanner Rainey
-base,80,Clear,false,10,Tanner Rainey
 base,80,Printing Plates,false,1,Tanner Rainey
 base,80,Platinum,false,1,Tanner Rainey
 base,81,,false,,Ozzie Albies
@@ -1390,7 +1341,6 @@ base,82,Black,false,72,Framber Valdez / Justin Verlander / Alek Manoah
 base,82,Father’s Day Powder Blue,false,50,Framber Valdez / Justin Verlander / Alek Manoah
 base,82,Mother’s Day Hot Pink,false,50,Framber Valdez / Justin Verlander / Alek Manoah
 base,82,Memorial Day Camo,false,25,Framber Valdez / Justin Verlander / Alek Manoah
-base,82,Clear,false,10,Framber Valdez / Justin Verlander / Alek Manoah
 base,82,Printing Plates,false,1,Framber Valdez / Justin Verlander / Alek Manoah
 base,82,Platinum,false,1,Framber Valdez / Justin Verlander / Alek Manoah
 base,83,,false,,Tylor Megill
@@ -1407,7 +1357,6 @@ base,83,Black,false,72,Tylor Megill
 base,83,Father’s Day Powder Blue,false,50,Tylor Megill
 base,83,Mother’s Day Hot Pink,false,50,Tylor Megill
 base,83,Memorial Day Camo,false,25,Tylor Megill
-base,83,Clear,false,10,Tylor Megill
 base,83,Printing Plates,false,1,Tylor Megill
 base,83,Platinum,false,1,Tylor Megill
 base,84,,false,,Toronto Blue Jays
@@ -1424,7 +1373,6 @@ base,84,Black,false,72,Toronto Blue Jays
 base,84,Father’s Day Powder Blue,false,50,Toronto Blue Jays
 base,84,Mother’s Day Hot Pink,false,50,Toronto Blue Jays
 base,84,Memorial Day Camo,false,25,Toronto Blue Jays
-base,84,Clear,false,10,Toronto Blue Jays
 base,84,Printing Plates,false,1,Toronto Blue Jays
 base,84,Platinum,false,1,Toronto Blue Jays
 base,85,,false,,Max Stassi
@@ -1441,7 +1389,6 @@ base,85,Black,false,72,Max Stassi
 base,85,Father’s Day Powder Blue,false,50,Max Stassi
 base,85,Mother’s Day Hot Pink,false,50,Max Stassi
 base,85,Memorial Day Camo,false,25,Max Stassi
-base,85,Clear,false,10,Max Stassi
 base,85,Printing Plates,false,1,Max Stassi
 base,85,Platinum,false,1,Max Stassi
 base,86,,false,,Gregory Soto
@@ -1458,7 +1405,6 @@ base,86,Black,false,72,Gregory Soto
 base,86,Father’s Day Powder Blue,false,50,Gregory Soto
 base,86,Mother’s Day Hot Pink,false,50,Gregory Soto
 base,86,Memorial Day Camo,false,25,Gregory Soto
-base,86,Clear,false,10,Gregory Soto
 base,86,Printing Plates,false,1,Gregory Soto
 base,86,Platinum,false,1,Gregory Soto
 base,87,,false,,Ethan Small
@@ -1475,7 +1421,6 @@ base,87,Black,false,72,Ethan Small
 base,87,Father’s Day Powder Blue,false,50,Ethan Small
 base,87,Mother’s Day Hot Pink,false,50,Ethan Small
 base,87,Memorial Day Camo,false,25,Ethan Small
-base,87,Clear,false,10,Ethan Small
 base,87,Printing Plates,false,1,Ethan Small
 base,87,Platinum,false,1,Ethan Small
 base,88,,false,,Luis Robert
@@ -1543,7 +1488,6 @@ base,91,Black,false,72,Josh Naylor
 base,91,Father’s Day Powder Blue,false,50,Josh Naylor
 base,91,Mother’s Day Hot Pink,false,50,Josh Naylor
 base,91,Memorial Day Camo,false,25,Josh Naylor
-base,91,Clear,false,10,Josh Naylor
 base,91,Printing Plates,false,1,Josh Naylor
 base,91,Platinum,false,1,Josh Naylor
 base,92,,false,,Triston Casas
@@ -1577,7 +1521,6 @@ base,93,Black,false,72,Los Angeles Angels
 base,93,Father’s Day Powder Blue,false,50,Los Angeles Angels
 base,93,Mother’s Day Hot Pink,false,50,Los Angeles Angels
 base,93,Memorial Day Camo,false,25,Los Angeles Angels
-base,93,Clear,false,10,Los Angeles Angels
 base,93,Printing Plates,false,1,Los Angeles Angels
 base,93,Platinum,false,1,Los Angeles Angels
 base,94,,false,,Oswald Peraza
@@ -1611,7 +1554,6 @@ base,95,Black,false,72,Jonah Bride
 base,95,Father’s Day Powder Blue,false,50,Jonah Bride
 base,95,Mother’s Day Hot Pink,false,50,Jonah Bride
 base,95,Memorial Day Camo,false,25,Jonah Bride
-base,95,Clear,false,10,Jonah Bride
 base,95,Printing Plates,false,1,Jonah Bride
 base,95,Platinum,false,1,Jonah Bride
 base,96,,false,,Kyle Gibson
@@ -1628,7 +1570,6 @@ base,96,Black,false,72,Kyle Gibson
 base,96,Father’s Day Powder Blue,false,50,Kyle Gibson
 base,96,Mother’s Day Hot Pink,false,50,Kyle Gibson
 base,96,Memorial Day Camo,false,25,Kyle Gibson
-base,96,Clear,false,10,Kyle Gibson
 base,96,Printing Plates,false,1,Kyle Gibson
 base,96,Platinum,false,1,Kyle Gibson
 base,97,,false,,Brandon Hughes
@@ -1645,7 +1586,6 @@ base,97,Black,false,72,Brandon Hughes
 base,97,Father’s Day Powder Blue,false,50,Brandon Hughes
 base,97,Mother’s Day Hot Pink,false,50,Brandon Hughes
 base,97,Memorial Day Camo,false,25,Brandon Hughes
-base,97,Clear,false,10,Brandon Hughes
 base,97,Printing Plates,false,1,Brandon Hughes
 base,97,Platinum,false,1,Brandon Hughes
 base,98,,false,,Mike Yastrzemski
@@ -1679,7 +1619,6 @@ base,99,Black,false,72,Antonio Senzatela
 base,99,Father’s Day Powder Blue,false,50,Antonio Senzatela
 base,99,Mother’s Day Hot Pink,false,50,Antonio Senzatela
 base,99,Memorial Day Camo,false,25,Antonio Senzatela
-base,99,Clear,false,10,Antonio Senzatela
 base,99,Printing Plates,false,1,Antonio Senzatela
 base,99,Platinum,false,1,Antonio Senzatela
 base,100,,false,,Paul Goldschmidt
@@ -1713,7 +1652,6 @@ base,101,Black,false,72,Tyler Mahle
 base,101,Father’s Day Powder Blue,false,50,Tyler Mahle
 base,101,Mother’s Day Hot Pink,false,50,Tyler Mahle
 base,101,Memorial Day Camo,false,25,Tyler Mahle
-base,101,Clear,false,10,Tyler Mahle
 base,101,Printing Plates,false,1,Tyler Mahle
 base,101,Platinum,false,1,Tyler Mahle
 base,102,,false,,Salvador Perez
@@ -1747,7 +1685,6 @@ base,103,Black,false,72,Taylor Ward
 base,103,Father’s Day Powder Blue,false,50,Taylor Ward
 base,103,Mother’s Day Hot Pink,false,50,Taylor Ward
 base,103,Memorial Day Camo,false,25,Taylor Ward
-base,103,Clear,false,10,Taylor Ward
 base,103,Printing Plates,false,1,Taylor Ward
 base,103,Platinum,false,1,Taylor Ward
 base,104,,false,,Keston Hiura
@@ -1764,7 +1701,6 @@ base,104,Black,false,72,Keston Hiura
 base,104,Father’s Day Powder Blue,false,50,Keston Hiura
 base,104,Mother’s Day Hot Pink,false,50,Keston Hiura
 base,104,Memorial Day Camo,false,25,Keston Hiura
-base,104,Clear,false,10,Keston Hiura
 base,104,Printing Plates,false,1,Keston Hiura
 base,104,Platinum,false,1,Keston Hiura
 base,105,,false,,Seth Beer
@@ -1781,7 +1717,6 @@ base,105,Black,false,72,Seth Beer
 base,105,Father’s Day Powder Blue,false,50,Seth Beer
 base,105,Mother’s Day Hot Pink,false,50,Seth Beer
 base,105,Memorial Day Camo,false,25,Seth Beer
-base,105,Clear,false,10,Seth Beer
 base,105,Printing Plates,false,1,Seth Beer
 base,105,Platinum,false,1,Seth Beer
 base,106,,false,,Willy Adames
@@ -1798,7 +1733,6 @@ base,106,Black,false,72,Willy Adames
 base,106,Father’s Day Powder Blue,false,50,Willy Adames
 base,106,Mother’s Day Hot Pink,false,50,Willy Adames
 base,106,Memorial Day Camo,false,25,Willy Adames
-base,106,Clear,false,10,Willy Adames
 base,106,Printing Plates,false,1,Willy Adames
 base,106,Platinum,false,1,Willy Adames
 base,107,,false,,Sandy Alcantara
@@ -1815,7 +1749,6 @@ base,107,Black,false,72,Sandy Alcantara
 base,107,Father’s Day Powder Blue,false,50,Sandy Alcantara
 base,107,Mother’s Day Hot Pink,false,50,Sandy Alcantara
 base,107,Memorial Day Camo,false,25,Sandy Alcantara
-base,107,Clear,false,10,Sandy Alcantara
 base,107,Printing Plates,false,1,Sandy Alcantara
 base,107,Platinum,false,1,Sandy Alcantara
 base,108,,false,,Alex Cobb
@@ -1832,7 +1765,6 @@ base,108,Black,false,72,Alex Cobb
 base,108,Father’s Day Powder Blue,false,50,Alex Cobb
 base,108,Mother’s Day Hot Pink,false,50,Alex Cobb
 base,108,Memorial Day Camo,false,25,Alex Cobb
-base,108,Clear,false,10,Alex Cobb
 base,108,Printing Plates,false,1,Alex Cobb
 base,108,Platinum,false,1,Alex Cobb
 base,109,,false,,Eric Lauer
@@ -1849,7 +1781,6 @@ base,109,Black,false,72,Eric Lauer
 base,109,Father’s Day Powder Blue,false,50,Eric Lauer
 base,109,Mother’s Day Hot Pink,false,50,Eric Lauer
 base,109,Memorial Day Camo,false,25,Eric Lauer
-base,109,Clear,false,10,Eric Lauer
 base,109,Printing Plates,false,1,Eric Lauer
 base,109,Platinum,false,1,Eric Lauer
 base,110,,false,,Randal Grichuk
@@ -1866,7 +1797,6 @@ base,110,Black,false,72,Randal Grichuk
 base,110,Father’s Day Powder Blue,false,50,Randal Grichuk
 base,110,Mother’s Day Hot Pink,false,50,Randal Grichuk
 base,110,Memorial Day Camo,false,25,Randal Grichuk
-base,110,Clear,false,10,Randal Grichuk
 base,110,Printing Plates,false,1,Randal Grichuk
 base,110,Platinum,false,1,Randal Grichuk
 base,111,,false,,Hunter Brown
@@ -1900,7 +1830,6 @@ base,112,Black,false,72,Baltimore Orioles
 base,112,Father’s Day Powder Blue,false,50,Baltimore Orioles
 base,112,Mother’s Day Hot Pink,false,50,Baltimore Orioles
 base,112,Memorial Day Camo,false,25,Baltimore Orioles
-base,112,Clear,false,10,Baltimore Orioles
 base,112,Printing Plates,false,1,Baltimore Orioles
 base,112,Platinum,false,1,Baltimore Orioles
 base,113,,false,,Mookie Betts
@@ -1917,7 +1846,6 @@ base,113,Black,false,72,Mookie Betts
 base,113,Father’s Day Powder Blue,false,50,Mookie Betts
 base,113,Mother’s Day Hot Pink,false,50,Mookie Betts
 base,113,Memorial Day Camo,false,25,Mookie Betts
-base,113,Clear,false,10,Mookie Betts
 base,113,Printing Plates,false,1,Mookie Betts
 base,113,Platinum,false,1,Mookie Betts
 base,114,,false,,Ian Anderson
@@ -1934,7 +1862,6 @@ base,114,Black,false,72,Ian Anderson
 base,114,Father’s Day Powder Blue,false,50,Ian Anderson
 base,114,Mother’s Day Hot Pink,false,50,Ian Anderson
 base,114,Memorial Day Camo,false,25,Ian Anderson
-base,114,Clear,false,10,Ian Anderson
 base,114,Printing Plates,false,1,Ian Anderson
 base,114,Platinum,false,1,Ian Anderson
 base,115,,false,,Raisel Iglesias
@@ -1951,7 +1878,6 @@ base,115,Black,false,72,Raisel Iglesias
 base,115,Father’s Day Powder Blue,false,50,Raisel Iglesias
 base,115,Mother’s Day Hot Pink,false,50,Raisel Iglesias
 base,115,Memorial Day Camo,false,25,Raisel Iglesias
-base,115,Clear,false,10,Raisel Iglesias
 base,115,Printing Plates,false,1,Raisel Iglesias
 base,115,Platinum,false,1,Raisel Iglesias
 base,116,,false,,Steven Kwan
@@ -1968,7 +1894,6 @@ base,116,Black,false,72,Steven Kwan
 base,116,Father’s Day Powder Blue,false,50,Steven Kwan
 base,116,Mother’s Day Hot Pink,false,50,Steven Kwan
 base,116,Memorial Day Camo,false,25,Steven Kwan
-base,116,Clear,false,10,Steven Kwan
 base,116,Printing Plates,false,1,Steven Kwan
 base,116,Platinum,false,1,Steven Kwan
 base,117,,false,,Emmanuel Clase
@@ -1985,7 +1910,6 @@ base,117,Black,false,72,Emmanuel Clase
 base,117,Father’s Day Powder Blue,false,50,Emmanuel Clase
 base,117,Mother’s Day Hot Pink,false,50,Emmanuel Clase
 base,117,Memorial Day Camo,false,25,Emmanuel Clase
-base,117,Clear,false,10,Emmanuel Clase
 base,117,Printing Plates,false,1,Emmanuel Clase
 base,117,Platinum,false,1,Emmanuel Clase
 base,118,,false,,Eduardo Escobar
@@ -2002,7 +1926,6 @@ base,118,Black,false,72,Eduardo Escobar
 base,118,Father’s Day Powder Blue,false,50,Eduardo Escobar
 base,118,Mother’s Day Hot Pink,false,50,Eduardo Escobar
 base,118,Memorial Day Camo,false,25,Eduardo Escobar
-base,118,Clear,false,10,Eduardo Escobar
 base,118,Printing Plates,false,1,Eduardo Escobar
 base,118,Platinum,false,1,Eduardo Escobar
 base,119,,false,,Oscar Gonzalez
@@ -2036,7 +1959,6 @@ base,120,Black,false,72,Patrick Wisdom
 base,120,Father’s Day Powder Blue,false,50,Patrick Wisdom
 base,120,Mother’s Day Hot Pink,false,50,Patrick Wisdom
 base,120,Memorial Day Camo,false,25,Patrick Wisdom
-base,120,Clear,false,10,Patrick Wisdom
 base,120,Printing Plates,false,1,Patrick Wisdom
 base,120,Platinum,false,1,Patrick Wisdom
 base,121,,false,,Luis García
@@ -2053,7 +1975,6 @@ base,121,Black,false,72,Luis García
 base,121,Father’s Day Powder Blue,false,50,Luis García
 base,121,Mother’s Day Hot Pink,false,50,Luis García
 base,121,Memorial Day Camo,false,25,Luis García
-base,121,Clear,false,10,Luis García
 base,121,Printing Plates,false,1,Luis García
 base,121,Platinum,false,1,Luis García
 base,122,,false,,Yonathan Daza
@@ -2070,7 +1991,6 @@ base,122,Black,false,72,Yonathan Daza
 base,122,Father’s Day Powder Blue,false,50,Yonathan Daza
 base,122,Mother’s Day Hot Pink,false,50,Yonathan Daza
 base,122,Memorial Day Camo,false,25,Yonathan Daza
-base,122,Clear,false,10,Yonathan Daza
 base,122,Printing Plates,false,1,Yonathan Daza
 base,122,Platinum,false,1,Yonathan Daza
 base,123,,false,,Zach Davies
@@ -2087,7 +2007,6 @@ base,123,Black,false,72,Zach Davies
 base,123,Father’s Day Powder Blue,false,50,Zach Davies
 base,123,Mother’s Day Hot Pink,false,50,Zach Davies
 base,123,Memorial Day Camo,false,25,Zach Davies
-base,123,Clear,false,10,Zach Davies
 base,123,Printing Plates,false,1,Zach Davies
 base,123,Platinum,false,1,Zach Davies
 base,124,,false,,Nathaniel Lowe
@@ -2104,7 +2023,6 @@ base,124,Black,false,72,Nathaniel Lowe
 base,124,Father’s Day Powder Blue,false,50,Nathaniel Lowe
 base,124,Mother’s Day Hot Pink,false,50,Nathaniel Lowe
 base,124,Memorial Day Camo,false,25,Nathaniel Lowe
-base,124,Clear,false,10,Nathaniel Lowe
 base,124,Printing Plates,false,1,Nathaniel Lowe
 base,124,Platinum,false,1,Nathaniel Lowe
 base,125,,false,,Marcell Ozuna
@@ -2121,7 +2039,6 @@ base,125,Black,false,72,Marcell Ozuna
 base,125,Father’s Day Powder Blue,false,50,Marcell Ozuna
 base,125,Mother’s Day Hot Pink,false,50,Marcell Ozuna
 base,125,Memorial Day Camo,false,25,Marcell Ozuna
-base,125,Clear,false,10,Marcell Ozuna
 base,125,Printing Plates,false,1,Marcell Ozuna
 base,125,Platinum,false,1,Marcell Ozuna
 base,126,,false,,Harold Castro
@@ -2138,7 +2055,6 @@ base,126,Black,false,72,Harold Castro
 base,126,Father’s Day Powder Blue,false,50,Harold Castro
 base,126,Mother’s Day Hot Pink,false,50,Harold Castro
 base,126,Memorial Day Camo,false,25,Harold Castro
-base,126,Clear,false,10,Harold Castro
 base,126,Printing Plates,false,1,Harold Castro
 base,126,Platinum,false,1,Harold Castro
 base,127,,false,,Shea Langeliers
@@ -2172,7 +2088,6 @@ base,128,Black,false,72,Alec Bohm
 base,128,Father’s Day Powder Blue,false,50,Alec Bohm
 base,128,Mother’s Day Hot Pink,false,50,Alec Bohm
 base,128,Memorial Day Camo,false,25,Alec Bohm
-base,128,Clear,false,10,Alec Bohm
 base,128,Printing Plates,false,1,Alec Bohm
 base,128,Platinum,false,1,Alec Bohm
 base,129,,false,,Nolan Jones
@@ -2206,7 +2121,6 @@ base,130,Black,false,72,Keibert Ruiz
 base,130,Father’s Day Powder Blue,false,50,Keibert Ruiz
 base,130,Mother’s Day Hot Pink,false,50,Keibert Ruiz
 base,130,Memorial Day Camo,false,25,Keibert Ruiz
-base,130,Clear,false,10,Keibert Ruiz
 base,130,Printing Plates,false,1,Keibert Ruiz
 base,130,Platinum,false,1,Keibert Ruiz
 base,131,,false,,Cody Bellinger
@@ -2223,7 +2137,6 @@ base,131,Black,false,72,Cody Bellinger
 base,131,Father’s Day Powder Blue,false,50,Cody Bellinger
 base,131,Mother’s Day Hot Pink,false,50,Cody Bellinger
 base,131,Memorial Day Camo,false,25,Cody Bellinger
-base,131,Clear,false,10,Cody Bellinger
 base,131,Printing Plates,false,1,Cody Bellinger
 base,131,Platinum,false,1,Cody Bellinger
 base,132,,false,,Gavin Sheets
@@ -2240,7 +2153,6 @@ base,132,Black,false,72,Gavin Sheets
 base,132,Father’s Day Powder Blue,false,50,Gavin Sheets
 base,132,Mother’s Day Hot Pink,false,50,Gavin Sheets
 base,132,Memorial Day Camo,false,25,Gavin Sheets
-base,132,Clear,false,10,Gavin Sheets
 base,132,Printing Plates,false,1,Gavin Sheets
 base,132,Platinum,false,1,Gavin Sheets
 base,133,,false,,Roberto Pérez
@@ -2257,7 +2169,6 @@ base,133,Black,false,72,Roberto Pérez
 base,133,Father’s Day Powder Blue,false,50,Roberto Pérez
 base,133,Mother’s Day Hot Pink,false,50,Roberto Pérez
 base,133,Memorial Day Camo,false,25,Roberto Pérez
-base,133,Clear,false,10,Roberto Pérez
 base,133,Printing Plates,false,1,Roberto Pérez
 base,133,Platinum,false,1,Roberto Pérez
 base,134,,false,,Kansas City Royals
@@ -2274,7 +2185,6 @@ base,134,Black,false,72,Kansas City Royals
 base,134,Father’s Day Powder Blue,false,50,Kansas City Royals
 base,134,Mother’s Day Hot Pink,false,50,Kansas City Royals
 base,134,Memorial Day Camo,false,25,Kansas City Royals
-base,134,Clear,false,10,Kansas City Royals
 base,134,Printing Plates,false,1,Kansas City Royals
 base,134,Platinum,false,1,Kansas City Royals
 base,135,,false,,Buddy Kennedy
@@ -2291,7 +2201,6 @@ base,135,Black,false,72,Buddy Kennedy
 base,135,Father’s Day Powder Blue,false,50,Buddy Kennedy
 base,135,Mother’s Day Hot Pink,false,50,Buddy Kennedy
 base,135,Memorial Day Camo,false,25,Buddy Kennedy
-base,135,Clear,false,10,Buddy Kennedy
 base,135,Printing Plates,false,1,Buddy Kennedy
 base,135,Platinum,false,1,Buddy Kennedy
 base,136,,false,,Dylan Bundy
@@ -2308,7 +2217,6 @@ base,136,Black,false,72,Dylan Bundy
 base,136,Father’s Day Powder Blue,false,50,Dylan Bundy
 base,136,Mother’s Day Hot Pink,false,50,Dylan Bundy
 base,136,Memorial Day Camo,false,25,Dylan Bundy
-base,136,Clear,false,10,Dylan Bundy
 base,136,Printing Plates,false,1,Dylan Bundy
 base,136,Platinum,false,1,Dylan Bundy
 base,137,,false,,Kyle Hendricks
@@ -2325,7 +2233,6 @@ base,137,Black,false,72,Kyle Hendricks
 base,137,Father’s Day Powder Blue,false,50,Kyle Hendricks
 base,137,Mother’s Day Hot Pink,false,50,Kyle Hendricks
 base,137,Memorial Day Camo,false,25,Kyle Hendricks
-base,137,Clear,false,10,Kyle Hendricks
 base,137,Printing Plates,false,1,Kyle Hendricks
 base,137,Platinum,false,1,Kyle Hendricks
 base,138,,false,,Marcus Wilson
@@ -2342,7 +2249,6 @@ base,138,Black,false,72,Marcus Wilson
 base,138,Father’s Day Powder Blue,false,50,Marcus Wilson
 base,138,Mother’s Day Hot Pink,false,50,Marcus Wilson
 base,138,Memorial Day Camo,false,25,Marcus Wilson
-base,138,Clear,false,10,Marcus Wilson
 base,138,Printing Plates,false,1,Marcus Wilson
 base,138,Platinum,false,1,Marcus Wilson
 base,139,,false,,Joe Barlow
@@ -2359,7 +2265,6 @@ base,139,Black,false,72,Joe Barlow
 base,139,Father’s Day Powder Blue,false,50,Joe Barlow
 base,139,Mother’s Day Hot Pink,false,50,Joe Barlow
 base,139,Memorial Day Camo,false,25,Joe Barlow
-base,139,Clear,false,10,Joe Barlow
 base,139,Printing Plates,false,1,Joe Barlow
 base,139,Platinum,false,1,Joe Barlow
 base,140,,false,,Lenyn Sosa
@@ -2393,7 +2298,6 @@ base,141,Black,false,72,Jonah Heim
 base,141,Father’s Day Powder Blue,false,50,Jonah Heim
 base,141,Mother’s Day Hot Pink,false,50,Jonah Heim
 base,141,Memorial Day Camo,false,25,Jonah Heim
-base,141,Clear,false,10,Jonah Heim
 base,141,Printing Plates,false,1,Jonah Heim
 base,141,Platinum,false,1,Jonah Heim
 base,142,,false,,Lucas Giolito
@@ -2410,7 +2314,6 @@ base,142,Black,false,72,Lucas Giolito
 base,142,Father’s Day Powder Blue,false,50,Lucas Giolito
 base,142,Mother’s Day Hot Pink,false,50,Lucas Giolito
 base,142,Memorial Day Camo,false,25,Lucas Giolito
-base,142,Clear,false,10,Lucas Giolito
 base,142,Printing Plates,false,1,Lucas Giolito
 base,142,Platinum,false,1,Lucas Giolito
 base,143,,false,,Nestor Cortes
@@ -2427,7 +2330,6 @@ base,143,Black,false,72,Nestor Cortes
 base,143,Father’s Day Powder Blue,false,50,Nestor Cortes
 base,143,Mother’s Day Hot Pink,false,50,Nestor Cortes
 base,143,Memorial Day Camo,false,25,Nestor Cortes
-base,143,Clear,false,10,Nestor Cortes
 base,143,Printing Plates,false,1,Nestor Cortes
 base,143,Platinum,false,1,Nestor Cortes
 base,144,,false,,Marco Gonzales
@@ -2444,7 +2346,6 @@ base,144,Black,false,72,Marco Gonzales
 base,144,Father’s Day Powder Blue,false,50,Marco Gonzales
 base,144,Mother’s Day Hot Pink,false,50,Marco Gonzales
 base,144,Memorial Day Camo,false,25,Marco Gonzales
-base,144,Clear,false,10,Marco Gonzales
 base,144,Printing Plates,false,1,Marco Gonzales
 base,144,Platinum,false,1,Marco Gonzales
 base,145,,false,,Noah Syndergaard
@@ -2461,7 +2362,6 @@ base,145,Black,false,72,Noah Syndergaard
 base,145,Father’s Day Powder Blue,false,50,Noah Syndergaard
 base,145,Mother’s Day Hot Pink,false,50,Noah Syndergaard
 base,145,Memorial Day Camo,false,25,Noah Syndergaard
-base,145,Clear,false,10,Noah Syndergaard
 base,145,Printing Plates,false,1,Noah Syndergaard
 base,145,Platinum,false,1,Noah Syndergaard
 base,146,,false,,Alex Verdugo
@@ -2478,7 +2378,6 @@ base,146,Black,false,72,Alex Verdugo
 base,146,Father’s Day Powder Blue,false,50,Alex Verdugo
 base,146,Mother’s Day Hot Pink,false,50,Alex Verdugo
 base,146,Memorial Day Camo,false,25,Alex Verdugo
-base,146,Clear,false,10,Alex Verdugo
 base,146,Printing Plates,false,1,Alex Verdugo
 base,146,Platinum,false,1,Alex Verdugo
 base,147,,false,,Daniel Vogelbach
@@ -2495,7 +2394,6 @@ base,147,Black,false,72,Daniel Vogelbach
 base,147,Father’s Day Powder Blue,false,50,Daniel Vogelbach
 base,147,Mother’s Day Hot Pink,false,50,Daniel Vogelbach
 base,147,Memorial Day Camo,false,25,Daniel Vogelbach
-base,147,Clear,false,10,Daniel Vogelbach
 base,147,Printing Plates,false,1,Daniel Vogelbach
 base,147,Platinum,false,1,Daniel Vogelbach
 base,148,,false,,Seth Brown
@@ -2512,7 +2410,6 @@ base,148,Black,false,72,Seth Brown
 base,148,Father’s Day Powder Blue,false,50,Seth Brown
 base,148,Mother’s Day Hot Pink,false,50,Seth Brown
 base,148,Memorial Day Camo,false,25,Seth Brown
-base,148,Clear,false,10,Seth Brown
 base,148,Printing Plates,false,1,Seth Brown
 base,148,Platinum,false,1,Seth Brown
 base,149,,false,,Josiah Gray
@@ -2563,7 +2460,6 @@ base,151,Black,false,72,Tyler Wells
 base,151,Father’s Day Powder Blue,false,50,Tyler Wells
 base,151,Mother’s Day Hot Pink,false,50,Tyler Wells
 base,151,Memorial Day Camo,false,25,Tyler Wells
-base,151,Clear,false,10,Tyler Wells
 base,151,Printing Plates,false,1,Tyler Wells
 base,151,Platinum,false,1,Tyler Wells
 base,152,,false,,Nick Pivetta
@@ -2580,7 +2476,6 @@ base,152,Black,false,72,Nick Pivetta
 base,152,Father’s Day Powder Blue,false,50,Nick Pivetta
 base,152,Mother’s Day Hot Pink,false,50,Nick Pivetta
 base,152,Memorial Day Camo,false,25,Nick Pivetta
-base,152,Clear,false,10,Nick Pivetta
 base,152,Printing Plates,false,1,Nick Pivetta
 base,152,Platinum,false,1,Nick Pivetta
 base,153,,false,,Kevin Gausman
@@ -2597,7 +2492,6 @@ base,153,Black,false,72,Kevin Gausman
 base,153,Father’s Day Powder Blue,false,50,Kevin Gausman
 base,153,Mother’s Day Hot Pink,false,50,Kevin Gausman
 base,153,Memorial Day Camo,false,25,Kevin Gausman
-base,153,Clear,false,10,Kevin Gausman
 base,153,Printing Plates,false,1,Kevin Gausman
 base,153,Platinum,false,1,Kevin Gausman
 base,154,,false,,Jonathan Aranda
@@ -2665,7 +2559,6 @@ base,157,Black,false,72,Christian Vázquez
 base,157,Father’s Day Powder Blue,false,50,Christian Vázquez
 base,157,Mother’s Day Hot Pink,false,50,Christian Vázquez
 base,157,Memorial Day Camo,false,25,Christian Vázquez
-base,157,Clear,false,10,Christian Vázquez
 base,157,Printing Plates,false,1,Christian Vázquez
 base,157,Platinum,false,1,Christian Vázquez
 base,158,,false,,Kris Bryant
@@ -2699,7 +2592,6 @@ base,159,Black,false,72,A.J. Minter
 base,159,Father’s Day Powder Blue,false,50,A.J. Minter
 base,159,Mother’s Day Hot Pink,false,50,A.J. Minter
 base,159,Memorial Day Camo,false,25,A.J. Minter
-base,159,Clear,false,10,A.J. Minter
 base,159,Printing Plates,false,1,A.J. Minter
 base,159,Platinum,false,1,A.J. Minter
 base,160,,false,,Cal Raleigh
@@ -2733,7 +2625,6 @@ base,161,Black,false,72,Carlos Carrasco
 base,161,Father’s Day Powder Blue,false,50,Carlos Carrasco
 base,161,Mother’s Day Hot Pink,false,50,Carlos Carrasco
 base,161,Memorial Day Camo,false,25,Carlos Carrasco
-base,161,Clear,false,10,Carlos Carrasco
 base,161,Printing Plates,false,1,Carlos Carrasco
 base,161,Platinum,false,1,Carlos Carrasco
 base,162,,false,,Isiah Kiner-Falefa
@@ -2750,7 +2641,6 @@ base,162,Black,false,72,Isiah Kiner-Falefa
 base,162,Father’s Day Powder Blue,false,50,Isiah Kiner-Falefa
 base,162,Mother’s Day Hot Pink,false,50,Isiah Kiner-Falefa
 base,162,Memorial Day Camo,false,25,Isiah Kiner-Falefa
-base,162,Clear,false,10,Isiah Kiner-Falefa
 base,162,Printing Plates,false,1,Isiah Kiner-Falefa
 base,162,Platinum,false,1,Isiah Kiner-Falefa
 base,163,,false,,Miguel Vargas
@@ -2784,7 +2674,6 @@ base,164,Black,false,72,Dany Jiménez
 base,164,Father’s Day Powder Blue,false,50,Dany Jiménez
 base,164,Mother’s Day Hot Pink,false,50,Dany Jiménez
 base,164,Memorial Day Camo,false,25,Dany Jiménez
-base,164,Clear,false,10,Dany Jiménez
 base,164,Printing Plates,false,1,Dany Jiménez
 base,164,Platinum,false,1,Dany Jiménez
 base,165,,false,,Jeter Downs
@@ -2818,7 +2707,6 @@ base,166,Black,false,72,Tyler Stephenson
 base,166,Father’s Day Powder Blue,false,50,Tyler Stephenson
 base,166,Mother’s Day Hot Pink,false,50,Tyler Stephenson
 base,166,Memorial Day Camo,false,25,Tyler Stephenson
-base,166,Clear,false,10,Tyler Stephenson
 base,166,Printing Plates,false,1,Tyler Stephenson
 base,166,Platinum,false,1,Tyler Stephenson
 base,167,,false,,Michael Massey
@@ -2835,7 +2723,6 @@ base,167,Black,false,72,Michael Massey
 base,167,Father’s Day Powder Blue,false,50,Michael Massey
 base,167,Mother’s Day Hot Pink,false,50,Michael Massey
 base,167,Memorial Day Camo,false,25,Michael Massey
-base,167,Clear,false,10,Michael Massey
 base,167,Printing Plates,false,1,Michael Massey
 base,167,Platinum,false,1,Michael Massey
 base,168,,false,,Atlanta Braves
@@ -2852,7 +2739,6 @@ base,168,Black,false,72,Atlanta Braves
 base,168,Father’s Day Powder Blue,false,50,Atlanta Braves
 base,168,Mother’s Day Hot Pink,false,50,Atlanta Braves
 base,168,Memorial Day Camo,false,25,Atlanta Braves
-base,168,Clear,false,10,Atlanta Braves
 base,168,Printing Plates,false,1,Atlanta Braves
 base,168,Platinum,false,1,Atlanta Braves
 base,169,,false,,Gabriel Moreno
@@ -2886,7 +2772,6 @@ base,170,Black,false,72,Michael Chavis
 base,170,Father’s Day Powder Blue,false,50,Michael Chavis
 base,170,Mother’s Day Hot Pink,false,50,Michael Chavis
 base,170,Memorial Day Camo,false,25,Michael Chavis
-base,170,Clear,false,10,Michael Chavis
 base,170,Printing Plates,false,1,Michael Chavis
 base,170,Platinum,false,1,Michael Chavis
 base,171,,false,,Mychal Givens
@@ -2903,7 +2788,6 @@ base,171,Black,false,72,Mychal Givens
 base,171,Father’s Day Powder Blue,false,50,Mychal Givens
 base,171,Mother’s Day Hot Pink,false,50,Mychal Givens
 base,171,Memorial Day Camo,false,25,Mychal Givens
-base,171,Clear,false,10,Mychal Givens
 base,171,Printing Plates,false,1,Mychal Givens
 base,171,Platinum,false,1,Mychal Givens
 base,172,,false,,Jazz Chisholm Jr.
@@ -2937,7 +2821,6 @@ base,173,Black,false,72,San Francisco Giants
 base,173,Father’s Day Powder Blue,false,50,San Francisco Giants
 base,173,Mother’s Day Hot Pink,false,50,San Francisco Giants
 base,173,Memorial Day Camo,false,25,San Francisco Giants
-base,173,Clear,false,10,San Francisco Giants
 base,173,Printing Plates,false,1,San Francisco Giants
 base,173,Platinum,false,1,San Francisco Giants
 base,174,,false,,Julio Rodríguez
@@ -2954,7 +2837,6 @@ base,174,Black,false,72,Julio Rodríguez
 base,174,Father’s Day Powder Blue,false,50,Julio Rodríguez
 base,174,Mother’s Day Hot Pink,false,50,Julio Rodríguez
 base,174,Memorial Day Camo,false,25,Julio Rodríguez
-base,174,Clear,false,10,Julio Rodríguez
 base,174,Printing Plates,false,1,Julio Rodríguez
 base,174,Platinum,false,1,Julio Rodríguez
 base,175,,false,,Liam Hendriks
@@ -2971,7 +2853,6 @@ base,175,Black,false,72,Liam Hendriks
 base,175,Father’s Day Powder Blue,false,50,Liam Hendriks
 base,175,Mother’s Day Hot Pink,false,50,Liam Hendriks
 base,175,Memorial Day Camo,false,25,Liam Hendriks
-base,175,Clear,false,10,Liam Hendriks
 base,175,Printing Plates,false,1,Liam Hendriks
 base,175,Platinum,false,1,Liam Hendriks
 base,176,,false,,Kody Clemens
@@ -2988,7 +2869,6 @@ base,176,Black,false,72,Kody Clemens
 base,176,Father’s Day Powder Blue,false,50,Kody Clemens
 base,176,Mother’s Day Hot Pink,false,50,Kody Clemens
 base,176,Memorial Day Camo,false,25,Kody Clemens
-base,176,Clear,false,10,Kody Clemens
 base,176,Printing Plates,false,1,Kody Clemens
 base,176,Platinum,false,1,Kody Clemens
 base,177,,false,,Kendall Graveman
@@ -3005,7 +2885,6 @@ base,177,Black,false,72,Kendall Graveman
 base,177,Father’s Day Powder Blue,false,50,Kendall Graveman
 base,177,Mother’s Day Hot Pink,false,50,Kendall Graveman
 base,177,Memorial Day Camo,false,25,Kendall Graveman
-base,177,Clear,false,10,Kendall Graveman
 base,177,Printing Plates,false,1,Kendall Graveman
 base,177,Platinum,false,1,Kendall Graveman
 base,178,,false,,Austin Riley/Kyle Schwarber/Pete Alonso
@@ -3022,7 +2901,6 @@ base,178,Black,false,72,Austin Riley/Kyle Schwarber/Pete Alonso
 base,178,Father’s Day Powder Blue,false,50,Austin Riley/Kyle Schwarber/Pete Alonso
 base,178,Mother’s Day Hot Pink,false,50,Austin Riley/Kyle Schwarber/Pete Alonso
 base,178,Memorial Day Camo,false,25,Austin Riley/Kyle Schwarber/Pete Alonso
-base,178,Clear,false,10,Austin Riley/Kyle Schwarber/Pete Alonso
 base,178,Printing Plates,false,1,Austin Riley/Kyle Schwarber/Pete Alonso
 base,178,Platinum,false,1,Austin Riley/Kyle Schwarber/Pete Alonso
 base,179,,false,,Carlos Rodón
@@ -3056,7 +2934,6 @@ base,180,Black,false,72,Dominic Leone
 base,180,Father’s Day Powder Blue,false,50,Dominic Leone
 base,180,Mother’s Day Hot Pink,false,50,Dominic Leone
 base,180,Memorial Day Camo,false,25,Dominic Leone
-base,180,Clear,false,10,Dominic Leone
 base,180,Printing Plates,false,1,Dominic Leone
 base,180,Platinum,false,1,Dominic Leone
 base,181,,false,,Yordan Alvarez
@@ -3124,7 +3001,6 @@ base,184,Black,false,72,Beau Brieske
 base,184,Father’s Day Powder Blue,false,50,Beau Brieske
 base,184,Mother’s Day Hot Pink,false,50,Beau Brieske
 base,184,Memorial Day Camo,false,25,Beau Brieske
-base,184,Clear,false,10,Beau Brieske
 base,184,Printing Plates,false,1,Beau Brieske
 base,184,Platinum,false,1,Beau Brieske
 base,185,,false,,Brayan Bello
@@ -3158,7 +3034,6 @@ base,186,Black,false,72,Teoscar Hernández
 base,186,Father’s Day Powder Blue,false,50,Teoscar Hernández
 base,186,Mother’s Day Hot Pink,false,50,Teoscar Hernández
 base,186,Memorial Day Camo,false,25,Teoscar Hernández
-base,186,Clear,false,10,Teoscar Hernández
 base,186,Printing Plates,false,1,Teoscar Hernández
 base,186,Platinum,false,1,Teoscar Hernández
 base,187,,false,,Seth Lugo
@@ -3175,7 +3050,6 @@ base,187,Black,false,72,Seth Lugo
 base,187,Father’s Day Powder Blue,false,50,Seth Lugo
 base,187,Mother’s Day Hot Pink,false,50,Seth Lugo
 base,187,Memorial Day Camo,false,25,Seth Lugo
-base,187,Clear,false,10,Seth Lugo
 base,187,Printing Plates,false,1,Seth Lugo
 base,187,Platinum,false,1,Seth Lugo
 base,188,,false,,Davis Martin
@@ -3192,7 +3066,6 @@ base,188,Black,false,72,Davis Martin
 base,188,Father’s Day Powder Blue,false,50,Davis Martin
 base,188,Mother’s Day Hot Pink,false,50,Davis Martin
 base,188,Memorial Day Camo,false,25,Davis Martin
-base,188,Clear,false,10,Davis Martin
 base,188,Printing Plates,false,1,Davis Martin
 base,188,Platinum,false,1,Davis Martin
 base,189,,false,,Brad Keller
@@ -3209,7 +3082,6 @@ base,189,Black,false,72,Brad Keller
 base,189,Father’s Day Powder Blue,false,50,Brad Keller
 base,189,Mother’s Day Hot Pink,false,50,Brad Keller
 base,189,Memorial Day Camo,false,25,Brad Keller
-base,189,Clear,false,10,Brad Keller
 base,189,Printing Plates,false,1,Brad Keller
 base,189,Platinum,false,1,Brad Keller
 base,190,,false,,Pete Alonso
@@ -3226,7 +3098,6 @@ base,190,Black,false,72,Pete Alonso
 base,190,Father’s Day Powder Blue,false,50,Pete Alonso
 base,190,Mother’s Day Hot Pink,false,50,Pete Alonso
 base,190,Memorial Day Camo,false,25,Pete Alonso
-base,190,Clear,false,10,Pete Alonso
 base,190,Printing Plates,false,1,Pete Alonso
 base,190,Platinum,false,1,Pete Alonso
 base,191,,false,,Caleb Smith
@@ -3243,7 +3114,6 @@ base,191,Black,false,72,Caleb Smith
 base,191,Father’s Day Powder Blue,false,50,Caleb Smith
 base,191,Mother’s Day Hot Pink,false,50,Caleb Smith
 base,191,Memorial Day Camo,false,25,Caleb Smith
-base,191,Clear,false,10,Caleb Smith
 base,191,Printing Plates,false,1,Caleb Smith
 base,191,Platinum,false,1,Caleb Smith
 base,192,,false,,Christian Yelich
@@ -3277,7 +3147,6 @@ base,193,Black,false,72,Luis García
 base,193,Father’s Day Powder Blue,false,50,Luis García
 base,193,Mother’s Day Hot Pink,false,50,Luis García
 base,193,Memorial Day Camo,false,25,Luis García
-base,193,Clear,false,10,Luis García
 base,193,Printing Plates,false,1,Luis García
 base,193,Platinum,false,1,Luis García
 base,194,,false,,Josh Staumont
@@ -3294,7 +3163,6 @@ base,194,Black,false,72,Josh Staumont
 base,194,Father’s Day Powder Blue,false,50,Josh Staumont
 base,194,Mother’s Day Hot Pink,false,50,Josh Staumont
 base,194,Memorial Day Camo,false,25,Josh Staumont
-base,194,Clear,false,10,Josh Staumont
 base,194,Printing Plates,false,1,Josh Staumont
 base,194,Platinum,false,1,Josh Staumont
 base,195,,false,,George Kirby
@@ -3328,7 +3196,6 @@ base,196,Black,false,72,Jordan Romano
 base,196,Father’s Day Powder Blue,false,50,Jordan Romano
 base,196,Mother’s Day Hot Pink,false,50,Jordan Romano
 base,196,Memorial Day Camo,false,25,Jordan Romano
-base,196,Clear,false,10,Jordan Romano
 base,196,Printing Plates,false,1,Jordan Romano
 base,196,Platinum,false,1,Jordan Romano
 base,197,,false,,Andrew Benintendi
@@ -3345,7 +3212,6 @@ base,197,Black,false,72,Andrew Benintendi
 base,197,Father’s Day Powder Blue,false,50,Andrew Benintendi
 base,197,Mother’s Day Hot Pink,false,50,Andrew Benintendi
 base,197,Memorial Day Camo,false,25,Andrew Benintendi
-base,197,Clear,false,10,Andrew Benintendi
 base,197,Printing Plates,false,1,Andrew Benintendi
 base,197,Platinum,false,1,Andrew Benintendi
 base,198,,false,,Vladimir Gutierrez
@@ -3362,7 +3228,6 @@ base,198,Black,false,72,Vladimir Gutierrez
 base,198,Father’s Day Powder Blue,false,50,Vladimir Gutierrez
 base,198,Mother’s Day Hot Pink,false,50,Vladimir Gutierrez
 base,198,Memorial Day Camo,false,25,Vladimir Gutierrez
-base,198,Clear,false,10,Vladimir Gutierrez
 base,198,Printing Plates,false,1,Vladimir Gutierrez
 base,198,Platinum,false,1,Vladimir Gutierrez
 base,199,,false,,Starling Marte
@@ -3379,7 +3244,6 @@ base,199,Black,false,72,Starling Marte
 base,199,Father’s Day Powder Blue,false,50,Starling Marte
 base,199,Mother’s Day Hot Pink,false,50,Starling Marte
 base,199,Memorial Day Camo,false,25,Starling Marte
-base,199,Clear,false,10,Starling Marte
 base,199,Printing Plates,false,1,Starling Marte
 base,199,Platinum,false,1,Starling Marte
 base,200,,false,,Freddie Freeman
@@ -3413,7 +3277,6 @@ base,201,Black,false,72,Trevor Larnach
 base,201,Father’s Day Powder Blue,false,50,Trevor Larnach
 base,201,Mother’s Day Hot Pink,false,50,Trevor Larnach
 base,201,Memorial Day Camo,false,25,Trevor Larnach
-base,201,Clear,false,10,Trevor Larnach
 base,201,Printing Plates,false,1,Trevor Larnach
 base,201,Platinum,false,1,Trevor Larnach
 base,202,,false,,Tony Gonsolin
@@ -3430,7 +3293,6 @@ base,202,Black,false,72,Tony Gonsolin
 base,202,Father’s Day Powder Blue,false,50,Tony Gonsolin
 base,202,Mother’s Day Hot Pink,false,50,Tony Gonsolin
 base,202,Memorial Day Camo,false,25,Tony Gonsolin
-base,202,Clear,false,10,Tony Gonsolin
 base,202,Printing Plates,false,1,Tony Gonsolin
 base,202,Platinum,false,1,Tony Gonsolin
 base,203,,false,,Gary Sánchez
@@ -3447,7 +3309,6 @@ base,203,Black,false,72,Gary Sánchez
 base,203,Father’s Day Powder Blue,false,50,Gary Sánchez
 base,203,Mother’s Day Hot Pink,false,50,Gary Sánchez
 base,203,Memorial Day Camo,false,25,Gary Sánchez
-base,203,Clear,false,10,Gary Sánchez
 base,203,Printing Plates,false,1,Gary Sánchez
 base,203,Platinum,false,1,Gary Sánchez
 base,204,,false,,Manuel Margot
@@ -3464,7 +3325,6 @@ base,204,Black,false,72,Manuel Margot
 base,204,Father’s Day Powder Blue,false,50,Manuel Margot
 base,204,Mother’s Day Hot Pink,false,50,Manuel Margot
 base,204,Memorial Day Camo,false,25,Manuel Margot
-base,204,Clear,false,10,Manuel Margot
 base,204,Printing Plates,false,1,Manuel Margot
 base,204,Platinum,false,1,Manuel Margot
 base,205,,false,,JJ Bleday
@@ -3515,7 +3375,6 @@ base,207,Black,false,72,Paul Sewald
 base,207,Father’s Day Powder Blue,false,50,Paul Sewald
 base,207,Mother’s Day Hot Pink,false,50,Paul Sewald
 base,207,Memorial Day Camo,false,25,Paul Sewald
-base,207,Clear,false,10,Paul Sewald
 base,207,Printing Plates,false,1,Paul Sewald
 base,207,Platinum,false,1,Paul Sewald
 base,208,,false,,Blake Snell
@@ -3532,7 +3391,6 @@ base,208,Black,false,72,Blake Snell
 base,208,Father’s Day Powder Blue,false,50,Blake Snell
 base,208,Mother’s Day Hot Pink,false,50,Blake Snell
 base,208,Memorial Day Camo,false,25,Blake Snell
-base,208,Clear,false,10,Blake Snell
 base,208,Printing Plates,false,1,Blake Snell
 base,208,Platinum,false,1,Blake Snell
 base,209,,false,,Darick Hall
@@ -3566,7 +3424,6 @@ base,210,Black,false,72,Riley Greene
 base,210,Father’s Day Powder Blue,false,50,Riley Greene
 base,210,Mother’s Day Hot Pink,false,50,Riley Greene
 base,210,Memorial Day Camo,false,25,Riley Greene
-base,210,Clear,false,10,Riley Greene
 base,210,Printing Plates,false,1,Riley Greene
 base,210,Platinum,false,1,Riley Greene
 base,211,,false,,Max Fried / Sandy Alcantara / Julio Urías
@@ -3583,7 +3440,6 @@ base,211,Black,false,72,Max Fried / Sandy Alcantara / Julio Urías
 base,211,Father’s Day Powder Blue,false,50,Max Fried / Sandy Alcantara / Julio Urías
 base,211,Mother’s Day Hot Pink,false,50,Max Fried / Sandy Alcantara / Julio Urías
 base,211,Memorial Day Camo,false,25,Max Fried / Sandy Alcantara / Julio Urías
-base,211,Clear,false,10,Max Fried / Sandy Alcantara / Julio Urías
 base,211,Printing Plates,false,1,Max Fried / Sandy Alcantara / Julio Urías
 base,211,Platinum,false,1,Max Fried / Sandy Alcantara / Julio Urías
 base,212,,false,,Jordan Lyles
@@ -3600,7 +3456,6 @@ base,212,Black,false,72,Jordan Lyles
 base,212,Father’s Day Powder Blue,false,50,Jordan Lyles
 base,212,Mother’s Day Hot Pink,false,50,Jordan Lyles
 base,212,Memorial Day Camo,false,25,Jordan Lyles
-base,212,Clear,false,10,Jordan Lyles
 base,212,Printing Plates,false,1,Jordan Lyles
 base,212,Platinum,false,1,Jordan Lyles
 base,213,,false,,Owen Miller
@@ -3617,7 +3472,6 @@ base,213,Black,false,72,Owen Miller
 base,213,Father’s Day Powder Blue,false,50,Owen Miller
 base,213,Mother’s Day Hot Pink,false,50,Owen Miller
 base,213,Memorial Day Camo,false,25,Owen Miller
-base,213,Clear,false,10,Owen Miller
 base,213,Printing Plates,false,1,Owen Miller
 base,213,Platinum,false,1,Owen Miller
 base,214,,false,,Graham Ashcraft
@@ -3668,7 +3522,6 @@ base,216,Black,false,72,Vladimir Guerrero Jr.
 base,216,Father’s Day Powder Blue,false,50,Vladimir Guerrero Jr.
 base,216,Mother’s Day Hot Pink,false,50,Vladimir Guerrero Jr.
 base,216,Memorial Day Camo,false,25,Vladimir Guerrero Jr.
-base,216,Clear,false,10,Vladimir Guerrero Jr.
 base,216,Printing Plates,false,1,Vladimir Guerrero Jr.
 base,216,Platinum,false,1,Vladimir Guerrero Jr.
 base,217,,false,,Luis Arraez
@@ -3685,7 +3538,6 @@ base,217,Black,false,72,Luis Arraez
 base,217,Father’s Day Powder Blue,false,50,Luis Arraez
 base,217,Mother’s Day Hot Pink,false,50,Luis Arraez
 base,217,Memorial Day Camo,false,25,Luis Arraez
-base,217,Clear,false,10,Luis Arraez
 base,217,Printing Plates,false,1,Luis Arraez
 base,217,Platinum,false,1,Luis Arraez
 base,218,,false,,Jhoan Duran
@@ -3702,7 +3554,6 @@ base,218,Black,false,72,Jhoan Duran
 base,218,Father’s Day Powder Blue,false,50,Jhoan Duran
 base,218,Mother’s Day Hot Pink,false,50,Jhoan Duran
 base,218,Memorial Day Camo,false,25,Jhoan Duran
-base,218,Clear,false,10,Jhoan Duran
 base,218,Printing Plates,false,1,Jhoan Duran
 base,218,Platinum,false,1,Jhoan Duran
 base,219,,false,,Los Angeles Dodgers
@@ -3719,7 +3570,6 @@ base,219,Black,false,72,Los Angeles Dodgers
 base,219,Father’s Day Powder Blue,false,50,Los Angeles Dodgers
 base,219,Mother’s Day Hot Pink,false,50,Los Angeles Dodgers
 base,219,Memorial Day Camo,false,25,Los Angeles Dodgers
-base,219,Clear,false,10,Los Angeles Dodgers
 base,219,Printing Plates,false,1,Los Angeles Dodgers
 base,219,Platinum,false,1,Los Angeles Dodgers
 base,220,,false,,Chicago Cubs
@@ -3736,7 +3586,6 @@ base,220,Black,false,72,Chicago Cubs
 base,220,Father’s Day Powder Blue,false,50,Chicago Cubs
 base,220,Mother’s Day Hot Pink,false,50,Chicago Cubs
 base,220,Memorial Day Camo,false,25,Chicago Cubs
-base,220,Clear,false,10,Chicago Cubs
 base,220,Printing Plates,false,1,Chicago Cubs
 base,220,Platinum,false,1,Chicago Cubs
 base,221,,false,,Rhys Hoskins
@@ -3787,7 +3636,6 @@ base,223,Black,false,72,Eli Morgan
 base,223,Father’s Day Powder Blue,false,50,Eli Morgan
 base,223,Mother’s Day Hot Pink,false,50,Eli Morgan
 base,223,Memorial Day Camo,false,25,Eli Morgan
-base,223,Clear,false,10,Eli Morgan
 base,223,Printing Plates,false,1,Eli Morgan
 base,223,Platinum,false,1,Eli Morgan
 base,224,,false,,Jake Cronenworth
@@ -3804,7 +3652,6 @@ base,224,Black,false,72,Jake Cronenworth
 base,224,Father’s Day Powder Blue,false,50,Jake Cronenworth
 base,224,Mother’s Day Hot Pink,false,50,Jake Cronenworth
 base,224,Memorial Day Camo,false,25,Jake Cronenworth
-base,224,Clear,false,10,Jake Cronenworth
 base,224,Printing Plates,false,1,Jake Cronenworth
 base,224,Platinum,false,1,Jake Cronenworth
 base,225,,false,,Corbin Burnes
@@ -3855,7 +3702,6 @@ base,227,Black,false,72,Yandy Díaz
 base,227,Father’s Day Powder Blue,false,50,Yandy Díaz
 base,227,Mother’s Day Hot Pink,false,50,Yandy Díaz
 base,227,Memorial Day Camo,false,25,Yandy Díaz
-base,227,Clear,false,10,Yandy Díaz
 base,227,Printing Plates,false,1,Yandy Díaz
 base,227,Platinum,false,1,Yandy Díaz
 base,228,,false,,Ryan Pressly
@@ -3872,7 +3718,6 @@ base,228,Black,false,72,Ryan Pressly
 base,228,Father’s Day Powder Blue,false,50,Ryan Pressly
 base,228,Mother’s Day Hot Pink,false,50,Ryan Pressly
 base,228,Memorial Day Camo,false,25,Ryan Pressly
-base,228,Clear,false,10,Ryan Pressly
 base,228,Printing Plates,false,1,Ryan Pressly
 base,228,Platinum,false,1,Ryan Pressly
 base,229,,false,,Ryan Helsley
@@ -3889,7 +3734,6 @@ base,229,Black,false,72,Ryan Helsley
 base,229,Father’s Day Powder Blue,false,50,Ryan Helsley
 base,229,Mother’s Day Hot Pink,false,50,Ryan Helsley
 base,229,Memorial Day Camo,false,25,Ryan Helsley
-base,229,Clear,false,10,Ryan Helsley
 base,229,Printing Plates,false,1,Ryan Helsley
 base,229,Platinum,false,1,Ryan Helsley
 base,230,,false,,Albert Almora
@@ -3906,7 +3750,6 @@ base,230,Black,false,72,Albert Almora
 base,230,Father’s Day Powder Blue,false,50,Albert Almora
 base,230,Mother’s Day Hot Pink,false,50,Albert Almora
 base,230,Memorial Day Camo,false,25,Albert Almora
-base,230,Clear,false,10,Albert Almora
 base,230,Printing Plates,false,1,Albert Almora
 base,230,Platinum,false,1,Albert Almora
 base,231,,false,,Rony García
@@ -3923,7 +3766,6 @@ base,231,Black,false,72,Rony García
 base,231,Father’s Day Powder Blue,false,50,Rony García
 base,231,Mother’s Day Hot Pink,false,50,Rony García
 base,231,Memorial Day Camo,false,25,Rony García
-base,231,Clear,false,10,Rony García
 base,231,Printing Plates,false,1,Rony García
 base,231,Platinum,false,1,Rony García
 base,232,,false,,Ian Happ
@@ -3940,7 +3782,6 @@ base,232,Black,false,72,Ian Happ
 base,232,Father’s Day Powder Blue,false,50,Ian Happ
 base,232,Mother’s Day Hot Pink,false,50,Ian Happ
 base,232,Memorial Day Camo,false,25,Ian Happ
-base,232,Clear,false,10,Ian Happ
 base,232,Printing Plates,false,1,Ian Happ
 base,232,Platinum,false,1,Ian Happ
 base,233,,false,,Taylor Rogers
@@ -3957,7 +3798,6 @@ base,233,Black,false,72,Taylor Rogers
 base,233,Father’s Day Powder Blue,false,50,Taylor Rogers
 base,233,Mother’s Day Hot Pink,false,50,Taylor Rogers
 base,233,Memorial Day Camo,false,25,Taylor Rogers
-base,233,Clear,false,10,Taylor Rogers
 base,233,Printing Plates,false,1,Taylor Rogers
 base,233,Platinum,false,1,Taylor Rogers
 base,234,,false,,St. Louis Cardinals
@@ -3974,7 +3814,6 @@ base,234,Black,false,72,St. Louis Cardinals
 base,234,Father’s Day Powder Blue,false,50,St. Louis Cardinals
 base,234,Mother’s Day Hot Pink,false,50,St. Louis Cardinals
 base,234,Memorial Day Camo,false,25,St. Louis Cardinals
-base,234,Clear,false,10,St. Louis Cardinals
 base,234,Printing Plates,false,1,St. Louis Cardinals
 base,234,Platinum,false,1,St. Louis Cardinals
 base,235,,false,,Robbie Ray
@@ -3991,7 +3830,6 @@ base,235,Black,false,72,Robbie Ray
 base,235,Father’s Day Powder Blue,false,50,Robbie Ray
 base,235,Mother’s Day Hot Pink,false,50,Robbie Ray
 base,235,Memorial Day Camo,false,25,Robbie Ray
-base,235,Clear,false,10,Robbie Ray
 base,235,Printing Plates,false,1,Robbie Ray
 base,235,Platinum,false,1,Robbie Ray
 base,236,,false,,Shane McClanahan
@@ -4059,7 +3897,6 @@ base,239,Black,false,72,Ketel Marte
 base,239,Father’s Day Powder Blue,false,50,Ketel Marte
 base,239,Mother’s Day Hot Pink,false,50,Ketel Marte
 base,239,Memorial Day Camo,false,25,Ketel Marte
-base,239,Clear,false,10,Ketel Marte
 base,239,Printing Plates,false,1,Ketel Marte
 base,239,Platinum,false,1,Ketel Marte
 base,240,,false,,Paul Goldschmidt / Pete Alonso / Francisco Lindor
@@ -4076,7 +3913,6 @@ base,240,Black,false,72,Paul Goldschmidt / Pete Alonso / Francisco Lindor
 base,240,Father’s Day Powder Blue,false,50,Paul Goldschmidt / Pete Alonso / Francisco Lindor
 base,240,Mother’s Day Hot Pink,false,50,Paul Goldschmidt / Pete Alonso / Francisco Lindor
 base,240,Memorial Day Camo,false,25,Paul Goldschmidt / Pete Alonso / Francisco Lindor
-base,240,Clear,false,10,Paul Goldschmidt / Pete Alonso / Francisco Lindor
 base,240,Printing Plates,false,1,Paul Goldschmidt / Pete Alonso / Francisco Lindor
 base,240,Platinum,false,1,Paul Goldschmidt / Pete Alonso / Francisco Lindor
 base,241,,false,,Kyle Tucker / José Ramírez / Aaron Judge
@@ -4093,7 +3929,6 @@ base,241,Black,false,72,Kyle Tucker / José Ramírez / Aaron Judge
 base,241,Father’s Day Powder Blue,false,50,Kyle Tucker / José Ramírez / Aaron Judge
 base,241,Mother’s Day Hot Pink,false,50,Kyle Tucker / José Ramírez / Aaron Judge
 base,241,Memorial Day Camo,false,25,Kyle Tucker / José Ramírez / Aaron Judge
-base,241,Clear,false,10,Kyle Tucker / José Ramírez / Aaron Judge
 base,241,Printing Plates,false,1,Kyle Tucker / José Ramírez / Aaron Judge
 base,241,Platinum,false,1,Kyle Tucker / José Ramírez / Aaron Judge
 base,242,,false,,Jarren Duran
@@ -4127,7 +3962,6 @@ base,243,Black,false,72,Evan Lee
 base,243,Father’s Day Powder Blue,false,50,Evan Lee
 base,243,Mother’s Day Hot Pink,false,50,Evan Lee
 base,243,Memorial Day Camo,false,25,Evan Lee
-base,243,Clear,false,10,Evan Lee
 base,243,Printing Plates,false,1,Evan Lee
 base,243,Platinum,false,1,Evan Lee
 base,244,,false,,César Hernández
@@ -4144,7 +3978,6 @@ base,244,Black,false,72,César Hernández
 base,244,Father’s Day Powder Blue,false,50,César Hernández
 base,244,Mother’s Day Hot Pink,false,50,César Hernández
 base,244,Memorial Day Camo,false,25,César Hernández
-base,244,Clear,false,10,César Hernández
 base,244,Printing Plates,false,1,César Hernández
 base,244,Platinum,false,1,César Hernández
 base,245,,false,,Aaron Judge
@@ -4161,7 +3994,6 @@ base,245,Black,false,72,Aaron Judge
 base,245,Father’s Day Powder Blue,false,50,Aaron Judge
 base,245,Mother’s Day Hot Pink,false,50,Aaron Judge
 base,245,Memorial Day Camo,false,25,Aaron Judge
-base,245,Clear,false,10,Aaron Judge
 base,245,Printing Plates,false,1,Aaron Judge
 base,245,Platinum,false,1,Aaron Judge
 base,246,,false,,Aaron Judge / Mike Trout / Yordan Alvarez
@@ -4178,7 +4010,6 @@ base,246,Black,false,72,Aaron Judge / Mike Trout / Yordan Alvarez
 base,246,Father’s Day Powder Blue,false,50,Aaron Judge / Mike Trout / Yordan Alvarez
 base,246,Mother’s Day Hot Pink,false,50,Aaron Judge / Mike Trout / Yordan Alvarez
 base,246,Memorial Day Camo,false,25,Aaron Judge / Mike Trout / Yordan Alvarez
-base,246,Clear,false,10,Aaron Judge / Mike Trout / Yordan Alvarez
 base,246,Printing Plates,false,1,Aaron Judge / Mike Trout / Yordan Alvarez
 base,246,Platinum,false,1,Aaron Judge / Mike Trout / Yordan Alvarez
 base,247,,false,,Gavin Lux
@@ -4195,7 +4026,6 @@ base,247,Black,false,72,Gavin Lux
 base,247,Father’s Day Powder Blue,false,50,Gavin Lux
 base,247,Mother’s Day Hot Pink,false,50,Gavin Lux
 base,247,Memorial Day Camo,false,25,Gavin Lux
-base,247,Clear,false,10,Gavin Lux
 base,247,Printing Plates,false,1,Gavin Lux
 base,247,Platinum,false,1,Gavin Lux
 base,248,,false,,Rhys Hoskins
@@ -4212,7 +4042,6 @@ base,248,Black,false,72,Rhys Hoskins
 base,248,Father’s Day Powder Blue,false,50,Rhys Hoskins
 base,248,Mother’s Day Hot Pink,false,50,Rhys Hoskins
 base,248,Memorial Day Camo,false,25,Rhys Hoskins
-base,248,Clear,false,10,Rhys Hoskins
 base,248,Printing Plates,false,1,Rhys Hoskins
 base,248,Platinum,false,1,Rhys Hoskins
 base,249,,false,,Frank Schwindel
@@ -4229,7 +4058,6 @@ base,249,Black,false,72,Frank Schwindel
 base,249,Father’s Day Powder Blue,false,50,Frank Schwindel
 base,249,Mother’s Day Hot Pink,false,50,Frank Schwindel
 base,249,Memorial Day Camo,false,25,Frank Schwindel
-base,249,Clear,false,10,Frank Schwindel
 base,249,Printing Plates,false,1,Frank Schwindel
 base,249,Platinum,false,1,Frank Schwindel
 base,250,,false,,Adley Rutschman
@@ -4263,7 +4091,6 @@ base,251,Black,false,72,Max Castillo
 base,251,Father’s Day Powder Blue,false,50,Max Castillo
 base,251,Mother’s Day Hot Pink,false,50,Max Castillo
 base,251,Memorial Day Camo,false,25,Max Castillo
-base,251,Clear,false,10,Max Castillo
 base,251,Printing Plates,false,1,Max Castillo
 base,251,Platinum,false,1,Max Castillo
 base,252,,false,,Austin Meadows
@@ -4280,7 +4107,6 @@ base,252,Black,false,72,Austin Meadows
 base,252,Father’s Day Powder Blue,false,50,Austin Meadows
 base,252,Mother’s Day Hot Pink,false,50,Austin Meadows
 base,252,Memorial Day Camo,false,25,Austin Meadows
-base,252,Clear,false,10,Austin Meadows
 base,252,Printing Plates,false,1,Austin Meadows
 base,252,Platinum,false,1,Austin Meadows
 base,253,,false,,Max Kepler
@@ -4297,7 +4123,6 @@ base,253,Black,false,72,Max Kepler
 base,253,Father’s Day Powder Blue,false,50,Max Kepler
 base,253,Mother’s Day Hot Pink,false,50,Max Kepler
 base,253,Memorial Day Camo,false,25,Max Kepler
-base,253,Clear,false,10,Max Kepler
 base,253,Printing Plates,false,1,Max Kepler
 base,253,Platinum,false,1,Max Kepler
 base,254,,false,,Jimmy Herget
@@ -4314,7 +4139,6 @@ base,254,Black,false,72,Jimmy Herget
 base,254,Father’s Day Powder Blue,false,50,Jimmy Herget
 base,254,Mother’s Day Hot Pink,false,50,Jimmy Herget
 base,254,Memorial Day Camo,false,25,Jimmy Herget
-base,254,Clear,false,10,Jimmy Herget
 base,254,Printing Plates,false,1,Jimmy Herget
 base,254,Platinum,false,1,Jimmy Herget
 base,255,,false,,Cal Quantrill
@@ -4331,7 +4155,6 @@ base,255,Black,false,72,Cal Quantrill
 base,255,Father’s Day Powder Blue,false,50,Cal Quantrill
 base,255,Mother’s Day Hot Pink,false,50,Cal Quantrill
 base,255,Memorial Day Camo,false,25,Cal Quantrill
-base,255,Clear,false,10,Cal Quantrill
 base,255,Printing Plates,false,1,Cal Quantrill
 base,255,Platinum,false,1,Cal Quantrill
 base,256,,false,,José Ramírez
@@ -4365,7 +4188,6 @@ base,257,Black,false,72,Yadiel Hernandez
 base,257,Father’s Day Powder Blue,false,50,Yadiel Hernandez
 base,257,Mother’s Day Hot Pink,false,50,Yadiel Hernandez
 base,257,Memorial Day Camo,false,25,Yadiel Hernandez
-base,257,Clear,false,10,Yadiel Hernandez
 base,257,Printing Plates,false,1,Yadiel Hernandez
 base,257,Platinum,false,1,Yadiel Hernandez
 base,258,,false,,Erick Fedde
@@ -4382,7 +4204,6 @@ base,258,Black,false,72,Erick Fedde
 base,258,Father’s Day Powder Blue,false,50,Erick Fedde
 base,258,Mother’s Day Hot Pink,false,50,Erick Fedde
 base,258,Memorial Day Camo,false,25,Erick Fedde
-base,258,Clear,false,10,Erick Fedde
 base,258,Printing Plates,false,1,Erick Fedde
 base,258,Platinum,false,1,Erick Fedde
 base,259,,false,,Mark Appel
@@ -4433,7 +4254,6 @@ base,261,Black,false,72,Martin Perez
 base,261,Father’s Day Powder Blue,false,50,Martin Perez
 base,261,Mother’s Day Hot Pink,false,50,Martin Perez
 base,261,Memorial Day Camo,false,25,Martin Perez
-base,261,Clear,false,10,Martin Perez
 base,261,Printing Plates,false,1,Martin Perez
 base,261,Platinum,false,1,Martin Perez
 base,262,,false,,Camilo Doval
@@ -4450,7 +4270,6 @@ base,262,Black,false,72,Camilo Doval
 base,262,Father’s Day Powder Blue,false,50,Camilo Doval
 base,262,Mother’s Day Hot Pink,false,50,Camilo Doval
 base,262,Memorial Day Camo,false,25,Camilo Doval
-base,262,Clear,false,10,Camilo Doval
 base,262,Printing Plates,false,1,Camilo Doval
 base,262,Platinum,false,1,Camilo Doval
 base,263,,false,,Arizona Diamondbacks
@@ -4467,7 +4286,6 @@ base,263,Black,false,72,Arizona Diamondbacks
 base,263,Father’s Day Powder Blue,false,50,Arizona Diamondbacks
 base,263,Mother’s Day Hot Pink,false,50,Arizona Diamondbacks
 base,263,Memorial Day Camo,false,25,Arizona Diamondbacks
-base,263,Clear,false,10,Arizona Diamondbacks
 base,263,Printing Plates,false,1,Arizona Diamondbacks
 base,263,Platinum,false,1,Arizona Diamondbacks
 base,264,,false,,Steele Walker
@@ -4484,7 +4302,6 @@ base,264,Black,false,72,Steele Walker
 base,264,Father’s Day Powder Blue,false,50,Steele Walker
 base,264,Mother’s Day Hot Pink,false,50,Steele Walker
 base,264,Memorial Day Camo,false,25,Steele Walker
-base,264,Clear,false,10,Steele Walker
 base,264,Printing Plates,false,1,Steele Walker
 base,264,Platinum,false,1,Steele Walker
 base,265,,false,,Anthony Santander
@@ -4501,7 +4318,6 @@ base,265,Black,false,72,Anthony Santander
 base,265,Father’s Day Powder Blue,false,50,Anthony Santander
 base,265,Mother’s Day Hot Pink,false,50,Anthony Santander
 base,265,Memorial Day Camo,false,25,Anthony Santander
-base,265,Clear,false,10,Anthony Santander
 base,265,Printing Plates,false,1,Anthony Santander
 base,265,Platinum,false,1,Anthony Santander
 base,266,,false,,Tommy Pham
@@ -4518,7 +4334,6 @@ base,266,Black,false,72,Tommy Pham
 base,266,Father’s Day Powder Blue,false,50,Tommy Pham
 base,266,Mother’s Day Hot Pink,false,50,Tommy Pham
 base,266,Memorial Day Camo,false,25,Tommy Pham
-base,266,Clear,false,10,Tommy Pham
 base,266,Printing Plates,false,1,Tommy Pham
 base,266,Platinum,false,1,Tommy Pham
 base,267,,false,,Dean Kremer
@@ -4535,7 +4350,6 @@ base,267,Black,false,72,Dean Kremer
 base,267,Father’s Day Powder Blue,false,50,Dean Kremer
 base,267,Mother’s Day Hot Pink,false,50,Dean Kremer
 base,267,Memorial Day Camo,false,25,Dean Kremer
-base,267,Clear,false,10,Dean Kremer
 base,267,Printing Plates,false,1,Dean Kremer
 base,267,Platinum,false,1,Dean Kremer
 base,268,,false,,Yasmani Grandal
@@ -4552,7 +4366,6 @@ base,268,Black,false,72,Yasmani Grandal
 base,268,Father’s Day Powder Blue,false,50,Yasmani Grandal
 base,268,Mother’s Day Hot Pink,false,50,Yasmani Grandal
 base,268,Memorial Day Camo,false,25,Yasmani Grandal
-base,268,Clear,false,10,Yasmani Grandal
 base,268,Printing Plates,false,1,Yasmani Grandal
 base,268,Platinum,false,1,Yasmani Grandal
 base,269,,false,,Steven Matz
@@ -4569,7 +4382,6 @@ base,269,Black,false,72,Steven Matz
 base,269,Father’s Day Powder Blue,false,50,Steven Matz
 base,269,Mother’s Day Hot Pink,false,50,Steven Matz
 base,269,Memorial Day Camo,false,25,Steven Matz
-base,269,Clear,false,10,Steven Matz
 base,269,Printing Plates,false,1,Steven Matz
 base,269,Platinum,false,1,Steven Matz
 base,270,,false,,Yusei Kikuchi
@@ -4586,7 +4398,6 @@ base,270,Black,false,72,Yusei Kikuchi
 base,270,Father’s Day Powder Blue,false,50,Yusei Kikuchi
 base,270,Mother’s Day Hot Pink,false,50,Yusei Kikuchi
 base,270,Memorial Day Camo,false,25,Yusei Kikuchi
-base,270,Clear,false,10,Yusei Kikuchi
 base,270,Printing Plates,false,1,Yusei Kikuchi
 base,270,Platinum,false,1,Yusei Kikuchi
 base,271,,false,,Cleveland Guardians
@@ -4603,7 +4414,6 @@ base,271,Black,false,72,Cleveland Guardians
 base,271,Father’s Day Powder Blue,false,50,Cleveland Guardians
 base,271,Mother’s Day Hot Pink,false,50,Cleveland Guardians
 base,271,Memorial Day Camo,false,25,Cleveland Guardians
-base,271,Clear,false,10,Cleveland Guardians
 base,271,Printing Plates,false,1,Cleveland Guardians
 base,271,Platinum,false,1,Cleveland Guardians
 base,272,,false,,Kevin Kiermaier
@@ -4620,7 +4430,6 @@ base,272,Black,false,72,Kevin Kiermaier
 base,272,Father’s Day Powder Blue,false,50,Kevin Kiermaier
 base,272,Mother’s Day Hot Pink,false,50,Kevin Kiermaier
 base,272,Memorial Day Camo,false,25,Kevin Kiermaier
-base,272,Clear,false,10,Kevin Kiermaier
 base,272,Printing Plates,false,1,Kevin Kiermaier
 base,272,Platinum,false,1,Kevin Kiermaier
 base,273,,false,,Boston Red Sox
@@ -4637,7 +4446,6 @@ base,273,Black,false,72,Boston Red Sox
 base,273,Father’s Day Powder Blue,false,50,Boston Red Sox
 base,273,Mother’s Day Hot Pink,false,50,Boston Red Sox
 base,273,Memorial Day Camo,false,25,Boston Red Sox
-base,273,Clear,false,10,Boston Red Sox
 base,273,Printing Plates,false,1,Boston Red Sox
 base,273,Platinum,false,1,Boston Red Sox
 base,274,,false,,Matt Duffy
@@ -4654,7 +4462,6 @@ base,274,Black,false,72,Matt Duffy
 base,274,Father’s Day Powder Blue,false,50,Matt Duffy
 base,274,Mother’s Day Hot Pink,false,50,Matt Duffy
 base,274,Memorial Day Camo,false,25,Matt Duffy
-base,274,Clear,false,10,Matt Duffy
 base,274,Printing Plates,false,1,Matt Duffy
 base,274,Platinum,false,1,Matt Duffy
 base,275,,false,,Vaughn Grissom
@@ -4688,7 +4495,6 @@ base,276,Black,false,72,David MacKinnon
 base,276,Father’s Day Powder Blue,false,50,David MacKinnon
 base,276,Mother’s Day Hot Pink,false,50,David MacKinnon
 base,276,Memorial Day Camo,false,25,David MacKinnon
-base,276,Clear,false,10,David MacKinnon
 base,276,Printing Plates,false,1,David MacKinnon
 base,276,Platinum,false,1,David MacKinnon
 base,277,,false,,David Villar
@@ -4773,7 +4579,6 @@ base,281,Black,false,72,Aaron Ashby
 base,281,Father’s Day Powder Blue,false,50,Aaron Ashby
 base,281,Mother’s Day Hot Pink,false,50,Aaron Ashby
 base,281,Memorial Day Camo,false,25,Aaron Ashby
-base,281,Clear,false,10,Aaron Ashby
 base,281,Printing Plates,false,1,Aaron Ashby
 base,281,Platinum,false,1,Aaron Ashby
 base,282,,false,,Tim Anderson
@@ -4807,7 +4612,6 @@ base,283,Black,false,72,Matt Strahm
 base,283,Father’s Day Powder Blue,false,50,Matt Strahm
 base,283,Mother’s Day Hot Pink,false,50,Matt Strahm
 base,283,Memorial Day Camo,false,25,Matt Strahm
-base,283,Clear,false,10,Matt Strahm
 base,283,Printing Plates,false,1,Matt Strahm
 base,283,Platinum,false,1,Matt Strahm
 base,284,,false,,Yu Darvish / Julio Urías / Kyle Wright
@@ -4824,7 +4628,6 @@ base,284,Black,false,72,Yu Darvish / Julio Urías / Kyle Wright
 base,284,Father’s Day Powder Blue,false,50,Yu Darvish / Julio Urías / Kyle Wright
 base,284,Mother’s Day Hot Pink,false,50,Yu Darvish / Julio Urías / Kyle Wright
 base,284,Memorial Day Camo,false,25,Yu Darvish / Julio Urías / Kyle Wright
-base,284,Clear,false,10,Yu Darvish / Julio Urías / Kyle Wright
 base,284,Printing Plates,false,1,Yu Darvish / Julio Urías / Kyle Wright
 base,284,Platinum,false,1,Yu Darvish / Julio Urías / Kyle Wright
 base,285,,false,,Oneil Cruz
@@ -4875,7 +4678,6 @@ base,287,Black,false,72,Brendan Rodgers
 base,287,Father’s Day Powder Blue,false,50,Brendan Rodgers
 base,287,Mother’s Day Hot Pink,false,50,Brendan Rodgers
 base,287,Memorial Day Camo,false,25,Brendan Rodgers
-base,287,Clear,false,10,Brendan Rodgers
 base,287,Printing Plates,false,1,Brendan Rodgers
 base,287,Platinum,false,1,Brendan Rodgers
 base,288,,false,,Jack Suwinski
@@ -4892,7 +4694,6 @@ base,288,Black,false,72,Jack Suwinski
 base,288,Father’s Day Powder Blue,false,50,Jack Suwinski
 base,288,Mother’s Day Hot Pink,false,50,Jack Suwinski
 base,288,Memorial Day Camo,false,25,Jack Suwinski
-base,288,Clear,false,10,Jack Suwinski
 base,288,Printing Plates,false,1,Jack Suwinski
 base,288,Platinum,false,1,Jack Suwinski
 base,289,,false,,Luis Arraez / Aaron Judge / Xander Bogaerts
@@ -4909,7 +4710,6 @@ base,289,Black,false,72,Luis Arraez / Aaron Judge / Xander Bogaerts
 base,289,Father’s Day Powder Blue,false,50,Luis Arraez / Aaron Judge / Xander Bogaerts
 base,289,Mother’s Day Hot Pink,false,50,Luis Arraez / Aaron Judge / Xander Bogaerts
 base,289,Memorial Day Camo,false,25,Luis Arraez / Aaron Judge / Xander Bogaerts
-base,289,Clear,false,10,Luis Arraez / Aaron Judge / Xander Bogaerts
 base,289,Printing Plates,false,1,Luis Arraez / Aaron Judge / Xander Bogaerts
 base,289,Platinum,false,1,Luis Arraez / Aaron Judge / Xander Bogaerts
 base,290,,false,,Max Fried
@@ -4926,7 +4726,6 @@ base,290,Black,false,72,Max Fried
 base,290,Father’s Day Powder Blue,false,50,Max Fried
 base,290,Mother’s Day Hot Pink,false,50,Max Fried
 base,290,Memorial Day Camo,false,25,Max Fried
-base,290,Clear,false,10,Max Fried
 base,290,Printing Plates,false,1,Max Fried
 base,290,Platinum,false,1,Max Fried
 base,291,,false,,New York Mets
@@ -4943,7 +4742,6 @@ base,291,Black,false,72,New York Mets
 base,291,Father’s Day Powder Blue,false,50,New York Mets
 base,291,Mother’s Day Hot Pink,false,50,New York Mets
 base,291,Memorial Day Camo,false,25,New York Mets
-base,291,Clear,false,10,New York Mets
 base,291,Printing Plates,false,1,New York Mets
 base,291,Platinum,false,1,New York Mets
 base,292,,false,,Texas Rangers
@@ -4960,7 +4758,6 @@ base,292,Black,false,72,Texas Rangers
 base,292,Father’s Day Powder Blue,false,50,Texas Rangers
 base,292,Mother’s Day Hot Pink,false,50,Texas Rangers
 base,292,Memorial Day Camo,false,25,Texas Rangers
-base,292,Clear,false,10,Texas Rangers
 base,292,Printing Plates,false,1,Texas Rangers
 base,292,Platinum,false,1,Texas Rangers
 base,293,,false,,J.T. Realmuto
@@ -4977,7 +4774,6 @@ base,293,Black,false,72,J.T. Realmuto
 base,293,Father’s Day Powder Blue,false,50,J.T. Realmuto
 base,293,Mother’s Day Hot Pink,false,50,J.T. Realmuto
 base,293,Memorial Day Camo,false,25,J.T. Realmuto
-base,293,Clear,false,10,J.T. Realmuto
 base,293,Printing Plates,false,1,J.T. Realmuto
 base,293,Platinum,false,1,J.T. Realmuto
 base,294,,false,,Tommy Edman
@@ -4994,7 +4790,6 @@ base,294,Black,false,72,Tommy Edman
 base,294,Father’s Day Powder Blue,false,50,Tommy Edman
 base,294,Mother’s Day Hot Pink,false,50,Tommy Edman
 base,294,Memorial Day Camo,false,25,Tommy Edman
-base,294,Clear,false,10,Tommy Edman
 base,294,Printing Plates,false,1,Tommy Edman
 base,294,Platinum,false,1,Tommy Edman
 base,295,,false,,Bryson Stott
@@ -5028,7 +4823,6 @@ base,296,Black,false,72,Cristian Pache
 base,296,Father’s Day Powder Blue,false,50,Cristian Pache
 base,296,Mother’s Day Hot Pink,false,50,Cristian Pache
 base,296,Memorial Day Camo,false,25,Cristian Pache
-base,296,Clear,false,10,Cristian Pache
 base,296,Printing Plates,false,1,Cristian Pache
 base,296,Platinum,false,1,Cristian Pache
 base,297,,false,,Abraham Toro
@@ -5045,7 +4839,6 @@ base,297,Black,false,72,Abraham Toro
 base,297,Father’s Day Powder Blue,false,50,Abraham Toro
 base,297,Mother’s Day Hot Pink,false,50,Abraham Toro
 base,297,Memorial Day Camo,false,25,Abraham Toro
-base,297,Clear,false,10,Abraham Toro
 base,297,Printing Plates,false,1,Abraham Toro
 base,297,Platinum,false,1,Abraham Toro
 base,298,,false,,Shane Bieber
@@ -5113,7 +4906,6 @@ base,301,Black,false,72,Ryan McMahon
 base,301,Father’s Day Powder Blue,false,50,Ryan McMahon
 base,301,Mother’s Day Hot Pink,false,50,Ryan McMahon
 base,301,Memorial Day Camo,false,25,Ryan McMahon
-base,301,Clear,false,10,Ryan McMahon
 base,301,Printing Plates,false,1,Ryan McMahon
 base,301,Platinum,false,1,Ryan McMahon
 base,302,,false,,Vinnie Pasquantino
@@ -5147,7 +4939,6 @@ base,303,Black,false,72,Jorge Alfaro
 base,303,Father’s Day Powder Blue,false,50,Jorge Alfaro
 base,303,Mother’s Day Hot Pink,false,50,Jorge Alfaro
 base,303,Memorial Day Camo,false,25,Jorge Alfaro
-base,303,Clear,false,10,Jorge Alfaro
 base,303,Printing Plates,false,1,Jorge Alfaro
 base,303,Platinum,false,1,Jorge Alfaro
 base,304,,false,,Alex Wood
@@ -5164,7 +4955,6 @@ base,304,Black,false,72,Alex Wood
 base,304,Father’s Day Powder Blue,false,50,Alex Wood
 base,304,Mother’s Day Hot Pink,false,50,Alex Wood
 base,304,Memorial Day Camo,false,25,Alex Wood
-base,304,Clear,false,10,Alex Wood
 base,304,Printing Plates,false,1,Alex Wood
 base,304,Platinum,false,1,Alex Wood
 base,305,,false,,Ji-Man Choi
@@ -5181,7 +4971,6 @@ base,305,Black,false,72,Ji-Man Choi
 base,305,Father’s Day Powder Blue,false,50,Ji-Man Choi
 base,305,Mother’s Day Hot Pink,false,50,Ji-Man Choi
 base,305,Memorial Day Camo,false,25,Ji-Man Choi
-base,305,Clear,false,10,Ji-Man Choi
 base,305,Printing Plates,false,1,Ji-Man Choi
 base,305,Platinum,false,1,Ji-Man Choi
 base,306,,false,,Jesse Winker
@@ -5198,7 +4987,6 @@ base,306,Black,false,72,Jesse Winker
 base,306,Father’s Day Powder Blue,false,50,Jesse Winker
 base,306,Mother’s Day Hot Pink,false,50,Jesse Winker
 base,306,Memorial Day Camo,false,25,Jesse Winker
-base,306,Clear,false,10,Jesse Winker
 base,306,Printing Plates,false,1,Jesse Winker
 base,306,Platinum,false,1,Jesse Winker
 base,307,,false,,Danny Jansen
@@ -5215,7 +5003,6 @@ base,307,Black,false,72,Danny Jansen
 base,307,Father’s Day Powder Blue,false,50,Danny Jansen
 base,307,Mother’s Day Hot Pink,false,50,Danny Jansen
 base,307,Memorial Day Camo,false,25,Danny Jansen
-base,307,Clear,false,10,Danny Jansen
 base,307,Printing Plates,false,1,Danny Jansen
 base,307,Platinum,false,1,Danny Jansen
 base,308,,false,,Christopher Morel
@@ -5249,7 +5036,6 @@ base,309,Black,false,72,Sean Murphy
 base,309,Father’s Day Powder Blue,false,50,Sean Murphy
 base,309,Mother’s Day Hot Pink,false,50,Sean Murphy
 base,309,Memorial Day Camo,false,25,Sean Murphy
-base,309,Clear,false,10,Sean Murphy
 base,309,Printing Plates,false,1,Sean Murphy
 base,309,Platinum,false,1,Sean Murphy
 base,310,,false,,Josh Naylor
@@ -5266,7 +5052,6 @@ base,310,Black,false,72,Josh Naylor
 base,310,Father’s Day Powder Blue,false,50,Josh Naylor
 base,310,Mother’s Day Hot Pink,false,50,Josh Naylor
 base,310,Memorial Day Camo,false,25,Josh Naylor
-base,310,Clear,false,10,Josh Naylor
 base,310,Printing Plates,false,1,Josh Naylor
 base,310,Platinum,false,1,Josh Naylor
 base,311,,false,,Alek Manoah / Justin Verlander / Dylan Cease
@@ -5283,7 +5068,6 @@ base,311,Black,false,72,Alek Manoah / Justin Verlander / Dylan Cease
 base,311,Father’s Day Powder Blue,false,50,Alek Manoah / Justin Verlander / Dylan Cease
 base,311,Mother’s Day Hot Pink,false,50,Alek Manoah / Justin Verlander / Dylan Cease
 base,311,Memorial Day Camo,false,25,Alek Manoah / Justin Verlander / Dylan Cease
-base,311,Clear,false,10,Alek Manoah / Justin Verlander / Dylan Cease
 base,311,Printing Plates,false,1,Alek Manoah / Justin Verlander / Dylan Cease
 base,311,Platinum,false,1,Alek Manoah / Justin Verlander / Dylan Cease
 base,312,,false,,Pavin Smith
@@ -5300,7 +5084,6 @@ base,312,Black,false,72,Pavin Smith
 base,312,Father’s Day Powder Blue,false,50,Pavin Smith
 base,312,Mother’s Day Hot Pink,false,50,Pavin Smith
 base,312,Memorial Day Camo,false,25,Pavin Smith
-base,312,Clear,false,10,Pavin Smith
 base,312,Printing Plates,false,1,Pavin Smith
 base,312,Platinum,false,1,Pavin Smith
 base,313,,false,,Cal Mitchell
@@ -5334,7 +5117,6 @@ base,314,Black,false,72,Ke'Bryan Hayes
 base,314,Father’s Day Powder Blue,false,50,Ke'Bryan Hayes
 base,314,Mother’s Day Hot Pink,false,50,Ke'Bryan Hayes
 base,314,Memorial Day Camo,false,25,Ke'Bryan Hayes
-base,314,Clear,false,10,Ke'Bryan Hayes
 base,314,Printing Plates,false,1,Ke'Bryan Hayes
 base,314,Platinum,false,1,Ke'Bryan Hayes
 base,315,,false,,Corey Seager
@@ -5368,7 +5150,6 @@ base,316,Black,false,72,Washington Nationals
 base,316,Father’s Day Powder Blue,false,50,Washington Nationals
 base,316,Mother’s Day Hot Pink,false,50,Washington Nationals
 base,316,Memorial Day Camo,false,25,Washington Nationals
-base,316,Clear,false,10,Washington Nationals
 base,316,Printing Plates,false,1,Washington Nationals
 base,316,Platinum,false,1,Washington Nationals
 base,317,,false,,Cedric Mullins
@@ -5385,7 +5166,6 @@ base,317,Black,false,72,Cedric Mullins
 base,317,Father’s Day Powder Blue,false,50,Cedric Mullins
 base,317,Mother’s Day Hot Pink,false,50,Cedric Mullins
 base,317,Memorial Day Camo,false,25,Cedric Mullins
-base,317,Clear,false,10,Cedric Mullins
 base,317,Printing Plates,false,1,Cedric Mullins
 base,317,Platinum,false,1,Cedric Mullins
 base,318,,false,,Jerar Encarnacion
@@ -5419,7 +5199,6 @@ base,319,Black,false,72,Brad Miller
 base,319,Father’s Day Powder Blue,false,50,Brad Miller
 base,319,Mother’s Day Hot Pink,false,50,Brad Miller
 base,319,Memorial Day Camo,false,25,Brad Miller
-base,319,Clear,false,10,Brad Miller
 base,319,Printing Plates,false,1,Brad Miller
 base,319,Platinum,false,1,Brad Miller
 base,320,,false,,Cade Cavalli
@@ -5453,7 +5232,6 @@ base,321,Black,false,72,Garrett Cooper
 base,321,Father’s Day Powder Blue,false,50,Garrett Cooper
 base,321,Mother’s Day Hot Pink,false,50,Garrett Cooper
 base,321,Memorial Day Camo,false,25,Garrett Cooper
-base,321,Clear,false,10,Garrett Cooper
 base,321,Printing Plates,false,1,Garrett Cooper
 base,321,Platinum,false,1,Garrett Cooper
 base,322,,false,,Luis Urías
@@ -5470,7 +5248,6 @@ base,322,Black,false,72,Luis Urías
 base,322,Father’s Day Powder Blue,false,50,Luis Urías
 base,322,Mother’s Day Hot Pink,false,50,Luis Urías
 base,322,Memorial Day Camo,false,25,Luis Urías
-base,322,Clear,false,10,Luis Urías
 base,322,Printing Plates,false,1,Luis Urías
 base,322,Platinum,false,1,Luis Urías
 base,323,,false,,Adrian Houser
@@ -5487,7 +5264,6 @@ base,323,Black,false,72,Adrian Houser
 base,323,Father’s Day Powder Blue,false,50,Adrian Houser
 base,323,Mother’s Day Hot Pink,false,50,Adrian Houser
 base,323,Memorial Day Camo,false,25,Adrian Houser
-base,323,Clear,false,10,Adrian Houser
 base,323,Printing Plates,false,1,Adrian Houser
 base,323,Platinum,false,1,Adrian Houser
 base,324,,false,,Santiago Espinal
@@ -5504,7 +5280,6 @@ base,324,Black,false,72,Santiago Espinal
 base,324,Father’s Day Powder Blue,false,50,Santiago Espinal
 base,324,Mother’s Day Hot Pink,false,50,Santiago Espinal
 base,324,Memorial Day Camo,false,25,Santiago Espinal
-base,324,Clear,false,10,Santiago Espinal
 base,324,Printing Plates,false,1,Santiago Espinal
 base,324,Platinum,false,1,Santiago Espinal
 base,325,,false,,German Márquez
@@ -5521,7 +5296,6 @@ base,325,Black,false,72,German Márquez
 base,325,Father’s Day Powder Blue,false,50,German Márquez
 base,325,Mother’s Day Hot Pink,false,50,German Márquez
 base,325,Memorial Day Camo,false,25,German Márquez
-base,325,Clear,false,10,German Márquez
 base,325,Printing Plates,false,1,German Márquez
 base,325,Platinum,false,1,German Márquez
 base,326,,false,,Byron Buxton
@@ -5538,7 +5312,6 @@ base,326,Black,false,72,Byron Buxton
 base,326,Father’s Day Powder Blue,false,50,Byron Buxton
 base,326,Mother’s Day Hot Pink,false,50,Byron Buxton
 base,326,Memorial Day Camo,false,25,Byron Buxton
-base,326,Clear,false,10,Byron Buxton
 base,326,Printing Plates,false,1,Byron Buxton
 base,326,Platinum,false,1,Byron Buxton
 base,327,,false,,Patrick Sandoval
@@ -5555,7 +5328,6 @@ base,327,Black,false,72,Patrick Sandoval
 base,327,Father’s Day Powder Blue,false,50,Patrick Sandoval
 base,327,Mother’s Day Hot Pink,false,50,Patrick Sandoval
 base,327,Memorial Day Camo,false,25,Patrick Sandoval
-base,327,Clear,false,10,Patrick Sandoval
 base,327,Printing Plates,false,1,Patrick Sandoval
 base,327,Platinum,false,1,Patrick Sandoval
 base,328,,false,,Brady Singer
@@ -5572,7 +5344,6 @@ base,328,Black,false,72,Brady Singer
 base,328,Father’s Day Powder Blue,false,50,Brady Singer
 base,328,Mother’s Day Hot Pink,false,50,Brady Singer
 base,328,Memorial Day Camo,false,25,Brady Singer
-base,328,Clear,false,10,Brady Singer
 base,328,Printing Plates,false,1,Brady Singer
 base,328,Platinum,false,1,Brady Singer
 base,329,,false,,Mark Canha
@@ -5589,7 +5360,6 @@ base,329,Black,false,72,Mark Canha
 base,329,Father’s Day Powder Blue,false,50,Mark Canha
 base,329,Mother’s Day Hot Pink,false,50,Mark Canha
 base,329,Memorial Day Camo,false,25,Mark Canha
-base,329,Clear,false,10,Mark Canha
 base,329,Printing Plates,false,1,Mark Canha
 base,329,Platinum,false,1,Mark Canha
 base,330,,false,,Julio Rodríguez

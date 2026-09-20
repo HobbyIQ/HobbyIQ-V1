@@ -16,11 +16,21 @@
  * every file, held or not.
  *
  * This test also exercises converter fixes made in the same PR (FOOTNOTE_LINE,
- * HEDGE_PRINT_RUN_FOOTNOTE, and the new parseRung evidence classes
- * statesTotalCopies/statesDistributionOnly) indirectly: the committed CSVs
- * are the converter's OWN output against the real fetched xlsx files, so a
- * regression in any of those fixes changes the staged rows and this test's
- * row/id counts would drift.
+ * HEDGE_PRINT_RUN_FOOTNOTE, the new parseRung evidence classes
+ * statesTotalCopies/statesDistributionOnly, and -- added in review --
+ * masterRosterFor + the widened SELECT_CARDS_ONLY_NOTE, which stop a
+ * restricted rung ("Clear - /10 (select cards, see below; hobby only)") from
+ * being stamped across the whole 330-card base roster instead of the 100
+ * cards this workbook's own Master sheet lists under that name) indirectly:
+ * the committed CSVs are the converter's OWN output against the real fetched
+ * xlsx files, so a regression in any of those fixes changes the staged rows
+ * and this test's row/id counts would drift.
+ *
+ * setKey is bare "topps" per Drew's 2026-09-20 ruling: Topps flagship is ONE
+ * key -- Series 1 and Series 2 base + inserts live under `topps`; Update
+ * Series stays `topps-update-series`. `topps-series-1` (D23's own product
+ * table) is registered as a distinct sibling key but is NOT what this
+ * ruling assigns to these packages.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
@@ -72,7 +82,7 @@ describe("2025 Topps Series 1 Baseball (Beckett S3)", () => {
     expect(m.heldRows.reason).toMatch(/Mookie Betts/);
   });
 
-  it("both files use bare setKey \"topps\" (not topps-series-1), matching the already-merged 2026 Series 1 package and the sold_comps evidence's own resolved cardIds", () => {
+  it("both files use bare setKey \"topps\" (not topps-series-1) per Drew's 2026-09-20 ruling: Topps flagship is one key, Series 1 + Series 2 both live under it", () => {
     const m = manifestFor(DIR, "2025-topps-series1-baseball.csv");
     expect(m.setKey).toBe("topps");
   });
@@ -81,14 +91,28 @@ describe("2025 Topps Series 1 Baseball (Beckett S3)", () => {
 describe("2023 Topps Series 1 Baseball (Beckett S3)", () => {
   const DIR = "acq-2026-09-20-beckett-topps-series1-2023-baseball";
 
-  it("clean file PASSes: 9,900 rows, 9,900 distinct ids, 0 collisions, 0 unregistered", () => {
+  it("clean file PASSes: 9,670 rows, 9,670 distinct ids, 0 collisions, 0 unregistered", () => {
     const { plans } = planDir(DIR);
     const entry = plans.get("2023-topps-series1-baseball.csv");
     expect(entry.product).not.toBeNull();
     expect(entry.plan.verdict, JSON.stringify(entry.plan.unregistered)).toBe("pass");
-    expect(entry.plan.rows).toBe(9900);
-    expect(entry.plan.ids).toBe(9900);
+    expect(entry.plan.rows).toBe(9670);
+    expect(entry.plan.ids).toBe(9670);
     expect(entry.plan.collisions.length).toBe(0);
+  });
+
+  it("REVIEW FIX: Clear -/10 (select cards, see below; hobby only) is a restricted rung -- emitted for exactly the 100 cards this workbook's Master sheet lists under 'Clear', never all 330 base cards", () => {
+    const csv = readFileSync(
+      join(SCRAPED_ROOT, DIR, "2023-topps-series1-baseball.csv"),
+      "utf8",
+    );
+    const clearRows = csv.split("\n").filter((l) => l.startsWith("base,") && l.includes(",Clear,"));
+    expect(clearRows.length).toBe(100);
+    // #2 (Zach Thompson) is NOT in the Master-stated Clear roster -- must
+    // never get a fabricated Clear row, the exact defect this fix closes.
+    expect(csv).not.toMatch(/^base,2,Clear,/m);
+    // #1 (Juan Soto) IS in the Master-stated Clear roster.
+    expect(csv).toMatch(/^base,1,Clear,false,10,Juan Soto$/m);
   });
 
   it("held file (PPA- cross-product initials collision, 49 rows) is REFUSEd with the 3 unregistered keys and gated by heldRows", () => {

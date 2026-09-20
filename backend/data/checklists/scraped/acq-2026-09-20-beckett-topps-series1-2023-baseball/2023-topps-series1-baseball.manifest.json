@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-09-20T22:14:39.235Z",
+  "scrapedAt": "2026-09-20T23:11:09.261Z",
   "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2023/02/2023-Topps-Series-1-Baseball-Checklist.xlsx",
   "source": "beckett-s3-2026-09-20",
   "sport": "baseball",
@@ -7,7 +7,7 @@
   "setName": "2023 Topps Series 1 Baseball",
   "productKey": "2023-topps",
   "setKey": "topps",
-  "rowCount": 9900,
+  "rowCount": 9670,
   "parallelColumnAuthoritative": true,
   "sectionsReport": [
     {

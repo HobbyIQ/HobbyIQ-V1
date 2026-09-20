@@ -311,6 +311,52 @@ function masterCardSetNames(sheets) {
   return out;
 }
 
+/**
+ * CF-A-SELECT-CARDS-ONLY-RUNG-NEEDS-ITS-OWN-ROSTER (2026-09-20, review fix).
+ *
+ * Master's own "Card Set" column is the most direct evidence a workbook can
+ * offer for "which cards actually carry rung X": measured on 2023 Topps
+ * Series 1 and Series 2 Baseball, Master lists exactly 100 rows tagged
+ * "Clear" (out of 330 base cards) for the ladder's `Clear - /10 (select
+ * cards, see below; hobby only)` rung -- the restricted roster the ladder's
+ * own note points at.
+ *
+ * DELIBERATELY POSITIONAL, never assumes a header row: masterCardSetNames
+ * (above) requires row 0 to read literally "Card Set" and returns an empty
+ * Set otherwise -- both 2023 workbooks' Master sheets open directly on data
+ * (`["Base", 1, "Juan Soto", "San Diego Padres"]`, no header at all), so that
+ * function silently sees no Master sheet for either file. This reads every
+ * row of column 0 as a card-set label unconditionally; a genuine header row
+ * ("Card Set", "Base") simply never matches a real rung name and is ignored
+ * on its own (rung names are colour/finish words, not literally "Card Set").
+ *
+ * Returns Map<cardNumber (uppercased string), Set<normalizeRosterPlayer>>
+ * for the requested card-set label (case-insensitive exact match on column
+ * 0), or null when Master has no row at all under that label -- the caller
+ * uses null, not an empty Map, to mean "no list found in this workbook",
+ * per CF-A-SELECT-CARDS-ONLY-RUNG-IS-NOT-A-FULL-ROSTER-TEMPLATE below.
+ */
+function masterRosterFor(sheets, cardSetLabel) {
+  const rows = sheets["Master"];
+  if (!rows || !rows.length) return null;
+  const wanted = String(cardSetLabel || "").trim().toLowerCase();
+  if (!wanted) return null;
+  const out = new Map();
+  let found = false;
+  for (const r of rows) {
+    const label = String((r || [])[0] || "").trim().toLowerCase();
+    if (label !== wanted) continue;
+    found = true;
+    const num = String((r || [])[1] || "").trim();
+    const player = String((r || [])[2] || "").trim();
+    if (!num || !player) continue;
+    const key = num.toUpperCase();
+    if (!out.has(key)) out.set(key, new Set());
+    out.get(key).add(normalizeRosterPlayer(player));
+  }
+  return found ? out : null;
+}
+
 /** Every single-cell header row on one sheet, in the shape stripChecklistSuffix
  *  needs to test "do this sheet's OTHER sections carry the same suffix" --
  *  built once per sheet, cheaply, from the same non-empty/non-ladder test
@@ -1568,13 +1614,33 @@ function parseRung(line) {
   // must keep refusing, and LADDER_PROSE_NOT_A_NAME already covers that shape
   // separately. printRun stays null: an availability restriction states no
   // serial number, and none is invented.
-  const statesDistributionOnly = note != null &&
+  // CF-AN-UNSTATED-HEDGE-STAYS-REFUSED-EVEN-WITH-A-DISTRIBUTION-NOTE
+  // (2026-09-20, review fix). Found in review: 2023 Topps Series 1
+  // Baseball's own "1988 Topps Baseball Autographs" ladder states
+  // "Red - /25 or less (hobby only)" -- the SAME hedge shape as the
+  // "Aspirations /99 or fewer (See list below)" line this comment already
+  // says must keep refusing, just with a distribution note instead of a
+  // "See list below" pointer trailing it. `s` (the name after the trailing
+  // parenthetical is stripped) still reads "Red - /25 or less" here --
+  // `numbered` never matched it (the "or less" tail sits after the /NNN, so
+  // the END-OF-STRING anchor in `numbered`'s own regex never reaches it) --
+  // and statesDistributionOnly alone was wrongly admitting it as a real rung
+  // named "Red - /25 or less", carrying the hedge text straight into the
+  // parallel column. A stated print run or a named finish are never hedged
+  // this way (an exact "/50" or "Foil" is not "50 or less" / "maybe Foil"),
+  // so this check is scoped to statesDistributionOnly/statesTotalCopies
+  // only -- the two evidence classes added in this same review round, both
+  // narrow enough that a hedge sitting in `s` was never possible to notice
+  // before either existed.
+  const hedgedName = /\bor\s+(?:less|fewer)\b/i.test(s);
+  const statesDistributionOnly = !hedgedName && note != null &&
     /^\s*(?:hobby|retail|hta|jumbo|blaster|box|pack)(?:\s+(?:hobby|retail|hta|jumbo|blaster|box|pack))*\s+(?:packs?|boxes?|only)(?:\s+only)?\s*$/i.test(String(note).trim());
   // Evidence, not vocabulary. A stated print run, stated pack odds, a stated
   // total copy count, a stated distribution restriction, or a named finish
   // each make this a rung; a line carrying none of the five is prose.
   const statesOdds = note != null && /^\s*1\s*:\s*[\d,]+/.test(String(note).trim());
-  if (printRun == null && !statesOdds && !statesTotalCopies && !statesDistributionOnly && !FINISH_WORD.test(s)) return null;
+  const statesTotalCopiesUnhedged = statesTotalCopies && !hedgedName;
+  if (printRun == null && !statesOdds && !statesTotalCopiesUnhedged && !statesDistributionOnly && !FINISH_WORD.test(s)) return null;
   return { name: s, printRun: printRun, note: note };
 }
 
@@ -2152,12 +2218,37 @@ function main() {
   const report = classifySections(sections);
 
   // A ladder rung's note saying it does not cover the whole section ("select
-  // cards only", the "Purple - /150 (select cards only, list below)" shape --
-  // see CF-A-SELECT-CARDS-ONLY-RUNG-IS-NOT-A-FULL-ROSTER-TEMPLATE at the
-  // emission site below) is evidence from the note itself, the same class
-  // parseRung's own statesOdds already reads from a trailing parenthetical --
-  // never a name guess.
-  const SELECT_CARDS_ONLY_NOTE = /select\s+cards?\s+only/i;
+  // cards only", "select cards, see below", "select cards, list below" --
+  // the "Purple - /150 (select cards only, list below)" and "Clear - /10
+  // (select cards, see below; hobby only)" shapes -- see
+  // CF-A-SELECT-CARDS-ONLY-RUNG-IS-NOT-A-FULL-ROSTER-TEMPLATE at the emission
+  // site below) is evidence from the note itself, the same class parseRung's
+  // own statesOdds already reads from a trailing parenthetical -- never a
+  // name guess.
+  //
+  // WIDENED (2026-09-20, review fix): the original pattern demanded the
+  // literal phrase "select cards only" immediately adjacent. 2023 Topps
+  // Series 1/2 Baseball's own "select cards, see below; hobby only" has
+  // "hobby only" as a SEPARATE, later clause (a distribution note, covered
+  // by "hobby only"/"retail only" ALONE never being read as a roster
+  // restriction -- see the DISTRIBUTION_ONLY_NOTE guard below, which is the
+  // deliberate non-match this pattern must not absorb). What actually marks a
+  // roster restriction, on every workbook seen so far, is "select cards"
+  // followed somewhere in the SAME parenthetical by a pointer to a list
+  // ("only", "see below", "list below", "below") -- never "select cards"
+  // alone with no pointer, which would be an unfalsifiable claim this file
+  // has no evidence for.
+  const SELECT_CARDS_ONLY_NOTE = /select\s+cards?\b(?:(?!\)).)*?\b(?:only|(?:see|list)\s+below|below)\b/i;
+  // A distribution restriction ALONE ("hobby only", "retail only", "HTA
+  // Jumbo only" -- see the parseRung evidence class of the same name added
+  // earlier in this same review round) is never a roster restriction: every
+  // card in the section still carries the rung, just sold only through that
+  // channel. Checked so a note that happens to end "... hobby only" but
+  // never said "select cards" is not misread by an even wider version of the
+  // pattern above -- SELECT_CARDS_ONLY_NOTE already requires the literal
+  // "select cards" token, so this is documentation of the boundary, not code
+  // that changes behaviour on its own.
+  const DISTRIBUTION_ONLY_NOTE = /^\s*(?:hobby|retail|hta|jumbo|blaster|box|pack)(?:\s+(?:hobby|retail|hta|jumbo|blaster|box|pack))*\s+(?:packs?|boxes?|only)(?:\s+only)?\s*$/i;
   // Precomputed once, not per (record, rung): for each section, which of its
   // OWN ladder rung names is satisfied by a sibling section that genuinely
   // folds onto it under that exact rung name (rungName, the same reduction
@@ -2175,6 +2266,30 @@ function main() {
       }
     }
     satisfiedLadderRungNames.set(sec, names);
+  }
+
+  // CF-A-SELECT-CARDS-ONLY-RUNG-IS-NOT-A-FULL-ROSTER-TEMPLATE, Master-sheet
+  // half (2026-09-20, review fix). A rung whose note matches
+  // SELECT_CARDS_ONLY_NOTE and is NOT already satisfied by a sibling fold
+  // (satisfiedLadderRungNames, computed above) is looked up in Master by its
+  // OWN name (masterRosterFor) before falling through to "no list found".
+  // Found -> the roster IS the restricted list: emitted ONLY for the numbers
+  // Master states, and ONLY when the player at that number agrees with this
+  // run's own anchor roster (never trusted blind -- Master and the anchor
+  // must name the SAME person at a shared number, or the row is dropped as
+  // an unresolved disagreement rather than guessed either way). Not found in
+  // Master either -> nothing is emitted and the rung is recorded verbatim in
+  // `restrictedRungsWithoutAList`, per section, so main()'s own
+  // droppedDeclaredParallels guard can treat it as declared-and-deliberately-
+  // held rather than a silent, unexplained drop (see that guard's own call
+  // site: `restrictedRungsWithoutAList` supplies the "this name is accounted
+  // for" signal the guard's dropped-name diff already reads).
+  const restrictedRungsWithoutAList = [];
+  const masterRosterByRungName = new Map(); // name.toLowerCase() -> roster Map | null (looked up once)
+  function masterRosterForRung(name) {
+    const key = String(name || "").toLowerCase();
+    if (!masterRosterByRungName.has(key)) masterRosterByRungName.set(key, masterRosterFor(sheets, name));
+    return masterRosterByRungName.get(key);
   }
 
   // ---- pass 3: emit ------------------------------------------------------
@@ -2334,9 +2449,49 @@ function main() {
         // main()'s own guard (sec.declaredParallels already carries this
         // exact string), never silently vanishing and never silently
         // over-applied.
-        if (SELECT_CARDS_ONLY_NOTE.test(String(rung.note || "")) &&
-            satisfiedLadderRungNames.get(sec) && satisfiedLadderRungNames.get(sec).has(rung.name)) {
-          continue;
+        if (SELECT_CARDS_ONLY_NOTE.test(String(rung.note || ""))) {
+          if (satisfiedLadderRungNames.get(sec) && satisfiedLadderRungNames.get(sec).has(rung.name)) {
+            continue;
+          }
+          // CF-A-SELECT-CARDS-ONLY-RUNG-IS-NOT-A-FULL-ROSTER-TEMPLATE,
+          // Master-sheet half (2026-09-20, review fix). No sibling section
+          // satisfies this rung by name -- check Master directly (see
+          // masterRosterFor's own header comment) before deciding there is
+          // no list at all. 2023 Topps Series 1/2 Baseball's "Clear" rung is
+          // exactly this shape: no sibling section resolves via
+          // classifySections's fold (the sub-list section, "Clear
+          // Checklist", carries the generic "Checklist" title-artifact
+          // suffix with no sibling on its own sheet to confirm stripping it
+          // -- see stripChecklistSuffix's own header comment -- so it never
+          // becomes a named fold candidate at all), but Master's own "Card
+          // Set" column lists exactly 100 "Clear"-tagged rows out of 330
+          // base cards, verbatim.
+          const masterRoster = masterRosterForRung(rung.name);
+          if (masterRoster) {
+            const key = String(rec.cardNumber || "").toUpperCase();
+            const masterPlayers = masterRoster.get(key);
+            // ROSTER-VERIFIED, NEVER TRUSTED BLIND: Master must both LIST
+            // this number for this rung AND name the SAME person this run's
+            // own anchor roster already established for it. A number Master
+            // lists under a DIFFERENT player than this card's own roster
+            // (the same class of source disagreement
+            // CF-BASE-SET-IS-NOT-A-SUBSET's own history warns about) is an
+            // unresolved finding, not a fold -- dropped from the emitted
+            // rows the same way any other disagreement is, never guessed.
+            if (!masterPlayers || !masterPlayers.has(normalizeRosterPlayer(emitPlayer))) continue;
+          } else {
+            // No sibling fold AND no Master entry under this exact name --
+            // Beckett states the restriction but this workbook carries no
+            // discoverable list for it anywhere this converter reads. Absent
+            // beats wrong: record once per (section, rung), emit nothing.
+            if (!restrictedRungsWithoutAList.some((r) => r.sheet === sec.sheet && r.section === sec.section && r.rung === rung.name)) {
+              restrictedRungsWithoutAList.push({
+                sheet: sec.sheet, section: sec.section, rung: rung.name,
+                note: rung.note || null, printRun: rung.printRun == null ? null : rung.printRun,
+              });
+            }
+            continue;
+          }
         }
         out.push({
           category: target.category,
@@ -2471,6 +2626,18 @@ function main() {
       if (emittedNames.has(name)) continue;
       const pointerMatch = LIST_BELOW_POINTER.exec(name);
       if (pointerMatch && materializedSectionNames.has(normPointerName(pointerMatch[1].trim()))) continue;
+      // CF-A-SELECT-CARDS-ONLY-RUNG-IS-NOT-A-FULL-ROSTER-TEMPLATE (see the
+      // emission-site guard above, and masterRosterFor's own header comment).
+      // A rung this run already decided is a genuine, roster-restricted
+      // parallel -- with either a Master-sheet list (in which case it DID
+      // emit rows, just fewer than the full roster, so emittedNames.has(name)
+      // already caught it above and this branch is not reached for that
+      // case) or no list found anywhere in the workbook (recorded in
+      // restrictedRungsWithoutAList instead) -- is declared-and-deliberately-
+      // held, never a silent, unexplained drop. Checked here so the FATAL
+      // below never fires for a name this file's own emission logic already
+      // gave an explicit, reported reason for withholding.
+      if (restrictedRungsWithoutAList.some((r) => r.sheet === sec.sheet && r.section === sec.section && r.rung === name)) continue;
       droppedDeclaredParallels.push({ sheet: sec.sheet, section: sec.section, parallel: name });
     }
   }
@@ -2535,6 +2702,18 @@ function main() {
     // passes the flag, or passes it with nothing dropped, writes a manifest
     // byte-identical to before this stamp existed.
     ...(droppedDeclaredParallels.length && ALLOW_DROPPED_PARALLELS ? { allowDroppedParallelsUsed: true } : {}),
+    // CF-A-SELECT-CARDS-ONLY-RUNG-IS-NOT-A-FULL-ROSTER-TEMPLATE (2026-09-20,
+    // review fix). A rung whose note stated a roster restriction ("select
+    // cards, see below") for which NEITHER a sibling fold NOR a Master-sheet
+    // "Card Set" entry could be found anywhere in this workbook -- emitted
+    // nowhere, rather than stamped across the whole section (the defect this
+    // fix exists to close: 2023 Topps Series 1/2 Baseball's own "Clear -
+    // /10 (select cards, see below; hobby only)" was landing on all 330 base
+    // cards instead of the 100 Master states). Additive, opt-in: absent
+    // entirely when nothing was withheld, so a workbook whose every
+    // restriction resolves via a sibling fold or a Master list writes a
+    // manifest byte-identical to before this field existed.
+    ...(restrictedRungsWithoutAList.length ? { restrictedRungsWithoutAList } : {}),
     // CF-A-FOLDED-RUNG-CARRIES-THE-SOURCE-STATED-PRINT-RUN's own disagreement
     // record (see that CF's header comment at the emission site): a
     // dedicated section's own ladder and its fold anchor's ladder rung of
