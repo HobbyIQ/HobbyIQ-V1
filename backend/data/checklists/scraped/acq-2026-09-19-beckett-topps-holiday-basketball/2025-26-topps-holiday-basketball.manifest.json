@@ -1,7 +1,6 @@
 {
-  "scrapedAt": "2026-09-20T02:49:11.783Z",
+  "scrapedAt": "2026-09-20T17:00:14.551Z",
   "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/10/2025-26-Topps-Holiday-Basketball-Checklist.xlsx",
-  "source": "beckett-s3-2026-09-19",
   "sport": "basketball",
   "year": 2025,
   "setName": "2025-26 Topps Holiday Basketball",
@@ -9,10 +8,6 @@
   "setKey": "topps-holiday",
   "rowCount": 4606,
   "parallelColumnAuthoritative": true,
-  "heldRows": {
-    "rows": 4606,
-    "reason": "odds line read as section name on the Autographs sheet -- 'Autographs' repeats as the sheet's own generic row-0 header across every subset, so the splitter falls back to the next line ('1:379 packs'), which is an odds line, not a real section name. Two categories (auto-1379-packs, auto-1379-packs-2) carry this artifact. A converter fix plus regeneration lifts this hold; do not ingest until the Autographs sheet's real subset names are recovered."
-  },
   "sectionsReport": [
     {
       "sheet": "Base",
@@ -23,78 +18,92 @@
     },
     {
       "sheet": "Base",
-      "section": "1:23 packs",
-      "category": "base",
-      "cards": 50,
-      "role": "anchor"
+      "section": "Base - SSP Variations",
+      "category": "insert-base-ssp-variations",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Base",
+      "section": "Base - SSP Back Variations",
+      "category": "insert-base-ssp-back-variations",
+      "cards": 25,
+      "role": "own-cards"
     },
     {
       "sheet": "Autographs",
-      "section": "1:379 packs",
-      "category": "auto-1379-packs",
+      "section": "Autographs",
+      "category": "auto-autographs",
       "cards": 92,
       "role": "own-cards"
     },
     {
       "sheet": "Autographs",
-      "section": "1:379 packs",
-      "category": "auto-1379-packs-2",
+      "section": "Autographs",
+      "category": "auto-autographs-2",
       "cards": 4,
       "role": "own-cards"
     },
     {
       "sheet": "Relics",
-      "section": "1:75 packs",
-      "category": "insert-175-packs",
+      "section": "Player Relics",
+      "category": "insert-player-relics",
       "cards": 100,
       "role": "own-cards"
     },
     {
       "sheet": "Relics",
-      "section": "1:392 packs",
-      "category": "insert-1392-packs",
+      "section": "Dual Player Relics",
+      "category": "insert-dual-player-relics",
       "cards": 25,
       "role": "own-cards"
     },
     {
       "sheet": "Relics",
-      "section": "1:345 packs",
-      "category": "insert-1345-packs",
+      "section": "Player Holiday-Shaped Relics",
+      "category": "insert-player-holiday-shaped-relics",
       "cards": 24,
       "role": "own-cards"
     },
     {
       "sheet": "Relics",
-      "section": "1:54 packs",
-      "category": "insert-154-packs",
+      "section": "Holiday Relics",
+      "category": "insert-holiday-relics",
       "cards": 40,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "1:200 packs",
-      "category": "insert-1200-packs",
-      "cards": 50,
-      "role": "own-cards"
-    },
-    {
-      "sheet": "Inserts",
-      "section": "1:2 packs (Advent-exclusive)",
-      "category": "insert-12-packs-advent-exclusive",
+      "section": "Frostbite Finishers",
+      "category": "insert-frostbite-finishers",
       "cards": 25,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "1:6 packs (Advent-exclusive)",
-      "category": "insert-16-packs-advent-exclusive",
+      "section": "Hidden Elf",
+      "category": "insert-hidden-elf",
       "cards": 25,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "1:10 packs",
-      "category": "insert-110-packs",
+      "section": "Making The Nice List",
+      "category": "insert-making-the-nice-list",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Evergreen",
+      "category": "insert-evergreen",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Oversized Die-Cut Ornaments",
+      "category": "insert-oversized-die-cut-ornaments",
       "cards": 20,
       "role": "own-cards"
     }
