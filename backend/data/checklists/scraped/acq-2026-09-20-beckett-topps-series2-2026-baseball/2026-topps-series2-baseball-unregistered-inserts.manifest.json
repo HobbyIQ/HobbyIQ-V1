@@ -1,0 +1,17 @@
+{
+  "scrapedAt": "2026-09-20T22:11:29.925Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/05/2026-Topps-Series-2-Baseball-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-20",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Topps Series 2 Baseball",
+  "productKey": "2026-topps",
+  "setKey": "topps",
+  "rowCount": 264,
+  "parallelColumnAuthoritative": true,
+  "heldRows": {
+    "reason": "CF-A-NAMED-INSERT-SET-NEEDS-ITS-OWN-REGISTERED-KEY, held per instructions (registration is a separate, small productSetKeys.ts PR with a fixed-point test, additions-only). Seven categories, none registered, none folded onto Series 2 base (351-685+) because none shares that roster at the colliding numbers. Roster-overlap evidence for a future registration PR: (1) `auto-flagship-real-one-autographs` (38 rows, numbers 5-339-ish) and `auto-1952-rookie-variation-autographs` (3 rows, #129/#214/#339) carry the IDENTICAL roster at every shared number (Cole Young #129, Nolan McLean #214, Dylan Beavers #339 in both) -- these two ARE one parallel ladder of one insert, but that insert's own numbers (1-350) are the SERIES 1 flagship's number line, not Series 2's (351+): the sibling 2026 Topps Series 1 package (acq-2026-09-19-beckett-topps-series1-baseball, already on main) already stages `Flagship Real One Autographs` folded cleanly onto Series 1 base at those same numbers (#1 Aaron Judge, #4 Jonah Tong, #10 Jacob Misiorowski). This Series 2 workbook is very likely listing late-arriving Series 1 autos rather than a Series 2 product of its own -- genuinely ambiguous which product these 41 rows belong to, so held rather than guessed. (2) `auto-the-flagship-collection-chrome-autographs` (63 rows, numbers 2-90ish) shares NO roster with (1) at any colliding number (#4 Jose Altuve here vs no #4 in Flagship Real One) -- a third, distinct insert, also on the Series-1 number line, same cross-product ambiguity. (3) `insert-golden-mirror-legend-variations` (50 rows, numbers 351-692, i.e. genuinely INSIDE Series 2's own base range) names retired legends (#351 Al Kaline, #358 Josh Gibson) that do NOT match the actual Series 2 base card at those numbers (#351 is Dillon Dingler) -- a real collision with base's own plain numbering, confirming this is its own numbered tribute insert, not a base parallel, and needs a key precisely because it reuses Series 2's number space for different cards. (4) `insert-through-the-years-golden-mirror-rookie-cards` (5 rows) spans #98/#164/#312/#482 AND `US175` -- an Update-Series-prefixed number -- crossing from the Series 2 base range into the Update Series product entirely; needs its product resolved before any key. (5)/(6) `insert-super-box-exclusive` (102 rows) + its roster-disagreement split `-2` (3 rows) mix `BO-`-prefixed numbers (BO-1..BO-10) with bare numbers (90, 123, 278) in the SAME section -- internally inconsistent numbering, itself worth a second look before registering. None of the six card sets above has been merged, folded, or guessed into an address; all are staged verbatim, held, and reported here so a human can decide which product each belongs to before any key is minted.",
+    "rows": 264
+  },
+  "sha256": "67263eaba2915c1a7cf7cde667456bcd976ef7b4836491d5439d752c59bd58a0"
+}

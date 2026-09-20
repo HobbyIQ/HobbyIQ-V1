@@ -1,0 +1,17 @@
+{
+  "scrapedAt": "2026-09-20T22:11:29.925Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2023/05/2023-Topps-Series-2-Baseball-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-20",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Topps Series 2 Baseball",
+  "productKey": "2023-topps",
+  "setKey": "topps",
+  "rowCount": 125,
+  "parallelColumnAuthoritative": true,
+  "heldRows": {
+    "reason": "CF-A-NAMED-INSERT-SET-NEEDS-ITS-OWN-REGISTERED-KEY, held per instructions (registration is a separate, small productSetKeys.ts PR with a fixed-point test, additions-only). Two own-numbered insert sets, neither registered: `2T88C-` (1988 Topps Baseball Chrome Silver Packs, 102 rows including the repeated-header roster split) and `SMFB-` (Social Media Follow Back Redemptions, 23 rows including its own repeated-header split). Neither has ANY roster overlap with the base set (both use their own alpha-numeric card-number prefix, never a bare number that could collide with Base), so their own-roster evidence for a future productSetKeys.ts registration is: `2T88C-1`..`2T88C-100` (100 players, e.g. Kodai Senga, Yu Darvish, Bo Naylor -- a Chrome Silver Pack parallel of the 1988 Topps Baseball insert already staged in the sibling 2023 Topps Series 1 package's own insert-1988-topps-baseball, itself unregistered too) and `SMFB-OC`..`SMFB-DS` (22 players, e.g. Oswaldo Cabrera, Michael Harris II, Mark Vientos). FINDING, not fixed here: the converter's own repeated-header roster-disagreement split fired on `2T88C-52` because one copy of the row reads player 'Jose Atluve' and the other 'Jose Altuve' -- almost certainly the SAME player under a transcription typo in one of the two header repeats, not two different cards; the split's roster-compare has no typo tolerance. Left split and held rather than hand-merged, since guessing which spelling is the typo is exactly the kind of silent correction no-synthetic-parallels forbids -- a future fix to the roster-fold's own typo tolerance (playerIdentityKey-style fuzzy match) belongs in the converter, not hand-patched into this one row. `SMFB-DS` itself, by contrast, is a genuine two-different-players collision (Dansby Swanson vs Darryl Strawberry, both real 23-player-roster entries) with no typo explanation available.",
+    "rows": 125
+  },
+  "sha256": "a5e1885baabf15f42f9f809ff2f52dd989495f670c1c8df2231da835eaa6f1bb"
+}
