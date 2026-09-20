@@ -1,21 +1,21 @@
 {
- "_doc": "CF-THE-REFERENCE-IS-THE-WHOLE-CORPUS-NOT-ONE-SLOT (2026-09-06). Per-slot classification from the GREAT REMATCH IMPROVE fleet, recovered from each run's rematch-census-slot-<N>-<runId> artifact (file census-slot-<N>.json, fields classified + counts.*). One entry per shard-table slot, latest run per slot in the window 2026-09-13T20:58Z..2026-09-14T13:13Z. `weighted` is the row-weighted corpus average -- the reference a whole-corpus draw is compared against; `slots[].shares` is what a SINGLE-SLOT draw must be compared against instead. NOT EVERY SLOT FINISHED ITS WALK: `slots[].coverage` is classified/expectedRows and `slots[].stoppedAtBudget` says the run hit its budget first, so a partial slot's shares describe a PREFIX of that slot; `coverage` at the top states the corpus fraction and names the partial slots. NOTE the four classes do not sum to 1: the runs report UNDERIVABLE-for-subset in byTier and leave it out of counts, so a share of rows is in none of the four. The shares are therefore comparable to each other and to a sample classified the same way, which is what frameHealth does.",
- "source": "rematch IMPROVE fleet census artifacts, 32/32 slots, 2026-09-13/14",
- "measuredAt": "2026-09-15",
+ "_doc": "CF-THE-REFERENCE-IS-THE-WHOLE-CORPUS-NOT-ONE-SLOT (2026-09-06). Per-slot classification from the GREAT REMATCH IMPROVE fleet, recovered from each run's rematch-census-slot-<N>-<runId> artifact (file census-slot-<N>.json, fields classified + counts.*). One entry per shard-table slot, latest run per slot in the window 2026-09-20T07:26Z..2026-09-20T08:16Z. `weighted` is the row-weighted corpus average -- the reference a whole-corpus draw is compared against; `slots[].shares` is what a SINGLE-SLOT draw must be compared against instead. NOT EVERY SLOT FINISHED ITS WALK: `slots[].coverage` is classified/expectedRows and `slots[].stoppedAtBudget` says the run hit its budget first, so a partial slot's shares describe a PREFIX of that slot; `coverage` at the top states the corpus fraction and names the partial slots. NOTE the four classes do not sum to 1: the runs report UNDERIVABLE-for-subset in byTier and leave it out of counts, so a share of rows is in none of the four. The shares are therefore comparable to each other and to a sample classified the same way, which is what frameHealth does.",
+ "source": "rematch IMPROVE fleet census artifacts, 32/32 slots, 2026-09-20/20",
+ "measuredAt": "2026-09-20",
  "measuredUnder": {
-  "stamp": "dcb4008caa05d+2026-09-06.a",
-  "derivation": "dcb4008caa05d",
+  "stamp": "d89719f819430+2026-09-06.a",
+  "derivation": "d89719f819430",
   "contract": "2026-09-06.a",
-  "commit": "b5ab5f745788d88168af9e339fc6be7f8c8de7a0",
-  "note": "Re-labelled by scripts/rebaseline-i9-reference.cjs --relabel: a derivation input changed, so the stamp moved, but the measurement did not. The four class shares are copied unchanged from the superseded reference; only a --from run may move them."
+  "commit": "b3311817431cd389509e74e957d9f784ba38e0ec",
+  "note": "Recorded by scripts/rebaseline-i9-reference.cjs. The alarm compares only against a reference carrying THIS stamp; a stamp change makes the drift a finding, not an alarm."
  },
  "container": "sold_comps",
  "slotCount": 32,
- "classifiedTotal": 18352932,
+ "classifiedTotal": 20458973,
  "coverage": {
   "expectedRows": 16336296,
-  "classified": 18352932,
-  "coverage": 1.1234,
+  "classified": 20458973,
+  "coverage": 1.2524,
   "completedSlots": [
    0,
    1,
@@ -52,25 +52,25 @@
   ],
   "partialSlots": [],
   "window": {
-   "from": "2026-09-13T20:58:21.233Z",
-   "to": "2026-09-14T13:13:41.425Z"
+   "from": "2026-09-20T07:26:15.656Z",
+   "to": "2026-09-20T08:16:19.744Z"
   },
   "note": "Per-slot `coverage` is classified/expectedRows; `stoppedAtBudget` says the walk hit its budget rather than finishing the slot. A partial slot's shares are still over the rows it classified, so they are comparable -- but they describe a PREFIX of the slot, and a reader weighing this reference should see which slots those are."
  },
  "weighted": {
-  "AGREE": 0.429696,
-  "IMPROVE": 0.09765,
-  "CONFLICT": 0.36437,
-  "UNDERIVABLE": 0.073416
+  "AGREE": 0.484008,
+  "IMPROVE": 0.082411,
+  "CONFLICT": 0.324332,
+  "UNDERIVABLE": 0.07679
  },
  "bySportClass": {
   "modern": {
-   "classified": 11021690,
+   "classified": 12151692,
    "shares": {
-    "AGREE": 0.46011,
-    "IMPROVE": 0.063345,
-    "CONFLICT": 0.385912,
-    "UNDERIVABLE": 0.060955
+    "AGREE": 0.531509,
+    "IMPROVE": 0.054256,
+    "CONFLICT": 0.321729,
+    "UNDERIVABLE": 0.064657
    },
    "slots": [
     1,
@@ -97,12 +97,12 @@
    ]
   },
   "pokemon": {
-   "classified": 2076995,
+   "classified": 2443814,
    "shares": {
-    "AGREE": 0.129984,
-    "IMPROVE": 0.352682,
-    "CONFLICT": 0.40065,
-    "UNDERIVABLE": 0.113353
+    "AGREE": 0.126264,
+    "IMPROVE": 0.26993,
+    "CONFLICT": 0.485979,
+    "UNDERIVABLE": 0.114767
    },
    "slots": [
     0,
@@ -112,12 +112,12 @@
    ]
   },
   "vintage": {
-   "classified": 5254246,
+   "classified": 5863467,
    "shares": {
-    "AGREE": 0.484374,
-    "IMPROVE": 0.068795,
-    "CONFLICT": 0.304841,
-    "UNDERIVABLE": 0.083768
+    "AGREE": 0.534668,
+    "IMPROVE": 0.062604,
+    "CONFLICT": 0.262354,
+    "UNDERIVABLE": 0.086104
    },
    "slots": [
     24,
@@ -131,8 +131,7 @@
   }
  },
  "supersedes": {
-  "stamp": "d7b70ce163186+2026-09-06.a",
-  "derivation": "d7b70ce163186",
+  "stamp": "dcb4008caa05d+2026-09-06.a",
   "measuredAt": "2026-09-15",
   "classifiedTotal": 18352932,
   "weighted": {
@@ -141,35 +140,42 @@
    "CONFLICT": 0.36437,
    "UNDERIVABLE": 0.073416
   },
-  "reason": "relabel-derivation-input-changed",
-  "relabelledAt": "2026-09-19T09:37:13.175Z",
-  "relabelledOnCommit": "6c9fac6985cd4dddd142978af84f9458cf9e58d6"
+  "delta": {
+   "AGREE": 0.054312,
+   "IMPROVE": -0.015239,
+   "CONFLICT": -0.040038,
+   "UNDERIVABLE": 0.003374
+  },
+  "reason": "stamp-changed"
  },
  "slots": [
   {
    "slot": 0,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T04:45:04.619Z",
-   "classified": 661670,
+   "generatedAt": "2026-09-20T07:27:13.869Z",
+   "classified": 825803,
    "expectedRows": 523940,
-   "coverage": 1.2629,
+   "coverage": 1.5761,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 58753,
-    "IMPROVE": 226801,
-    "CONFLICT": 305818,
-    "UNDERIVABLE": 69145,
+    "AGREE": 66359,
+    "IMPROVE": 221921,
+    "CONFLICT": 453225,
+    "UNDERIVABLE": 83135,
     "UNDERIVABLE-for-subset": null,
     "r26": 0,
-    "r27": 93810,
-    "r28": 0
+    "r27": 232056,
+    "r28": 0,
+    "r31": 0,
+    "r32": 49,
+    "r33": 1
    },
    "shares": {
-    "AGREE": 0.088795,
-    "IMPROVE": 0.342771,
-    "CONFLICT": 0.462191,
-    "UNDERIVABLE": 0.104501
+    "AGREE": 0.080357,
+    "IMPROVE": 0.268734,
+    "CONFLICT": 0.548829,
+    "UNDERIVABLE": 0.100672
    },
    "classMix": {
     "pokemon": 0.925564,
@@ -180,26 +186,29 @@
    "slot": 1,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-13T22:16:45.838Z",
-   "classified": 596636,
+   "generatedAt": "2026-09-20T07:45:54.755Z",
+   "classified": 690477,
    "expectedRows": 526729,
-   "coverage": 1.1327,
+   "coverage": 1.3109,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 269120,
-    "IMPROVE": 41153,
-    "CONFLICT": 273685,
-    "UNDERIVABLE": 12439,
+    "AGREE": 403574,
+    "IMPROVE": 16924,
+    "CONFLICT": 253504,
+    "UNDERIVABLE": 16213,
     "UNDERIVABLE-for-subset": null,
-    "r26": 2507,
+    "r26": 1234,
     "r27": 0,
-    "r28": 314
+    "r28": 0,
+    "r31": 14432,
+    "r32": 12802,
+    "r33": 23
    },
    "shares": {
-    "AGREE": 0.451062,
-    "IMPROVE": 0.068975,
-    "CONFLICT": 0.458714,
-    "UNDERIVABLE": 0.020849
+    "AGREE": 0.584486,
+    "IMPROVE": 0.024511,
+    "CONFLICT": 0.367143,
+    "UNDERIVABLE": 0.023481
    },
    "classMix": {
     "modern": 0.90493,
@@ -210,26 +219,29 @@
    "slot": 2,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-13T23:39:57.636Z",
-   "classified": 548486,
+   "generatedAt": "2026-09-20T07:35:53.086Z",
+   "classified": 576522,
    "expectedRows": 525258,
-   "coverage": 1.0442,
+   "coverage": 1.0976,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 274618,
-    "IMPROVE": 33678,
-    "CONFLICT": 225512,
-    "UNDERIVABLE": 14607,
+    "AGREE": 332481,
+    "IMPROVE": 32592,
+    "CONFLICT": 197133,
+    "UNDERIVABLE": 14246,
     "UNDERIVABLE-for-subset": null,
-    "r26": 11,
-    "r27": 11977,
-    "r28": 0
+    "r26": 2318,
+    "r27": 17807,
+    "r28": 0,
+    "r31": 7999,
+    "r32": 5144,
+    "r33": 899
    },
    "shares": {
-    "AGREE": 0.500684,
-    "IMPROVE": 0.061402,
-    "CONFLICT": 0.411154,
-    "UNDERIVABLE": 0.026631
+    "AGREE": 0.576701,
+    "IMPROVE": 0.056532,
+    "CONFLICT": 0.341935,
+    "UNDERIVABLE": 0.02471
    },
    "classMix": {
     "modern": 1
@@ -239,25 +251,28 @@
    "slot": 3,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-13T21:50:28.872Z",
-   "classified": 573602,
+   "generatedAt": "2026-09-20T07:46:37.747Z",
+   "classified": 636025,
    "expectedRows": 509724,
-   "coverage": 1.1253,
+   "coverage": 1.2478,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 184697,
-    "IMPROVE": 25726,
-    "CONFLICT": 315175,
-    "UNDERIVABLE": 48004,
-    "r26": 50,
+    "AGREE": 269704,
+    "IMPROVE": 13561,
+    "CONFLICT": 299132,
+    "UNDERIVABLE": 53628,
+    "r26": 26,
     "r27": 0,
-    "r28": 0
+    "r28": 0,
+    "r31": 12910,
+    "r32": 3977,
+    "r33": 174
    },
    "shares": {
-    "AGREE": 0.321995,
-    "IMPROVE": 0.04485,
-    "CONFLICT": 0.549466,
-    "UNDERIVABLE": 0.083689
+    "AGREE": 0.424046,
+    "IMPROVE": 0.021321,
+    "CONFLICT": 0.470315,
+    "UNDERIVABLE": 0.084317
    },
    "classMix": {
     "modern": 1
@@ -267,26 +282,29 @@
    "slot": 4,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-13T22:13:28.257Z",
-   "classified": 551894,
+   "generatedAt": "2026-09-20T07:30:29.933Z",
+   "classified": 611685,
    "expectedRows": 507991,
-   "coverage": 1.0864,
+   "coverage": 1.2041,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 224786,
-    "IMPROVE": 25109,
-    "CONFLICT": 294906,
-    "UNDERIVABLE": 3631,
+    "AGREE": 313102,
+    "IMPROVE": 13259,
+    "CONFLICT": 277759,
+    "UNDERIVABLE": 3878,
     "UNDERIVABLE-for-subset": null,
-    "r26": 74,
+    "r26": 22,
     "r27": 0,
-    "r28": 0
+    "r28": 0,
+    "r31": 12294,
+    "r32": 3602,
+    "r33": 184
    },
    "shares": {
-    "AGREE": 0.407299,
-    "IMPROVE": 0.045496,
-    "CONFLICT": 0.534353,
-    "UNDERIVABLE": 0.006579
+    "AGREE": 0.511868,
+    "IMPROVE": 0.021676,
+    "CONFLICT": 0.454088,
+    "UNDERIVABLE": 0.00634
    },
    "classMix": {
     "modern": 0.889567,
@@ -297,26 +315,29 @@
    "slot": 5,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-13T23:28:01.972Z",
-   "classified": 546647,
+   "generatedAt": "2026-09-20T07:27:24.415Z",
+   "classified": 585611,
    "expectedRows": 506536,
-   "coverage": 1.0792,
+   "coverage": 1.1561,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 305016,
-    "IMPROVE": 36391,
-    "CONFLICT": 176271,
-    "UNDERIVABLE": 28761,
+    "AGREE": 358264,
+    "IMPROVE": 35712,
+    "CONFLICT": 158541,
+    "UNDERIVABLE": 32883,
     "UNDERIVABLE-for-subset": null,
-    "r26": 4,
-    "r27": 7158,
-    "r28": 0
+    "r26": 445,
+    "r27": 17352,
+    "r28": 0,
+    "r31": 17199,
+    "r32": 13552,
+    "r33": 16
    },
    "shares": {
-    "AGREE": 0.557976,
-    "IMPROVE": 0.066571,
-    "CONFLICT": 0.322459,
-    "UNDERIVABLE": 0.052613
+    "AGREE": 0.611778,
+    "IMPROVE": 0.060982,
+    "CONFLICT": 0.270727,
+    "UNDERIVABLE": 0.056152
    },
    "classMix": {
     "modern": 1
@@ -326,25 +347,28 @@
    "slot": 6,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-13T22:33:00.051Z",
-   "classified": 544843,
+   "generatedAt": "2026-09-20T07:56:11.635Z",
+   "classified": 577964,
    "expectedRows": 505960,
-   "coverage": 1.0768,
+   "coverage": 1.1423,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 346108,
-    "IMPROVE": 22507,
-    "CONFLICT": 167640,
-    "UNDERIVABLE": 8588,
-    "r26": 469,
+    "AGREE": 407064,
+    "IMPROVE": 21024,
+    "CONFLICT": 141349,
+    "UNDERIVABLE": 8527,
+    "r26": 447,
     "r27": 0,
-    "r28": 0
+    "r28": 0,
+    "r31": 17050,
+    "r32": 13095,
+    "r33": 33
    },
    "shares": {
-    "AGREE": 0.635244,
-    "IMPROVE": 0.041309,
-    "CONFLICT": 0.307685,
-    "UNDERIVABLE": 0.015762
+    "AGREE": 0.704307,
+    "IMPROVE": 0.036376,
+    "CONFLICT": 0.244564,
+    "UNDERIVABLE": 0.014754
    },
    "classMix": {
     "modern": 0.878793,
@@ -355,26 +379,29 @@
    "slot": 7,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T03:48:21.402Z",
-   "classified": 609106,
+   "generatedAt": "2026-09-20T07:39:46.889Z",
+   "classified": 689269,
    "expectedRows": 506634,
-   "coverage": 1.2023,
+   "coverage": 1.3605,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 62878,
-    "IMPROVE": 245086,
-    "CONFLICT": 233158,
-    "UNDERIVABLE": 67641,
+    "AGREE": 65518,
+    "IMPROVE": 204607,
+    "CONFLICT": 344632,
+    "UNDERIVABLE": 74013,
     "UNDERIVABLE-for-subset": null,
-    "r26": 23,
-    "r27": 103065,
-    "r28": 0
+    "r26": 45,
+    "r27": 243813,
+    "r28": 0,
+    "r31": 166,
+    "r32": 155,
+    "r33": 23
    },
    "shares": {
-    "AGREE": 0.10323,
-    "IMPROVE": 0.40237,
-    "CONFLICT": 0.382787,
-    "UNDERIVABLE": 0.11105
+    "AGREE": 0.095054,
+    "IMPROVE": 0.296846,
+    "CONFLICT": 0.499996,
+    "UNDERIVABLE": 0.107379
    },
    "classMix": {
     "pokemon": 0.877582,
@@ -385,25 +412,28 @@
    "slot": 8,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T05:00:43.592Z",
-   "classified": 631954,
+   "generatedAt": "2026-09-20T07:32:59.272Z",
+   "classified": 726628,
    "expectedRows": 498558,
-   "coverage": 1.2676,
+   "coverage": 1.4575,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 90546,
-    "IMPROVE": 210799,
-    "CONFLICT": 225978,
-    "UNDERIVABLE": 104631,
+    "AGREE": 108611,
+    "IMPROVE": 166391,
+    "CONFLICT": 335719,
+    "UNDERIVABLE": 115907,
     "r26": 0,
-    "r27": 89402,
-    "r28": 0
+    "r27": 193889,
+    "r28": 0,
+    "r31": 40,
+    "r32": 30,
+    "r33": 1
    },
    "shares": {
-    "AGREE": 0.143279,
-    "IMPROVE": 0.333567,
-    "CONFLICT": 0.357586,
-    "UNDERIVABLE": 0.165567
+    "AGREE": 0.149473,
+    "IMPROVE": 0.228991,
+    "CONFLICT": 0.462023,
+    "UNDERIVABLE": 0.159514
    },
    "classMix": {
     "pokemon": 0.869221,
@@ -414,25 +444,29 @@
    "slot": 9,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-13T21:00:50.157Z",
-   "classified": 522981,
+   "generatedAt": "2026-09-20T07:54:57.734Z",
+   "classified": 555722,
    "expectedRows": 497603,
-   "coverage": 1.051,
+   "coverage": 1.1168,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 244138,
-    "IMPROVE": 16821,
-    "CONFLICT": 207669,
-    "UNDERIVABLE": 13917,
-    "r26": 0,
+    "AGREE": 303646,
+    "IMPROVE": 19091,
+    "CONFLICT": 175509,
+    "UNDERIVABLE": 12580,
+    "UNDERIVABLE-for-subset": null,
+    "r26": 762,
     "r27": 0,
-    "r28": 0
+    "r28": 0,
+    "r31": 13434,
+    "r32": 4485,
+    "r33": 726
    },
    "shares": {
-    "AGREE": 0.46682,
-    "IMPROVE": 0.032164,
-    "CONFLICT": 0.397087,
-    "UNDERIVABLE": 0.026611
+    "AGREE": 0.546399,
+    "IMPROVE": 0.034354,
+    "CONFLICT": 0.315822,
+    "UNDERIVABLE": 0.022637
    },
    "classMix": {
     "modern": 0.8623,
@@ -443,25 +477,28 @@
    "slot": 10,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-13T20:58:21.233Z",
-   "classified": 527477,
+   "generatedAt": "2026-09-20T07:26:15.656Z",
+   "classified": 561075,
    "expectedRows": 498176,
-   "coverage": 1.0588,
+   "coverage": 1.1263,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 250634,
-    "IMPROVE": 19278,
-    "CONFLICT": 240466,
-    "UNDERIVABLE": 17099,
-    "r26": 0,
-    "r27": 0,
-    "r28": 0
+    "AGREE": 310450,
+    "IMPROVE": 22847,
+    "CONFLICT": 210797,
+    "UNDERIVABLE": 16981,
+    "r26": 661,
+    "r27": 2,
+    "r28": 0,
+    "r31": 14088,
+    "r32": 4838,
+    "r33": 1911
    },
    "shares": {
-    "AGREE": 0.475156,
-    "IMPROVE": 0.036548,
-    "CONFLICT": 0.45588,
-    "UNDERIVABLE": 0.032417
+    "AGREE": 0.553313,
+    "IMPROVE": 0.04072,
+    "CONFLICT": 0.375702,
+    "UNDERIVABLE": 0.030265
    },
    "classMix": {
     "modern": 0.982976,
@@ -472,26 +509,29 @@
    "slot": 11,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-13T22:32:47.747Z",
-   "classified": 559366,
+   "generatedAt": "2026-09-20T07:27:08.914Z",
+   "classified": 627603,
    "expectedRows": 500403,
-   "coverage": 1.1178,
+   "coverage": 1.2542,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 120429,
-    "IMPROVE": 56032,
-    "CONFLICT": 352039,
-    "UNDERIVABLE": 30582,
+    "AGREE": 209625,
+    "IMPROVE": 51453,
+    "CONFLICT": 330363,
+    "UNDERIVABLE": 35856,
     "UNDERIVABLE-for-subset": null,
-    "r26": 110,
-    "r27": 24938,
-    "r28": 1046
+    "r26": 566,
+    "r27": 30144,
+    "r28": 27,
+    "r31": 22181,
+    "r32": 3238,
+    "r33": 365
    },
    "shares": {
-    "AGREE": 0.215296,
-    "IMPROVE": 0.100171,
-    "CONFLICT": 0.629354,
-    "UNDERIVABLE": 0.054673
+    "AGREE": 0.334009,
+    "IMPROVE": 0.081983,
+    "CONFLICT": 0.526388,
+    "UNDERIVABLE": 0.057132
    },
    "classMix": {
     "modern": 0.975126,
@@ -502,26 +542,29 @@
    "slot": 12,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T00:20:34.614Z",
-   "classified": 523034,
+   "generatedAt": "2026-09-20T08:06:58.115Z",
+   "classified": 570122,
    "expectedRows": 497603,
-   "coverage": 1.0511,
+   "coverage": 1.1457,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 283834,
-    "IMPROVE": 25611,
-    "CONFLICT": 185026,
-    "UNDERIVABLE": 17725,
+    "AGREE": 361996,
+    "IMPROVE": 20652,
+    "CONFLICT": 157273,
+    "UNDERIVABLE": 18508,
     "UNDERIVABLE-for-subset": null,
-    "r26": 838,
+    "r26": 1786,
     "r27": 0,
-    "r28": 0
+    "r28": 0,
+    "r31": 15628,
+    "r32": 12374,
+    "r33": 32
    },
    "shares": {
-    "AGREE": 0.542668,
-    "IMPROVE": 0.048966,
-    "CONFLICT": 0.353755,
-    "UNDERIVABLE": 0.033889
+    "AGREE": 0.634945,
+    "IMPROVE": 0.036224,
+    "CONFLICT": 0.275859,
+    "UNDERIVABLE": 0.032463
    },
    "classMix": {
     "modern": 0.845616,
@@ -532,26 +575,29 @@
    "slot": 13,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-13T22:31:53.644Z",
-   "classified": 522490,
+   "generatedAt": "2026-09-20T08:16:19.744Z",
+   "classified": 569118,
    "expectedRows": 497603,
-   "coverage": 1.05,
+   "coverage": 1.1437,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 268404,
-    "IMPROVE": 23999,
-    "CONFLICT": 173830,
-    "UNDERIVABLE": 18658,
+    "AGREE": 343245,
+    "IMPROVE": 19723,
+    "CONFLICT": 145570,
+    "UNDERIVABLE": 19001,
     "UNDERIVABLE-for-subset": null,
-    "r26": 678,
+    "r26": 1734,
     "r27": 0,
-    "r28": 0
+    "r28": 0,
+    "r31": 15718,
+    "r32": 9960,
+    "r33": 99
    },
    "shares": {
-    "AGREE": 0.513702,
-    "IMPROVE": 0.045932,
-    "CONFLICT": 0.332695,
-    "UNDERIVABLE": 0.03571
+    "AGREE": 0.603117,
+    "IMPROVE": 0.034655,
+    "CONFLICT": 0.255782,
+    "UNDERIVABLE": 0.033387
    },
    "classMix": {
     "modern": 0.853689,
@@ -562,26 +608,29 @@
    "slot": 14,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-13T22:24:04.747Z",
-   "classified": 523835,
+   "generatedAt": "2026-09-20T07:42:26.187Z",
+   "classified": 570201,
    "expectedRows": 498189,
-   "coverage": 1.0515,
+   "coverage": 1.1445,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 277330,
-    "IMPROVE": 24822,
-    "CONFLICT": 181981,
-    "UNDERIVABLE": 19355,
+    "AGREE": 369479,
+    "IMPROVE": 20847,
+    "CONFLICT": 153707,
+    "UNDERIVABLE": 19388,
     "UNDERIVABLE-for-subset": null,
-    "r26": 2212,
+    "r26": 1864,
     "r27": 0,
-    "r28": 0
+    "r28": 0,
+    "r31": 15608,
+    "r32": 10542,
+    "r33": 108
    },
    "shares": {
-    "AGREE": 0.529422,
-    "IMPROVE": 0.047385,
-    "CONFLICT": 0.347401,
-    "UNDERIVABLE": 0.036949
+    "AGREE": 0.64798,
+    "IMPROVE": 0.036561,
+    "CONFLICT": 0.269566,
+    "UNDERIVABLE": 0.034002
    },
    "classMix": {
     "modern": 0.844621,
@@ -592,26 +641,29 @@
    "slot": 15,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T01:08:41.988Z",
-   "classified": 559039,
+   "generatedAt": "2026-09-20T07:48:06.135Z",
+   "classified": 640209,
    "expectedRows": 508645,
-   "coverage": 1.0991,
+   "coverage": 1.2587,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 235817,
-    "IMPROVE": 27252,
-    "CONFLICT": 188629,
-    "UNDERIVABLE": 62164,
+    "AGREE": 295443,
+    "IMPROVE": 26580,
+    "CONFLICT": 178554,
+    "UNDERIVABLE": 90615,
     "UNDERIVABLE-for-subset": null,
-    "r26": 35,
-    "r27": 273,
-    "r28": 0
+    "r26": 717,
+    "r27": 24817,
+    "r28": 0,
+    "r31": 3223,
+    "r32": 970,
+    "r33": 138
    },
    "shares": {
-    "AGREE": 0.421826,
-    "IMPROVE": 0.048748,
-    "CONFLICT": 0.337417,
-    "UNDERIVABLE": 0.111198
+    "AGREE": 0.461479,
+    "IMPROVE": 0.041518,
+    "CONFLICT": 0.2789,
+    "UNDERIVABLE": 0.14154
    },
    "classMix": {
     "modern": 0.732533,
@@ -622,25 +674,29 @@
    "slot": 16,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T03:24:51.494Z",
-   "classified": 563511,
+   "generatedAt": "2026-09-20T07:46:08.745Z",
+   "classified": 620026,
    "expectedRows": 509575,
-   "coverage": 1.1058,
+   "coverage": 1.2168,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 271930,
-    "IMPROVE": 40643,
-    "CONFLICT": 187074,
-    "UNDERIVABLE": 39350,
-    "r26": 91,
-    "r27": 14049,
-    "r28": 0
+    "AGREE": 341305,
+    "IMPROVE": 43969,
+    "CONFLICT": 161770,
+    "UNDERIVABLE": 46104,
+    "UNDERIVABLE-for-subset": null,
+    "r26": 1132,
+    "r27": 39565,
+    "r28": 0,
+    "r31": 2565,
+    "r32": 1797,
+    "r33": 881
    },
    "shares": {
-    "AGREE": 0.482564,
-    "IMPROVE": 0.072125,
-    "CONFLICT": 0.331979,
-    "UNDERIVABLE": 0.06983
+    "AGREE": 0.550469,
+    "IMPROVE": 0.070915,
+    "CONFLICT": 0.260908,
+    "UNDERIVABLE": 0.074358
    },
    "classMix": {
     "modern": 0.836839,
@@ -651,26 +707,29 @@
    "slot": 17,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T00:36:30.710Z",
-   "classified": 565427,
+   "generatedAt": "2026-09-20T07:49:27.555Z",
+   "classified": 645502,
    "expectedRows": 499807,
-   "coverage": 1.1313,
+   "coverage": 1.2915,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 299687,
-    "IMPROVE": 18160,
-    "CONFLICT": 198980,
-    "UNDERIVABLE": 10205,
+    "AGREE": 389330,
+    "IMPROVE": 20074,
+    "CONFLICT": 183310,
+    "UNDERIVABLE": 11247,
     "UNDERIVABLE-for-subset": null,
-    "r26": 30,
+    "r26": 1625,
     "r27": 0,
-    "r28": 0
+    "r28": 0,
+    "r31": 15021,
+    "r32": 5642,
+    "r33": 24
    },
    "shares": {
-    "AGREE": 0.530019,
-    "IMPROVE": 0.032117,
-    "CONFLICT": 0.351911,
-    "UNDERIVABLE": 0.018048
+    "AGREE": 0.603143,
+    "IMPROVE": 0.031098,
+    "CONFLICT": 0.283981,
+    "UNDERIVABLE": 0.017424
    },
    "classMix": {
     "modern": 0.696717,
@@ -681,25 +740,28 @@
    "slot": 18,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T06:06:45.087Z",
-   "classified": 593415,
+   "generatedAt": "2026-09-20T07:39:15.145Z",
+   "classified": 674598,
    "expectedRows": 500603,
-   "coverage": 1.1854,
+   "coverage": 1.3476,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 259581,
-    "IMPROVE": 32291,
-    "CONFLICT": 214594,
-    "UNDERIVABLE": 86949,
-    "r26": 755,
-    "r27": 7529,
-    "r28": 0
+    "AGREE": 313490,
+    "IMPROVE": 32988,
+    "CONFLICT": 222350,
+    "UNDERIVABLE": 105770,
+    "r26": 616,
+    "r27": 21191,
+    "r28": 0,
+    "r31": 1172,
+    "r32": 4526,
+    "r33": 546
    },
    "shares": {
-    "AGREE": 0.437436,
-    "IMPROVE": 0.054416,
-    "CONFLICT": 0.361626,
-    "UNDERIVABLE": 0.146523
+    "AGREE": 0.464706,
+    "IMPROVE": 0.0489,
+    "CONFLICT": 0.329604,
+    "UNDERIVABLE": 0.15679
    },
    "classMix": {
     "modern": 0.825083,
@@ -710,26 +772,29 @@
    "slot": 19,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T06:46:02.451Z",
-   "classified": 586036,
+   "generatedAt": "2026-09-20T08:07:09.115Z",
+   "classified": 636080,
    "expectedRows": 526560,
-   "coverage": 1.113,
+   "coverage": 1.208,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 283354,
-    "IMPROVE": 26261,
-    "CONFLICT": 193182,
-    "UNDERIVABLE": 52490,
+    "AGREE": 344022,
+    "IMPROVE": 28152,
+    "CONFLICT": 176696,
+    "UNDERIVABLE": 57941,
     "UNDERIVABLE-for-subset": null,
-    "r26": 3663,
-    "r27": 8336,
-    "r28": 0
+    "r26": 2606,
+    "r27": 18334,
+    "r28": 0,
+    "r31": 5819,
+    "r32": 7566,
+    "r33": 504
    },
    "shares": {
-    "AGREE": 0.48351,
-    "IMPROVE": 0.044811,
-    "CONFLICT": 0.329642,
-    "UNDERIVABLE": 0.089568
+    "AGREE": 0.540847,
+    "IMPROVE": 0.044259,
+    "CONFLICT": 0.277789,
+    "UNDERIVABLE": 0.091091
    },
    "classMix": {
     "modern": 0.579357,
@@ -740,26 +805,29 @@
    "slot": 20,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T07:30:46.044Z",
-   "classified": 597568,
+   "generatedAt": "2026-09-20T08:15:13.544Z",
+   "classified": 649927,
    "expectedRows": 532572,
-   "coverage": 1.122,
+   "coverage": 1.2204,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 226943,
-    "IMPROVE": 41422,
-    "CONFLICT": 222178,
-    "UNDERIVABLE": 72861,
+    "AGREE": 294994,
+    "IMPROVE": 46776,
+    "CONFLICT": 194754,
+    "UNDERIVABLE": 78951,
     "UNDERIVABLE-for-subset": null,
-    "r26": 1946,
-    "r27": 24855,
-    "r28": 0
+    "r26": 1408,
+    "r27": 36391,
+    "r28": 0,
+    "r31": 5879,
+    "r32": 6123,
+    "r33": 497
    },
    "shares": {
-    "AGREE": 0.379778,
-    "IMPROVE": 0.069318,
-    "CONFLICT": 0.371804,
-    "UNDERIVABLE": 0.121929
+    "AGREE": 0.453888,
+    "IMPROVE": 0.071971,
+    "CONFLICT": 0.299655,
+    "UNDERIVABLE": 0.121477
    },
    "classMix": {
     "modern": 0.665022,
@@ -770,26 +838,29 @@
    "slot": 21,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T06:07:00.347Z",
-   "classified": 571814,
+   "generatedAt": "2026-09-20T07:36:58.249Z",
+   "classified": 641044,
    "expectedRows": 515862,
-   "coverage": 1.1085,
+   "coverage": 1.2427,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 362922,
-    "IMPROVE": 10742,
-    "CONFLICT": 129738,
-    "UNDERIVABLE": 21925,
+    "AGREE": 422970,
+    "IMPROVE": 12211,
+    "CONFLICT": 118488,
+    "UNDERIVABLE": 36644,
     "UNDERIVABLE-for-subset": null,
-    "r26": 664,
-    "r27": 1727,
-    "r28": 0
+    "r26": 844,
+    "r27": 3819,
+    "r28": 0,
+    "r31": 551,
+    "r32": 3065,
+    "r33": 1033
    },
    "shares": {
-    "AGREE": 0.634685,
-    "IMPROVE": 0.018786,
-    "CONFLICT": 0.226888,
-    "UNDERIVABLE": 0.038343
+    "AGREE": 0.659814,
+    "IMPROVE": 0.019049,
+    "CONFLICT": 0.184836,
+    "UNDERIVABLE": 0.057163
    },
    "classMix": {
     "modern": 0.581322,
@@ -800,26 +871,29 @@
    "slot": 22,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T06:05:19.506Z",
-   "classified": 671996,
+   "generatedAt": "2026-09-20T07:50:33.762Z",
+   "classified": 781888,
    "expectedRows": 519400,
-   "coverage": 1.2938,
+   "coverage": 1.5054,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 144223,
-    "IMPROVE": 219369,
-    "CONFLICT": 261318,
-    "UNDERIVABLE": 37291,
+    "AGREE": 168102,
+    "IMPROVE": 229572,
+    "CONFLICT": 306933,
+    "UNDERIVABLE": 66756,
     "UNDERIVABLE-for-subset": null,
-    "r26": 451,
-    "r27": 105056,
-    "r28": 0
+    "r26": 493,
+    "r27": 243754,
+    "r28": 0,
+    "r31": 430,
+    "r32": 2225,
+    "r33": 231
    },
    "shares": {
-    "AGREE": 0.214619,
-    "IMPROVE": 0.326444,
-    "CONFLICT": 0.388868,
-    "UNDERIVABLE": 0.055493
+    "AGREE": 0.214995,
+    "IMPROVE": 0.293612,
+    "CONFLICT": 0.392554,
+    "UNDERIVABLE": 0.085378
    },
    "classMix": {
     "pokemon": 0.566565,
@@ -831,25 +905,29 @@
    "slot": 23,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T05:22:09.651Z",
-   "classified": 579871,
+   "generatedAt": "2026-09-20T07:56:46.056Z",
+   "classified": 657650,
    "expectedRows": 524808,
-   "coverage": 1.1049,
+   "coverage": 1.2531,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 236739,
-    "IMPROVE": 8120,
-    "CONFLICT": 283032,
-    "UNDERIVABLE": 46033,
-    "r26": 186,
+    "AGREE": 336194,
+    "IMPROVE": 13927,
+    "CONFLICT": 233058,
+    "UNDERIVABLE": 67426,
+    "UNDERIVABLE-for-subset": null,
+    "r26": 314,
     "r27": 0,
-    "r28": 0
+    "r28": 0,
+    "r31": 11299,
+    "r32": 1659,
+    "r33": 397
    },
    "shares": {
-    "AGREE": 0.408261,
-    "IMPROVE": 0.014003,
-    "CONFLICT": 0.488095,
-    "UNDERIVABLE": 0.079385
+    "AGREE": 0.511205,
+    "IMPROVE": 0.021177,
+    "CONFLICT": 0.35438,
+    "UNDERIVABLE": 0.102526
    },
    "classMix": {
     "modern": 0.606464,
@@ -860,26 +938,29 @@
    "slot": 24,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T05:01:13.238Z",
-   "classified": 558924,
+   "generatedAt": "2026-09-20T07:47:47.862Z",
+   "classified": 612007,
    "expectedRows": 505955,
-   "coverage": 1.1047,
+   "coverage": 1.2096,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 299288,
-    "IMPROVE": 22466,
-    "CONFLICT": 183031,
-    "UNDERIVABLE": 19322,
+    "AGREE": 378148,
+    "IMPROVE": 14224,
+    "CONFLICT": 160903,
+    "UNDERIVABLE": 21147,
     "UNDERIVABLE-for-subset": null,
-    "r26": 280,
+    "r26": 449,
     "r27": 0,
-    "r28": 0
+    "r28": 0,
+    "r31": 6360,
+    "r32": 4023,
+    "r33": 110
    },
    "shares": {
-    "AGREE": 0.535472,
-    "IMPROVE": 0.040195,
-    "CONFLICT": 0.32747,
-    "UNDERIVABLE": 0.03457
+    "AGREE": 0.617882,
+    "IMPROVE": 0.023242,
+    "CONFLICT": 0.26291,
+    "UNDERIVABLE": 0.034554
    },
    "classMix": {
     "modern": 0.460772,
@@ -890,26 +971,29 @@
    "slot": 25,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T07:23:18.354Z",
-   "classified": 568092,
+   "generatedAt": "2026-09-20T07:55:03.195Z",
+   "classified": 653327,
    "expectedRows": 501820,
-   "coverage": 1.1321,
+   "coverage": 1.3019,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 301687,
-    "IMPROVE": 52727,
-    "CONFLICT": 144619,
-    "UNDERIVABLE": 50533,
+    "AGREE": 369497,
+    "IMPROVE": 53891,
+    "CONFLICT": 154509,
+    "UNDERIVABLE": 55707,
     "UNDERIVABLE-for-subset": null,
-    "r26": 212,
-    "r27": 23937,
-    "r28": 0
+    "r26": 400,
+    "r27": 61652,
+    "r28": 0,
+    "r31": 1005,
+    "r32": 2138,
+    "r33": 569
    },
    "shares": {
-    "AGREE": 0.531053,
-    "IMPROVE": 0.092814,
-    "CONFLICT": 0.25457,
-    "UNDERIVABLE": 0.088952
+    "AGREE": 0.565562,
+    "IMPROVE": 0.082487,
+    "CONFLICT": 0.236496,
+    "UNDERIVABLE": 0.085267
    },
    "classMix": {
     "vintage": 1
@@ -919,25 +1003,29 @@
    "slot": 26,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T09:18:05.972Z",
-   "classified": 568719,
+   "generatedAt": "2026-09-20T08:00:14.961Z",
+   "classified": 624655,
    "expectedRows": 497602,
-   "coverage": 1.1429,
+   "coverage": 1.2553,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 240924,
-    "IMPROVE": 43986,
-    "CONFLICT": 173910,
-    "UNDERIVABLE": 84951,
-    "r26": 2251,
-    "r27": 39012,
-    "r28": 0
+    "AGREE": 288176,
+    "IMPROVE": 48286,
+    "CONFLICT": 170144,
+    "UNDERIVABLE": 91649,
+    "UNDERIVABLE-for-subset": null,
+    "r26": 1930,
+    "r27": 45178,
+    "r28": 0,
+    "r31": 447,
+    "r32": 8029,
+    "r33": 421
    },
    "shares": {
-    "AGREE": 0.423626,
-    "IMPROVE": 0.077342,
-    "CONFLICT": 0.305792,
-    "UNDERIVABLE": 0.149373
+    "AGREE": 0.461336,
+    "IMPROVE": 0.0773,
+    "CONFLICT": 0.272381,
+    "UNDERIVABLE": 0.146719
    },
    "classMix": {
     "vintage": 0.68389,
@@ -948,25 +1036,29 @@
    "slot": 27,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T07:23:59.989Z",
-   "classified": 601262,
+   "generatedAt": "2026-09-20T08:00:09.097Z",
+   "classified": 683516,
    "expectedRows": 531725,
-   "coverage": 1.1308,
+   "coverage": 1.2855,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 295438,
-    "IMPROVE": 37924,
-    "CONFLICT": 162771,
-    "UNDERIVABLE": 61023,
-    "r26": 831,
-    "r27": 35678,
-    "r28": 0
+    "AGREE": 362498,
+    "IMPROVE": 49562,
+    "CONFLICT": 160327,
+    "UNDERIVABLE": 66176,
+    "UNDERIVABLE-for-subset": null,
+    "r26": 668,
+    "r27": 47691,
+    "r28": 0,
+    "r31": 418,
+    "r32": 3906,
+    "r33": 1287
    },
    "shares": {
-    "AGREE": 0.491363,
-    "IMPROVE": 0.063074,
-    "CONFLICT": 0.270716,
-    "UNDERIVABLE": 0.101492
+    "AGREE": 0.530343,
+    "IMPROVE": 0.07251,
+    "CONFLICT": 0.234562,
+    "UNDERIVABLE": 0.096817
    },
    "classMix": {
     "vintage": 0.653693,
@@ -977,26 +1069,29 @@
    "slot": 28,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T08:34:51.190Z",
-   "classified": 597785,
+   "generatedAt": "2026-09-20T08:03:10.516Z",
+   "classified": 658638,
    "expectedRows": 526853,
-   "coverage": 1.1346,
+   "coverage": 1.2501,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 318347,
-    "IMPROVE": 62927,
-    "CONFLICT": 129300,
-    "UNDERIVABLE": 58370,
+    "AGREE": 368431,
+    "IMPROVE": 66772,
+    "CONFLICT": 128633,
+    "UNDERIVABLE": 63831,
     "UNDERIVABLE-for-subset": null,
-    "r26": 261,
-    "r27": 30302,
-    "r28": 0
+    "r26": 104,
+    "r27": 61317,
+    "r28": 0,
+    "r31": 87,
+    "r32": 5743,
+    "r33": 1557
    },
    "shares": {
-    "AGREE": 0.532544,
-    "IMPROVE": 0.105267,
-    "CONFLICT": 0.216299,
-    "UNDERIVABLE": 0.097644
+    "AGREE": 0.559383,
+    "IMPROVE": 0.101379,
+    "CONFLICT": 0.195302,
+    "UNDERIVABLE": 0.096914
    },
    "classMix": {
     "modern": 0.396911,
@@ -1007,26 +1102,29 @@
    "slot": 29,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T07:49:59.410Z",
-   "classified": 592551,
+   "generatedAt": "2026-09-20T08:02:26.851Z",
+   "classified": 643737,
    "expectedRows": 531140,
-   "coverage": 1.1156,
+   "coverage": 1.212,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 336676,
-    "IMPROVE": 20678,
-    "CONFLICT": 131228,
-    "UNDERIVABLE": 87140,
+    "AGREE": 372260,
+    "IMPROVE": 19643,
+    "CONFLICT": 138629,
+    "UNDERIVABLE": 95313,
     "UNDERIVABLE-for-subset": null,
-    "r26": 220,
-    "r27": 1363,
-    "r28": 0
+    "r26": 133,
+    "r27": 11691,
+    "r28": 0,
+    "r31": 262,
+    "r32": 4794,
+    "r33": 118
    },
    "shares": {
-    "AGREE": 0.568181,
-    "IMPROVE": 0.034897,
-    "CONFLICT": 0.221463,
-    "UNDERIVABLE": 0.147059
+    "AGREE": 0.57828,
+    "IMPROVE": 0.030514,
+    "CONFLICT": 0.21535,
+    "UNDERIVABLE": 0.148062
    },
    "classMix": {
     "modern": 0.390453,
@@ -1037,25 +1135,29 @@
    "slot": 30,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T13:13:41.425Z",
-   "classified": 574680,
+   "generatedAt": "2026-09-20T08:03:53.011Z",
+   "classified": 641056,
    "expectedRows": 504154,
-   "coverage": 1.1399,
+   "coverage": 1.2715,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 221700,
-    "IMPROVE": 80702,
-    "CONFLICT": 190476,
-    "UNDERIVABLE": 57154,
-    "r26": 547,
-    "r27": 34782,
-    "r28": 0
+    "AGREE": 265972,
+    "IMPROVE": 87519,
+    "CONFLICT": 196851,
+    "UNDERIVABLE": 63949,
+    "UNDERIVABLE-for-subset": null,
+    "r26": 1064,
+    "r27": 93084,
+    "r28": 0,
+    "r31": 652,
+    "r32": 1642,
+    "r33": 1471
    },
    "shares": {
-    "AGREE": 0.38578,
-    "IMPROVE": 0.140429,
-    "CONFLICT": 0.331447,
-    "UNDERIVABLE": 0.099454
+    "AGREE": 0.414897,
+    "IMPROVE": 0.136523,
+    "CONFLICT": 0.307073,
+    "UNDERIVABLE": 0.099756
    },
    "classMix": {
     "modern": 0.741595,
@@ -1066,26 +1168,29 @@
    "slot": 31,
    "runId": null,
    "measuredAt": "2026-09-01",
-   "generatedAt": "2026-09-14T07:17:31.157Z",
-   "classified": 558221,
+   "generatedAt": "2026-09-20T07:52:45.167Z",
+   "classified": 621288,
    "expectedRows": 498308,
-   "coverage": 1.1202,
+   "coverage": 1.2468,
    "stoppedAtBudget": false,
    "counts": {
-    "AGREE": 289640,
-    "IMPROVE": 12672,
-    "CONFLICT": 134040,
-    "UNDERIVABLE": 24855,
+    "AGREE": 368360,
+    "IMPROVE": 11293,
+    "CONFLICT": 115377,
+    "UNDERIVABLE": 27066,
     "UNDERIVABLE-for-subset": null,
-    "r26": 463,
+    "r26": 530,
     "r27": 0,
-    "r28": 0
+    "r28": 0,
+    "r31": 529,
+    "r32": 7178,
+    "r33": 65
    },
    "shares": {
-    "AGREE": 0.518863,
-    "IMPROVE": 0.022701,
-    "CONFLICT": 0.24012,
-    "UNDERIVABLE": 0.044525
+    "AGREE": 0.592897,
+    "IMPROVE": 0.018177,
+    "CONFLICT": 0.185706,
+    "UNDERIVABLE": 0.043564
    },
    "classMix": {
     "vintage": 1
