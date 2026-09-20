@@ -2786,6 +2786,304 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // verticals, ruled distinct in both — so the entry carries no sport of its
   // own, exactly as `bowmans-best-preview` above carries none.
   P("leaf-ultimate", { parent: "leaf" }),
+
+  /**
+   * WAVE-1 ACQUISITION FOLLOW-ON (Drew, ruling round of 2026-09-19): FOUR
+   * BECKETT/HOBBYMONITOR PACKAGES -- THE GENUINE NAMED INSERT/AUTO SETS THAT
+   * WERE BLOCKING THEM (85 keys total: 23 + 16 + 19 + 27).
+   *
+   * Same R60/R67 method as #2276 (Zenith) and #2342 (Illusions/Mosaic): every
+   * key below was measured by running the ingester's own offline planner
+   * (`planStagedDirectory`, scripts/ingest-checklist-csv-to-catalog.cjs)
+   * against the live staged CSV and registering EXACTLY the strings it
+   * reports `unregistered`, never a hand-spelled guess. For each one this
+   * comment also re-derived, directly from the CSV rather than trusting the
+   * PR #2344 body: distinct card count, numbering, and roster overlap against
+   * (a) the product's base set and (b) every other section whose name shares
+   * a root word -- because a colour/finish rung that REPRINTS a root's roster
+   * is a PARALLEL and must never get a key, even when the source spells it
+   * with a tier or retailer name instead of a colour.
+   *
+   * 2024 PANINI PRIZM FOOTBALL (Beckett S3) -- 23 keys. All land
+   * `role: own-cards` in the converter's own classifier; none is a subset of
+   * Base>Base Set. One cluster was checked and correctly EXCLUDED: the
+   * eighteen "Rookie Autographs Prizm <colour>" categories (silver, black
+   * finite, black shimmer, blue shimmer, camo, gold, gold vinyl, green scope,
+   * green shimmer, no huddle, no huddle black, no huddle gold, pink, purple
+   * power, purple pulsar, red shimmer, red wave, white sparkle) are each a
+   * 100% roster match, number-for-number and player-for-player, against
+   * Base's own Rookies subset (#301-400) -- on-card autograph PARALLELS of
+   * the base rookie cards, not a separate insert, exactly the Donruss
+   * Rated-Rookies-Autographs shape below. The module's own colour-strip fold
+   * already resolves all eighteen to root `rookie-autographs-prizm`, which
+   * normalizes straight back to bare `panini-prizm` (verified: no
+   * registration needed OR wanted -- registering it would mint a key for a
+   * parallel). `Rookie Patch Autographs Prizm Silver` (144 rows) and `Rookie
+   * Variations Prizms Silver` (294 rows) are NOT this shape: both use their
+   * own independent 1-42 numbering with zero player overlap against Base or
+   * against each other, so both are genuine, distinct own-cards sets.
+   *
+   *     fireworks                      275 rows  #1-25
+   *     sensational-signatures         231 rows  #3-50
+   *     emergent                       220 rows  #1-20
+   *     prizmatic                      220 rows  #1-20
+   *     hype                           165 rows  #1-15
+   *     rookie-patch-autographs-prizm-silver  144 rows  #1-42 (own roster,
+   *                                            zero overlap with Rookie
+   *                                            Variations below)
+   *     franchise-legends-signatures   112 rows  #3-25
+   *     portals                        110 rows  #1-10
+   *     prizm-break                    110 rows  #1-10
+   *     all-purpose-prizms-silver      100 rows  #1-20
+   *     flashback-autographs            91 rows  #1-24
+   *     premier-jerseys                 87 rows  #1-29
+   *     rookie-gear                     87 rows  #1-29
+   *     lockdown-prizms-silver          85 rows  #1-18
+   *     significant-signatures          83 rows  #2-99
+   *     color-blast                     50 rows  #1-35
+   *     prizm-flashback-prizms-silver   50 rows  #1-10
+   *     prizmania                       30 rows  #1-30
+   *     aurora                          20 rows  #1-20
+   *     profiles                        20 rows  #1-20
+   *     manga-horizontal                15 rows  #1-15
+   *     manga-vertical                  15 rows  #1-15
+   *     rookie-variations-prizms-silver 294 rows  #1-42 (own roster; the
+   *                                            module fold leaves this
+   *                                            unfolded because it carries NO
+   *                                            isAuto="true" rows to match the
+   *                                            autograph-patch shape above)
+   *
+   * 2024-25 PANINI PRIZM BASKETBALL (Beckett S3) -- 19 keys. Checked the same
+   * base-roster trap that FB's Rookie Autographs cluster hit: zero of these 19
+   * overlaps Base>Base Set (measured directly, not assumed) -- Prizm
+   * Basketball signs its rookies through "Fast Break Rookie Autographs" and
+   * "Rookie Signatures" style products with their OWN print-run numbering, not
+   * an on-card colour rung of the base card. Checked the two same-root-word
+   * pairs for a fold: `Fast Break Rookie Autographs` (39 rows) vs `Fast Break
+   * Autographs` (59 rows) shares ZERO numbers (0% overlap) -- disjoint rookie
+   * vs veteran signer pools, not a rung. `Signatures` (109 rows) vs
+   * `Sensational Signatures` (89 rows) overlaps only 2 rows (1.8%/2.2%) --
+   * two real, mostly-disjoint signer pools, not a fold. `Kaleidoscopic` (300
+   * rows, #1-30) never appears as a `parallel` value on any base row in this
+   * file -- confirmed by scanning every base row's parallel column -- so in
+   * THIS product/year it is an insert, not a rung (the doctrine's own
+   * warning that Prizm's names can be a parallel in one year and an insert in
+   * another; this file settles it for 2024-25 by its own structure).
+   *
+   *     sensational-signatures       1,634 rows  #1-90
+   *     signatures                   1,017 rows  #1-50
+   *     kaleidoscopic                   300 rows  #1-30
+   *     fast-break-autographs           295 rows  #1-60
+   *     fireworks                       250 rows  #1-25
+   *     emergent                        240 rows  #1-30
+   *     talismen                        210 rows  #1-21
+   *     dominance                       200 rows  #1-25
+   *     instant-impact                  200 rows  #1-25
+   *     fast-break-rookie-autographs    195 rows  #1-40 (0% overlap with
+   *                                              fast-break-autographs above)
+   *     penmanship                      156 rows  #1-50
+   *     luck-of-the-lottery              140 rows  #1-14
+   *     fractal                          100 rows  #1-10
+   *     deep-space                        80 rows  #1-10
+   *     global-reach                      80 rows  #1-10
+   *     groovy                             30 rows  #1-30
+   *     sublime                            30 rows  #1-30
+   *     manga                              20 rows  #1-20
+   *     prizmania                          20 rows  #1-20
+   *
+   * 2024 PANINI DONRUSS FOOTBALL, full workbook (Beckett S3) -- 16 of 18
+   * unregistered keys. TWO ARE DELIBERATELY LEFT UNREGISTERED, not genuine
+   * card sets (measured, not assumed):
+   *
+   *     rated-rookies-autographs (355 rows: folds "Rated Rookies Autographs"
+   *       + "... Orange" + "... Purple") and optic-rated-rookies-preview-
+   *       autographs (60 rows) are BOTH a 100% roster match, number-for-number
+   *       and player-for-player, against Base's own Rated Rookies subset
+   *       (#301-400) -- on-card autograph PARALLELS of the base rookie cards,
+   *       same shape as Prizm FB's excluded cluster above. Left unregistered
+   *       and unfolded pending a converter fix (needs converter fold / owner
+   *       ruling) -- registering either would mint a key for a parallel and
+   *       both keep the file at REFUSE.
+   *
+   * The 16 genuine keys below all land `role: own-cards`, no fold candidate
+   * against any anchor on the file. Six pairs share a root word with a sibling
+   * on this SAME file (retro-1994/-autographs, retro-2004/-autographs,
+   * bomb-squad/-autographs, best-of-instant/-autographs, rated-rookies-retro/
+   * -autographs, rated-rookies-throwback/-autographs) -- checked every pair:
+   * each "-autographs" sibling is a 100% NUMBER-AND-PLAYER SUBSET of its plain
+   * sibling's own roster (verified directly, not assumed), the exact "signed
+   * subset of a real insert, not of base" shape #2276 registered for Zenith's
+   * `rookies` / `rookies-autographs` -- so each pair gets ITS OWN two keys,
+   * neither folded into the other. `red-hot-rookies-autographs` has no plain
+   * sibling here to compare because the base `red-hot-rookies` key already
+   * exists (R38, #2157) -- registering the signed side alone completes it.
+   *
+   *     rated-rookies-throwback          100 rows  #1-50 (insert)
+   *     unleashed                         75 rows  #1-25 (insert)
+   *     bomb-squad                        70 rows  #1-35 (insert; auto sibling
+   *                                              is a 100% subset, 15/70)
+   *     galaxy-of-stars                   60 rows  #1-15 (insert)
+   *     best-of-instant                   54 rows  #1-27 (insert; auto sibling
+   *                                              is a 100% subset, 7/54)
+   *     retro-1994                        40 rows  #1-40 (insert; auto sibling
+   *                                              is a 100% subset, 26/40)
+   *     retro-2004                        40 rows  #1-40 (insert; auto sibling
+   *                                              is a 100% subset, 27/40)
+   *     rated-rookies-throwback-autographs 32 rows  #1-32 (100% subset of
+   *                                              rated-rookies-throwback above)
+   *     retro-2004-autographs              27 rows  100% subset of retro-2004
+   *     retro-1994-autographs              26 rows  100% subset of retro-1994
+   *     1-per-costco-bundle                21 rows  #1-21 (insert; brand-name
+   *                                              kept as printed, R38 style)
+   *     rated-rookies-retro                20 rows  #1-20 (insert; auto
+   *                                              sibling is a 100% subset,
+   *                                              9/20)
+   *     bomb-squad-autographs               15 rows  100% subset of bomb-squad
+   *     rated-rookies-retro-autographs        9 rows  100% subset of
+   *                                              rated-rookies-retro
+   *     best-of-instant-autographs            7 rows  100% subset of
+   *                                              best-of-instant
+   *     red-hot-rookies-autographs             7 rows  signed subset of the
+   *                                              ALREADY-registered
+   *                                              panini-donruss-red-hot-
+   *                                              rookies (R38); this key
+   *                                              completes the pair
+   *
+   * NOT REGISTERED (fold candidates, needs converter fold / owner ruling):
+   *   rated-rookies-autographs, optic-rated-rookies-preview-autographs
+   *
+   * 2024 PANINI SELECT BASKETBALL (hobbymonitor, already committed to main as
+   * `data/checklists/scraped/2024-panini-select-basketball.csv`) -- 27 keys,
+   * derived from the offline planner exactly like the other three packages.
+   * `Sparks Relics` (25 rows, #1-25) is checked against the ALREADY-
+   * registered `panini-select-sparks` and is NOT a rung of it: this file has
+   * no bare "Sparks" section at all (0 rows), so "Sparks" here belongs to a
+   * different Select release entirely and "Sparks Relics" is its own,
+   * unrelated 25-card memorabilia insert in THIS product.
+   *
+   *     rookie-jersey-autographs          640 rows  #1-40
+   *     signature-selections              304 rows  #1-40
+   *     in-flight-signatures               290 rows  #1-30
+   *     youth-explosion-signatures         264 rows  #1-40
+   *     neon-icon                          250 rows  #1-25
+   *     rookie-revolution                  250 rows  #1-25
+   *     jumbo-rookie-swatches               232 rows  #1-30
+   *     autographed-memorabilia             203 rows  #1-30
+   *     clutch                              200 rows  #1-25
+   *     select-certified                    200 rows  #1-20
+   *     throwback-memorabilia               200 rows  #1-25
+   *     selection-committee-signatures      160 rows  #1-20
+   *     sky-high                            160 rows  #1-20
+   *     hot-stars                           150 rows  #1-15
+   *     lodestars                           150 rows  #1-15
+   *     en-fuego                            120 rows  #1-15
+   *     select-pairings-signatures          100 rows  #1-10
+   *     top-shelf-signatures                  75 rows  #1-15
+   *     select-few-signatures                 50 rows  #1-10
+   *     x-factor-memorabilia-signatures        29 rows  #1-30
+   *     sparks-relics                          25 rows  #1-25 (own set, see
+   *                                              above -- not a rung of
+   *                                              panini-select-sparks)
+   *     select-stars-jersey-autographs         20 rows  #1-20
+   *     2024-origins-update-autographs         16 rows  #6-39
+   *     solar-eclipse                          15 rows  #1-15
+   *     artistic-selections                    10 rows  #1-10
+   *     crown-jewels                           10 rows  #1-10
+   *     2024-hoops-update-autographs             1 row   #1
+   *
+   * `family` left at the default (each insert its own pricing family), same
+   * as every prior R60/R67 registration. `productSetKeys.ts` is not a
+   * derivation-stamp input (verified: neither hash definition in
+   * derivation-version.cjs lists this file), so this registration-only PR
+   * does not move `currentStamp()`.
+   */
+  S("panini-prizm-fireworks", { parent: "panini-prizm" }),
+  S("panini-prizm-sensational-signatures", { parent: "panini-prizm" }),
+  S("panini-prizm-emergent", { parent: "panini-prizm" }),
+  S("panini-prizm-prizmatic", { parent: "panini-prizm" }),
+  S("panini-prizm-hype", { parent: "panini-prizm" }),
+  S("panini-prizm-rookie-patch-autographs-prizm-silver", { parent: "panini-prizm" }),
+  S("panini-prizm-franchise-legends-signatures", { parent: "panini-prizm" }),
+  S("panini-prizm-portals", { parent: "panini-prizm" }),
+  S("panini-prizm-prizm-break", { parent: "panini-prizm" }),
+  S("panini-prizm-all-purpose-prizms-silver", { parent: "panini-prizm" }),
+  S("panini-prizm-flashback-autographs", { parent: "panini-prizm" }),
+  S("panini-prizm-premier-jerseys", { parent: "panini-prizm" }),
+  S("panini-prizm-rookie-gear", { parent: "panini-prizm" }),
+  S("panini-prizm-lockdown-prizms-silver", { parent: "panini-prizm" }),
+  S("panini-prizm-significant-signatures", { parent: "panini-prizm" }),
+  S("panini-prizm-color-blast", { parent: "panini-prizm" }),
+  S("panini-prizm-prizm-flashback-prizms-silver", { parent: "panini-prizm" }),
+  S("panini-prizm-prizmania", { parent: "panini-prizm" }),
+  S("panini-prizm-aurora", { parent: "panini-prizm" }),
+  S("panini-prizm-profiles", { parent: "panini-prizm" }),
+  S("panini-prizm-manga-horizontal", { parent: "panini-prizm" }),
+  S("panini-prizm-manga-vertical", { parent: "panini-prizm" }),
+  S("panini-prizm-rookie-variations-prizms-silver", { parent: "panini-prizm" }),
+
+  S("panini-prizm-signatures", { parent: "panini-prizm" }),
+  S("panini-prizm-kaleidoscopic", { parent: "panini-prizm" }),
+  S("panini-prizm-fast-break-autographs", { parent: "panini-prizm" }),
+  S("panini-prizm-talismen", { parent: "panini-prizm" }),
+  S("panini-prizm-dominance", { parent: "panini-prizm" }),
+  S("panini-prizm-instant-impact", { parent: "panini-prizm" }),
+  S("panini-prizm-fast-break-rookie-autographs", { parent: "panini-prizm" }),
+  S("panini-prizm-penmanship", { parent: "panini-prizm" }),
+  S("panini-prizm-luck-of-the-lottery", { parent: "panini-prizm" }),
+  S("panini-prizm-fractal", { parent: "panini-prizm" }),
+  S("panini-prizm-deep-space", { parent: "panini-prizm" }),
+  S("panini-prizm-global-reach", { parent: "panini-prizm" }),
+  S("panini-prizm-groovy", { parent: "panini-prizm" }),
+  S("panini-prizm-sublime", { parent: "panini-prizm" }),
+  S("panini-prizm-manga", { parent: "panini-prizm" }),
+  // "signatures" and "sensational-signatures" both already registered by
+  // the FB block above (bare panini-prizm parent, shared across FB/BK).
+  // "prizmania" and "emergent" and "fireworks" likewise shared with FB.
+
+  S("panini-donruss-rated-rookies-throwback", { parent: "panini-donruss" }),
+  S("panini-donruss-unleashed", { parent: "panini-donruss" }),
+  S("panini-donruss-bomb-squad", { parent: "panini-donruss" }),
+  S("panini-donruss-galaxy-of-stars", { parent: "panini-donruss" }),
+  S("panini-donruss-best-of-instant", { parent: "panini-donruss" }),
+  S("panini-donruss-retro-1994", { parent: "panini-donruss" }),
+  S("panini-donruss-retro-2004", { parent: "panini-donruss" }),
+  S("panini-donruss-rated-rookies-throwback-autographs", { parent: "panini-donruss" }),
+  S("panini-donruss-retro-2004-autographs", { parent: "panini-donruss" }),
+  S("panini-donruss-retro-1994-autographs", { parent: "panini-donruss" }),
+  S("panini-donruss-1-per-costco-bundle", { parent: "panini-donruss" }),
+  S("panini-donruss-rated-rookies-retro", { parent: "panini-donruss" }),
+  S("panini-donruss-bomb-squad-autographs", { parent: "panini-donruss" }),
+  S("panini-donruss-rated-rookies-retro-autographs", { parent: "panini-donruss" }),
+  S("panini-donruss-best-of-instant-autographs", { parent: "panini-donruss" }),
+  S("panini-donruss-red-hot-rookies-autographs", { parent: "panini-donruss" }),
+
+  S("panini-select-rookie-jersey-autographs", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-signature-selections", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-in-flight-signatures", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-youth-explosion-signatures", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-neon-icon", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-rookie-revolution", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-jumbo-rookie-swatches", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-autographed-memorabilia", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-clutch", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-select-certified", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-throwback-memorabilia", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-selection-committee-signatures", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-sky-high", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-hot-stars", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-lodestars", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-en-fuego", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-select-pairings-signatures", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-top-shelf-signatures", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-select-few-signatures", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-x-factor-memorabilia-signatures", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-sparks-relics", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-select-stars-jersey-autographs", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-2024-origins-update-autographs", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-solar-eclipse", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-artistic-selections", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-crown-jewels", { family: "panini-select", parent: "panini-select" }),
+  S("panini-select-2024-hoops-update-autographs", { family: "panini-select", parent: "panini-select" }),
 ];
 
 // -- lookups -----------------------------------------------------------------
