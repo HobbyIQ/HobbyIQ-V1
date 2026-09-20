@@ -137,18 +137,40 @@
  * cardId query + the ONE cross-partition hobbyiqCardId query + decide + write
  * + holdings repoint) runs through a bounded worker pool, not the one-at-a-
  * time serial loop this lane shipped with -- see processTarget's own header
- * comment for the proof that concurrent targets cannot collide (disjoint
- * destination ids by construction, disjoint sale reads by field) and for how
- * the budget stop, the reconciliation counters and the REPORT==APPLY parity
- * all stay exact under it. Read env, same as before: CONCURRENCY or
- * BACKFILL_CONCURRENCY (the runner's own `inputs.concurrency` -- no workflow
- * change needed).
+ * comment for the honest disjointness proof (destination ids are always
+ * disjoint by construction; a sale/holding CAN be found by two live targets,
+ * but ONLY when it is a pre-existing split identity, which classifySaleFor
+ * Relocation now refuses from EITHER side rather than writing from either)
+ * and for how the budget stop, the reconciliation counters (deduped by
+ * document address, not raw query hits) and the REPORT==APPLY parity all
+ * stay exact under it. A blocking review on the first version of this
+ * change found the split-identity gap (a sale with cardId naming one live
+ * target's short id and hobbyiqCardId naming ANOTHER live target's short id
+ * used to be relocated by one and patched by the other -- a torn write on a
+ * document that was never an un-numbered twin); that decision defect was
+ * pre-existing and SERIAL too (the two writes just never raced before), and
+ * is fixed at the decision layer, not just the race. Read env, same as
+ * before: CONCURRENCY or BACKFILL_CONCURRENCY (the runner's own
+ * `inputs.concurrency` -- no workflow change needed).
+ *
+ * LIMIT (non-blocking review note, 2026-09-19): under concurrency, up to
+ * CONCURRENCY targets can be past the `LIMIT` check before any of their
+ * writes land and bump `salesRelocated + salesPatched`, so a dispatch with
+ * LIMIT set can overshoot by up to CONCURRENCY targets' worth of sales
+ * (worst case) before the NEXT target claim sees the limit reached. This
+ * lane's `LIMIT` was already a soft/approximate cap serially (checked once
+ * per TARGET, never per sale, so one target's whole sale list could already
+ * push past it) -- concurrency widens that same slack, it does not introduce
+ * a new kind of imprecision. Not a correctness defect (nothing under- or
+ * double-counts), just a sizing note for an operator who set LIMIT expecting
+ * an exact ceiling.
  *
  * Env: COSMOS_CONNECTION_STRING; BACKFILL_APPLY=true / APPLY=true to write;
  *      SCOPE required (sport:year cells, comma list); SET_KEYS required
  *      (comma list, no 'all'/'*'); SLOT/SLOTS (sha1(id) shards, opt-in via
  *      SHARD=true for slot 0); CONCURRENCY=8 (or BACKFILL_CONCURRENCY, the
- *      runner's own input name); RUN_MINUTES=110; LIMIT=0.
+ *      runner's own input name); RUN_MINUTES=110; LIMIT=0 (soft cap, see
+ *      LIMIT note above).
  * Requires dist/ (foldTwinRuleChecklistNumbered, catalogAuthority,
  * parseTitleIdentity, writeReconciliation).
  */
@@ -302,6 +324,106 @@ function shortIdOf(id) {
 }
 
 /**
+ * RULING (review, 2026-09-19, blocking #2339 as first filed): the split-
+ * identity refusal below used to fire only when NEITHER `cardId` nor
+ * `hobbyiqCardId` equalled the shortId being scanned -- which misses the
+ * exact shape a concurrent dispatch turns into a torn write: a sale with
+ * `cardId = shortA` (a LIVE target, this cell's own scan) and
+ * `hobbyiqCardId = shortB` (a DIFFERENT live target). Target A's cardId-shape
+ * query finds it and RELOCATES it, stamping `hobbyiqCardId = numberedA` --
+ * destroying the very fact that this sale's hobbyiqCardId used to name a
+ * DIFFERENT card. Target B's hobbyiqCardId-shape query (`hobbyiqCardId = @s
+ * AND cardId != @s`) finds the SAME document and PATCHES `hobbyiqCardId =
+ * numberedB`. Whichever write lands last wins; the other is a torn write, a
+ * lost update, on a document that was NEVER an un-numbered twin to begin
+ * with -- it was already split. This was already wrong SERIALLY (the two
+ * writes just never raced), and worse: for split rows, tonight's audit
+ * established the STORED hobbyiqCardId is typically the CORRECT identity and
+ * the vendor-derived cardId the wrong one, so the old relocate path was
+ * overwriting a correct field with a checklist target chosen from the WRONG
+ * side of the split.
+ *
+ * So the shape a sale must be in to be touched AT ALL is now enumerated
+ * explicitly, rather than inferred from "neither field is the shortId":
+ *
+ *   (1) cardId === hobbyiqCardId === shortId
+ *       -- the ordinary un-numbered-twin case this lane exists to fix.
+ *          RELOCATE: both fields become numberedId.
+ *   (2) cardId is a raw VENDOR id (does not start with "hiq:") and
+ *       hobbyiqCardId === shortId
+ *       -- the vendor-keyed patch-shape case: the row lives at a vendor
+ *          partition and only hobbyiqCardId names a hiq: slug.
+ *          PATCH: hobbyiqCardId becomes numberedId, cardId untouched.
+ *   (3) cardId === shortId and hobbyiqCardId is ABSENT/empty
+ *       -- today's code already treats an absent hobbyiqCardId as if it
+ *          equalled cardId (`sale.hobbyiqCardId ?? saleCardId`), so this is
+ *          NOT a distinct code path -- it collapses into (1), and nothing
+ *          about the absent field is destroyed: there was no information
+ *          there to lose, and the relocate sets BOTH fields to numberedId
+ *          exactly as (1) does.
+ *   (4) cardId === shortId and hobbyiqCardId === numberedId ALREADY
+ *       -- a relocate a prior run started and was interrupted before the
+ *          delete of the short-id copy landed (or that itself raced). The
+ *          cardId-shape query still finds it (cardId is still shortId); this
+ *          is finished idempotently by relocating again -- `keep`'s
+ *          hobbyiqCardId is already numberedId either way, so this is not a
+ *          distinct branch from (1) either, just a fixture worth naming.
+ *
+ * EVERYTHING ELSE -- most importantly cardId and hobbyiqCardId both `hiq:`
+ * slugs naming two DIFFERENT cards where at least one of them happens to be
+ * a shortId THIS SCAN is currently examining -- REFUSES as split-identity,
+ * from WHICHEVER side reaches it, in REPORT and APPLY, serial or concurrent.
+ * "Different cards" here is judged against the EXACT relation this lane
+ * itself creates (`numberedId === shortId + ":num-" + N`): a cardId/
+ * hobbyiqCardId pair that already agrees on being exactly {shortId,
+ * numberedId} for THIS target is shape (1)/(4), not a split; anything else
+ * where both are `hiq:` and they disagree is a pre-existing split this lane
+ * does not arbitrate.
+ *
+ * Returns the classification alone (no write decision) so both
+ * `decideSaleAction` (per-sale) and the concurrency test fixtures can assert
+ * on it directly. `null` shape/rank fields are for humans reading a refusal
+ * detail, never branched on.
+ */
+function classifySaleForRelocation(sale, ctx) {
+  const { shortId, numberedId } = ctx;
+  const cardId = String(sale.cardId ?? "");
+  const hobbyiqCardIdRaw = sale.hobbyiqCardId;
+  const hobbyiqCardIdPresent = hobbyiqCardIdRaw !== null && hobbyiqCardIdRaw !== undefined && String(hobbyiqCardIdRaw) !== "";
+  const hobbyiqCardId = hobbyiqCardIdPresent ? String(hobbyiqCardIdRaw) : cardId; // absent falls back to cardId, same as before -- shape (3)
+
+  // (1) / (3) / (4): cardId IS the shortId this target is scanning, and
+  // hobbyiqCardId is either the SAME shortId, absent (folded into the same
+  // check via the fallback above), or ALREADY the numberedId this exact
+  // target would write (a half-done prior relocate). Every one of these
+  // agrees on the pair {shortId, numberedId} for THIS target -- never a
+  // split, because there is only one other card in play (numberedId) and it
+  // is the one this scan is already moving toward.
+  if (cardId === shortId && (hobbyiqCardId === shortId || hobbyiqCardId === numberedId)) {
+    return { ok: true, action: "relocate" };
+  }
+
+  // (2): a raw vendor id (never a hiq: slug) carrying hobbyiqCardId ===
+  // shortId. The vendor id names no card of its own in this vocabulary --
+  // there is nothing for it to "split" from -- so this is the ordinary
+  // patch-shape case, not a split-identity question at all.
+  if (!cardId.startsWith("hiq:") && hobbyiqCardId === shortId) {
+    return { ok: true, action: "patch" };
+  }
+
+  // Everything else: SPLIT. Covers (a) cardId === shortId but hobbyiqCardId
+  // names some OTHER hiq: slug entirely (a different live target, or any
+  // other card) -- the shape the concurrency review found; (b) hobbyiqCardId
+  // === shortId but cardId is a DIFFERENT hiq: slug (the mirror, reached from
+  // the hobbyiqCardId-shape query); (c) the pre-existing "neither field is
+  // this shortId" split the original guard already caught. All three are one
+  // rule now: cardId and hobbyiqCardId disagree on being exactly this
+  // target's {shortId, numberedId} pair, so this lane refuses and lists both
+  // ids, never touching the doc from either side.
+  return { ok: false, cardId, hobbyiqCardId };
+}
+
+/**
  * Pure per-sale decision -- no I/O -- so REPORT and APPLY run the EXACT same
  * logic and a test can assert REPORT's counts equal APPLY's on one fixture
  * (the sibling bug this guards against: a structural zero because a
@@ -327,16 +449,17 @@ function shortIdOf(id) {
 function decideSaleAction(sale, shape, ctx) {
   const { shortId, numberedId, titlePrintRun, targetPrintRun } = ctx;
 
-  // Pre-existing split identity: cardId and hobbyiqCardId already name TWO
-  // DIFFERENT cards, NEITHER of which is the short id being scanned. Not this
-  // lane's job to arbitrate which is right -- counted and listed, never
-  // touched. (When one of the two IS the short id, that is exactly the shape
-  // this lane exists to repair, not a pre-existing split.)
-  const saleCardId = String(sale.cardId ?? "");
-  const saleHobbyiqCardId = String(sale.hobbyiqCardId ?? saleCardId);
-  if (saleCardId && saleHobbyiqCardId && saleCardId !== saleHobbyiqCardId
-    && saleCardId !== shortId && saleHobbyiqCardId !== shortId) {
-    return { action: "refuse", reason: "split-identity", detail: `cardId=${saleCardId} hobbyiqCardId=${saleHobbyiqCardId} -- neither is the short id being scanned; pre-existing split, not this lane's to fix` };
+  // RULING (review, 2026-09-19): the split-identity question is now answered
+  // by ONE shared classifier (classifySaleForRelocation, above), reached
+  // identically from either query shape, rather than a guard that only
+  // caught the case where NEITHER field named the shortId. See that
+  // function's own header for the four allowed shapes and why everything
+  // else -- including cardId === shortId with hobbyiqCardId naming a
+  // DIFFERENT hiq: slug (a different LIVE target under concurrency, or any
+  // other pre-existing split) -- refuses from whichever side reaches it.
+  const classified = classifySaleForRelocation(sale, { shortId, numberedId });
+  if (!classified.ok) {
+    return { action: "refuse", reason: "split-identity", detail: `cardId=${classified.cardId} hobbyiqCardId=${classified.hobbyiqCardId} -- these do not agree on being exactly {${shortId}, ${numberedId}}; pre-existing split, not this lane's to fix` };
   }
 
   // THE ONE TITLE/PRINT-RUN RULE (#2298's own gate, reused rather than
@@ -356,10 +479,21 @@ function decideSaleAction(sale, shape, ctx) {
   if (titlePrintRun || ctx.titleStatesProsePrintRun) {
     return {
       action: "refuse", reason: "title-states-print-run",
-      detail: `title states${titlePrintRun ? ` /${titlePrintRun}` : " a print run in prose"}${targetPrintRun && titlePrintRun && titlePrintRun !== targetPrintRun ? ` (checklist target is /${targetPrintRun})` : ""} -- absent beats wrong, left at ${shape === "cardId" ? saleCardId : saleHobbyiqCardId}`,
+      detail: `title states${titlePrintRun ? ` /${titlePrintRun}` : " a print run in prose"}${targetPrintRun && titlePrintRun && titlePrintRun !== targetPrintRun ? ` (checklist target is /${targetPrintRun})` : ""} -- absent beats wrong, left at ${shape === "cardId" ? String(sale.cardId ?? "") : String(sale.hobbyiqCardId ?? sale.cardId ?? "")}`,
     };
   }
 
+  // `classified.action` and `shape` always agree (shape "cardId" only ever
+  // classifies "relocate"; shape "hobbyiqCardId" only ever classifies
+  // "patch") -- classifySaleForRelocation's own shape (1)/(3)/(4) require
+  // cardId === shortId (which is only how the cardId-shape query finds a
+  // row), and shape (2) requires hobbyiqCardId === shortId with a non-hiq:
+  // cardId (only how the hobbyiqCardId-shape query finds a row, since that
+  // query explicitly excludes cardId === shortId). `shape` is kept as the
+  // return value's own source of truth rather than `classified.action`
+  // because it is what the two call sites already branch their OWN
+  // shape-specific write code on (upsert+delete vs. a plain patch) -- this
+  // is not a second decision, just naming which one classify already made.
   return shape === "cardId"
     ? { action: "relocate", newId: numberedId }
     : { action: "patch", newId: numberedId };
@@ -444,8 +578,19 @@ async function main() {
     // collapse; different sale -> refuse, move nothing.
     collapsedOntoResident: 0,
     refusedTitlePrintRun: 0, refusedSplitIdentity: 0, refusedGuardParked: 0, refusedDestinationCollision: 0,
+    // LAST-LINE DEFENCE (review, 2026-09-19): the source doc changed (or
+    // vanished from its planned address) between this target's planning
+    // read and the point it was about to write -- a re-read-before-write
+    // refusal, never a decision made on stale data.
+    refusedEtagChanged: 0,
     salesFailed: 0, salesLeftAlone: 0,
     holdingsRepointed: 0, holdingsWalked: 0, holdingDocsWalked: 0,
+    // RULING (review, 2026-09-19): a holding whose cardId/hobbyiqCardId
+    // disagree on being exactly this target's {shortId, numberedId} pair --
+    // the SAME split-identity question a sale gets, applied before a
+    // holding write rather than after one that would have destroyed the
+    // correct side of the split.
+    holdingsRefusedSplitIdentity: 0,
     notReached: 0,
     // SHOULD-FIX 4 (review, 2026-09-19): the cross-partition hobbyiqCardId
     // query is the one whose cost scales with pool size rather than with the
@@ -456,22 +601,75 @@ async function main() {
     // across every worker, so a wider CONCURRENCY dispatch shows its own
     // throttle cost in the banner rather than only in the retry backoff.
     throttled: 0,
+    // RULING (review, 2026-09-19): a split-identity sale can be FOUND by two
+    // different targets -- cardId===shortA reaches it via one target's
+    // shape-1 query, hobbyiqCardId===shortB reaches the SAME document via
+    // another target's shape-2 query. Both finds are real (the queries did
+    // return the row twice, once per target), but it is the SAME document,
+    // so it is counted ONCE in `salesFoundByCardId`/`salesFoundByHobbyiqCardId`
+    // via the raw query-hit counts (those are per-shape metrics and stay
+    // exactly what they always were) and this counter is the CORRECTION
+    // applied to the CF-A-SALE-IS-NEVER-LOST reconciliation's own
+    // `salesBefore`, so "sales at short ids before" counts DOCUMENTS, not
+    // query hits. See the reconciliation section below for the subtraction.
+    salesFoundDuplicateAcrossTargets: 0,
   };
   const hobbyiqCardIdQueryMs = [];
   const bySetKey = new Map();
   const byYear = new Map();
-  const refusals = { "title-states-print-run": [], "split-identity": [], "guard-parked": [], "destination-collision": [] };
+  const refusals = { "title-states-print-run": [], "split-identity": [], "guard-parked": [], "destination-collision": [], "stale-since-plan": [] };
   const vetoedTargets = [];
   const collapsedExamples = [];
   const failures = [];
   const examples = [];
   const ambiguousExamples = [];
   const twinExamples = [];
+  const splitHoldingExamples = [];
   const bump = (m, k) => m.set(k, (m.get(k) || 0) + 1);
+
+  // RULING (review, 2026-09-19): every sale doc this run's queries have
+  // touched, keyed by its OWN current `(id, cardId)` address -- the one
+  // stable identity a document has regardless of which target's query (or
+  // which of the two shapes) found it. A key already in this set when a
+  // target's loop reaches it means SOME OTHER target already found this
+  // EXACT document; that can only happen for a split-identity sale (proven
+  // in classifySaleForRelocation's own header: every non-split shape ties a
+  // document to exactly one target's {shortId, numberedId} pair), so the
+  // decision is unaffected -- classifySaleForRelocation already refuses it
+  // independently from either side -- but the REFUSAL COUNTERS and the
+  // reconciliation's `salesBefore` must not double-count the same document.
+  // A plain Map (not per-target), because "found by two different targets"
+  // is a cross-target fact by definition and only means anything checked
+  // against the WHOLE run's finds, not one target's own.
+  const seenSaleAddresses = new Map(); // "id::cardId" -> count of targets that found it
+  const saleAddressKey = (sale) => `${sale.id}::${sale.cardId}`;
+  /** Marks `sale` as found by the CURRENT target's query, and reports
+   *  whether this is the FIRST target to find it (`firstSighting: true`) or
+   *  a document some other target already claimed (`firstSighting: false`,
+   *  `duplicate: true`). Every call increments `salesFoundDuplicateAcrossTargets`
+   *  by exactly the amount needed so `salesFoundByCardId + salesFoundByHobbyiqCardId
+   *  - salesFoundDuplicateAcrossTargets` equals the number of DISTINCT
+   *  documents found across the whole run, however many targets found each
+   *  one. */
+  function noteSaleFound(sale) {
+    const key = saleAddressKey(sale);
+    const n = (seenSaleAddresses.get(key) ?? 0) + 1;
+    seenSaleAddresses.set(key, n);
+    if (n > 1) s.salesFoundDuplicateAcrossTargets++;
+    return { duplicate: n > 1 };
+  }
   let stoppedAtBudget = false;
 
   // ── Holdings index, built ONCE (fold-checklist-numbered-twins' own shape).
   // portfolio.holdings is a MAP: Object.entries, never JOIN h IN c.holdings.
+  //
+  // RULING (review, 2026-09-19): each entry now carries the holding's OWN
+  // cardId/hobbyiqCardId (not just its docId/userId/holdingId), so
+  // repointHoldings can run the SAME split-identity classification a sale
+  // gets before writing -- a holding whose two id fields name different
+  // cards is not this lane's to fix either, and blindly overwriting BOTH
+  // fields with `newId` (the pre-ruling code) is exactly the same destroy-
+  // the-correct-side defect as the sale path had.
   async function buildHoldingsIndex() {
     const index = new Map();
     let docs = 0;
@@ -483,10 +681,12 @@ async function main() {
         for (const [hid, h] of Object.entries(holdings)) {
           s.holdingsWalked++;
           if (!h || typeof h !== "object") continue;
-          for (const slug of new Set([String(h.hobbyiqCardId ?? ""), String(h.cardId ?? "")])) {
+          const hCardId = String(h.cardId ?? "");
+          const hHobbyiqCardId = String(h.hobbyiqCardId ?? hCardId);
+          for (const slug of new Set([hHobbyiqCardId, hCardId])) {
             if (!slug) continue;
             const list = index.get(slug) ?? [];
-            list.push({ docId: doc.id, userId: doc.userId, holdingId: hid });
+            list.push({ docId: doc.id, userId: doc.userId, holdingId: hid, cardId: hCardId, hobbyiqCardId: hHobbyiqCardId });
             index.set(slug, list);
           }
         }
@@ -500,11 +700,39 @@ async function main() {
   }
   const holdingsIndex = await buildHoldingsIndex();
 
+  // RULING (review, 2026-09-19): the SAME cross-target dedup a sale's split
+  // refusal gets (see `noteSaleFound`/`seenSaleAddresses` above) -- a holding
+  // whose cardId names live target A's shortId and hobbyiqCardId names live
+  // target B's shortId is indexed under BOTH slugs in `holdingsIndex`, so
+  // `repointHoldings` is called once by EACH target and would otherwise
+  // count and list the SAME holding's split refusal twice. Keyed by
+  // `(docId, holdingId)` -- the one stable identity a holding has regardless
+  // of which target's call reached it.
+  const seenHoldingSplitRefusal = new Set();
+
   async function repointHoldings(oldId, newId) {
     const hits = holdingsIndex.get(oldId);
     if (!hits || !hits.length) return;
     const byDoc = new Map();
     for (const h of hits) {
+      // RULING (review, 2026-09-19): the SAME classifier a sale gets, applied
+      // to the holding's own {cardId, hobbyiqCardId} pair against THIS
+      // target's {shortId=oldId, numberedId=newId}. A holding whose two
+      // fields disagree on being exactly that pair is a split -- counted and
+      // left untouched, exactly as a split sale is, from whichever side
+      // (cardId===oldId or hobbyiqCardId===oldId) reached it.
+      const classified = classifySaleForRelocation({ cardId: h.cardId, hobbyiqCardId: h.hobbyiqCardId }, { shortId: oldId, numberedId: newId });
+      if (!classified.ok) {
+        const holdingKey = `${h.docId}::${h.holdingId}`;
+        if (!seenHoldingSplitRefusal.has(holdingKey)) {
+          seenHoldingSplitRefusal.add(holdingKey);
+          s.holdingsRefusedSplitIdentity++;
+          if (splitHoldingExamples.length < 20) {
+            splitHoldingExamples.push(`  ${h.docId}/${h.holdingId}: cardId=${classified.cardId} hobbyiqCardId=${classified.hobbyiqCardId} -- pre-existing split, not repointed (target ${oldId} -> ${newId})`);
+          }
+        }
+        continue;
+      }
       const k = `${h.docId}|${h.userId}`;
       const e = byDoc.get(k) ?? { docId: h.docId, userId: h.userId, ids: new Set() };
       e.ids.add(h.holdingId);
@@ -636,19 +864,59 @@ async function main() {
    *   distinct cardNumbers, run at CONCURRENCY=16, asserts both relocate to
    *   their OWN numbered id and neither's sale count leaks into the other).
    *
-   *   HAZARD 2 -- the same SALE reachable from two targets. A sale document
-   *   lives at exactly one (id, cardId) address. This lane finds it either by
-   *   `c.cardId = @shortId` (shape 1) or `c.hobbyiqCardId = @shortId AND
-   *   c.cardId != @shortId` (shape 2) for ONE target's shortId -- and HAZARD
-   *   1 already establishes every concurrent target's shortId is unique. A
-   *   sale whose cardId is short id A can only be found by target A's shape-1
-   *   query; the SAME document could only ALSO surface under target B if its
-   *   hobbyiqCardId equalled B's shortId too, which would require the sale to
-   *   carry two different short-id-shaped values across two fields it does
-   *   not have a THIRD field for -- shape 1 and shape 2 within ONE target's
-   *   own two queries can never double-count the same document either,
-   *   because shape 2 explicitly excludes `c.cardId = @s`. So the read sets
-   *   across concurrent workers are disjoint by field, not merely by luck.
+   *   HAZARD 2 -- the same SALE reachable from two targets. THIS WAS
+   *   PREVIOUSLY MIS-PROVEN HERE, and a blocking review caught it before
+   *   merge: the claim that a document's cardId and hobbyiqCardId "cannot
+   *   carry two different short-id-shaped values" is simply FALSE for a
+   *   pre-existing split-identity sale -- one whose cardId names live target
+   *   A's shortId and whose hobbyiqCardId names live target B's shortId,
+   *   both real checklist-numbered cells in the SAME dispatch. That document
+   *   IS found twice: once by target A's shape-1 query (`c.cardId = @shortA`)
+   *   and once by target B's shape-2 query (`c.hobbyiqCardId = @shortB AND
+   *   c.cardId != @shortB`) -- HAZARD 1's uniqueness of shortIds says nothing
+   *   about this, because HAZARD 1 is about which id a TARGET computes, not
+   *   about how many of a SALE's own two fields can independently match some
+   *   live target's shortId. Under the old decision rule (a split-identity
+   *   refusal that fired only when NEITHER field equalled the SCANNING
+   *   target's own shortId), target A would RELOCATE it (stamping
+   *   hobbyiqCardId = numberedA, destroying the fact that hobbyiqCardId used
+   *   to name a different card) while target B would PATCH the SAME document
+   *   (stamping hobbyiqCardId = numberedB) -- a torn write, decided from two
+   *   different halves of the SAME split fact, on a document that was never
+   *   an un-numbered twin to begin with. This was a pre-existing SERIAL
+   *   defect too (the two writes simply never raced before this file added
+   *   concurrency to notice it): a single-worker rerun that scanned target A
+   *   and then target B would perform BOTH writes in sequence, same result.
+   *
+   *   THE FIX IS AT THE DECISION LAYER, NOT THE RACE.
+   *   `classifySaleForRelocation` (above `decideSaleAction`) replaces "neither
+   *   field is THIS target's shortId" with an exhaustive enumeration of the
+   *   only four shapes this lane may touch (see that function's own header):
+   *   cardId===hobbyiqCardId===shortId; a vendor cardId with
+   *   hobbyiqCardId===shortId; an absent hobbyiqCardId (folds into the first
+   *   shape); or a half-done prior relocate. EVERYTHING ELSE -- including
+   *   cardId naming one live target's shortId while hobbyiqCardId names
+   *   ANOTHER live target's shortId -- refuses as split-identity, from
+   *   WHICHEVER SIDE reaches it, independently, with no shared state needed
+   *   between the two targets to agree on the refusal. That is what makes
+   *   concurrency safe here: not that the document is unreachable from two
+   *   targets (it demonstrably is reachable), but that BOTH targets, given
+   *   the SAME snapshot of that document, compute the SAME "refuse" verdict
+   *   on their own -- there is no write for either of them to race on. The
+   *   only remaining cross-target bookkeeping is COSMETIC: the refusal is
+   *   counted and listed ONCE rather than twice (`noteSaleFound`, dedupe by
+   *   `(id, cardId)`), so the reconciliation counts distinct documents, not
+   *   raw query hits.
+   *
+   *   For a NON-split sale, the old field argument still holds and is worth
+   *   keeping: shape 1 and shape 2 within one target's own two queries can
+   *   never double-count the same document (shape 2 explicitly excludes
+   *   `c.cardId = @s`), and a non-split document's cardId/hobbyiqCardId agree
+   *   with each other, so it can only ever match ONE target's shortId in the
+   *   first place. It is the split case specifically -- where the two fields
+   *   disagree ON PURPOSE, naming two different cards -- that made the old
+   *   "disjoint by field" claim false, and that is exactly the case the new
+   *   classifier exists to name and refuse rather than paper over.
    *
    *   HAZARD 3 -- 429s under higher parallelism. Every I/O call in this
    *   function already goes through the shared `retry()` (now counted via
@@ -656,16 +924,28 @@ async function main() {
    *   jitter on the backoff rather than a bare exponential sleep, so workers
    *   throttled on the same tick do not all wake and retry in lockstep.
    *
-   *   HAZARD 4 -- per-cell caches shared across workers. `catalogTwinAt`
-   *   memoises the twin-catalog point read by shortId; since HAZARD 1
-   *   guarantees every concurrent target's shortId is unique, no two workers
-   *   ever contend for the SAME cache key, but the cache is still made
-   *   promise-safe below (the in-flight PROMISE is stored, not just the
-   *   resolved value) so a hypothetical future caller that re-enters the same
-   *   shortId mid-flight cannot double-read/double-write; today it is a
-   *   defensive property, not a live race. `holdingsIndex` is looked up and
-   *   deleted by `oldId` (= shortId) inside `repointHoldings` -- same
-   *   uniqueness guarantee, same disjoint keys.
+   *   HAZARD 4 -- per-cell caches shared across workers. `catalogTwinAt` is
+   *   keyed purely by the SCANNING target's own shortId (never by a
+   *   holding's or sale's field value), and HAZARD 1 genuinely guarantees
+   *   every concurrent target's OWN shortId is unique -- so no two workers
+   *   ever contend for the SAME `catalogTwinAt` cache key, and the cache is
+   *   additionally made promise-safe below (the in-flight PROMISE is stored,
+   *   not just the resolved value) for a hypothetical future caller that
+   *   re-enters the same shortId mid-flight.
+   *
+   *   `holdingsIndex`, by contrast, IS reachable from two live targets for
+   *   the SAME reason a sale is (HAZARD 2, corrected above): a holding whose
+   *   cardId names target A's shortId and hobbyiqCardId names target B's
+   *   shortId is indexed under BOTH slugs (`buildHoldingsIndex` indexes by
+   *   both fields, same as before), and `repointHoldings` is called once by
+   *   each target with its OWN `oldId`. The fix is the SAME fix as HAZARD 2,
+   *   applied to holdings instead of sales: `repointHoldings` now runs
+   *   `classifySaleForRelocation` on the holding's own {cardId,
+   *   hobbyiqCardId} against the CALLING target's {shortId, numberedId}
+   *   before queueing a write, and a holding that classifies as split is
+   *   refused (counted in `holdingsRefusedSplitIdentity`, listed) rather than
+   *   patched -- from whichever target reaches it, independently, no shared
+   *   state needed between the two calls to agree.
    *
    * `LIMIT`, the example-list caps and `bySetKey`/`byYear` bumps are plain
    * counters/array pushes: JS never interleaves two synchronous statements on
@@ -736,15 +1016,25 @@ async function main() {
     s.salesFoundByCardId += cardIdRows.length;
 
     for (const sale of cardIdRows) {
+      const { duplicate } = noteSaleFound(sale);
       const titlePrintRun = titlePrintRunOf(sale, shortId);
       const titleStatesProsePrintRun = statesProsePrintRun(sale.title);
       const plan = decideSaleAction(sale, "cardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, targetPrintRun: printRunOf(target) });
       if (plan.action === "refuse") {
-        s.salesLeftAlone++;
-        if (plan.reason === "title-states-print-run") s.refusedTitlePrintRun++;
-        else s.refusedSplitIdentity++;
-        const list = refusals[plan.reason];
-        if (list) list.push(`  ${sale.id}@${sale.cardId}: ${plan.detail}`);
+        // RULING (review, 2026-09-19): a document already found by ANOTHER
+        // target (only possible for a split-identity sale -- see
+        // classifySaleForRelocation's own proof) is counted and listed
+        // exactly ONCE, by whichever target's loop reached it FIRST.
+        // `noteSaleFound` above already recorded this as a duplicate FIND
+        // for the reconciliation's own dedup; this is the matching dedup on
+        // the REFUSAL side, so the two stay consistent with each other.
+        if (!duplicate) {
+          s.salesLeftAlone++;
+          if (plan.reason === "title-states-print-run") s.refusedTitlePrintRun++;
+          else s.refusedSplitIdentity++;
+          const list = refusals[plan.reason];
+          if (list) list.push(`  ${sale.id}@${sale.cardId}: ${plan.detail}`);
+        }
         continue;
       }
       try {
@@ -781,6 +1071,43 @@ async function main() {
           // both, move nothing.
           s.refusedDestinationCollision++;
           refusals["destination-collision"].push(`  ${sale.id}@${shortId} -> ${numberedId}: a DIFFERENT sale (by content hash) already resides at the destination; NEITHER moved -- resident price=${resident.price ?? "?"} soldAt=${resident.soldAt ?? "?"} vs incoming price=${sale.price ?? "?"} soldAt=${sale.soldAt ?? "?"}`);
+          continue;
+        }
+
+        // LAST-LINE DEFENCE (review, 2026-09-19): `sale` is the copy this
+        // target's PLANNING read (the cardId-shape query, above) returned.
+        // Everything since -- the title parse, the classify, the resident
+        // check -- ran on that snapshot. Under concurrency (and, more
+        // simply, under a slow serial run racing a live ingest), the SOURCE
+        // document at (sale.id, shortId) can have changed since that read:
+        // another writer (a re-scrape, a different repair lane) could have
+        // altered its hobbyiqCardId, title or content between the plan and
+        // this write. `relocateSoldComp`'s own upsert is a blind write of
+        // `keep`, built entirely from the STALE `sale` snapshot -- so a
+        // change nobody re-checked would be silently overwritten with a
+        // decision made on data that no longer describes the document.
+        //
+        // Cheap and scoped to ONLY the sale actually being relocated (never
+        // the whole cardIdRows page): one extra point read, compared by
+        // `_etag` against the SAME snapshot's own `_etag` (Cosmos returns it
+        // on every `SELECT *`, so `sale._etag` is already what the planning
+        // read saw). A mismatch, or the document being GONE from its planned
+        // address entirely, means it moved out from under this decision --
+        // refuse rather than write over unknown changes; this lane is
+        // idempotent by construction (see processTarget's own header), so a
+        // later pass re-reads and re-decides from scratch rather than acting
+        // on stale information now.
+        let freshBeforeWrite = null;
+        try { freshBeforeWrite = await residentAt(sale.id, shortId); }
+        catch (e) { s.salesFailed++; failures.push(`  FAILED relocate ${sale.id}@${shortId} -> ${numberedId}: could not re-read before write: ${String(e?.message ?? e)}`); continue; }
+        const etagChanged = !freshBeforeWrite || String(freshBeforeWrite._etag ?? "") !== String(sale._etag ?? "");
+        if (etagChanged) {
+          s.refusedEtagChanged++;
+          s.salesLeftAlone++;
+          const why = freshBeforeWrite
+            ? `_etag changed since the planning read (${sale._etag ?? "?"} -> ${freshBeforeWrite._etag ?? "?"})`
+            : `gone from ${shortId} since the planning read (already moved or deleted by something else)`;
+          refusals["stale-since-plan"].push(`  ${sale.id}@${shortId} -> ${numberedId}: ${why} -- refused, not relocated on stale data`);
           continue;
         }
 
@@ -822,15 +1149,23 @@ async function main() {
     s.salesFoundByHobbyiqCardId += hobbyiqRows.length;
 
     for (const sale of hobbyiqRows) {
+      const { duplicate } = noteSaleFound(sale);
       const titlePrintRun = titlePrintRunOf(sale, shortId);
       const titleStatesProsePrintRun = statesProsePrintRun(sale.title);
       const plan = decideSaleAction(sale, "hobbyiqCardId", { shortId, numberedId, titlePrintRun, titleStatesProsePrintRun, targetPrintRun: printRunOf(target) });
       if (plan.action === "refuse") {
-        s.salesLeftAlone++;
-        if (plan.reason === "title-states-print-run") s.refusedTitlePrintRun++;
-        else s.refusedSplitIdentity++;
-        const list = refusals[plan.reason];
-        if (list) list.push(`  ${sale.id}@${sale.cardId} (hobbyiqCardId=${shortId}): ${plan.detail}`);
+        // RULING (review, 2026-09-19): same dedup as the cardId-shape loop
+        // above -- see its comment. A document reached from BOTH shapes
+        // (once via some other target's cardId-shape query, once here via
+        // this target's hobbyiqCardId-shape query) is counted once, by
+        // whichever loop reached it first across the WHOLE run.
+        if (!duplicate) {
+          s.salesLeftAlone++;
+          if (plan.reason === "title-states-print-run") s.refusedTitlePrintRun++;
+          else s.refusedSplitIdentity++;
+          const list = refusals[plan.reason];
+          if (list) list.push(`  ${sale.id}@${sale.cardId} (hobbyiqCardId=${shortId}): ${plan.detail}`);
+        }
         continue;
       }
       try {
@@ -937,10 +1272,12 @@ async function main() {
   console.log(`  REFUSED: pre-existing split identity ${f(s.refusedSplitIdentity)}   <- cardId != hobbyiqCardId naming two different cards already; not this lane's to fix`);
   console.log(`  REFUSED: destination collision       ${f(s.refusedDestinationCollision)}   <- a DIFFERENT sale already resides at the numbered address; neither moved`);
   console.log(`  REFUSED: guard parked (malformed key) ${f(s.refusedGuardParked)}`);
+  console.log(`  REFUSED: stale since the planning read ${f(s.refusedEtagChanged)}   <- source doc changed or vanished between plan and write; re-read before every relocate`);
   console.log(`  failed                              ${f(s.salesFailed)}`);
   console.log(`  not reached                         ${f(s.notReached)}`);
   console.log("");
   console.log(`  holdings re-pointed        ${f(s.holdingsRepointed)}   (walked ${f(s.holdingsWalked)} holdings across ${f(s.holdingDocsWalked)} portfolio docs)`);
+  console.log(`  holdings REFUSED: split identity ${f(s.holdingsRefusedSplitIdentity)}   <- cardId != hobbyiqCardId naming two different cards already; not this lane's to fix`);
   console.log(`  NOTE: a holding still on the short id prices correctly regardless -- poolReadIdsFor`);
   console.log(`        (catalogIdentityResolver.ts) unions the short id and its numbered twin at read`);
   console.log(`        time, so a holding not yet re-pointed here does not go dark.`);
@@ -972,6 +1309,7 @@ async function main() {
   if (byYear.size) { console.log(`\n  by year:`); for (const [k, n] of [...byYear.entries()].sort()) console.log(`    ${String(n).padStart(9)}  ${k}`); }
   if (examples.length) { console.log(`\n  examples:`); for (const e of sorted(examples)) console.log(e); }
   if (twinExamples.length) { console.log(`\n  short ids WITH a catalog twin (sample, ${f(s.shortIdsWithCatalogTwin)} total):`); for (const e of sorted(twinExamples)) console.log(e); }
+  if (splitHoldingExamples.length) { console.log(`\n  holdings REFUSED as split identity (sample, ${f(s.holdingsRefusedSplitIdentity)} total):`); for (const e of sorted(splitHoldingExamples)) console.log(e); }
   if (vetoedTargets.length) { console.log(`\n  VETOED targets -- short id is checklist-backed (sample, ${f(s.targetsVetoedShortIdChecklistBacked)} total):`); for (const e of sorted(vetoedTargets)) console.log(e); }
   if (collapsedExamples.length) { console.log(`\n  COLLAPSED onto a resident (sample, ${f(s.collapsedOntoResident)} total):`); for (const e of sorted(collapsedExamples)) console.log(e); }
   if (ambiguousExamples.length) { console.log(`\n  RIVAL /N groups (sample, ${f(s.ambiguousRivalRuns)} total) -- never folded, a human rules on these:`); for (const e of sorted(ambiguousExamples)) console.log(e); }
@@ -994,12 +1332,27 @@ async function main() {
   // `refusedDestinationCollision` joins the other named refusals -- a
   // DIFFERENT sale already at the destination is exactly the shape a refusal
   // exists to report, never a write this lane may attempt.
-  const salesBefore = s.salesFoundByCardId + s.salesFoundByHobbyiqCardId;
+  //
+  // RULING (review, 2026-09-19): `salesFoundByCardId + salesFoundByHobbyiqCardId`
+  // counts QUERY HITS, and a split-identity sale reachable from two live
+  // targets is a query hit TWICE for the SAME document (once under each
+  // target's own shortId). `salesFoundDuplicateAcrossTargets` (incremented
+  // by `noteSaleFound`, at the point each sale is first seen by ANY target's
+  // loop) is the exact correction: subtracting it turns the raw hit count
+  // into a count of DISTINCT DOCUMENTS, which is what "sales at short ids
+  // before" has always meant to claim. The refusal counters above are
+  // deduped the same way (by `(id, cardId)`, via the SAME `noteSaleFound`
+  // call), so both sides of this equation dedupe identically and the
+  // balance holds whether a split sale was found by one target or two.
+  const salesBefore = s.salesFoundByCardId + s.salesFoundByHobbyiqCardId - s.salesFoundDuplicateAcrossTargets;
   const written = s.salesRelocated + s.salesPatched + s.collapsedOntoResident;
-  const refused = s.refusedTitlePrintRun + s.refusedSplitIdentity + s.refusedGuardParked + s.refusedDestinationCollision;
+  const refused = s.refusedTitlePrintRun + s.refusedSplitIdentity + s.refusedGuardParked + s.refusedDestinationCollision + s.refusedEtagChanged;
   const left = salesBefore - written - refused - s.salesFailed;
   console.log("");
   console.log(`CF-A-SALE-IS-NEVER-LOST`);
+  if (s.salesFoundDuplicateAcrossTargets) {
+    console.log(`  (${f(s.salesFoundByCardId + s.salesFoundByHobbyiqCardId)} raw query hits, ${f(s.salesFoundDuplicateAcrossTargets)} were the SAME split-identity document found by a second target -- deduped to distinct documents below)`);
+  }
   console.log(`  sales at short ids before   ${f(salesBefore)}`);
   console.log(`  ${APPLY ? "=" : "would be ="} relocated ${f(s.salesRelocated)} + patched ${f(s.salesPatched)} + collapsed ${f(s.collapsedOntoResident)} + refused ${f(refused)} + failed ${f(s.salesFailed)} + left ${f(left)}`);
   const accountedFor = written + refused + s.salesFailed + left;
@@ -1036,7 +1389,7 @@ async function main() {
   }
 }
 
-module.exports = { candidateSpec, hasTrailingPrintRun, shortIdOf, decideSaleAction, TRAILING_NUM_RE, INHERITED_SCOPES, CELL_RE, WILDCARDS };
+module.exports = { candidateSpec, hasTrailingPrintRun, shortIdOf, classifySaleForRelocation, decideSaleAction, TRAILING_NUM_RE, INHERITED_SCOPES, CELL_RE, WILDCARDS };
 
 if (require.main === module) {
   main()

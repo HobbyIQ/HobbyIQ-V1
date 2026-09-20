@@ -64,6 +64,30 @@ function shim(opts: {
    *  Zero (the default) behaves exactly as before: an instant, synchronous
    *  resolution, so every test that does not ask for this stays unaffected. */
   latencyMs?: number;
+  /** CONCURRENCY / RULING (review, 2026-09-19): artificial latency (ms) on
+   *  sold_comps WRITE paths -- upsert, patch, delete -- so a test can widen
+   *  the window between the lane's re-read-before-write (`residentAt`) and
+   *  the actual upsert, the exact window the last-line _etag defence exists
+   *  to close. Distinct from `latencyMs` (which only ever delayed the
+   *  card_catalog read) because the split-identity / stale-write tests need
+   *  the RACE to be on the write side, not the target-dispatch side. */
+  writeLatencyMs?: number;
+  /** LAST-LINE DEFENCE (review, 2026-09-19): an OUT-OF-BAND mutation the
+   *  store applies to `mutateSaleId`'s document on its OWN timer
+   *  (`setTimeout`, independent of anything the lane calls), simulating a
+   *  concurrent writer -- a different repair lane, a re-scrape -- touching
+   *  the SAME document between this lane's planning read (the cardId-shape
+   *  query) and the point it re-reads immediately before the upsert. Bumps
+   *  the doc's `_etag` exactly as a real external write would; the lane's
+   *  own re-read-before-write must see the NEW etag and refuse rather than
+   *  overwrite. */
+  mutateSaleId?: string;
+  mutateAfterMs?: number;
+  /** LAST-LINE DEFENCE (review, 2026-09-19): instead of bumping the etag,
+   *  the out-of-band mutation DELETES `mutateSaleId`'s doc from its planned
+   *  address -- simulating it having already been moved or removed by
+   *  something else entirely before this lane's re-read-before-write. */
+  deleteSaleAfterMutate?: boolean;
 } = {}): { requirePath: string; ledger: string } {
   const ledger = path.join(tmp, `ledger-${Math.random().toString(36).slice(2)}.json`);
   const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
@@ -72,6 +96,10 @@ function shim(opts: {
   const portfolio = opts.portfolio ?? [];
   const failSalesUpsertForIds = opts.failSalesUpsertForIds ?? [];
   const latencyMs = opts.latencyMs ?? 0;
+  const writeLatencyMs = opts.writeLatencyMs ?? 0;
+  const mutateSaleId = opts.mutateSaleId ?? null;
+  const mutateAfterMs = opts.mutateAfterMs ?? 0;
+  const deleteSaleAfterMutate = opts.deleteSaleAfterMutate ?? false;
 
   fs.writeFileSync(p, `
 const Module = require("node:module");
@@ -79,6 +107,7 @@ const fs = require("node:fs");
 const LEDGER = ${JSON.stringify(ledger)};
 const FAIL_SALES_UPSERT_FOR_IDS = new Set(${JSON.stringify(failSalesUpsertForIds)});
 const LATENCY_MS = ${JSON.stringify(latencyMs)};
+const WRITE_LATENCY_MS = ${JSON.stringify(writeLatencyMs)};
 
 // PARTITION-AWARE for sold_comps ONLY (BLOCKER 2 fixture need, #2314 review):
 // keyed by "id::cardId" rather than bare "id", so two documents CAN share the
@@ -88,14 +117,41 @@ const LATENCY_MS = ${JSON.stringify(latencyMs)};
 // sharing an id at different partitions).
 const salesKey = (id, cardId) => id + "::" + cardId;
 
+// RULING (review, 2026-09-19): every sold_comps doc gets an _etag so the
+// last-line-defence re-read-before-write can compare one. A bare counter,
+// not a real Cosmos etag shape -- the lane only ever compares it for
+// equality, never parses it. Stamped on the SAME array literal the sales Map
+// below is built from (one parse of the embedded JSON, not two independent
+// ones) so the stamp is visible through the Map's own values.
+let etagCounter = 0;
+const stampEtag = (d) => { d._etag = "etag-" + (++etagCounter); return d; };
+const SALES_SEED = ${JSON.stringify(sales)}.map(stampEtag);
+
 const state = {
   catalog: new Map(${JSON.stringify(catalog)}.map((d) => [d.id, d])),
-  sales: new Map(${JSON.stringify(sales)}.map((d) => [salesKey(d.id, d.cardId), d])),
+  sales: new Map(SALES_SEED.map((d) => [salesKey(d.id, d.cardId), d])),
   portfolio: new Map(${JSON.stringify(portfolio)}.map((d) => [d.id, d])),
 };
 const led = { catalogUpserts: [], catalogDeletes: [], salesUpserts: [], salesPatches: [], salesDeletes: [], portfolioPatches: [], maxInFlight: 0 };
 const save = () => fs.writeFileSync(LEDGER, JSON.stringify(led));
 save();
+
+// LAST-LINE DEFENCE (review, 2026-09-19): an out-of-band mutation, on its
+// OWN timer, simulating a concurrent writer touching the mutateSaleId
+// document between the lane's planning read and its re-read-before-write.
+const MUTATE_SALE_ID = ${JSON.stringify(mutateSaleId)};
+const MUTATE_AFTER_MS = ${JSON.stringify(mutateAfterMs)};
+const DELETE_SALE_AFTER_MUTATE = ${JSON.stringify(deleteSaleAfterMutate)};
+if (MUTATE_SALE_ID) {
+  setTimeout(() => {
+    for (const [key, d] of [...state.sales.entries()]) {
+      if (d.id === MUTATE_SALE_ID) {
+        if (DELETE_SALE_AFTER_MUTATE) { state.sales.delete(key); }
+        else { stampEtag(d); d.title = "mutated by another writer"; }
+      }
+    }
+  }, MUTATE_AFTER_MS);
+}
 
 // CONCURRENCY (review, 2026-09-19): counts how many card_catalog point reads
 // (catalogTwinAt's own read, called once per target before anything else in
@@ -118,18 +174,28 @@ function makeContainer(name, store, onUpsert, onDelete, onPatch, keyOf) {
           save();
           try { await sleep(LATENCY_MS); } finally { inFlight--; }
         }
+        // WRITE_LATENCY_MS also delays sold_comps READS (residentAt's own
+        // point read: the destination-collision check AND the last-line
+        // re-read-before-write) -- both are part of the write-side critical
+        // section this option exists to widen, per the LAST-LINE DEFENCE
+        // tests, which need the out-of-band mutation timer to land before
+        // this read runs.
+        if (name === "sold_comps" && WRITE_LATENCY_MS > 0) await sleep(WRITE_LATENCY_MS);
         const d = store.get(key(id, pk));
         if (!d) throw notFound();
         return { resource: structuredClone(d) };
       },
       patch: async (ops) => {
+        if (name === "sold_comps" && WRITE_LATENCY_MS > 0) await sleep(WRITE_LATENCY_MS);
         const d = store.get(key(id, pk));
         if (!d) throw notFound();
         for (const o of ops) { if (o.op === "set" || o.op === "add") d[o.path.slice(1)] = o.value; }
+        if (name === "sold_comps") stampEtag(d);
         if (onPatch) onPatch(id, ops);
         return { resource: structuredClone(d) };
       },
       delete: async () => {
+        if (name === "sold_comps" && WRITE_LATENCY_MS > 0) await sleep(WRITE_LATENCY_MS);
         if (!store.has(key(id, pk))) throw notFound();
         store.delete(key(id, pk));
         if (onDelete) onDelete(id);
@@ -138,12 +204,15 @@ function makeContainer(name, store, onUpsert, onDelete, onPatch, keyOf) {
     }),
     items: {
       upsert: async (doc) => {
+        if (name === "sold_comps" && WRITE_LATENCY_MS > 0) await sleep(WRITE_LATENCY_MS);
         if (name === "sold_comps" && FAIL_SALES_UPSERT_FOR_IDS.has(doc.id)) {
           throw new Error("simulated upsert failure for " + doc.id);
         }
-        store.set(key(doc.id, doc.cardId), structuredClone(doc));
+        const stored = structuredClone(doc);
+        if (name === "sold_comps") stampEtag(stored);
+        store.set(key(doc.id, doc.cardId), stored);
         if (onUpsert) onUpsert(doc);
-        return { resource: structuredClone(doc) };
+        return { resource: structuredClone(stored) };
       },
       query: (spec) => {
         const q = typeof spec === "string" ? spec : spec.query;
@@ -164,8 +233,8 @@ function makeContainer(name, store, onUpsert, onDelete, onPatch, keyOf) {
           throw new Error("fake " + name + ": unsupported query " + q);
         }
         return {
-          fetchNext: async () => ({ resources, continuationToken: undefined }),
-          fetchAll: async () => ({ resources }),
+          fetchNext: async () => ({ resources: resources.map((r) => structuredClone(r)), continuationToken: undefined }),
+          fetchAll: async () => ({ resources: resources.map((r) => structuredClone(r)) }),
         };
       },
     },
@@ -654,13 +723,18 @@ describe("CONCURRENCY -- bounded worker pool over independent targets", () => {
     expect(r.led.salesDeletes.length).toBe(10);
   });
 
-  it("HAZARD 2 -- a sale is reachable from exactly one target's two queries (cardId-shape XOR hobbyiqCardId-shape), never both: a cardId-shape hit at target A's shortId is not also patched as target B's hobbyiqCardId hit", () => {
+  it("HAZARD 2 (non-split case) -- a sale is reachable from exactly one target's two queries (cardId-shape XOR hobbyiqCardId-shape), never both: a cardId-shape hit at target A's shortId is not also patched as target B's hobbyiqCardId hit", () => {
     // Two targets sharing NOTHING but proximity in the same setKey/cell: A's
     // sale sits AT its own short id (cardId-shape); B's sale is vendor-keyed
     // but carries B's OWN short id as hobbyiqCardId (hobbyiqCardId-shape).
     // If the two queries ever overlapped, B's sale could double-match A's
     // shape-1 scan (it does not, because A's query filters cardId = A's
-    // shortId, and B's sale's cardId is a vendor id, not A's shortId).
+    // shortId, and B's sale's cardId is a vendor id, not A's shortId). This
+    // is the case where the OLD "disjoint by field" proof was correct --
+    // neither sale's two fields disagree, so each can only ever satisfy ONE
+    // target. See the SPLIT-IDENTITY describe block below for the shape the
+    // old proof missed: a sale whose two fields deliberately disagree,
+    // naming two DIFFERENT live targets.
     const shortA = "hiq:baseball:2026:topps:1:gold:no-auto";
     const numberedA = `${shortA}:num-101`;
     const shortB = "hiq:baseball:2026:topps:2:gold:no-auto";
@@ -704,6 +778,165 @@ describe("CONCURRENCY -- bounded worker pool over independent targets", () => {
     expect(r.out).toMatch(/stopped at the 110-minute budget -- the slot has more to do/);
     expect(r.out).toMatch(/RELOCATED 0/);
     expect(r.led.salesUpserts.length).toBe(0);
+  });
+});
+
+// ── SPLIT-IDENTITY ACROSS TWO LIVE TARGETS (blocking review, 2026-09-19) ────
+// The gap the first version of #2339 missed: a sale whose cardId names one
+// LIVE target's shortId and whose hobbyiqCardId names ANOTHER live target's
+// shortId is reachable from BOTH -- target A's cardId-shape query finds it
+// and would relocate it (stamping hobbyiqCardId = numberedA, destroying the
+// fact it used to name a different card); target B's hobbyiqCardId-shape
+// query finds the SAME document and would patch hobbyiqCardId = numberedB.
+// That is a torn write on a document that was never an un-numbered twin --
+// pre-existing SERIAL defect, not only a concurrency one. classifySaleFor
+// Relocation now refuses this shape from EITHER side; these tests pin the
+// refusal with write-path latency injected so the two targets' writes would
+// have genuinely raced under the OLD code, and confirm the reconcile line
+// still balances with the refusal counted once, not twice.
+describe("SPLIT IDENTITY ACROSS TWO LIVE TARGETS -- the decision fix, not just the race", () => {
+  function twoLiveTargetsFixture() {
+    const shortA = "hiq:baseball:2026:topps:1:gold:no-auto";
+    const numberedA = `${shortA}:num-101`;
+    const shortB = "hiq:baseball:2026:topps:2:gold:no-auto";
+    const numberedB = `${shortB}:num-102`;
+    const catalog = [
+      { id: numberedA, cardId: numberedA, sport: "baseball", year: 2026, cardYear: 2026, setKey: "topps", cardNumber: "1", parallelSlug: "gold", isAuto: false, printRun: 101, source: "checklistinsider-2026-08-27", gradeTier: undefined },
+      { id: numberedB, cardId: numberedB, sport: "baseball", year: 2026, cardYear: 2026, setKey: "topps", cardNumber: "2", parallelSlug: "gold", isAuto: false, printRun: 102, source: "checklistinsider-2026-08-27", gradeTier: undefined },
+    ];
+    // THE SPLIT SALE: cardId names A's shortId, hobbyiqCardId names B's
+    // shortId -- both hiq: slugs, both LIVE targets in THIS dispatch.
+    const splitSale = { id: "split1", cardId: shortA, hobbyiqCardId: shortB, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    return { shortA, numberedA, shortB, numberedB, catalog, splitSale };
+  }
+
+  it("refuses the split sale from BOTH targets, writes nothing to it, even with write-path latency and CONCURRENCY=16 (the shape that would have raced under the old code)", () => {
+    const { catalog, splitSale } = twoLiveTargetsFixture();
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true", CONCURRENCY: "16" },
+      { catalog, sales: [splitSale], portfolio: PORTFOLIO_EMPTY, latencyMs: 15, writeLatencyMs: 30 },
+    );
+    expect(r.code).toBe(0);
+    // Neither a relocate nor a patch happened to the split doc: zero writes
+    // of ANY kind to sold_comps.
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesPatches.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 0/);
+    expect(r.out).toMatch(/PATCHED 0/);
+    // Counted and listed as a split-identity refusal.
+    expect(r.out).toMatch(/REFUSED: pre-existing split identity\s+1/);
+    expect(r.out).toMatch(/split-identity/);
+    expect(r.out).toMatch(/cardId=hiq:baseball:2026:topps:1:gold:no-auto hobbyiqCardId=hiq:baseball:2026:topps:2:gold:no-auto/);
+  });
+
+  it("counts the split sale ONCE in the reconciliation, not twice, even though it is found by two targets' queries", () => {
+    const { catalog, splitSale } = twoLiveTargetsFixture();
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true", CONCURRENCY: "16" },
+      { catalog, sales: [splitSale], portfolio: PORTFOLIO_EMPTY, latencyMs: 15, writeLatencyMs: 30 },
+    );
+    expect(r.code).toBe(0);
+    // "sales at short ids before" is DEDUPED to 1 distinct document, not 2
+    // raw query hits, and the banner names the dedup explicitly.
+    expect(r.out).toMatch(/sales at short ids before\s+1/);
+    expect(r.out).toMatch(/2 raw query hits, 1 were the SAME split-identity document/);
+    // The reconcile still balances: 1 before = 0 relocated + 0 patched + 0
+    // collapsed + 1 refused + 0 failed + 0 left.
+    expect(r.out).toMatch(/matched -- every sale at a short id is relocated, patched, refused/);
+    expect(r.code).not.toBe(4); // exit 4 is CF-A-SALE-IS-NEVER-LOST's own "unaccounted for"
+  });
+
+  it("REPORT and APPLY agree on the split refusal (same fixture)", () => {
+    const { catalog, splitSale } = twoLiveTargetsFixture();
+    const fixture = { catalog, sales: [splitSale], portfolio: PORTFOLIO_EMPTY, latencyMs: 15, writeLatencyMs: 30 };
+    const report = drive({ SCOPE: "baseball:2026", SET_KEYS: "topps", CONCURRENCY: "16" }, fixture);
+    const apply = drive({ SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true", CONCURRENCY: "16" }, fixture);
+    expect(report.out).toMatch(/REFUSED: pre-existing split identity\s+1/);
+    expect(apply.out).toMatch(/REFUSED: pre-existing split identity\s+1/);
+    expect(report.led.salesUpserts.length).toBe(0);
+    expect(apply.led.salesUpserts.length).toBe(0);
+  });
+
+  it("refuses a split HOLDING (cardId names one live target, hobbyiqCardId names another) from both targets, and does not overwrite either field", () => {
+    const { catalog, shortA, shortB } = twoLiveTargetsFixture();
+    const holdingDoc = { id: "p1", userId: "u1", holdings: { h1: { cardId: shortA, hobbyiqCardId: shortB } } };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true", CONCURRENCY: "16" },
+      { catalog, sales: [], portfolio: [holdingDoc], latencyMs: 10 },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.portfolioPatches.length).toBe(0);
+    expect(r.out).toMatch(/holdings REFUSED: split identity\s+1/);
+    expect(r.out).toMatch(/holdings re-pointed\s+0/);
+  });
+
+  it("a NON-split holding under the same two-target fixture still repoints normally (the split guard does not over-refuse)", () => {
+    const { catalog, shortA, numberedA } = twoLiveTargetsFixture();
+    const holdingDoc = { id: "p1", userId: "u1", holdings: { h1: { cardId: shortA, hobbyiqCardId: shortA } } };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true", CONCURRENCY: "16" },
+      { catalog, sales: [], portfolio: [holdingDoc], latencyMs: 10 },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.portfolioPatches.some((p: any) => p.id === "p1")).toBe(true);
+    const setOps = r.led.portfolioPatches.find((p: any) => p.id === "p1").ops;
+    expect(setOps.some((o: any) => o.path === "/holdings/h1/cardId" && o.value === numberedA)).toBe(true);
+    expect(r.out).toMatch(/holdings re-pointed\s+1/);
+  });
+});
+
+// ── LAST-LINE DEFENCE: re-read-before-write on the relocate path (review,
+// 2026-09-19) ────────────────────────────────────────────────────────────
+describe("LAST-LINE DEFENCE -- a source doc that changed since the planning read is refused, not overwritten", () => {
+  it("refuses a relocate when the source doc's _etag changed between the planning read and the write (simulated by an out-of-band mutation mid-flight)", () => {
+    // An ordinary un-numbered-twin candidate (would relocate under shape
+    // (1)), but its title is rewritten IN THE STORE, on an independent
+    // timer, between the plan and the write -- simulating some OTHER writer
+    // (a re-scrape, a different repair lane) touching it in that window.
+    // WRITE_LATENCY_MS on the resident-check point read (residentAt, used as
+    // BOTH the destination-collision check and the last-line re-read) gives
+    // the mutation time to land before the lane's re-read-before-write runs.
+    const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true", CONCURRENCY: "1" },
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY, writeLatencyMs: 40, mutateSaleId: "s1", mutateAfterMs: 10 },
+    );
+    expect(r.code).toBe(0);
+    // Refused, not relocated: no upsert, no delete of the stale copy.
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 0/);
+    expect(r.out).toMatch(/REFUSED: stale since the planning read\s+1/);
+    expect(r.out).toMatch(/stale-since-plan/);
+    expect(r.out).toMatch(/_etag changed since the planning read/);
+  });
+
+  it("does NOT false-positive on an untouched document -- the ordinary relocate still succeeds with no interference", () => {
+    const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true" },
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.out).toMatch(/REFUSED: stale since the planning read\s+0/);
+  });
+
+  it("the doc GONE from its planned address by write time (deleted/moved by something else) is refused, not treated as a silent no-op", () => {
+    // Simulated by mutating the sale's cardId itself out from under the
+    // plan -- residentAt(sale.id, shortId) then finds nothing at that
+    // address, which the defence treats the same as an etag mismatch: gone
+    // since the plan, refuse rather than guess.
+    const sale = { id: "s1", cardId: SHORT_ID, hobbyiqCardId: SHORT_ID, title: "plain", sport: "baseball", price: 5, parallel: "Gold", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2026-01-01" };
+    const r = drive(
+      { SCOPE: "baseball:2026", SET_KEYS: "topps", BACKFILL_APPLY: "true", CONCURRENCY: "1" },
+      { catalog: [CHECKLIST_ROW()], sales: [sale], portfolio: PORTFOLIO_EMPTY, writeLatencyMs: 40, mutateSaleId: "s1", mutateAfterMs: 10, deleteSaleAfterMutate: true },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: stale since the planning read\s+1/);
+    expect(r.out).toMatch(/gone from .* since the planning read/);
   });
 });
 
