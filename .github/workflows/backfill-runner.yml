@@ -2454,7 +2454,7 @@ jobs:
           finished-notice: |
             echo "::notice::finished within budget — done, no re-dispatch."
           dispatch: |
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rematch-sold-comps -f mode="${{ inputs.mode }}" -f apply="${{ inputs.apply == true && steps.canary_after.outcome == 'success' }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f limit="${{ inputs.limit }}" -f scope="${{ inputs.scope }}" -f sports="${{ inputs.sports }}" -f setkey_like="${{ inputs.setkey_like }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rematch-sold-comps -f mode="${{ inputs.mode }}" -f apply="${{ inputs.apply == true && steps.canary_after.outcome == 'success' }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f limit="${{ inputs.limit }}" -f scope="${{ inputs.scope }}" -f sports="${{ inputs.sports }}" -f setkey_like="${{ inputs.setkey_like }}" -f sources="${{ inputs.sources }}"
           startup-marker-prefix: rematch-sold-comps
           startup-banner-regex: "^rematch-sold-comps  MODE="
 

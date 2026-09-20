@@ -169,6 +169,30 @@ describe("mergeSlots — the sum across slots", () => {
     expect(totalFailedCells).toBe(0);
     expect(failedCellSamples).toHaveLength(0);
   });
+
+  it("sums backingByCellFoldedForCheckpoint across slots and names which slots folded (2026-09-20, cursor-size follow-up)", () => {
+    const dir = tmpDir();
+    writeSlotArtifact(dir, 9, { bySport: {}, byCell: {}, backingByCellFoldedForCheckpoint: 12 });
+    writeSlotArtifact(dir, 12, { bySport: {}, byCell: {}, backingByCellFoldedForCheckpoint: 30 });
+    writeSlotArtifact(dir, 20, { bySport: {}, byCell: {} }); // never folded -- field absent
+    const { slots } = M.readSlotArtifacts([dir]);
+    const { totalCellsFoldedForCheckpoint, slotsWithFolds } = M.mergeSlots(slots);
+    expect(totalCellsFoldedForCheckpoint).toBe(42);
+    expect(slotsWithFolds.sort((a: any, b: any) => a.slot - b.slot)).toEqual([
+      { slot: 9, folded: 12 },
+      { slot: 12, folded: 30 },
+    ]);
+  });
+
+  it("zero total and empty slotsWithFolds when no slot ever folded", () => {
+    const dir = tmpDir();
+    writeSlotArtifact(dir, 0, { bySport: {}, byCell: {} });
+    writeSlotArtifact(dir, 1, { bySport: {}, byCell: {}, backingByCellFoldedForCheckpoint: 0 });
+    const { slots } = M.readSlotArtifacts([dir]);
+    const { totalCellsFoldedForCheckpoint, slotsWithFolds } = M.mergeSlots(slots);
+    expect(totalCellsFoldedForCheckpoint).toBe(0);
+    expect(slotsWithFolds).toEqual([]);
+  });
 });
 
 describe("topUnbackedCells — ranking, and the 'other' exclusion", () => {
