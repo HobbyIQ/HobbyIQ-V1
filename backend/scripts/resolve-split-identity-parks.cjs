@@ -123,10 +123,24 @@
  * `identityUnverifiedBy`, `identityUnverifiedReason`,
  * `identityUnverifiedDetail`. All five are unset (`op: "remove"` on APPLY's
  * patch shape; simply omitted from the relocate shape's `keep` document) so
- * nothing is left half-parked. A ledger is stamped in their place:
- * `splitResolvedAt`, `splitResolvedTo` ("hobbyiqCardId"|"cardId"),
- * `splitResolvedFrom: { cardId, hobbyiqCardId }` (the PRE-resolve values, so
- * the correction is reversible), `splitResolvedBy`.
+ * nothing is left half-parked. A ledger is stamped in their place, as ONE
+ * object-valued field `splitResolved: { at, to, from, by }` (`to`:
+ * "hobbyiqCardId"|"cardId"; `from: { cardId, hobbyiqCardId }`, the
+ * PRE-resolve values, so the correction is reversible) -- COLLAPSED FROM
+ * FOUR SCALAR FIELDS (`splitResolvedAt`/`splitResolvedTo`/
+ * `splitResolvedFrom`/`splitResolvedBy`) on 2026-09-20 (live defect, pilot
+ * run 35510350850): the PATCH shape's own JSON-patch op list was 3 identity
+ * `set`s + 4 ledger `set`s + up to 5 park-field `remove`s = UP TO 12 ops on
+ * a fully-parked row, over Cosmos's own 10-operation-per-patch ceiling
+ * ("The number of patch operations cannot exceed '10'.") -- so EVERY
+ * PATCH-shape resolve failed in prod; RELOCATE (a whole-document upsert, no
+ * op count) was unaffected. The four fields were never read by any other
+ * service or test (grepped clean repo-wide before this change), so folding
+ * them into one object changes nothing observable outside this lane. New
+ * worst case: 3 identity `set`s + 1 ledger `set` + up to 5 `remove`s = 9,
+ * under the ceiling with one op of headroom. Both write shapes (PATCH and
+ * RELOCATE's `keep` upsert) write the SAME nested shape, so a row's stored
+ * ledger is byte-identical regardless of which shape resolved it.
  *
  * WRITE-DOOR GUARD, BOTH DIRECTIONS. The resolved document is run through
  * `guardSoldCompDoc` before any write: cardId === hobbyiqCardId === the
@@ -235,13 +249,22 @@
  *      SCOPE required (`all-splits` or comma `sport:year` cells, matched
  *      against EITHER id's sport/year); TITLES optional freeform filter
  *      (substring, case-insensitive, against the sale's own title) mirroring
- *      the runner's inherited `titles` dispatch field -- OR, when it starts
- *      with the literal `exclude-winner:`, a comma list of winner candidate
- *      ids to LEAVE untouched (named `excluded-by-operator`) instead of a
- *      substring filter; MODE unused (kept for workflow-input symmetry,
- *      refused if set to anything but empty); SLOT/SLOTS (sha1(id) shards,
- *      opt-in via SHARD=true for slot 0); CONCURRENCY=8; RUN_MINUTES=110;
- *      LIMIT=0.
+ *      the runner's inherited `titles` dispatch field -- OR, made of one or
+ *      both of two `;`-joined segments (e.g. `exclude-winner:a,b;exclude-
+ *      id:x,y`): `exclude-winner:<id>[,<id>...]`, a comma list of WINNER
+ *      candidate ids to LEAVE untouched (named `excluded-by-operator`)
+ *      instead of resolving to them; `exclude-id:<id>[,<id>...]`, a comma
+ *      list of sold_comps DOCUMENT ids to LEAVE untouched (named
+ *      `excluded-by-operator-id`), checked before any catalog read. Both
+ *      forms case-fold the compare, echo the id EXACTLY as dispatched in
+ *      the startup banner, print a per-id match count (loud ::warning:: on
+ *      zero) in the closing banner, and REFUSE (exit 2) if either prefix's
+ *      own segment carries zero usable ids -- never a silent full sweep.
+ *      Once EITHER prefix appears anywhere in TITLES, every `;`-segment
+ *      must recognise one of the two prefixes or the run refuses; MODE
+ *      unused (kept for workflow-input symmetry, refused if set to
+ *      anything but empty); SLOT/SLOTS (sha1(id) shards, opt-in via
+ *      SHARD=true for slot 0); CONCURRENCY=8; RUN_MINUTES=110; LIMIT=0.
  *
  * PLAN_OUT (AUDITABILITY, 2026-09-20). The banner's own samples cap at 20-60
  * lines per bucket -- necessarily, for a lane this large (1,506+ LEAVE rows
@@ -400,26 +423,100 @@ const SCOPE_REJECTED = SCOPE_IS_ALL ? [] : RAW_SCOPE.filter((p) => !CELL_RE.test
 // an operator should see back the exact text they typed, not a silently
 // folded copy, when reading whether their exclude landed.
 const EXCLUDE_WINNER_PREFIX = /^exclude-winner:/i;
+// ── EXCLUDE-BY-ID (fix, 2026-09-20; the owner's own ask). The row-level
+// twin of exclude-winner: -- names a sold_comps DOCUMENT id (never a
+// candidate/winner id) to leave parked untouched this run, named LEAVE
+// `excluded-by-operator-id`. Same case-fold/echo/per-id-match-count/zero-
+// match-warning/empty-list-refuses discipline as exclude-winner:, because
+// an operator reasonably expects the two mechanisms to behave alike --
+// NOTE, though, that a sold_comps `id` (unlike a winner slug) is genuinely
+// CASE-SENSITIVE at rest (makeId's own `${source}::${externalId}` shape
+// embeds vendor ids and ISO timestamps verbatim, never normalised at
+// ingest). Folding it here is therefore a DELIBERATE widening for the
+// exclude compare only -- the fold makes a case-mismatched dispatch still
+// exclude the row an operator meant (fails closed, not open, same as
+// exclude-winner:), and is applied to BOTH sides of the compare (this set,
+// and `doc.id` at the call site) so it stays a correct equality test; the
+// real, unfolded `doc.id` is never mutated, written, or compared
+// case-insensitively anywhere else in this lane.
+//
+// BOTH PREFIXES IN ONE VALUE, joined by `;` (e.g.
+// `exclude-winner:a,b;exclude-id:x,y`) -- a single dispatch may need to
+// hold back a whole product (by winner) AND a specific row a human is
+// mid-review on (by id) at once. `;` is the segment separator (never `,`,
+// which already separates ids WITHIN one segment) and is itself never a
+// valid character in an hiq: winner slug or a sold_comps id (both are
+// `:`/`|`/alnum-only by construction: `${source}::${externalId}` or
+// `${source}::${sub}::...` for id, `hiq:sport:year:...` for a winner), so a
+// literal `;` in a real id would be a corruption this parser is right to
+// choke on rather than silently swallow.
+//
+// SOLD_COMPS IDS CONTAIN THEIR OWN `::` AND `|` (per makeId's own
+// `${source}::${externalId}` shape and vendor-specific externalId shapes
+// like eBay's `EBAY-v1|<itemId>|<variant>`) -- e.g.
+// `cardhedge::ch-fill::1696404425047x713141937632706600::2024-04-01T16:41:
+// 02.000Z::9500` or `tca-ebay::EBAY-v1|358639037826|0` -- NEITHER of which
+// contains a comma, so splitting a segment's own id LIST on `,` (via the
+// shared `csv()` helper, exactly as exclude-winner: already does) is safe:
+// an id's internal `::`/`|` structure is never mistaken for the `,`
+// list-separator or the `;` prefix-separator.
+const EXCLUDE_ID_PREFIX = /^exclude-id:/i;
 function parseTitlesInput(raw) {
   const rawStr = str(raw);
-  if (EXCLUDE_WINNER_PREFIX.test(rawStr)) {
-    const rawIds = csv(rawStr.replace(EXCLUDE_WINNER_PREFIX, ""));
-    // ── ZERO PARSED IDS FAILS OPEN INTO A FULL UNFILTERED SWEEP (fix,
-    // 2026-09-20). `titles=exclude-winner:` (nothing after the colon, or
-    // only commas/whitespace) used to parse to an EMPTY excludedWinners set
-    // -- which excludes nothing, so every row resolves normally, exactly as
-    // if the operator had typed no exclude at all. That is the opposite of
-    // what typing the prefix signals: an operator who typed it meant to
-    // HOLD BACK at least one winner, so a prefix match with nothing usable
-    // after it is a NAMED error, refused loudly before any Cosmos read,
-    // rather than a silent full sweep.
-    if (!rawIds.length) {
-      return { error: `titles="exclude-winner:" carries no ids after the prefix -- pass at least one winner candidate id, e.g. exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto` };
-    }
-    const excludedWinners = new Set(rawIds.map(lower));
-    return { excludedWinners, rawExcludedWinnerIds: rawIds, titlesFilter: [] };
+
+  // ── Split on `;` into segments, classify EACH by its own prefix. A
+  // segment matching neither prefix, when NEITHER prefix appears anywhere
+  // in the raw value, falls through to the ordinary title-substring filter
+  // (the pre-2026-09-20 behaviour, unchanged) -- but once EITHER prefix is
+  // present, every segment is expected to be a recognised exclude segment;
+  // an unrecognised segment in that mix is a NAMED error (most likely a
+  // typo'd prefix, e.g. "exclud-id:"), never silently dropped or folded
+  // into a substring filter that would never match anything real.
+  const hasAnyExcludePrefix = EXCLUDE_WINNER_PREFIX.test(rawStr) || EXCLUDE_ID_PREFIX.test(rawStr)
+    || rawStr.split(";").some((seg) => EXCLUDE_WINNER_PREFIX.test(seg.trim()) || EXCLUDE_ID_PREFIX.test(seg.trim()));
+  if (!hasAnyExcludePrefix) {
+    return { excludedWinners: new Set(), rawExcludedWinnerIds: [], excludedIds: new Set(), rawExcludedIds: [], titlesFilter: csv(rawStr).map(lower) };
   }
-  return { excludedWinners: new Set(), rawExcludedWinnerIds: [], titlesFilter: csv(rawStr).map(lower) };
+
+  const excludedWinners = new Set();
+  const rawExcludedWinnerIds = [];
+  const excludedIds = new Set();
+  const rawExcludedIds = [];
+  for (const rawSeg of rawStr.split(";")) {
+    const seg = rawSeg.trim();
+    if (!seg) continue; // a stray leading/trailing/doubled `;` is not an error on its own
+    if (EXCLUDE_WINNER_PREFIX.test(seg)) {
+      const ids = csv(seg.replace(EXCLUDE_WINNER_PREFIX, ""));
+      // ── ZERO PARSED IDS FAILS OPEN INTO A FULL UNFILTERED SWEEP (fix,
+      // 2026-09-20). `exclude-winner:` (nothing after the colon, or only
+      // commas/whitespace) used to parse to an EMPTY excludedWinners set --
+      // which excludes nothing, so every row resolves normally, exactly as
+      // if the operator had typed no exclude at all. That is the opposite
+      // of what typing the prefix signals, so a segment with nothing usable
+      // after it is a NAMED error, refused loudly before any Cosmos read.
+      if (!ids.length) {
+        return { error: `titles carries "exclude-winner:" with no ids after the prefix -- pass at least one winner candidate id, e.g. exclude-winner:hiq:basketball:2023:topps:vw3:base:no-auto` };
+      }
+      for (const id of ids) { excludedWinners.add(lower(id)); rawExcludedWinnerIds.push(id); }
+    } else if (EXCLUDE_ID_PREFIX.test(seg)) {
+      const ids = csv(seg.replace(EXCLUDE_ID_PREFIX, ""));
+      if (!ids.length) {
+        return { error: `titles carries "exclude-id:" with no ids after the prefix -- pass at least one sold_comps document id, e.g. exclude-id:tca-ebay::227353572453` };
+      }
+      for (const id of ids) { excludedIds.add(lower(id)); rawExcludedIds.push(id); }
+    } else {
+      return { error: `titles carries an unrecognised segment "${seg}" alongside an exclude-winner:/exclude-id: prefix -- every segment (split on ';') must start with one of those two prefixes once either is used` };
+    }
+  }
+  if (!excludedWinners.size && !excludedIds.size) {
+    // Every segment was empty/whitespace (e.g. titles=";;") -- the prefix
+    // check above only proves a prefix appears SOMEWHERE in the raw string,
+    // which a stray ";exclude-winner:" fragment inside an otherwise-blank
+    // value could satisfy without ever reaching a real segment. Same "typed
+    // it, meant it" refusal as the per-segment zero-id case.
+    return { error: `titles carries an exclude-winner:/exclude-id: prefix but no segment produced any id -- pass at least one id after one of those prefixes` };
+  }
+  return { excludedWinners, rawExcludedWinnerIds, excludedIds, rawExcludedIds, titlesFilter: [] };
 }
 // Read at module scope (importing this file for its pure helpers must never
 // pay a Cosmos-shaped cost -- same discipline RAW_MODE/RAW_SCOPE already
@@ -430,6 +527,8 @@ function parseTitlesInput(raw) {
 const TITLES_PARSE = parseTitlesInput(process.env.TITLES);
 const EXCLUDED_WINNERS = TITLES_PARSE.excludedWinners ?? new Set();
 const RAW_EXCLUDED_WINNER_IDS = TITLES_PARSE.rawExcludedWinnerIds ?? [];
+const EXCLUDED_IDS = TITLES_PARSE.excludedIds ?? new Set();
+const RAW_EXCLUDED_IDS = TITLES_PARSE.rawExcludedIds ?? [];
 const TITLES_FILTER = TITLES_PARSE.titlesFilter ?? [];
 
 /** Unset every park field on a resolve. Read from splitIdentityWriteGuard.ts's
@@ -1042,6 +1141,7 @@ async function main() {
   // otherwise fail OPEN and silently exclude nothing) is visible by eye
   // even before the closing per-id match-count line below.
   if (RAW_EXCLUDED_WINNER_IDS.length) console.log(`  exclude-winner    ${RAW_EXCLUDED_WINNER_IDS.join(", ")}`);
+  if (RAW_EXCLUDED_IDS.length) console.log(`  exclude-id        ${RAW_EXCLUDED_IDS.join(", ")}`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  ${CLOCK.describe()}`);
   console.log("");
@@ -1076,8 +1176,14 @@ async function main() {
   // for every dispatched id up front -- so an id that never matches a single
   // row (a typo, or a winner this run's own scope never reaches) still has
   // an entry to report zero against, rather than being silently absent from
-  // the closing banner.
+  // the closing banner. `excludedIdMatchCounts` is the SAME discipline for
+  // exclude-id: (row-level), a separate map because the two mechanisms name
+  // different kinds of id (a winner CANDIDATE id vs a sold_comps DOCUMENT
+  // id) and a real dispatch could plausibly name the same string in both
+  // (unlikely, but not impossible) without either counter's own zero being
+  // masked by the other's match.
   const excludedWinnerMatchCounts = new Map([...EXCLUDED_WINNERS].map((id) => [id, 0]));
+  const excludedIdMatchCounts = new Map([...EXCLUDED_IDS].map((id) => [id, 0]));
 
   // ── PLAN_OUT: one NDJSON record per in-scope row, written into the SAME
   // fixed path the runner already uploads (see module header). A synchronous
@@ -1281,6 +1387,23 @@ async function main() {
       return;
     }
 
+    // ── EXCLUDE-BY-ID (fix, 2026-09-20; via titles=exclude-id:<id>[,...]).
+    // Row-level, checked BEFORE any catalog read -- unlike exclude-winner:
+    // (which needs a computed verdict to know which candidate WOULD have
+    // won), an operator naming a specific sold_comps document id already
+    // knows exactly which row they mean, so this never needs to wait on
+    // catalog evidence at all. Folded the same way `winner` is at its own
+    // compare site (see EXCLUDE-BY-ID's own header doc on the case-
+    // sensitivity nuance for a document id).
+    const docIdFold = lower(doc.id);
+    if (EXCLUDED_IDS.has(docIdFold)) {
+      bumpReason(s.leave, "excluded-by-operator-id");
+      pushExample(leaveExamples, "excluded-by-operator-id", `  ${doc.id}@${doc.cardId}: this row's own id is named in this run's exclude-id list -- left parked untouched`);
+      excludedIdMatchCounts.set(docIdFold, (excludedIdMatchCounts.get(docIdFold) || 0) + 1);
+      emitPlanRow(doc, "leave", "excluded-by-operator-id");
+      return;
+    }
+
     const H = str(doc.hobbyiqCardId);
     const C = str(doc.cardId);
     const hSport = sportSegmentOf(H);
@@ -1390,11 +1513,19 @@ async function main() {
     // concurrently, and only a genuine race at ONE destination serialises.
     await withPhysicalSaleLock(physicalSaleKeyOf(doc, winner), async () => {
     try {
+      // ── ONE object-valued ledger field, not four scalars (fix, 2026-09-20;
+      // see the module header's own PARK FIELDS CLEARED ON RESOLVE doc for
+      // the live-defect op-count arithmetic this closes). `splitResolved`
+      // is the SAME shape whichever write shape lands it -- PATCH's own
+      // `set` below, and RELOCATE's whole-document `keep` upsert via
+      // Object.assign just underneath.
       const ledger = {
-        splitResolvedAt: new Date().toISOString(),
-        splitResolvedTo: verdict.verdict === "resolve-to-h" ? "hobbyiqCardId" : "cardId",
-        splitResolvedFrom: { cardId: doc.cardId, hobbyiqCardId: doc.hobbyiqCardId },
-        splitResolvedBy: "resolve-split-identity-parks",
+        splitResolved: {
+          at: new Date().toISOString(),
+          to: verdict.verdict === "resolve-to-h" ? "hobbyiqCardId" : "cardId",
+          from: { cardId: doc.cardId, hobbyiqCardId: doc.hobbyiqCardId },
+          by: "resolve-split-identity-parks",
+        },
       };
       const keep = { ...stripSystem(doc) };
       for (const f2 of PARK_FIELDS) delete keep[f2];
@@ -1484,14 +1615,21 @@ async function main() {
             if (!(e?.code === 404 || e?.statusCode === 404)) throw e;
           }
           try {
+            // ── ATOMIC, SINGLE PATCH CALL, ≤10 ops (fix, 2026-09-20; see the
+            // module header's PARK FIELDS CLEARED ON RESOLVE doc). ONE
+            // object-valued `/splitResolved` set replaces the four scalar
+            // sets this used to be -- 3 identity sets + 1 ledger set + up to
+            // 5 park-field removes = 9 ops max, never split across two calls:
+            // a split could let the first call succeed and the second fail,
+            // leaving a row half-resolved (identity moved but still parked,
+            // or parked-cleared but identity unmoved) with no way back to a
+            // clean state from the plan-time etag alone. This stays the
+            // SAME single conditional call it always was, just fewer ops.
             await retry(() => pool.item(doc.id, doc.cardId).patch([
               { op: "set", path: "/sport", value: keep.sport },
               { op: "set", path: "/hobbyiqCardId", value: keep.hobbyiqCardId },
               { op: "set", path: "/cardId", value: keep.cardId },
-              { op: "set", path: "/splitResolvedAt", value: ledger.splitResolvedAt },
-              { op: "set", path: "/splitResolvedTo", value: ledger.splitResolvedTo },
-              { op: "set", path: "/splitResolvedFrom", value: ledger.splitResolvedFrom },
-              { op: "set", path: "/splitResolvedBy", value: ledger.splitResolvedBy },
+              { op: "set", path: "/splitResolved", value: ledger.splitResolved },
               ...PARK_FIELDS.filter((f2) => doc[f2] !== undefined).map((f2) => ({ op: "remove", path: `/${f2}` })),
             ], planEtag ? { accessCondition: { type: "IfMatch", condition: planEtag } } : undefined));
           } catch (e) {
@@ -1606,7 +1744,7 @@ async function main() {
       }
       const res = await relocateSoldComp(pool, {
         keep, drop: [{ id: doc.id, cardId: doc.cardId, ifMatchEtag: planEtagForDrop }],
-        retry, verifyFields: ["cardId", "hobbyiqCardId", "sport", "splitResolvedTo"], dryRun: !APPLY,
+        retry, verifyFields: ["cardId", "hobbyiqCardId", "sport", "splitResolved"], dryRun: !APPLY,
       });
       if (res.guard?.verdict === "park") {
         bumpReason(s.refused, "guard-parked");
@@ -1723,17 +1861,27 @@ async function main() {
   if (failures.length) { console.log(`\n  FAILURES (${f(failures.length)}):`); for (const fl of failures) console.log(fl); }
 
   // ── PER-EXCLUDED-ID MATCH COUNT, loud on a ZERO (fix, 2026-09-20). An
-  // operator who typed exclude-winner:<id> and gets back zero matches has,
-  // almost always, mistyped the id or named a winner this run's own scope/
-  // shard/titles-filter never reaches -- a silent zero is indistinguishable
-  // from "worked as intended, this run just never hit it," so it is called
-  // out with ::warning:: rather than folded quietly into the ordinary
-  // excluded-by-operator count line above.
+  // operator who typed exclude-winner:<id>/exclude-id:<id> and gets back
+  // zero matches has, almost always, mistyped the id or named a row this
+  // run's own scope/shard/titles-filter never reaches -- a silent zero is
+  // indistinguishable from "worked as intended, this run just never hit
+  // it," so it is called out with ::warning:: rather than folded quietly
+  // into the ordinary excluded-by-operator(-id) count line above.
   if (excludedWinnerMatchCounts.size) {
     console.log(`\n  exclude-winner match counts:`);
     for (const [id, n] of excludedWinnerMatchCounts) {
       if (n === 0) {
         console.log(`  ::warning::exclude-winner:${id} matched ZERO rows this run -- check for a typo, or a winner outside this run's own SCOPE/SHARD/TITLES/LIMIT`);
+      } else {
+        console.log(`    ${String(n).padStart(7)}  ${id}`);
+      }
+    }
+  }
+  if (excludedIdMatchCounts.size) {
+    console.log(`\n  exclude-id match counts:`);
+    for (const [id, n] of excludedIdMatchCounts) {
+      if (n === 0) {
+        console.log(`  ::warning::exclude-id:${id} matched ZERO rows this run -- check for a typo, or a row outside this run's own SCOPE/SHARD/TITLES/LIMIT`);
       } else {
         console.log(`    ${String(n).padStart(7)}  ${id}`);
       }
@@ -1800,7 +1948,8 @@ module.exports = {
   withSportSegment, cellsOf, checklistMatchOf, multiPlayerKeysOf,
   judgeSplitIdentityVerdict, titleVetoes, guessTitlePlayer, playerIdentityTokens,
   physicalSaleKeyOf, listingIdOf, sameListingIdentity, isPinnedOrFlagged, USER_SEED_SOURCES,
-  ALL_SPLITS, CELL_RE, PARK_FIELDS, EXCLUDE_WINNER_PREFIX, EXCLUDED_WINNERS, TITLES_FILTER,
+  ALL_SPLITS, CELL_RE, PARK_FIELDS, EXCLUDE_WINNER_PREFIX, EXCLUDE_ID_PREFIX,
+  EXCLUDED_WINNERS, EXCLUDED_IDS, TITLES_FILTER,
   parseTitlesInput,
 };
 
