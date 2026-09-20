@@ -1,0 +1,32 @@
+dir: data/checklists/scraped/acq-2026-09-20-checklistinsider-panini-prizm-wnba-basketball files: [ '2024-panini-prizm-wnba-basketball.csv' ]
+
+=== FILE: 2024-panini-prizm-wnba-basketball.csv ===
+product: {"sport":"basketball","year":2024,"setKey":"panini-prizm-wnba","setName":"2024 Panini Prizm WNBA Basketball","sourceUrl":null,"subsetName":null,"parallelVocabulary":null}
+plan keys: [
+  'verdict',
+  'reason',
+  'separate',
+  'foldRungs',
+  'keys',
+  'unregistered',
+  'ids',
+  'collisions',
+  'unslugable',
+  'duplicatesFolded',
+  'rows'
+]
+{
+ "verdict": "pass",
+ "reason": null,
+ "separate": {},
+ "foldRungs": {},
+ "keys": [],
+ "unregistered": [],
+ "ids": 4950,
+ "collisions": [],
+ "unslugable": 0,
+ "duplicatesFolded": 0,
+ "rows": 4950
+}
+
+TOTAL BATCH ROWS: 4950
