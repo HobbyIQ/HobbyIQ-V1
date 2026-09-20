@@ -694,6 +694,15 @@ function classifySections(sections) {
   const all = [...sections.values()];
   const isAutoSection = (s) => s.category.startsWith("auto-");
   const normSection = (s) => s.toLowerCase().replace(/\s*-\s*/g, " ").trim();
+  // Hoisted out of the per-section loop below (2026-09-20, Donruss FB fold)
+  // so the nameless-section roster-fold pass further down can reuse the
+  // identical containment test rather than re-deriving it -- see that pass's
+  // own header comment for why it now also needs this.
+  const extendsName = (cand, anchor) => {
+    const at = tokens(anchor.section).map((t) => t.toLowerCase());
+    const ct = tokens(cand.section).map((t) => t.toLowerCase());
+    return at.length > 0 && ct.length > at.length && at.every((t) => ct.includes(t));
+  };
 
   // Sections that name the plain card of their own run are anchors outright.
   // Everything else has to earn the title by not folding onto one.
@@ -721,12 +730,9 @@ function classifySections(sections) {
     // "X". Without (b)'s containment test, size alone decides, and the LARGER
     // section wins even when it is the more specific one: 1999 Black Diamond
     // folded "Prime Cuts Relics" onto "Prime Cuts Pine Tar Relics" and then had
-    // no words left to name the rung with.
-    const extendsName = (cand, anchor) => {
-      const at = tokens(anchor.section).map((t) => t.toLowerCase());
-      const ct = tokens(cand.section).map((t) => t.toLowerCase());
-      return at.length > 0 && ct.length > at.length && at.every((t) => ct.includes(t));
-    };
+    // no words left to name the rung with. (extendsName itself is hoisted to
+    // this function's outer scope above, so the nameless-fold pass further
+    // down can reuse it too.)
     // CF-BECKETT-EXPLICIT-ANCHOR-IS-NOT-A-BLANK-CHEQUE (2026-09-19). The
     // explicitAnchor branch above exists for "International Refractors" on
     // 2026 Bowman Chrome — a real rung whose section header extends nothing
@@ -924,6 +930,53 @@ function classifySections(sections) {
       }
     }
 
+    // CF-A-SELECT-CARDS-ONLY-EXTRA-IS-NOT-AN-AMBIGUITY (2026-09-20, Donruss
+    // FB). best.pct < 1 via extendsName used to fall straight to own-cards-
+    // AMBIGUOUS below, however clean the roster evidence was, because the
+    // pct===1 gate above only ever asked "does every number match", never
+    // "does every NON-match have an innocent explanation". 2024 Panini
+    // Donruss Football's "Rated Rookies Autographs Orange" (51 cards) is a
+    // "select cards only" colour rung of "Rated Rookies Autographs" (63
+    // cards, itself now folded onto Base>Rated Rookies by the roster-fold
+    // pass above) -- 50 of its 51 numbers are the identical rookie at the
+    // identical number (98% -- Beckett's own note explains the pct
+    // shortfall: not every base card got an Orange print), and the 51st
+    // (#364 Tyrone Tracy Jr.) has literally no counterpart in the anchor's
+    // own 63-card listing at all -- the exact R67 #420 "extra" shape the
+    // nameless-section roster-fold pass already treats as a hold-out, not
+    // a disagreement. "Rated Rookies Autographs Purple" (94.2%) is the
+    // identical shape. Scoped to extendsName only (never explicitAnchor,
+    // which keeps its own separate, already-correct partial-fold branch
+    // above) and requires the roster to account for the ENTIRE shortfall as
+    // extras with zero disagreements -- a shortfall roster-blind evidence
+    // cannot explain, or that includes even one real disagreement, still
+    // falls through to own-cards-AMBIGUOUS unchanged.
+    const extendsNameMatch = best && best.anchor && extendsName(sec, best.anchor);
+    let rosterExtraFold = null;
+    if (best && best.pct > 0 && best.pct < 1 && extendsNameMatch && sec.roster && best.anchor.roster) {
+      const rf = rosterFoldAgainst(sec, best.anchor);
+      if (rf.disagree === 0 && rf.agree > 0 && rf.agree + rf.extra.length === sec.numbers.size) {
+        rosterExtraFold = rf;
+      }
+    }
+    if (rosterExtraFold) {
+      const rung = rungName(sec.section, best.anchor.section);
+      if (rung) {
+        sec.parallelOf = best.anchor;
+        sec.rung = rung;
+        sec.foldExceptions = new Set(rosterExtraFold.extra);
+        push(sec, {
+          role: "parallel", anchor: best.anchor.key, rung: rung,
+          rosterFold: true, agree: rosterExtraFold.agree, disagree: 0,
+          heldNumbers: rosterExtraFold.extra,
+        });
+        continue;
+      }
+      // No rung name to fold under -- fall through to own-cards below, same
+      // "a fold that cannot be named is not a fold" doctrine as the
+      // pct===1 branch's own UNNAMEABLE case above.
+    }
+
     // It folds onto nothing, so it is a run of cards in its own right — and
     // therefore an anchor that its OWN variations can fold onto.
     sec.isAnchor = true;
@@ -996,26 +1049,181 @@ function classifySections(sections) {
   const stillUnfolded = report.filter((r) => /^own-cards($|-)/.test(r.role) && r.role !== "own-cards-AMBIGUOUS");
   for (const r of stillUnfolded) {
     const sec = sections.get(r.sheet + ">" + r.section);
-    if (!sec || sec.parallelOf || isHub(sec)) continue;
-    const baseAnchor = anchors.find((a) => a !== sec && a.category === "base" && PLAIN_SECTION.test(normSection(a.section)));
-    if (!baseAnchor) continue;
-    const fold = rosterFoldAgainst(sec, baseAnchor);
+    if (!sec || sec.parallelOf) continue;
+    // CF-BECKETT-A-SIGNED-ROSTER-FOLD-CAN-NAME-ITS-OWN-NON-FLAGSHIP-ANCHOR
+    // (2026-09-20, Donruss FB). 2024 Panini Donruss Football's "Rated
+    // Rookies Autographs" (base #301-400, category auto-rated-rookies-
+    // autographs) names "Rated Rookies" (base #301-400, category "base")
+    // explicitly in its own header -- extendsName's tokens-subset test
+    // already confirms it ("Rated Rookies" subset of "Rated Rookies
+    // Autographs"), the same relation "X - Image Variations" has to "X" in
+    // the main loop above. The main loop itself cannot make this fold: its
+    // candidates filter requires isAutoSection(anchor) === isAutoSection
+    // (sec) before extendsName is even tried (deliberately -- "a non-auto
+    // insert cannot be a rung on a signed card"), which also blocks the
+    // opposite, legitimate direction this fold exists for (a SIGNED section
+    // as the parallel of an UNSIGNED base anchor -- R67: "isAuto is its own
+    // axis, not the address", already relied on by pass 3's own isAuto-
+    // from-the-section's-own-category comment). Computed BEFORE the isHub
+    // gate below, because whether this section has a named anchor decides
+    // how that gate treats it.
+    // CF-THE-BARE-SIGNED-TIER-ADDS-NOTHING-BUT-AUTOGRAPHS (2026-09-20,
+    // Donruss FB, review fix). extendsName + a clean roster fold alone is
+    // NOT enough evidence -- it also matches 2024 Panini Zenith Football's
+    // "Rookies Autographs No Huddle" against "Rookies" (same roster, and
+    // "rookies" IS a token subset of "rookies autographs no huddle"), which
+    // this pass's own pinned negative-case test requires to stay unfolded:
+    // "No Huddle" is a genuine retailer-exclusive PRODUCT name (Zenith's own
+    // real registration, #2276, gives it its OWN key, `panini-zenith-
+    // rookies-autographs`, rather than folding it here) that classifySections
+    // alone cannot distinguish from a colour/finish rung by roster evidence
+    // -- exactly the same "own-named product vs. parallel" question
+    // CF-THE-ROSTER-DECIDES-THE-EXPLICIT-ANCHOR-FOLD-TOO already needed
+    // rosterHasAgreeingMajority for, one level up. The distinguishing signal
+    // here is different and narrower: rungName(sec.section, a.section) --
+    // the candidate's own name with the anchor's tokens AND the bare word
+    // "Autograph(s)" stripped -- must reduce to EMPTY. "Rated Rookies
+    // Autographs" strips to "" (nothing left after "Rated"/"Rookies"/
+    // "Autographs" are all removed): it adds NO further distinguishing word
+    // beyond stating it is the signed version of the anchor, so it is the
+    // bare signed TIER, never a separately-named product. "Rookies
+    // Autographs No Huddle" strips to "No Huddle": a real added name, the
+    // same shape a genuine own-named insert always has, so it is correctly
+    // refused here and left for a human/registration to decide, exactly as
+    // it already is today.
+    const namedAnchor = anchors.find((a) =>
+      a !== sec && a.category === "base" && !PLAIN_SECTION.test(normSection(a.section)) &&
+      extendsName(sec, a) && !rungName(sec.section, a.section));
+    // CF-A-HUB-CAN-ITSELF-BE-A-NAMED-PARALLEL-TWO-LEVELS-UP (2026-09-20,
+    // Donruss FB). isHub(sec) still refuses to fold a hub onto the
+    // FLAGSHIP -- that is exactly Photogenic's own protected shape ("Base
+    // Autographs" stays its own anchor so "Base Silver Autographs" has
+    // somewhere to land, never collapsed onto plain Base Set; "Base
+    // Autographs" has no namedAnchor candidate at all, so it is refused
+    // here unchanged). But Donruss needs a THIRD level: "Rated Rookies
+    // Autographs" is itself a hub (its own colour rungs -- Orange, Purple,
+    // the Optic Preview auto -- fold onto it via the main loop's own
+    // roster-extra branch above) AND its own name extends a genuine NAMED
+    // (non-flagship) base-category anchor, "Rated Rookies". Both facts are
+    // true at once and neither contradicts the other: "Rated Rookies
+    // Autographs" is correctly the hub its colour rungs address (pass 3
+    // reads their `category` off it directly, never recursing through ITS
+    // OWN parallelOf), while it is simultaneously, correctly, a signed
+    // PARALLEL of the unsigned base product it reprints -- R67's doctrine
+    // ("isAuto is its own axis, not the address") is precisely this: a hub
+    // for the auto side of the ladder is not disqualified from being a
+    // rung on the unsigned side. Scoped to the NAMED-anchor path only --
+    // a hub with no namedAnchor candidate still refuses via the flagship
+    // exactly as before.
+    if (isHub(sec) && !namedAnchor) continue;
+    // A hub is never allowed to fall back to the flagship -- that fallback
+    // is exactly what Photogenic's own protected shape must keep refusing
+    // ("Base Autographs" must never collapse onto plain Base Set even
+    // though its roster would agree). A non-hub keeps the ordinary
+    // named-anchor-first-then-flagship-fallback behaviour unchanged.
+    const flagshipAnchor = isHub(sec) ? undefined :
+      anchors.find((a) => a !== sec && a.category === "base" && PLAIN_SECTION.test(normSection(a.section)));
+    // TRIED FIRST, NOT ONLY ON A FLAGSHIP MISS. "Rated Rookies" is itself
+    // category "base" and is FOUND by the exact same flagship-anchor
+    // `.find` above whenever no PLAIN_SECTION-matching anchor exists ahead
+    // of it in `anchors`' insertion order -- Base Set always exists first
+    // on this workbook, so a flagship candidate is never null here and an
+    // "only try the name-extension anchor when the flagship lookup found
+    // nothing" gate would never fire for this exact case. The correct
+    // precedence is specificity, not presence: a named anchor this
+    // section's own title extends is always the more specific candidate
+    // when one exists, tried before the flagship fallback below.
+    let anchor = namedAnchor || flagshipAnchor;
+    if (!anchor) continue;
+    let fold = rosterFoldAgainst(sec, anchor);
+    // A named anchor that turns out NOT to agree (or shares nothing) is not
+    // evidence against the flagship -- fall back to it exactly as if the
+    // named anchor had never been found, same "degrade gracefully" contract
+    // rosterFoldAgainst's own header documents for a missing roster.
+    if (namedAnchor && anchor === namedAnchor && (fold.shared === 0 || fold.disagree > 0) && flagshipAnchor && flagshipAnchor !== namedAnchor) {
+      anchor = flagshipAnchor;
+      fold = rosterFoldAgainst(sec, anchor);
+    }
     if (fold.shared === 0 || fold.disagree > 0) continue;
-    const rung = sec.section; // the section's own header names the parallel
-    sec.parallelOf = baseAnchor;
+    const rung = rungName(sec.section, anchor.section) || sec.section;
+    sec.parallelOf = anchor;
     sec.rung = rung;
+    // CF-A-SIGNED-PRODUCT-FOLDED-AS-A-TIER-KEEPS-ITS-OWN-LADDER (2026-09-20,
+    // Donruss FB). Pass 3's CF-EMIT-THE-WHOLE-LADDER gate (`if
+    // (!foldsHere)`) suppresses a folded section's ladder by design for the
+    // ordinary same-auto-class colour-rung fold ("Base Autographs Silver"
+    // folds onto "Base Autographs" as the Silver rung and has no further
+    // ladder of its OWN to lose) -- but "Rated Rookies Autographs" is a
+    // different shape: it folds UP as the bare signed tier of an unsigned
+    // anchor (isAutoSection(sec) !== isAutoSection(anchor), the exact cross-
+    // class fold this whole pass exists for), while remaining a real signed
+    // PRODUCT with its own further colour ladder (Gold - /25, Black - /10,
+    // no "select cards only" qualifier on either -- see the SELECT_CARDS_
+    // ONLY_NOTE guard at the emission site, which separately excludes Purple
+    // there). Suppressing that ladder here would silently drop two more
+    // genuine full-roster parallels for every one of this shape found.
+    // Flagged only for the cross-class direction; an ordinary same-class
+    // fold (never reaches this branch at all -- it is handled by the main
+    // loop above, which has no such flag) is unaffected.
+    sec.crossClassFoldKeepsOwnLadder = isAutoSection(sec) !== isAutoSection(anchor);
     // Numbers this section has that base does not (R67's #420 shape): held
     // out of the fold, not disagreements -- they keep their own category and
     // a blank parallel, same as any other own-cards section, while every
     // clean-subset number folds onto base.
     sec.foldExceptions = new Set(fold.extra);
     Object.assign(r, {
-      role: "parallel", anchor: baseAnchor.key, rung: rung,
+      role: "parallel", anchor: anchor.key, rung: rung,
       rosterFold: true, agree: fold.agree, disagree: fold.disagree,
       ...(fold.extra.length ? { heldNumbers: fold.extra } : { overlapPct: undefined }),
     });
     delete r.overlapPct;
     delete r.note;
+  }
+
+  // CF-A-HELD-OUT-EXTRA-CAN-STILL-MATCH-THE-GRANDPARENT (2026-09-20, Donruss
+  // FB). A held-out "extra" number (no counterpart in the immediate fold
+  // anchor's own roster -- R67's #420 shape) is not automatically an orphan
+  // if that anchor ITSELF folds one level further up onto a wider root: 2024
+  // Panini Donruss Football's "Rated Rookies Autographs Purple" (52 cards)
+  // folds onto "Rated Rookies Autographs" (63 cards, the immediate anchor,
+  // itself now folded onto "Rated Rookies", 100 cards -- see the cross-class
+  // roster fold above) with 1 number (#364 Tyrone Tracy Jr.) held out
+  // because RRA's own signed list happens to exclude that player -- but #364
+  // genuinely IS a "Rated Rookies" base card (row present, right player,
+  // right team), so it is not an orphan at all, only excluded from the
+  // MIDDLE tier's own narrower roster. Re-tested here against the immediate
+  // anchor's OWN parallelOf (the grandparent, only ever set by the pass just
+  // above, which is why this runs after it) using the identical
+  // rosterFoldAgainst evidence bar (zero disagreement) -- a number that
+  // agrees with the grandparent folds too, under the SAME rung name, and is
+  // removed from foldExceptions; a number that disagrees with the
+  // grandparent too, or has no counterpart there either, stays held out
+  // exactly as before. Never applied beyond one extra level (grandparent
+  // only) and never invents a rung name the section did not already carry.
+  for (const sec of all) {
+    if (!sec.parallelOf || !sec.foldExceptions || !sec.foldExceptions.size) continue;
+    const grandparent = sec.parallelOf.parallelOf;
+    if (!grandparent || !sec.roster || !grandparent.roster) continue;
+    const stillHeld = new Set();
+    let rescued = 0;
+    for (const num of sec.foldExceptions) {
+      const players = sec.roster.get(num);
+      const grandparentPlayers = grandparent.roster.get(num);
+      if (players && grandparentPlayers && [...players].every((p) => grandparentPlayers.has(p))) {
+        rescued++;
+      } else {
+        stillHeld.add(num);
+      }
+    }
+    if (rescued) {
+      sec.foldExceptions = stillHeld;
+      const r = report.find((x) => x.sheet === sec.sheet && x.section === sec.section);
+      if (r) {
+        r.heldNumbers = [...stillHeld];
+        if (!stillHeld.size) delete r.heldNumbers;
+        r.grandparentRescued = rescued;
+      }
+    }
   }
 
   for (const s of all) {
@@ -1791,6 +1999,32 @@ function main() {
   // ---- pass 2: which sections are parallels of which anchors? -------------
   const report = classifySections(sections);
 
+  // A ladder rung's note saying it does not cover the whole section ("select
+  // cards only", the "Purple - /150 (select cards only, list below)" shape --
+  // see CF-A-SELECT-CARDS-ONLY-RUNG-IS-NOT-A-FULL-ROSTER-TEMPLATE at the
+  // emission site below) is evidence from the note itself, the same class
+  // parseRung's own statesOdds already reads from a trailing parenthetical --
+  // never a name guess.
+  const SELECT_CARDS_ONLY_NOTE = /select\s+cards?\s+only/i;
+  // Precomputed once, not per (record, rung): for each section, which of its
+  // OWN ladder rung names is satisfied by a sibling section that genuinely
+  // folds onto it under that exact rung name (rungName, the same reduction
+  // classifySections itself used to name the fold) -- i.e. a real,
+  // roster-verified, separately-printed card list already accounts for that
+  // name, so the mechanical full-roster ladder stamp for it would be either
+  // redundant or, worse, synthetic for the numbers the real list excludes.
+  const satisfiedLadderRungNames = new Map();
+  for (const sec of sections.values()) {
+    const names = new Set();
+    for (const other of sections.values()) {
+      if (other !== sec && other.parallelOf === sec) {
+        const name = rungName(other.section, sec.section);
+        if (name) names.add(name);
+      }
+    }
+    satisfiedLadderRungNames.set(sec, names);
+  }
+
   // ---- pass 3: emit ------------------------------------------------------
   const out = [];
   for (const rec of records) {
@@ -1853,8 +2087,51 @@ function main() {
     // every card would be the cross join that no-synthetic-parallels forbids.
     // Per section it is not a template -- it is Beckett stating which
     // parallels this specific run of cards has.
-    if (!foldsHere) {
+    //
+    // The `|| sec.crossClassFoldKeepsOwnLadder` half is CF-A-SIGNED-PRODUCT-
+    // FOLDED-AS-A-TIER-KEEPS-ITS-OWN-LADDER (see that flag's own header
+    // comment, set only by the cross-auto-class roster fold above): a
+    // section folding UP as the bare signed tier of an unsigned anchor is
+    // still a real product with its own further colour ladder, never
+    // suppressed by the fold the way an ordinary same-class colour-rung
+    // fold's ladder correctly is.
+    if (!foldsHere || sec.crossClassFoldKeepsOwnLadder) {
       for (const rung of sec.ladder || []) {
+        // CF-A-SELECT-CARDS-ONLY-RUNG-IS-NOT-A-FULL-ROSTER-TEMPLATE
+        // (2026-09-20, Donruss FB). A ladder rung can carry a stated print
+        // run AND, in its own trailing note, say it does not apply to
+        // every card in the section ("select cards only, list below") --
+        // 2024 Panini Donruss Football's "Rated Rookies Autographs" ladder
+        // states "Purple - /150 (select cards only, list below)" alongside
+        // "Gold - /25" and "Black - /10" (no such qualifier). Mechanically
+        // stamping Purple onto all 63 base-roster numbers the same way Gold
+        // and Black correctly are is the cross-join CF-EMIT-THE-WHOLE-
+        // LADDER's own header warns against: Beckett is stating that
+        // Purple has an actual narrower, separately-printed roster --
+        // "list below" pointing at exactly that: the real "Rated Rookies
+        // Autographs Purple" section, printed further down this same
+        // sheet, which classifySections's roster-fold now correctly folds
+        // onto this same anchor as its own `parallel="Purple"` rows (50 of
+        // its 51 numbers agree; the 51st has no counterpart here at all --
+        // held out, not forced). Emitting BOTH here would either silently
+        // duplicate the 50 agreeing rows (harmless but redundant) or, worse,
+        // invent 12 Purple auto rows for base cards that were never
+        // actually printed with one -- a synthetic parallel no scraped row
+        // supports, which the no-synthetic-parallels rule forbids outright.
+        // Detected the same way parseRung already recognizes a stated-odds
+        // note (see statesOdds) -- evidence in the rung's own note, never a
+        // vocabulary guess -- and the guard below only ever SKIPS emission
+        // here when the fold this note points at genuinely exists among
+        // this run's own sibling sections (by number, roster-verified,
+        // never merely by name); if no such fold exists, the rung falls
+        // through to the ordinary droppedDeclaredParallels finding via
+        // main()'s own guard (sec.declaredParallels already carries this
+        // exact string), never silently vanishing and never silently
+        // over-applied.
+        if (SELECT_CARDS_ONLY_NOTE.test(String(rung.note || "")) &&
+            satisfiedLadderRungNames.get(sec) && satisfiedLadderRungNames.get(sec).has(rung.name)) {
+          continue;
+        }
         out.push({
           category: target.category,
           cardNumber: rec.cardNumber,
@@ -1897,6 +2174,41 @@ function main() {
   // name absent from that set never became a row for a single card, the
   // exact failure class Phoenix's sixteen names and Donruss Elite's three
   // shipped silently before this guard existed.
+  // CF-A-LIST-BELOW-NAME-POINTS-AT-ANOTHER-SECTION-NOT-A-RUNG-HERE
+  // (2026-09-20, Donruss FB). A declared name of the shape "<Name> - (...
+  // list below)" / "<Name> - (... list below)" is Beckett's own table-of-
+  // contents style pointer to a section named <Name> printed FURTHER DOWN
+  // THE SAME SHEET -- never a same-section colour/finish rung at all. 2024
+  // Panini Donruss Football's Base Set ladder declares "Jersey Number -
+  // (print runs vary, list below)" and "Season Stat Line - (print runs
+  // vary, list below)"; both names are ALSO real, separately materialized,
+  // roster-verified sections elsewhere on the Base sheet ("Jersey Number
+  // Checklist", 395 cards; "Season Stat Line", 400 cards) -- the guard's own
+  // per-section emittedNames check can never see this, because the row it
+  // is looking for was never going to be filed under Base Set's own
+  // category at all; it already exists, correctly, under its own. The
+  // guard's original form (comparing only against sec's own emitted rows)
+  // is still the right test for a genuine same-section rung -- this is an
+  // ADDITIONAL satisfaction, not a replacement: a name is dropped only when
+  // NEITHER a same-section row NOR a materialized section elsewhere in the
+  // file accounts for it. "Orange (select cards only, list below)" on
+  // Rated Rookies Autographs is the identical shape one level down (points
+  // at the separately materialized "Rated Rookies Autographs Orange").
+  const LIST_BELOW_POINTER = /^(.*\S)\s*[–—-]\s*\(.*list below\)\s*$/i;
+  // A trailing " Checklist" is stripped here unconditionally, regardless of
+  // what stripChecklistSuffix decided for the SECTION'S OWN stored name
+  // (its sibling-carries-it rule is deliberately conservative and can
+  // legitimately leave "Checklist" attached -- 2024 Panini Donruss
+  // Football's "Jersey Number Checklist" is the ONLY Base-sheet section
+  // ending that way, so stripChecklistSuffix's own siblingsCarryIt test
+  // never fires for it and the stored section name keeps the suffix). This
+  // comparison is a pointer match, not a naming decision, so it always
+  // compares the bare form on both sides.
+  const normPointerName = (s) => String(s || "")
+    .replace(/\s+Checklist$/i, "").toLowerCase().replace(/\s*-\s*/g, " ").trim();
+  const materializedSectionNames = new Set(
+    [...sections.values()].map((s) => normPointerName(s.section))
+  );
   const droppedDeclaredParallels = [];
   for (const sec of sections.values()) {
     if (!sec.declaredParallels || !sec.declaredParallels.length) continue;
@@ -1905,9 +2217,10 @@ function main() {
       rowsOut.filter((r) => r.category === sec.category).map((r) => r.parallel)
     );
     for (const name of new Set(sec.declaredParallels)) {
-      if (!emittedNames.has(name)) {
-        droppedDeclaredParallels.push({ sheet: sec.sheet, section: sec.section, parallel: name });
-      }
+      if (emittedNames.has(name)) continue;
+      const pointerMatch = LIST_BELOW_POINTER.exec(name);
+      if (pointerMatch && materializedSectionNames.has(normPointerName(pointerMatch[1].trim()))) continue;
+      droppedDeclaredParallels.push({ sheet: sec.sheet, section: sec.section, parallel: name });
     }
   }
   if (droppedDeclaredParallels.length && !ALLOW_DROPPED_PARALLELS) {

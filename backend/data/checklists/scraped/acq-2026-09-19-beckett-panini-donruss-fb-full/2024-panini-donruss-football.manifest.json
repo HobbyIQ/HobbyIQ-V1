@@ -1,13 +1,12 @@
 {
-  "scrapedAt": "2026-09-20T02:46:03.224Z",
+  "scrapedAt": "2026-09-20T16:54:17.256Z",
   "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/12/2024-Donruss-Football-Checklist.xlsx",
-  "source": "beckett-s3-2026-09-19",
   "sport": "football",
   "year": 2024,
   "setName": "2024 Panini Donruss Football",
   "productKey": "2024-panini-donruss",
   "setKey": "panini-donruss",
-  "rowCount": 6369,
+  "rowCount": 9606,
   "parallelColumnAuthoritative": true,
   "sectionsReport": [
     {
@@ -127,34 +126,51 @@
       "section": "Optic Rated Rookies Preview Autographs",
       "category": "auto-optic-rated-rookies-preview-autographs",
       "cards": 60,
-      "role": "own-cards-AMBIGUOUS",
+      "role": "parallel",
       "anchor": "Autographs>Rated Rookies Autographs",
-      "overlapPct": 98.3
+      "rung": "Optic Preview",
+      "rosterFold": true,
+      "agree": 59,
+      "disagree": 0,
+      "grandparentRescued": 1
     },
     {
       "sheet": "Autographs",
       "section": "Rated Rookies Autographs",
       "category": "auto-rated-rookies-autographs",
       "cards": 63,
-      "role": "own-cards"
+      "role": "parallel",
+      "anchor": "Base>Rated Rookies",
+      "rung": "Rated Rookies Autographs",
+      "rosterFold": true,
+      "agree": 63,
+      "disagree": 0
     },
     {
       "sheet": "Autographs",
       "section": "Rated Rookies Autographs Orange",
       "category": "auto-rated-rookies-autographs-orange",
       "cards": 51,
-      "role": "own-cards-AMBIGUOUS",
+      "role": "parallel",
       "anchor": "Autographs>Rated Rookies Autographs",
-      "overlapPct": 98
+      "rung": "Orange",
+      "rosterFold": true,
+      "agree": 50,
+      "disagree": 0,
+      "grandparentRescued": 1
     },
     {
       "sheet": "Autographs",
       "section": "Rated Rookies Autographs Purple",
       "category": "auto-rated-rookies-autographs-purple",
       "cards": 52,
-      "role": "own-cards-AMBIGUOUS",
+      "role": "parallel",
       "anchor": "Autographs>Rated Rookies Autographs",
-      "overlapPct": 94.2
+      "rung": "Purple",
+      "rosterFold": true,
+      "agree": 49,
+      "disagree": 0,
+      "grandparentRescued": 3
     },
     {
       "sheet": "Autographs",
@@ -587,5 +603,18 @@
       "header": "Rated Rookies - #301-400",
       "nextCardNumber": "1"
     }
-  ]
+  ],
+  "droppedDeclaredParallels": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "parallel": "Jersey Number - (print runs vary, list below)"
+    },
+    {
+      "sheet": "Base",
+      "section": "Rated Rookies",
+      "parallel": "Jersey Number - (print runs vary, list below)"
+    }
+  ],
+  "allowDroppedParallelsUsed": true
 }
