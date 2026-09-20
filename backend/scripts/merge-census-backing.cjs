@@ -76,11 +76,12 @@ const DENOMINATOR_BUCKETS = ["backedStrict", "rowExistsNonStrict", "noRow", "unp
 const EXCLUDED_BUCKETS = ["parked", "notPricedFlagged", "unknown"];
 
 function args() {
-  const out = { from: [], top: 300, out: null };
+  const out = { from: [], top: 300, out: null, allMin: 50 };
   const a = process.argv.slice(2);
   for (let i = 0; i < a.length; i++) {
     if (a[i] === "--from") { while (a[i + 1] && !a[i + 1].startsWith("--")) out.from.push(a[++i]); }
     else if (a[i] === "--top") out.top = Number(a[++i]);
+    else if (a[i] === "--all-min") out.allMin = Number(a[++i]);
     else if (a[i] === "--out") out.out = a[++i];
   }
   return out;
@@ -260,6 +261,36 @@ function topUnbackedCells(byCell, topN) {
   return rows.slice(0, topN);
 }
 
+/**
+ * THE LONG TAIL, COMPACT (2026-09-20, gap-router follow-up). topUnbackedCells
+ * is a top-N (default 300) human worklist -- but route-backing-gaps.cjs
+ * exists precisely for the cells BELOW that line, so a top-N is the wrong
+ * input for it. This emits EVERY sports cell with >= `minUnbacked` unbacked
+ * sales (unbacked = noRow + rowExistsNonStrict, the SAME definition
+ * topUnbackedCells uses), in a columns+rows array form: tens of thousands of
+ * cells as objects would repeat every key name per row for no information.
+ * Sports are named by the cell's OWN sport segment against an explicit set
+ * -- bySport's keys carry every mis-tagged variant string the pool ever saw
+ * ("soccer (足球)", "multi-sport", ...) and none of those is a sport a repair
+ * lane can be dispatched at. "other" (the overflow bucket) is excluded for
+ * the same reason topUnbackedCells excludes it.
+ */
+const SPORTS_CELLS = new Set(["baseball", "basketball", "football", "hockey", "soccer"]);
+const ALL_CELLS_COLUMNS = ["sport", "year", "setKey", "unbacked", "noRow", "rowExistsNonStrict", "backedStrict", "unknown", "total"];
+function allSportsUnbackedCells(byCell, minUnbacked = 50) {
+  const rows = [];
+  for (const [cell, b] of byCell) {
+    if (cell === "other") continue;
+    const [sport, year, setKey] = cell.split("|");
+    if (!SPORTS_CELLS.has(sport)) continue;
+    const unbacked = b.noRow + b.rowExistsNonStrict;
+    if (unbacked < minUnbacked) continue;
+    rows.push([sport, year, setKey, unbacked, b.noRow, b.rowExistsNonStrict, b.backedStrict, b.unknown, totalOf(b)]);
+  }
+  rows.sort((a, b) => b[3] - a[3]);
+  return { columns: ALL_CELLS_COLUMNS, minUnbacked, rows };
+}
+
 /** OPTIONAL N/R split for the top-N cells, one card_catalog query per
  *  flagged cell (never per sale) -- see the module header's "NOTE ON N vs R".
  *  Classifies a cell P0 (no product rows), P1 (rows exist, none strict), and
@@ -299,7 +330,7 @@ async function classifyTopCells(rows, catContainer) {
 function fmtPct(n, total) { return total > 0 ? `${(100 * n / total).toFixed(1)}%` : "n/a"; }
 
 async function main() {
-  const { from, top, out } = args();
+  const { from, top, out, allMin } = args();
   if (!from.length) {
     console.error("Usage: node scripts/merge-census-backing.cjs --from <census-slot-*.json | dir> [--top 300] [--out path]");
     process.exit(2);
@@ -418,6 +449,8 @@ async function main() {
   }
   if (topRows.length > 20) console.log(`    ... ${topRows.length - 20} more in the written report`);
 
+  console.log(`\n  ALL SPORTS CELLS with >= ${allMin} unbacked sales (report.allSportsUnbackedCells, the gap router's input): ${allSportsUnbackedCells(byCell, allMin).rows.length.toLocaleString()}  [--all-min to change the floor]`);
+
   const otherBucket = byCell.get("other") ?? null;
   if (otherBucket) {
     console.log(`\n  "other" overflow cell (beyond cellCap, not attributable to one product):`);
@@ -489,6 +522,10 @@ async function main() {
     }])),
     otherOverflow: otherBucket,
     topUnbackedCells: topRows,
+    // EVERY sports cell with >= allMin unbacked sales, compact (see
+    // allSportsUnbackedCells' own header) -- publish-census-backing.cjs's
+    // input for route-backing-gaps.cjs. topUnbackedCells above is unchanged.
+    allSportsUnbackedCells: allSportsUnbackedCells(byCell, allMin),
   };
   const outPath = out ?? path.join(process.cwd(), "census-backing-report.json");
   fs.writeFileSync(outPath, JSON.stringify(report, null, 2));
@@ -502,6 +539,7 @@ module.exports = {
   BUCKETS, DENOMINATOR_BUCKETS, EXCLUDED_BUCKETS,
   emptyBuckets, addInto, totalOf, denominatorOf, excludedOf,
   mergeSlots, topUnbackedCells, readSlotArtifacts, filesOf,
+  allSportsUnbackedCells, SPORTS_CELLS, ALL_CELLS_COLUMNS,
   // 2026-09-20 (the census self-relaunch backing-loss fix, part 3): the
   // backing-coverage guard, exported so its refusal rule is pinned on the
   // SHIPPED function rather than a test's re-implementation of it.

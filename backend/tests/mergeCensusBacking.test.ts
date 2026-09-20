@@ -253,6 +253,32 @@ describe("topUnbackedCells — ranking, and the 'other' exclusion", () => {
   });
 });
 
+describe("allSportsUnbackedCells — the WHOLE tail, compact, for the gap router", () => {
+  it("has no top-N: every sports cell at or above the floor is emitted, ranked, as columns+rows", () => {
+    const byCell = new Map<string, any>();
+    for (let i = 0; i < 1000; i++) byCell.set(`baseball|2018|set-${i}`, bucket({ noRow: 50 + i, backedStrict: 3 }));
+    const all = M.allSportsUnbackedCells(byCell, 50);
+    expect(all.rows).toHaveLength(1000); // topUnbackedCells(…, 300) would have cut 700 of these
+    expect(all.columns).toEqual(M.ALL_CELLS_COLUMNS);
+    const c = Object.fromEntries(all.columns.map((k: string, i: number) => [k, all.rows[0][i]]));
+    expect(c).toMatchObject({ sport: "baseball", year: "2018", setKey: "set-999", unbacked: 1049, noRow: 1049, backedStrict: 3, total: 1052 });
+  });
+
+  it("applies the floor to (noRow + rowExistsNonStrict) and keeps sports only — by the cell's OWN sport segment", () => {
+    const byCell = new Map<string, any>([
+      ["hockey|2020|upper-deck", bucket({ noRow: 30, rowExistsNonStrict: 20 })], // exactly 50: in
+      ["hockey|2021|upper-deck", bucket({ noRow: 49 })],                          // under: out
+      ["pokemon|2023|sv-151", bucket({ noRow: 99999 })],
+      ["multi-sport|2020|leaf", bucket({ noRow: 99999 })],
+      ["other", bucket({ noRow: 99999 })],
+      ["soccer|2024|panini-prizm", bucket({ unknown: 99999, noRow: 60 })],      // unknown never counts as unbacked
+    ]);
+    const all = M.allSportsUnbackedCells(byCell, 50);
+    expect(all.rows.map((r: any[]) => `${r[0]}|${r[1]}|${r[2]}`)).toEqual(["soccer|2024|panini-prizm", "hockey|2020|upper-deck"]);
+    expect(all.minUnbacked).toBe(50);
+  });
+});
+
 describe("filesOf — the artifact-discovery shape rebaseline-i9-reference.cjs also uses", () => {
   it("returns [] for a path that does not exist, never throws", () => {
     expect(M.filesOf("/no/such/path/at/all.json")).toEqual([]);

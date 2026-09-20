@@ -5,11 +5,12 @@
  * repair lane applies -- never applies anything itself.
  *
  * THIS LANE IS READ-ONLY / DECISION-ONLY. IT MAKES NO COSMOS WRITES, EVER, IN
- * EITHER MODE. There is no APPLY branch in this file at all -- no
- * BACKFILL_APPLY gate, because there is nothing behind one: every Cosmos call
- * below is a SELECT, and grepping this file for `.upsert(`, `.replace(`,
- * `.delete(`, `.patch(`, or `container.items.create` should find nothing but
- * this sentence. It dispatches nothing itself either; its output is a
+ * EITHER MODE. There is no apply branch in this file at all -- the runner's
+ * apply switch is never read, because there is nothing behind one: the only
+ * container call below is `items.query`. No point operation, no items-level
+ * write, no sale mover (tests/routeBackingGapsLane.test.ts pins all three,
+ * and tests/everyWriteJobReconciles.test.ts's own writer net must keep
+ * reading this file as a NON-writer). It dispatches nothing itself either; its output is a
  * machine-readable work queue (PLAN_OUT NDJSON) plus a console banner rollup
  * that names, per cell, which SIBLING lane a human/steward should dispatch.
  *
@@ -24,46 +25,40 @@
  * shape belongs to.
  *
  * PRIMARY INPUT. `backend/data/census/backing-cells.json`
- * (publish-census-backing.cjs's own output) -- a trimmed, sports-only,
- * unbacked>=200 view of merge-census-backing.cjs's topUnbackedCells. This
- * lane does NOT re-derive the census: it reads that published table as its
- * candidate-cell list and narrows it by SCOPE/TITLES/LIMIT/SLOT-SHARD, then
- * spends its own Cosmos reads only on the PER-CELL classification and
- * PER-SALE sampling described below.
+ * (publish-census-backing.cjs's own output) -- every sports cell with >= 50
+ * unbacked sales, columns+rows, each stamped with its share of its sport's
+ * whole gap. (A file stamped `placeholder: true` was cut from the merge
+ * tool's top-300 worklist and holds no long tail; the banner says so.) This
+ * lane does NOT re-derive the census: it reads that table as its candidate
+ * list, narrows it by SCOPE/TITLES/LIMIT/SLOT-SHARD, and spends its own
+ * Cosmos reads only on the per-cell classification and per-sale sampling.
  *
- * CELL CLASS, in order, first match wins (see classifyCellClass, pure):
- *   PRESENT             the cell already has plentiful strict catalog rows.
- *                        Threshold: backedStrict >= 200 in the published
- *                        row's own bucket (the same 200-sale floor
- *                        publish-census-backing.cjs itself uses to decide a
- *                        cell is big enough to matter) OR backedStrict is at
- *                        least 10% of the cell's total -- either signal says
- *                        the checklist is genuinely present and the gap is a
- *                        MATCHING problem, not an ACQUISITION problem.
- *   MISSING-PRODUCT      near-zero strict catalog rows for the whole cell
- *                        (checklistStrictRows below a small floor, default 5
- *                        -- a handful of stray rows from a mis-keyed sibling
- *                        product is not "the product has a checklist").
- *   ALIAS-KEY            the key is a ruled alias (setKeyReconciliation.ts's
- *                        ruledAliases()) AND the canonical twin holds strict
- *                        rows. suggestedLane: rekey-product-setkey MODE=pool.
- *                        Checked BEFORE UNREGISTERED-KEY below: a ruled
- *                        alias's own string is usually not a registered
- *                        product either, and this more-actionable class
- *                        would never fire if the generic one ran first.
- *   UNREGISTERED-KEY      the cell's setKey string is not resolvable through
- *                        isRegisteredProduct nor productAncestry (and is not
- *                        a ruled alias, see above). Sub-case recorded:
- *                        whether strict rows already exist under that
- *                        literal string (subCase:
- *                        "strict-rows-exist-under-unregistered-string").
- *   PRESENT-MISMATCH      (the remaining case) the product IS registered and
- *                        DOES have checklist rows, but not enough to clear
- *                        the PRESENT floor above, or its sales are not
- *                        matching it -- this is the case sale-class sampling
- *                        exists for.
+ * CELL CLASS, in order, first match wins (classifyCellClass, pure). The
+ * names are the evidence's own (gap-classes-top120.json):
+ *   ALIAS-KEY         the key is a ruled alias (setKeyReconciliation.ts's
+ *                     ruledAliases()) AND the canonical twin holds strict
+ *                     rows in this sport+year. The WHOLE CELL re-keys
+ *                     (rekey-product-setkey MODE=pool), so no sampling. First
+ *                     because an alias's own string is usually unregistered
+ *                     too, and the generic class would swallow it.
+ *   UNKNOWN-KEY       neither isRegisteredProduct nor productAncestry knows
+ *                     the string. subCase says whether strict rows already
+ *                     sit under that literal string
+ *                     ("strict-rows-exist-under-unregistered-string" -- the
+ *                     evidence's practical alias signal) or not. SAMPLED:
+ *                     its numbers may live verbatim under a registered key.
+ *   MISSING           fewer than 5 strict rows at the cell's id prefix: there
+ *                     is nothing to match a sale against, so no sampling --
+ *                     this is an acquisition.
+ *   PRESENT-MISMATCH  everything else: the checklist EXISTS and the sales do
+ *                     not match it. THIS IS THE BULK OF THE GAP (96 of the
+ *                     top 120 cells, 85% of their unbacked sales -- baseball
+ *                     2025 topps holds 140k strict rows beside 107k unbacked
+ *                     sales), and it is what sale-class sampling is FOR. A
+ *                     cell is never excused from sampling for having many
+ *                     strict rows.
  *
- * SALE CLASS SAMPLING (skipped for PRESENT cells -- nothing to route).
+ * SALE CLASS SAMPLING -- every cell except ALIAS-KEY and MISSING.
  * MEASUREMENT TRAP #1 (backed sales polluting the sample): the query is
  * bounded to STARTSWITH(c.hobbyiqCardId, "hiq:<sport>:<year>:<setKey>:") over
  * SOLD_COMPS directly, then every sampled row's id is checked against the
@@ -87,6 +82,47 @@
  * checked first) then identityUnverified===true (parked) -- neither is ever
  * routed to a repair lane, because neither is a live gap.
  *
+ * SIBLING DISCOVERY (siblingCandidatesFor, pure). A sampled number ABSENT
+ * from the cell's own strict rows is probed against candidate products of
+ * the SAME sport+year, in this priority order. THE CAP: probing stops after
+ * SIBLING_CANDIDATE_CAP (default 12) candidates that actually HOLD strict
+ * rows that year, and never exceeds 4 x that many probes in all:
+ *   1. known-good pairs (KNOWN_SIBLING_PAIRS -- the pairs the acting lane has
+ *      already been ruled on; here ONLY a flag on a suggestion, never a gate)
+ *   2. the key's registered ANCESTORS (productAncestry)
+ *   3. its registered CHILDREN (productParentOf(child) === key). The registry
+ *      files a RELEASE under its flagship exactly as it files an insert
+ *      (topps-update-series under topps), so a child hit is
+ *      INSERT-UNDER-PARENT only when the sale's TITLE NAMES that child
+ *      (insertSetNamedInTitle -- the insert lane's own gate); otherwise it is
+ *      NUMBER-IN-SIBLING, the lane that moves on the number alone.
+ *   4. SIBLINGS (same immediate parent), then the rest of the FAMILY (same
+ *      productAncestry root)
+ * Across 3 and 4, a product the published table shows SELLING in this
+ * sport+year -- or one this run already holds rows for -- is probed before
+ * any that is not (free evidence it exists that year): topps-chrome alone
+ * has ~80 registered team-set children, and relation order by itself would
+ * spend every probe on empty ones before reaching a sibling.
+ * Each candidate's strict NUMBER set is preloaded at most once per run (a
+ * projection of cardNumber+source only), held in a row-budgeted LRU cache
+ * (NUMBER_CACHE_BUDGET, default 600,000 numbers) shared across cells -- the
+ * cells of one sport+year mostly share one family, so later cells pay
+ * nothing. Candidates are loaded ONLY when the sample holds an absent number.
+ * RU EFFECT: a candidate with no rows costs ~3 RU (at most 48 of them,
+ * ~150 RU); one with rows costs about what its own cell preload costs --
+ * measured 196 to 21,714 RU across the census's five reference cells --
+ * ONCE per run. So the first cell of a family pays for up to 12 sibling
+ * checklists (tens of thousands of RU when the family is a flagship's) and
+ * every later cell of that sport+year family pays ~0.
+ *
+ * DISCOVERY IS SAFE BECAUSE THIS LANE NEVER ACTS. A pair it reports is a
+ * SUGGESTION with a count and five (number, title) samples; "these two
+ * products are confusable" stays an operator ruling
+ * (feedback_ratio_similarity_is_not_identity), and the acting lane
+ * (repoint-sales-to-sibling-product) still refuses any pair the operator did
+ * not name. Candidates cut by the cap are COUNTED in the record
+ * (siblingCandidatesDropped), never silently unprobed.
+ *
  * SALE CLASSES (classifySaleShape, pure) -> suggestedLane:
  *   NUMBER-IN-SIBLING        repoint-sales-to-sibling-product
  *   INSERT-UNDER-PARENT      repoint-stored-insert-sales
@@ -98,20 +134,18 @@
  *                            (see the RE-DERIVE LANE note below)
  *   UNPARSEABLE              no hobbyiqCardId, or parseHobbyIqCardId fails
  *
- * RE-DERIVE LANE NAME -- A DEVIATION FROM THE TASK'S ASSUMED NAME. The task
- * expected a script literally named "re-derive"/"rederive". Grepping
- * backend/scripts and backend/src for that vocabulary finds
- * recheck-holding-identity.ts (holdings, not sold_comps rows) and
- * rematch-sold-comps.cjs itself (the census/apply-improve engine this whole
- * program is triaging FOR). Neither is "a re-derive lane a JUNK-PARALLEL/
- * PHRASE-LEAK/AUTO-MISMATCH sale gets dispatched to" in the way the task
- * assumed one exists. This lane therefore reports those three classes'
- * suggestedLane as "rematch-sold-comps (MODE=census scope=improve)" -- the
- * real, shipped mechanism that already re-derives a stored sale's identity
- * from its title through today's parser and classifies it IMPROVE/CONFLICT/
- * AGREE/UNDERIVABLE -- rather than inventing a script name that does not
- * exist. Named explicitly here, and again in the final PR report, per the
- * task's own instruction to say so plainly rather than substitute silently.
+ *   PRINTRUN-SHORT-ID        repoint-sales-to-checklist-numbered (the rung is
+ *                            on the checklist only WITH :num-N)
+ *   NUMBER-ABSENT            acquisition note (on no probed checklist)
+ *
+ * THERE IS NO "RE-DERIVE" LANE FOR A STORED SALE. The only scripts that carry
+ * the word are recheck-holding-identity.ts / rederive-holding-identity
+ * (HOLDINGS, not sold_comps). What re-derives a stored sale's identity from
+ * its title through today's parser is rematch-sold-comps itself, so
+ * JUNK-PARALLEL / PHRASE-LEAK / AUTO-MISMATCH name
+ * "rematch-sold-comps (MODE=census scope=improve)" -- a census first, since
+ * its apply is gated on a clean sample audit and the canary -- rather than
+ * a script that does not exist.
  *
  * PLAN_OUT (the resolve-split-identity-parks.cjs mechanism, mirrored
  * byte-for-byte in shape): when PLAN_OUT names a directory, this run writes
@@ -130,7 +164,12 @@
  *      slot 0, via runner-shard-scope.cjs); RU_BUDGET_MAX (hard RU ceiling,
  *      default 2,000,000 -- no existing RU-budget env name was found by grep
  *      across scripts/, so this lane defines its own, clean-stopping and
- *      flushing the banner rather than crashing); PLAN_OUT optional NDJSON
+ *      flushing the banner rather than crashing -- and an RU stop does NOT
+ *      print the budget marker, so the runner never relaunches into the same
+ *      spend); SAMPLE_CAP=400; SIBLING_CANDIDATE_CAP=12;
+ *      NUMBER_CACHE_BUDGET=600000; SCAN_LIMIT (the runner's `scan_limit`) =
+ *      the RESUME OFFSET a budget relaunch carries, 0 on a first dispatch;
+ *      BACKING_CELLS optional table path (workstation/tests); PLAN_OUT optional NDJSON
  *      dir; RUN_MINUTES=110 (runner-budget.cjs convention).
  *
  * Requires dist/ (catalogAuthority, productSetKeys, resolveProductByChecklist,
@@ -160,12 +199,48 @@ const LIMIT = Number(process.env.LIMIT || 0);
 // many cells were left unclassified for the next run.
 const RU_BUDGET_MAX = Number(process.env.RU_BUDGET_MAX || 2_000_000);
 
+// THE RESUME OFFSET. This lane writes nothing, so it cannot keep a cursor in
+// Cosmos, and a relaunch that re-read the table from the top would redo the
+// same cells until the end of time. The runner's relaunch step therefore adds
+// this link's "cells processed" to the EXISTING `scan_limit` input (exported
+// to every script as SCAN_LIMIT, inherited default "0"), and the next link
+// skips that many cells of the SAME deterministic order (unbacked desc, then
+// cell key). LIMIT bounds the whole chain, not each link: the order is cut to
+// LIMIT first and the offset applied second.
+const RESUME_OFFSET = Math.max(0, Math.floor(Number(process.env.SCAN_LIMIT || 0)) || 0);
+const SAMPLE_CAP = Math.max(1, Number(process.env.SAMPLE_CAP || 400));
+// How many sibling candidates one cell may probe (see SIBLING DISCOVERY in the
+// header for the order and the RU effect), and how many card NUMBERS the
+// shared candidate cache may hold before its least-recently-used set goes.
+const SIBLING_CANDIDATE_CAP = Math.max(0, Number(process.env.SIBLING_CANDIDATE_CAP || 12));
+const NUMBER_CACHE_BUDGET = Math.max(1, Number(process.env.NUMBER_CACHE_BUDGET || 600_000));
+
+/**
+ * KNOWN-GOOD SIBLING PAIRS, from -> [to]. NOT a gate and NOT the candidate
+ * list: discovery finds pairs on its own. A pair listed here has already
+ * been ruled for the acting lane (repoint-sales-to-sibling-product's own
+ * pilot pairs), so its suggestion is flagged `knownGood` and probed first;
+ * every other pair is reported as DISCOVERED and needs an operator ruling.
+ */
+const KNOWN_SIBLING_PAIRS = Object.freeze({
+  topps: Object.freeze(["topps-update-series"]),
+  "donruss-optic": Object.freeze(["panini-donruss"]),
+});
+
+/** Tokens that are never a finish. A closed list, matched against whole
+ *  hyphen-separated tokens of the sale's PARALLEL SLUG (never the title). */
+const JUNK_PARALLEL_WORDS = Object.freeze(["lot", "lots", "reprint", "custom", "proxy", "digital", "psa", "bgs", "sgc", "cgc", "graded", "slab", "invest"]);
+
+const { decodeCells } = require(path.join(__dirname, "publish-census-backing.cjs"));
+
 const SHARD_SCOPE = runnerShardScope({ label: "route-backing-gaps" });
 const shardOf = (key) => parseInt(crypto.createHash("sha1").update(String(key)).digest("hex").slice(0, 8), 16) % SHARD_SCOPE.SLOTS;
 
 const PLAN_OUT = str(process.env.PLAN_OUT);
 
-const BACKING_CELLS_PATH = path.join(backend, "data", "census", "backing-cells.json");
+// BACKING_CELLS is for a workstation or a test pointing at another published
+// table; the runner never sets it, so a dispatch always reads the committed one.
+const BACKING_CELLS_PATH = str(process.env.BACKING_CELLS) || path.join(backend, "data", "census", "backing-cells.json");
 
 // ── SCOPE. Bare sport ("baseball") filters every cell of that sport; a
 // sport:year pair ("baseball:2025") narrows to one year. Both forms are
@@ -218,8 +293,6 @@ const SCOPE_PARSE = parseScopeTokens(RAW_SCOPE);
 const RAW_TITLES = csv(process.env.TITLES || process.env.SET_KEYS).map(lower);
 const SET_KEY_FILTER = new Set(RAW_TITLES);
 
-const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
-
 // ── never-price predicates, mirroring rematch-sold-comps.cjs's own census
 // bucketing ORDER exactly: notPricedFlagged (flaggedWrong/excludedFromFmv)
 // is checked BEFORE parked (identityUnverified) -- see that file's own
@@ -236,58 +309,29 @@ function neverPricedBucket(row) {
 // planSiblingMove/classifySaleForSiblingMove's own separation exactly.
 // ============================================================================
 
-/** Every checklist-authority row's normalised card number, from a preloaded
- *  cell's strict rows -- Set<string>, lowercase. */
-function strictNumberSetOf(strictRows) {
-  return new Set(strictRows.map((r) => String(r.cardNumber ?? "").trim().toLowerCase()).filter(Boolean));
-}
-
 /**
- * CELL CLASS. `cellRow` is one row of the published backing-cells.json table
- * (carries unbacked/noRow/rowExistsNonStrict/total, its own bucket counts --
- * NOT backedStrict, which the published table does not carry; see the
- * `catalog` param below for that). `catalog` is `{ totalRows, strictRows,
- * registered, resolvesViaAncestry, aliasTarget, aliasTargetStrictRows }` --
- * everything this function needs about the LIVE card_catalog state for this
- * cell, computed once by the caller (a single preload) and passed in pure.
+ * CELL CLASS. `cellRow` is one decoded row of backing-cells.json. `catalog`
+ * is `{ totalRows, strictRows, registered, resolvesViaAncestry, aliasTarget,
+ * aliasTargetStrictRows }` -- the LIVE card_catalog facts for this cell,
+ * computed once by the caller and passed in pure.
  *
- * PRESENT floor: 200 strict rows (the same floor publish-census-backing.cjs
- * itself uses to decide a cell is big enough to matter -- reusing ONE
- * threshold across both tools rather than inventing a second number) OR
- * strictRows is at least 10% of the cell's own `total` sales -- either
- * signal says the checklist is genuinely present, so a gap here is a
- * MATCHING problem for sale-class sampling to diagnose, never an
- * ACQUISITION one.
+ * `sample` on the verdict says whether the caller goes on to sale-class
+ * sampling. Only ALIAS-KEY (the whole cell re-keys) and MISSING (nothing to
+ * match a sale against) do not. A cell with plentiful strict rows is NOT
+ * excused: that is PRESENT-MISMATCH, the bulk of the measured gap.
  *
- * MISSING-PRODUCT floor: catalog.strictRows < 5 -- a small floor rather than
- * a hard zero, because a handful of stray rows under this cell's exact id
- * prefix (a mis-keyed sibling, an isolated seed row) is not "the product has
- * a checklist"; it is noise beneath the level this lane can act on.
+ * MISSING floor: strictRows < 5 -- a small floor rather than a hard zero,
+ * because a handful of stray rows under this id prefix (a mis-keyed sibling,
+ * an isolated seed row) is not "the product has a checklist".
  */
+const MISSING_FLOOR = 5;
 function classifyCellClass(cellRow, catalog) {
-  const total = Number(cellRow.total ?? cellRow.unbacked ?? 0) || 1;
   const strictRows = Number(catalog.strictRows ?? 0);
-  const PRESENT_FLOOR_ABSOLUTE = 200;
-  const PRESENT_FLOOR_SHARE = 0.10;
-  if (strictRows >= PRESENT_FLOOR_ABSOLUTE || strictRows / total >= PRESENT_FLOOR_SHARE) {
-    return { cellClass: "PRESENT", detail: `${strictRows} strict rows (>= ${PRESENT_FLOOR_ABSOLUTE} or >= ${(PRESENT_FLOOR_SHARE * 100).toFixed(0)}% of ${total} total) -- checklist is genuinely present` };
-  }
+  const totalRows = Number(catalog.totalRows ?? 0);
 
-  const MISSING_PRODUCT_FLOOR = 5;
-  if (strictRows < MISSING_PRODUCT_FLOOR) {
-    return { cellClass: "MISSING-PRODUCT", detail: `${strictRows} strict catalog row(s) at this cell's id prefix -- below the ${MISSING_PRODUCT_FLOOR}-row noise floor; no checklist exists here` };
-  }
-
-  // ALIAS-KEY is checked BEFORE UNREGISTERED-KEY: a ruled alias's own setKey
-  // string is, by construction, usually NOT a registered product (that is
-  // exactly why setKeyReconciliation.ts had to rule it an alias rather than
-  // leaving productSetKeys.ts to resolve it) -- so testing
-  // "!registered && !resolvesViaAncestry" first would swallow every real
-  // alias into the generic UNREGISTERED-KEY bucket and this dedicated,
-  // more-actionable class would never fire.
   if (catalog.aliasTarget && Number(catalog.aliasTargetStrictRows ?? 0) > 0) {
     return {
-      cellClass: "ALIAS-KEY",
+      cellClass: "ALIAS-KEY", sample: false,
       aliasTarget: catalog.aliasTarget,
       detail: `setKey "${cellRow.setKey}" is a RULED ALIAS of "${catalog.aliasTarget}" (setKeyReconciliation.ts ruledAliases()), which holds ${catalog.aliasTargetStrictRows} strict rows`,
       suggestedLane: "rekey-product-setkey",
@@ -296,39 +340,121 @@ function classifyCellClass(cellRow, catalog) {
   }
 
   if (!catalog.registered && !catalog.resolvesViaAncestry) {
-    const subCase = catalog.totalRows > 0 ? "strict-rows-exist-under-unregistered-string" : "no-rows-under-unregistered-string";
+    const subCase = strictRows > 0 ? "strict-rows-exist-under-unregistered-string" : "no-strict-rows-under-unregistered-string";
     return {
-      cellClass: "UNREGISTERED-KEY",
-      subCase,
-      detail: `setKey "${cellRow.setKey}" is not a registered product and does not resolve via productAncestry -- ${catalog.totalRows} total catalog row(s) exist under this exact string`,
+      cellClass: "UNKNOWN-KEY", sample: true, subCase,
+      detail: `setKey "${cellRow.setKey}" is not a registered product and does not resolve via productAncestry -- ${strictRows} strict / ${totalRows} total catalog row(s) sit under this exact string`,
+    };
+  }
+
+  if (strictRows < MISSING_FLOOR) {
+    return {
+      cellClass: "MISSING", sample: false,
+      detail: `${strictRows} strict catalog row(s) at this cell's id prefix (floor ${MISSING_FLOOR}) -- registered product, no checklist here; acquire it`,
     };
   }
 
   return {
-    cellClass: "PRESENT-MISMATCH",
-    detail: `${strictRows} strict rows exist (registered product) but below the PRESENT floor relative to ${total} total sales -- sale-class sampling decides why`,
+    cellClass: "PRESENT-MISMATCH", sample: true,
+    detail: `${strictRows} strict rows exist and ${Number(cellRow.unbacked ?? 0)} sales still do not match them -- sale-class sampling says why`,
   };
 }
 
 /**
- * SALE CLASS for one sampled unbacked sale. `parsed` is
- * parseHobbyIqCardId(sale.hobbyiqCardId) or null. `ctx` carries everything
- * precomputed per-cell: `ownNumbers` (this cell's own strict card-number
- * set), `siblingHits` (Map<siblingSetKey, Set<number>> for sport-year
- * siblings named as hints, or discovered), `insertParentHits` (Map<insertKey,
- * {parentSetKey, numbers:Set}>), `ownParallelsByNumber` (Map<number,
- * Set<parallelSlug>> from this cell's OWN strict rows, for the
- * PARALLEL-SUFFIX / PRINTRUN-VARIANT-ABSENT / RUNG-ABSENT split),
- * `nonStrictSourcesByNumber` (Map<number, Set<source>> for ROW-EXISTS-NON-
- * STRICT), `phraseLeakWords` (product-family suffix words this cell's own
- * checklist carries, for PARALLEL-SUFFIX's spelling variant), `titleWords`.
+ * THE SIBLING CANDIDATES for one setKey, in PROBE ORDER. PURE: `deps` =
+ * { productAncestry, productParentOf, allKeys, knownPairs, presentKeys }.
+ * Returns [{ setKey, relation, knownGood, present }], relation being
+ * "ancestor" | "child" | "sibling" | "family". The CALLER applies the cap
+ * while it probes (see SIBLING DISCOVERY in the header): it stops after
+ * `cap` candidates that actually HOLD strict rows in this sport+year, and
+ * never probes more than 4 x cap in all -- an empty candidate costs ~3 RU
+ * and tells the operator the product has no checklist that year, so it must
+ * not spend a slot a real checklist needs.
  *
- * Order (first match wins), matching the task's own ordering:
- *   UNPARSEABLE -> NUMBER-IN-SIBLING -> INSERT-UNDER-PARENT ->
- *   PARALLEL-SUFFIX -> PRINTRUN-VARIANT-ABSENT -> RUNG-ABSENT ->
- *   ROW-EXISTS-NON-STRICT -> JUNK-PARALLEL/PHRASE-LEAK/AUTO-MISMATCH (title
- *   parser defects) -> a residual bucket, UNRESOLVED, when nothing fires.
+ * ORDER: known-good pairs, then ancestors, then children, siblings (same
+ * immediate parent) and the rest of the family (same productAncestry root).
+ * After the ancestors, every key in `presentKeys` -- a product the census
+ * table shows selling in THIS sport+year, or one this run already holds
+ * rows for -- goes before every key that is not, whatever its relation: a
+ * flagship has dozens of registered children (topps-chrome ~80 team sets)
+ * and relation order alone would never reach the first sibling. Relation,
+ * then closest spelling, order each of the two groups.
+ *
+ * An UNREGISTERED key has an ancestry of just itself, so its family is
+ * empty by the registry -- for that one case the family is the keys sharing
+ * its leading word ("topps-foo" probes the topps family), the segment
+ * reading resolveProductByChecklist.ts already uses for a key the registry
+ * does not know.
  */
+function siblingCandidatesFor(setKey, deps) {
+  const key = String(setKey ?? "").trim().toLowerCase();
+  if (!key) return [];
+  const all = deps.allKeys ?? [];
+  const present = deps.presentKeys ?? new Set();
+  const ancestry = deps.productAncestry(key);
+  const known = new Set(deps.knownPairs?.[key] ?? []);
+  const parent = deps.productParentOf(key);
+  const isRoot = ancestry.length === 1 && all.includes(key);
+  const root = ancestry.length > 1 ? ancestry[ancestry.length - 1] : (isRoot ? key : null);
+  const leadingWord = key.split("-")[0];
+  const rootOf = (k) => { const a = deps.productAncestry(k); return a[a.length - 1]; };
+  const sharedPrefix = (k) => { let i = 0; while (i < k.length && i < key.length && k[i] === key[i]) i++; return i; };
+  const ranked = (keys) => [...keys].sort((a, b) => (present.has(b) ? 1 : 0) - (present.has(a) ? 1 : 0) || sharedPrefix(b) - sharedPrefix(a) || a.localeCompare(b));
+  const relationOf = (k) => {
+    if (ancestry.includes(k)) return "ancestor";
+    if (deps.productParentOf(k) === key) return "child";
+    if (parent && deps.productParentOf(k) === parent) return "sibling";
+    return "family";
+  };
+
+  const seen = new Set([key]);
+  const out = [];
+  const push = (k) => {
+    if (!k || seen.has(k)) return;
+    seen.add(k);
+    out.push({ setKey: k, relation: relationOf(k), knownGood: known.has(k), present: present.has(k) });
+  };
+  for (const k of known) push(k);
+  for (const k of ancestry.slice(1)) push(k);
+  const head = out.length;
+  for (const k of ranked(all.filter((c) => deps.productParentOf(c) === key))) push(k);
+  if (parent) for (const k of ranked(all.filter((c) => deps.productParentOf(c) === parent))) push(k);
+  for (const k of ranked(all.filter((c) => (root ? rootOf(c) === root : (c === leadingWord || c.startsWith(`${leadingWord}-`)))))) push(k);
+  // PRESENCE OUTRANKS RELATION. topps-chrome alone has ~80 registered
+  // children (team sets), nearly all empty in any one sport+year; probed in
+  // relation order they would exhaust the probe limit before the first
+  // sibling. A stable partition keeps child < sibling < family WITHIN the
+  // present group and within the rest.
+  const tail = out.slice(head);
+  return [...out.slice(0, head), ...tail.filter((c) => c.present), ...tail.filter((c) => !c.present)];
+}
+
+/**
+ * SALE CLASS for one sampled unbacked sale. `parsed` is
+ * parseHobbyIqCardId(sale.hobbyiqCardId) or null. EVERY comparison is on
+ * SLUG SEGMENTS -- the sale's id against the catalog rows' ids -- never the
+ * human-form parallel/cardNumber/isAuto fields or the title. `ctx`, all
+ * precomputed per cell:
+ *   sport, year, setKey
+ *   ownNumbers            Set<number slug> on this cell's strict rows
+ *   ownRungsByNumber      Map<number, [{parallel, isAuto, printRun}]> parsed
+ *                         off this cell's strict rows' OWN ids
+ *   nonStrictSourcesById  Map<catalog id, Set<source>> for non-strict rows
+ *   candidateHits         [{setKey, relation, knownGood, numbers:Set}] in
+ *                         siblingCandidatesFor's priority order
+ *   suffixWords           the product family's own suffix word(s)
+ *   junkWords             tokens that are never a finish
+ *
+ * Order, first match wins:
+ *   UNPARSEABLE -> ROW-EXISTS-NON-STRICT (exact id)
+ *   number NOT on own checklist: INSERT-UNDER-PARENT / NUMBER-IN-SIBLING by
+ *     candidate relation -> NUMBER-ABSENT
+ *   number on own checklist, parallel on it: AUTO-MISMATCH ->
+ *     PRINTRUN-SHORT-ID -> PRINTRUN-VARIANT-ABSENT -> UNRESOLVED
+ *   number on own checklist, parallel NOT on it: PARALLEL-SUFFIX ->
+ *     JUNK-PARALLEL -> PHRASE-LEAK -> RUNG-ABSENT
+ */
+const REDERIVE_LANE = "rematch-sold-comps (MODE=census scope=improve)";
 function classifySaleShape(sale, parsed, ctx) {
   if (!sale?.hobbyiqCardId || !parsed) {
     return { saleClass: "UNPARSEABLE", detail: "no hobbyiqCardId, or the slug does not parse into segments" };
@@ -336,101 +462,121 @@ function classifySaleShape(sale, parsed, ctx) {
   const num = String(parsed.cardNumber ?? "").trim().toLowerCase();
   if (!num) return { saleClass: "UNPARSEABLE", detail: "parsed slug carries no card number segment" };
 
-  // NUMBER-IN-SIBLING: absent from this cell's own strict rows, present
-  // verbatim under a NAMED sibling product of the same sport-year.
-  if (!ctx.ownNumbers.has(num)) {
-    for (const [siblingKey, numbers] of ctx.siblingHits ?? []) {
-      if (numbers.has(num)) {
-        return {
-          saleClass: "NUMBER-IN-SIBLING",
-          siblingSetKey: siblingKey,
-          suggestedLane: "repoint-sales-to-sibling-product",
-          detail: `#${num} absent from this cell's own checklist, present verbatim on sibling "${siblingKey}"`,
-        };
-      }
-    }
-  }
-
-  // INSERT-UNDER-PARENT: the number belongs to a REGISTERED insert whose
-  // productParentOf is THIS cell's setKey.
-  if (!ctx.ownNumbers.has(num)) {
-    for (const [insertKey, info] of ctx.insertParentHits ?? []) {
-      if (info.numbers.has(num)) {
-        return {
-          saleClass: "INSERT-UNDER-PARENT",
-          insertSetKey: insertKey,
-          suggestedLane: "repoint-stored-insert-sales",
-          detail: `#${num} is on registered insert "${insertKey}"'s own checklist, whose parent product is this cell`,
-        };
-      }
-    }
-  }
-
-  // From here on the number itself IS on this cell's own checklist (or
-  // matches neither sibling nor insert and falls through as a genuine
-  // catalog hole below) -- the remaining classes distinguish PARALLEL-level
-  // shapes at that same number.
-  const ownParallels = ctx.ownParallelsByNumber?.get(num) ?? new Set();
-  const saleParallel = String(parsed.parallelSlug ?? "").trim().toLowerCase() || "base";
-
-  if (ownParallels.size > 0 && !ownParallels.has(saleParallel)) {
-    // PARALLEL-SUFFIX: the checklist carries a DIFFERENT spelling of the
-    // same finish (a product-family suffix word, e.g. "silver" vs
-    // "silver-prizm") -- detected by stripping/adding the cell's own known
-    // suffix words and checking whether that produces a checklist hit.
-    for (const suffixWord of ctx.phraseLeakWords ?? []) {
-      const withSuffix = `${saleParallel}-${suffixWord}`;
-      const withoutSuffix = saleParallel.endsWith(`-${suffixWord}`) ? saleParallel.slice(0, -(suffixWord.length + 1)) : null;
-      if (ownParallels.has(withSuffix) || (withoutSuffix && ownParallels.has(withoutSuffix))) {
-        return {
-          saleClass: "PARALLEL-SUFFIX",
-          suggestedLane: "repoint-sales-parallel-suffix",
-          detail: `"${saleParallel}" differs from the checklist's own spelling by the product-family suffix "${suffixWord}"`,
-        };
-      }
-    }
-    // The number exists at a DIFFERENT print-run/parallel combination the
-    // checklist DOES carry (just not this exact one, and not a suffix
-    // spelling match) -- the print-run VARIANT itself is what's missing.
-    if (parsed.printRun) {
-      return {
-        saleClass: "PRINTRUN-VARIANT-ABSENT",
-        detail: `#${num} "${saleParallel}" num-${parsed.printRun} -- the base parallel exists on the checklist but not this specific print-run variant`,
-      };
-    }
-    return {
-      saleClass: "RUNG-ABSENT",
-      detail: `#${num} parallel "${saleParallel}" is nowhere on this card's checklist rows -- a genuine catalog hole, not a routing problem`,
-      acquisitionNote: `acquire ladder/insert checklist coverage for "${saleParallel}" on ${ctx.sport}/${ctx.year}/${ctx.setKey} #${num}`,
-    };
-  }
-
-  // ROW-EXISTS-NON-STRICT: a card_catalog row exists at this exact id, but
-  // its source(s) are not checklist-authority.
-  const nonStrictSources = ctx.nonStrictSourcesByNumber?.get(num);
+  // ROW-EXISTS-NON-STRICT, by EXACT ID: a card_catalog row sits at this very
+  // address and no checklist-authority source backs it. This is the census's
+  // own rowExistsNonStrict bucket, so it is answered first and exactly.
+  const nonStrictSources = ctx.nonStrictSourcesById?.get(String(sale.hobbyiqCardId));
   if (nonStrictSources && nonStrictSources.size > 0) {
     return {
       saleClass: "ROW-EXISTS-NON-STRICT",
       sources: [...nonStrictSources],
-      detail: `a card_catalog row exists at #${num}/${saleParallel} but its source(s) (${[...nonStrictSources].join(", ")}) are not checklist-authority`,
+      detail: `a card_catalog row exists at this exact id but its source(s) (${[...nonStrictSources].join(", ")}) are not checklist-authority`,
     };
   }
 
-  // Title-parser-defect candidates -- re-derive lane (see module header's
-  // RE-DERIVE LANE NAME note for why this names rematch-sold-comps rather
-  // than a script that does not exist).
-  const title = lower(sale.title);
-  if (ctx.junkParallelWords?.some((w) => title.includes(w))) {
-    return { saleClass: "JUNK-PARALLEL", suggestedLane: "rematch-sold-comps (MODE=census scope=improve)", detail: `title contains a junk-parallel phrase this cell's checklist never lists as a real rung` };
-  }
-  if (ctx.phraseLeakTitleWords?.some((w) => title.includes(w))) {
-    return { saleClass: "PHRASE-LEAK", suggestedLane: "rematch-sold-comps (MODE=census scope=improve)", detail: `title carries a product-phrase leak into the parallel field` };
-  }
-  if (sale.isAuto === true && !ctx.autoNumbers?.has(num)) {
-    return { saleClass: "AUTO-MISMATCH", suggestedLane: "rematch-sold-comps (MODE=census scope=improve)", detail: `sale is flagged isAuto but #${num} carries no auto rung on this cell's checklist` };
+  // THE NUMBER IS NOT ON THIS CELL'S OWN CHECKLIST. Probe the discovered
+  // candidates in priority order (siblingCandidatesFor): a CHILD of this key
+  // is INSERT-UNDER-PARENT, any other relation is NUMBER-IN-SIBLING. The
+  // first candidate listing the number wins; `alsoOn` names the rest, so an
+  // ambiguous number is visible as ambiguous.
+  if (!ctx.ownNumbers.has(num)) {
+    const hits = (ctx.candidateHits ?? []).filter((c) => c.numbers.has(num));
+    if (hits.length) {
+      // A CHILD of this key is not automatically an insert: the registry
+      // files a RELEASE under its flagship the same way (topps-update-series
+      // under topps), and that pair belongs to the sibling lane. The two
+      // acting lanes split on exactly one fact -- repoint-stored-insert-sales
+      // moves a sale only when its TITLE NAMES the insert
+      // (insertSetNamedInTitle), the sibling lane moves on the number alone
+      // -- so the router asks the same question: a child the title names is
+      // INSERT-UNDER-PARENT, any other hit is NUMBER-IN-SIBLING.
+      const named = new Set(ctx.insertKeysNamedInTitle ? ctx.insertKeysNamedInTitle(sale) : []);
+      const namedChild = hits.find((c) => c.relation === "child" && named.has(c.setKey));
+      const hit = namedChild ?? hits[0];
+      const alsoOn = hits.filter((c) => c !== hit).map((c) => c.setKey);
+      if (namedChild) {
+        return {
+          saleClass: "INSERT-UNDER-PARENT", insertSetKey: hit.setKey, knownGood: hit.knownGood === true, alsoOn,
+          suggestedLane: "repoint-stored-insert-sales",
+          detail: `#${num} is on "${hit.setKey}"'s own checklist, a registered child of this cell's product, and the title names it`,
+        };
+      }
+      return {
+        saleClass: "NUMBER-IN-SIBLING", siblingSetKey: hit.setKey, relation: hit.relation, knownGood: hit.knownGood === true, alsoOn,
+        suggestedLane: "repoint-sales-to-sibling-product",
+        detail: `#${num} absent from this cell's own checklist, present verbatim on ${hit.relation} "${hit.setKey}"`,
+      };
+    }
+    return {
+      saleClass: "NUMBER-ABSENT",
+      detail: `#${num} is on neither this cell's checklist nor any of the ${(ctx.candidateHits ?? []).length} probed candidate(s) -- a missing insert/subset checklist, or a misread number`,
+      acquisitionNote: `acquire the checklist carrying #${num} for ${ctx.sport}/${ctx.year}/${ctx.setKey}`,
+    };
   }
 
-  return { saleClass: "UNRESOLVED", detail: `#${num}/${saleParallel} matched none of the named shapes -- residual bucket for manual review` };
+  // THE NUMBER IS ON THIS CELL'S OWN CHECKLIST. Everything below compares the
+  // sale's SLUG rung (parallel, auto, printRun -- read off its id) against the
+  // checklist's OWN slug rungs at that number (read off the catalog rows'
+  // ids by the same parser), so both sides are in one vocabulary.
+  const rungs = ctx.ownRungsByNumber?.get(num) ?? [];
+  const saleParallel = String(parsed.parallel ?? "").trim().toLowerCase() || "base";
+  const saleAuto = parsed.isAuto === true;
+  const salePrintRun = parsed.printRun ?? null;
+  const atParallel = rungs.filter((r) => r.parallel === saleParallel);
+
+  if (atParallel.length) {
+    const sameAuto = atParallel.filter((r) => r.isAuto === saleAuto);
+    if (!sameAuto.length) {
+      return {
+        saleClass: "AUTO-MISMATCH", suggestedLane: REDERIVE_LANE,
+        detail: `#${num} "${saleParallel}" exists on the checklist only as ${saleAuto ? "no-auto" : "auto"}; the sale's id says ${saleAuto ? "auto" : "no-auto"}`,
+      };
+    }
+    if (!sameAuto.some((r) => (r.printRun ?? null) === salePrintRun)) {
+      if (salePrintRun === null) {
+        return {
+          saleClass: "PRINTRUN-SHORT-ID", suggestedLane: "repoint-sales-to-checklist-numbered",
+          detail: `#${num} "${saleParallel}" is on the checklist only WITH a print run (num-${sameAuto.map((r) => r.printRun).filter(Boolean).join("/num-")}); the sale's id carries none`,
+        };
+      }
+      return {
+        saleClass: "PRINTRUN-VARIANT-ABSENT",
+        detail: `#${num} "${saleParallel}" is on the checklist, but not at num-${salePrintRun} (checklist: ${sameAuto.map((r) => (r.printRun ? `num-${r.printRun}` : "unnumbered")).join(", ")})`,
+      };
+    }
+    // Exact rung present (the ids differ elsewhere, e.g. a subset segment).
+    return { saleClass: "UNRESOLVED", detail: `#${num}/${saleParallel} -- the exact rung is on the checklist; the id differs on another segment` };
+  }
+
+  // The checklist has the number but NOT this parallel slug.
+  const parallelsHere = new Set(rungs.map((r) => r.parallel));
+  for (const suffixWord of ctx.suffixWords ?? []) {
+    const longer = `${saleParallel}-${suffixWord}`;
+    const shorter = saleParallel.endsWith(`-${suffixWord}`) ? saleParallel.slice(0, -(suffixWord.length + 1)) : null;
+    const twin = parallelsHere.has(longer) ? longer : (shorter && parallelsHere.has(shorter) ? shorter : null);
+    if (twin) {
+      return {
+        saleClass: "PARALLEL-SUFFIX", suggestedLane: "repoint-sales-parallel-suffix", checklistSpelling: twin,
+        detail: `"${saleParallel}" vs the checklist's "${twin}" -- they differ only by the product's own suffix word "${suffixWord}"`,
+      };
+    }
+  }
+  const tokens = saleParallel.split("-").filter(Boolean);
+  const junk = tokens.find((t) => (ctx.junkWords ?? []).includes(t));
+  if (junk) {
+    return { saleClass: "JUNK-PARALLEL", suggestedLane: REDERIVE_LANE, detail: `parallel slug "${saleParallel}" carries "${junk}", which is never a finish` };
+  }
+  const productWords = new Set([...String(ctx.setKey ?? "").split("-"), String(ctx.year ?? "")].filter((w) => w.length > 2));
+  for (const w of ctx.suffixWords ?? []) productWords.delete(w); // a suffix word is a legitimate part of a finish
+  const leaked = tokens.find((t) => productWords.has(t));
+  if (leaked) {
+    return { saleClass: "PHRASE-LEAK", suggestedLane: REDERIVE_LANE, detail: `parallel slug "${saleParallel}" carries the product's own word "${leaked}" -- the product phrase leaked into the finish` };
+  }
+  return {
+    saleClass: "RUNG-ABSENT", missingSlug: saleParallel,
+    detail: `#${num} is on the checklist, "${saleParallel}" is not among its ${parallelsHere.size} rung(s) -- a catalog hole, not a routing problem`,
+    acquisitionNote: `acquire ladder coverage for "${saleParallel}" on ${ctx.sport}/${ctx.year}/${ctx.setKey}`,
+  };
 }
 
 /**
@@ -443,15 +589,19 @@ function suggestedDispatchFor(suggestion, cell) {
   const scopeArg = `${cell.sport}:${cell.year}`;
   switch (suggestion.suggestedLane) {
     case "repoint-sales-to-sibling-product":
-      return `gh workflow run backfill-runner.yml -f script=repoint-sales-to-sibling-product -f apply=false -f scope=${scopeArg} -f titles=${cell.setKey}>${suggestion.siblingSetKey ?? "<sibling-setkey>"}`;
+      return `gh workflow run backfill-runner.yml -f script=repoint-sales-to-sibling-product -f apply=false -f scope=${scopeArg} -f "titles=${cell.setKey}>${suggestion.siblingSetKey ?? "SIBLING-SETKEY"}"`; // quoted: a bare '>' is a shell redirect
     case "repoint-stored-insert-sales":
       return `gh workflow run backfill-runner.yml -f script=repoint-stored-insert-sales -f apply=false -f scope=${scopeArg} -f titles=${suggestion.insertSetKey ?? "<insert-setkey>"}`;
     case "repoint-sales-parallel-suffix":
       return `gh workflow run backfill-runner.yml -f script=repoint-sales-parallel-suffix -f apply=false -f scope=${scopeArg} -f titles=${cell.setKey}`;
+    case "repoint-sales-to-checklist-numbered":
+      return `gh workflow run backfill-runner.yml -f script=repoint-sales-to-checklist-numbered -f apply=false -f scope=${scopeArg} -f titles=${cell.setKey}`;
     case "rekey-product-setkey":
       return `gh workflow run backfill-runner.yml -f script=rekey-product-setkey -f apply=false -f mode=pool -f scope=${cell.sport} -f setkey_like=${cell.setKey} -f titles=${suggestion.aliasTarget ?? "<canonical-setkey>"} -f years=${cell.year}`;
     case "rematch-sold-comps (MODE=census scope=improve)":
-      return `gh workflow run backfill-runner.yml -f script=rematch-sold-comps -f mode=census -f scope=improve -f setkey_like=${cell.setKey}`;
+      // The rematch ALWAYS shards 32 ways on its measured table, so one
+      // dispatch is one slot; setkey_like + sports are its in-slot row filter.
+      return `gh workflow run backfill-runner.yml -f script=rematch-sold-comps -f mode=census -f scope=improve -f sports=${cell.sport} -f setkey_like=${cell.setKey} -f slots=32 -f slot=0   # repeat for slot 1..31`;
     default:
       return null; // ACQUISITION/RUNG-ABSENT/UNPARSEABLE/UNRESOLVED/ROW-EXISTS-NON-STRICT carry no dispatch line
   }
@@ -495,8 +645,9 @@ const idPrefix = (sport, year, setKey) => `hiq:${sport}:${year}:${setKey}:`;
 
 function checklistSpec(sport, year, setKey) {
   return {
-    query: `SELECT c.id, c.source, c.sport, c.year, c.cardYear, c.setKey, c.cardNumber,
-                   c.parallel, c.parallelSlug, c.isAuto, c.playerName
+    // id + source + cardNumber ONLY: every rung this lane compares is parsed
+    // off the id, so the human-form parallel/isAuto fields are never fetched.
+    query: `SELECT c.id, c.source, c.cardNumber
             FROM c
             WHERE STARTSWITH(c.id, @prefix)
               AND c.sport = @sport AND (c.year = @year OR c.cardYear = @year)
@@ -509,9 +660,15 @@ function checklistSpec(sport, year, setKey) {
   };
 }
 
+/** A sibling CANDIDATE's rows -- the same bounded prefix read; only its strict
+ *  NUMBER set is kept, in the row-budgeted cache. */
+const numbersSpec = checklistSpec;
+
 function salesSpecWindow(sport, year, setKey, fromIso, toIso) {
   return {
-    query: `SELECT c.id, c.hobbyiqCardId, c.cardId, c.title, c.isAuto, c.soldAt,
+    // title/playerName ride along ONLY for the plan's samples and the insert
+    // lane's own title gate -- never for number/parallel/auto classification.
+    query: `SELECT c.id, c.hobbyiqCardId, c.cardId, c.title, c.playerName, c.soldAt,
                    c.flaggedWrong, c.excludedFromFmv, c.identityUnverified
             FROM c
             WHERE STARTSWITH(c.hobbyiqCardId, @p)
@@ -583,14 +740,25 @@ async function main() {
 
   const { CosmosClient } = require("@azure/cosmos");
   const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
-  const { productParentOf, productAncestry } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
+  const { productParentOf, productAncestry, productSetKeys } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
   const { isRegisteredProduct } = require(path.join(backend, "dist/services/catalog/resolveProductByChecklist.js"));
   const { ruledAliases } = require(path.join(backend, "dist/services/catalog/setKeyReconciliation.js"));
   const { parseHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+  // The ACTING lane's own table decides where PARALLEL-SUFFIX can be
+  // suggested at all: a product it has no suffix word for is a product it
+  // would refuse, so the router never sends an operator there.
+  const { suffixWordFor } = require(path.join(__dirname, "repoint-sales-parallel-suffix.cjs"));
+  const { insertSetNamedInTitle } = require(path.join(backend, "dist/services/portfolioiq/insertSetTitleReader.js"));
 
   const isChecklist = (source) => catalogAuthorityOf(source) === "checklist";
   const ALIASES = ruledAliases(); // [{setKey, canonical, why}]
   const aliasTargetOf = (setKey) => ALIASES.find((a) => a.setKey === setKey)?.canonical ?? null;
+  const ALL_KEYS = productSetKeys();
+  const candidateDeps = { productAncestry, productParentOf, allKeys: ALL_KEYS, knownPairs: KNOWN_SIBLING_PAIRS };
+  const numberOfId = (row) => {
+    const p = parseHobbyIqCardId(String(row.id ?? ""));
+    return lower(p?.cardNumber ?? row.cardNumber);
+  };
 
   const client = new CosmosClient(conn);
   const db = client.database(process.env.COSMOS_DATABASE || "hobbyiq");
@@ -598,24 +766,72 @@ async function main() {
   const sales = db.container("sold_comps");
 
   let totalRU = 0;
-  const spendRU = (n) => { totalRU += n; };
+
+  // ── THE NUMBER CACHE: one strict NUMBER set per (sport, year, setKey),
+  // loaded at most once per run and shared by every cell that probes it --
+  // including each cell's OWN set, since the cells of one family are each
+  // other's candidates. LRU, bounded by TOTAL NUMBERS held (a flagship is
+  // 5k numbers, an insert 20 -- a count-of-sets cap could not see that).
+  const numberCache = new Map(); // key -> Set<number>
+  let numberCacheSize = 0, numberCacheEvictions = 0, numberCacheHits = 0, numberCacheLoads = 0;
+  const cachePut = (key, set) => {
+    if (numberCache.has(key)) { numberCacheSize -= numberCache.get(key).size; numberCache.delete(key); }
+    numberCache.set(key, set);
+    numberCacheSize += set.size;
+    while (numberCacheSize > NUMBER_CACHE_BUDGET && numberCache.size > 1) {
+      const [oldest, oldSet] = numberCache.entries().next().value;
+      if (oldest === key) break;
+      numberCache.delete(oldest); numberCacheSize -= oldSet.size; numberCacheEvictions++;
+    }
+  };
+  /** Returns { numbers, ru } -- ru is 0 on a cache hit. */
+  async function strictNumbersOf(sport, year, setKey) {
+    const key = `${sport}|${year}|${setKey}`;
+    const hit = numberCache.get(key);
+    if (hit) { numberCache.delete(key); numberCache.set(key, hit); numberCacheHits++; return { numbers: hit, ru: 0 }; }
+    const numbers = new Set();
+    const ru = await pagedQuery(catalog, numbersSpec(sport, year, setKey), (rows) => {
+      for (const r of rows) { if (isChecklist(r.source)) { const n = numberOfId(r); if (n) numbers.add(n); } }
+    });
+    numberCacheLoads++;
+    cachePut(key, numbers);
+    return { numbers, ru };
+  }
 
   // ── CANDIDATE CELLS: the published table, filtered by SCOPE/TITLES/LIMIT/SHARD ──
-  const allCells = Array.isArray(published.cells) ? published.cells : [];
+  const allCells = decodeCells(published);
+  const sportGap = published.sportGap ?? {};
+  // Which products the census saw SELLING in each sport+year -- free evidence
+  // (no RU) that a sibling candidate exists that year; ranks the probe order.
+  const presentKeysBySportYear = new Map();
+  for (const c of allCells) {
+    const k = `${c.sport}|${Number(c.year)}`;
+    if (!presentKeysBySportYear.has(k)) presentKeysBySportYear.set(k, new Set());
+    presentKeysBySportYear.get(k).add(lower(c.setKey));
+  }
   let candidates = allCells.filter((c) => rowInScope(c, SCOPE_PARSE));
   if (SET_KEY_FILTER.size) candidates = candidates.filter((c) => SET_KEY_FILTER.has(lower(c.setKey)));
+  const inScopeBeforeShard = candidates.length;
   candidates = candidates.filter((c) => SHARD_SCOPE.mine(shardOf(c.cell)));
-  candidates.sort((a, b) => b.unbacked - a.unbacked);
+  candidates.sort((a, b) => b.unbacked - a.unbacked || String(a.cell).localeCompare(String(b.cell)));
+  const inScopeBeforeLimit = candidates.length;
   if (LIMIT > 0) candidates = candidates.slice(0, LIMIT);
+  const chainTotal = candidates.length;
+  if (RESUME_OFFSET > 0) candidates = candidates.slice(RESUME_OFFSET);
 
   console.log("");
-  console.log(`  published cells        ${f(allCells.length)}  (from ${BACKING_CELLS_PATH})`);
-  console.log(`  in-scope this run       ${f(candidates.length)}`);
-  console.log(`  RU_BUDGET_MAX           ${f(RU_BUDGET_MAX)}`);
+  console.log(`  published cells         ${f(allCells.length)}  (floor ${published.minUnbackedUsed ?? "?"} unbacked; from ${BACKING_CELLS_PATH})`);
+  if (published.placeholder === true) {
+    console.log("  !! INPUT IS A PLACEHOLDER: cut from the merge tool's TOP-300 worklist, it holds NO long tail.");
+    console.log("     Regenerate it (merge-census-backing.cjs -> publish-census-backing.cjs) to route the tail.");
+  }
+  console.log(`  in scope                ${f(inScopeBeforeShard)}  -> this shard ${f(inScopeBeforeLimit)}  -> after LIMIT ${f(chainTotal)}`);
+  if (RESUME_OFFSET > 0) console.log(`  RESUMED                 skipping the first ${f(RESUME_OFFSET)} cell(s) an earlier link already routed (scan_limit carries the offset) -> ${f(candidates.length)} left; rollups below cover THIS link only`);
+  console.log(`  RU_BUDGET_MAX           ${f(RU_BUDGET_MAX)}    sibling candidate cap ${SIBLING_CANDIDATE_CAP}    number cache budget ${f(NUMBER_CACHE_BUDGET)}`);
 
   if (!candidates.length) {
     console.log("\n  nothing in scope -- nothing to route.");
-    return { skippedForBudget: 0, cellsProcessed: 0 };
+    return;
   }
 
   // ── PLAN_OUT ──────────────────────────────────────────────────────────────
@@ -638,286 +854,295 @@ async function main() {
     catch (e) { console.log(`\n::warning::PLAN_OUT write failed for ${record?.cell}: ${e?.message}`); }
   }
 
-  const salesByClassOverall = new Map(); // saleClass -> unbacked-sale count (sampled, scaled)
-  const salesByClassBySport = new Map(); // sport -> Map(saleClass -> count)
-  const actionCandidates = []; // {suggestedLane, suggestedDispatch, cell, salesUnlocked}
-  const cellsByClass = new Map();
-  let cellsProcessed = 0;
-  let skippedForBudget = 0;
+  const estByClass = new Map();        // saleClass -> estimated unbacked sales
+  const estByClassBySport = new Map(); // sport -> Map(saleClass -> est)
+  const actions = [];                  // {lane, dispatch, cell, estSales, note}
+  const cellsByClass = new Map();      // cellClass -> {cells, unbacked}
+  const reachedBySport = new Map();    // sport -> {cells, unbacked, smallest}
+  let cellsProcessed = 0, cellsFailed = 0;
+  let stoppedBy = null;
+  const bump = (map, k, n) => map.set(k, (map.get(k) ?? 0) + n);
 
+  console.log("\n  per cell:  class / sampled / RU");
   for (const cellRow of candidates) {
-    if (CLOCK.outOfClock()) {
-      console.log(`\n  ${CLOCK.stoppedAtBudget()} -- ${candidates.length - cellsProcessed} cell(s) left unprocessed this run.`);
-      break;
-    }
-    if (totalRU >= RU_BUDGET_MAX) {
-      skippedForBudget = candidates.length - cellsProcessed;
-      console.log(`\n  RU_BUDGET_MAX (${f(RU_BUDGET_MAX)}) reached -- stopping cleanly, ${f(skippedForBudget)} cell(s) left unprocessed this run.`);
-      break;
-    }
+    // The budget's PRE-CHECK, before the unit -- never after (runner-budget.cjs).
+    if (CLOCK.outOfClock()) { stoppedBy = "clock"; break; }
+    if (totalRU >= RU_BUDGET_MAX) { stoppedBy = "ru"; break; }
 
-    const { sport, year, setKey, cell } = cellRow;
+    const { sport, setKey, cell } = cellRow;
+    const year = Number(cellRow.year);
     let cellRU = 0;
-
-    // ── PRELOAD: this cell's own strict + non-strict checklist rows, ONCE.
-    const strictRows = [];
-    const nonStrictBySources = new Map(); // number -> Set<source>
-    const ownParallelsByNumber = new Map(); // number -> Set<parallelSlug>
-    const autoNumbers = new Set();
-    let totalCatalogRows = 0;
-    cellRU += await pagedQuery(catalog, checklistSpec(sport, year, setKey), (rows) => {
-      totalCatalogRows += rows.length;
-      for (const r of rows) {
-        const num = String(r.cardNumber ?? "").trim().toLowerCase();
-        if (!num) continue;
-        if (isChecklist(r.source)) {
-          strictRows.push(r);
-          const pSlug = String(r.parallelSlug ?? r.parallel ?? "base").trim().toLowerCase() || "base";
-          if (!ownParallelsByNumber.has(num)) ownParallelsByNumber.set(num, new Set());
-          ownParallelsByNumber.get(num).add(pSlug);
-          if (r.isAuto === true) autoNumbers.add(num);
-        } else {
-          if (!nonStrictBySources.has(num)) nonStrictBySources.set(num, new Set());
-          nonStrictBySources.get(num).add(String(r.source ?? "unknown"));
-        }
-      }
-    });
-    const ownNumbers = strictNumberSetOf(strictRows);
-
-    // ── UNREGISTERED-KEY / ALIAS-KEY predicates (no extra Cosmos read -- pure).
-    const registered = isRegisteredProduct(setKey);
-    const ancestry = productAncestry(setKey);
-    const resolvesViaAncestry = ancestry.length > 1;
-    const aliasTarget = aliasTargetOf(setKey);
-    let aliasTargetStrictRows = 0;
-    if (aliasTarget) {
-      cellRU += await pagedQuery(catalog, checklistSpec(sport, year, aliasTarget), (rows) => {
-        aliasTargetStrictRows += rows.filter((r) => isChecklist(r.source)).length;
-      });
-    }
-
-    const cellClassVerdict = classifyCellClass(cellRow, {
-      totalRows: totalCatalogRows, strictRows: strictRows.length,
-      registered, resolvesViaAncestry, aliasTarget, aliasTargetStrictRows,
-    });
-    cellsByClass.set(cellClassVerdict.cellClass, (cellsByClass.get(cellClassVerdict.cellClass) ?? 0) + 1);
-
     const record = {
       cell, sport, year, setKey, unbacked: cellRow.unbacked,
-      cellClass: cellClassVerdict.cellClass,
-      cellClassDetail: cellClassVerdict.detail,
-      subCase: cellClassVerdict.subCase ?? null,
-      saleClassShares: {},
-      suggestedLane: cellClassVerdict.suggestedLane ?? null,
-      suggestedMode: cellClassVerdict.suggestedMode ?? null,
-      suggestedDispatch: null,
-      topMissingSlugs: [],
-      topMissingPrefixes: [],
-      siblingPairs: [],
-      blockers: [],
+      unbackedShareOfSportGap: cellRow.unbackedShareOfSportGap ?? null,
+      class: null, classDetail: null, subCase: null,
+      sampled: 0, saleClassShares: {}, saleClassEstSales: {},
+      suggestedLane: null, suggestedDispatch: null, suggestions: [],
+      topMissingSlugs: [], topMissingPrefixes: [], siblingPairs: [],
+      siblingCandidatesProbed: [], siblingCandidatesDropped: 0,
+      blockers: [], ru: 0,
     };
 
-    if (cellClassVerdict.cellClass === "PRESENT") {
-      // Nothing to route -- the checklist is already there in force.
-      emitPlanRow(record);
-      cellsProcessed++;
-      spendRU(cellRU);
-      continue;
-    }
-
-    if (cellClassVerdict.cellClass === "ALIAS-KEY") {
-      record.suggestedDispatch = suggestedDispatchFor({ suggestedLane: "rekey-product-setkey", aliasTarget: cellClassVerdict.aliasTarget }, cellRow);
-      const share = cellRow.unbacked;
-      actionCandidates.push({ suggestedLane: "rekey-product-setkey", suggestedDispatch: record.suggestedDispatch, cell, salesUnlocked: share });
-      emitPlanRow(record);
-      cellsProcessed++;
-      spendRU(cellRU);
-      continue;
-    }
-
-    // ── SALE-CLASS SAMPLING (MISSING-PRODUCT / UNREGISTERED-KEY / PRESENT-MISMATCH) ──
-    // MEASUREMENT TRAP #1: sample only UNBACKED sales -- every row's id is
-    // checked against ownNumbers/strictRows AFTER the query, but the census
-    // "backed" bucket is about card_catalog id existence, not this cell's
-    // number set alone, so we additionally build the exact strict-id set for
-    // this cell to drop any sale whose hobbyiqCardId IS one of them.
-    const strictIds = new Set(strictRows.map((r) => r.id));
-
-    // Sibling hint list: named pairs from the evidence + generic same-(sport,
-    // year) siblings sharing a family root via productAncestry's OWN parent
-    // (never inferred by name similarity -- feedback_ratio_similarity_is_not_
-    // identity). Kept small and bounded: only the OPERATOR-NAMED sibling of
-    // this exact setKey (if any) plus the parent/ancestor chain's OTHER
-    // registered children are consulted, never a scan of every product in
-    // the sport-year.
-    const KNOWN_SIBLING_HINTS = {
-      topps: ["topps-update-series"],
-      "donruss-optic": ["panini-donruss"],
-    };
-    const siblingHits = new Map();
-    for (const siblingKey of KNOWN_SIBLING_HINTS[setKey] ?? []) {
-      const numbers = new Set();
-      cellRU += await pagedQuery(catalog, checklistSpec(sport, year, siblingKey), (rows) => {
-        for (const r of rows) if (isChecklist(r.source)) numbers.add(String(r.cardNumber ?? "").trim().toLowerCase());
-      });
-      if (numbers.size) siblingHits.set(siblingKey, numbers);
-    }
-
-    // Registered-insert hint: any insert whose OWN productParentOf resolves
-    // to this cell's setKey. productSetKeys.ts has no reverse index exposed,
-    // so this checks a small, explicit candidate list built from this cell's
-    // OWN nonStrictBySources sources plus the evidence's known insert-shaped
-    // number prefixes -- bounded, never a full-registry scan.
-    const insertParentHits = new Map();
-    // (left empty by default -- populated only when an operator-supplied
-    // TITLES hint names a candidate insert key; see KNOWN_INSERT_HINTS.)
-    const KNOWN_INSERT_HINTS = {};
-    for (const insertKey of KNOWN_INSERT_HINTS[setKey] ?? []) {
-      if (productParentOf(insertKey) !== setKey) continue;
-      const numbers = new Set();
-      cellRU += await pagedQuery(catalog, checklistSpec(sport, year, insertKey), (rows) => {
-        for (const r of rows) if (isChecklist(r.source)) numbers.add(String(r.cardNumber ?? "").trim().toLowerCase());
-      });
-      if (numbers.size) insertParentHits.set(insertKey, { parentSetKey: setKey, numbers });
-    }
-
-    const PHRASE_LEAK_WORDS = ["prizm", "optic", "mosaic", "chrome", "finest", "select"];
-    const JUNK_PARALLEL_WORDS = ["lot", "reprint", "custom", "proxy"];
-    const PHRASE_LEAK_TITLE_WORDS = ["insert", "case hit", "box topper"];
-
-    const sampleCap = 400;
-    let sampled = [];
-    let skippedNeverPrice = 0;
-    let skippedAlreadyBacked = 0;
-    for (const { from, to } of sampleWindows()) {
-      if (sampled.length >= sampleCap || CLOCK.outOfClock()) break;
-      cellRU += await pagedQuery(sales, salesSpecWindow(sport, year, setKey, from, to), (rows) => {
+    try {
+      // ── PRELOAD this cell's catalog rows ONCE. Every structure below is
+      // LOCAL to this iteration and released with it; only the number set
+      // outlives the cell, inside the row-budgeted cache above.
+      const strictIds = new Set();
+      const ownNumbers = new Set();
+      const ownRungsByNumber = new Map();
+      const nonStrictSourcesById = new Map();
+      let totalCatalogRows = 0;
+      cellRU += await pagedQuery(catalog, checklistSpec(sport, year, setKey), (rows) => {
+        totalCatalogRows += rows.length;
         for (const r of rows) {
-          if (sampled.length >= sampleCap) return false;
-          if (neverPricedBucket(r)) { skippedNeverPrice++; continue; }
-          if (r.hobbyiqCardId && strictIds.has(r.hobbyiqCardId)) { skippedAlreadyBacked++; continue; }
-          sampled.push(r);
+          if (!isChecklist(r.source)) {
+            if (!nonStrictSourcesById.has(r.id)) nonStrictSourcesById.set(r.id, new Set());
+            nonStrictSourcesById.get(r.id).add(String(r.source ?? "unknown"));
+            continue;
+          }
+          strictIds.add(r.id);
+          const p = parseHobbyIqCardId(String(r.id ?? ""));
+          const num = lower(p?.cardNumber ?? r.cardNumber);
+          if (!num) continue;
+          ownNumbers.add(num);
+          if (!p) continue;
+          if (!ownRungsByNumber.has(num)) ownRungsByNumber.set(num, []);
+          ownRungsByNumber.get(num).push({ parallel: lower(p.parallel) || "base", isAuto: p.isAuto === true, printRun: p.printRun ?? null });
         }
-        return sampled.length < sampleCap;
-      }, { pageSize: 500 });
-    }
-
-    const shareCounts = {};
-    const siblingPairsSeen = new Map();
-    for (const sale of sampled) {
-      const parsed = sale.hobbyiqCardId ? parseHobbyIqCardId(sale.hobbyiqCardId) : null;
-      const verdict = classifySaleShape(sale, parsed, {
-        sport, year, setKey,
-        ownNumbers, siblingHits, insertParentHits, ownParallelsByNumber,
-        nonStrictSourcesByNumber: nonStrictBySources,
-        phraseLeakWords: PHRASE_LEAK_WORDS, junkParallelWords: JUNK_PARALLEL_WORDS,
-        phraseLeakTitleWords: PHRASE_LEAK_TITLE_WORDS, autoNumbers,
       });
-      shareCounts[verdict.saleClass] = (shareCounts[verdict.saleClass] ?? 0) + 1;
-      salesByClassOverall.set(verdict.saleClass, (salesByClassOverall.get(verdict.saleClass) ?? 0) + 1);
-      if (!salesByClassBySport.has(sport)) salesByClassBySport.set(sport, new Map());
-      const bySport = salesByClassBySport.get(sport);
-      bySport.set(verdict.saleClass, (bySport.get(verdict.saleClass) ?? 0) + 1);
+      // A strict twin at the same id outranks a non-strict row there.
+      for (const id of strictIds) nonStrictSourcesById.delete(id);
+      cachePut(`${sport}|${year}|${setKey}`, ownNumbers);
 
-      if (verdict.saleClass === "NUMBER-IN-SIBLING") {
-        const key = verdict.siblingSetKey;
-        siblingPairsSeen.set(key, (siblingPairsSeen.get(key) ?? 0) + 1);
+      const aliasTarget = aliasTargetOf(setKey);
+      let aliasTargetStrictRows = 0;
+      if (aliasTarget) {
+        const got = await strictNumbersOf(sport, year, aliasTarget);
+        cellRU += got.ru;
+        aliasTargetStrictRows = got.numbers.size; // distinct strict NUMBERS -- >0 is all the class asks
       }
-      if (verdict.saleClass === "RUNG-ABSENT") {
-        record.topMissingSlugs.push(parsed?.parallelSlug ?? null);
-      }
-    }
 
-    record.saleClassShares = shareCounts;
-    record.siblingPairs = [...siblingPairsSeen.entries()].map(([to, count]) => ({ from: setKey, to, count }));
-    record.topMissingSlugs = [...new Set(record.topMissingSlugs.filter(Boolean))].slice(0, 20);
-    record.samplesSeen = sampled.length;
-    record.skippedAlreadyBacked = skippedAlreadyBacked;
-    record.skippedNeverPrice = skippedNeverPrice;
+      const verdict = classifyCellClass(cellRow, {
+        totalRows: totalCatalogRows, strictRows: strictIds.size,
+        registered: isRegisteredProduct(setKey), resolvesViaAncestry: productAncestry(setKey).length > 1,
+        aliasTarget, aliasTargetStrictRows,
+      });
+      record.class = verdict.cellClass;
+      record.classDetail = verdict.detail;
+      record.subCase = verdict.subCase ?? null;
 
-    // Dominant sale class -> the cell's own suggestedLane (majority vote
-    // over the sample; ties keep the first-seen order, which is the order
-    // classifySaleShape itself checks in).
-    const dominant = Object.entries(shareCounts).sort((a, b) => b[1] - a[1])[0];
-    if (dominant) {
-      const [dominantClass] = dominant;
-      let suggestion = null;
-      if (dominantClass === "NUMBER-IN-SIBLING" && record.siblingPairs.length) {
-        suggestion = { suggestedLane: "repoint-sales-to-sibling-product", siblingSetKey: record.siblingPairs[0].to };
-      } else if (dominantClass === "INSERT-UNDER-PARENT") {
-        suggestion = { suggestedLane: "repoint-stored-insert-sales" };
-      } else if (dominantClass === "PARALLEL-SUFFIX") {
-        suggestion = { suggestedLane: "repoint-sales-parallel-suffix" };
-      } else if (["JUNK-PARALLEL", "PHRASE-LEAK", "AUTO-MISMATCH"].includes(dominantClass)) {
-        suggestion = { suggestedLane: "rematch-sold-comps (MODE=census scope=improve)" };
-      }
-      if (suggestion) {
-        record.suggestedLane = suggestion.suggestedLane;
-        record.suggestedDispatch = suggestedDispatchFor(suggestion, cellRow);
-        actionCandidates.push({ suggestedLane: suggestion.suggestedLane, suggestedDispatch: record.suggestedDispatch, cell, salesUnlocked: dominant[1] });
-      } else if (dominantClass === "RUNG-ABSENT") {
+      if (verdict.cellClass === "ALIAS-KEY") {
+        const s = { suggestedLane: "rekey-product-setkey", aliasTarget: verdict.aliasTarget };
+        record.suggestedLane = s.suggestedLane;
+        record.suggestedDispatch = suggestedDispatchFor(s, { sport, year, setKey });
+        record.suggestions.push({ lane: s.suggestedLane, estSales: cellRow.unbacked, dispatch: record.suggestedDispatch, note: `whole cell re-keys onto ${verdict.aliasTarget}` });
+        actions.push({ lane: s.suggestedLane, dispatch: record.suggestedDispatch, cell, estSales: cellRow.unbacked, note: `alias of ${verdict.aliasTarget}` });
+      } else if (verdict.cellClass === "MISSING") {
         record.suggestedLane = "ACQUISITION";
-        record.blockers.push(`RUNG-ABSENT dominant (${dominant[1]}/${sampled.length} sampled) -- acquire ladder/insert checklist coverage; no repair lane applies`);
-      } else if (dominantClass === "ROW-EXISTS-NON-STRICT") {
-        record.suggestedLane = "ROW-EXISTS-NON-STRICT";
-        record.blockers.push(`${dominant[1]}/${sampled.length} sampled sales already have a card_catalog row, but its source is not checklist-authority -- no repoint lane applies; this is an acquisition/upgrade candidate`);
+        record.blockers.push(`no checklist: acquire ${sport} ${year} ${setKey} (${f(cellRow.unbacked)} unbacked sales wait on it)`);
+        actions.push({ lane: "ACQUISITION", dispatch: null, cell, estSales: cellRow.unbacked, note: "acquire the product checklist" });
       }
+
+      if (verdict.sample) {
+        // ── SAMPLE UNBACKED SALES ONLY (trap #1), across several windows.
+        const sampled = [];
+        let skippedNeverPrice = 0, skippedAlreadyBacked = 0;
+        for (const { from, to } of sampleWindows()) {
+          if (sampled.length >= SAMPLE_CAP || CLOCK.outOfClock()) break;
+          const windowCap = Math.min(SAMPLE_CAP, sampled.length + Math.ceil(SAMPLE_CAP / 4));
+          cellRU += await pagedQuery(sales, salesSpecWindow(sport, year, setKey, from, to), (rows) => {
+            for (const r of rows) {
+              if (sampled.length >= windowCap) return false;
+              if (neverPricedBucket(r)) { skippedNeverPrice++; continue; }
+              if (r.hobbyiqCardId && strictIds.has(r.hobbyiqCardId)) { skippedAlreadyBacked++; continue; }
+              sampled.push(r);
+            }
+            return sampled.length < windowCap;
+          });
+        }
+        const parsedOf = new Map(sampled.map((s) => [s, s.hobbyiqCardId ? parseHobbyIqCardId(s.hobbyiqCardId) : null]));
+
+        // ── DISCOVER: only when the sample actually holds an absent number.
+        const absent = new Set();
+        for (const p of parsedOf.values()) { const n = lower(p?.cardNumber); if (n && !ownNumbers.has(n)) absent.add(n); }
+        const candidateHits = [];
+        if (absent.size) {
+          // Present = the census saw it selling this sport+year, OR this run
+          // already holds a non-empty number set for it (free either way).
+          const presentKeys = new Set(presentKeysBySportYear.get(`${sport}|${year}`) ?? []);
+          for (const [k, set] of numberCache) { const [s, y, sk] = k.split("|"); if (set.size && s === sport && Number(y) === year) presentKeys.add(sk); }
+          const cands = siblingCandidatesFor(setKey, { ...candidateDeps, presentKeys });
+          let probed = 0;
+          for (const c of cands) {
+            if (candidateHits.length >= SIBLING_CANDIDATE_CAP || probed >= 4 * SIBLING_CANDIDATE_CAP) break;
+            if (CLOCK.outOfClock() || totalRU + cellRU >= RU_BUDGET_MAX) { record.blockers.push(`sibling probe cut short at "${c.setKey}" (budget) -- pairs below are a lower bound`); break; }
+            const got = await strictNumbersOf(sport, year, c.setKey);
+            cellRU += got.ru; probed++;
+            if (!got.numbers.size) continue; // no checklist that year: costs ~3 RU, holds no slot
+            record.siblingCandidatesProbed.push({ setKey: c.setKey, relation: c.relation, knownGood: c.knownGood, strictNumbers: got.numbers.size });
+            candidateHits.push({ ...c, numbers: got.numbers });
+          }
+          record.siblingCandidatesEmpty = probed - candidateHits.length;
+          record.siblingCandidatesDropped = cands.length - probed;
+          if (record.siblingCandidatesDropped > 0) record.blockers.push(`${record.siblingCandidatesDropped} of ${cands.length} family candidate(s) were NOT probed (cap ${SIBLING_CANDIDATE_CAP} with rows / ${4 * SIBLING_CANDIDATE_CAP} probes) -- NUMBER-ABSENT below may hide a sibling; raise SIBLING_CANDIDATE_CAP to reach them`);
+        }
+
+        const suffixWord = suffixWordFor(setKey);
+        const ctx = {
+          sport, year, setKey, ownNumbers, ownRungsByNumber, nonStrictSourcesById, candidateHits,
+          suffixWords: suffixWord ? [suffixWord, `${suffixWord}s`] : [], junkWords: JUNK_PARALLEL_WORDS,
+          // The insert lane's OWN gate, asked the way that lane asks it.
+          insertKeysNamedInTitle: (s) => {
+            try {
+              return insertSetNamedInTitle({ title: s.title, sport, year, setKey, playerName: s.playerName })
+                .map((m) => m.registeredKey).filter(Boolean);
+            } catch { return []; }
+          },
+        };
+        const counts = {};
+        const pairs = new Map();        // "to" -> {to, relation, knownGood, saleClass, count, samples}
+        const missingSlugs = new Map(); const missingPrefixes = new Map();
+        for (const sale of sampled) {
+          const parsed = parsedOf.get(sale);
+          const v = classifySaleShape(sale, parsed, ctx);
+          counts[v.saleClass] = (counts[v.saleClass] ?? 0) + 1;
+          const to = v.siblingSetKey ?? v.insertSetKey;
+          if (to) {
+            if (!pairs.has(to)) pairs.set(to, { from: setKey, to, saleClass: v.saleClass, relation: v.relation ?? "child", knownGood: v.knownGood === true, count: 0, samples: [] });
+            const pr = pairs.get(to); pr.count++;
+            if (pr.samples.length < 5) pr.samples.push({ number: parsed.cardNumber, title: String(sale.title ?? "").slice(0, 140) });
+          }
+          if (v.saleClass === "RUNG-ABSENT") bump(missingSlugs, v.missingSlug, 1);
+          if (v.saleClass === "NUMBER-ABSENT") bump(missingPrefixes, (/^[a-z]+-?/.exec(lower(parsed.cardNumber)) ?? ["(numeric)"])[0], 1);
+        }
+
+        // Each sampled sale stands for unbacked/sampled real ones.
+        const scale = sampled.length ? cellRow.unbacked / sampled.length : 0;
+        const est = (n) => Math.round(n * scale);
+        record.sampled = sampled.length;
+        record.skippedAlreadyBacked = skippedAlreadyBacked;
+        record.skippedNeverPrice = skippedNeverPrice;
+        for (const [k, n] of Object.entries(counts)) {
+          record.saleClassShares[k] = Number((n / sampled.length).toFixed(4));
+          record.saleClassEstSales[k] = est(n);
+          bump(estByClass, k, est(n));
+          if (!estByClassBySport.has(sport)) estByClassBySport.set(sport, new Map());
+          bump(estByClassBySport.get(sport), k, est(n));
+        }
+        const top = (m, key) => [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20).map(([k, n]) => ({ [key]: k, count: n, estSales: est(n) }));
+        record.topMissingSlugs = top(missingSlugs, "slug");
+        record.topMissingPrefixes = top(missingPrefixes, "prefix");
+        record.siblingPairs = [...pairs.values()].sort((a, b) => b.count - a.count).map((p) => ({ ...p, estSales: est(p.count) }));
+        if (!sampled.length) record.blockers.push("no unbacked sale sampled in any window -- the published count may be stale, or every sale is parked/flagged");
+
+        // catalog-duplicate-rung: the checklist itself lists BOTH spellings
+        // as real rungs somewhere in the product, which the acting lane
+        // refuses product-wide (both-slugs-are-real-rungs).
+        if (suffixWord && counts["PARALLEL-SUFFIX"]) {
+          const allParallels = new Set();
+          for (const rs of ownRungsByNumber.values()) for (const r of rs) allParallels.add(r.parallel);
+          const dup = [...allParallels].filter((p) => !p.endsWith(`-${suffixWord}`) && allParallels.has(`${p}-${suffixWord}`));
+          if (dup.length) record.blockers.push(`catalog-duplicate-rung: ${dup.length} finish(es) are on this checklist under BOTH spellings (${dup.slice(0, 5).join(", ")}${dup.length > 5 ? ", ..." : ""}) -- repoint-sales-parallel-suffix refuses those (both-slugs-are-real-rungs)`);
+        }
+
+        // ── SUGGESTIONS: one per lane (one per PAIR for the two pair lanes),
+        // sized by estimated sales. The operator still names the pair.
+        const add = (s, n, note) => {
+          const dispatch = suggestedDispatchFor(s, { sport, year, setKey });
+          record.suggestions.push({ lane: s.suggestedLane, estSales: est(n), dispatch, note });
+          actions.push({ lane: s.suggestedLane, dispatch, cell, estSales: est(n), note });
+        };
+        for (const p of record.siblingPairs) {
+          const flag = p.knownGood ? "known-good pair" : "DISCOVERED -- needs an operator ruling before the acting lane is dispatched";
+          if (p.saleClass === "INSERT-UNDER-PARENT") add({ suggestedLane: "repoint-stored-insert-sales", insertSetKey: p.to }, p.count, `${setKey} -> ${p.to} (${flag})`);
+          else add({ suggestedLane: "repoint-sales-to-sibling-product", siblingSetKey: p.to }, p.count, `${setKey} > ${p.to}, ${p.relation} (${flag})`);
+        }
+        if (counts["PARALLEL-SUFFIX"]) add({ suggestedLane: "repoint-sales-parallel-suffix" }, counts["PARALLEL-SUFFIX"], `suffix word "${suffixWord}"`);
+        if (counts["PRINTRUN-SHORT-ID"]) add({ suggestedLane: "repoint-sales-to-checklist-numbered" }, counts["PRINTRUN-SHORT-ID"], "short ids onto the checklist's :num-N rows");
+        const rederive = (counts["JUNK-PARALLEL"] ?? 0) + (counts["PHRASE-LEAK"] ?? 0) + (counts["AUTO-MISMATCH"] ?? 0);
+        if (rederive) add({ suggestedLane: REDERIVE_LANE }, rederive, "junk-parallel + phrase-leak + auto-mismatch");
+        const acquire = (counts["RUNG-ABSENT"] ?? 0) + (counts["NUMBER-ABSENT"] ?? 0) + (counts["PRINTRUN-VARIANT-ABSENT"] ?? 0);
+        if (acquire) {
+          record.suggestions.push({ lane: "ACQUISITION", estSales: est(acquire), dispatch: null, note: "rungs / numbers / print runs the checklist does not carry -- see topMissingSlugs + topMissingPrefixes" });
+          actions.push({ lane: "ACQUISITION", dispatch: null, cell, estSales: est(acquire), note: `ladder/insert coverage: ${record.topMissingSlugs.slice(0, 3).map((x) => x.slug).join(", ") || record.topMissingPrefixes.slice(0, 3).map((x) => x.prefix).join(", ")}` });
+        }
+        record.suggestions.sort((a, b) => b.estSales - a.estSales);
+        record.suggestedLane = record.suggestions[0]?.lane ?? null;
+        record.suggestedDispatch = record.suggestions[0]?.dispatch ?? null;
+      }
+    } catch (e) {
+      cellsFailed++;
+      record.class = record.class ?? "FAILED";
+      record.blockers.push(`cell read failed: ${String(e?.message ?? e).slice(0, 200)}`);
     }
 
-    emitPlanRow(record);
+    record.ru = Math.round(cellRU);
+    totalRU += cellRU;
     cellsProcessed++;
-    spendRU(cellRU);
+    const cc = cellsByClass.get(record.class) ?? { cells: 0, unbacked: 0 };
+    cc.cells++; cc.unbacked += cellRow.unbacked; cellsByClass.set(record.class, cc);
+    const rs = reachedBySport.get(sport) ?? { cells: 0, unbacked: 0, smallest: Infinity };
+    rs.cells++; rs.unbacked += cellRow.unbacked; rs.smallest = Math.min(rs.smallest, cellRow.unbacked); reachedBySport.set(sport, rs);
+    emitPlanRow(record);
+    console.log(`    ${cell.padEnd(44)} ${String(record.class).padEnd(17)} sampled ${String(record.sampled).padStart(3)}  RU ${f(record.ru).padStart(7)}  (running ${f(Math.round(totalRU))})`);
   }
 
   // ── BANNER ────────────────────────────────────────────────────────────────
+  const left = candidates.length - cellsProcessed;
   console.log("");
-  console.log(`  cells processed         ${f(cellsProcessed)}`);
-  if (skippedForBudget) console.log(`  cells skipped (RU budget) ${f(skippedForBudget)}`);
-  console.log(`  total RU spent          ${f(Math.round(totalRU))}`);
-  console.log(`  RU per cell (avg)       ${cellsProcessed ? f(Math.round(totalRU / cellsProcessed)) : 0}`);
+  console.log(`  cells processed         ${f(cellsProcessed)}${cellsFailed ? `   (${f(cellsFailed)} FAILED to read -- see their plan records)` : ""}`);
+  if (stoppedBy === "ru") console.log(`  RU_BUDGET_MAX (${f(RU_BUDGET_MAX)}) reached -- stopped cleanly, ${f(left)} cell(s) NOT processed; re-dispatch with a higher budget or a narrower scope.`);
+  console.log(`  total RU spent          ${f(Math.round(totalRU))}    avg/cell ${cellsProcessed ? f(Math.round(totalRU / cellsProcessed)) : 0}`);
+  console.log(`  number cache            ${f(numberCacheLoads)} loads, ${f(numberCacheHits)} hits, ${f(numberCacheEvictions)} evictions, ${f(numberCacheSize)} numbers held`);
+
+  console.log("\n  COVERAGE -- how far down each sport's tail this run reached:");
+  for (const [sport, r] of reachedBySport) {
+    const gap = Number(sportGap[sport] ?? 0);
+    const inTable = allCells.filter((c) => c.sport === sport);
+    const tableUnbacked = inTable.reduce((n, c) => n + c.unbacked, 0);
+    console.log(`    ${sport.padEnd(11)} ${f(r.cells)} of ${f(inTable.length)} published cells, down to a ${f(r.smallest)}-sale cell;`
+      + ` ${f(r.unbacked)} unbacked = ${gap ? `${((100 * r.unbacked) / gap).toFixed(1)}% of the sport's ${f(gap)}-sale gap` : "sport gap unknown"}`
+      + ` (the published table itself covers ${gap ? `${((100 * tableUnbacked) / gap).toFixed(1)}%` : "?"})`);
+  }
 
   console.log("\n  CELL CLASS ROLLUP:");
-  for (const [cls, n] of [...cellsByClass.entries()].sort((a, b) => b[1] - a[1])) {
-    console.log(`    ${cls.padEnd(20)} ${f(n)}`);
+  for (const [cls, v] of [...cellsByClass.entries()].sort((a, b) => b[1].unbacked - a[1].unbacked)) {
+    console.log(`    ${String(cls).padEnd(18)} ${f(v.cells).padStart(6)} cells  ${f(v.unbacked).padStart(11)} unbacked sales`);
   }
 
-  console.log("\n  SALE CLASS ROLLUP (sampled unbacked sales, overall):");
-  const totalSampled = [...salesByClassOverall.values()].reduce((a, b) => a + b, 0) || 1;
-  for (const [cls, n] of [...salesByClassOverall.entries()].sort((a, b) => b[1] - a[1])) {
-    console.log(`    ${cls.padEnd(24)} ${f(n).padStart(8)}  (${((100 * n) / totalSampled).toFixed(1)}%)`);
-  }
-
-  console.log("\n  SALE CLASS ROLLUP, per sport:");
-  for (const [sport, bySport] of salesByClassBySport) {
-    const sportTotal = [...bySport.values()].reduce((a, b) => a + b, 0) || 1;
-    console.log(`    ${sport}:`);
-    for (const [cls, n] of [...bySport.entries()].sort((a, b) => b[1] - a[1])) {
-      console.log(`      ${cls.padEnd(24)} ${f(n).padStart(8)}  (${((100 * n) / sportTotal).toFixed(1)}%)`);
+  const printClasses = (m, indent) => {
+    const total = [...m.values()].reduce((a, b) => a + b, 0) || 1;
+    for (const [cls, n] of [...m.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log(`${indent}${cls.padEnd(24)} ${f(n).padStart(11)}  (${((100 * n) / total).toFixed(1)}%)`);
     }
-  }
+  };
+  console.log("\n  SALE CLASS ROLLUP -- ESTIMATED unbacked sales (sample share x the cell's unbacked count), overall:");
+  printClasses(estByClass, "    ");
+  console.log("\n  SALE CLASS ROLLUP, per sport:");
+  for (const [sport, m] of estByClassBySport) { console.log(`    ${sport}:`); printClasses(m, "      "); }
 
-  console.log("\n  TOP 50 ACTIONS BY SALES-UNLOCKED (candidate dispatches, ranked):");
-  const rankedActions = [...actionCandidates].sort((a, b) => b.salesUnlocked - a.salesUnlocked).slice(0, 50);
-  for (const a of rankedActions) {
-    console.log(`    ${f(a.salesUnlocked).padStart(8)}  ${a.cell.padEnd(36)}  ${a.suggestedLane}`);
+  console.log("\n  TOP 50 ACTIONS BY ESTIMATED SALES UNLOCKED:");
+  for (const a of [...actions].sort((x, y) => y.estSales - x.estSales).slice(0, 50)) {
+    console.log(`    ${f(a.estSales).padStart(9)}  ${a.cell.padEnd(40)} ${a.lane}  -- ${a.note ?? ""}`);
+    if (a.dispatch) console.log(`               ${a.dispatch}`);
   }
 
   if (planFd) {
-    console.log(`\n  plan file rows written  ${f(planRowsWritten)}  (one NDJSON record per in-scope cell)`);
+    console.log(`\n  plan file rows written  ${f(planRowsWritten)}  (one NDJSON record per processed cell; this run only -- truncated at open)`);
     try { fs.closeSync(planFd); } catch { /* best effort */ }
   } else if (PLAN_OUT) {
     console.log(`\n  ::warning::PLAN_OUT was set but no plan file was opened.`);
   }
 
-  console.log("\n  This lane made NO Cosmos writes. Every suggestedDispatch line above is a");
-  console.log("  REPORT-MODE dispatch for a human/steward to review and run -- nothing here");
-  console.log("  dispatches anything on its own.");
+  console.log("\n  This lane made NO Cosmos writes and dispatched nothing. Every dispatch line above is a");
+  console.log("  REPORT-mode (apply=false) suggestion; a DISCOVERED sibling pair needs an operator ruling first.");
 
-  if (CLOCK.outOfClock()) {
-    console.log(`\n  ${CLOCK.stoppedAtBudget()}`);
-  }
-
-  return { cellsProcessed, skippedForBudget, totalRU };
+  // Printed LAST and only when the clock -- not the RU cap -- stopped the run:
+  // the relaunch composite re-dispatches on this phrase, and re-dispatching a
+  // run that stopped on its RU cap would just spend the same RU again.
+  // Spelled as a literal (not CLOCK.stoppedAtBudget()) because
+  // tests/everyWriteJobReconciles.test.ts reads the SOURCE for the phrase.
+  if (stoppedBy === "clock") console.log(`\n  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- ${f(left)} cell(s) left; the relaunch resumes at offset ${f(RESUME_OFFSET + cellsProcessed)} (scan_limit)`);
 }
 
 if (require.main === module) {
@@ -931,6 +1156,7 @@ if (require.main === module) {
 
 module.exports = {
   parseScopeTokens, rowInScope,
-  strictNumberSetOf, classifyCellClass, classifySaleShape, suggestedDispatchFor,
-  neverPricedBucket, sampleWindows,
+  classifyCellClass, classifySaleShape, suggestedDispatchFor,
+  siblingCandidatesFor, neverPricedBucket, sampleWindows,
+  KNOWN_SIBLING_PAIRS, JUNK_PARALLEL_WORDS, REDERIVE_LANE, MISSING_FLOOR,
 };

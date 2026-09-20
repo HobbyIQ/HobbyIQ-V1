@@ -334,26 +334,30 @@ on:
           # writes in any mode (there is no apply branch in the script at
           # all) and dispatches nothing itself. For every unbacked cell in
           # the committed backend/data/census/backing-cells.json table
-          # (publish-census-backing.cjs's own trimmed output), it classifies
-          # the CELL (PRESENT / MISSING-PRODUCT / UNREGISTERED-KEY / ALIAS-KEY
-          # / PRESENT-MISMATCH) and, for cells with real gap left to explain,
-          # SAMPLES the cell's own unbacked sales (bounded, several soldAt
-          # windows, never a cross-partition scan) to name the sale-level
-          # shape -- NUMBER-IN-SIBLING, INSERT-UNDER-PARENT, PARALLEL-SUFFIX,
-          # PRINTRUN-VARIANT-ABSENT, RUNG-ABSENT, ROW-EXISTS-NON-STRICT,
-          # JUNK-PARALLEL, PHRASE-LEAK, AUTO-MISMATCH, UNPARSEABLE -- and names
-          # the EXISTING repair lane (repoint-sales-to-sibling-product,
-          # repoint-stored-insert-sales, repoint-sales-parallel-suffix,
-          # rekey-product-setkey, or rematch-sold-comps for a title-parser
-          # defect) that cell's dominant shape belongs to. Output is a
+          # (publish-census-backing.cjs's output), it classifies the CELL
+          # (ALIAS-KEY / UNKNOWN-KEY / MISSING / PRESENT-MISMATCH) and -- for
+          # every cell except ALIAS-KEY (the whole cell re-keys) and MISSING
+          # (nothing to match against) -- SAMPLES the cell's own UNBACKED
+          # sales (<= 400, four soldAt windows, id-prefix reads only) to size
+          # each sale-level shape: NUMBER-IN-SIBLING, INSERT-UNDER-PARENT,
+          # PARALLEL-SUFFIX, PRINTRUN-SHORT-ID, PRINTRUN-VARIANT-ABSENT,
+          # RUNG-ABSENT, NUMBER-ABSENT, ROW-EXISTS-NON-STRICT, JUNK-PARALLEL,
+          # PHRASE-LEAK, AUTO-MISMATCH, UNPARSEABLE. A cell with plentiful
+          # strict rows is NOT excused: that is 85% of the measured gap.
+          # Sibling pairs are DISCOVERED (registered ancestors, children and
+          # family of the key, <= 12 checklists probed per cell, cached per
+          # run) and reported as SUGGESTIONS with counts + samples; the
+          # acting lanes still move only pairs an operator names. Output is a
           # console banner rollup plus a PLAN_OUT NDJSON queue (one record per
           # in-scope cell), same mechanism as resolve-split-identity-parks.
           # `scope` is REQUIRED: a bare sport (baseball) sweeps every cell of
           # that sport, or sport:year (baseball:2025) narrows to one year; no
           # 'all'. `titles` is an OPTIONAL setKey filter (comma list, NOT a
           # from>to pair like the sibling repoint lanes) -- empty means every
-          # cell in scope. `limit` caps the number of cells processed this
-          # run. The pilot dispatch is scope=baseball limit=150.
+          # cell in scope. `limit` caps the cells routed by the whole relaunch
+          # chain. `scan_limit` is this lane's RESUME OFFSET -- leave it 0;
+          # the budget relaunch below sets it. The pilot dispatch is
+          # scope=baseball limit=150.
           - route-backing-gaps
           # R76 (Drew, 2026-09-19). repair-set-sport.cjs (2026-08-20) flipped
           # 183,248 sold_comps rows' sport by set-level checklist dominance,
@@ -3698,11 +3702,13 @@ jobs:
         # Stops at its own 110-minute budget and PRINTS its summary; a run
         # killed by the 150-minute step ceiling prints nothing.
         # CF-RELAUNCH-ONLY-ON-BUDGET (#1361): relaunch iff the marker printed,
-        # never on a count. This lane is READ ONLY, so `apply` is irrelevant
-        # to it and is forwarded verbatim only because every other lane's
-        # dispatch line does the same (a stray apply=true on this lane's own
-        # dispatch is simply never read -- there is no APPLY branch in the
-        # script to read it).
+        # never on a count. This lane is READ ONLY and never reads `apply`; it
+        # is forwarded verbatim like every marker-gated lane's. THE RESUME
+        # OFFSET: the lane writes nothing, so it keeps no cursor -- the
+        # continuation instead carries `scan_limit` = the offset this link
+        # started at + the cells it processed, and the script skips that
+        # many cells of its own deterministic order. Without it a relaunch
+        # would re-route the same cells forever.
         if: ${{ !cancelled() && inputs.script == 'route-backing-gaps' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -3718,7 +3724,7 @@ jobs:
           finished-notice: |
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (cellsProcessed=${N:-0}) — done, no re-dispatch."
           dispatch: |
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=route-backing-gaps -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}" -f limit="${{ inputs.limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=route-backing-gaps -f apply="${{ inputs.apply }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}" -f limit="${{ inputs.limit }}" -f scan_limit="$(( ${{ inputs.scan_limit }} + ${N:-0} ))"
 
       # R76's whole point is a reviewer being able to audit every wrongly-
       # flipped sale that moved (or was refused, and why) -- never a
