@@ -1,0 +1,290 @@
+{
+  "scrapedAt": "2026-09-20T02:49:26.181Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/04/2025-Topps-Chrome-Football-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "football",
+  "year": 2025,
+  "setName": "2025 Topps Chrome Football",
+  "productKey": "2025-topps-chrome",
+  "setKey": "topps-chrome",
+  "rowCount": 1926,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Rookies: #s 301-400",
+      "category": "base",
+      "cards": 300,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Base - Rookies",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Team Camo Variation",
+      "category": "insert-team-camo-variation",
+      "cards": 400,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Base>Rookies: #s 301-400",
+      "overlapPct": 75
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Etch Variation",
+      "category": "insert-base-etch-variation",
+      "cards": 50,
+      "role": "parallel",
+      "anchor": "Base>Rookies: #s 301-400",
+      "rung": "Base Etch Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Rookies - Etch Variation",
+      "category": "insert-base-rookies-etch-variation",
+      "cards": 50,
+      "role": "parallel",
+      "anchor": "Base>Base - Rookies",
+      "rung": "Etch Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Image Variations",
+      "category": "insert-base-image-variations",
+      "cards": 30,
+      "role": "own-cards-AMBIGUOUS",
+      "anchor": "Base>Rookies: #s 301-400",
+      "overlapPct": 83.3
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Rookies - Image Variations",
+      "category": "insert-base-rookies-image-variations",
+      "cards": 20,
+      "role": "parallel",
+      "anchor": "Base>Base - Rookies",
+      "rung": "Image Variation"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Autographs",
+      "category": "auto-chrome-autographs",
+      "cards": 70,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Autographs - Rookies",
+      "category": "auto-chrome-autographs-rookies",
+      "cards": 94,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chrome Autographs - Legends",
+      "category": "auto-chrome-autographs-legends",
+      "cards": 28,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1990 Topps Football Autographs",
+      "category": "auto-1990-topps-football-autographs",
+      "cards": 34,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Dual Autographs",
+      "category": "auto-dual-autographs",
+      "cards": 13,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Future Stars Autographs",
+      "category": "auto-future-stars-autographs",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Chromographs",
+      "category": "auto-chromographs",
+      "cards": 24,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Hall Of Chrome Autographs",
+      "category": "auto-hall-of-chrome-autographs",
+      "cards": 27,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Autographs Variation",
+      "category": "auto-rookie-autographs-variation",
+      "cards": 38,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Patch Autographs",
+      "category": "auto-rookie-patch-autographs",
+      "cards": 38,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie PREM1ERE Patch Autographs",
+      "category": "auto-rookie-prem1ere-patch-autographs",
+      "cards": 98,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "NFL Honors Gold Shield Autographs",
+      "category": "auto-nfl-honors-gold-shield-autographs",
+      "cards": 5,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Rookie Relics",
+      "category": "insert-rookie-relics",
+      "cards": 38,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "First Year Fabric",
+      "category": "insert-first-year-fabric",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "NFL Honors Gold Shield Relics",
+      "category": "insert-nfl-honors-gold-shield-relics",
+      "cards": 5,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Future Stars",
+      "category": "insert-future-stars",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1975 Topps",
+      "category": "insert-1975-topps",
+      "cards": 35,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Power Players",
+      "category": "insert-power-players",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Legends Of The Gridiron",
+      "category": "insert-legends-of-the-gridiron",
+      "cards": 40,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Fortune 15",
+      "category": "insert-fortune-15",
+      "cards": 35,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "All Chrome Team",
+      "category": "insert-all-chrome-team",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Radiating Rookies",
+      "category": "insert-radiating-rookies",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Urban Legends",
+      "category": "insert-urban-legends",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Helix",
+      "category": "insert-helix",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Shadow Etch",
+      "category": "insert-shadow-etch",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Game Genies",
+      "category": "insert-game-genies",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Kaiju",
+      "category": "insert-kaiju",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Let’s Go",
+      "category": "insert-lets-go",
+      "cards": 5,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Ultra Violet",
+      "category": "insert-ultra-violet",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Lightning Leaders",
+      "category": "insert-lightning-leaders",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Fanatical",
+      "category": "insert-fanatical",
+      "cards": 30,
+      "role": "own-cards"
+    }
+  ]
+}

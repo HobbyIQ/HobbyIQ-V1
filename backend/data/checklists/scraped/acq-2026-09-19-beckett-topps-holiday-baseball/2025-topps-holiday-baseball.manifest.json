@@ -1,0 +1,147 @@
+{
+  "scrapedAt": "2026-09-20T02:49:02.841Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/10/2025-Topps-Holiday-Baseball-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Topps Holiday Baseball",
+  "productKey": "2025-topps-holiday",
+  "setKey": "topps-holiday",
+  "rowCount": 1253,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 200,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Base - Holiday Short Prints",
+      "category": "base",
+      "cards": 25,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Base - Holiday Super Short Prints",
+      "category": "base",
+      "cards": 25,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Base - Holiday Backs Short Prints",
+      "category": "base",
+      "cards": 25,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Base - Holiday Backs Super Short Prints",
+      "category": "base",
+      "cards": 25,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Base Chrome",
+      "category": "base",
+      "cards": 200,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Holiday Relic Autographs",
+      "category": "auto-holiday-relic-autographs",
+      "cards": 41,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Holiday Faux Relic Autographs",
+      "category": "auto-holiday-faux-relic-autographs",
+      "cards": 5,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Player Autographed Relics",
+      "category": "auto-player-autographed-relics",
+      "cards": 46,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Player Autographs",
+      "category": "auto-player-autographs",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Relics",
+      "section": "Player Relics",
+      "category": "insert-player-relics",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Relics",
+      "section": "Player Relics - Dual",
+      "category": "insert-player-relics-dual",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Relics",
+      "section": "Holiday Relics",
+      "category": "insert-holiday-relics",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Relics",
+      "section": "Holiday Faux Relics",
+      "category": "insert-holiday-faux-relics",
+      "cards": 5,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "The Santa Archives",
+      "category": "insert-the-santa-archives",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Hidden Elf",
+      "category": "insert-hidden-elf",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Advent Calendar-Exclusive",
+      "category": "insert-advent-calendar-exclusive",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Oversized Die-Cut Ornaments",
+      "category": "insert-oversized-die-cut-ornaments",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Present Die-Cut Ornaments",
+      "category": "insert-present-die-cut-ornaments",
+      "cards": 20,
+      "role": "own-cards"
+    }
+  ]
+}

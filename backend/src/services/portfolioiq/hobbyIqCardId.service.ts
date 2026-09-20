@@ -50,7 +50,7 @@ import { playerSegmentIsAPerson } from "../compiq/playerSegmentIsAPerson.js";
 import { chromeRefractorSuffixForVariation, normalizeVariationSlug } from "../catalog/variationVocabulary.js";
 import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
 import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js";
-import { productParentOf, productSetKeyForName, spellForEra, spellForSport } from "../catalog/productSetKeys.js";
+import { productParentOf, productSetKeyForName, spellForEra, spellForSport, BOWMAN_MEGA_BOX_SPLIT_FROM_YEAR } from "../catalog/productSetKeys.js";
 import { reconcileSetKey } from "../catalog/setKeyReconciliation.js";
 import { ruledPokemonEnglishSetKey } from "../catalog/pokemonEnglishSetKeyRuling.js";
 import { ruledJapaneseSetAliases } from "../catalog/japaneseVintageSetKeyRuling.js";
@@ -2561,6 +2561,37 @@ export function resolveSetKeyForSlug(sport: string, setName: string, year: numbe
   // its switch live in productSetKeys (DONRUSS_SPELLING_POLICY). Applied
   // after normalization so it corrects the canonical key rather than racing
   // the vocabulary that produces it.
+  // R75 (Drew, 2026-09-19). TWO Bowman Mega Box product keys from 2026, ONE
+  // before. `normalizeSetKey`'s vocabulary rule (`/bowman-(?:chrome-)?mega
+  // (?:-box)?/ -> bowman-chrome-mega-box`) is intentionally unchanged by this
+  // ruling — it stays the correct, year-agnostic fold for 2025-and-earlier,
+  // where both spellings ("Bowman Mega Box", "Bowman Chrome Mega Box") name
+  // the one product the pinned tests assert
+  // (tests/setKeyReconciliation.test.ts: `bowman-mega-box` and
+  // `bowman-mega-box-chrome` -> `bowman-chrome-mega-box`, unaffected by this
+  // rule since it only fires from 2026).
+  //
+  // From 2026 the two releases have DIFFERENT rosters at the SAME numbers
+  // (#52 Ohtani on plain Mega Box vs #52 JJ Wetherholt on Chrome Mega Box —
+  // the same card-coincidence test CF-BOWMAN-MEGA-BOX-DISTINCT already used
+  // to split Mega Box from flagship Bowman Chrome). The vocabulary regex
+  // cannot see this: it collapses "Bowman Mega Box" and "Bowman Chrome Mega
+  // Box" to the same key before either YEAR or the word "chrome" can be
+  // consulted, and `spellForEra` only receives the (already-collapsed)
+  // setKey and year — it cannot recover which spelling produced it. So the
+  // correction has to live HERE, the one call site with the raw setName
+  // text AND the year both in hand — the same reason CF-SOCCER-PRIZM-IS-
+  // PRIZM-FIFA lives here rather than in spellForEra.
+  //
+  // A title that says "chrome" is left alone in every year (it already
+  // resolves to the right key). Only the BARE spelling, from 2026, is
+  // redirected to the plain product.
+  const isBowmanMegaBoxTextWithoutChrome = !/chrome/i.test(setName) && /bowman/i.test(setName) && /mega/i.test(setName);
+  const rawSetKeyForYear = rawSetKey === "bowman-chrome-mega-box"
+    && typeof year === "number" && Number.isFinite(year) && year >= BOWMAN_MEGA_BOX_SPLIT_FROM_YEAR
+    && isBowmanMegaBoxTextWithoutChrome
+    ? "bowman-mega"
+    : rawSetKey;
   // CF-SOCCER-PRIZM-IS-PRIZM-FIFA (Drew, 2026-09-05). A SPORT-scoped spelling,
   // applied last so it corrects the canonical key the era rule produced rather
   // than racing it. `panini-prizm` in soccer/2025 IS `panini-prizm-fifa`; in
@@ -2569,7 +2600,7 @@ export function resolveSetKeyForSlug(sport: string, setName: string, year: numbe
   // the sport gate turns FB/BK red. This is the ONE deriver with the sport in
   // hand, which is why the rule lives at this call site and not in spellForEra
   // (whose other two call sites have no sport to pass).
-  return spellForSport(spellForEra(rawSetKey, year), sport, year);
+  return spellForSport(spellForEra(rawSetKeyForYear, year), sport, year);
 }
 
 /** Compute the canonical hobbyiqCardId slug for a card. Same inputs

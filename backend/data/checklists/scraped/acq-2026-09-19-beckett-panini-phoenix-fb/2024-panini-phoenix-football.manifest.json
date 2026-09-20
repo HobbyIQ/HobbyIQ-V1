@@ -1,0 +1,543 @@
+{
+  "scrapedAt": "2026-09-20T02:39:31.724Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/04/2024-Panini-Phoenix-Football-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-19",
+  "sport": "football",
+  "year": 2024,
+  "setName": "2024 Panini Phoenix Football",
+  "productKey": "2024-panini-phoenix",
+  "setKey": "panini-phoenix",
+  "rowCount": 16209,
+  "parallelColumnAuthoritative": true,
+  "heldRows": {
+    "rows": 16209,
+    "reason": "14 declared unnumbered base parallels (Hyper, Ice, International, Lazer, Orange, Pandora, Purple, Silver, plus the Orange/Purple Fade/Hyper/Lazer variants) emitted zero rows -- converter defect, ladder incomplete. A converter fix plus regeneration lifts this hold; do not ingest until the base parallel ladder is complete for every card."
+  },
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 150,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Rookies",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Silver",
+      "category": "auto-base-autographs-silver",
+      "cards": 22,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Silver",
+      "rosterFold": true,
+      "agree": 22,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Black",
+      "category": "auto-base-autographs-black",
+      "cards": 43,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Black",
+      "rosterFold": true,
+      "agree": 43,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Blue",
+      "category": "auto-base-autographs-blue",
+      "cards": 30,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Blue",
+      "rosterFold": true,
+      "agree": 30,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Gold",
+      "category": "auto-base-autographs-gold",
+      "cards": 37,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Gold",
+      "rosterFold": true,
+      "agree": 37,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Green",
+      "category": "auto-base-autographs-green",
+      "cards": 35,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Green",
+      "rosterFold": true,
+      "agree": 35,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Hyper",
+      "category": "auto-base-autographs-hyper",
+      "cards": 27,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Hyper",
+      "rosterFold": true,
+      "agree": 27,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Lazer",
+      "category": "auto-base-autographs-lazer",
+      "cards": 26,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Lazer",
+      "rosterFold": true,
+      "agree": 26,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Base Autographs Red",
+      "category": "auto-base-autographs-red",
+      "cards": 24,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Base Autographs Red",
+      "rosterFold": true,
+      "agree": 24,
+      "disagree": 0
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Calligraphy",
+      "category": "auto-calligraphy",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Calligraphy Hyper",
+      "category": "auto-calligraphy-hyper",
+      "cards": 13,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Calligraphy Lazer",
+      "category": "auto-calligraphy-lazer",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Calligraphy Pandora",
+      "category": "auto-calligraphy-pandora",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Calligraphy Stars",
+      "category": "auto-calligraphy-stars",
+      "cards": 17,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Incredible Inked Materials",
+      "category": "auto-incredible-inked-materials",
+      "cards": 23,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Incredible Inked Materials Brand Logo",
+      "category": "auto-incredible-inked-materials-brand-logo",
+      "cards": 28,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Incredible Inked Materials Gold",
+      "category": "auto-incredible-inked-materials-gold",
+      "cards": 26,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Incredible Inked Materials Green",
+      "category": "auto-incredible-inked-materials-green",
+      "cards": 26,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Incredible Inked Materials NFL Shield",
+      "category": "auto-incredible-inked-materials-nfl-shield",
+      "cards": 29,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Incredible Inked Materials Nike Laundry Tag",
+      "category": "auto-incredible-inked-materials-nike-laundry-tag",
+      "cards": 28,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Phenomenal Duo Jersey Autographs",
+      "category": "auto-phenomenal-duo-jersey-autographs",
+      "cards": 5,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Phoenician Penmanship",
+      "category": "auto-phoenician-penmanship",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Phoenician Penmanship Hyper",
+      "category": "auto-phoenician-penmanship-hyper",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Phoenician Penmanship Ice",
+      "category": "auto-phoenician-penmanship-ice",
+      "cards": 14,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Phoenician Penmanship Pandora",
+      "category": "auto-phoenician-penmanship-pandora",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Phoenician Rookie Penmanship",
+      "category": "auto-phoenician-rookie-penmanship",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Phoenician Rookie Penmanship Hyper",
+      "category": "auto-phoenician-rookie-penmanship-hyper",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Phoenician Rookie Penmanship Ice",
+      "category": "auto-phoenician-rookie-penmanship-ice",
+      "cards": 22,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Phoenician Rookie Penmanship Lazer",
+      "category": "auto-phoenician-rookie-penmanship-lazer",
+      "cards": 21,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Phoenician Rookie Penmanship Pandora",
+      "category": "auto-phoenician-rookie-penmanship-pandora",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rising Rookie Autographs Jersey",
+      "category": "auto-rising-rookie-autographs-jersey",
+      "cards": 35,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rising Rookies Dual Patch Autographs",
+      "category": "auto-rising-rookies-dual-patch-autographs",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rising Star Autographs Jersey",
+      "category": "auto-rising-star-autographs-jersey",
+      "cards": 18,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Calligraphy",
+      "category": "auto-rookie-calligraphy",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Calligraphy Hyper",
+      "category": "auto-rookie-calligraphy-hyper",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Calligraphy Lazer",
+      "category": "auto-rookie-calligraphy-lazer",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Calligraphy Pandora",
+      "category": "auto-rookie-calligraphy-pandora",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Calligraphy Stars",
+      "category": "auto-rookie-calligraphy-stars",
+      "cards": 19,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Phenoms Jersey Autographs",
+      "category": "auto-rookie-phenoms-jersey-autographs",
+      "cards": 42,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Silhouettes",
+      "category": "auto-rookie-silhouettes",
+      "cards": 41,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookie Silhouettes Silver",
+      "category": "auto-rookie-silhouettes-silver",
+      "cards": 41,
+      "role": "parallel",
+      "anchor": "Autographs>Rookie Silhouettes",
+      "rung": "Silver"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Silver",
+      "category": "auto-rookies-autographs-silver",
+      "cards": 38,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Black",
+      "category": "auto-rookies-autographs-black",
+      "cards": 61,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Black Pandora",
+      "category": "auto-rookies-autographs-black-pandora",
+      "cards": 62,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Blue",
+      "category": "auto-rookies-autographs-blue",
+      "cards": 54,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Bronze",
+      "category": "auto-rookies-autographs-bronze",
+      "cards": 57,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Gold",
+      "category": "auto-rookies-autographs-gold",
+      "cards": 55,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Gold Pandora",
+      "category": "auto-rookies-autographs-gold-pandora",
+      "cards": 61,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Green",
+      "category": "auto-rookies-autographs-green",
+      "cards": 55,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Hyper",
+      "category": "auto-rookies-autographs-hyper",
+      "cards": 56,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Ice",
+      "category": "auto-rookies-autographs-ice",
+      "cards": 44,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Lazer",
+      "category": "auto-rookies-autographs-lazer",
+      "cards": 67,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Pandora",
+      "category": "auto-rookies-autographs-pandora",
+      "cards": 53,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Red",
+      "category": "auto-rookies-autographs-red",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs Stars",
+      "category": "auto-rookies-autographs-stars",
+      "cards": 57,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rookies Autographs White Shimmer",
+      "category": "auto-rookies-autographs-white-shimmer",
+      "cards": 63,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Franchise Future Material",
+      "category": "insert-franchise-future-material",
+      "cards": 35,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Pandora Patch",
+      "category": "insert-pandora-patch",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Regeneration",
+      "category": "insert-regeneration",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Rookie Phenom Jersey",
+      "category": "insert-rookie-phenom-jersey",
+      "cards": 35,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Archetype",
+      "category": "insert-archetype",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Color Blast",
+      "category": "insert-color-blast",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Contours",
+      "category": "insert-contours",
+      "cards": 32,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Flex",
+      "category": "insert-flex",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Gridiron Crowns",
+      "category": "insert-gridiron-crowns",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Phoenician",
+      "category": "insert-phoenician",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Rookie Rising",
+      "category": "insert-rookie-rising",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Treasured Tandems",
+      "category": "insert-treasured-tandems",
+      "cards": 18,
+      "role": "own-cards"
+    }
+  ]
+}
