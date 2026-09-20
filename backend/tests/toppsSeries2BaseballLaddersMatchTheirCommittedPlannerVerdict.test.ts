@@ -16,10 +16,21 @@
  * every file, held or not.
  *
  * This test also exercises the widened PLACEHOLDER fix (bare "TBA" suffix,
- * e.g. "Versions TBA") made in the sibling PR this branch is stacked on:
+ * e.g. "Versions TBA") made in the sibling PR this branch is stacked on, and
+ * -- added in review -- masterRosterFor + the widened SELECT_CARDS_ONLY_NOTE,
+ * which stop a restricted rung ("Clear - /10 (select cards, list below;
+ * hobby only)") from being stamped across the whole 330-card base roster
+ * instead of the 100 cards this workbook's own Master sheet lists under that
+ * name, and record a restriction with NO discoverable list ("Advanced Stats
+ * - /300 (select cards only)", no Master entry, no sibling section anywhere
+ * in this workbook) as `restrictedRungsWithoutAList` rather than guessing:
  * the committed CSVs are the converter's OWN output against the real fetched
  * xlsx files, so a regression changes the staged rows and this test's
  * row/id counts would drift.
+ *
+ * setKey is bare "topps" per Drew's 2026-09-20 ruling: Topps flagship is ONE
+ * key -- Series 1 and Series 2 base + inserts live under `topps`; Update
+ * Series stays `topps-update-series`.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
@@ -46,14 +57,46 @@ function manifestFor(dirName: string, csvName: string) {
 describe("2023 Topps Series 2 Baseball (Beckett S3)", () => {
   const DIR = "acq-2026-09-20-beckett-topps-series2-2023-baseball";
 
-  it("clean file PASSes: 11,905 rows, 11,905 distinct ids, 0 collisions, 0 unregistered", () => {
+  it("clean file PASSes: 11,345 rows, 11,345 distinct ids, 0 collisions, 0 unregistered", () => {
     const { plans } = planDir(DIR);
     const entry = plans.get("2023-topps-series2-baseball.csv");
     expect(entry.product).not.toBeNull();
     expect(entry.plan.verdict, JSON.stringify(entry.plan.unregistered)).toBe("pass");
-    expect(entry.plan.rows).toBe(11905);
-    expect(entry.plan.ids).toBe(11905);
+    expect(entry.plan.rows).toBe(11345);
+    expect(entry.plan.ids).toBe(11345);
     expect(entry.plan.collisions.length).toBe(0);
+  });
+
+  it("REVIEW FIX: Clear -/10 (select cards, list below; hobby only) is a restricted rung -- emitted for exactly the 100 cards this workbook's Master sheet lists under 'Clear', never all 330 base cards", () => {
+    const csv = readFileSync(
+      join(SCRAPED_ROOT, DIR, "2023-topps-series2-baseball.csv"),
+      "utf8",
+    );
+    const clearRows = csv.split("\n").filter((l) => l.startsWith("base,") && l.includes(",Clear,"));
+    expect(clearRows.length).toBe(100);
+  });
+
+  it("REVIEW FIX: Advanced Stats - /300 (select cards only) has NO discoverable list in this workbook (no Master entry, no sibling section) -- emitted for ZERO cards, recorded in restrictedRungsWithoutAList, never guessed", () => {
+    const csv = readFileSync(
+      join(SCRAPED_ROOT, DIR, "2023-topps-series2-baseball.csv"),
+      "utf8",
+    );
+    expect(csv).not.toMatch(/,Advanced Stats,/);
+    const m = manifestFor(DIR, "2023-topps-series2-baseball.csv");
+    expect(m.restrictedRungsWithoutAList).toBeDefined();
+    const rung = m.restrictedRungsWithoutAList.find((r: { rung: string }) => r.rung === "Advanced Stats");
+    expect(rung).toBeDefined();
+    expect(rung.note).toMatch(/select cards only/);
+    expect(rung.printRun).toBe(300);
+  });
+
+  it("REVIEW FIX: Royal Blue - (retail only) is a DISTRIBUTION note, not a roster restriction -- still applies to every base card", () => {
+    const csv = readFileSync(
+      join(SCRAPED_ROOT, DIR, "2023-topps-series2-baseball.csv"),
+      "utf8",
+    );
+    const royalBlueRows = csv.split("\n").filter((l) => l.startsWith("base,") && l.includes(",Royal Blue,"));
+    expect(royalBlueRows.length).toBe(330);
   });
 
   it("held file (2T88C-/SMFB- unregistered insert keys, 125 rows) is REFUSEd with 4 unregistered keys and gated by heldRows", () => {

@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-09-20T22:17:52.123Z",
+  "scrapedAt": "2026-09-20T23:12:33.770Z",
   "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2023/05/2023-Topps-Series-2-Baseball-Checklist.xlsx",
   "source": "beckett-s3-2026-09-20",
   "sport": "baseball",
@@ -7,7 +7,7 @@
   "setName": "2023 Topps Series 2 Baseball",
   "productKey": "2023-topps",
   "setKey": "topps",
-  "rowCount": 11905,
+  "rowCount": 11345,
   "parallelColumnAuthoritative": true,
   "sectionsReport": [
     {
@@ -314,9 +314,18 @@
       "role": "own-cards"
     }
   ],
-  "notes": [
-    "The Variations sheet's parallel is committed verbatim as Beckett prints it: \"Golden Mirror Variations Checklist\" (330 rows). This workbook's Master sheet lists no per-parallel names at all (only Base/category + cardNumber/player/team), so stripChecklistSuffix's Master-authority gate never fires, and the Variations sheet has no sibling section to confirm a sheet-wide Checklist-suffix convention either (it is the ONLY section on that sheet). Per convertBeckettChecklistXlsx.cjs's own documented rule (CF-BECKETT-CHECKLIST-IS-A-TITLE-ARTIFACT-NOT-A-NAME), the suffix is left ON rather than guessed off with no corroborating evidence. The sibling 2023 Topps Series 1 file's analogous parallel, correctly stripped, is \"Golden Mirror Image Variation\" -- this may be the same rung under the same naming convention, but it is committed as its own literal string pending a second source or a Master-sheet confirmation, per no-synthetic-parallels.",
-    "Removed 4 pure-duplicate rows the source workbook printed for card numbers 371/423/452/505 with unaccented player-name spellings (Livan Soto / Jordan Diaz / Carlos Perez / Jose Miranda) immediately following the plain Base Set run and before the Golden Mirror Variations run began -- each number already carries its correctly-accented row earlier in the same run (Livan Soto / Liván Soto, etc.), identical category/parallel/isAuto/printRun otherwise. Removed as source duplication (CF-A-DUPLICATE-IS-NOT-A-COLLISION), not a second card; measured via planStagedDirectory id-collisions before removal (4 colliding ids, exactly these 4 numbers) and re-verified PASS after."
+  "restrictedRungsWithoutAList": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "rung": "Advanced Stats",
+      "note": "select cards only",
+      "printRun": 300
+    }
   ],
-  "sha256": "a5e1885baabf15f42f9f809ff2f52dd989495f670c1c8df2231da835eaa6f1bb"
+  "sha256": "a5e1885baabf15f42f9f809ff2f52dd989495f670c1c8df2231da835eaa6f1bb",
+  "notes": [
+    "Removed 4 pure-duplicate rows the source workbook printed for card numbers 371/423/452/505 with unaccented player-name spellings (Livan Soto / Jordan Diaz / Carlos Perez / Jose Miranda) immediately following the plain Base Set run and before the Golden Mirror Variations run began -- each number already carries its correctly-accented row earlier in the same run.",
+    "The Variations sheet parallel is committed verbatim as Beckett prints it: \"Golden Mirror Variations Checklist\" (330 rows). This workbook Master sheet lists no per-parallel names at all, so stripChecklistSuffix Master-authority gate never fires, and the Variations sheet has no sibling section to confirm a sheet-wide Checklist-suffix convention either."
+  ]
 }
