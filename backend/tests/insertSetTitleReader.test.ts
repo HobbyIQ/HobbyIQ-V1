@@ -333,14 +333,25 @@ describe("R67 -- a recognised insert composes to its registered product key (rea
 });
 
 describe("R70 park reason -- named with no registered key, real corpus", () => {
-  it("Panini Prizm 'Kaleidoscopic' is a real, unregistered insert -- parks, never guesses", () => {
+  it("Panini Prizm 'Kaleidoscopic' is a real, NOW-registered insert (Wave-1 follow-on, 2026-09-19) -- resolves, no longer parks", () => {
+    // Was the park-path example until this PR registered
+    // panini-prizm-kaleidoscopic for real (2024-25 Panini Prizm Basketball's
+    // own "Kaleidoscopic" insert, 300 rows, own #1-30 roster, never a base
+    // parallel value in that file's own parallel column -- see
+    // productSetKeys.ts's own registration comment). The same defect class
+    // #2342 hit registering panini-mosaic-kaleidoscopic: "a real word the
+    // reader finds with no registered key" is a fact about the shipped
+    // corpus at a moment in time, not an invariant, and correctly stops
+    // being true the moment the key is registered. See
+    // insertSetReviewAdversarialTitles.test.ts for the synthetic-fixture
+    // replacement of the "still parks" example this test used to be.
     const res = insertSetNamedInTitle({
       title: "2024-25 Panini Prizm - Kaleidoscopic Victor Wembanyama #20 Fast Break Prizm",
       sport: "basketball", year: 2024, setKey: "panini-prizm",
     });
     expect(res).toHaveLength(1);
     expect(res[0].root).toBe("kaleidoscopic");
-    expect(res[0].registeredKey).toBeNull();
+    expect(res[0].registeredKey).toBe("panini-prizm-kaleidoscopic");
   });
 
   it("a bare YEAR is never read as an insert name (corpus noise guard)", () => {
