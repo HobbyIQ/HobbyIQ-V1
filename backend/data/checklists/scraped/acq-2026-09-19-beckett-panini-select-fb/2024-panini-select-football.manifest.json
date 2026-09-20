@@ -1,5 +1,5 @@
 {
-  "scrapedAt": "2026-09-19T23:38:43.750Z",
+  "scrapedAt": "2026-09-20T00:43:38.545Z",
   "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/07/2024-Panini-Select-Football-Checklist.xlsx",
   "source": "beckett-s3-2026-09-19",
   "sport": "football",
@@ -7,12 +7,8 @@
   "setName": "2024 Panini Select Football",
   "productKey": "2024-panini-select",
   "setKey": "panini-select",
-  "rowCount": 19986,
+  "rowCount": 19586,
   "parallelColumnAuthoritative": true,
-  "heldRows": {
-    "rows": 19986,
-    "reason": "REGENERATED 2026-09-19 after fixing convertBeckettChecklistXlsx.cjs's explicitAnchor+FINISH_WORD bypass (see CF-BECKETT-THE-ROSTER-DECIDES-THE-EXPLICIT-ANCHOR-FOLD-TOO in the script): the four Memorabilia-sheet sections (Draft Selections Memorabilia Prizm, Jumbo Rookie Swatch Prizm, Rookie Swatches Prizm, Sparks Prizm) that previously false-folded onto Base>Base Concourse now correctly re-emit under their own registered category with a blank parallel -- the false-fold defect this file was originally held for is FIXED. The file remains HELD, not because its rows are wrong, but because planStagedDirectory still REFUSEs it on the ordinary, unrelated unregistered-set-keys gate: 10 named insert/autograph set keys (panini-select-select-signatures-prizm 1,278 rows, panini-select-sparks-prizm 464, panini-select-jumbo-rookie-swatch-prizm 336, panini-select-draft-selections-memorabilia-prizm 225, panini-select-rookie-swatches-prizm 225, panini-select-signatures-prizm 199, panini-select-rookie-signature-memorabilia-prizm 180, panini-select-jumbo-rookie-signature-swatches-prizm 45, panini-select-2025-xrc-mystery-autograph-prizm 20, panini-select-jumbo-signature-swatches-prizm 12 -- each a trailing-Prizm-suffix spelling of an already-registered sibling key, same shape as Mosaic/Zenith's reported suffix mismatches) are not yet registered in hobbyIqCardId.service.ts, and 832 id collisions follow from those same unregistered keys falling back to a shared bucket -- the identical, ordinary REFUSE shape Mosaic and Photogenic ship WITHOUT a heldRows gate (they REFUSE via the ingester's own unregistered-set-keys check, with no manifest flag needed). This file keeps heldRows, unlike those two, only because the PRIOR heldRows already existed here and removing it is a decision the task instructions reserve for 'the planner is clean' -- REPORT would additionally still refuse on the keys/collisions above even with heldRows lifted, so nothing is gained by removing it before those keys are registered. Unhold (or simply let the ordinary unregistered-set-keys refusal stand, matching Mosaic/Photogenic) once the 10 keys above are registered in both productSetKeys.ts and hobbyIqCardId.service.ts."
-  },
   "sectionsReport": [
     {
       "sheet": "Base",
@@ -59,14 +55,14 @@
     {
       "sheet": "Autographs",
       "section": "Jumbo Rookie Signature Swatches Prizm",
-      "category": "auto-jumbo-rookie-signature-swatches-prizm",
+      "category": "auto-jumbo-rookie-signature-swatches",
       "cards": 45,
       "role": "own-cards"
     },
     {
       "sheet": "Autographs",
       "section": "Jumbo Signature Swatches Prizm",
-      "category": "auto-jumbo-signature-swatches-prizm",
+      "category": "auto-jumbo-signature-swatches",
       "cards": 12,
       "role": "own-cards"
     },
@@ -82,7 +78,7 @@
     {
       "sheet": "Autographs",
       "section": "Rookie Signature Memorabilia Prizm",
-      "category": "auto-rookie-signature-memorabilia-prizm",
+      "category": "auto-rookie-signature-memorabilia",
       "cards": 50,
       "role": "own-cards"
     },
@@ -116,14 +112,23 @@
     {
       "sheet": "Autographs",
       "section": "Select Signatures Prizm",
-      "category": "auto-select-signatures-prizm",
-      "cards": 730,
+      "category": "auto-select-signatures",
+      "cards": 642,
       "role": "own-cards"
     },
     {
       "sheet": "Autographs",
+      "section": "Select Signatures Prizm",
+      "category": "auto-select-signatures-2",
+      "cards": 87,
+      "role": "parallel",
+      "anchor": "Autographs>Signatures Prizm",
+      "rung": "Select"
+    },
+    {
+      "sheet": "Autographs",
       "section": "Signatures Prizm",
-      "category": "auto-signatures-prizm",
+      "category": "auto-signatures",
       "cards": 58,
       "role": "own-cards"
     },
@@ -137,14 +142,14 @@
     {
       "sheet": "Memorabilia",
       "section": "Draft Selections Memorabilia Prizm",
-      "category": "insert-draft-selections-memorabilia-prizm",
+      "category": "insert-draft-selections-memorabilia",
       "cards": 25,
       "role": "own-cards"
     },
     {
       "sheet": "Memorabilia",
       "section": "Jumbo Rookie Swatch Prizm",
-      "category": "insert-jumbo-rookie-swatch-prizm",
+      "category": "insert-jumbo-rookie-swatch",
       "cards": 42,
       "role": "own-cards"
     },
@@ -158,14 +163,14 @@
     {
       "sheet": "Memorabilia",
       "section": "Rookie Swatches Prizm",
-      "category": "insert-rookie-swatches-prizm",
+      "category": "insert-rookie-swatches",
       "cards": 25,
       "role": "own-cards"
     },
     {
       "sheet": "Memorabilia",
       "section": "Sparks Prizm",
-      "category": "insert-sparks-prizm",
+      "category": "insert-sparks",
       "cards": 58,
       "role": "own-cards"
     },
@@ -201,7 +206,14 @@
       "sheet": "Inserts",
       "section": "Score Select Throwback",
       "category": "insert-score-select-throwback",
-      "cards": 50,
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Score Select Throwback",
+      "category": "insert-score-select-throwback-2",
+      "cards": 24,
       "role": "own-cards"
     },
     {
@@ -220,16 +232,23 @@
     },
     {
       "sheet": "Inserts",
-      "section": "Snapshots",
-      "category": "insert-snapshots",
-      "cards": 50,
+      "section": "Starcade",
+      "category": "insert-starcade",
+      "cards": 25,
       "role": "own-cards"
     },
     {
       "sheet": "Inserts",
-      "section": "Starcade",
-      "category": "insert-starcade",
+      "section": "Snapshots",
+      "category": "insert-snapshots",
       "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Snapshots",
+      "category": "insert-snapshots-2",
+      "cards": 24,
       "role": "own-cards"
     },
     {
@@ -249,7 +268,7 @@
     {
       "sheet": "XRC Redemptions",
       "section": "2025 XRC Mystery Autograph Prizm",
-      "category": "auto-2025-xrc-mystery-autograph-prizm",
+      "category": "auto-2025-xrc-mystery-autograph",
       "cards": 5,
       "role": "own-cards"
     }

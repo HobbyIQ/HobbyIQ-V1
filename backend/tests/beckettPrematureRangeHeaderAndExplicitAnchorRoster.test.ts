@@ -64,7 +64,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import * as XLSX from "xlsx";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { classifySections, normalizeRosterPlayer, countDataLookingRows } = require("../scripts/convertBeckettChecklistXlsx.cjs");
+const { classifySections, normalizeRosterPlayer, countDataLookingRows, categoryFor } = require("../scripts/convertBeckettChecklistXlsx.cjs");
 
 const CONVERTER = path.join(__dirname, "..", "scripts", "convertBeckettChecklistXlsx.cjs");
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), "beckett-range-roster-"));
@@ -335,5 +335,101 @@ describe("THIRD SUSPICION: a sheet that emits far fewer cards than it looks like
       ["3", "Marvin Harrison Jr.", "Arizona Cardinals"],
     ];
     expect(countDataLookingRows(rows)).toBe(3);
+  });
+});
+
+describe("FOURTH FINDING: a brand-wide finish suffix is not a new product (CANONICAL_CATEGORY_SLUG)", () => {
+  it("strips the trailing 'Prizm'/'Mosaic' suffix for the ten hand-verified spelling artefacts", () => {
+    // Select's Memorabilia/Autographs sheets.
+    expect(categoryFor("Memorabilia", "Sparks Prizm")).toBe("insert-sparks");
+    expect(categoryFor("Memorabilia", "Jumbo Rookie Swatch Prizm")).toBe("insert-jumbo-rookie-swatch");
+    expect(categoryFor("Memorabilia", "Draft Selections Memorabilia Prizm")).toBe("insert-draft-selections-memorabilia");
+    expect(categoryFor("Memorabilia", "Rookie Swatches Prizm")).toBe("insert-rookie-swatches");
+    expect(categoryFor("Autographs", "Select Signatures Prizm")).toBe("auto-select-signatures");
+    expect(categoryFor("Autographs", "Signatures Prizm")).toBe("auto-signatures");
+    expect(categoryFor("Autographs", "Rookie Signature Memorabilia Prizm")).toBe("auto-rookie-signature-memorabilia");
+    expect(categoryFor("Autographs", "Jumbo Rookie Signature Swatches Prizm")).toBe("auto-jumbo-rookie-signature-swatches");
+    expect(categoryFor("XRC Redemptions", "2025 XRC Mystery Autograph Prizm")).toBe("auto-2025-xrc-mystery-autograph");
+    expect(categoryFor("Autographs", "Jumbo Signature Swatches Prizm")).toBe("auto-jumbo-signature-swatches");
+    // Mosaic's Inserts sheet.
+    expect(categoryFor("Inserts", "Center Stage Mosaic")).toBe("insert-center-stage");
+    expect(categoryFor("Inserts", "Overdrive Mosaic")).toBe("insert-overdrive");
+  });
+
+  it("leaves every OTHER Prizm/Mosaic-suffixed section exactly as categoryForRaw would slug it — not a blanket stripper", () => {
+    // Select: no un-suffixed "Rookie Signatures" or "Jumbo Signature
+    // Swatches" (non-rookie) sibling is registered, so these stay suffixed.
+    expect(categoryFor("Autographs", "Rookie Signatures Prizm")).toBe("auto-rookie-signatures-prizm");
+    expect(categoryFor("Autographs", "Prime Selections Prizm Signatures")).toBe("auto-prime-selections-prizm-signatures");
+    // Mosaic: Capital Gains / Splash / Storm / Micro Mosaic are each their
+    // OWN registered key WITH "Mosaic" in it (#2342) -- no bare sibling
+    // exists to fold onto, so these must never be stripped.
+    expect(categoryFor("Inserts", "Capital Gains Mosaic")).toBe("insert-capital-gains-mosaic");
+    expect(categoryFor("Inserts", "Splash Mosaic")).toBe("insert-splash-mosaic");
+    expect(categoryFor("Inserts", "Storm Mosaic")).toBe("insert-storm-mosaic");
+    expect(categoryFor("Inserts", "Micro Mosaic")).toBe("insert-micro-mosaic");
+  });
+});
+
+describe("FIFTH FINDING: a repeated header with a disagreeing roster is a second section", () => {
+  it("reproduces Select's own shape minimally: 'Score Select Throwback' printed twice, two disjoint rosters", () => {
+    const rows = convert({
+      Inserts: [
+        ["Score Select Throwback"],
+        ["2 cards"],
+        ["1", "Jalen Hurts", "Philadelphia Eagles"],
+        ["2", "C.J. Stroud", "Houston Texans"],
+        ["Score Select Throwback"],
+        ["2 cards"],
+        ["1", "Caleb Williams", "Chicago Bears"],
+        ["2", "Jayden Daniels", "Washington Commanders"],
+      ],
+    }, "test-repeated-header");
+
+    const num1 = rows.filter((r) => r.cardNumber === "1");
+    expect(num1).toHaveLength(2);
+    const players = num1.map((r) => r.player).sort();
+    expect(players).toEqual(["Caleb Williams", "Jalen Hurts"]);
+    // The two rows for #1 must land under DIFFERENT categories -- the
+    // whole point of the split is that they no longer compute the same id.
+    const categories = new Set(num1.map((r) => r.category));
+    expect(categories.size).toBe(2);
+    expect([...categories].some((c) => /-2$/.test(c))).toBe(true);
+  });
+
+  it("does NOT split a genuine League-Leaders multi-player card (same number, consecutive rows, meant to MERGE)", () => {
+    const rows = convert({
+      Inserts: [
+        ["League Leaders"],
+        ["1 card"],
+        ["11", "Pete Alonso", "New York Mets"],
+        ["11", "Kyle Schwarber", "Philadelphia Phillies"],
+        ["11", "Juan Soto", "New York Mets"],
+      ],
+    }, "test-league-leaders-no-split");
+
+    const eleven = rows.filter((r) => r.cardNumber === "11");
+    expect(eleven).toHaveLength(1);
+    expect(eleven[0].player).toBe("Pete Alonso/Kyle Schwarber/Juan Soto");
+    expect(eleven[0].category).toBe("insert-league-leaders");
+  });
+
+  it("does not split when the same number repeats with the SAME player (a genuine parallel/ladder re-mention)", () => {
+    const rows = convert({
+      Inserts: [
+        ["Some Insert"],
+        ["1 card"],
+        ["1", "Kyler Murray", "Arizona Cardinals"],
+        ["Some Insert"],
+        ["1", "Kyler Murray", "Arizona Cardinals"],
+      ],
+    }, "test-same-player-no-split");
+
+    const ones = rows.filter((r) => r.cardNumber === "1");
+    // Deduped to one row (same category, same cardNumber, same parallel,
+    // same isAuto, same player) by the existing duplicate-row guard --
+    // never split, since there is no disagreement at all.
+    expect(ones).toHaveLength(1);
+    expect(new Set(ones.map((r) => r.category)).size).toBe(1);
   });
 });

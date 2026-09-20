@@ -353,7 +353,70 @@ const PLAIN_SECTION = /^(base[- ]?set|base|chrome[- ]prospects?|base[- ]prospect
 
 // Sheet -> category prefix. Chrome Prospects are part of the base set's own
 // numbering (BCP-###), so they are base cards, not inserts.
+// CF-BECKETT-A-BRAND-WIDE-FINISH-SUFFIX-IS-NOT-A-NEW-PRODUCT (2026-09-19).
+// A section header that is ALSO the whole product's own base card stock name
+// ("Prizm" on every 2024 Panini Select Football section; "Mosaic" on every
+// 2024 Panini Mosaic Football section, since each product IS printed on that
+// finish) carries the brand word as REDUNDANT PROSE, not as a distinct
+// insert set's own name -- but categoryFor has no way to tell that from a
+// genuinely independent insert whose title happens to end the same way,
+// short of a registered-key lookup this offline converter does not have.
+//
+// MEASURED, NOT GUESSED: this map holds ONLY category slugs verified, by
+// hand, against `backend/src/services/catalog/productSetKeys.ts`, to be a
+// trailing-brand-suffix spelling of an ALREADY-REGISTERED sibling key with
+// no suffix at all --
+//
+//   insert-sparks-prizm                    -> insert-sparks                 (panini-select-sparks registered)
+//   insert-jumbo-rookie-swatch-prizm        -> insert-jumbo-rookie-swatch     (panini-select-jumbo-rookie-swatch)
+//   insert-draft-selections-memorabilia-prizm -> insert-draft-selections-memorabilia
+//   insert-rookie-swatches-prizm           -> insert-rookie-swatches         (panini-select-rookie-swatches)
+//   auto-select-signatures-prizm           -> auto-select-signatures         (panini-select-select-signatures)
+//   auto-signatures-prizm                  -> auto-signatures                (panini-select-signatures)
+//   auto-rookie-signature-memorabilia-prizm -> auto-rookie-signature-memorabilia
+//   auto-jumbo-rookie-signature-swatches-prizm -> auto-jumbo-rookie-signature-swatches
+//   auto-2025-xrc-mystery-autograph-prizm  -> auto-2025-xrc-mystery-autograph (panini-select-2025-xrc-mystery-autograph)
+//   auto-jumbo-signature-swatches-prizm    -> auto-jumbo-signature-swatches   (panini-select-jumbo-signature-swatches)
+//   insert-center-stage-mosaic             -> insert-center-stage            (panini-mosaic-center-stage, pre-existing)
+//   insert-overdrive-mosaic                -> insert-overdrive               (panini-mosaic-overdrive, pre-existing)
+//
+// EVERY OTHER "-prizm"/"-mosaic" category on either file is LEFT ALONE --
+// most of Select's own Prizm-suffixed sections (Signatures Prizm's rookie
+// sibling Rookie Signatures Prizm, Jumbo Signature Swatches Prizm, etc.) and
+// most of Mosaic's own Mosaic-suffixed sections (Capital Gains Mosaic,
+// Splash Mosaic, Storm Mosaic, Micro Mosaic) are each their OWN genuinely
+// new named insert set with no un-suffixed registered sibling at all --
+// #2342 registers those, deliberately, rather than folding them here. A
+// blanket "always strip the trailing brand word" rule was considered and
+// rejected: it is exactly the unbounded-whitelist trap PLAIN_SECTION's own
+// history already warns this file about, just aimed at a suffix instead of
+// a whole name, and it would have silently merged Capital Gains Mosaic into
+// a "Capital Gains" key that does not exist and should not.
+//
+// This table is therefore a closed, hand-verified list of SPELLING fixes
+// for keys that already have a registered sibling -- not a general finish-
+// word stripper, and not something a future acquisition should extend
+// without first checking the registered key table the same way.
+const CANONICAL_CATEGORY_SLUG = {
+  "insert-sparks-prizm": "insert-sparks",
+  "insert-jumbo-rookie-swatch-prizm": "insert-jumbo-rookie-swatch",
+  "insert-draft-selections-memorabilia-prizm": "insert-draft-selections-memorabilia",
+  "insert-rookie-swatches-prizm": "insert-rookie-swatches",
+  "auto-select-signatures-prizm": "auto-select-signatures",
+  "auto-signatures-prizm": "auto-signatures",
+  "auto-rookie-signature-memorabilia-prizm": "auto-rookie-signature-memorabilia",
+  "auto-jumbo-rookie-signature-swatches-prizm": "auto-jumbo-rookie-signature-swatches",
+  "auto-2025-xrc-mystery-autograph-prizm": "auto-2025-xrc-mystery-autograph",
+  "auto-jumbo-signature-swatches-prizm": "auto-jumbo-signature-swatches",
+  "insert-center-stage-mosaic": "insert-center-stage",
+  "insert-overdrive-mosaic": "insert-overdrive",
+};
+
 function categoryFor(sheetName, section) {
+  return CANONICAL_CATEGORY_SLUG[categoryForRaw(sheetName, section)] || categoryForRaw(sheetName, section);
+}
+
+function categoryForRaw(sheetName, section) {
   const s = slug(section) || "unsectioned";
   // A variation section gets its own category even when Beckett lists it on the
   // Base sheet, which Mega Box does ('Base > Mega Chrome Base Cards - Image
@@ -1151,11 +1214,80 @@ function main() {
       // into the player field ("Jacob Wilson RC").
       if (row.slice(2).some((c) => /^RC$/i.test(String(c || "").trim()))) player += " RC";
 
-      const key = name + ">" + section;
+      let key = name + ">" + section;
+      // CF-BECKETT-A-REPEATED-HEADER-WITH-A-DISAGREEING-ROSTER-IS-A-SECOND-
+      // SECTION (2026-09-19). Beckett sometimes prints the SAME bare header
+      // text twice on one sheet for two genuinely different card groups --
+      // 2024 Panini Select Football's Inserts sheet lists "Score Select
+      // Throwback" (and separately "Snapshots") ONCE for a veterans roster
+      // (#1 Jalen Hurts) and AGAIN, unchanged, for a rookies roster (#1 Caleb
+      // Williams) -- no suffix, no distinguishing word, genuinely the exact
+      // same section name repeated. The unconditional `key = name + ">" +
+      // section` lookup found the SAME section both times and merged 50 rows
+      // (25 + 25, two disjoint rosters) into one 94-distinct-number pool,
+      // producing exactly the "two different cards forced onto one id" id-
+      // collision id-collisions(...) exists to refuse -- 832 collision
+      // groups across three such pairs on this one file, none of them a
+      // fold candidate or a genuine source duplicate.
+      //
+      // THE DISCRIMINATOR IS THE ROSTER, same doctrine as every other fold
+      // decision in this file: a card row whose NUMBER already exists in
+      // this section's roster, naming a DIFFERENT player, is not this
+      // section's own card restated -- it is the second listing's first
+      // card, and belongs to a split section carrying the identical name
+      // (so its category/rung derivation is unaffected) but its own
+      // numbers/roster. Splits are named `key + "#2"`, `"#3"`, ... so a
+      // THIRD repeat (not measured on any workbook yet, but the mechanism
+      // must not silently merge into whichever split happened to exist) is
+      // still caught rather than merged into split #2 by accident.
+      //
+      // A number NOT yet seen in this section, or seen with the SAME
+      // player, is unaffected -- this never fires for the ordinary case
+      // (first mention of a number). It must ALSO never fire for a
+      // League-Leaders multi-player row (Pete Alonso / Kyle Schwarber /
+      // Juan Soto, all card #11, consecutive rows meant to MERGE into one
+      // card, not split into two sections) -- that shape is INDISTINGUISHABLE
+      // from a genuine disagreeing repeat by roster content alone (both are
+      // "same number, different player"); the one fact that tells them apart
+      // is ADJACENCY, the exact test the merge below already uses. So this
+      // check is skipped whenever the incoming row is adjacent to the prior
+      // record in this pre-split section -- that row is the merge's own
+      // candidate, decided by the merge logic below, never by this one.
+      if (sections.has(key)) {
+        const existing = sections.get(key);
+        const priorForSplitCheck = existing.lastRecordIndex >= 0 ? records[existing.lastRecordIndex] : null;
+        const isMergeCandidate = priorForSplitCheck && priorForSplitCheck.sectionKey === key &&
+          String(priorForSplitCheck.cardNumber).toUpperCase() === cardNumber.toUpperCase();
+        if (!isMergeCandidate) {
+          const existingPlayers = existing.roster.get(cardNumber.toUpperCase());
+          if (existingPlayers && existingPlayers.size &&
+              !existingPlayers.has(normalizeRosterPlayer(player))) {
+            let n = 2;
+            while (sections.has(key + "#" + n) &&
+                   sections.get(key + "#" + n).roster.get(cardNumber.toUpperCase()) &&
+                   !sections.get(key + "#" + n).roster.get(cardNumber.toUpperCase()).has(normalizeRosterPlayer(player))) {
+              n++;
+            }
+            key = key + "#" + n;
+          }
+        }
+      }
       if (!sections.has(key)) {
+        // A split section (key ends "#N") carries the SAME section name --
+        // Beckett never named the two listings differently -- so its
+        // category must be distinguishable too, or pass 3 would re-collide
+        // the two groups the split above exists to separate. Suffixed
+        // "-2"/"-3"/... on the category, same numbering as the key, flagged
+        // in the manifest (sectionsReport carries the section's own `key`)
+        // so a human can give it its real name once one is known -- absent
+        // beats wrong, and a numbered placeholder is at least never silently
+        // wrong about WHICH card it is.
+        const splitMatch = /#(\d+)$/.exec(key);
+        const baseCategory = categoryFor(name, section);
+        const category = splitMatch ? baseCategory + "-" + splitMatch[1] : baseCategory;
         sections.set(key, {
           sheet: name, section: section, key: key,
-          category: categoryFor(name, section),
+          category: category,
           numbers: new Set(), cards: 0,
           // (cardNumber -> Set of normalizeRosterPlayer(player)), for
           // classifySections's roster-based fold below. Built from the SAME
