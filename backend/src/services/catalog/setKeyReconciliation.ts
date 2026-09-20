@@ -372,6 +372,66 @@ const RULED_ALIASES: Readonly<Record<string, { to: string; why: string }>> = Obj
   // ALLEN & GINTER SPELLING. `and` vs `&` is orthography, not product.
   "topps-allen-and-ginter-chrome": { to: "topps-allen-ginter-chrome",
     why: "SPELLING ONLY ('and' vs the vocabulary's elided form). The CHROME SUBSET ITSELF IS DISTINCT and is declared a fixed point below — this entry exists so the two spellings of that one subset do not split its pool." },
+
+  // R-B (Drew 2026-09-20, by widget). `topps-chrome-cactus-jack` (basketball
+  // 2025-26; 9,123 sales, 6,098 strict catalog rows) is NOT a product — a
+  // scrape split one finish (the "Cactus Jack Refractor" insert, 1:184
+  // packs) into its own product bucket. checklist-parallel-names.json's
+  // `basketball|2025|topps-chrome-cactus-jack` entry carries the STANDARD
+  // Topps Chrome Basketball refractor ladder under this key (Aqua Shimmer,
+  // Black, Blue, Gold, Green, Lasers, LogoFractor, Orange, Pink, Purple
+  // Mini-Diamond, Red, Refractor, Sonar, SuperFractor, Teal Speckle, White —
+  // all "seen: 337", the same tier structure as mainline `topps-chrome`,
+  // just captured by a different scrape that named the whole bucket after
+  // one named insert instead of "Topps Chrome"). Bounded read-only Cosmos
+  // check (2026-09-20, sold_comps, hobbyiqCardId prefix scan, 1,208 rows
+  // sampled of the ~9,123): 818/1,208 (68%) carry parallel `base`, the rest
+  // spread across the same refractor names (`cactus-jack-refractor` itself
+  // is only 61 rows, 5%); of 60 distinct (number, parallel, auto) identities
+  // sampled, 53 (88%) ALREADY have a twin under `topps-chrome` today with
+  // matching titles ("2025 Topps Chrome Cactus Jack Basketball #JU-1 Base"
+  // resident under BOTH `hiq:basketball:2025:topps-chrome-cactus-jack:ju-1:
+  // base:no-auto` AND `hiq:basketball:2025:topps-chrome:ju-1:base:no-auto` —
+  // a live one-card-two-pools split). The 7 non-overlapping identities are
+  // Cactus Jack-exclusive insert numbers (`JU-` "Jacked Up", `LFL-` "La Flame
+  // Legends", plus `ast-`/`bv-` prefixes) that do not collide with mainline
+  // topps-chrome numbering, so a plain setKey-segment rekey files them
+  // correctly rather than colliding. Sampled titles overwhelmingly read
+  // "Topps Chrome Cactus Jack" / "Topps Chrome x Cactus Jack" — vendor
+  // shorthand for the parallel/insert name, not a distinct brand. This
+  // declared alias OUTRANKS setkey-reconciliation.json's templated "distinct
+  // / product-family collapse forbidden (Drew 2026-09-03)" verdict for this
+  // key, which is the same boilerplate rule text applied to all 668 entries
+  // in that file (including this key's own sibling `topps-chrome-sonic-lite`
+  // two entries later) and whose `evidence.sampleTitles` for this key are
+  // literally the BASEBALL topps-chrome census sample (18,927 "Topps Chrome"
+  // rows, 2020 Topps Chrome Baseball) — not evidence about this key at all.
+  "topps-chrome-cactus-jack": { to: "topps-chrome",
+    why: "R-B (Drew 2026-09-20): the checklist bucket is the standard Topps Chrome Basketball 2025-26 refractor ladder under a scrape-assigned product name ('Cactus Jack Refractor' is one named parallel among ~18, 1:184 packs), not a standalone product. 88% of a 60-identity Cosmos sample already has a twin under topps-chrome with matching titles. Overrides the templated setkey-reconciliation.json 'distinct' verdict, whose cited evidence for this key is a copy-paste of the baseball topps-chrome census sample." },
+
+  // R-C (Drew 2026-09-20, by widget). Topps' 2025-26 NBA flagship ("2025-26
+  // Topps Basketball"; 13,943 sales, 18,998 strict catalog rows measured
+  // under `topps-nba-hoops`) is keyed `topps` for basketball — there is no
+  // revived Hoops brand under the new Topps NBA license, so the bare `topps`
+  // key is the flagship, exactly as `nba-hoops` (the header's own precedent,
+  // productSetKeys.ts) is a Panini product spelled by its checklist rather
+  // than by house-style prefix. Bounded read-only Cosmos check (2026-09-20):
+  // `hiq:basketball:2025:topps:` already holds 128,540 rows, MANY of them
+  // titled "... Topps NBA Hoops ..." at identities that already coincide
+  // with rows still sitting under `topps-nba-hoops` (e.g. `bh-22:base:
+  // no-auto` — 5 rows under `topps`, 8 under `topps-nba-hoops`, same card,
+  // same parallel, same auto flag: an exact identity collision already live
+  // in the pool). Of 1,068 distinct identities sampled under
+  // `topps-nba-hoops`, 685 (64%) already have a twin under `topps` today.
+  // `topps-nba-hoops` is not siloed from `topps` at all — it is a live
+  // split pool for the same release, one axis of the one-card-one-row-
+  // one-pool defect. A plain setKey-segment rekey merges the remaining 36%
+  // in; the pre-existing exact-identity collisions (like `bh-22:base:
+  // no-auto`) are exactly what rekey-product-setkey's own content-hash dedup
+  // (reported as `duplicatesLeft`) exists to settle, not something this
+  // ruling needs to resolve by hand.
+  "topps-nba-hoops": { to: "topps",
+    why: "R-C (Drew 2026-09-20): Topps' 2025-26 NBA flagship has no revived Hoops brand under the new license; the checklist-spelled precedent is the bare key, same shape as `nba-hoops` for Panini. A bounded Cosmos sample shows 64% of topps-nba-hoops identities already exist under `topps` today (including at least one exact-identity collision, `bh-22:base:no-auto`) — this is a live split pool for one release, not two products." },
   // ---------------------------------------------------------------------
   // DREW RULED 2026-09-04. The five keys #1699 shipped as still-open.
   // ---------------------------------------------------------------------

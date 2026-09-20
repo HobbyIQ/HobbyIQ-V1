@@ -1144,6 +1144,22 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // not a name match, because the NAME "panini-prizm" belongs to FB/BK.
   P("panini-prizm-fifa", { parent: "panini-prizm" }),
   P("panini-prizm-monopoly-wnba", { family: "panini-prizm", parent: "panini-prizm" }),
+  // R-A (Drew 2026-09-20, by widget). Its own standalone premium release
+  // (basketball, 2024-25) — 19,425 unbacked sold_comps sales, 10,792 STRICT
+  // catalog rows already resident under this key. `reconcileSetKey` already
+  // treats it as a census-ruled fixed point (setkey-reconciliation.json:
+  // "product-family collapse forbidden") and the title parser
+  // (parseTitleIdentity.service.ts) already routes both "Prizm Black ..."
+  // and "... Black Prizm" title orderings to this key today, independent of
+  // this registration — this entry is additions-only, registering what the
+  // deriver already answers, exactly as topps-flagship/panini-select-wnba
+  // did. NOT `S()`/`spelled`: mirrors `topps-chrome-black` (line 557), a
+  // product name that collides with a common finish word inside its own
+  // parent family — `S()`'s contiguous-segment-run name matcher would fire
+  // on any title slug containing the run `prizm-black` in ANY context; `P()`
+  // relies on the existing reconciliation fixed point + parser regex
+  // instead, exactly like `topps-chrome-black`'s precedent.
+  P("panini-prizm-black", { family: "panini-prizm", parent: "panini-prizm" }),
   ...["panini-select", "panini-mosaic", "panini-contenders", "panini-immaculate", "panini-flawless",
     "panini-national-treasures", "panini-absolute", "panini-chronicles", "panini-phoenix", "panini-illusions",
     "panini-obsidian", "panini-spectra", "panini-revolution", "panini-crown-royale", "panini-one-one", "panini-playoff",
