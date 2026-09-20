@@ -233,6 +233,30 @@ on:
           # REQUIRED, no 'all' escape hatch. The pilot dispatch is
           # scope=baseball:2026 titles=topps.
           - repoint-sales-to-checklist-numbered
+          # CF-THE-CATALOG-SUFFIX-IS-PART-OF-THE-SPELLING (2026-09-20
+          # decomposition). ~10% of unbacked sales in the biggest modern
+          # cells (48% in basketball 2024 panini-prizm) fail to match a
+          # strict checklist row ONLY because the parallel slug differs from
+          # the checklist's own spelling by the product's own suffix word --
+          # "silver" vs "silver-prizm", "holo-prizm" vs "holo",
+          # "fast-break-blue" vs "fast-break-blue-prizm" -- in BOTH
+          # directions. Drives from card_catalog's STRICT rows for the
+          # scoped cell(s), builds the suffix-word candidate set for each
+          # unbacked sale's own parallel slug (one word per product family,
+          # from an explicit table -- panini-prizm/donruss-optic/panini-
+          # optic/panini-mosaic/topps-chrome/bowman-chrome/topps-finest;
+          # panini-select is DELIBERATELY excluded, see the script's own
+          # header), and moves it onto the ONE checklist row that matches on
+          # number/auto/sub -- refusing product-wide
+          # (both-slugs-are-real-rungs) whenever the checklist itself carries
+          # BOTH the bare and suffixed spelling as distinct real cards
+          # anywhere in the product. SCOPE is sport:year cells (`scope`,
+          # e.g. basketball:2024); the target setKey list rides `titles`
+          # (e.g. panini-prizm), same convention as repoint-sales-to-
+          # checklist-numbered immediately above. Both are REQUIRED, no
+          # 'all' escape hatch. The pilot dispatch is scope=basketball:2024
+          # titles=panini-prizm.
+          - repoint-sales-parallel-suffix
           # CF-INGEST-KEEPS-STORED-IDENTITY repair (Drew, 2026-09-19, PR #2331
           # follow-up). The R66/R67/R70 ingest-time insert re-key only ever
           # fires for a FRESH sale being written today; a sale that landed in
@@ -1858,6 +1882,16 @@ jobs:
           # is a whole-source write that needs its own name. The pilot
           # dispatch is scope=baseball:2026 titles=topps.
           #
+          # repoint-sales-parallel-suffix (2026-09-20) reads BCP_TITLES as its
+          # REQUIRED comma-separated target-setKey list (SET_KEYS) -- e.g.
+          # panini-prizm -- narrowing its required SCOPE=sport:year cells,
+          # same convention as repoint-sales-to-checklist-numbered
+          # immediately above. Empty or a wildcard ('all', '*') is REFUSED
+          # (exit 2): this lane moves sold_comps rows onto a checklist's
+          # differently-suffixed row, so "every setKey" is a whole-source
+          # write that needs its own name. The pilot dispatch is
+          # scope=basketball:2024 titles=panini-prizm.
+          #
           # repoint-stored-insert-sales (2026-09-19) reads BCP_TITLES as its
           # REQUIRED comma-separated REGISTERED INSERT setKey list (SET_KEYS)
           # -- e.g. panini-photogenic-rookie-pix -- narrowing its required
@@ -2148,7 +2182,13 @@ jobs:
           # as CENSUS_OUT/REPORT_OUT above so no path can leak sideways into
           # a script that would honour it. Uploaded by the SAME step that
           # already uploads this lane's backfill.log, below.
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || '' }}
+          # repoint-sales-parallel-suffix (2026-09-20). ONE NDJSON record per
+          # in-scope sale (action, reason, fromSlug/toSlug, target id) --
+          # same auditability doctrine as resolve-split-identity-parks's own
+          # PLAN_OUT, and the SAME fixed-path-guarded-on-script convention
+          # (no new input; workflow_dispatch is at 24 of 25). Uploaded by the
+          # SAME step that already uploads this lane's backfill.log, below.
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -3465,6 +3505,50 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (relocated=${R:-0} patched=${P:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-to-checklist-numbered -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+
+      # This lane's whole point is the suffix-spelling sales the CATALOG-side
+      # resolver (resolveLongFormRung, catalogMatcher.service.ts) only ever
+      # reconciles for a FRESH catalog match, never for a STORED sale -- so a
+      # reviewer auditing which sales moved, which pairs were refused as
+      # both-slugs-are-real-rungs, and which were left alone needs the full
+      # list, never a truncated sample, same reason every sibling repoint log
+      # above is kept.
+      - name: Upload the repoint-sales-parallel-suffix log
+        if: ${{ always() && inputs.script == 'repoint-sales-parallel-suffix' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: repoint-sales-parallel-suffix-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/repoint-sales-parallel-suffix-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the parallel-suffix repoint until the scope is clean
+        # Stops at its own 110-minute budget and PRINTS its summary; a run killed
+        # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
+        # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
+        # re-run after a budget stop is idempotent by construction: a sale that
+        # already relocated or was patched no longer matches the unbacked-sale
+        # selection (its cardId/hobbyiqCardId is now the checklist's own
+        # suffix spelling).
+        if: ${{ !cancelled() && inputs.script == 'repoint-sales-parallel-suffix' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: repoint-sales-parallel-suffix
+          preamble: |
+            R=$(grep -aoE "(RELOCATED|WOULD RELOCATE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            P=$(grep -aoE "(PATCHED|WOULD PATCH) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "relocated=${R:-0} patched=${P:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (relocated=${R:-0} patched=${P:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (relocated=${R:-0} patched=${P:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-parallel-suffix -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
       # This lane's whole point is the stored insert sales the R66/R67/R70
       # ingest-time re-key can never reach (CF-INGEST-KEEPS-STORED-IDENTITY),
