@@ -291,7 +291,7 @@ describe("Drew's ruled Pokemon codes stay the key", () => {
   });
 });
 
-describe("the era table (ASSUMPTION — Drew has not ruled the dates)", () => {
+describe("the era table (Donruss RULED 2026-09-20; Fleer/Skybox/Score/Leaf still ASSUMPTION)", () => {
   it("spells Donruss by its era in both directions", () => {
     expect(spellForEra("donruss", 1987)).toBe("donruss");
     expect(spellForEra("donruss", 2008)).toBe("donruss");
@@ -334,9 +334,18 @@ describe("the era table (ASSUMPTION — Drew has not ruled the dates)", () => {
     expect(spellForEra("topps-chrome", 1995)).toBe("topps-chrome");
   });
 
-  it("labels every era rule an ASSUMPTION", () => {
+  it("labels every UNRULED era rule an ASSUMPTION, and the RULED Donruss boundary as RULED", () => {
+    // Drew ruled the Donruss boundary 2026-09-20: pre-2009 Donruss is
+    // `donruss`, never `panini-donruss`. The date and makerKey are
+    // unchanged — only the "unruled assumption" status is. Fleer, Skybox,
+    // Score and Leaf remain open assumptions.
     for (const rule of ERA_SPLIT_TABLE) {
-      expect(rule.why, `${rule.brand} era rule is not labelled`).toMatch(/ASSUMPTION/);
+      if (rule.brand === "donruss") {
+        expect(rule.why, "donruss era rule should carry the 2026-09-20 ruling").toMatch(/RULED \(Drew, 2026-09-20\)/);
+        expect(rule.why).not.toMatch(/ASSUMPTION/);
+      } else {
+        expect(rule.why, `${rule.brand} era rule is not labelled`).toMatch(/ASSUMPTION/);
+      }
     }
   });
 });
