@@ -1,4 +1,5 @@
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
+import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
 // CF-GRADE-CURVE-TEST-SEAM (2026-08-16).
 //
 // The raw sold_comps read behind the observed grade curve, split into its own
@@ -137,7 +138,15 @@ export async function readSoldCompsForGrade(
               ORDER BY c.soldAt DESC`,
       parameters: params,
     }).fetchAll();
-    return resources ?? [];
+    const rows = resources ?? [];
+    // CF-DEDUPE-SOLD-COMPS-EVERY-READER (2026-09-20). This query is already
+    // scoped to one (cardId, grade), so every row here shares the same
+    // gradeKey by construction — a CardHedge dual-id twin (same sale, same
+    // price, minutes apart) collapses via the SAME shared rule the FMV path
+    // (unifiedPricing.service.ts) applies, so the observed grade curve's
+    // weighted-median leading edge cannot be outvoted by one sale counted
+    // twice the way unifiedPricing's was on Ohtani 2018 BC #1.
+    return dedupeSoldComps(rows);
   } catch (err) {
     console.warn(JSON.stringify({
       event: "observed_grade_curve_sold_comps_query_failed",

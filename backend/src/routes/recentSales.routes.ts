@@ -50,6 +50,7 @@ import { requireRateLimited } from "../middleware/requireRateLimited.js";
 import { readCompsByCardId } from "../services/portfolioiq/soldCompsStore.service.js";
 import { poolReadIdsFor, resolveIdentityToCatalogRow } from "../services/catalog/catalogIdentityResolver.js";
 import { isOwnComp, OWN_COMP_ROW_LABEL } from "../services/compiq/selfComp.js";
+import { dedupeSoldComps } from "../services/portfolioiq/dedupeSoldComps.js";
 
 const router = Router();
 
@@ -155,29 +156,40 @@ router.get("/cards/:cardId/recent-sales", requireSession, requireRateLimited("pr
       // saw N-1 comps behind a value derived from N.
     });
 
-    // CF-RECENT-SALES-DEDUP (Drew, 2026-08-06). CardHedge occasionally
-    // ingests the SAME eBay sale twice via two code paths (raw CH API
-    // + ch_daily_sales), producing duplicate rows with the same
-    // (source, sourceExternalId) OR the same (contentHash) OR the
-    // same (price, soldAt-day). Ohtani Refractor #150 Raw had 4 dup
-    // pairs in 30d. Dedup at display time.
-    const seenDedupKeys = new Set<string>();
-    const dedupedComps: typeof rawComps = [];
+    // CF-RECENT-SALES-DEDUP (Drew, 2026-08-06; unified onto the shared
+    // rule 2026-09-20). CardHedge occasionally ingests the SAME eBay sale
+    // twice via two code paths (raw CH API + ch_daily_sales), producing
+    // duplicate rows with the same (source, sourceExternalId), the same
+    // (contentHash), or a CardHedge dual-id twin — same card, same grade,
+    // same price, minutes apart. Ohtani Refractor #150 Raw had 4 dup pairs
+    // in 30d.
+    //
+    // Two passes, kept separate because they are different signals:
+    //   1. IDENTITY dedup — sourceExternalId / contentHash say "this is the
+    //      SAME ingested record", not a price coincidence. Unrelated to the
+    //      twin-collapse rule below and stays route-local.
+    //   2. `dedupeSoldComps` — the ONE shared price-coincidence rule used
+    //      by every sold_comps reader (unifiedPricing, market movers, the
+    //      market index, the observed grade curve): same gradeKey, same
+    //      price to the cent, within 60 minutes, keep earliest. Previously
+    //      this route ran its OWN looser version of this rule (same price +
+    //      calendar day, no grade key, folded parallel into the key), which
+    //      could disagree with what the FMV headline above already
+    //      collapsed. Same implementation everywhere now.
+    const seenIdentityKeys = new Set<string>();
+    const identityDeduped: typeof rawComps = [];
     for (const c of rawComps) {
       const ext = (c as { sourceExternalId?: string }).sourceExternalId ?? "";
       const contentHash = (c as { contentHash?: string }).contentHash ?? "";
-      const priceDay = `${c.price}|${String(c.soldAt ?? "").slice(0, 10)}`;
-      const priceParDay = `${priceDay}|${String(c.parallel ?? "").toLowerCase()}`;
       const keys = [
         contentHash ? `hash:${contentHash}` : "",
         ext ? `ext:${c.source}:${ext}` : "",
-        `pd:${priceParDay}`,
       ].filter(Boolean);
-      // Skip if we've seen ANY of this row's fingerprint keys already.
-      if (keys.some((k) => seenDedupKeys.has(k))) continue;
-      keys.forEach((k) => seenDedupKeys.add(k));
-      dedupedComps.push(c);
+      if (keys.length > 0 && keys.some((k) => seenIdentityKeys.has(k))) continue;
+      keys.forEach((k) => seenIdentityKeys.add(k));
+      identityDeduped.push(c);
     }
+    const dedupedComps = dedupeSoldComps(identityDeduped);
 
     // CF-RECENT-SALES-PRICE-GATE (Drew, 2026-08-06; per-tier fix 2026-08-10).
     // Drop extreme-outlier rows (< median/3 or > median*3) WITHIN EACH

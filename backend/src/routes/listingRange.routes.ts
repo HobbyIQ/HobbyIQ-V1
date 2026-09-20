@@ -4,6 +4,15 @@
 // directly under the FMV headline so users see "what people think it's
 // worth" vs "what people are asking right now."
 //
+// CF-DEDUPE-SOLD-COMPS-EVERY-READER (2026-09-20): NOT wired to
+// `dedupeSoldComps`, and cannot be. `fetchCardActiveListings` below calls
+// eBay's live Browse API for ACTIVE listings (asks, not sales) — it never
+// reads our `sold_comps` container, so a CardHedge dual-id SALE twin
+// stored there cannot appear here. `computeCanonicalValuation` (the FMV
+// half of this route's response) is the sold_comps-backed side and already
+// dedupes via unifiedPricing.service.ts's existing call to
+// `dedupeSoldComps`.
+//
 // Route: GET /api/compiq/cards/:cardId/listing-range
 // Auth:  requireSession
 //

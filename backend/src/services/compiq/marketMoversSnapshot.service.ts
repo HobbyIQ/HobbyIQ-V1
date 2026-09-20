@@ -46,6 +46,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { moverCredibility, looksDamaged } from "./moverCredibility.service.js";
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
+import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
 
 export interface MarketMoversParams {
   sport: string;
@@ -222,6 +223,16 @@ export async function computeMarketMovers(params: MarketMoversParams): Promise<M
   let usedPath: "rollups" | "raw" = "raw";
 
   if (useRollups) {
+    // CF-DEDUPE-SOLD-COMPS-EVERY-READER (2026-09-20). sold_comps_daily is
+    // precomputed FROM sold_comps by scripts/rollup-sold-comps-daily.cjs,
+    // which now runs `dedupeSoldComps` per (cardId, parallel, grade) group
+    // BEFORE computing each day's count/sum/median/min/max — so a
+    // CardHedge dual-id twin is collapsed once, at rollup build time, and
+    // every rollup doc this path reads is already deduped. No second
+    // dedupe pass belongs here: `DailyRow` carries only day-level
+    // aggregates (count/median), not individual sale timestamps, so
+    // `dedupeSoldComps`'s 60-minute window has nothing to key on at this
+    // grain — the doc IS the unit dedupe already ran against.
     const daily = await getDailyContainer();
     if (daily) {
       const dailyIter = daily.items.query<DailyRow>({
@@ -305,6 +316,17 @@ export async function computeMarketMovers(params: MarketMoversParams): Promise<M
     if (g) g.rows.push(r);
     else groups.set(key, { rows: [r], sku: r });
   }
+
+  // CF-DEDUPE-SOLD-COMPS-EVERY-READER (2026-09-20). Every row in a group
+  // already shares (cardId, parallel, gradeCompany, gradeValue) by
+  // construction, so this is the exact gradeKey scope `dedupeSoldComps`
+  // expects — a CardHedge dual-id twin collapses here the same way it does
+  // on the FMV path, and two genuinely different grades can never be
+  // merged. Without this, a mover's `salesInWindow` (the credibility gate's
+  // input) and its prior/current medians both double-count every twin,
+  // which can flip a flat card into a reported "mover" or inflate a real
+  // move's magnitude.
+  for (const g of groups.values()) g.rows = dedupeSoldComps(g.rows);
 
   const movers: Mover[] = [];
   const rejected = new Map<string, number>();
