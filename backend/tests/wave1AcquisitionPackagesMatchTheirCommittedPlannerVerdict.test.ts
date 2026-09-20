@@ -6,15 +6,31 @@
  * measured with nothing but what THIS branch (based on #2337) provides. No
  * package here depends on any sibling PR's key registrations.
  *
- * Six packages, one Wave-1 acquisition each:
- *   - 2024 Panini Prizm Football (Beckett S3)        REFUSE, 23 unregistered
+ * Six packages, one Wave-1 acquisition each. UPDATED (2026-09-19, follow-on
+ * registration PR, precedent #2276/#2342): Prizm Football and Prizm
+ * Basketball now PASS -- their genuine named insert/auto keys are registered
+ * in productSetKeys.ts (see that file's own registration comment for the
+ * full per-key evidence). Donruss Football stays REFUSE: 16 of its 18
+ * unregistered keys were genuine and are now registered, but the remaining 2
+ * (`rated-rookies-autographs`, `optic-rated-rookies-preview-autographs`) are
+ * a 100% roster match against Base's own Rated Rookies subset -- on-card
+ * autograph PARALLELS of the base rookie cards, not real sets -- and are
+ * deliberately left unregistered pending a converter fold, so the file still
+ * refuses on those two.
+ *
+ *   - 2024 Panini Prizm Football (Beckett S3)        PASS (was REFUSE, 23
+ *     unregistered -- all 23 were genuine, now registered)
  *   - 2024 Panini Phoenix Football (Beckett S3)       REFUSE, 23 unregistered
- *   - 2024 Panini Donruss Football, full workbook     REFUSE, 18 unregistered
+ *     (untouched by this PR -- held pending the converter fix, out of scope)
+ *   - 2024 Panini Donruss Football, full workbook     REFUSE, 2 unregistered
+ *     (was 18; 16 genuine keys now registered, 2 fold-candidates deliberately
+ *     left unregistered -- see productSetKeys.ts's own comment)
  *     (Base+Press Proof already staged in #2304 under
  *     acq-2026-09-19-beckett-football-donruss-mosaic/ -- THIS package is the
  *     FULL workbook including Autographs/Memorabilia/Inserts, a separate
  *     directory so it does not collide with or duplicate that prior stage)
- *   - 2024-25 Panini Prizm Basketball (Beckett S3)    REFUSE, 19 unregistered
+ *   - 2024-25 Panini Prizm Basketball (Beckett S3)    PASS (was REFUSE, 19
+ *     unregistered -- all 19 were genuine, now registered)
  *   - 2025 Topps Holiday Baseball (Beckett S3)        PASS, zero unregistered
  *   - 2025-26 Topps Holiday Basketball (Beckett S3)   REFUSE, 2 unregistered
  *     (both are a converter defect, not a real set -- see the hazard note
@@ -27,8 +43,16 @@
  *     ("Team Camo Variation" -- AMBIGUOUS 75% roster overlap with
  *     Rookies #301-400, correctly left unfolded pending a human ruling)
  *
- * None of these packages is registered here (out of scope per the acquisition
- * brief -- registration is a separate PR, precedent #2276).
+ * A seventh package, already committed to main outside any acq- directory
+ * (`data/checklists/scraped/2024-panini-select-basketball.csv`, 27
+ * unregistered named insert/auto keys, all genuine), is added below: all 27
+ * are now registered, but the file still REFUSES -- not on key registration,
+ * on 53 id-COLLISIONS in two dual/multi-signer products (`Select Pairings
+ * Signatures`, an explicitly-paired autograph insert, and `2024 Origins
+ * Update Autographs`) where more than one player shares a (cardNumber,
+ * parallel) address. That is a card-identity/multi-signer scoping question,
+ * out of scope for a productSetKeys.ts-only PR (computeHobbyIqCardId is
+ * explicitly not touched here).
  */
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
@@ -49,14 +73,15 @@ function planPackage(dirName: string) {
   return { dir, file: files[0], entry };
 }
 
-describe("2024 Panini Prizm Football (Beckett S3) — REFUSE on this branch alone", () => {
-  it("planStagedDirectory reports unregistered-set-keys for 23 genuine named inserts, not PASS", () => {
+describe("2024 Panini Prizm Football (Beckett S3) — PASS after this PR's registrations", () => {
+  it("planStagedDirectory reports PASS: all 23 genuine named inserts are now registered", () => {
     const { entry } = planPackage("acq-2026-09-19-beckett-panini-prizm-fb");
     expect(entry.product).not.toBeNull();
-    expect(entry.plan.verdict, JSON.stringify(entry.plan.unregistered)).toBe("refuse");
-    expect(entry.plan.reason).toBe("unregistered-set-keys");
-    expect(entry.plan.unregistered.length).toBe(23);
+    expect(entry.plan.verdict, JSON.stringify(entry.plan.unregistered)).toBe("pass");
+    expect(entry.plan.unregistered).toEqual([]);
+    expect(entry.plan.collisions).toEqual([]);
     expect(entry.plan.rows).toBe(29980);
+    expect(entry.plan.ids).toBe(29980);
   });
 
   it("the on-card base autograph parallels fold onto the base roster with isAuto true", () => {
@@ -129,14 +154,47 @@ describe("2024 Panini Phoenix Football (Beckett S3) — REFUSE on this branch al
   });
 });
 
-describe("2024 Panini Donruss Football, full workbook (Beckett S3) — REFUSE on this branch alone", () => {
-  it("planStagedDirectory reports unregistered-set-keys for 18 genuine named inserts, not PASS", () => {
+describe("2024 Panini Donruss Football, full workbook (Beckett S3) — REFUSE persists, 2 fold-candidates not genuine sets", () => {
+  it("planStagedDirectory reports unregistered-set-keys for the 2 held-out fold-candidates only, down from 18", () => {
     const { entry } = planPackage("acq-2026-09-19-beckett-panini-donruss-fb-full");
     expect(entry.product).not.toBeNull();
     expect(entry.plan.verdict, JSON.stringify(entry.plan.unregistered)).toBe("refuse");
     expect(entry.plan.reason).toBe("unregistered-set-keys");
-    expect(entry.plan.unregistered.length).toBe(18);
+    const keys = entry.plan.unregistered.map((u: { setKey: string }) => u.setKey).sort();
+    expect(keys).toEqual([
+      "panini-donruss-optic-rated-rookies-preview-autographs",
+      "panini-donruss-rated-rookies-autographs",
+    ]);
     expect(entry.plan.rows).toBe(6369);
+  });
+
+  it("the 2 held-out keys are a 100% roster match against Base's own Rated Rookies — parallels, not sets", () => {
+    const csv = readFileSync(
+      join(SCRAPED_ROOT, "acq-2026-09-19-beckett-panini-donruss-fb-full", "2024-panini-donruss-football.csv"),
+      "utf8",
+    );
+    const lines = csv.split(/\r?\n/).filter(Boolean).slice(1);
+    const rows = lines.map((l) => {
+      const parts = l.split(",");
+      return { category: parts[0], cardNumber: parts[1], player: parts.slice(5).join(",") };
+    });
+    const baseRatedRookies = new Set(
+      rows
+        .filter((r) => r.category === "base" && Number(r.cardNumber) >= 301 && Number(r.cardNumber) <= 400)
+        .map((r) => `${r.cardNumber}::${r.player.trim().toLowerCase()}`),
+    );
+    for (const cat of [
+      "auto-rated-rookies-autographs",
+      "auto-rated-rookies-autographs-orange",
+      "auto-rated-rookies-autographs-purple",
+      "auto-optic-rated-rookies-preview-autographs",
+    ]) {
+      const roster = rows
+        .filter((r) => r.category === cat)
+        .map((r) => `${r.cardNumber}::${r.player.trim().toLowerCase()}`);
+      expect(roster.length, cat).toBeGreaterThan(0);
+      expect(roster.every((t) => baseRatedRookies.has(t)), `${cat} must be a 100% subset of base Rated Rookies`).toBe(true);
+    }
   });
 
   it("does not collide with the prior base-only stage's own directory", () => {
@@ -153,14 +211,44 @@ describe("2024 Panini Donruss Football, full workbook (Beckett S3) — REFUSE on
   });
 });
 
-describe("2024-25 Panini Prizm Basketball (Beckett S3) — REFUSE on this branch alone", () => {
-  it("planStagedDirectory reports unregistered-set-keys for 19 genuine named inserts, not PASS", () => {
+describe("2024-25 Panini Prizm Basketball (Beckett S3) — PASS after this PR's registrations", () => {
+  it("planStagedDirectory reports PASS: all 19 genuine named inserts are now registered", () => {
     const { entry } = planPackage("acq-2026-09-19-beckett-panini-prizm-bk");
     expect(entry.product).not.toBeNull();
-    expect(entry.plan.verdict, JSON.stringify(entry.plan.unregistered)).toBe("refuse");
-    expect(entry.plan.reason).toBe("unregistered-set-keys");
-    expect(entry.plan.unregistered.length).toBe(19);
+    expect(entry.plan.verdict, JSON.stringify(entry.plan.unregistered)).toBe("pass");
+    expect(entry.plan.unregistered).toEqual([]);
+    expect(entry.plan.collisions).toEqual([]);
     expect(entry.plan.rows).toBe(29837);
+    expect(entry.plan.ids).toBe(29837);
+  });
+});
+
+describe("2024 Panini Select Basketball (hobbymonitor, already committed to main) — REFUSE persists, id-collisions not key registration", () => {
+  it("planStagedDirectory reports PASS on key registration but REFUSE on 53 id-collisions in two dual/multi-signer inserts", () => {
+    const files = ["2024-panini-select-basketball.csv"];
+    const plans = INGEST.planStagedDirectory(SCRAPED_ROOT, files);
+    const entry = plans.get(files[0]);
+    expect(entry.product).not.toBeNull();
+    expect(entry.plan.verdict, JSON.stringify(entry.plan.collisions?.slice(0, 3))).toBe("refuse");
+    expect(entry.plan.reason).toBe("id-collisions");
+    expect(entry.plan.unregistered).toEqual([]);
+    expect(entry.plan.rows).toBe(25999);
+    expect(entry.plan.collisions.length).toBe(53);
+  });
+
+  it("every collision is concentrated in the two dual/multi-signer products, not a registration defect", () => {
+    const files = ["2024-panini-select-basketball.csv"];
+    const plans = INGEST.planStagedDirectory(SCRAPED_ROOT, files);
+    const entry = plans.get(files[0]);
+    const bySetKey = new Map<string, number>();
+    for (const c of entry.plan.collisions) {
+      const setKey = c.id.split(":")[3];
+      bySetKey.set(setKey, (bySetKey.get(setKey) || 0) + 1);
+    }
+    expect(Object.fromEntries(bySetKey)).toEqual({
+      "panini-select-select-pairings-signatures": 50,
+      "panini-select-2024-origins-update-autographs": 3,
+    });
   });
 });
 

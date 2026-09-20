@@ -90,6 +90,28 @@ const sale = {
   cardId: "hiq:basketball:2024:panini-prizm:6:base:no-auto",
 };
 
+// #2355 registered "fireworks" as panini-prizm-fireworks (Wave-1 acquisition),
+// so the sale above no longer exercises the NO registered-key path -- it now
+// exercises the registered-but-checklist-unconfirmed path (see the new test
+// below). 2024 Panini Crusade baseball carries a real, still-UNREGISTERED
+// single-word insert root "Juggernauts" in the same shipped corpus -- verified
+// via insertSetNamedInTitle() to resolve with registeredKey: null.
+const noKeySale = {
+  playerName: "Some Player",
+  cardYear: 2024,
+  setName: "Panini Crusade",
+  cardNumber: "6",
+  parallel: "Base",
+  isAuto: false,
+  sport: "baseball",
+  price: 120,
+  soldAt: "2026-09-01T00:00:00.000Z",
+  source: "tca-ebay" as const,
+  sourceExternalId: "tca-f4-nokey",
+  title: "2024 Panini Crusade Juggernauts Some Player #6",
+  cardId: "hiq:baseball:2024:panini-crusade:6:base:no-auto",
+};
+
 let fake: ReturnType<typeof fakeSoldCompsContainer>;
 
 beforeEach(() => {
@@ -124,11 +146,24 @@ describe("F4 -- an unregistered insert root that is an ordinary word in a checkl
       // Checklist rows exist for the product but none at THIS card number.
       fetchAll: async () => ({ resources: [{ id: "hiq:z", source: "beckett-2026-08", cardNumber: "999", playerName: "Someone Else" }] }),
     }));
-    const res = await recordSoldComp(sale);
+    const res = await recordSoldComp(noKeySale);
     expect(res.written).toBe(true);
     const [doc] = rows();
     expect(doc.identityUnverified).toBe(true);
     expect(doc.identityUnverifiedReason).toBe("insert-named-no-key");
+  });
+
+  it("#2355: PARKS as insert-named-unconfirmed (not insert-named-no-key) when the named insert root IS now registered but its OWN checklist does not confirm this card", async () => {
+    catalogQuery.mockImplementation(() => ({
+      // No checklist rows confirm this card number/player -- neither the
+      // base product's nor (implicitly) panini-prizm-fireworks's own.
+      fetchAll: async () => ({ resources: [{ id: "hiq:z", source: "beckett-2026-08", cardNumber: "999", playerName: "Someone Else" }] }),
+    }));
+    const res = await recordSoldComp(sale);
+    expect(res.written).toBe(true);
+    const [doc] = rows();
+    expect(doc.identityUnverified).toBe(true);
+    expect(doc.identityUnverifiedReason).toBe("insert-named-unconfirmed");
   });
 
   it("FIX B: is left UNTOUCHED (no park) when the base-confirm read answers UNKNOWN (a query throw) -- a stalled read must never park a real base sale", async () => {
