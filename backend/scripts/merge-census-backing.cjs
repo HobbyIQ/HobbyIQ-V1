@@ -205,6 +205,17 @@ function mergeSlots(slots) {
   let anyOverflowed = false;
   let totalFailedCells = 0;
   const failedCellSamples = [];
+  // THE CURSOR'S OWN FOLD, SUMMED ACROSS SLOTS (2026-09-20, cursor-size
+  // follow-up). This is about the CURSOR a slot checkpointed mid-run, never
+  // this slot's own ARTIFACT byCell table above (which is always the full,
+  // unfolded table -- see rematch-sold-comps.cjs's own comment on the
+  // field). Non-zero for a slot only means: at some point during that
+  // slot's pass, a checkpoint save had to fold its smallest cells into
+  // "other" to fit the cursor's byte cap -- a fact about a RESUME's
+  // resolution, not about this merge's own totals (which are exact
+  // regardless, by construction of the fold itself).
+  let totalCellsFoldedForCheckpoint = 0;
+  const slotsWithFolds = [];
   for (const s of slots) {
     for (const [sport, b] of Object.entries(s.backing.bySport ?? {})) {
       addInto(bySport.get(sport) ?? bySport.set(sport, emptyBuckets()).get(sport), b);
@@ -217,8 +228,13 @@ function mergeSlots(slots) {
     for (const sample of s.backing.preload?.failedCellSamples ?? []) {
       failedCellSamples.push({ slot: s.slot, ...sample });
     }
+    const foldedForThisSlot = Number(s.backing.backingByCellFoldedForCheckpoint ?? 0);
+    if (foldedForThisSlot > 0) {
+      totalCellsFoldedForCheckpoint += foldedForThisSlot;
+      slotsWithFolds.push({ slot: s.slot, folded: foldedForThisSlot });
+    }
   }
-  return { bySport, byCell, anyOverflowed, totalFailedCells, failedCellSamples };
+  return { bySport, byCell, anyOverflowed, totalFailedCells, failedCellSamples, totalCellsFoldedForCheckpoint, slotsWithFolds };
 }
 
 /** Every non-parked, non-unparseable, non-flagged, non-unknown row that
@@ -329,7 +345,7 @@ async function main() {
   const seenSlots = new Set(slots.map((s) => s.slot));
   const missing = Array.from({ length: 32 }, (_, i) => i).filter((i) => !seenSlots.has(i));
 
-  const { bySport, byCell, anyOverflowed, totalFailedCells, failedCellSamples } = mergeSlots(slots);
+  const { bySport, byCell, anyOverflowed, totalFailedCells, failedCellSamples, totalCellsFoldedForCheckpoint, slotsWithFolds } = mergeSlots(slots);
 
   const grandTotal = emptyBuckets();
   for (const b of bySport.values()) addInto(grandTotal, b);
@@ -341,6 +357,15 @@ async function main() {
   console.log(`  slot artifacts read  ${slots.length}/32${missing.length ? `  MISSING SLOTS: [${missing.join(",")}]` : ""}`);
   console.log(`  rows tallied         ${grandTotalRows.toLocaleString()}`);
   if (anyOverflowed) console.log(`  NOTE: at least one slot's byCell hit its cellCap -- the "other" bucket absorbs its overflow.`);
+  // THE CURSOR'S OWN FOLD, ACROSS SLOTS (2026-09-20, cursor-size follow-up).
+  // Never affects any total this merge computes (a fold preserves every
+  // bucket's total exactly, by construction -- see rematch-sold-comps.cjs's
+  // foldBackingByCellToFit) -- named here purely so a reader who sees a
+  // slot's own per-cell detail look coarser than expected knows why, rather
+  // than suspecting a merge defect.
+  if (totalCellsFoldedForCheckpoint > 0) {
+    console.log(`  NOTE: ${totalCellsFoldedForCheckpoint.toLocaleString()} cell(s), across slot(s) ${slotsWithFolds.map((s) => s.slot).join(",")}, were folded into "other" INSIDE a mid-run CURSOR checkpoint (never in this slot's own artifact byCell table) to fit the cursor's byte cap -- totals are exact regardless; only that slot's resumed-checkpoint cell RESOLUTION was reduced.`);
+  }
 
   // *** PRINT unknown LOUDLY, ALWAYS, EVEN AT ZERO. *** A silent zero here is
   // indistinguishable from "this script forgot to check" -- printing it
@@ -446,6 +471,11 @@ async function main() {
     cellCap: slots[0]?.backing?.cellCap ?? null, anyOverflowed,
     distinctCellsTouched: distinctCellsAcrossSlots,
     loadFailures: { totalFailedCells, failedCellSamples },
+    // THE CURSOR'S OWN FOLD, ACROSS SLOTS (2026-09-20, cursor-size follow-
+    // up) -- see the console NOTE printed above for what this does and does
+    // not mean. Zero/empty when no slot's mid-run checkpoint ever needed to
+    // fold.
+    cellsFoldedForCheckpoint: { total: totalCellsFoldedForCheckpoint, bySlot: slotsWithFolds },
     overall: grandTotal,
     overallTotalRows: grandTotalRows,
     overallDenominator: grandDenominator,

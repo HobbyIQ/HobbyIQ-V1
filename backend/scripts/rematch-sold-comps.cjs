@@ -318,6 +318,42 @@ const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "tr
  * costs RU, never correctness.
  */
 const CENSUS_BACKING = MODE === "census" && String(process.env.SOURCES ?? "").trim().toLowerCase() === "backing";
+
+/**
+ * THE SEVEN BACKING BUCKETS, IN A FIXED ORDER (2026-09-20, the cursor-size
+ * follow-up). Module-level (not inside main()'s closure) so both the
+ * per-slot tally AND `saveCensusCursor`'s fold-to-fit guard below -- which
+ * has no access to main()'s locals -- agree on the same order without
+ * duplicating the literal seven strings a second time.
+ */
+const BACKING_BUCKET_KEYS = ["backedStrict", "rowExistsNonStrict", "noRow", "unparseable", "parked", "notPricedFlagged", "unknown"];
+
+/** `{backedStrict, rowExistsNonStrict, ...}` -> `[n0..n6]` in
+ *  BACKING_BUCKET_KEYS order. Roughly HALVES the cursor's backingByCell
+ *  bytes versus named keys (measured: a 2,000-cell worst case is ~387 KB
+ *  named vs ~199 KB compact) -- the buckets are always present and always in
+ *  this order, so the field names are pure overhead in the cursor, which
+ *  restores this same shape on load and never surfaces it anywhere else
+ *  (the ARTIFACT keeps named keys; only the cursor's round-trip is compact). */
+function backingBucketsToArray(b) {
+  return BACKING_BUCKET_KEYS.map((k) => Number(b?.[k]) || 0);
+}
+
+/** The inverse of `backingBucketsToArray` -- accepts EITHER shape (an array,
+ *  the compact cursor form; or a named object, a fat pre-fix cursor, or a
+ *  hand-built fixture) so a resume never cares which one a saved doc used. */
+function backingBucketsFromArray(v) {
+  const out = {};
+  if (Array.isArray(v)) {
+    for (let i = 0; i < BACKING_BUCKET_KEYS.length; i++) out[BACKING_BUCKET_KEYS[i]] = Number(v[i]) || 0;
+  } else if (v && typeof v === "object") {
+    for (const k of BACKING_BUCKET_KEYS) out[k] = Number(v[k]) || 0;
+  } else {
+    for (const k of BACKING_BUCKET_KEYS) out[k] = 0;
+  }
+  return out;
+}
+
 // CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD: this lane's NORMAL mode is a
 // fan-out -- it declares its own multi-slot default (32) and is always
 // dispatched per slot -- so it shards on the env alone. The helper is shared so
@@ -2377,12 +2413,16 @@ async function main() {
   const mergeBackingMapInto = (liveMap, savedObj, { capAt } = {}) => {
     if (!savedObj || typeof savedObj !== "object") return;
     for (const [key, saved] of Object.entries(savedObj)) {
-      if (!saved || typeof saved !== "object") continue;
+      if (saved === undefined || saved === null) continue;
+      // ACCEPTS EITHER SHAPE. `saved` is a compact `[n0..n6]` array on any
+      // cursor this build wrote; a named `{backedStrict, ...}` object is
+      // still accepted so a cursor written by a build BEFORE this
+      // compaction (or a hand-built fixture) merges in exactly the same --
+      // see backingBucketsFromArray's own header.
+      const decoded = backingBucketsFromArray(saved);
       const overflowing = capAt != null && key !== "other" && !liveMap.has(key) && liveMap.size >= capAt;
       const b = backingBucketsOf(liveMap, overflowing ? "other" : key);
-      for (const bucket of ["backedStrict", "rowExistsNonStrict", "noRow", "unparseable", "parked", "notPricedFlagged", "unknown"]) {
-        b[bucket] += Number(saved[bucket]) || 0;
-      }
+      for (const bucket of BACKING_BUCKET_KEYS) b[bucket] += decoded[bucket];
     }
   };
 
@@ -2624,12 +2664,24 @@ async function main() {
     // backing tally from zero, because nothing about it survived the
     // cursor. Only checkpointed when this pass actually armed the block
     // (CENSUS_BACKING) -- a plain census's cursor stays exactly the small
-    // shape it always was, and the size guard sees the same bounded byCell
-    // (BACKING_CELL_CAP entries, 7 numeric fields each) a live pass already
-    // bounds itself to.
+    // shape it always was.
+    //
+    // COMPACT ARRAY ENCODING (2026-09-20 follow-up, reviewer finding on
+    // #2360). Named `{backedStrict, rowExistsNonStrict, ...}` objects at
+    // BACKING_CELL_CAP (2,000) cells measured ~387 KB for backingByCell
+    // alone -- close enough to CENSUS_CURSOR_MAX_BYTES (512 KB) that the
+    // FIVE SLOTS that most need a resume (9/10/12/13/14, the largest modern
+    // units, hence the most distinct cells) were also the most likely to
+    // hit the FATAL size guard on their very first backing checkpoint and
+    // lose the slot again -- the same failure mode this whole fix exists to
+    // end, just moved one layer down. `backingBucketsToArray` drops the
+    // seven field names (always present, always this order) and measures
+    // ~199 KB for the same worst case -- roughly half. `saveCensusCursor`'s
+    // fold-to-fit guard below is the second, independent backstop for
+    // whatever margin this alone does not buy back.
     if (CENSUS_BACKING) {
-      out.backingBySport = Object.fromEntries(backingBySport);
-      out.backingByCell = Object.fromEntries(backingByCell);
+      out.backingBySport = Object.fromEntries([...backingBySport].map(([k, b]) => [k, backingBucketsToArray(b)]));
+      out.backingByCell = Object.fromEntries([...backingByCell].map(([k, b]) => [k, backingBucketsToArray(b)]));
     }
     return out;
   };
@@ -4437,6 +4489,20 @@ async function main() {
       byCell: Object.fromEntries(backingByCell),
       cellCap: BACKING_CELL_CAP,
       cellOverflowed: backingByCell.has("other"),
+      // THE CURSOR'S OWN FOLD (2026-09-20, cursor-size follow-up). This
+      // artifact's OWN `byCell` above is always the full, unfolded table --
+      // folding only ever happens to the CURSOR's copy (see
+      // foldBackingByCellToFit's header), which exists purely to fit inside
+      // CENSUS_CURSOR_MAX_BYTES for a RESUME, never to shrink what this pass
+      // reports about itself. Non-zero here means at least one
+      // saveCensusCursor call this pass folded its smallest cells into
+      // "other" to checkpoint at all -- so a reader of a LATER RESUMED
+      // pass's own artifact (which starts its merge from that folded
+      // checkpoint) knows its OWN byCell table, from that point forward, is
+      // only as fine-grained as what the checkpoint could still resolve;
+      // totals are exact regardless (see the same header). merge-census-
+      // backing.cjs sums this across slots and says so in its own report.
+      backingByCellFoldedForCheckpoint: getCensusCursorBackingCellsFoldedTotal(),
       preload: {
         cellCap: BACKING_PRELOAD_CELL_CAP,
         // ROW-BUDGETED EVICTION (2026-09-20 per review) -- the PRIMARY
@@ -5074,6 +5140,33 @@ function signaturesMatch(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+/**
+ * NAME WHICH FIELD(S) DIFFER (2026-09-20, cursor-size follow-up, reviewer
+ * suggestion on #2360). `signaturesMatch` itself stays a plain boolean --
+ * it is a pinned function several tests call directly expecting `true`/
+ * `false` -- this is a SEPARATE diagnostic used only for the log line: a
+ * mismatch used to print nothing about WHY, so "starting from unit 0" (a
+ * signature refusal) and "no usable prior checkpoint" (a genuine first-ever
+ * run) were the same log line for two different facts, and an operator
+ * seeing a slot restart from zero mid-fleet had to diff two JSON blobs by
+ * hand to find out whether it was `years`/`scope`/`sourcesMode`/etc.
+ * Compares every key either side has (a field ABSENT on one side but
+ * present with a non-undefined value on the other is a mismatch, same as
+ * `JSON.stringify` would see); reports up to 6 differing keys so a genuinely
+ * wide drift (e.g. a whole scope rewrite) still prints something bounded
+ * rather than one line per key. */
+function describeSignatureMismatch(saved, current) {
+  const keys = new Set([...Object.keys(saved ?? {}), ...Object.keys(current ?? {})]);
+  const diffs = [];
+  for (const k of keys) {
+    const a = saved?.[k];
+    const b = current?.[k];
+    if (JSON.stringify(a) !== JSON.stringify(b)) diffs.push(`${k}: saved=${JSON.stringify(a)} vs this pass=${JSON.stringify(b)}`);
+  }
+  if (!diffs.length) return "(no field-level difference found -- the mismatch is in a key one side has and JSON.stringify sees but this comparison does not)";
+  return diffs.slice(0, 6).join("; ") + (diffs.length > 6 ? ` ... and ${diffs.length - 6} more` : "");
+}
+
 /** Read this slot's cursor, or null when there is none or it does not match
  *  THIS pass's signature (see censusCursorSignature above). A refused read
  *  (missing container on a first-ever run, a throttle) is treated the same
@@ -5084,7 +5177,11 @@ async function loadCensusCursor(control, slot) {
   try {
     const { resource } = await control.item(censusCursorId(slot), censusCursorId(slot)).read();
     if (!resource || resource.kind !== CENSUS_CURSOR_KIND) return null;
-    if (!signaturesMatch(resource.signature, censusCursorSignature())) return null;
+    const thisSignature = censusCursorSignature();
+    if (!signaturesMatch(resource.signature, thisSignature)) {
+      console.warn(`  !! census cursor signature mismatch for slot ${slot} -- dropping it, starting this pass from unit 0. Differing field(s): ${describeSignatureMismatch(resource.signature, thisSignature)}`);
+      return null;
+    }
     return resource;
   } catch (e) {
     if (e?.code === 404 || e?.statusCode === 404) return null;
@@ -5132,6 +5229,25 @@ async function loadCensusCursor(control, slot) {
  */
 const CENSUS_CURSOR_MAX_BYTES = 512 * 1024;
 
+/** THE CUMULATIVE FOLD COUNTER (2026-09-20, cursor-size follow-up). How many
+ *  distinct backingByCell cells this PROCESS has folded into "other" across
+ *  every `saveCensusCursor` call so far -- module-level because
+ *  `saveCensusCursor` is module-level (outside main()'s closure) and its
+ *  boolean return is a pinned, load-bearing shape (rematchCensusCursorResume
+ *  .test.ts asserts `=== true`/`=== false` directly), so this is a SEPARATE
+ *  channel rather than a change to that return value. `main()` reads it once,
+ *  at artifact-build time, to set `backingByCellFoldedForCheckpoint` -- see
+ *  the census artifact's own field. Cumulative, not "this save's fold count"
+ *  alone: a slot that checkpoints many times across one pass folds a
+ *  possibly-different set of cells each time (this pass's own live cells
+ *  grow as it classifies), and the artifact reports the pass's own total
+ *  exposure to the fold, not just its last checkpoint's. */
+let censusCursorBackingCellsFoldedTotal = 0;
+/** A `let` cannot be re-exported live through `module.exports` (the export
+ *  binding freezes the value at require time) -- this getter is the actual
+ *  read path both `main()`'s artifact build and a test use. */
+function getCensusCursorBackingCellsFoldedTotal() { return censusCursorBackingCellsFoldedTotal; }
+
 /** The name of `doc`'s single largest top-level field, by its own JSON byte
  *  size -- so a FATAL can name the actual offender instead of just "the
  *  cursor is too big". Ties keep whichever key iterates first. */
@@ -5146,9 +5262,114 @@ function largestCursorField(doc) {
   return { key: worstKey, bytes: Math.max(worstBytes, 0) };
 }
 
+/**
+ * FOLD backingByCell'S SMALLEST CELLS INTO "other" UNTIL THE WHOLE DOC FITS
+ * (2026-09-20, cursor-size follow-up, reviewer finding on #2360).
+ *
+ * WHY THIS EXISTS. `backingByCell`'s compact array encoding buys back roughly
+ * half the bytes a 2,000-cell worst case costs (see backingBucketsToArray's
+ * header), but does not GUARANTEE the doc fits: the five slots most likely to
+ * need a resume at all (9/10/12/13/14, the largest 2024-25 units) are also
+ * the ones most likely to have the most distinct cells, and a FATAL on their
+ * very first backing checkpoint would re-lose the slot exactly the way an
+ * unforwarded `sources` did -- just one layer further down the same defect.
+ * A cursor is resume state, never the source of truth for the ARTIFACT's own
+ * per-cell table (census-slot-N.json always carries every cell this pass
+ * saw, unfolded) -- so degrading the CURSOR's cell resolution costs nothing
+ * a resume actually depends on: `mergeCensusAggregate` only needs the
+ * TOTALS to come back correct, and folding preserves every one of them
+ * exactly (a folded cell's seven counts are added into "other" bucket by
+ * bucket, never dropped).
+ *
+ * NEVER a FATAL for backing data specifically -- this function is called
+ * BEFORE the byte-size guard below ever sees `aggregate.backingByCell`, so a
+ * slot with too many distinct cells degrades instead of dying. The FATAL
+ * guard remains the backstop for every OTHER field (a truly runaway
+ * `samples`/`reasons`/etc. -- see its own header), which this never touches.
+ *
+ * ALGORITHM. Cells are ranked by their own total (ascending) and folded into
+ * "other" smallest-first -- the smallest cells are the least informative to
+ * lose resolution on AND the ones a per-slot cell count is least likely to
+ * miss once merged. Stops the moment the WHOLE doc's re-measured byte size
+ * is back under `CENSUS_CURSOR_MAX_BYTES`, so a doc that is already under
+ * budget folds nothing at all (checked once before the loop even starts).
+ * Mutates nothing on `aggregate` in place -- returns a NEW backingByCell
+ * object plus the fold count, so the caller decides what to do with either.
+ */
+function foldBackingByCellToFit(doc, maxBytes) {
+  const byCell = doc?.aggregate?.backingByCell;
+  if (!byCell || typeof byCell !== "object") return { doc, folded: 0 };
+  const docBytes = Buffer.byteLength(JSON.stringify(doc), "utf8");
+  if (docBytes <= maxBytes) return { doc, folded: 0 };
+
+  // NORMALIZE FIRST, THEN RE-ARRAY. `byCell`'s values are ALREADY the
+  // compact `[n0..n6]` shape by the time this runs (censusAggregateToCompact
+  // JSON writes it that way) -- `backingBucketsToArray` expects a NAMED
+  // object and would silently read every position as 0 off an array
+  // (`arr?.["backedStrict"]` is undefined on a plain array), zeroing every
+  // cell's real counts. Routing through `backingBucketsFromArray` first
+  // accepts EITHER shape (array or named object -- see its own header) and
+  // produces the named object `backingBucketsToArray` actually expects.
+  const entries = Object.entries(byCell).map(([key, v]) => ({
+    key, arr: backingBucketsToArray(backingBucketsFromArray(v)),
+    // Each entry's own serialized byte cost as a `"key":[n,n,n,n,n,n,n],`
+    // object member -- computed ONCE, up front, so the fold loop below is
+    // pure arithmetic (subtract this entry's bytes, no re-stringify) rather
+    // than re-measuring the WHOLE doc on every single fold. A 6,000-cell
+    // slot folding hundreds of entries at O(doc size) per fold (the
+    // original approach) measured over 11 SECONDS; this is milliseconds.
+  }));
+  for (const e of entries) e.bytes = Buffer.byteLength(JSON.stringify(e.key) + ":" + JSON.stringify(e.arr) + ",", "utf8");
+  // Rank by the cell's own total ascending -- "other" (if already present)
+  // is a fold TARGET, never a candidate to fold AWAY from itself.
+  const totalOf7 = (arr) => arr.reduce((a, n) => a + n, 0);
+  entries.sort((a, b) => totalOf7(a.arr) - totalOf7(b.arr));
+
+  const otherArr = (byCell.other ? backingBucketsToArray(backingBucketsFromArray(byCell.other)) : BACKING_BUCKET_KEYS.map(() => 0));
+  const hadOther = Boolean(byCell.other);
+  // The BYTE BUDGET TO CLEAR: how far over maxBytes this doc is, PLUS the
+  // margin an "other" key that does not exist yet would newly cost (its own
+  // `"other":[...]"` member -- folding the FIRST cell when there was no
+  // prior "other" key adds bytes it did not have before, so the target
+  // must account for that up front, not discover it fold-by-fold).
+  const otherKeyOverheadIfNew = hadOther ? 0 : Buffer.byteLength('"other":[0,0,0,0,0,0,0],', "utf8");
+  let bytesOver = (docBytes - maxBytes) + otherKeyOverheadIfNew;
+  const kept = new Map(entries.filter((e) => e.key !== "other").map((e) => [e.key, e.arr]));
+  let folded = 0;
+  // Fold smallest-first. Each fold frees exactly that entry's own byte cost
+  // (its key+array leave `kept` entirely; "other"'s own array grows by at
+  // most a few digits, which the small SAFETY_MARGIN below absorbs rather
+  // than measuring precisely) -- so `bytesOver` converges to <= 0 in AT MOST
+  // one pass over `entries`, never a re-scan.
+  const SAFETY_MARGIN_BYTES = 64; // absorbs "other"'s own array growing digit-width as it accumulates
+  for (const e of entries) {
+    if (e.key === "other") continue;
+    if (bytesOver + SAFETY_MARGIN_BYTES <= 0) break;
+    for (let i = 0; i < BACKING_BUCKET_KEYS.length; i++) otherArr[i] += e.arr[i];
+    kept.delete(e.key);
+    bytesOver -= e.bytes;
+    folded++;
+  }
+  const nextByCell = { ...Object.fromEntries(kept) };
+  if (folded > 0 || hadOther) nextByCell.other = otherArr;
+  const nextDoc = { ...doc, aggregate: { ...doc.aggregate, backingByCell: nextByCell } };
+  // BELT AND SUSPENDERS: the incremental arithmetic above is an ESTIMATE
+  // (SAFETY_MARGIN_BYTES covers the expected slack) -- one real measurement
+  // of the actual candidate doc after folding, and recurse (folding further)
+  // if it still somehow doesn't fit, rather than trusting the estimate
+  // blindly on a doc this consequential. The recursive call's OWN fold
+  // count is added to this call's, so a caller sees the TOTAL cells folded
+  // across every round, never just the last one.
+  if (folded > 0 && Buffer.byteLength(JSON.stringify(nextDoc), "utf8") > maxBytes) {
+    const again = foldBackingByCellToFit(nextDoc, maxBytes);
+    return { doc: again.doc, folded: folded + again.folded };
+  }
+  return { doc: nextDoc, folded };
+}
+
 async function saveCensusCursor(control, slot, { unitsDone, aggregate, classified, partialUnit = null }) {
   if (!control) return false;
-  const doc = {
+  let doc = {
     id: censusCursorId(slot), kind: CENSUS_CURSOR_KIND, slot, slots: SLOTS,
     signature: censusCursorSignature(),
     unitsDone, classified, aggregate,
@@ -5163,6 +5384,20 @@ async function saveCensusCursor(control, slot, { unitsDone, aggregate, classifie
     partialUnit: partialUnit ? { key: String(partialUnit.key), continuationToken: partialUnit.continuationToken } : null,
     updatedAt: new Date().toISOString(),
   };
+  // DEGRADE, NEVER DIE, FOR BACKING DATA (see foldBackingByCellToFit's own
+  // header). Runs BEFORE the general byte-size guard below, so a slot whose
+  // backingByCell alone would blow the budget never reaches the FATAL path
+  // at all -- it folds its smallest cells into "other" (totals preserved
+  // exactly) and checkpoints with reduced cell resolution instead of losing
+  // the checkpoint outright.
+  if (doc.aggregate && doc.aggregate.backingByCell) {
+    const { doc: folded, folded: foldedCount } = foldBackingByCellToFit(doc, CENSUS_CURSOR_MAX_BYTES);
+    if (foldedCount > 0) {
+      console.warn(`  !! census cursor for slot ${slot}: folded ${foldedCount} of its smallest backingByCell cell(s) into "other" to fit the ${CENSUS_CURSOR_MAX_BYTES}-byte cursor guard. Totals are exact (every folded cell's counts moved into "other" bucket by bucket, none dropped) -- only per-cell RESOLUTION in the CURSOR is reduced; the ARTIFACT's own byCell table is unaffected.`);
+      doc = folded;
+      censusCursorBackingCellsFoldedTotal += foldedCount;
+    }
+  }
   const docBytes = Buffer.byteLength(JSON.stringify(doc), "utf8");
   if (docBytes > CENSUS_CURSOR_MAX_BYTES) {
     const { key, bytes } = largestCursorField(doc);
@@ -5438,6 +5673,10 @@ module.exports = {
   // tests drive `pool`.
   censusCursorId, censusCursorSignature, signaturesMatch,
   loadCensusCursor, saveCensusCursor, clearCensusCursor, CENSUS_CURSOR_KIND,
+  // 2026-09-20 (cursor-size follow-up, reviewer suggestion on #2360): the
+  // signature-mismatch field-namer, exported so its diff rule is pinned on
+  // the SHIPPED function.
+  describeSignatureMismatch,
   // 2026-09-13 (#2073 cursor-size follow-up, run 34782080801 slot 12): the
   // hard size guard and its threshold/field-naming helper, exported so the
   // guard is pinned on the SHIPPED constant and function rather than a
@@ -5451,6 +5690,11 @@ module.exports = {
   // completeness assertion's exit code, exported so a test pins the SHIPPED
   // constant rather than a hardcoded 8 that could silently drift from it.
   INCOMPLETE_BACKING_EXIT_CODE,
+  // 2026-09-20 (cursor-size follow-up, reviewer finding on #2360): the
+  // compact bucket codec and the fold-to-fit degrade, exported so both are
+  // pinned on the SHIPPED functions rather than a test's re-implementation.
+  BACKING_BUCKET_KEYS, backingBucketsToArray, backingBucketsFromArray,
+  foldBackingByCellToFit, getCensusCursorBackingCellsFoldedTotal,
 };
 
 if (require.main === module) // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane

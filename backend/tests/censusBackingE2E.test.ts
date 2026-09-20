@@ -313,15 +313,16 @@ describe("rematch-sold-comps.cjs MODE=census SOURCES=backing -- a resumed pass m
 
     // The checkpoint itself carries the backing maps -- the actual fix,
     // proven directly against the persisted cursor doc rather than inferred
-    // only from pass 2's behaviour below.
+    // only from pass 2's behaviour below. THE CURSOR's copy is the COMPACT
+    // `[n0..n6]` array shape (2026-09-20 cursor-size follow-up) -- HALF the
+    // bytes of the named-object shape the ARTIFACT above keeps -- in fixed
+    // BACKING_BUCKET_KEYS order: backedStrict, rowExistsNonStrict, noRow,
+    // unparseable, parked, notPricedFlagged, unknown.
     const controlState = JSON.parse(readFileSync(controlStateFile, "utf8"));
     const cursor = controlState["census-cursor::slot-0"];
     expect(cursor.aggregate.backingBySport).toBeTruthy();
-    expect(cursor.aggregate.backingBySport.pokemon).toEqual({
-      backedStrict: 1, rowExistsNonStrict: 0, noRow: 2, unparseable: 0,
-      parked: 0, notPricedFlagged: 0, unknown: 0,
-    });
-    expect(cursor.aggregate.backingByCell["pokemon|2025|some-set"]).toBeTruthy();
+    expect(cursor.aggregate.backingBySport.pokemon).toEqual([1, 0, 2, 0, 0, 0, 0]);
+    expect(cursor.aggregate.backingByCell["pokemon|2025|some-set"]).toEqual([1, 0, 2, 0, 0, 0, 0]);
     // The signature carries the new sourcesMode field, "backing".
     expect(cursor.signature.sourcesMode).toBe("backing");
   }, RESUME_TIMEOUT_MS + 10_000);
