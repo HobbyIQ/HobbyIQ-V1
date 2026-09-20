@@ -364,6 +364,17 @@ on:
 
           - rekey-user-comps
           - collapse-ch-dual-ids
+          # collapse-ch-synthetic-twins (2026-09-20). The #2357 follow-up
+          # sweep: before that fix, backfill-sold-comps-from-ch.cjs minted
+          # every CH daily sale under a SYNTHETIC id instead of CardHedge's
+          # own vendor sale id, so ~35% of sampled September rows carry a
+          # same-partition twin under the canonical shape another writer
+          # already produced. REPORT-FIRST: collapses only a PROVEN pair
+          # (matching chCardId/soldAt-instant/price embedded in the long id
+          # against the short row) and refuses (never guesses) an identity
+          # disagreement or a same-day-price ambiguity. See its own module
+          # header for the full proof predicate.
+          - collapse-ch-synthetic-twins
 
           - audit-all-holdings
           - rename-setkey
@@ -2078,7 +2089,7 @@ jobs:
           # as CENSUS_OUT/REPORT_OUT above so no path can leak sideways into
           # a script that would honour it. Uploaded by the SAME step that
           # already uploads this lane's backfill.log, below.
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || '' }}
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -3160,6 +3171,40 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (collapsed=${N:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=collapse-ch-dual-ids -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
+
+      # collapse-ch-synthetic-twins's own audit trail -- every proven pair,
+      # ambiguous-multi-sale-day, twins-disagree and long-only row this run
+      # saw, never a truncated sample. Same PLAN_OUT mechanism (env set
+      # above, guarded on script) resolve-split-identity-parks.cjs uses: no
+      # new upload-artifact step, no new workflow_dispatch input.
+      - name: Upload the collapse-ch-synthetic-twins log
+        if: ${{ always() && inputs.script == 'collapse-ch-synthetic-twins' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: collapse-ch-synthetic-twins-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/collapse-ch-synthetic-twins-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the CardHedge synthetic-twin collapse until the slot is clean
+        if: ${{ !cancelled() && inputs.script == 'collapse-ch-synthetic-twins' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: collapse-ch-synthetic-twins
+          preamble: |
+            N=$(grep -aoE "^  (COLLAPSED|WOULD COLLAPSE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "collapsed=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (collapsed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (collapsed=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=collapse-ch-synthetic-twins -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
 
       - name: Self-relaunch the ruled setKey rename until the slot is clean
         if: ${{ !cancelled() && inputs.script == 'rename-setkey' }}
