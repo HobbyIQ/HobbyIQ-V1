@@ -236,20 +236,57 @@ function sameInstant(a, b) {
  *  overwrites a value the keeper already has). `hobbyiqCardId` is included
  *  here for the case the short row has NONE at all; a short row that HAS one
  *  and disagrees with the long row's is handled upstream by the
- *  `twins-disagree` refusal and never reaches this fold. */
+ *  `twins-disagree` refusal and never reaches this fold.
+ *
+ * REVIEW (coordinator, HIGH, on #2361). The five `identityUnverified*` park
+ * stamps are DELIBERATELY NOT carried: `isProtected()` below refuses a pair
+ * whenever EITHER side is parked (a NEW, named `parked-side` outcome), so a
+ * proven collapse never reaches this fold with a parked long row -- folding
+ * the stamps here would have meant "carry a park onto a row that was
+ * healthy a moment ago", newly hiding a priceable sale from every reader
+ * that excludes parks (most of them). A synthetic-id cleanup must never move
+ * a park; the park stays exactly where it is, on the row this lane leaves
+ * untouched.
+ *
+ * `flaggedWrong`/`excludedFromFmv`/`verifiedByUser` are ALSO removed:
+ * `isProtected()` already refuses the pair whenever either side carries any
+ * of the three, so by the time a pair reaches this fold NEITHER side has
+ * one -- carrying a field that is always false/absent on both inputs is
+ * dead code, and dead code in a fold list reads as a claim ("this can carry
+ * a flag") that is not true of any row this function is ever called on. */
 const CARRY_FIELDS = [
   "hobbyiqCardId", "rekeyedAt", "rekeyedFrom", "splitResolved",
-  "identityUnverified", "identityUnverifiedAt", "identityUnverifiedBy", "identityUnverifiedReason", "identityUnverifiedDetail",
-  "flaggedWrong", "excludedFromFmv", "verifiedByUser",
   "gradeCompany", "gradeValue", "gradeQualifier",
 ];
 const REASON = "CF-CH-DAILY-DOUBLE-WRITE: the same CH sale under a synthetic id and CardHedge's own vendor sale id (#2357 follow-up sweep)";
 
 /** Never touched, in EITHER direction -- a human claim (or a park a human
  *  triage step is mid-review on) outranks a synthetic-id cleanup. Mirrors the
- *  same three flags every other D19-family lane refuses to override. */
+ *  same three flags every other D19-family lane refuses to override.
+ *
+ * `identityUnverified` is DELIBERATELY EXCLUDED from this predicate (REVIEW,
+ * coordinator, HIGH, on #2361) -- a parked row is reported under its OWN
+ * named class, `parked-side` (see `isParkedSide` below), never folded into
+ * the same `protected` bucket a human attestation uses. Both are "never
+ * touched", but an operator reading the banner needs to tell "a human said
+ * so" apart from "a repair lane's own park, possibly stale" -- they are
+ * different populations with different next steps. */
 function isProtected(doc) {
   return doc?.verifiedByUser === true || doc?.flaggedWrong === true || doc?.excludedFromFmv === true || doc?.pinned === true;
+}
+
+/** A row parked by ANY repair lane's own split-identity/malformed-key guard.
+ *  REVIEW (coordinator, HIGH, on #2361): CARRY_FIELDS no longer folds the
+ *  park stamps (see its own comment), so this predicate is what actually
+ *  keeps a parked long row from collapsing onto a healthy short row (which
+ *  would otherwise delete the ONLY parked copy of the sale, silently
+ *  resolving the park by deletion) and keeps a parked SHORT row from being
+ *  folded onto with a long row's healthy state while the park stamps stay
+ *  put (which would leave a still-parked row carrying fields a human/repair
+ *  lane has not yet reviewed against). Either direction is refused, named,
+ *  and counted separately from `protected`. */
+function isParkedSide(doc) {
+  return doc?.identityUnverified === true;
 }
 
 /** grade identity as a comparable key; RAW (no company, no value) is a grade
@@ -390,11 +427,36 @@ async function main() {
   console.log(`  ${f(cards.length)} CH cards carry a long-id-shaped row (regex pre-filter; parsed precisely per row below)`);
 
   const stats = {
-    partitions: 0, otherShard: 0, rowsRead: 0, longRows: 0, longOnly: 0,
-    provenPairs: 0, ambiguousMultiSaleDay: 0, twinsDisagree: 0, protected: 0, notAMatch: 0,
+    partitions: 0, otherShard: 0, rowsRead: 0, longRows: 0,
+    // REVIEW (coordinator, on #2361): long-only split into its two named
+    // reasons -- "no short row at all in this partition" is a different
+    // population from "short rows exist, but none share this long row's
+    // price", and the banner should not fold them into one count.
+    longOnlyNoShortInPartition: 0, longOnlyNoPriceMatch: 0,
+    provenPairs: 0, ambiguousMultiSaleDay: 0, twinsDisagree: 0, protected: 0,
+    // REVIEW (coordinator, HIGH, on #2361): a row parked by ANY repair
+    // lane's own guard (identityUnverified === true, either side) is its
+    // own named class, disjoint from `protected` (a human attestation) --
+    // see isParkedSide's own comment for why they must not be folded
+    // together.
+    parkedSide: 0,
     collapsed: 0, failed: 0, duplicatesLeft: 0, staleSincePlan: 0, alreadyGone: 0, notReached: 0,
   };
   const disagreeBy = new Map();
+  // REVIEW (coordinator, on #2361): of the twins-disagree pairs, how many
+  // carry evidence of a REPAIR IN THE LAST 7 DAYS on either side
+  // (rekeyedAt / splitResolved.at) -- the repaired population, called out
+  // separately because a disagreement against a FRESH repair is more likely
+  // to be the repair correcting a stale id than an ambiguous case, and an
+  // operator triaging the twins-disagree list benefits from seeing that
+  // split without re-deriving it from the plan file by hand.
+  const RECENT_REPAIR_MS = 7 * 24 * 60 * 60 * 1000;
+  let twinsDisagreeRecentlyRepaired = 0;
+  const recentlyRepaired = (doc, nowMs) => {
+    const at = doc?.rekeyedAt ?? doc?.splitResolved?.at;
+    const ms = at ? Date.parse(String(at)) : NaN;
+    return Number.isFinite(ms) && nowMs - ms <= RECENT_REPAIR_MS && nowMs - ms >= 0;
+  };
   const bump = (m, k, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
   const examples = [];
   let stopReason = null, i = 0;
@@ -420,8 +482,8 @@ async function main() {
       // Every long row here is long-only WITHIN this partition -- a resident
       // short twin may still live in ANOTHER partition (relocated); out of
       // scope for this same-partition lane, counted separately.
-      stats.longOnly += longRows.length;
-      for (const long of longRows) emitPlanRow("long-only", "no-short-twin-in-partition", long, null);
+      stats.longOnlyNoShortInPartition += longRows.length;
+      for (const long of longRows) emitPlanRow("long-only-no-short-in-partition", "no-short-twin-in-partition", long, null);
       continue;
     }
 
@@ -452,15 +514,20 @@ async function main() {
 
     for (const long of longRows) {
       if (isProtected(long)) { stats.protected++; emitPlanRow("protected", "long-row-pinned-or-flagged", long, null); continue; }
+      // REVIEW (coordinator, HIGH, on #2361): a parked long row is its own
+      // named class, checked BEFORE any candidate matching -- a park never
+      // reaches decideSyntheticTwin, so it can never be proven into a
+      // collapse that would delete the only parked copy of the sale.
+      if (isParkedSide(long)) { stats.parkedSide++; emitPlanRow("parked-side", "long-row-parked", long, null); continue; }
 
       const parsedId = parseLongSyntheticId(long.id);
       const candidateShorts = shortRows.filter((s) => cents(s.price) === Math.round(Number(parsedId.priceCents) || NaN));
-      if (!candidateShorts.length) { stats.longOnly++; emitPlanRow("long-only", "no-price-matching-short", long, null); continue; }
+      if (!candidateShorts.length) { stats.longOnlyNoPriceMatch++; emitPlanRow("long-only-no-price-match", "no-price-matching-short", long, null); continue; }
 
       let outcome = { verdict: "not-a-match" };
       let matchedShort = null;
       for (const short of candidateShorts) {
-        if (isProtected(short)) continue;
+        if (isProtected(short) || isParkedSide(short)) continue;
         const d = decideSyntheticTwin(long, short, { dayCounts, longDayCounts });
         if (d.verdict === "collapse" || d.verdict === "twins-disagree" || d.verdict === "ambiguous-multi-sale-day") { outcome = d; matchedShort = short; break; }
       }
@@ -469,8 +536,18 @@ async function main() {
         emitPlanRow("protected", "short-twin-pinned-or-flagged", long, candidateShorts.find((s) => isProtected(s)));
         continue;
       }
+      // REVIEW (coordinator, HIGH, on #2361): a parked SHORT row is ALSO
+      // named separately from `protected` -- checked after the protected
+      // short check (a human attestation still outranks a park's own
+      // ambiguity) but before falling through to long-only-no-price-match,
+      // so a parked short twin is never miscounted as "no twin at all".
+      if (outcome.verdict === "not-a-match" && candidateShorts.some((s) => isParkedSide(s))) {
+        stats.parkedSide++;
+        emitPlanRow("parked-side", "short-twin-parked", long, candidateShorts.find((s) => isParkedSide(s)));
+        continue;
+      }
 
-      if (outcome.verdict === "not-a-match") { stats.longOnly++; emitPlanRow("long-only", "no-proven-short-twin", long, null); continue; }
+      if (outcome.verdict === "not-a-match") { stats.longOnlyNoPriceMatch++; emitPlanRow("long-only-no-price-match", "no-proven-short-twin", long, null); continue; }
       if (outcome.verdict === "ambiguous-multi-sale-day") {
         stats.ambiguousMultiSaleDay++;
         emitPlanRow("ambiguous-multi-sale-day", "multiple-sales-same-day-price", long, matchedShort);
@@ -480,8 +557,10 @@ async function main() {
       if (outcome.verdict === "twins-disagree") {
         stats.twinsDisagree++;
         bump(disagreeBy, outcome.axis);
-        emitPlanRow("twins-disagree", outcome.axis, long, matchedShort, { longValue: outcome.longValue, shortValue: outcome.shortValue });
-        if (examples.length < 30) examples.push(`  TWINS-DISAGREE ${outcome.axis}  ${cardId}  long=${JSON.stringify(outcome.longValue)} short=${JSON.stringify(outcome.shortValue)}`);
+        const repaired = recentlyRepaired(long, started) || recentlyRepaired(matchedShort, started);
+        if (repaired) twinsDisagreeRecentlyRepaired++;
+        emitPlanRow("twins-disagree", outcome.axis, long, matchedShort, { longValue: outcome.longValue, shortValue: outcome.shortValue, recentlyRepaired: repaired });
+        if (examples.length < 30) examples.push(`  TWINS-DISAGREE ${outcome.axis}  ${cardId}  long=${JSON.stringify(outcome.longValue)} short=${JSON.stringify(outcome.shortValue)}${repaired ? "  (recently repaired)" : ""}`);
         continue;
       }
 
@@ -498,14 +577,19 @@ async function main() {
     }
   }
 
+  const longOnly = stats.longOnlyNoShortInPartition + stats.longOnlyNoPriceMatch;
   console.log(`\n${APPLY ? "APPLIED" : "REPORT ONLY -- nothing written"}`);
   console.log(`  CH partitions scanned         ${f(stats.partitions)}   (${f(stats.otherShard)} belonging to other slots; ${f(stats.rowsRead)} rows read)`);
   console.log(`  long (synthetic-id) rows seen ${f(stats.longRows)}`);
   console.log(`  PROVEN PAIRS (would delete)   ${f(stats.provenPairs)}`);
   console.log(`  ambiguous-multi-sale-day      ${f(stats.ambiguousMultiSaleDay)}   <- several real sales, same day+price; left alone`);
   console.log(`  twins-disagree                ${f(stats.twinsDisagree)}   <- ${[...disagreeBy].map(([k, n]) => `${k} ${n}`).join(", ") || "-"}`);
+  console.log(`    recently repaired (<=7d)    ${f(twinsDisagreeRecentlyRepaired)}   <- either side carries rekeyedAt/splitResolved.at within the last 7 days`);
   console.log(`  protected                     ${f(stats.protected)}   <- verifiedByUser/flaggedWrong/excludedFromFmv/pinned; never touched`);
-  console.log(`  long-only                     ${f(stats.longOnly)}   <- no short twin resident in this partition; out of scope here`);
+  console.log(`  parked-side                   ${f(stats.parkedSide)}   <- identityUnverified on either side; never touched, never folded (see isParkedSide)`);
+  console.log(`  long-only                     ${f(longOnly)}   <- out of scope here; split below`);
+  console.log(`    no short row in partition   ${f(stats.longOnlyNoShortInPartition)}   <- a resident short twin may still live in ANOTHER partition (relocated)`);
+  console.log(`    no price-matching short     ${f(stats.longOnlyNoPriceMatch)}   <- short rows exist in this partition, none at this long row's price`);
   console.log(`  ${APPLY ? "COLLAPSED" : "WOULD COLLAPSE"}                     ${f(stats.collapsed)}`);
   console.log(`  failed                        ${f(stats.failed)}`);
   console.log(`    duplicates left             ${f(stats.duplicatesLeft)}   <- kept row written, the long row's delete failed: the sale is in the pool twice, never lost`);
@@ -513,12 +597,12 @@ async function main() {
   console.log(`  not reached                   ${f(stats.notReached)}`);
   console.log(`  projected rows freed if applied: ${f(stats.provenPairs)}`);
   if (examples.length) { console.log("  examples:"); for (const e of examples) console.log(e); }
-  if (APPLY) reportWrites({ job: "collapse-ch-synthetic-twins", intended: stats.provenPairs, written: stats.collapsed, skipped: stats.ambiguousMultiSaleDay + stats.twinsDisagree + stats.protected + stats.longOnly, failed: stats.failed });
+  if (APPLY) reportWrites({ job: "collapse-ch-synthetic-twins", intended: stats.provenPairs, written: stats.collapsed, skipped: stats.ambiguousMultiSaleDay + stats.twinsDisagree + stats.protected + stats.parkedSide + longOnly, failed: stats.failed });
   if (stopReason) console.log(`\n${stopReason}`);
   if (planFd) { try { fs.closeSync(planFd); } catch { /* best effort */ } }
 }
 
-module.exports = { parseLongSyntheticId, isCanonicalChDailyId, parseInstant, sameInstant, dayOf, decideSyntheticTwin, isProtected, gradeKeyOf, CARRY_FIELDS };
+module.exports = { parseLongSyntheticId, isCanonicalChDailyId, parseInstant, sameInstant, dayOf, decideSyntheticTwin, isProtected, isParkedSide, gradeKeyOf, CARRY_FIELDS };
 
 if (require.main === module) // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809).
 main()

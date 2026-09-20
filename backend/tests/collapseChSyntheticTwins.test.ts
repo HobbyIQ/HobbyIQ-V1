@@ -186,6 +186,52 @@ describe("isProtected: never touched, either direction", () => {
     expect(ch.isProtected({ pinned: true })).toBe(true);
     expect(ch.isProtected({})).toBe(false);
   });
+  it("identityUnverified is NOT protected -- it is its own named class (isParkedSide)", () => {
+    // Coordinator review of #2361 (HIGH): a park must be reported under its
+    // OWN class, disjoint from a human attestation, so isProtected must NOT
+    // absorb it.
+    expect(ch.isProtected({ identityUnverified: true })).toBe(false);
+  });
+});
+
+describe("isParkedSide: a repair-lane park, named and never folded (coordinator review of #2361, HIGH)", () => {
+  it("identityUnverified === true is parked; absent or false is not", () => {
+    expect(ch.isParkedSide({ identityUnverified: true })).toBe(true);
+    expect(ch.isParkedSide({ identityUnverified: false })).toBe(false);
+    expect(ch.isParkedSide({})).toBe(false);
+  });
+
+  it("CARRY_FIELDS no longer carries the five park stamps or the three protected flags", () => {
+    // The fix: a proven pair's fold must never move a park from the long
+    // row onto a healthy short row (which would newly hide a priceable
+    // sale from every FMV reader that excludes parks), and must never carry
+    // flaggedWrong/excludedFromFmv/verifiedByUser -- fields isProtected()
+    // already guarantees are false/absent on BOTH sides of any pair that
+    // reaches the fold, so carrying them would be dead code.
+    for (const stamp of ["identityUnverified", "identityUnverifiedAt", "identityUnverifiedBy", "identityUnverifiedReason", "identityUnverifiedDetail"]) {
+      expect(ch.CARRY_FIELDS).not.toContain(stamp);
+    }
+    for (const flag of ["flaggedWrong", "excludedFromFmv", "verifiedByUser"]) {
+      expect(ch.CARRY_FIELDS).not.toContain(flag);
+    }
+    // What IS still carried: identity + repair-ledger + grade fields.
+    expect(ch.CARRY_FIELDS).toEqual(expect.arrayContaining(["hobbyiqCardId", "rekeyedAt", "rekeyedFrom", "splitResolved", "gradeCompany", "gradeValue", "gradeQualifier"]));
+  });
+
+  it("a proven-shape pair with a PARKED long row would (if collapsed) carry no park stamp onto the short row", () => {
+    // decideSyntheticTwin itself has no park gate (the caller's own
+    // isParkedSide check is what keeps a parked row out of this function in
+    // the shipped main() loop -- pinned below by source grep). This test
+    // proves the OTHER half of the fix directly: even if a parked long row
+    // reached the fold, CARRY_FIELDS can no longer move identityUnverified
+    // onto the kept short row.
+    const long = longRow({ identityUnverified: true, identityUnverifiedReason: "split-identity" });
+    const short = shortRow();
+    const d = ch.decideSyntheticTwin(long, short);
+    expect(d.verdict).toBe("collapse");
+    expect(d.keep.identityUnverified).toBeUndefined();
+    expect(d.keep.identityUnverifiedReason).toBeUndefined();
+  });
 });
 
 // ── the one write helper, fake Cosmos with etag/IfMatch enforcement ─────────
@@ -341,6 +387,39 @@ describe("collapse-ch-synthetic-twins carries the fleet discipline", () => {
   it("never touches a protected row -- both isProtected call sites exist in the shipped file", () => {
     expect(src).toMatch(/isProtected\(long\)/);
     expect(src).toMatch(/isProtected\(s\)|isProtected\(short\)/);
+  });
+
+  it("never touches a parked row -- both isParkedSide call sites exist in the shipped file, in BOTH directions (coordinator review of #2361, HIGH)", () => {
+    // The long-row gate: checked before any candidate matching, so a parked
+    // long row can never be handed to decideSyntheticTwin at all.
+    expect(src).toMatch(/isParkedSide\(long\)/);
+    // The short-row gate: candidateShorts filters isParkedSide(short) out of
+    // the matching loop, AND the not-a-match fallthrough separately counts
+    // "the only candidate short was parked" as its own outcome rather than
+    // silently falling into long-only.
+    expect(src).toMatch(/isParkedSide\(s\)|isParkedSide\(short\)/);
+    expect(src).toMatch(/some\(\(s\) => isParkedSide\(s\)\)/);
+    // The named outcome itself, and its own stat, must exist -- not folded
+    // into `protected`.
+    expect(src).toMatch(/"parked-side"/);
+    expect(src).toMatch(/stats\.parkedSide/);
+  });
+
+  it("CARRY_FIELDS (source, not just the runtime value) carries no park stamp or protected flag", () => {
+    const carryFieldsBlock = /const CARRY_FIELDS = \[([\s\S]*?)\];/.exec(src);
+    expect(carryFieldsBlock, "CARRY_FIELDS declaration must exist").toBeTruthy();
+    const body = carryFieldsBlock![1];
+    for (const stamp of ["identityUnverified", "flaggedWrong", "excludedFromFmv", "verifiedByUser"]) {
+      expect(body, `CARRY_FIELDS must not list ${stamp}`).not.toMatch(new RegExp(`"${stamp}[a-zA-Z]*"`));
+    }
+  });
+
+  it("the banner splits long-only into its two named reasons and reports parked-side and the recently-repaired count", () => {
+    expect(src).toMatch(/no short row in partition/);
+    expect(src).toMatch(/no price-matching short/);
+    expect(src).toMatch(/parked-side\s+\$\{f\(stats\.parkedSide\)\}/);
+    expect(src).toMatch(/recently repaired/);
+    expect(src).toMatch(/twinsDisagreeRecentlyRepaired/);
   });
 
   it("the runner's whitelist and a marker-keyed relaunch exist for this script", () => {
