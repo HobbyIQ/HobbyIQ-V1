@@ -164,21 +164,26 @@ jobs:
             local max_attempts=5
             local delay=15
             local value=""
+            # CF-MKTEMP-NOT-A-FIXED-PATH (2026-09-20, review follow-up). A
+            # fixed /tmp path collides if this function is ever called
+            # concurrently (it isn't today, but a fixed name is a landmine
+            # for whoever adds a second caller). mktemp per invocation.
+            local err_log
+            err_log=$(mktemp)
             while [ "$attempt" -le "$max_attempts" ]; do
               if value=$(az webapp config appsettings list \
                 --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
-                --query "[?name=='${setting_name}'].value" -o tsv 2>/tmp/az-fetch-err.log | tr -d '\r\n'); then
+                --query "[?name=='${setting_name}'].value" -o tsv 2>"$err_log" | tr -d '\r\n'); then
                 if [ -n "$value" ]; then
                   echo "::add-mask::$value"
                   printf '%s' "$value"
-                  rm -f /tmp/az-fetch-err.log
+                  rm -f "$err_log"
                   return 0
                 fi
                 echo "::warning::${setting_name} fetch returned empty (attempt ${attempt}/${max_attempts})"
               else
-                echo "::warning::${setting_name} fetch failed (attempt ${attempt}/${max_attempts}): $(tail -c 500 /tmp/az-fetch-err.log 2>/dev/null | tr -d '\n')"
+                echo "::warning::${setting_name} fetch failed (attempt ${attempt}/${max_attempts}): $(tail -c 500 "$err_log" 2>/dev/null | tr -d '\n')"
               fi
-              rm -f /tmp/az-fetch-err.log
               if [ "$attempt" -lt "$max_attempts" ]; then
                 echo "  retrying ${setting_name} in ${delay}s..."
                 sleep "$delay"
@@ -187,6 +192,7 @@ jobs:
               fi
               attempt=$(( attempt + 1 ))
             done
+            rm -f "$err_log"
             return 1
           }
 
