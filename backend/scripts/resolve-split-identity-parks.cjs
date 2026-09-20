@@ -79,12 +79,43 @@
  *
  * TITLE VETO (never a decider on its own). Once a side wins on checklist
  * evidence, the title must not CONTRADICT it: sportEvidence(title) naming a
- * third sport (neither H's nor C's), or inferSetKeyFromTitle/
- * extractCardNumberFromTitle+sameCardNumber disagreeing with the winner's
- * own setKey/cardNumber, or playerTheTitleAllows judging the winner's own
- * catalog player "irreconcilable" against the sale's stored playerName --
- * any of these vetoes the resolve to LEAVE `title-contradicts-winner`. A
- * title that is merely silent (no evidence either way) never vetoes.
+ * third sport (neither H's nor C's), inferSetKeyFromTitle/
+ * resolveSetKeyForSlug + extractCardNumberFromTitle/sameCardNumber
+ * disagreeing with the winner's own year-resolved setKey/cardNumber, or a
+ * REAL title-side player guess (guessTitlePlayer, the same lazy require +
+ * confidence floor as repoint-sales-to-checklist-numbered.cjs's own
+ * guessPlayerFromTitleLocal) sharing NO name token (cleanPlayerName +
+ * playerIdentityKey, RC/RR/DP/TC/UER/SP/SSP-insensitive) with any player
+ * listed on the winner's own catalog row, when the guess itself has >= 2
+ * tokens -- see titleVetoes' own doc for the three production false
+ * positives ("James" vs "James Wood RC" etc.) this bar exists to clear. Any
+ * of these vetoes the resolve to LEAVE `title-contradicts-winner`. A title
+ * that is merely silent (no evidence either way) never vetoes.
+ *
+ * PINNED-OR-FLAGGED ROWS (REVIEW #5, LOW, 2026-09-19) are never resolved,
+ * regardless of catalog evidence: `verifiedByUser === true`, `flaggedWrong
+ * === true`, `excludedFromFmv === true`, or `source` in
+ * USER_SEED_SOURCES's literal (soldCompsStore.service.ts's own module-
+ * private const, not exported -- copied here by inspection, kept in sync
+ * the same way every other script that cannot import a private const
+ * does). A human claim, or the one path a sale is allowed to mint a card,
+ * outranks a catalog point-read. Leaves the row parked, named
+ * `pinned-or-flagged`.
+ *
+ * OTHER READERS OF sold_comps (REVIEW #6, 2026-09-19). `SoldCompDoc`
+ * (soldCompsStore.service.ts) carries exactly THREE identity fields --
+ * `sport`, `cardId`, `hobbyiqCardId` -- and no `league`/`category`/
+ * `vertical`/`sportKey` or any other sport-derived denormalized field.
+ * `exactPoolReader.ts` (the pricing pool's own read path) filters sold_comps
+ * on `cardId`, `hobbyiqCardId`, `flaggedWrong`, `excludedFromFmv` only --
+ * the last two are moderation flags this lane already leaves alone (review
+ * #5, above), not sport-derived. Every OTHER stored field on the doc
+ * (`playerName`, `setName`, `parallel`, `cardNumber`, `isAuto`, grade
+ * fields, `printRun`, `composite`, `contentHash`, `vendorCardId`,
+ * `derivedIdentityAtIngest`) is independent of `sport` -- populated from
+ * vendor/title parsing at ingest, never RECOMPUTED from the sport field a
+ * resolve changes. This lane's resolve therefore never needs to rewrite
+ * anything beyond the three identity fields it already does.
  *
  * PARK FIELDS CLEARED ON RESOLVE (read from splitIdentityWriteGuard.ts's
  * `GuardedSoldCompDoc` and relocate-pool-rows-by-list.cjs's own PARK/REPOINT
@@ -114,10 +145,27 @@
  * the destination by the SAME `(id, cardId)` compound key sold_comps
  * partitions on -- the row's own `id` (e.g. `tca-ebay::168568127039`) is
  * unchanged by a resolve; only its `cardId` (partition) changes, and a
- * collision is only possible when some OTHER sale's `id` already equals
- * this one's `id` AT the destination partition, which the collision check
- * (a point read at `(doc.id, destCardId)`) catches before the upsert ever
- * runs.
+ * SAME-ID collision is only possible when some OTHER sale's `id` already
+ * equals this one's `id` AT the destination partition, which the collision
+ * check (a point read at `(doc.id, destCardId)`) catches before the upsert
+ * ever runs.
+ *
+ * PHYSICAL-SALE TWINS (REVIEW #1, HIGH, 2026-09-19). A same-id check cannot
+ * see a CardHedge dual-id twin of the SAME physical sale, because a twin
+ * carries a DIFFERENT `id` by construction (project_cardhedge_dual_id_
+ * duplicates_and_graded_in_raw_pool). Before EITHER write shape, this lane
+ * additionally runs `physicalTwinAtPartition` -- one single-partition query
+ * at the destination filtered on price + soldAt(day), then `isSameSale`
+ * (the SAME contentHashOf compare) in memory across the small candidate
+ * set -- and: RELOCATE, a twin found -> COLLAPSE (delete the moving copy,
+ * the twin survives, same as the same-id case); PATCH, a twin ALREADY
+ * resident at this row's OWN (unmoving) partition -> the row is left
+ * PARKED (not patched), named `duplicate-of-resolved-resident`, because
+ * patching this row's identity fields does not collapse a duplicate that
+ * was already double-counted before this lane ran. Serialised WITHIN a run
+ * by a PHYSICAL-SALE KEY (price|soldAt-day|normalised title), not by `id`
+ * -- two twins share no `id` to group on, so without this lock both could
+ * pass the destination scan concurrently and both write.
  *
  * TWO WRITE SHAPES:
  *   PATCH      RESOLVE-TO-C always; RESOLVE-TO-H when the row's cardId
@@ -128,16 +176,28 @@
  *              via relocate-sold-comp.cjs's relocateSoldComp (upsert at H,
  *              verify read-back, delete the old C-partition row).
  *
+ * CONDITIONAL WRITES (REVIEW #3, MEDIUM, 2026-09-19). Both shapes re-read
+ * the source document immediately before writing and pass its FRESH
+ * `_etag` as an `IfMatch` access condition on the mutating call (the
+ * patch itself, or the relocate's source-side delete via
+ * relocate-sold-comp.cjs's existing `ifMatchEtag` drop option) -- closing
+ * the window between this handleRow call's own planning read and its
+ * write, during which a concurrent lane or a prior partial run could have
+ * changed the document. A 412 REFUSES the write outright (never retried --
+ * `retry()` only retries 429/timeout-shaped errors), counted
+ * `stale-since-plan`, disjoint from every other outcome.
+ *
  * BUDGET / SHARD / RELAUNCH / RECONCILE: identical machinery to
  * revert-set-sport-repair.cjs (lib/runner-budget.cjs, lib/runner-shard-
- * scope.cjs) -- candidates grouped by sale `id` and processed serially
- * WITHIN an id (never two concurrent writers on one sale) but multiple ids
- * run concurrently, bounded by CONCURRENCY, same shared-cursor-pool shape
- * the repoint lane uses. Catalog reads are promise-cached per id, per run,
- * and a persistent (non-404) catalog read failure is caught at the
- * narrowest point that knows it is a read failure, isolating exactly ONE
- * row -- never the batch, the page walk, or the run's own RECONCILE/
- * relaunch marker.
+ * scope.cjs) -- candidates grouped by sale `id` for the page-walk's own
+ * batch dispatch (multiple ids run concurrently, bounded by CONCURRENCY,
+ * same shared-cursor-pool shape the repoint lane uses) and ADDITIONALLY
+ * serialised by physical-sale key (see above) at the write site, so a
+ * dual-id twin sharing no `id` with its sibling still cannot race it.
+ * Catalog reads are promise-cached per id, per run, and a persistent
+ * (non-404) catalog read failure is caught at the narrowest point that
+ * knows it is a read failure, isolating exactly ONE row -- never the
+ * batch, the page walk, or the run's own RECONCILE/relaunch marker.
  *
  * Env: COSMOS_CONNECTION_STRING; BACKFILL_APPLY=true / APPLY=true to write;
  *      SCOPE required (`all-splits` or comma `sport:year` cells, matched
@@ -213,6 +273,33 @@ const TITLES_FILTER = csv(process.env.TITLES).map(lower);
  *  the same five fields either mechanism writes, so a row this lane resolves
  *  is indistinguishable, once cleared, from a row that was never parked. */
 const PARK_FIELDS = ["identityUnverified", "identityUnverifiedAt", "identityUnverifiedBy", "identityUnverifiedReason", "identityUnverifiedDetail"];
+
+/**
+ * REVIEW #5 (LOW, 2026-09-19). A human (or the ONE place a sale mints a
+ * card: USER_SEED_SOURCES) already made a stronger claim about this row
+ * than a catalog point-read can second-guess, so this lane leaves it
+ * parked untouched rather than resolving out from under that claim:
+ *
+ *   verifiedByUser === true    a real user attested to this cardId.
+ *   flaggedWrong === true      soft-deleted by wrong-attestation recovery
+ *                              (flagCompAsWrong) -- moderation, not identity.
+ *   excludedFromFmv === true   deliberately excluded from every FMV read.
+ *   source in USER_SEED_SOURCES  soldCompsStore.service.ts's own literal
+ *     ("ebay-user-purchase","ebay-user-sale","manual-user-entry",
+ *     "user-verified") -- NOT exported (module-private `const`), so this is
+ *     a byte-for-byte copy kept in sync by inspection, same as it always
+ *     was for every OTHER script that cannot import a private const.
+ *
+ * Named `pinned-or-flagged` and listed, same discipline as every other
+ * LEAVE bucket -- a human can still act on these by name; this lane simply
+ * never overrides them on catalog evidence alone. */
+const USER_SEED_SOURCES = new Set(["ebay-user-purchase", "ebay-user-sale", "manual-user-entry", "user-verified"]);
+function isPinnedOrFlagged(doc) {
+  return doc.verifiedByUser === true
+    || doc.flaggedWrong === true
+    || doc.excludedFromFmv === true
+    || USER_SEED_SOURCES.has(String(doc.source ?? ""));
+}
 
 const retry = async (fn, tries = 8) => {
   let wait = 500;
@@ -356,6 +443,28 @@ function checklistMatchOf(catalogRow, salePlayerName, catalogAuthorityOf, player
 }
 
 /**
+ * REVIEW #1. A physical sale's own signature -- price (cents, to avoid a
+ * float-equality footgun), soldAt floored to the DAY (matching relocate-
+ * sold-comp.cjs's own `contentHashOf`/`day()` helper), and the title
+ * normalised (trimmed, lowercased, whitespace-collapsed). Two rows sharing
+ * this key are candidates for "the same underlying physical sale, filed
+ * twice under different ids" -- a CardHedge dual-id twin, most often --
+ * and this key is what serialises this run's own writes against each
+ * other (see `withPhysicalSaleLock` in main()) and what the destination
+ * scan (`physicalTwinAtPartition`) narrows its query on. It is NOT itself
+ * the identity test: `isSameSale`/`contentHashOf` (relocate-sold-comp.cjs)
+ * still decide identity from the small candidate set this key's query
+ * returns -- this is a narrowing filter, never a second, looser definition
+ * of "same sale."
+ */
+function physicalSaleKeyOf(d) {
+  const price = Number.isFinite(Number(d?.price)) ? Math.round(Number(d.price) * 100) : "?";
+  const soldDay = String(d?.soldAt ?? "").slice(0, 10);
+  const normTitle = String(d?.title ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  return `${price}|${soldDay}|${normTitle}`;
+}
+
+/**
  * Multi-player catalog rows are one string with every name listed
  * ("Eddie Murray / Cal Ripken Jr.", the D33 shape documented in
  * cardCatalog.service.ts and read identically by
@@ -423,11 +532,16 @@ function judgeSplitIdentityVerdict({ hMatch, cMatch, saleIsTwoSportAthlete }) {
  * to REJECT a checklist-backed winner the title actively contradicts.
  * Reuses the SHIPPED title machinery verbatim (never re-implemented):
  * `sportEvidence` (third-sport check), `inferSetKeyFromTitle` +
- * `extractCardNumberFromTitle`/`sameCardNumber` (setKey/number check), and
- * `playerTheTitleAllows` (player check against the WINNING catalog row's
- * own playerName, never the sale's stored playerName -- the stored field is
+ * `resolveSetKeyForSlug` + `extractCardNumberFromTitle`/`sameCardNumber`
+ * (year-aware setKey/number check), and a REAL title-side player guess
+ * (`guessTitlePlayer`, below -- the same lazy require + confidence floor as
+ * repoint-sales-to-checklist-numbered.cjs's own `guessPlayerFromTitleLocal`)
+ * compared by shared name TOKEN against the WINNING catalog row's own
+ * playerName (never the sale's stored playerName -- the stored field is
  * what already won the checklist match; the title is a SEPARATE, weaker
- * witness being asked whether it actively disagrees).
+ * witness being asked whether it actively disagrees). See that function's
+ * own doc below for why this is a token-sharing test, not
+ * `playerTheTitleAllows`'s "irreconcilable" outcome verbatim.
  *
  * @param {object} input
  * @param {string} input.title
@@ -440,7 +554,7 @@ function judgeSplitIdentityVerdict({ hMatch, cMatch, saleIsTwoSportAthlete }) {
  * @returns {{ vetoed: boolean, detail?: string }}
  */
 function titleVetoes({ title, winnerSport, winnerYear, winnerSetKey, winnerCardNumber, winnerCatalogPlayerName, otherSport }, deps) {
-  const { inferSetKeyFromTitle, resolveSetKeyForSlug, extractCardNumberFromTitle, sameCardNumber, playerTheTitleAllows, sportEvidenceFn } = deps;
+  const { inferSetKeyFromTitle, resolveSetKeyForSlug, extractCardNumberFromTitle, sameCardNumber, sportEvidenceFn } = deps;
   const t = String(title ?? "");
   if (!t.trim()) return { vetoed: false };
 
@@ -477,31 +591,109 @@ function titleVetoes({ title, winnerSport, winnerYear, winnerSetKey, winnerCardN
     return { vetoed: true, detail: `title states card number "${titleNumber}", which disagrees with the winning candidate's own number "${winnerCardNumber}"` };
   }
 
-  // ── PLAYER: the title's own player mention (read from the title text via
-  // a simple presence check against the winning catalog row's playerName --
-  // playerTheTitleAllows reconciles VENDOR vs TITLE attribution, so it is
-  // called here with the winning catalog row's name standing in for the
-  // "vendor" side and nothing else claiming a title-side name unless the
-  // catalog row's own name is absent from the title). This only vetoes on
-  // an outright IRRECONCILABLE disagreement -- the strongest signal that
-  // function returns -- never on ambiguity.
+  // ── PLAYER (REVIEW #2, HIGH, 2026-09-19). A REAL title-side player guess,
+  // via `guessTitlePlayer` -- the SAME lazy require of dist/services/compiq/
+  // cardQueryParser.js, the same confidence>0 floor, as
+  // repoint-sales-to-checklist-numbered.cjs's own `guessPlayerFromTitleLocal`
+  // (not re-implemented; this is the identical pattern against the identical
+  // compiled parser). The FIRST version of this veto called
+  // `playerTheTitleAllows(winnerCatalogPlayerName, winnerCatalogPlayerName)`
+  // -- a string compared with ITSELF, which can never disagree and never
+  // vetoed anything. Wiring the model lane's own veto (`outcome ===
+  // "irreconcilable"`) VERBATIM against a real title guess reproduced three
+  // false positives measured in production against this exact title corpus:
+  //
+  //   title guess "James"             vs winner "James Wood RC"
+  //   title guess "Mason Montgomery"  vs winner "Mason Montgomery RC"
+  //   title guess "Roki Sasaki Ff Nyc" vs winner "Roki Sasaki RC"
+  //
+  // Every one is the SAME player -- `playerNameKey` (playerTheTitleAllows.ts)
+  // strips jr/sr/ii/iii/iv/v but NOT "RC" ("James Wood RC" -> surname token
+  // "rc", not "wood"), so `isAbbreviationOf`'s own surname-anchored compare
+  // sees mismatched surnames and calls it IRRECONCILABLE on the RC marker
+  // alone -- exactly the false-contradiction shape this lane's own review
+  // exists to catch before it reaches "irreconcilable" at all.
+  //
+  // THE FIX is a narrower, additive gate ON TOP of playerTheTitleAllows,
+  // never a change to that shared function (which the model lane and this
+  // one must keep agreeing with): normalise BOTH sides through
+  // cleanPlayerName (strips RC/RR/DP/TC/UER/SP/SSP -- the SAME reduction
+  // playerIdentityKey.ts's own header documents doing first, for this exact
+  // reason) + playerIdentityKey, and veto ONLY when ALL of:
+  //
+  //   1. the title guess has >= 2 name tokens (a bare single word --
+  //      "James" -- is too weak a signal to contradict a checklist-backed
+  //      catalog row; measured false positive #1 above is exactly this);
+  //   2. guessTitlePlayer's own confidence floor already passed (baked into
+  //      guessTitlePlayer itself, mirroring guessPlayerFromTitleLocal);
+  //   3. the guess shares NO token with ANY name listed on the winner's own
+  //      catalog row (multi-player rows: "Eddie Murray / Cal Ripken Jr." --
+  //      any listed name's tokens count, via the SAME "/" & "&" split
+  //      multiPlayerKeysOf already uses elsewhere in this file).
+  //
+  // "Shares no token" rather than a stricter equality/abbreviation test is
+  // deliberately permissive: "Mason Montgomery" (title, after cleaning)
+  // shares both tokens with "Mason Montgomery" (winner, after cleaning) and
+  // is a clean agreement, never reaching this rule at all; "Roki Sasaki"
+  // (title, after cleaning strips "Ff Nyc"? -- no, cardQueryParser's own
+  // parse already returns "Roki Sasaki" for that title, see the test) shares
+  // both tokens with "Roki Sasaki" too. A genuine contradiction --
+  // "LeBron James" against a Wembanyama catalog row -- shares ZERO tokens
+  // and correctly vetoes.
   if (winnerCatalogPlayerName) {
-    const decision = playerTheTitleAllows(winnerCatalogPlayerName, winnerCatalogPlayerName);
-    // playerTheTitleAllows compares VENDOR vs TITLE attribution; this lane
-    // has no separately-parsed "title player" of its own to hand it (that
-    // parser lives in parseTitleIdentity.service.ts's title pipeline, which
-    // this lane does not run). Rather than approximate a title-player
-    // extraction (and risk a false veto from a bad approximation),
-    // player-name vetoing is deliberately left to the existing
-    // checklistMatchOf comparison (sale.playerName vs catalog row), which
-    // already ran and IS the winning evidence. `decision` is computed only
-    // to keep the dependency wired for a future caller that supplies a real
-    // title-side player; today it can never disagree with itself, so it
-    // never vetoes on its own.
-    void decision;
+    const titleGuess = guessTitlePlayer(t, deps);
+    if (titleGuess) {
+      const guessTokens = playerIdentityTokens(titleGuess, deps);
+      if (guessTokens.length >= 2) {
+        const winnerTokenSets = String(winnerCatalogPlayerName ?? "")
+          .split(/\s*[/&]\s*/)
+          .map((name) => new Set(playerIdentityTokens(name, deps)))
+          .filter((set) => set.size > 0);
+        const sharesAnyToken = winnerTokenSets.some((winnerSet) => guessTokens.some((tok) => winnerSet.has(tok)));
+        if (winnerTokenSets.length && !sharesAnyToken) {
+          return { vetoed: true, detail: `title's own player guess ("${titleGuess}") shares no name token with the winning candidate's catalog player ("${winnerCatalogPlayerName}")` };
+        }
+      }
+    }
   }
 
   return { vetoed: false };
+}
+
+/**
+ * The title's own player guess -- the SAME lazy require + confidence>0 floor
+ * as repoint-sales-to-checklist-numbered.cjs's own `guessPlayerFromTitleLocal`
+ * (not re-implemented, the identical pattern against the identical compiled
+ * parser: dist/services/compiq/cardQueryParser.js's `parseCardQuery`).
+ */
+function guessTitlePlayer(title, deps) {
+  try {
+    const parsed = deps.parseCardQuery(String(title || ""));
+    if (!parsed || !(Number(parsed.confidence) > 0)) return null;
+    const player = parsed.playerName;
+    return typeof player === "string" && player.trim().length > 0 ? player.trim() : null;
+  } catch { return null; }
+}
+
+/** A name reduced to its identity-bearing tokens: cleanPlayerName strips the
+ *  RC/RR/DP/TC/UER/SP/SSP family FIRST (the exact fix for the three measured
+ *  false positives -- "James Wood RC" and "James Wood" must tokenize the
+ *  same), then playerIdentityKey folds accents/symbols/punctuation, and the
+ *  result is split on whitespace into tokens. Returns [] for an empty/
+ *  unresolvable name. */
+function playerIdentityTokens(name, deps) {
+  const cleaned = deps.cleanPlayerName(String(name ?? ""));
+  const key = deps.playerIdentityKey(cleaned);
+  // playerIdentityKey already removed every non-alphanumeric character, so
+  // there is no whitespace left to split on -- re-derive token boundaries
+  // from the CLEANED (pre-key) string instead, lowercased, split on
+  // whitespace, each token then run through the same identity fold so
+  // "O'Neill" and "ONeill" still compare equal token-for-token.
+  return cleaned
+    .toLowerCase()
+    .split(/\s+/)
+    .map((tok) => deps.playerIdentityKey(tok))
+    .filter(Boolean);
 }
 
 async function main() {
@@ -557,10 +749,18 @@ async function main() {
   const { inferSetKeyFromTitle } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
   const { extractCardNumberFromTitle } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js"));
   const { sameCardNumber, resolveSetKeyForSlug } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
-  const { playerTheTitleAllows } = require(path.join(backend, "dist/services/portfolioiq/playerTheTitleAllows.js"));
+  // REVIEW #2: parseCardQuery + cleanPlayerName back the REAL title-player
+  // veto (guessTitlePlayer/playerIdentityTokens above) -- the same lazy
+  // require of dist/services/compiq/cardQueryParser.js
+  // repoint-sales-to-checklist-numbered.cjs's own guessPlayerFromTitleLocal
+  // uses, and the same cleanPlayerName (cardCatalog.service.js) whose RC/RR/
+  // DP/TC/UER/SP/SSP strip playerIdentityKey.ts's own header already runs
+  // FIRST for exactly this reason.
+  const { parseCardQuery } = require(path.join(backend, "dist/services/compiq/cardQueryParser.js"));
+  const { cleanPlayerName } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
   const TWO_SPORT_ATHLETE_KEYS = require(path.join(__dirname, "lib", "two-sport-athletes.cjs")).buildTwoSportAthleteKeys(playerIdentityKey);
 
-  const titleDeps = { inferSetKeyFromTitle, resolveSetKeyForSlug, extractCardNumberFromTitle, sameCardNumber, playerTheTitleAllows, sportEvidenceFn: sportEvidence };
+  const titleDeps = { inferSetKeyFromTitle, resolveSetKeyForSlug, extractCardNumberFromTitle, sameCardNumber, sportEvidenceFn: sportEvidence, parseCardQuery, cleanPlayerName, playerIdentityKey };
 
   const client = new CosmosClient(conn);
   const db = client.database(process.env.COSMOS_DATABASE || "hobbyiq");
@@ -625,6 +825,92 @@ async function main() {
     return contentHashOf(resident) === contentHashOf(incomingAtNewAddress);
   }
 
+  // ── REVIEW #1 (HIGH, 2026-09-19): PHYSICAL-SALE TWINS ---------------------
+  //
+  // CardHedge dual-id twins of ONE physical sale carry DIFFERENT `id`s
+  // (e.g. a `cardhedge::…` row and a `tca-ebay::…` row, or ch-daily vs
+  // ch-fill) -- CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL's own sibling
+  // finding, `project_cardhedge_dual_id_duplicates_and_graded_in_raw_pool`.
+  // Grouping this run's own candidate rows by `doc.id` (the page-walk
+  // below) therefore does NOT serialise two twins of the same physical
+  // sale, because they are DIFFERENT `id`s and land in DIFFERENT groups --
+  // and `residentAt(doc.id, H)` above only ever checks for the SAME `id`
+  // already at H, so it can never see a twin filed under its own,
+  // different, id. Both twins independently see "nothing resident yet" and
+  // both write to H: the double-count that already exists today (each
+  // twin already prices via H under PR #2341's read path) survives the
+  // resolve unless this lane collapses it -- and a resolve, which touches
+  // every parked row anyway, is the natural place to do that rather than
+  // cementing the duplicate a second time under a newly-coherent identity.
+  //
+  // PHYSICAL-SALE SIGNATURE. price + soldAt (floored to the DAY, matching
+  // contentHashOf's own `day()` helper) is the narrowest equality/prefix
+  // filter Cosmos can serve as a SINGLE-PARTITION, index-served query (never
+  // a cross-partition scan) -- `c.cardId = @dest AND c.price = @p AND
+  // STARTSWITH(c.soldAt, @day)`. That narrows to a small candidate set;
+  // `isSameSale` (the SAME contentHashOf-based predicate every other
+  // collapse/collision check in this file already uses) decides identity
+  // FROM those candidates in memory, so this is additive precision, never a
+  // second, looser definition of "same sale."
+  //
+  // SERIALISED WITHIN A RUN by a PHYSICAL-SALE KEY (price|soldAt-day|
+  // normalised title, `physicalSaleKeyOf` above at module scope -- pure, no
+  // I/O, exported for its own unit test), not by `id` -- two twins of the
+  // same physical sale have DIFFERENT ids and would otherwise both pass the
+  // destination check concurrently (read-then-write race: both read "no
+  // twin yet", both write). `physicalSaleMutex` below is a promise-chain-
+  // per-key lock: every `handleRow` call for the SAME physical-sale key
+  // awaits the prior one's mutex link before running its own destination
+  // scan + write, so the scan always sees any twin the SAME run already
+  // resolved.
+  const physicalSaleMutex = new Map();
+  /** Run `fn` serialised against every OTHER call sharing the same
+   *  physical-sale key, in this run only -- a promise-chain lock, not a
+   *  distributed one. Always resolves/rejects with `fn`'s own outcome. */
+  function withPhysicalSaleLock(key, fn) {
+    const prior = physicalSaleMutex.get(key) ?? Promise.resolve();
+    const chained = prior.then(fn, fn);
+    // Store a NEVER-REJECTING continuation as the new tail -- a failed
+    // holder must not poison the lock for the next physical-sale twin.
+    physicalSaleMutex.set(key, chained.then(() => {}, () => {}));
+    return chained;
+  }
+
+  /**
+   * Single-partition scan at `destCardId` for a resident row matching this
+   * sale's PHYSICAL signature (price + soldAt day), any `id` OTHER than
+   * `saleForHash.id` itself -- the twin check `residentAt` cannot make
+   * because a twin's `id` differs from `doc.id` by construction. The
+   * self-exclusion matters at the PATCH call site: when `destCardId`
+   * equals the sale's OWN current partition (the row has not moved), the
+   * sale's own resident document would otherwise match its own query and
+   * "find" itself as its own twin. Returns the first OTHER row
+   * `contentHashOf` confirms is the same sale, or null. Index-served
+   * (`c.cardId = @dest` is the partition key equality; `c.price`/
+   * `STARTSWITH(c.soldAt,...)` are property filters WITHIN that one
+   * partition, never cross-partition).
+   */
+  async function physicalTwinAtPartition(destCardId, saleForHash) {
+    const price = Number(saleForHash?.price);
+    const soldDay = String(saleForHash?.soldAt ?? "").slice(0, 10);
+    if (!Number.isFinite(price) || !soldDay) return null;
+    const res = await retry(() => pool.items.query({
+      query: "SELECT * FROM c WHERE c.cardId = @dest AND c.price = @p AND STARTSWITH(c.soldAt, @day)",
+      parameters: [
+        { name: "@dest", value: destCardId },
+        { name: "@p", value: price },
+        { name: "@day", value: soldDay },
+      ],
+    }, { partitionKey: destCardId }).fetchAll());
+    // EXCLUDE THE SALE'S OWN id -- when destCardId equals this sale's
+    // CURRENT partition (the PATCH-shape call site, where the row has not
+    // moved yet), the sale's own resident document matches its own query
+    // trivially and would otherwise "find" itself as its own twin.
+    const candidates = (res?.resources ?? []).filter((c) => c.id !== saleForHash?.id);
+    const targetHash = contentHashOf({ ...saleForHash, cardId: destCardId });
+    return candidates.find((c) => contentHashOf(c) === targetHash) ?? null;
+  }
+
   async function handleRow(doc) {
     s.scanned++;
     const cells = cellsOf(doc.cardId, doc.hobbyiqCardId);
@@ -638,6 +924,14 @@ async function main() {
       if (!TITLES_FILTER.some((needle) => t.includes(needle))) { s.otherTitleFilter++; return; }
     }
     if (LIMIT && (s.resolveToHByPatch + s.resolveToHByRelocate + s.resolveToCByPatch) >= LIMIT) return;
+
+    // ── REVIEW #5: a human claim (or the user-seed mint path) outranks a
+    // catalog point-read -- leave these parked, named, never resolved.
+    if (isPinnedOrFlagged(doc)) {
+      bumpReason(s.leave, "pinned-or-flagged");
+      pushExample(leaveExamples, "pinned-or-flagged", `  ${doc.id}@${doc.cardId}: verifiedByUser=${doc.verifiedByUser === true} flaggedWrong=${doc.flaggedWrong === true} excludedFromFmv=${doc.excludedFromFmv === true} source=${doc.source ?? "?"}`);
+      return;
+    }
 
     const H = str(doc.hobbyiqCardId);
     const C = str(doc.cardId);
@@ -701,6 +995,12 @@ async function main() {
 
     const cellKey = [...cells].join(",") || "unknown-cell";
 
+    // ── REVIEW #1: serialise the write against every OTHER sale in THIS run
+    // sharing this sale's physical signature (price|soldAt-day|normalised
+    // title) -- a CardHedge dual-id twin has a DIFFERENT `doc.id`, so the
+    // page-walk's own group-by-id below cannot serialise two twins against
+    // each other; this is the one place that does.
+    await withPhysicalSaleLock(physicalSaleKeyOf(doc), async () => {
     try {
       const ledger = {
         splitResolvedAt: new Date().toISOString(),
@@ -725,22 +1025,79 @@ async function main() {
       }
 
       if (alreadyResolved || verdict.verdict === "resolve-to-c" || doc.cardId === winner) {
+        // ── REVIEW #1: a physical-sale twin ALREADY resident at this SAME
+        // partition (a different `id`, same underlying sale -- the dual-id
+        // shape) is a duplicate this lane must not cement under a patch:
+        // patching this row's identity fields does nothing to collapse a
+        // twin that was already double-counted before this lane ran, so it
+        // is left PARKED (reason unchanged) and counted separately rather
+        // than written.
+        const patchTwin = await physicalTwinAtPartition(doc.cardId, doc);
+        if (patchTwin) {
+          bumpReason(s.refused, "duplicate-of-resolved-resident");
+          pushExample(refuseExamples, "duplicate-of-resolved-resident", `  ${doc.id}@${doc.cardId}: a physical-sale twin already resides at this SAME partition under a different id (${patchTwin.id}) -- left parked, not patched, to avoid cementing the pre-existing duplicate`);
+          return;
+        }
+
         // PATCH shape: partition (cardId) does not move. RESOLVE-TO-C is
         // always this shape (cardId already equals C by construction of the
         // predicate); RESOLVE-TO-H takes this shape only in the
         // already-at-target case, or the defensive case where cardId
         // already equals H for some other reason.
         if (APPLY) {
-          await retry(() => pool.item(doc.id, doc.cardId).patch([
-            { op: "set", path: "/sport", value: keep.sport },
-            { op: "set", path: "/hobbyiqCardId", value: keep.hobbyiqCardId },
-            { op: "set", path: "/cardId", value: keep.cardId },
-            { op: "set", path: "/splitResolvedAt", value: ledger.splitResolvedAt },
-            { op: "set", path: "/splitResolvedTo", value: ledger.splitResolvedTo },
-            { op: "set", path: "/splitResolvedFrom", value: ledger.splitResolvedFrom },
-            { op: "set", path: "/splitResolvedBy", value: ledger.splitResolvedBy },
-            ...PARK_FIELDS.filter((f2) => doc[f2] !== undefined).map((f2) => ({ op: "remove", path: `/${f2}` })),
-          ]));
+          // ── REVIEW #3 (MEDIUM, 2026-09-19): CONDITIONAL WRITES. `doc._etag`
+          // is the PLANNING read's own etag -- the page-walk's own query
+          // result this handleRow call was handed, captured before any of
+          // this row's own I/O ran. Two layers, both keyed on that SAME
+          // planning etag:
+          //
+          //   1. RE-READ IMMEDIATELY BEFORE WRITE: a fast, explicit check --
+          //      if the document's CURRENT etag already differs from the
+          //      planning etag, refuse now rather than let Cosmos discover
+          //      it (cheaper, and gives a clearer refusal reason).
+          //   2. THE WRITE ITSELF still carries an IfMatch access condition
+          //      on the PLANNING etag (never the fresh re-read's own etag --
+          //      using the fresh value would only catch a race in the
+          //      instant between the re-read and the patch call, not the
+          //      much wider window between this row's OWN planning read and
+          //      the write, which is the actual race this review closes).
+          //      Cosmos itself is the enforcement layer of last resort: even
+          //      if step 1 raced and missed a concurrent change, the server
+          //      still refuses a write against a stale etag.
+          //
+          // Either layer 412ing REFUSES the write outright (never retried --
+          // retry() only retries 429/timeout-shaped errors) and is counted
+          // `stale-since-plan`, disjoint from every other outcome.
+          const planEtag = doc._etag;
+          try {
+            const fresh = await retry(() => pool.item(doc.id, doc.cardId).read());
+            if (planEtag && fresh?.resource?._etag && fresh.resource._etag !== planEtag) {
+              bumpReason(s.refused, "stale-since-plan");
+              pushExample(refuseExamples, "stale-since-plan", `  ${doc.id}@${doc.cardId}: patch refused -- a re-read immediately before write found the document already changed since this run's own planning read; nothing written`);
+              return;
+            }
+          } catch (e) {
+            if (!(e?.code === 404 || e?.statusCode === 404)) throw e;
+          }
+          try {
+            await retry(() => pool.item(doc.id, doc.cardId).patch([
+              { op: "set", path: "/sport", value: keep.sport },
+              { op: "set", path: "/hobbyiqCardId", value: keep.hobbyiqCardId },
+              { op: "set", path: "/cardId", value: keep.cardId },
+              { op: "set", path: "/splitResolvedAt", value: ledger.splitResolvedAt },
+              { op: "set", path: "/splitResolvedTo", value: ledger.splitResolvedTo },
+              { op: "set", path: "/splitResolvedFrom", value: ledger.splitResolvedFrom },
+              { op: "set", path: "/splitResolvedBy", value: ledger.splitResolvedBy },
+              ...PARK_FIELDS.filter((f2) => doc[f2] !== undefined).map((f2) => ({ op: "remove", path: `/${f2}` })),
+            ], planEtag ? { accessCondition: { type: "IfMatch", condition: planEtag } } : undefined));
+          } catch (e) {
+            if (e?.code === 412 || e?.statusCode === 412) {
+              bumpReason(s.refused, "stale-since-plan");
+              pushExample(refuseExamples, "stale-since-plan", `  ${doc.id}@${doc.cardId}: patch refused (412) -- the document changed since this run's own planning read; nothing written`);
+              return;
+            }
+            throw e;
+          }
         }
         if (alreadyResolved) s.alreadyAtTarget++;
         if (verdict.verdict === "resolve-to-h") s.resolveToHByPatch++; else s.resolveToCByPatch++;
@@ -767,13 +1124,64 @@ async function main() {
         return;
       }
 
+      // ── REVIEW #1: a PHYSICAL-SALE TWIN (different id, same underlying
+      // sale) may already be resident at the RELOCATE destination -- the
+      // `residentAt` check above only ever matches `doc.id` itself, which
+      // a dual-id twin never shares. Collapse onto it exactly as the
+      // same-id case does: verify (isSameSale, the same contentHashOf
+      // predicate), delete the MOVING copy, leave the resident twin as the
+      // one survivor at H.
+      const physicalTwin = await physicalTwinAtPartition(destCardId, doc);
+      if (physicalTwin) {
+        if (isSameSale(physicalTwin, { ...keep, cardId: destCardId })) {
+          if (APPLY) await retry(() => pool.item(doc.id, doc.cardId).delete());
+          s.collapsedOntoResident++;
+          bump(byCell, cellKey);
+          if (resolveExamples.length < 60) resolveExamples.push(`  COLLAPSE ${str(doc.title).slice(0, 70)} -- a physical-sale twin (${physicalTwin.id}) already resides at ${destCardId}; this copy (${doc.id}) deleted, one survivor remains`);
+          return;
+        }
+        // A physical-sale-signature (price+soldAt-day) match that FAILS the
+        // full contentHashOf compare is a coincidence, not a twin -- fall
+        // through to the ordinary relocate below, exactly as if no
+        // candidate had matched the narrower scan at all.
+      }
+
+      // ── REVIEW #3: same two-layer discipline as the patch shape, applied
+      // to the RELOCATE's source-side DELETE. Layer 1 (APPLY only -- a
+      // REPORT run performs no write and gains nothing from re-reading): a
+      // fast re-read-before-write pre-check against the PLANNING etag
+      // (`doc._etag`, from the page-walk's own query result). Layer 2: the
+      // planning etag is ALSO passed as `ifMatchEtag` on the drop item --
+      // relocate-sold-comp.cjs already supports this (see that file's own
+      // CONDITIONAL DELETE doc) -- so Cosmos itself refuses the delete if
+      // the document changed since the plan, even if layer 1 raced and
+      // missed it. A 412 from EITHER layer is reported in `staleSincePlan`,
+      // disjoint from `duplicatesLeft`, and never retried.
+      const planEtagForDrop = doc._etag;
+      if (APPLY) {
+        try {
+          const fresh = await retry(() => pool.item(doc.id, doc.cardId).read());
+          if (planEtagForDrop && fresh?.resource?._etag && fresh.resource._etag !== planEtagForDrop) {
+            bumpReason(s.refused, "stale-since-plan");
+            pushExample(refuseExamples, "stale-since-plan", `  ${doc.id}@${doc.cardId}: relocate refused -- a re-read immediately before write found the document already changed since this run's own planning read; nothing written`);
+            return;
+          }
+        } catch (e) {
+          if (!(e?.code === 404 || e?.statusCode === 404)) throw e;
+        }
+      }
       const res = await relocateSoldComp(pool, {
-        keep, drop: [{ id: doc.id, cardId: doc.cardId }],
+        keep, drop: [{ id: doc.id, cardId: doc.cardId, ifMatchEtag: planEtagForDrop }],
         retry, verifyFields: ["cardId", "hobbyiqCardId", "sport", "splitResolvedTo"], dryRun: !APPLY,
       });
       if (res.guard?.verdict === "park") {
         bumpReason(s.refused, "guard-parked");
         pushExample(refuseExamples, "guard-parked", `  ${doc.id}@${doc.cardId}: ${res.error ?? res.guard.reason}`);
+        return;
+      }
+      if (res.staleSincePlan?.length) {
+        bumpReason(s.refused, "stale-since-plan");
+        pushExample(refuseExamples, "stale-since-plan", `  ${doc.id}@${doc.cardId}: relocate's source delete refused (412) -- the document changed since this run's own planning read; the new copy at ${destCardId} was written, the OLD copy at ${doc.cardId} was NOT deleted (a duplicate this lane does not retry past)`);
         return;
       }
       if (!res.ok && res.stage !== "dry-run") {
@@ -790,6 +1198,7 @@ async function main() {
       s.failed++;
       failures.push(`  FAILED resolve ${doc.id}@${doc.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
     }
+    });
   }
 
   // ── bounded-concurrency page walk. A `.catch` on EACH row's own promise,
@@ -898,7 +1307,8 @@ async function main() {
 module.exports = {
   CANDIDATE_SPEC, segmentsOf, sportSegmentOf, yearSegmentOf, setKeySegmentOf,
   withSportSegment, cellsOf, checklistMatchOf, multiPlayerKeysOf,
-  judgeSplitIdentityVerdict, titleVetoes,
+  judgeSplitIdentityVerdict, titleVetoes, guessTitlePlayer, playerIdentityTokens,
+  physicalSaleKeyOf, isPinnedOrFlagged, USER_SEED_SOURCES,
   ALL_SPLITS, CELL_RE, PARK_FIELDS,
 };
 

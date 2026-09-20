@@ -26,12 +26,27 @@ beforeAll(() => {
   if (!built) throw new Error("backend/dist is not built -- run `npm run build` in backend/ before this suite");
 });
 
-function shim(opts: { sales?: Array<Record<string, unknown>>; catalog?: Array<Record<string, unknown>>; catalogFailIds?: string[] } = {}): { requirePath: string; ledger: string } {
+function shim(opts: {
+  sales?: Array<Record<string, unknown>>;
+  catalog?: Array<Record<string, unknown>>;
+  catalogFailIds?: string[];
+  /** REVIEW #3: ids whose sale is seeded with a "planning" etag that
+   *  ALREADY differs from what a fresh `.item().read()` returns -- i.e.
+   *  the document was already mutated (by a concurrent lane, or a prior
+   *  partial run) by the time THIS run's page-walk query captured its own
+   *  copy. The page-walk query itself hands the lane the STALE ("v1")
+   *  snapshot (so `doc._etag` inside handleRow is "v1"); every subsequent
+   *  `.item().read()` -- the lane's own re-read-before-write -- returns
+   *  the CURRENT, different ("v2") value, and a write conditioned on "v1"
+   *  is refused 412. */
+  staleAfterFirstReadIds?: string[];
+} = {}): { requirePath: string; ledger: string } {
   const ledger = path.join(tmp, `ledger-${Math.random().toString(36).slice(2)}.json`);
   const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
   const sales = opts.sales ?? [];
   const catalog = opts.catalog ?? [];
   const catalogFailIds = opts.catalogFailIds ?? [];
+  const staleAfterFirstReadIds = opts.staleAfterFirstReadIds ?? [];
 
   fs.writeFileSync(p, `
 const Module = require("node:module");
@@ -40,7 +55,15 @@ const LEDGER = ${JSON.stringify(ledger)};
 
 const salesKey = (id, cardId) => id + "::" + cardId;
 
-const state = { sales: new Map(${JSON.stringify(sales)}.map((d) => [salesKey(d.id, d.cardId), d])) };
+const STALE_IDS = new Set(${JSON.stringify(staleAfterFirstReadIds)});
+// Every seeded sale gets an initial _etag ("v1") so the lane's own
+// re-read-before-write has something real to compare against. A doc named
+// in STALE_IDS is stored with the CURRENT etag already bumped to "v2" --
+// simulating a concurrent mutation that landed BEFORE this run even
+// started its page-walk -- while the page-walk QUERY (below) hands the
+// lane the STALE "v1" snapshot it captured a moment "earlier."
+const seeded = ${JSON.stringify(sales)}.map((d) => ({ ...d, _etag: d._etag ?? (STALE_IDS.has(d.id) ? '"v2"' : '"v1"') }));
+const state = { sales: new Map(seeded.map((d) => [salesKey(d.id, d.cardId), d])) };
 const catalogState = new Map(${JSON.stringify(catalog)}.map((d) => [d.id, d]));
 const CATALOG_FAIL_IDS = new Set(${JSON.stringify(catalogFailIds)});
 const led = { salesUpserts: [], salesPatches: [], salesDeletes: [], catalogReads: [] };
@@ -48,6 +71,7 @@ const save = () => fs.writeFileSync(LEDGER, JSON.stringify(led));
 save();
 
 function notFound() { return Object.assign(new Error("not found"), { code: 404 }); }
+function preconditionFailed() { return Object.assign(new Error("etag mismatch"), { code: 412 }); }
 
 const salesContainer = {
   item: (id, pk) => ({
@@ -56,19 +80,25 @@ const salesContainer = {
       if (!d) throw notFound();
       return { resource: structuredClone(d) };
     },
-    patch: async (ops) => {
+    patch: async (ops, options) => {
       const d = state.sales.get(salesKey(id, pk));
       if (!d) throw notFound();
+      const cond = options && options.accessCondition;
+      if (cond && cond.type === "IfMatch" && cond.condition !== d._etag) throw preconditionFailed();
       for (const o of ops) {
         if (o.op === "set" || o.op === "add") d[o.path.slice(1)] = o.value;
         else if (o.op === "remove") delete d[o.path.slice(1)];
       }
-      led.salesPatches.push({ id, ops });
+      d._etag = '"' + (Math.random().toString(36).slice(2)) + '"';
+      led.salesPatches.push({ id, ops, accessCondition: cond ?? null });
       save();
       return { resource: structuredClone(d) };
     },
-    delete: async () => {
-      if (!state.sales.has(salesKey(id, pk))) throw notFound();
+    delete: async (options) => {
+      const d = state.sales.get(salesKey(id, pk));
+      if (!d) throw notFound();
+      const cond = options && options.accessCondition;
+      if (cond && cond.type === "IfMatch" && cond.condition !== d._etag) throw preconditionFailed();
       state.sales.delete(salesKey(id, pk));
       led.salesDeletes.push(id);
       save();
@@ -77,10 +107,11 @@ const salesContainer = {
   }),
   items: {
     upsert: async (doc) => {
-      state.sales.set(salesKey(doc.id, doc.cardId), structuredClone(doc));
+      const withEtag = { ...doc, _etag: '"' + (Math.random().toString(36).slice(2)) + '"' };
+      state.sales.set(salesKey(doc.id, doc.cardId), withEtag);
       led.salesUpserts.push(doc.id);
       save();
-      return { resource: structuredClone(doc) };
+      return { resource: structuredClone(withEtag) };
     },
     query: (spec) => {
       const q = typeof spec === "string" ? spec : spec.query;
@@ -93,10 +124,26 @@ const salesContainer = {
           && typeof d.hobbyiqCardId === "string" && d.hobbyiqCardId.startsWith("hiq:")
           && d.cardId !== d.hobbyiqCardId
           && (d.identityUnverifiedReason === "split-identity" || String(d.identityUnverifiedReason ?? "").startsWith("PARK. cardId vertical"))
-        );
+        // REVIEW #3 fixture hook: the page-walk's OWN query -- the lane's
+        // planning read -- hands back the STALE "v1" etag for a doc named
+        // in STALE_IDS, even though the CURRENT stored state (and every
+        // subsequent .item().read()) already carries "v2". This is what
+        // makes doc._etag inside handleRow disagree with a fresh re-read.
+        ).map((d) => STALE_IDS.has(d.id) ? { ...d, _etag: '"v1"' } : d);
       } else if (q.includes("c.id = @id AND c.cardId = @pk")) {
         const params = Object.fromEntries((spec.parameters ?? []).map((x) => [x.name, x.value]));
         resources = all.filter((d) => d.id === params["@id"] && d.cardId === params["@pk"]);
+      } else if (q.includes("c.cardId = @dest AND c.price = @p AND STARTSWITH(c.soldAt, @day)")) {
+        // REVIEW #1: the physical-sale-signature scan at the destination
+        // partition -- single-partition (cardId equality), filtered by
+        // price + soldAt day, exactly the query resolve-split-identity-
+        // parks.cjs's own physicalTwinAtPartition issues.
+        const params = Object.fromEntries((spec.parameters ?? []).map((x) => [x.name, x.value]));
+        resources = all.filter((d) =>
+          d.cardId === params["@dest"]
+          && Number(d.price) === Number(params["@p"])
+          && String(d.soldAt ?? "").startsWith(params["@day"])
+        );
       } else {
         throw new Error("fake sold_comps: unsupported query " + q);
       }
@@ -351,7 +398,10 @@ describe("resolve-split-identity-parks -- LEAVE buckets", () => {
   });
 
   it("LEAVEs (two-sport-athlete) when the checklist evidence backs one side only via absence, and the player is on the gazetteer", () => {
-    const sale = { ...VW3_SALE, id: "bo-jackson-1", playerName: "Bo Jackson" };
+    // title is player-neutral (no name at all) so the REAL title-player
+    // veto (review #2) never fires ahead of the two-sport-athlete bound
+    // this test means to exercise.
+    const sale = { ...VW3_SALE, id: "bo-jackson-1", playerName: "Bo Jackson", title: "2023 Topps Basketball #VW3 rookie card" };
     const catalog = [{ ...VW3_CHECKLIST_BASKETBALL, playerName: "Bo Jackson" }]; // H matches, C is no-row
     const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale], catalog });
     expect(r.code).toBe(0);
@@ -360,7 +410,7 @@ describe("resolve-split-identity-parks -- LEAVE buckets", () => {
   });
 
   it("RESOLVEs a two-sport athlete when the OTHER side has POSITIVE counter-evidence (different-card)", () => {
-    const sale = { ...VW3_SALE, id: "bo-jackson-2", playerName: "Bo Jackson" };
+    const sale = { ...VW3_SALE, id: "bo-jackson-2", playerName: "Bo Jackson", title: "2023 Topps Basketball #VW3 rookie card" };
     const catalogBaseball = { id: "hiq:baseball:2023:topps:vw-3:base:no-auto", cardId: "hiq:baseball:2023:topps:vw-3:base:no-auto", source: "checklistcenter", playerName: "Someone Else" };
     const catalog = [{ ...VW3_CHECKLIST_BASKETBALL, playerName: "Bo Jackson" }, catalogBaseball];
     const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale], catalog });
@@ -379,6 +429,46 @@ describe("resolve-split-identity-parks -- LEAVE buckets", () => {
     expect(r.out).toMatch(/LEAVE: title-contradicts-winner\s+1/);
     expect(r.led.salesPatches.length).toBe(0);
     expect(r.led.salesUpserts.length).toBe(0);
+  });
+});
+
+describe("resolve-split-identity-parks -- REVIEW #5: pinned-or-flagged rows are never resolved", () => {
+  it("LEAVEs (pinned-or-flagged) a verifiedByUser row even with unambiguous checklist evidence for H", () => {
+    const sale = { ...VW3_SALE, id: "pinned-verified", verifiedByUser: true };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/LEAVE: pinned-or-flagged\s+1/);
+    expect(r.led.salesPatches.length).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("LEAVEs (pinned-or-flagged) a flaggedWrong row", () => {
+    const sale = { ...VW3_SALE, id: "pinned-flagged", flaggedWrong: true };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/LEAVE: pinned-or-flagged\s+1/);
+  });
+
+  it("LEAVEs (pinned-or-flagged) an excludedFromFmv row", () => {
+    const sale = { ...VW3_SALE, id: "pinned-excluded", excludedFromFmv: true };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/LEAVE: pinned-or-flagged\s+1/);
+  });
+
+  it("LEAVEs (pinned-or-flagged) a USER_SEED_SOURCES row (user-verified)", () => {
+    const sale = { ...VW3_SALE, id: "pinned-source", source: "user-verified" };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/LEAVE: pinned-or-flagged\s+1/);
+  });
+
+  it("does NOT leave an ordinary vendor row with none of these flags -- the ordinary resolve still runs", () => {
+    const sale = { ...VW3_SALE, id: "not-pinned", verifiedByUser: false, flaggedWrong: false, excludedFromFmv: false };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RESOLVE-TO-H \(relocate\)\s+1/);
+    expect(r.out).not.toMatch(/LEAVE: pinned-or-flagged/);
   });
 });
 
@@ -423,6 +513,116 @@ describe("resolve-split-identity-parks -- collapse / refuse on relocate destinat
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/REFUSED: destination-collision\s+1/);
     expect(r.led.salesDeletes.length).toBe(0);
+  });
+});
+
+describe("resolve-split-identity-parks -- REVIEW #1 (HIGH): physical-sale twins (different id, same underlying sale)", () => {
+  // A CardHedge dual-id twin of ONE physical sale: same price, same sold
+  // day, same title -- but a DIFFERENT id (a tca-ebay id vs a cardhedge
+  // id), and here already resident at H under its OWN id. `residentAt`
+  // (same-id check) never sees this, because it only ever probes
+  // `(doc.id, destCardId)` -- a DIFFERENT id at that exact address.
+  const TWIN_PRICE = 12.5;
+  const TWIN_SOLD_AT = "2026-06-02T02:59:03.000Z";
+  const TWIN_TITLE = "Pikachu V - Holo Promo SWSH061";
+
+  it("RELOCATE: COLLAPSES onto a physical-sale twin already resident at H under a DIFFERENT id -- exactly one document survives at H, the moving copy is deleted", () => {
+    const moving = {
+      ...VW3_SALE, id: "cardhedge::twin-moving", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, title: TWIN_TITLE,
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null,
+    };
+    const residentTwin = {
+      id: "tca-ebay::twin-resident-999", cardId: "hiq:basketball:2023:topps:vw3:base:no-auto",
+      sport: "basketball", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto",
+      price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, title: TWIN_TITLE,
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null,
+    };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [moving, residentTwin], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/COLLAPSED onto a resident \(same sale, by hash\)\s+1/);
+    // The MOVING copy is deleted; the pre-existing twin (different id) is
+    // never touched -- exactly one survivor remains at H.
+    expect(r.led.salesDeletes).toContain("cardhedge::twin-moving");
+    expect(r.led.salesDeletes).not.toContain("tca-ebay::twin-resident-999");
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("RELOCATE: a coincidental price+day match that FAILS the full content-hash compare is NOT collapsed -- falls through to an ordinary relocate", () => {
+    const moving = { ...VW3_SALE, id: "cardhedge::not-a-twin", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, title: TWIN_TITLE, parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null };
+    // Same price + same day, but a DIFFERENT parallel -- contentHashOf
+    // disagrees, so this is a coincidence, not a twin.
+    const coincidence = {
+      id: "tca-ebay::coincidence-1", cardId: "hiq:basketball:2023:topps:vw3:base:no-auto",
+      sport: "basketball", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto",
+      price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, title: TWIN_TITLE,
+      parallel: "refractor", isAuto: false, gradeCompany: null, gradeValue: null,
+    };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [moving, coincidence], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RESOLVE-TO-H \(relocate\)\s+1/);
+    expect(r.led.salesUpserts).toContain("cardhedge::not-a-twin");
+    expect(r.led.salesDeletes).toContain("cardhedge::not-a-twin"); // the OLD (C) copy, deleted by the successful relocate
+    expect(r.led.salesDeletes).not.toContain("tca-ebay::coincidence-1"); // the coincidence is untouched
+  });
+
+  it("PATCH (RESOLVE-TO-C): a physical-sale twin ALREADY resident at this row's OWN (unmoving) partition is left PARKED, named duplicate-of-resolved-resident -- never patched", () => {
+    const sale = {
+      id: "cardhedge::patch-twin-moving",
+      cardId: "hiq:football:1989:score:257:base:no-auto",
+      hobbyiqCardId: "hiq:baseball:1989:score:257:base:no-auto",
+      sport: "baseball",
+      identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z",
+      identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity",
+      identityUnverifiedDetail: "no source attests either side",
+      title: "1989 Score Barry Sanders Detroit Lions Rookie RC #257",
+      playerName: "Barry Sanders", price: 40, soldAt: "2026-06-02T00:00:00.000Z",
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "cardhedge", cardNumber: "257",
+    };
+    // A DIFFERENT id, but the SAME physical sale, already resident at
+    // cardId's OWN (unmoving) partition -- a dual-id twin filed on the
+    // SAME address as the row this lane is about to patch.
+    const residentTwin = {
+      id: "tca-ebay::patch-twin-resident", cardId: "hiq:football:1989:score:257:base:no-auto",
+      sport: "football", hobbyiqCardId: "hiq:football:1989:score:257:base:no-auto",
+      title: "1989 Score Barry Sanders Detroit Lions Rookie RC #257",
+      playerName: "Barry Sanders", price: 40, soldAt: "2026-06-02T00:00:00.000Z",
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null,
+    };
+    const catalogFootball = { id: "hiq:football:1989:score:257:base:no-auto", cardId: "hiq:football:1989:score:257:base:no-auto", source: "checklistcenter", playerName: "Barry Sanders" };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale, residentTwin], catalog: [catalogFootball] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED: duplicate-of-resolved-resident\s+1/);
+    expect(r.out).not.toMatch(/RESOLVE-TO-C \(patch\)\s+1/);
+    expect(r.led.salesPatches.some((p: any) => p.id === "cardhedge::patch-twin-moving")).toBe(false);
+  });
+
+  it("does NOT collapse two DIFFERENT sales that merely share the day (different price)", () => {
+    const moving = { ...VW3_SALE, id: "cardhedge::genuine-1", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, title: TWIN_TITLE, parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null };
+    const differentSale = {
+      id: "tca-ebay::genuine-2", cardId: "hiq:basketball:2023:topps:vw3:base:no-auto",
+      sport: "basketball", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto",
+      price: 999.99, soldAt: TWIN_SOLD_AT, title: "an unrelated different sale",
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null,
+    };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [moving, differentSale], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RESOLVE-TO-H \(relocate\)\s+1/);
+    expect(r.led.salesDeletes).not.toContain("tca-ebay::genuine-2");
+  });
+
+  it("CONCURRENCY: two twins dispatched at once resolve to exactly one survivor at H, reconcile balances, and a re-run is a no-op", () => {
+    const twinA = { id: "cardhedge::conc-a", cardId: "hiq:baseball:2023:topps:vw-3:base:no-auto", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto", sport: "baseball", identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z", identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity", identityUnverifiedDetail: "x", title: TWIN_TITLE, playerName: "Victor Wembanyama", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "cardhedge" };
+    const twinB = { id: "tca-ebay::conc-b-dup", cardId: "hiq:baseball:2023:topps:vw-3:base:no-auto", hobbyiqCardId: "hiq:basketball:2023:topps:vw3:base:no-auto", sport: "baseball", identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z", identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity", identityUnverifiedDetail: "x", title: TWIN_TITLE, playerName: "Victor Wembanyama", price: TWIN_PRICE, soldAt: TWIN_SOLD_AT, parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "tca-ebay" };
+    const first = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true", CONCURRENCY: "16" }, { sales: [twinA, twinB], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(first.code).toBe(0);
+    // Exactly one RELOCATE and one COLLAPSE -- one survivor at H, not two.
+    expect(first.out).toMatch(/RESOLVE-TO-H \(relocate\)\s+1/);
+    expect(first.out).toMatch(/COLLAPSED onto a resident \(same sale, by hash\)\s+1/);
+    expect(first.out).toMatch(/RECONCILE BALANCES/);
+    const survivingIds = new Set(first.led.salesUpserts as string[]);
+    expect(survivingIds.size).toBe(1);
+    const deletedIds = new Set(first.led.salesDeletes as string[]);
+    expect(deletedIds.size).toBe(2); // one old-partition delete (the relocate) + one collapse delete
   });
 });
 
@@ -509,16 +709,45 @@ describe("resolve-split-identity-parks -- persistent catalog read failure isolat
     expect(report.out).toMatch(/RECONCILE BALANCES/);
     expect(apply.out).toMatch(/RECONCILE BALANCES/);
   });
+
+  it("REVIEW #4: REPORT==APPLY parity under a MIXED batch with a catalog-read failure -- identical catalogReads AND identical failed counts in both modes", () => {
+    // Three rows on one page: a clean resolve, a clean leave, and one whose
+    // candidateBefore (H) id is wired to throw persistently. The catalog
+    // reads that run BEFORE the failure (for the other two rows) must be
+    // byte-for-byte the same set in REPORT and APPLY -- the only difference
+    // between the two modes is whether a write lands, never what is read.
+    const resolveRow = { ...VW3_SALE, id: "parity-resolve", cardId: "hiq:baseball:2024:topps:10:base:no-auto", hobbyiqCardId: "hiq:basketball:2024:topps:10:base:no-auto" };
+    const leaveRow = { ...VW3_SALE, id: "parity-leave", cardId: "hiq:baseball:2024:topps:11:base:no-auto", hobbyiqCardId: "hiq:basketball:2024:topps:11:base:no-auto" };
+    const failRow = { ...VW3_SALE, id: "parity-fail", cardId: "hiq:baseball:2024:topps:12:base:no-auto", hobbyiqCardId: "hiq:basketball:2024:topps:12:base:no-auto" };
+    const catalog = [
+      { id: "hiq:basketball:2024:topps:10:base:no-auto", cardId: "hiq:basketball:2024:topps:10:base:no-auto", source: "checklistcenter", playerName: "Victor Wembanyama" },
+      // parity-leave: no catalog rows at all on either side.
+    ];
+    const fixture = { sales: [resolveRow, leaveRow, failRow], catalog, catalogFailIds: ["hiq:basketball:2024:topps:12:base:no-auto"] };
+    const report = drive({ SCOPE: "all-splits" }, fixture);
+    const apply = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, fixture);
+
+    expect(report.code).toBe(4);
+    expect(apply.code).toBe(4);
+    expect(report.out).toMatch(/failed\s+1/);
+    expect(apply.out).toMatch(/failed\s+1/);
+    expect(report.led.catalogReads.sort()).toEqual(apply.led.catalogReads.sort());
+    expect(report.out.match(/WOULD RESOLVE-TO-H \(relocate\)\s+(\d+)/)?.[1]).toBe("1");
+    expect(apply.out.match(/RESOLVE-TO-H \(relocate\)\s+(\d+)/)?.[1]).toBe("1");
+    expect(report.out).toMatch(/LEAVE: neither-side-names-the-player\s+1/);
+    expect(apply.out).toMatch(/LEAVE: neither-side-names-the-player\s+1/);
+    expect(report.out).toMatch(/RECONCILE BALANCES/);
+    expect(apply.out).toMatch(/RECONCILE BALANCES/);
+  });
 });
 
 describe("resolve-split-identity-parks -- IfMatch 412 refuses the delete without losing the sale", () => {
-  it("a relocate whose drop carries a stale ifMatchEtag is refused stale-since-plan, never counted as a duplicate, and the resolve is not double-counted as written", () => {
-    // relocateSoldComp only issues a conditional delete when the caller
-    // supplies `ifMatchEtag` on the drop item -- this lane's own drop list
-    // never does today (grepped: `drop: [{ id: doc.id, cardId: doc.cardId }]`,
-    // no etag), so this test exercises relocate-sold-comp.cjs's own shared
-    // primitive directly rather than pretending the lane wires it, matching
-    // that helper's own header note that an unwired caller is unaffected.
+  it("relocateSoldComp's own conditional-delete primitive: a drop carrying a stale ifMatchEtag is refused stale-since-plan, never counted as a duplicate", () => {
+    // Exercises relocate-sold-comp.cjs's own shared primitive directly
+    // (its own unit-level contract), separate from the end-to-end
+    // REVIEW #3 tests below that drive the actual resolve-split-identity-
+    // parks.cjs lane -- which DOES now wire `ifMatchEtag` on every relocate
+    // drop (review #3, 2026-09-19).
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { relocateSoldComp } = require("../scripts/lib/relocate-sold-comp.cjs");
     const calls: Array<{ id: string; options: unknown }> = [];
@@ -551,5 +780,84 @@ describe("resolve-split-identity-parks -- IfMatch 412 refuses the delete without
       expect(res.duplicatesLeft.length).toBe(0);
       expect(calls.length).toBe(1);
     });
+  });
+});
+
+describe("resolve-split-identity-parks -- REVIEW #3 (MEDIUM): end-to-end conditional writes against the lane itself", () => {
+  it("PATCH shape: a document mutated between this run's planning read and its own write is REFUSED stale-since-plan, never patched", () => {
+    // WRONG_FLIP-style RESOLVE-TO-C fixture (Barry Sanders), reused from
+    // the earlier PATCH-shape test. `staleAfterFirstReadIds` bumps the
+    // stored _etag on the SECOND `.item().read()` call for this id -- the
+    // lane's own review-#3 re-read-before-write IS that second read (the
+    // first `.item().read()` in this whole run for this id), so by the
+    // time the lane compares its planning etag against the fresh one, they
+    // already disagree.
+    const sale = {
+      id: "cardhedge::stale-patch",
+      cardId: "hiq:football:1989:score:257:base:no-auto",
+      hobbyiqCardId: "hiq:baseball:1989:score:257:base:no-auto",
+      sport: "baseball",
+      identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z",
+      identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity",
+      identityUnverifiedDetail: "no source attests either side",
+      title: "1989 Score Barry Sanders Detroit Lions Rookie RC #257",
+      playerName: "Barry Sanders", price: 40, soldAt: "2026-06-02T00:00:00.000Z",
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "cardhedge", cardNumber: "257",
+    };
+    const catalogFootball = { id: "hiq:football:1989:score:257:base:no-auto", cardId: "hiq:football:1989:score:257:base:no-auto", source: "checklistcenter", playerName: "Barry Sanders" };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [catalogFootball], staleAfterFirstReadIds: ["cardhedge::stale-patch"] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED: stale-since-plan\s+1/);
+    expect(r.out).not.toMatch(/RESOLVE-TO-C \(patch\)\s+1/);
+    expect(r.led.salesPatches.some((p: any) => p.id === "cardhedge::stale-patch")).toBe(false);
+    expect(r.out).toMatch(/RECONCILE BALANCES/);
+  });
+
+  it("PATCH shape: an UNCHANGED document (etag still matches the plan) writes normally -- the conditional check is not a blanket refusal", () => {
+    const sale = {
+      id: "cardhedge::fresh-patch",
+      cardId: "hiq:football:1989:score:258:base:no-auto",
+      hobbyiqCardId: "hiq:baseball:1989:score:258:base:no-auto",
+      sport: "baseball",
+      identityUnverified: true, identityUnverifiedAt: "2026-09-07T00:00:00.000Z",
+      identityUnverifiedBy: "relocate-pool-rows-by-list", identityUnverifiedReason: "split-identity",
+      identityUnverifiedDetail: "no source attests either side",
+      title: "1989 Score Barry Sanders Detroit Lions Rookie RC #258",
+      playerName: "Barry Sanders", price: 41, soldAt: "2026-06-02T00:00:00.000Z",
+      parallel: "base", isAuto: false, gradeCompany: null, gradeValue: null, source: "cardhedge", cardNumber: "258",
+    };
+    const catalogFootball = { id: "hiq:football:1989:score:258:base:no-auto", cardId: "hiq:football:1989:score:258:base:no-auto", source: "checklistcenter", playerName: "Barry Sanders" };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [catalogFootball] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RESOLVE-TO-C \(patch\)\s+1/);
+    expect(r.led.salesPatches.some((p: any) => p.id === "cardhedge::fresh-patch")).toBe(true);
+  });
+
+  it("RELOCATE shape: a document mutated between this run's planning read and its own write is REFUSED stale-since-plan, never relocated", () => {
+    const sale = { ...VW3_SALE, id: "cardhedge::stale-relocate" };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [VW3_CHECKLIST_BASKETBALL], staleAfterFirstReadIds: ["cardhedge::stale-relocate"] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED: stale-since-plan\s+1/);
+    expect(r.out).not.toMatch(/RESOLVE-TO-H \(relocate\)\s+1/);
+    expect(r.led.salesUpserts).not.toContain("cardhedge::stale-relocate");
+    expect(r.led.salesDeletes).not.toContain("cardhedge::stale-relocate");
+    expect(r.out).toMatch(/RECONCILE BALANCES/);
+  });
+
+  it("RELOCATE shape: an UNCHANGED document relocates normally", () => {
+    const sale = { ...VW3_SALE, id: "cardhedge::fresh-relocate" };
+    const r = drive({ SCOPE: "all-splits", BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [VW3_CHECKLIST_BASKETBALL] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/RESOLVE-TO-H \(relocate\)\s+1/);
+    expect(r.led.salesUpserts).toContain("cardhedge::fresh-relocate");
+    expect(r.led.salesDeletes).toContain("cardhedge::fresh-relocate");
+  });
+
+  it("REPORT never re-reads for the conditional check (no write to protect) -- REPORT/APPLY still agree on the eventual verdict once unstaled", () => {
+    const sale = { ...VW3_SALE, id: "cardhedge::report-no-stale-check" };
+    const fixture = { sales: [sale], catalog: [VW3_CHECKLIST_BASKETBALL] };
+    const report = drive({ SCOPE: "all-splits" }, fixture);
+    expect(report.code).toBe(0);
+    expect(report.out).toMatch(/WOULD RESOLVE-TO-H \(relocate\)\s+1/);
   });
 });

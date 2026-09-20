@@ -20,6 +20,11 @@ const mod = require("../scripts/resolve-split-identity-parks.cjs") as {
   multiPlayerKeysOf: (playerName: unknown, playerIdentityKey: (n: unknown) => string) => Set<string>;
   judgeSplitIdentityVerdict: (input: { hMatch: string; cMatch: string; saleIsTwoSportAthlete?: boolean }) => { verdict: string; reason: string; detail: string };
   titleVetoes: (input: Record<string, unknown>, deps: Record<string, unknown>) => { vetoed: boolean; detail?: string };
+  guessTitlePlayer: (title: string, deps: Record<string, unknown>) => string | null;
+  playerIdentityTokens: (name: unknown, deps: Record<string, unknown>) => string[];
+  physicalSaleKeyOf: (doc: Record<string, unknown>) => string;
+  isPinnedOrFlagged: (doc: Record<string, unknown>) => boolean;
+  USER_SEED_SOURCES: Set<string>;
   CELL_RE: RegExp;
   ALL_SPLITS: string;
   PARK_FIELDS: string[];
@@ -36,11 +41,13 @@ const { extractCardNumberFromTitle } = require("../dist/services/portfolioiq/sol
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { sameCardNumber, resolveSetKeyForSlug } = require("../dist/services/portfolioiq/hobbyIqCardId.service.js") as { sameCardNumber: (a: unknown, b: unknown) => boolean; resolveSetKeyForSlug: (sport: string, setName: string, year: number) => string };
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { playerTheTitleAllows } = require("../dist/services/portfolioiq/playerTheTitleAllows.js") as { playerTheTitleAllows: (a: unknown, b: unknown) => unknown };
+const { parseCardQuery } = require("../dist/services/compiq/cardQueryParser.js") as { parseCardQuery: (q: string) => { playerName?: string; confidence?: number } };
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { cleanPlayerName } = require("../dist/services/portfolioiq/cardCatalog.service.js") as { cleanPlayerName: (n: unknown) => string };
 
 const { sportEvidence } = require("../scripts/lib/sport-title-evidence.cjs") as { sportEvidence: (t: string) => { sports: Set<string> } };
 
-const TITLE_DEPS = { inferSetKeyFromTitle, resolveSetKeyForSlug, extractCardNumberFromTitle, sameCardNumber, playerTheTitleAllows, sportEvidenceFn: sportEvidence };
+const TITLE_DEPS = { inferSetKeyFromTitle, resolveSetKeyForSlug, extractCardNumberFromTitle, sameCardNumber, sportEvidenceFn: sportEvidence, parseCardQuery, cleanPlayerName, playerIdentityKey };
 
 describe("resolve-split-identity-parks: segment helpers", () => {
   it("segmentsOf/sportSegmentOf/yearSegmentOf/setKeySegmentOf read a well-formed hiq slug", () => {
@@ -258,5 +265,119 @@ describe("resolve-split-identity-parks: SCOPE cell shape", () => {
     expect(mod.CELL_RE.test("basketball:2023")).toBe(true);
     expect(mod.CELL_RE.test("fleer|1988")).toBe(false); // the model lane's pipe shape, deliberately different
     expect(mod.CELL_RE.test("basketball-2023")).toBe(false);
+  });
+});
+
+describe("resolve-split-identity-parks: REVIEW #2 -- guessTitlePlayer + playerIdentityTokens (the real title-player veto)", () => {
+  it("guessTitlePlayer returns null for a bare, low-confidence single word", () => {
+    expect(mod.guessTitlePlayer("James", TITLE_DEPS)).toBeNull();
+  });
+
+  it("guessTitlePlayer returns a real multi-token guess for an ordinary title", () => {
+    expect(mod.guessTitlePlayer("2023 Topps LeBron James #VW3", TITLE_DEPS)).toBe("Lebron James");
+  });
+
+  it("playerIdentityTokens strips the RC/RR/DP/TC/UER/SP/SSP family via cleanPlayerName BEFORE tokenizing", () => {
+    expect(mod.playerIdentityTokens("James Wood RC", TITLE_DEPS)).toEqual(["james", "wood"]);
+    expect(mod.playerIdentityTokens("James Wood", TITLE_DEPS)).toEqual(["james", "wood"]);
+  });
+
+  describe("the three measured production false positives -- none veto", () => {
+    it('title guess "James" vs winner "James Wood RC"', () => {
+      const veto = mod.titleVetoes({
+        title: "2023 Bowman James Wood RC Prospect #1",
+        winnerSport: "baseball", winnerYear: 2023, winnerSetKey: null, winnerCardNumber: null,
+        winnerCatalogPlayerName: "James Wood RC", otherSport: "basketball",
+      }, TITLE_DEPS);
+      expect(veto.vetoed).toBe(false);
+    });
+
+    it('title guess "Mason Montgomery" vs winner "Mason Montgomery RC"', () => {
+      const veto = mod.titleVetoes({
+        title: "2023 Bowman Mason Montgomery RC Prospect",
+        winnerSport: "baseball", winnerYear: 2023, winnerSetKey: null, winnerCardNumber: null,
+        winnerCatalogPlayerName: "Mason Montgomery RC", otherSport: "basketball",
+      }, TITLE_DEPS);
+      expect(veto.vetoed).toBe(false);
+    });
+
+    it('title guess "Roki Sasaki Ff Nyc" vs winner "Roki Sasaki RC"', () => {
+      const veto = mod.titleVetoes({
+        title: "Roki Sasaki Ff Nyc RC rookie card",
+        winnerSport: "baseball", winnerYear: 2023, winnerSetKey: null, winnerCardNumber: null,
+        winnerCatalogPlayerName: "Roki Sasaki RC", otherSport: "basketball",
+      }, TITLE_DEPS);
+      expect(veto.vetoed).toBe(false);
+    });
+  });
+
+  it("VETOES a genuine contradiction: title names LeBron James, winner is Wembanyama", () => {
+    const veto = mod.titleVetoes({
+      title: "2023 Topps LeBron James #VW3",
+      winnerSport: "basketball", winnerYear: 2023, winnerSetKey: null, winnerCardNumber: null,
+      winnerCatalogPlayerName: "Victor Wembanyama", otherSport: "baseball",
+    }, TITLE_DEPS);
+    expect(veto.vetoed).toBe(true);
+    expect(veto.detail).toMatch(/Lebron James/);
+  });
+
+  it("multi-player winner row: shares a token with ANY listed name -- no veto", () => {
+    const veto = mod.titleVetoes({
+      title: "1988 Donruss Cal Ripken Jr #1",
+      winnerSport: "baseball", winnerYear: 1988, winnerSetKey: null, winnerCardNumber: null,
+      winnerCatalogPlayerName: "Eddie Murray / Cal Ripken Jr.", otherSport: "basketball",
+    }, TITLE_DEPS);
+    expect(veto.vetoed).toBe(false);
+  });
+
+  it("never vetoes when the title carries no player guess at all (confidence-floor silence)", () => {
+    const veto = mod.titleVetoes({
+      title: "PSA 10 GEM MINT card lot vintage",
+      winnerSport: "basketball", winnerYear: 2023, winnerSetKey: null, winnerCardNumber: null,
+      winnerCatalogPlayerName: "Victor Wembanyama", otherSport: "baseball",
+    }, TITLE_DEPS);
+    expect(veto.vetoed).toBe(false);
+  });
+});
+
+describe("resolve-split-identity-parks: REVIEW #1 -- physicalSaleKeyOf", () => {
+  it("keys on price (cents) + soldAt (day) + normalised title", () => {
+    expect(mod.physicalSaleKeyOf({ price: 12.5, soldAt: "2026-06-02T02:59:03.000Z", title: "  Pikachu   V  Holo  " }))
+      .toBe("1250|2026-06-02|pikachu v holo");
+  });
+
+  it("two CardHedge dual-id twins of the SAME physical sale (different id, same price/day/title) share one key", () => {
+    const a = { id: "cardhedge::abc", price: 12.5, soldAt: "2026-06-02T02:59:03.000Z", title: "Pikachu V Holo" };
+    const b = { id: "tca-ebay::999-dup", price: 12.5, soldAt: "2026-06-02T18:00:00.000Z", title: "Pikachu V Holo" };
+    expect(mod.physicalSaleKeyOf(a)).toBe(mod.physicalSaleKeyOf(b));
+  });
+
+  it("a genuinely different sale (different price) gets a different key", () => {
+    const a = { id: "a", price: 12.5, soldAt: "2026-06-02T00:00:00.000Z", title: "Pikachu V Holo" };
+    const b = { id: "b", price: 99.99, soldAt: "2026-06-02T00:00:00.000Z", title: "Pikachu V Holo" };
+    expect(mod.physicalSaleKeyOf(a)).not.toBe(mod.physicalSaleKeyOf(b));
+  });
+});
+
+describe("resolve-split-identity-parks: REVIEW #5 -- isPinnedOrFlagged", () => {
+  it("true for verifiedByUser", () => {
+    expect(mod.isPinnedOrFlagged({ verifiedByUser: true })).toBe(true);
+  });
+  it("true for flaggedWrong", () => {
+    expect(mod.isPinnedOrFlagged({ flaggedWrong: true })).toBe(true);
+  });
+  it("true for excludedFromFmv", () => {
+    expect(mod.isPinnedOrFlagged({ excludedFromFmv: true })).toBe(true);
+  });
+  it("true for every USER_SEED_SOURCES source", () => {
+    for (const source of mod.USER_SEED_SOURCES) {
+      expect(mod.isPinnedOrFlagged({ source })).toBe(true);
+    }
+  });
+  it("false for an ordinary vendor row with none of the flags", () => {
+    expect(mod.isPinnedOrFlagged({ source: "tca-ebay", verifiedByUser: false, flaggedWrong: false, excludedFromFmv: false })).toBe(false);
+  });
+  it("USER_SEED_SOURCES is the exact literal from soldCompsStore.service.ts (not exported there, kept in sync by inspection)", () => {
+    expect([...mod.USER_SEED_SOURCES].sort()).toEqual(["ebay-user-purchase", "ebay-user-sale", "manual-user-entry", "user-verified"].sort());
   });
 });
