@@ -1,18 +1,13 @@
 {
-  "scrapedAt": "2026-09-20T02:39:31.724Z",
+  "scrapedAt": "2026-09-20T17:43:39.902Z",
   "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2025/04/2024-Panini-Phoenix-Football-Checklist.xlsx",
-  "source": "beckett-s3-2026-09-19",
   "sport": "football",
   "year": 2024,
   "setName": "2024 Panini Phoenix Football",
   "productKey": "2024-panini-phoenix",
   "setKey": "panini-phoenix",
-  "rowCount": 16209,
+  "rowCount": 20309,
   "parallelColumnAuthoritative": true,
-  "heldRows": {
-    "rows": 16209,
-    "reason": "14 declared unnumbered base parallels (Hyper, Ice, International, Lazer, Orange, Pandora, Purple, Silver, plus the Orange/Purple Fade/Hyper/Lazer variants) emitted zero rows -- converter defect, ladder incomplete. A converter fix plus regeneration lifts this hold; do not ingest until the base parallel ladder is complete for every card."
-  },
   "sectionsReport": [
     {
       "sheet": "Base",
@@ -35,7 +30,7 @@
       "cards": 22,
       "role": "parallel",
       "anchor": "Base>Base Set",
-      "rung": "Base Autographs Silver",
+      "rung": "Silver",
       "rosterFold": true,
       "agree": 22,
       "disagree": 0
@@ -47,7 +42,7 @@
       "cards": 43,
       "role": "parallel",
       "anchor": "Base>Base Set",
-      "rung": "Base Autographs Black",
+      "rung": "Black",
       "rosterFold": true,
       "agree": 43,
       "disagree": 0
@@ -59,7 +54,7 @@
       "cards": 30,
       "role": "parallel",
       "anchor": "Base>Base Set",
-      "rung": "Base Autographs Blue",
+      "rung": "Blue",
       "rosterFold": true,
       "agree": 30,
       "disagree": 0
@@ -71,7 +66,7 @@
       "cards": 37,
       "role": "parallel",
       "anchor": "Base>Base Set",
-      "rung": "Base Autographs Gold",
+      "rung": "Gold",
       "rosterFold": true,
       "agree": 37,
       "disagree": 0
@@ -83,7 +78,7 @@
       "cards": 35,
       "role": "parallel",
       "anchor": "Base>Base Set",
-      "rung": "Base Autographs Green",
+      "rung": "Green",
       "rosterFold": true,
       "agree": 35,
       "disagree": 0
@@ -95,7 +90,7 @@
       "cards": 27,
       "role": "parallel",
       "anchor": "Base>Base Set",
-      "rung": "Base Autographs Hyper",
+      "rung": "Hyper",
       "rosterFold": true,
       "agree": 27,
       "disagree": 0
@@ -107,7 +102,7 @@
       "cards": 26,
       "role": "parallel",
       "anchor": "Base>Base Set",
-      "rung": "Base Autographs Lazer",
+      "rung": "Lazer",
       "rosterFold": true,
       "agree": 26,
       "disagree": 0
@@ -119,7 +114,7 @@
       "cards": 24,
       "role": "parallel",
       "anchor": "Base>Base Set",
-      "rung": "Base Autographs Red",
+      "rung": "Red",
       "rosterFold": true,
       "agree": 24,
       "disagree": 0

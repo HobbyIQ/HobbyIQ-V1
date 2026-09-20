@@ -3093,6 +3093,44 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   S("panini-donruss-best-of-instant-autographs", { parent: "panini-donruss" }),
   S("panini-donruss-red-hot-rookies-autographs", { parent: "panini-donruss" }),
 
+  // 2024 Panini Phoenix Football (Beckett S3, acq-2026-09-19). 23 keys, all
+  // measured 0% roster agreement against Base's own #1-100 numbering
+  // (planStagedDirectory's own `unregistered` list on the regenerated,
+  // #2350-fixed CSV -- 20,309 rows, "Base Autographs <colour>" already folds
+  // onto Base Set as a parallel via the SAME cross-class roster fold
+  // Donruss's own registration above relies on, so it never appears here).
+  // Every key below is a genuinely independent named product: same card
+  // number as a base row, completely different player -- e.g. base #1 is
+  // A.J. Brown, insert-rookie-rising #1 is J.J. McCarthy; insert-archetype
+  // #1 is Patrick Mahomes II; insert-franchise-future-material #1 is Ja'Marr
+  // Chase. Card counts that look implausibly large for a single insert
+  // (Rookie Rising 900, Contours 544) are the product's own FULL colour
+  // parallel ladder (18 and 17 colours respectively) over a real, much
+  // smaller roster (50 and 32 cards) -- verified directly, not guessed.
+  S("panini-phoenix-rookie-rising", { parent: "panini-phoenix" }),
+  S("panini-phoenix-contours", { parent: "panini-phoenix" }),
+  S("panini-phoenix-rookie-phenoms-jersey-autographs", { parent: "panini-phoenix" }),
+  S("panini-phoenix-rookie-silhouettes", { parent: "panini-phoenix" }),
+  S("panini-phoenix-treasured-tandems", { parent: "panini-phoenix" }),
+  S("panini-phoenix-franchise-future-material", { parent: "panini-phoenix" }),
+  S("panini-phoenix-rookie-phenom-jersey", { parent: "panini-phoenix" }),
+  S("panini-phoenix-rising-rookie-autographs-jersey", { parent: "panini-phoenix" }),
+  S("panini-phoenix-incredible-inked-materials", { parent: "panini-phoenix" }),
+  S("panini-phoenix-pandora-patch", { parent: "panini-phoenix" }),
+  S("panini-phoenix-rising-rookies-dual-patch-autographs", { parent: "panini-phoenix" }),
+  S("panini-phoenix-rising-star-autographs-jersey", { parent: "panini-phoenix" }),
+  S("panini-phoenix-phoenician-rookie-penmanship", { parent: "panini-phoenix" }),
+  S("panini-phoenix-rookie-calligraphy", { parent: "panini-phoenix" }),
+  S("panini-phoenix-regeneration", { parent: "panini-phoenix" }),
+  S("panini-phoenix-calligraphy", { parent: "panini-phoenix" }),
+  S("panini-phoenix-phoenician-penmanship", { parent: "panini-phoenix" }),
+  S("panini-phoenix-phenomenal-duo-jersey-autographs", { parent: "panini-phoenix" }),
+  S("panini-phoenix-color-blast", { parent: "panini-phoenix" }),
+  S("panini-phoenix-flex", { parent: "panini-phoenix" }),
+  S("panini-phoenix-gridiron-crowns", { parent: "panini-phoenix" }),
+  S("panini-phoenix-phoenician", { parent: "panini-phoenix" }),
+  S("panini-phoenix-archetype", { parent: "panini-phoenix" }),
+
   S("panini-select-rookie-jersey-autographs", { family: "panini-select", parent: "panini-select" }),
   S("panini-select-signature-selections", { family: "panini-select", parent: "panini-select" }),
   S("panini-select-in-flight-signatures", { family: "panini-select", parent: "panini-select" }),
