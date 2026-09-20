@@ -1786,6 +1786,88 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
     "rookie-variations",
     ].map((sub) => S(`panini-mosaic-${sub}`, { family: "panini-mosaic", parent: "panini-mosaic" })),
 
+  /**
+   * 2024 PANINI MOSAIC FOOTBALL -- EIGHTEEN NAMED INSERT SETS (R67 method,
+   * same as Illusions/Select/Zenith above; #2337, 2026-09-19).
+   *
+   * MEASURED against Beckett's own S3-hosted checklist (11,468 rows). The
+   * offline planner names 20 unregistered keys; two (`center-stage-mosaic`,
+   * `overdrive-mosaic`) are a trailing-"Mosaic" spelling of the ALREADY-
+   * registered `panini-mosaic-center-stage` / `panini-mosaic-overdrive`
+   * (both in the basketball-era block immediately above) and are fixed in
+   * #2337's converter, not registered here a second time under a duplicate
+   * spelling. The eighteen below have NO already-registered sibling under
+   * any spelling -- each is genuinely new to this file.
+   *
+   * EVERY ONE IS `role: own-cards` in the converter's own classifier
+   * (`classifySections`, the same production code every prior registration
+   * in this file was measured against): no fold candidate was found for any
+   * of them, meaning none is a numeric subset of any anchor on the file
+   * (base or otherwise). Combined with each having Beckett's own distinct
+   * section header, own "N cards." count and own numbering, this is the
+   * "a named insert set is its own card set" shape (R60/R67), not a rung of
+   * anything.
+   *
+   *     panini-mosaic-in-focus-signatures      194 rows (Autographs, signed)
+   *     panini-mosaic-notoriety                175 rows (Inserts)
+   *     panini-mosaic-capital-gains-mosaic     150 rows (Inserts -- "Mosaic"
+   *                                                       is part of THIS
+   *                                                       insert's own name,
+   *                                                       unlike the two
+   *                                                       spelling artefacts
+   *                                                       above: no bare
+   *                                                       "Capital Gains"
+   *                                                       section exists on
+   *                                                       this sheet at all)
+   *     panini-mosaic-moments-in-time          150 rows (Inserts)
+   *     panini-mosaic-showtime-signatures      150 rows (Autographs, signed)
+   *     panini-mosaic-epic-performers          140 rows (Inserts)
+   *     panini-mosaic-touchdown-masters        140 rows (Inserts)
+   *     panini-mosaic-splash-mosaic            120 rows (Inserts, same "Mosaic
+   *                                                       is the real name"
+   *                                                       shape as Capital
+   *                                                       Gains above)
+   *     panini-mosaic-carbon-copy               90 rows (Inserts)
+   *     panini-mosaic-storm-mosaic              90 rows (Inserts, same shape)
+   *     panini-mosaic-kaleidoscopic             25 rows (Inserts)
+   *     panini-mosaic-micro-mosaic              25 rows (Inserts, same shape)
+   *     panini-mosaic-money                     25 rows (Inserts)
+   *     panini-mosaic-signatures-highlights     14 rows (Autographs, signed)
+   *     panini-mosaic-gridiron-greats           13 rows (Inserts)
+   *     panini-mosaic-pinnacle-inscriptions      10 rows (Autographs, signed)
+   *     panini-mosaic-franchise-numbers          1 row  (Autographs, signed)
+   *     panini-mosaic-super-bowl-signatures      1 row  (Autographs, signed)
+   *
+   * "Capital Gains", "Splash" and "Storm" are each registered WITH "Mosaic"
+   * in the key, not stripped, because Beckett's own workbook has no bare
+   * ("Capital Gains" / "Splash" / "Storm") section at all on this file --
+   * unlike Center Stage and Overdrive, which have BOTH a plain, already-
+   * registered spelling on other Mosaic releases AND this file's own
+   * "... Mosaic" suffix, "Mosaic" here is simply the whole name Beckett
+   * printed for a 2024-football-only insert.
+   *
+   * `family` left at the default (each insert its own pricing family), same
+   * as every prior R60/R67 registration; `parent: "panini-mosaic"` throughout.
+   */
+  S("panini-mosaic-in-focus-signatures", { parent: "panini-mosaic" }),
+  S("panini-mosaic-notoriety", { parent: "panini-mosaic" }),
+  S("panini-mosaic-capital-gains-mosaic", { parent: "panini-mosaic" }),
+  S("panini-mosaic-moments-in-time", { parent: "panini-mosaic" }),
+  S("panini-mosaic-showtime-signatures", { parent: "panini-mosaic" }),
+  S("panini-mosaic-epic-performers", { parent: "panini-mosaic" }),
+  S("panini-mosaic-touchdown-masters", { parent: "panini-mosaic" }),
+  S("panini-mosaic-splash-mosaic", { parent: "panini-mosaic" }),
+  S("panini-mosaic-carbon-copy", { parent: "panini-mosaic" }),
+  S("panini-mosaic-storm-mosaic", { parent: "panini-mosaic" }),
+  S("panini-mosaic-kaleidoscopic", { parent: "panini-mosaic" }),
+  S("panini-mosaic-micro-mosaic", { parent: "panini-mosaic" }),
+  S("panini-mosaic-money", { parent: "panini-mosaic" }),
+  S("panini-mosaic-signatures-highlights", { parent: "panini-mosaic" }),
+  S("panini-mosaic-gridiron-greats", { parent: "panini-mosaic" }),
+  S("panini-mosaic-pinnacle-inscriptions", { parent: "panini-mosaic" }),
+  S("panini-mosaic-franchise-numbers", { parent: "panini-mosaic" }),
+  S("panini-mosaic-super-bowl-signatures", { parent: "panini-mosaic" }),
+
   ...["college-penmanship", "draft-picks-autographs", "freshman-signatures",
     "sensational-signatures",
   ].map((sub) => S(`panini-prizm-draft-picks-${sub}`, {
@@ -2131,6 +2213,45 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   S("panini-illusions-superlatives", { parent: "panini-illusions" }),
   S("panini-illusions-trophy-collection-signatures", { parent: "panini-illusions" }),
   S("panini-illusions-trophy-hunters-all-pro", { parent: "panini-illusions" }),
+
+  /**
+   * 2024 PANINI ILLUSIONS FOOTBALL -- TWO MORE NAMED INSERT SETS, FOUND IN
+   * BECKETT'S OWN CHECKLIST (2026-09-19), ABSENT FROM THE 28 ABOVE.
+   *
+   * The 28 keys above were all measured against the checklistinsider package
+   * already on main (10,871 rows). #2337 acquired the SAME product from
+   * Beckett's own S3-hosted checklist (7,094 rows, a different source with a
+   * different sheet layout) and its offline planner names exactly two
+   * unregistered keys, neither present in checklistinsider's own file at all:
+   *
+   *     panini-illusions-mystique          336 rows (Inserts sheet, "Mystique")
+   *     panini-illusions-instant-impact    280 rows (Memorabilia sheet,
+   *                                                  "Instant Impact")
+   *
+   * BOTH ARE THEIR OWN CARD SET, NOT A RUNG OF ANYTHING ALREADY REGISTERED
+   * ABOVE. Beckett's own workbook prints each with its own header, its own
+   * "N cards." count, and its own numbering (Mystique #1-42, Instant Impact
+   * #1-40); the converter's classifier (`classifySections`, same production
+   * code every other registration in this file was measured against) finds
+   * NO fold candidate for either -- both land `role: "own-cards"`, meaning
+   * their numbers never fully overlap any anchor (base or otherwise) on the
+   * file. Confirmed distinct from each other too, not a duplicate listing of
+   * one product under two names: Mystique #3 is Bo Nix, Instant Impact #3 is
+   * Marvin Harrison Jr. -- different players at the same number, so neither
+   * is a re-statement of the other.
+   *
+   * WHY THIS MATTERS. Both currently answer `panini-illusions` (verified by
+   * running normalizeSetKey), so every one of their 616 combined rows would
+   * price in the flagship base pool instead of their own -- and because
+   * BOTH keys fall back to the identical address, they collide with base AND
+   * with each other: 202 id-collision groups in #2337's own offline planner
+   * run, every one of them a {base, insert-instant-impact, insert-mystique}
+   * triple or pair fighting for `panini-illusions:<N>:base:no-auto`.
+   * Registration alone clears every one of them -- no fold, no roster
+   * ambiguity, both simply need their own address.
+   */
+  S("panini-illusions-mystique", { parent: "panini-illusions" }),
+  S("panini-illusions-instant-impact", { parent: "panini-illusions" }),
 
   /**
    * 2024 PANINI SELECT FOOTBALL -- THE 33 NAMED INSERT SETS (R60 + R38).
