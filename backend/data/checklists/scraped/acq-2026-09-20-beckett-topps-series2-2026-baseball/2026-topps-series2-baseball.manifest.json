@@ -1,0 +1,440 @@
+{
+  "scrapedAt": "2026-09-20T22:22:46.352Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2026/05/2026-Topps-Series-2-Baseball-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-20",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Topps Series 2 Baseball",
+  "productKey": "2026-topps",
+  "setKey": "topps",
+  "rowCount": 3058,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base",
+      "category": "base",
+      "cards": 350,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Golden Mirror Variations",
+      "category": "insert-golden-mirror-variations",
+      "cards": 350,
+      "role": "parallel",
+      "anchor": "Base>Base",
+      "rung": "Golden Mirror Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Vintage Stock Variations",
+      "category": "insert-vintage-stock-variations",
+      "cards": 100,
+      "role": "parallel",
+      "anchor": "Base>Base",
+      "rung": "Vintage Stock Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Hobby Exclusive",
+      "category": "insert-hobby-exclusive",
+      "cards": 125,
+      "role": "parallel",
+      "anchor": "Base>Base",
+      "rung": "Hobby Exclusive",
+      "rosterFold": true,
+      "agree": 100,
+      "disagree": 0
+    },
+    {
+      "sheet": "Variations",
+      "section": "True Photo Variations",
+      "category": "insert-true-photo-variations",
+      "cards": 100,
+      "role": "parallel",
+      "anchor": "Base>Base",
+      "rung": "True Photo Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Team Color Border Variations",
+      "category": "insert-team-color-border-variations",
+      "cards": 100,
+      "role": "parallel",
+      "anchor": "Base>Base",
+      "rung": "Team Color Border Variation"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Tin Exclusive",
+      "category": "insert-tin-exclusive",
+      "cards": 100,
+      "role": "parallel",
+      "anchor": "Base>Base",
+      "rung": "Tin Exclusive",
+      "rosterFold": true,
+      "agree": 100,
+      "disagree": 0
+    },
+    {
+      "sheet": "Variations",
+      "section": "Fanatics Fest Exclusive",
+      "category": "insert-fanatics-fest-exclusive",
+      "cards": 100,
+      "role": "parallel",
+      "anchor": "Base>Base",
+      "rung": "Fanatics Fest Exclusive",
+      "rosterFold": true,
+      "agree": 100,
+      "disagree": 0
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - Short Print Rookie Cards",
+      "category": "insert-base-short-print-rookie-cards",
+      "cards": 4,
+      "role": "parallel",
+      "anchor": "Base>Base",
+      "rung": "Short Print Rookie Card"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Base - 1952 Variations",
+      "category": "insert-base-1952-variations",
+      "cards": 20,
+      "role": "parallel",
+      "anchor": "Base>Base",
+      "rung": "1952 Variation"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "First Pitch Autographs",
+      "category": "auto-first-pitch-autographs",
+      "cards": 6,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Baseball Stars Autographs",
+      "category": "auto-baseball-stars-autographs",
+      "cards": 92,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1991 Topps Baseball Autographs",
+      "category": "auto-1991-topps-baseball-autographs",
+      "cards": 90,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1991 Topps Baseball All-Star Autographs",
+      "category": "auto-1991-topps-baseball-all-star-autographs",
+      "cards": 71,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "World Champion Autographs",
+      "category": "auto-world-champion-autographs",
+      "cards": 14,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Postseason Performance Autographs",
+      "category": "auto-postseason-performance-autographs",
+      "cards": 33,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Signature Tunes Dual Aurographs",
+      "category": "auto-signature-tunes-dual-aurographs",
+      "cards": 2,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Cover Athlete Autographs",
+      "category": "auto-cover-athlete-autographs",
+      "cards": 9,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1991 Topps Baseball Chrome Autographs",
+      "category": "auto-1991-topps-baseball-chrome-autographs",
+      "cards": 44,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1991 Topps Baseball Chrome All-Star Autographs",
+      "category": "auto-1991-topps-baseball-chrome-all-star-autographs",
+      "cards": 43,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Highlight Reels Autographs",
+      "category": "auto-highlight-reels-autographs",
+      "cards": 5,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "75 Years Of Topps Die-Cut Autographs",
+      "category": "auto-75-years-of-topps-die-cut-autographs",
+      "cards": 11,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "75 Years Of Topps Baseball Autographs",
+      "category": "auto-75-years-of-topps-baseball-autographs",
+      "cards": 4,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Topps Flagship Autograph Patches",
+      "category": "auto-topps-flagship-autograph-patches",
+      "cards": 51,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Heavy Lumber Autograph Relics",
+      "category": "auto-heavy-lumber-autograph-relics",
+      "cards": 43,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Major League Materials Autographs",
+      "category": "auto-major-league-materials-autographs",
+      "cards": 65,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Major Legaue Materials Dual Autographs",
+      "category": "auto-major-legaue-materials-dual-autographs",
+      "cards": 4,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "City Connect Swatches Autographs",
+      "category": "auto-city-connect-swatches-autographs",
+      "cards": 56,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Rounding The Bases Autographs",
+      "category": "auto-rounding-the-bases-autographs",
+      "cards": 61,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Major League Material",
+      "category": "insert-major-league-material",
+      "cards": 98,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "City Connect Swatch Collection",
+      "category": "insert-city-connect-swatch-collection",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Real One Relics",
+      "category": "insert-real-one-relics",
+      "cards": 45,
+      "role": "parallel",
+      "anchor": "Base>Base",
+      "rung": "Real One Relic",
+      "rosterFold": true,
+      "agree": 45,
+      "disagree": 0
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Rounding The Bases Relics",
+      "category": "insert-rounding-the-bases-relics",
+      "cards": 79,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "1991 Topps Baseball Relics",
+      "category": "insert-1991-topps-baseball-relics",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "1991 Topps Baseball All-Star Relics",
+      "category": "insert-1991-topps-baseball-all-star-relics",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Hobby/Jumbo Exclusive",
+      "category": "insert-hobbyjumbo-exclusive",
+      "cards": 91,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Crooked Numbers",
+      "category": "insert-crooked-numbers",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Glove Work",
+      "category": "insert-glove-work",
+      "cards": 65,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "First Pitch",
+      "category": "insert-first-pitch",
+      "cards": 6,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Heavy Lumber",
+      "category": "insert-heavy-lumber",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Home Field",
+      "category": "insert-home-field",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "All Aces",
+      "category": "insert-all-aces",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "All Kings",
+      "category": "insert-all-kings",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Highlight Reels",
+      "category": "insert-highlight-reels",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1991 Topps Baseball",
+      "category": "insert-1991-topps-baseball",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1991 Topps All-Stars",
+      "category": "insert-1991-topps-all-stars",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Hobby/Jumbo Silver Pack Exclusive",
+      "category": "insert-hobbyjumbo-silver-pack-exclusive",
+      "cards": 100,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Oversized 1991 Topps Baseball",
+      "category": "insert-oversized-1991-topps-baseball",
+      "cards": 16,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Oversized 2026 Topps Baseball",
+      "category": "insert-oversized-2026-topps-baseball",
+      "cards": 16,
+      "role": "parallel",
+      "anchor": "Base>Base",
+      "rung": "Oversized 2026 Topps Baseball",
+      "rosterFold": true,
+      "agree": 16,
+      "disagree": 0
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Retail Exclusive",
+      "category": "insert-retail-exclusive",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Fanatics Fest Exclusive",
+      "category": "insert-fanatics-fest-exclusive",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Home Field FanFest",
+      "category": "insert-home-field-fanfest",
+      "cards": 1,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Cover Athletes",
+      "category": "insert-cover-athletes",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Diamond Dust",
+      "category": "insert-diamond-dust",
+      "cards": 10,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Iconic Topps Buyback Cards",
+      "category": "insert-iconic-topps-buyback-cards",
+      "cards": 19,
+      "role": "own-cards"
+    }
+  ],
+  "notes": [
+    "264 rows across 7 unregistered-key categories were split into the sibling file 2026-topps-series2-baseball-unregistered-inserts.csv and held there (see its own manifest heldRows) -- none of them shares Series 2 base's roster at the colliding numbers, several appear to belong to the Series 1 or Update Series number lines instead, and none is registered in productSetKeys.ts."
+  ],
+  "sha256": "67263eaba2915c1a7cf7cde667456bcd976ef7b4836491d5439d752c59bd58a0"
+}

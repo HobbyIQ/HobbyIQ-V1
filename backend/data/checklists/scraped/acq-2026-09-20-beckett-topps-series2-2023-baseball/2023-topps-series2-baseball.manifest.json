@@ -1,0 +1,322 @@
+{
+  "scrapedAt": "2026-09-20T22:17:52.123Z",
+  "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2023/05/2023-Topps-Series-2-Baseball-Checklist.xlsx",
+  "source": "beckett-s3-2026-09-20",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Topps Series 2 Baseball",
+  "productKey": "2023-topps",
+  "setKey": "topps",
+  "rowCount": 11905,
+  "parallelColumnAuthoritative": true,
+  "sectionsReport": [
+    {
+      "sheet": "Base",
+      "section": "Base Set",
+      "category": "base",
+      "cards": 330,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Base",
+      "section": "Clear Checklist",
+      "category": "base",
+      "cards": 100,
+      "role": "anchor"
+    },
+    {
+      "sheet": "Variations",
+      "section": "Golden Mirror Variations Checklist",
+      "category": "insert-golden-mirror-variations-checklist",
+      "cards": 330,
+      "role": "parallel",
+      "anchor": "Base>Base Set",
+      "rung": "Golden Mirror Variations Checklist"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1988 Topps Baseball Autographs",
+      "category": "auto-1988-topps-baseball-autographs",
+      "cards": 94,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "1988 Topps Baseball All-Stars Autographs",
+      "category": "auto-1988-topps-baseball-all-stars-autographs",
+      "cards": 71,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "2022 Silver Slugger Award Winners Autographs",
+      "category": "auto-2022-silver-slugger-award-winners-autographs",
+      "cards": 9,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "2023 World Baseball Classic Stars Autographs",
+      "category": "auto-2023-world-baseball-classic-stars-autographs",
+      "cards": 37,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "All Aces Autographs",
+      "category": "auto-all-aces-autographs",
+      "cards": 15,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Baseball Stars Autographs",
+      "category": "auto-baseball-stars-autographs",
+      "cards": 63,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Baseball Stars Dual Autographs",
+      "category": "auto-baseball-stars-dual-autographs",
+      "cards": 14,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Crowning Achievements Commemorative Patch Autographs",
+      "category": "auto-crowning-achievements-commemorative-patch-autographs",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Cut Signatures",
+      "category": "auto-cut-signatures",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Father's Day Commemorative Team Patch Autographs",
+      "category": "auto-fathers-day-commemorative-team-patch-autographs",
+      "cards": 38,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Favorite Sons Autographs",
+      "category": "auto-favorite-sons-autographs",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Legends of the Game Autographs",
+      "category": "auto-legends-of-the-game-autographs",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Major League Materials Autographs",
+      "category": "auto-major-league-materials-autographs",
+      "cards": 33,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Oversized Topps Record Breakers Autographs",
+      "category": "auto-oversized-topps-record-breakers-autographs",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Significant Statistics Autographs",
+      "category": "auto-significant-statistics-autographs",
+      "cards": 12,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Autographs",
+      "section": "Topps Reverence Auto Patch",
+      "category": "auto-topps-reverence-auto-patch",
+      "cards": 57,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "1988 Topps Baseball Relics",
+      "category": "insert-1988-topps-baseball-relics",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "1988 Topps Baseball All-Star Relics",
+      "category": "insert-1988-topps-baseball-all-star-relics",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "In the Name Relics",
+      "category": "insert-in-the-name-relics",
+      "cards": 60,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Memorabilia",
+      "section": "Major League Materials",
+      "category": "insert-major-league-materials",
+      "cards": 53,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1988 Topps Baseball",
+      "category": "insert-1988-topps-baseball",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "1988 Topps Baseball All-Stars",
+      "category": "insert-1988-topps-baseball-all-stars",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "2022 Silver Slugger Award Winners",
+      "category": "insert-2022-silver-slugger-award-winners",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "2023 World Baseball Classic Stars",
+      "category": "insert-2023-world-baseball-classic-stars",
+      "cards": 60,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "All Aces",
+      "category": "insert-all-aces",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Crowning Achievements Commemorative Patch",
+      "category": "insert-crowning-achievements-commemorative-patch",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Father's Day Commemorative Team Patch",
+      "category": "insert-fathers-day-commemorative-team-patch",
+      "cards": 50,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Favorite Sons",
+      "category": "insert-favorite-sons",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Heavy Lumber",
+      "category": "insert-heavy-lumber",
+      "cards": 20,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Home Run Challenge Code Cards",
+      "category": "insert-home-run-challenge-code-cards",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Legends of the Game",
+      "category": "insert-legends-of-the-game",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Luke the Cardist Art Cards",
+      "category": "insert-luke-the-cardist-art-cards",
+      "cards": 17,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Oversized Topps Record Breaker",
+      "category": "insert-oversized-topps-record-breaker",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Significant Statistics",
+      "category": "insert-significant-statistics",
+      "cards": 25,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Social Media Follow Back Redemptions",
+      "category": "insert-social-media-follow-back-redemptions",
+      "cards": 22,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Social Media Follow Back Redemptions",
+      "category": "insert-social-media-follow-back-redemptions-2",
+      "cards": 1,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Stars of MLB",
+      "category": "insert-stars-of-mlb",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Inserts",
+      "section": "Stars of MLB Chrome",
+      "category": "insert-stars-of-mlb-chrome",
+      "cards": 30,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Silver Packs",
+      "section": "1988 Topps Baseball Chrome Silver Packs Checklist",
+      "category": "insert-1988-topps-baseball-chrome-silver-packs-checklist",
+      "cards": 147,
+      "role": "own-cards"
+    },
+    {
+      "sheet": "Silver Packs",
+      "section": "1988 Topps Baseball Chrome Silver Packs Checklist",
+      "category": "insert-1988-topps-baseball-chrome-silver-packs-checklist-2",
+      "cards": 1,
+      "role": "own-cards"
+    }
+  ],
+  "notes": [
+    "The Variations sheet's parallel is committed verbatim as Beckett prints it: \"Golden Mirror Variations Checklist\" (330 rows). This workbook's Master sheet lists no per-parallel names at all (only Base/category + cardNumber/player/team), so stripChecklistSuffix's Master-authority gate never fires, and the Variations sheet has no sibling section to confirm a sheet-wide Checklist-suffix convention either (it is the ONLY section on that sheet). Per convertBeckettChecklistXlsx.cjs's own documented rule (CF-BECKETT-CHECKLIST-IS-A-TITLE-ARTIFACT-NOT-A-NAME), the suffix is left ON rather than guessed off with no corroborating evidence. The sibling 2023 Topps Series 1 file's analogous parallel, correctly stripped, is \"Golden Mirror Image Variation\" -- this may be the same rung under the same naming convention, but it is committed as its own literal string pending a second source or a Master-sheet confirmation, per no-synthetic-parallels.",
+    "Removed 4 pure-duplicate rows the source workbook printed for card numbers 371/423/452/505 with unaccented player-name spellings (Livan Soto / Jordan Diaz / Carlos Perez / Jose Miranda) immediately following the plain Base Set run and before the Golden Mirror Variations run began -- each number already carries its correctly-accented row earlier in the same run (Livan Soto / Liván Soto, etc.), identical category/parallel/isAuto/printRun otherwise. Removed as source duplication (CF-A-DUPLICATE-IS-NOT-A-COLLISION), not a second card; measured via planStagedDirectory id-collisions before removal (4 colliding ids, exactly these 4 numbers) and re-verified PASS after."
+  ],
+  "sha256": "a5e1885baabf15f42f9f809ff2f52dd989495f670c1c8df2231da835eaa6f1bb"
+}
