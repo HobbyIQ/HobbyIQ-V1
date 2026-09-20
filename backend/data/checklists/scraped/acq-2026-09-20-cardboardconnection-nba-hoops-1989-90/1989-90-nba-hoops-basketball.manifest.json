@@ -1,0 +1,28 @@
+{
+  "source": "cardboardconnection-2026-09-20",
+  "sourceUrl": "https://www.cardboardconnection.com/1989-nba-hoops-basketball-cards",
+  "sourceHtmlSha256": "e928aa8ee6ac23ff8d25d002231a5dff37e0cb391a725ac18d62877560b2a1d5",
+  "fetchedAt": "2026-09-20",
+  "sport": "basketball",
+  "year": 1989,
+  "setName": "1989-90 NBA Hoops Basketball",
+  "productKey": "1989-90-nba-hoops-basketball",
+  "setKey": "nba-hoops",
+  "rowCount": 353,
+  "parallelColumnAuthoritative": false,
+  "readyToIngest": false,
+  "readyToIngestNote": "Documentation only -- ingest-checklist-csv-to-catalog.cjs and ingest-scraped-checklist.cjs do not read this field; the real gate is that this directory sits under backend/data/checklists/scraped/ where a human/workflow chooses which directories to point DIR at.",
+  "stagedNote": "STAGED, not ingested. planStagedDirectory (real ingest lane, read-only, no Cosmos) PASSES on this file: verdict 'pass', 353 batch rows, 353 distinct ids, 0 collisions, 0 unregistered keys. setKey resolves to 'nba-hoops' via the filename fallback (year=1989, the split-year season's FIRST year, matching the repo's own split-year-slug convention already used for the 2022-23/2023-24 nba-hoops packages under acq-2026-09-13-cbc/). setKey 'nba-hoops' was already registered in productSetKeys.ts before this package existed. No new productSetKeys.ts registrations were needed.",
+  "gapThisFills": "2026-09-20 census target: NBA Hoops 1989-90 and 1990-91 (~25k unbacked sales combined). Neither year was staged anywhere in the repo before this package (siblings under acq-2026-09-13-cbc/ cover 2022-23 and 2023-24 only). This package closes 1989-90; 1990-91 was NOT acquired in this pass (cardboardconnection's page for it, https://www.cardboardconnection.com/1990-91-nba-hoops-basketball-cards, 404s under every URL slug tried in this pass -- see final report for the slugs attempted).",
+  "sourcePageShape": "Same Cardboard Connection vintage layout as the Donruss siblings: '<div class=\"checklistdesc\">353 cards...</div>' anchor, then '<br />'-separated 'NUMBER Player - Team [SP|AS|Coach] [RC]' rows split across a 'Series 1' (#1-300) and 'Series 2' (#301-353) block on the SAME page (the page's own prose: 'Series 1 = cards #1-300; Series 2 = cards #301-353.'). SP/AS/Coach are card-type markers stated by the page's own KEY line ('SP = Series 1 cards dropped from Series 2 boxes to add new cards; AS = All-Star.') -- not parallels, not kept as a distinct category, same treatment as the Beckett-source 'CL' marker precedent.",
+  "converterNote": "One-off Node script in the builder's scratch directory (same precedent as the Donruss siblings, not committed): splits on <br>, matches '^(\\d{1,4})\\s+(.+)$', drops the bare 'Series 1'/'Series 2' section-label lines (no card number), strips trailing ' RC', then strips a trailing ' SP', ' AS', or ' Coach' marker word before splitting on ' - ' to drop the team name and keep only the player field. All 353 rows land as category=base -- no named subset axis is stated for this product's base checklist beyond the card-type markers already stripped.",
+  "sectionsReport": [
+    { "category": "base", "cardRange": "1-353 (Series 1 #1-300 + Series 2 #301-353)", "cards": 353 }
+  ],
+  "heldOut": {
+    "section": "Base Variations / Errors Set Checklist",
+    "reason": "Not parsed or counted -- this package's converter stops at card #353 (the stated end of the base checklist) before this section begins, per the same 'no synthetic parallels / error-variant axis needs a human ruling' rule as the Donruss siblings. Not staged.",
+    "alsoHeld": "Coaches/Team Checklists/Inside Stuff/etc subsets described in web search results for the SIBLING 1990-91 product were not investigated for 1989-90 since that page could not be fetched at all -- unknown whether they exist as separate CBC subsets for this year."
+  },
+  "salesUnlockedEstimate": "Part of the ~25k NBA Hoops 1989-90 + 1990-91 combined unbacked-sales figure in the 2026-09-20 census; this package's exact share was not separately measured (no Cosmos access in this pass) -- 353 checklist-backed cardNumbers now exist for 1989-90 where zero existed before. 1990-91 remains unacquired."
+}

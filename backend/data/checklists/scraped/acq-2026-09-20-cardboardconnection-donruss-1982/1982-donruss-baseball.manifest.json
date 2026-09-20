@@ -1,0 +1,29 @@
+{
+  "source": "cardboardconnection-2026-09-20",
+  "sourceUrl": "https://www.cardboardconnection.com/1982-donruss-baseball-cards",
+  "sourceHtmlSha256": "7521c02f9cf5c93c5c89838e8270c40eaf3ec546dc8db06d8e17af7316c28eea",
+  "fetchedAt": "2026-09-20",
+  "sport": "baseball",
+  "year": 1982,
+  "setName": "1982 Donruss Baseball",
+  "productKey": "1982-donruss-baseball",
+  "setKey": "donruss",
+  "rowCount": 653,
+  "parallelColumnAuthoritative": false,
+  "readyToIngest": false,
+  "readyToIngestNote": "Documentation only -- ingest-checklist-csv-to-catalog.cjs and ingest-scraped-checklist.cjs do not read this field; the real gate is that this directory sits under backend/data/checklists/scraped/ where a human/workflow chooses which directories to point DIR at.",
+  "stagedNote": "STAGED, not ingested. planStagedDirectory (real ingest lane, read-only, no Cosmos) PASSES on this file: verdict 'pass', 653 batch rows, 653 distinct ids, 0 collisions, 0 unregistered keys. setKey resolves to bare 'donruss' via the filename fallback (no manifest setKey override applied at plan time in this check -- confirmed the filename-derived key matches the catalog's own pre-2009 Donruss convention, see productSetKeys.ts's own comment: pre-2009 Donruss keys 'as-named', i.e. bare 'donruss', never 'panini-donruss'). No productSetKeys.ts registrations were needed for this package.",
+  "gapThisFills": "2026-09-20 census target: Donruss baseball 1982-1990 (~121k total unbacked sales across the run, key baseball|<year>|panini-donruss per the task brief -- but the catalog's OWN pre-2009 convention, confirmed against productSetKeys.ts and the sibling acq-2026-09-13-bcp Donruss packages (1983/1986-89, keyed bare 'donruss'), is bare 'donruss' for this era; followed that, not the task brief's literal key, per the brief's own instruction to 'follow whatever key the existing catalog/sales use'. 1982 was NOT staged anywhere in the repo before this package (siblings cover 1983, 1986-89, 2001-03 only).",
+  "sourcePageShape": "Cardboard Connection's vintage layout: a single <div class=\"checklistdesc\">N cards.</div> anchor followed by <div class=\"ezcol...tablechecklist\"> blocks of '<br />'-separated 'NUMBER Player [Subset]' lines -- no per-section '<Product> Set Checklist' heading (the committed scripts/fetchCardboardConnectionChecklist.cjs's SECTION_RE/BARE_SECTION_RE do not match this exact heading shape, '<h2>1982 Donruss Baseball Checklist</h2>', so this package used a one-off scratch parser rather than editing the shared, tested fetcher for a single page; the scratch parser is NOT committed, matching the precedent set by the 2023-24 Upper Deck Extended Series Hockey package's converterNote).",
+  "converterNote": "One-off Node script in the builder's scratch directory: strips tags, splits on <br>, matches '^(\\d{1,4})\\s+(.+)$', strips trailing ' Diamond Kings' (the page's own subset suffix, the ONLY named subset in the base checklist body per the page's own prose) into category=insert-diamond-kings, strips trailing ' RC' (rookie marker, not part of the printed player name, same rule as every sibling package) before writing the player field. Not committed as a script -- lives in the builder's scratch directory, same precedent as the UD hockey packages' one-off HTML parser.",
+  "sectionsReport": [
+    { "category": "insert-diamond-kings", "cardRange": "1-26", "cards": 26, "note": "OWN numbering at the head of the checklist -- the source never prints a separate plain-base row for #1-26, so this is not a rung/parallel of an existing base card. Zero overlap with base's own range (base starts at #27), which is why planStagedDirectory reports 0 collisions." },
+    { "category": "base", "cardRange": "27-660 (7 numbers reserved for unnumbered checklist filler cards, correctly excluded -- no card number to key on)", "cards": 627 }
+  ],
+  "heldOut": {
+    "section": "Errors and Variations Checklist",
+    "rows": 15,
+    "reason": "Photo/name misprint variants of already-staged base numbers (e.g. '5a Alan Trammel' / '5b Alan Trammell', '352a ... wrong photo' / '352b ... correct photo'). These are not a named parallel or a distinct checklist-defined card -- the page's own prose describes them as printing corrections, not a rung -- so per 'no synthetic parallels' and the checklist-csv contract's blank-is-unknown rule, they were left OUT of this package rather than guessed into a parallel name. Not staged anywhere; would need a human ruling on whether/how an error-variant axis should be represented before acquisition."
+  },
+  "salesUnlockedEstimate": "Part of the ~121k Donruss baseball 1982-1990 unbacked-sales figure in the 2026-09-20 census; this package's exact share was not separately measured (no Cosmos access in this pass, per instructions) -- 653 checklist-backed cardNumbers now exist for 1982 where zero existed before."
+}
