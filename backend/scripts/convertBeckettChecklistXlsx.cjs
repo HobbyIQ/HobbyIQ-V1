@@ -2027,6 +2027,11 @@ function main() {
 
   // ---- pass 3: emit ------------------------------------------------------
   const out = [];
+  // Disagreements between a dedicated section's own stated print run and its
+  // fold anchor's ladder rung of the same name -- see CF-A-FOLDED-RUNG-
+  // CARRIES-THE-SOURCE-STATED-PRINT-RUN below. A real finding, recorded in
+  // the manifest, never silently resolved either way.
+  const printRunConflicts = [];
   for (const rec of records) {
     const sec = sections.get(rec.sectionKey);
     // CF-BECKETT-ROSTER-FOLD-FOR-NAMELESS-SECTIONS's per-row carve-out: a
@@ -2065,6 +2070,55 @@ function main() {
     // read "Jonah Tong RC/Someone Else", and a tail-only strip would miss the
     // flag entirely because "Someone Else" is now the last segment.
     const emitPlayer = rec.player.split("/").map((p) => p.replace(/\s+RC$/i, "")).join("/");
+    // CF-A-FOLDED-RUNG-CARRIES-THE-SOURCE-STATED-PRINT-RUN (2026-09-20,
+    // review fix). This plain-card push used to hardcode printRun: "" for
+    // EVERY record, folded or not -- harmless for an unfolded own-cards
+    // section (nothing else claims to know its run either), but WRONG for a
+    // folded section: the fold target's own category is a real product
+    // (e.g. "Silver" on "Base Autographs", "/49") whose print run the
+    // source DOES state, just never on the dedicated section's own rows
+    // (Beckett's "list below" pointer shape means the dedicated section --
+    // "Base Silver Autographs", "Rated Rookies Autographs Purple" -- is a
+    // plain card list with no ladder of its own; the run is stated on the
+    // ANCHOR's ladder line instead: "Silver - /49 (select cards only, list
+    // below)", "Purple - /150 (select cards only, list below)"). Before the
+    // SELECT_CARDS_ONLY_NOTE guard above existed, the mechanical full-
+    // roster ladder stamp (which DID carry the real run) emitted a second,
+    // identically-keyed row that happened to win the pre-existing dedup
+    // (`seen`, keyed without printRun) over this blank one, which MASKED
+    // the defect: committed Photogenic reads "Silver,true,49" today only
+    // because of that now-fixed duplicate, not because this line ever
+    // computed 49 itself. Once that duplicate stopped being emitted for the
+    // "select cards only" shape, this line's own hardcoded blank became the
+    // only row left -- exactly the regression found in review.
+    //
+    // Resolution order (never invents a run, matches the review's own
+    // instruction): (1) the DEDICATED section's own declared ladder, if it
+    // has one stating a run for its own bare tier -- rare (no fixture
+    // measured needs it yet, but a future one might) and checked first
+    // because it is the more specific source; (2) else the FOLD TARGET's
+    // (`target`, the anchor) own ladder, for a rung name matching what THIS
+    // section folds as (`sec.rung`, or the section's own name for the
+    // bare-signed-tier shape where rung equals the full name) -- this is
+    // where "Silver -/49" and "Purple -/150" actually live. If both exist
+    // and disagree, the dedicated section's own statement wins (closer to
+    // the source) and the disagreement is recorded in the manifest via
+    // printRunConflicts, never silently dropped either way.
+    let resolvedPrintRun = "";
+    let printRunConflict = null;
+    if (foldsHere) {
+      const rungLabel = sec.rung || "";
+      const ownLadderRung = (sec.ladder || []).find((r) => r.name === rungLabel && r.printRun != null);
+      const anchorLadderRung = (target.ladder || []).find((r) => r.name === rungLabel && r.printRun != null);
+      if (ownLadderRung && anchorLadderRung && ownLadderRung.printRun !== anchorLadderRung.printRun) {
+        printRunConflict = {
+          sheet: sec.sheet, section: sec.section, rung: rungLabel,
+          ownPrintRun: ownLadderRung.printRun, anchorPrintRun: anchorLadderRung.printRun,
+        };
+      }
+      resolvedPrintRun = ownLadderRung ? ownLadderRung.printRun : (anchorLadderRung ? anchorLadderRung.printRun : "");
+    }
+    if (printRunConflict) printRunConflicts.push(printRunConflict);
     // The plain card. Parallel stays BLANK, never "Base" — normalizeParallel()
     // already reads "" as the base tier, so the blank lies about nothing.
     out.push({
@@ -2072,7 +2126,7 @@ function main() {
       cardNumber: rec.cardNumber,
       parallel: foldsHere ? sec.rung : "",
       isAuto: isAuto,
-      printRun: "",
+      printRun: resolvedPrintRun === "" ? "" : String(resolvedPrintRun),
       player: emitPlayer,
     });
 
@@ -2149,12 +2203,57 @@ function main() {
   // part of the key — once a variation folds onto its anchor's card number, the
   // rung is the ONLY thing separating it from the anchor row, and keying
   // without it would delete every folded row as a "duplicate".
+  //
+  // CF-A-NUMBERED-STATEMENT-OUTRANKS-AN-UNNUMBERED-ONE-OF-THE-SAME-RUNG
+  // (2026-09-20, review fix). printRun is now PART of the identity below,
+  // never folded into the same key a bare (category, cardNumber, parallel,
+  // isAuto, player) tuple already used -- before this fix, a genuinely
+  // numbered row (the mechanical full-roster ladder stamp, when it existed)
+  // and a genuinely unnumbered row (the fold-target's plain-card push,
+  // before CF-A-FOLDED-RUNG-CARRIES-THE-SOURCE-STATED-PRINT-RUN above
+  // taught it to look the run up) could silently mask one another under
+  // the OLD key, which is exactly how committed Photogenic's own "Silver,
+  // true, 49" row survived for as long as it did -- the blank statement
+  // this file used to emit was there the whole time, just shadowed. With
+  // printRun resolved correctly at the emission site, the two should never
+  // actually disagree any more for a fold -- but if some future workbook
+  // shape still produces a genuine (numbered, unnumbered) pair for the
+  // identical rung, this keeps them from silently collapsing into whichever
+  // one the Map iteration order happened to see first: the numbered
+  // statement is kept (closer to the source's own printed run than an
+  // absence of one), the unnumbered twin is dropped as the finding it is,
+  // and BOTH sides of every such swap are recorded in the manifest.
+  const byIdentityNoRun = new Map();
+  for (const r of out) {
+    const kNoRun = [r.category, r.cardNumber, r.parallel, r.isAuto, r.player].join("|");
+    if (!byIdentityNoRun.has(kNoRun)) byIdentityNoRun.set(kNoRun, []);
+    byIdentityNoRun.get(kNoRun).push(r);
+  }
+  const numberedVsUnnumberedFindings = [];
   const seen = new Set();
-  const rowsOut = out.filter((r) => {
-    const k = [r.category, r.cardNumber, r.parallel, r.isAuto, r.player].join("|");
-    if (seen.has(k)) return false;
-    seen.add(k); return true;
-  });
+  const rowsOut = [];
+  for (const [kNoRun, group] of byIdentityNoRun) {
+    let winner = group[0];
+    if (group.length > 1) {
+      const numbered = group.filter((r) => r.printRun !== "");
+      const unnumbered = group.filter((r) => r.printRun === "");
+      if (numbered.length && unnumbered.length) {
+        numberedVsUnnumberedFindings.push({
+          category: winner.category, cardNumber: winner.cardNumber, parallel: winner.parallel,
+          keptPrintRun: numbered[0].printRun, droppedCount: group.length - 1,
+        });
+      }
+      // Prefer a numbered statement; among numbered statements (or among
+      // unnumbered ones, if that's all there is), the first seen is kept --
+      // unchanged from the pre-existing behaviour for every shape that is
+      // NOT this specific numbered/unnumbered split.
+      winner = numbered.length ? numbered[0] : group[0];
+    }
+    const k = [winner.category, winner.cardNumber, winner.parallel, winner.isAuto, winner.printRun, winner.player].join("|");
+    if (seen.has(k)) continue;
+    seen.add(k);
+    rowsOut.push(winner);
+  }
 
   const csv = ["category,cardNumber,parallel,isAuto,printRun,player"];
   for (const r of rowsOut) {
@@ -2284,6 +2383,20 @@ function main() {
     // passes the flag, or passes it with nothing dropped, writes a manifest
     // byte-identical to before this stamp existed.
     ...(droppedDeclaredParallels.length && ALLOW_DROPPED_PARALLELS ? { allowDroppedParallelsUsed: true } : {}),
+    // CF-A-FOLDED-RUNG-CARRIES-THE-SOURCE-STATED-PRINT-RUN's own disagreement
+    // record (see that CF's header comment at the emission site): a
+    // dedicated section's own ladder and its fold anchor's ladder rung of
+    // the same name stating DIFFERENT print runs for the same product is a
+    // real finding, not a silent resolution either way -- additive/opt-in
+    // like every other finding array in this manifest.
+    ...(printRunConflicts.length ? { printRunConflicts } : {}),
+    // CF-A-NUMBERED-STATEMENT-OUTRANKS-AN-UNNUMBERED-ONE-OF-THE-SAME-RUNG's
+    // own record (see that CF's header comment at the dedup site): additive/
+    // opt-in, empty on every workbook where this shape never occurs (which
+    // is every currently-measured fixture once print run resolution is
+    // fixed at the source -- this array exists for the NEXT workbook that
+    // proves it can still happen).
+    ...(numberedVsUnnumberedFindings.length ? { numberedVsUnnumberedFindings } : {}),
   };
   fs.writeFileSync(outPath.replace(/\.csv$/, ".manifest.json"), JSON.stringify(manifest, null, 2));
 
