@@ -723,9 +723,26 @@ function classifySections(sections) {
     // this (their rosters, where numbers overlap the anchor at all, agree);
     // Select's four Memorabilia sections do not, and fall through to
     // own-cards under their own registered category exactly as intended.
+    // ABSENT ROSTER DATA IS NOT A DISAGREEMENT (2026-09-20 correction, found
+    // by CI). `rosterFoldAgainst` returns `shared: 0` both when the rosters
+    // genuinely share zero numbers AND when either side carries no `roster`
+    // map at all (its own documented degrade-gracefully behaviour, so a
+    // caller built from numbers alone -- every classifySections unit test
+    // predating this bypass, including checklistVariationIsAParallel.test.ts's
+    // own Packfractor/International-Refractors fixtures, which construct a
+    // section descriptor with numbers only, no roster -- gets the exact same
+    // "nothing to disagree with" answer a roster-blind fold already gave).
+    // The FIRST version of this fix treated `shared > 0` as the gate, which
+    // made an absent roster read as "roster refuses" and broke every one of
+    // those pre-existing tests -- fold something can't be more disagreeable
+    // than what it never SAW. The fix is looser but still faithful to R67:
+    // refuse ONLY when there is roster evidence AND it actually disagrees;
+    // no evidence at all falls through to the pre-existing numeric-overlap
+    // decision unchanged, exactly as before this bypass existed.
     const rosterAgreesWithAnchor = (cand, anchor) => {
+      if (!cand.roster || !anchor.roster) return true;
       const fold = rosterFoldAgainst(cand, anchor);
-      return fold.shared > 0 && fold.disagree === 0;
+      return fold.disagree === 0;
     };
     const candidates = anchors.filter((a) =>
       a !== sec && isAutoSection(a) === isAutoSection(sec) &&
