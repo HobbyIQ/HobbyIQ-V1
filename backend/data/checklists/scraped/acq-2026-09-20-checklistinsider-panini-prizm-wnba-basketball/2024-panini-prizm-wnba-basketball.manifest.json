@@ -1,0 +1,94 @@
+{
+  "scrapedAt": "2026-09-20T22:03:00.000Z",
+  "articleUrl": "https://www.checklistinsider.com/2024-panini-prizm-wnba-basketball",
+  "articleHttpStatus": 200,
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2025/02/2024-Panini-Prizm-WNBA-Basketball-Checklist-Downloads-Excel-spreadsheet-2.xlsx",
+  "xlsxHttpStatus": 200,
+  "sha256": "8b0e120c79e1e69813a5680fcd2de4e458a65eafa35b19ac8cb4b6b4bf68be8f",
+  "source": "checklistinsider-2026-09-20",
+  "sport": "basketball",
+  "year": 2024,
+  "setName": "2024 Panini Prizm WNBA Basketball",
+  "productKey": "2024-panini-prizm-wnba-basketball",
+  "setKey": "panini-prizm-wnba",
+  "rowCount": 4950,
+  "parallelColumnAuthoritative": true,
+  "note": "TARGET (owner ruling 2026-09-05): 2024 Panini Prizm WNBA has NO base checklist with card numbers in card_catalog at all -- highest single-acquisition value in this scope, basketball/2024/panini-prizm-wnba, 55,163 unbacked sales. WNBA Prizm is its own family and never borrows NBA Prizm's ladder (owner ruling); confirmed by measurement -- the WNBA base ladder (33 rungs incl. Cracked Ice-shaped Ice/Orange Ice/Orange Velocity/Blue Velocity, Checkerboard, Snake Skin, WNBA Logo, Premium Box Set, Mosaic, Lotus Flower FOTL, Cherry Blossom FOTL) shares NOT ONE spelling with basketball/2024/panini-prizm's NBA ladder (167 registered spellings, all NBA-shaped: Fast Break *, Choice *, Dragon Year, etc.) in backend/data/checklist-parallel-names.json. `panini-prizm-wnba` is already registered under `family: panini-prizm, parent: panini-prizm` in productSetKeys.ts (own product-year address; not an alias).",
+  "reproduce": {
+    "pipeline": "The repo's own checklistinsider pipeline, end to end, no one-off script.",
+    "step1_scrape": "node backend/scripts/scrape-checklistinsider.cjs --sport=basketball --year=2024 --slugsFile=<file containing one line: 2024-panini-prizm-wnba-basketball> --delayMs=2500 --out=<staging>.jsonl",
+    "step1_result": "1 page fetched, layout=tabular, 6,702 card rows read from the xlsx (CARD SET | CARD # | ATHLETE | TEAM | SEQ shape), 32 parallel rows read from the page's own Base Parallels List (0 diagnostics, 0 stub, 0 qualifier notes -- every rung applies to all 150 base cards uniformly, confirmed against the xlsx SEQ column card-by-card).",
+    "step2_convert": "node backend/scripts/convertChecklistInsiderToChecklistCsv.cjs --in=<staging>.jsonl --outDir=<outDir> --verbose",
+    "step2_result": "1 CSV written, 11,502 total rows across 25 anchor sections and 108 parallel-rung sections (Base + 32 Prizm colors, plus Fearless/Fireworks/Fractal/Groovy/Kaleidoscopic/Top Tier/Pioneers/Color Blast/Clark-Mania! inserts and Signatures/Throwback Signatures autos -- every CARD SET value the workbook carries, split into base/insert-*/auto-* by the shared classifySections/categoryFor logic).",
+    "step3_scope_filter": "This package keeps ONLY category=='base' rows: `awk -F',' 'NR==1 || $1==\"base\"' <step2-output>.csv > 2024-panini-prizm-wnba-basketball.csv` -- the flagship numbered checklist and its full Prizm color ladder (150 base + 4,800 colored = 4,950 rows, 32 distinct Prizm colors, Pulsar /499 down to Black Finite / Gold Vinyl 1/1)."
+  },
+  "categoriesExcludedAndWhy": {
+    "count": "6,552 of the 11,502 rows the pipeline produced were excluded -- every category other than plain 'base'.",
+    "breakdown": {
+      "insert-base-prizms-<color>": "4,800 rows (32 categories x 150 cards): the SAME (cardNumber, color) cell as the 'base' category's ladder-expanded rows, derived from the workbook's per-subset sheets instead of the page's parallel-list ladder. Both signals agree card-for-card (spot-checked #1-150 across all 32 colors against the raw xlsx SEQ column). Restaging as a second category would double-count cells the 'base' rows already cover.",
+      "auto-signatures / auto-throwback-signatures (+ their -prizms-<color> children)": "590 rows across 2 distinct autograph insert sets (Signatures #1-28ish, Throwback Signatures #1-37ish, own rosters). Correctly flagged auto-* by the converter's classifier; none landed in 'base'. Excluded -- own-roster autograph sets need their own registered keys, not done here.",
+      "insert-fearless / -fireworks / -fractal / -groovy / -kaleidoscopic / -top-tier / -pioneers / -color-blast (+ each insert's own -prizms-<color> parallels)": "1,150 rows across 8 named insert sets, each its OWN 10-15-card roster disjoint from Base's 150. HELD per owner ruling (WNBA never borrows NBA's ladder): NBA Prizm 2024-25 already registers `panini-prizm-fireworks` (250 rows #1-25), `panini-prizm-kaleidoscopic` (300 rows #1-30), `panini-prizm-fractal` (100 rows #1-10), `panini-prizm-groovy` (30 rows #1-30), `panini-prizm-color-blast` (50 rows #1-35) under `parent: panini-prizm` in productSetKeys.ts -- but WNBA's own Fearless/Fireworks/Fractal/Groovy/Kaleidoscopic/Top Tier/Pioneers/Color Blast are each 10-15 cards, a disjoint roster and count from the NBA insert of the same name. Reusing the NBA key would silently merge two different card sets under one address. Registering wnba-scoped keys (e.g. `panini-prizm-wnba-fireworks`) is additions-only, out of this package's scope -- see HELD section below.",
+      "insert-clark-mania-*": "12 rows, a 1-card Caitlin Clark insert with its own colored parallels. HELD alongside the other WNBA inserts, same reasoning (own roster, unregistered key)."
+    },
+    "decision": "Excluded rows are fully reproducible from step 2's output via the commands above; not staged, not discarded from the record."
+  },
+  "alreadyPresentUnderOtherSpelling": [],
+  "heldSections": {
+    "reason": "Insert sets with their own roster need a registered productSetKeys.ts key. None of WNBA Prizm's 9 insert names (Fearless, Fireworks, Fractal, Groovy, Kaleidoscopic, Top Tier, Pioneers, Color Blast, Clark-Mania!) is registered under a WNBA-scoped key today; the identically-named NBA Prizm keys are a DIFFERENT roster (see categoriesExcludedAndWhy) so must not be reused.",
+    "sections": [
+      { "name": "Fearless", "cards": 15, "numberRange": "1-15", "rosterOverlapVsBase": "0% (own numbering restarts at 1, distinct from Base's 1-150)" },
+      { "name": "Fireworks", "cards": 15, "numberRange": "1-15", "rosterOverlapVsBase": "0%" },
+      { "name": "Fractal", "cards": 15, "numberRange": "1-15", "rosterOverlapVsBase": "0%" },
+      { "name": "Groovy", "cards": 15, "numberRange": "1-15", "rosterOverlapVsBase": "0%" },
+      { "name": "Kaleidoscopic", "cards": 15, "numberRange": "1-15", "rosterOverlapVsBase": "0%" },
+      { "name": "Top Tier", "cards": 15, "numberRange": "1-15", "rosterOverlapVsBase": "0%" },
+      { "name": "Pioneers", "cards": 10, "numberRange": "1-10", "rosterOverlapVsBase": "0%" },
+      { "name": "Color Blast", "cards": 10, "numberRange": "1-10", "rosterOverlapVsBase": "0%" },
+      { "name": "Clark-Mania!", "cards": 1, "numberRange": "1", "rosterOverlapVsBase": "0% (single Caitlin Clark insert card)" },
+      { "name": "Signatures / Throwback Signatures (auto)", "cards": "~28 / ~37", "numberRange": "own", "rosterOverlapVsBase": "0%, and already correctly isAuto=true -- not restaged as base regardless" }
+    ],
+    "recommendedFollowUp": "A separate additions-only PR registering `panini-prizm-wnba-fearless`, `panini-prizm-wnba-fireworks`, `panini-prizm-wnba-fractal`, `panini-prizm-wnba-groovy`, `panini-prizm-wnba-kaleidoscopic`, `panini-prizm-wnba-top-tier`, `panini-prizm-wnba-pioneers`, `panini-prizm-wnba-color-blast`, `panini-prizm-wnba-clark-mania` (each `family: panini-prizm-wnba` or similar, `parent: panini-prizm-wnba`) with roster-overlap evidence (0% vs Base, 0% vs the like-named NBA insert) and a fixed-point test, per the acquisition brief's S(key,{parent}) instruction."
+  },
+  "verification": "Spot-checked the converter's plain-'base' output against the live page verbatim for cards #1-20 and the full 32-rung parallels list: names/teams/print runs match exactly (#1 Jackie Young, #10 Angel Reese, #22 Caitlin Clark; Pulsar /499, Red /299, Blue /199, Purple /149, Black Finite 1/1, Gold Vinyl 1/1). Cross-checked the two independent signals for the same cells (page ladder vs. workbook per-subset SEQ column) card-for-card, color-for-color, print-run-for-print-run -- exact agreement, 0 diagnostics.",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run read-only against this file): 4,950 batch rows, 4,950 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys. See PLANNER-OUTPUT.txt alongside this manifest for the raw run.",
+  "newVsExisting": {
+    "method": "No card_catalog rows exist for basketball/2024/panini-prizm-wnba today (measured in the census evidence, `mismatch-decomp/basketball_2024_panini-prizm-wnba/summary.json`: catalogRowsLoaded not present / near-zero backing, 614 of 1,077 sampled sales classed PARALLEL-ABSENT-NEW-RUNG on ordinary colors like Ice/Orange Ice/Blue Velocity that a checklist-backed product would already answer). Every (cardNumber, parallel) cell in this CSV is NEW.",
+    "byCategory": {
+      "base_blankParallel": { "newCells": 150, "existingCellsUnchanged": 0 },
+      "base_coloredPrizm": { "newCells": 4800, "existingCellsUnchanged": 0 }
+    },
+    "newCells": 4950,
+    "existingCellsUnchanged": 0
+  },
+  "coversMissingSlugs": {
+    "fromEvidence": "census-2026-09-20/mismatch-decomp/basketball_2024_panini-prizm-wnba/sales-classified.ndjson",
+    "slugsCovered": [
+      { "slug": "Ice Prizm", "salesCount": 238, "note": "registers as 'Ice Prizms' in this package" },
+      { "slug": "Blue Velocity Prizm", "salesCount": 50 },
+      { "slug": "Cracked Ice Prizm", "salesCount": 47, "note": "NOT covered -- 'Cracked Ice' is not on the source's stated ladder (source states 'Ice Prizms' only); left uncovered rather than mechanically added, see notSourced below" },
+      { "slug": "Orange Prizm", "salesCount": 19 },
+      { "slug": "Pulsar Prizm", "salesCount": 18 },
+      { "slug": "Orange Velocity Prizm", "salesCount": 18 },
+      { "slug": "Red Pulsar Prizm", "salesCount": 16 },
+      { "slug": "Blue Pulsar Prizm", "salesCount": 14 },
+      { "slug": "White Sparkle Prizm", "salesCount": 12 },
+      { "slug": "Blue Prizm", "salesCount": 12 },
+      { "slug": "Red Prizm", "salesCount": 12 },
+      { "slug": "Orange Ice Prizm", "salesCount": 10 },
+      { "slug": "Silver Prizm", "salesCount": 9 },
+      { "slug": "Black Velocity Prizm", "salesCount": 7 },
+      { "slug": "Gold Ice Prizm", "salesCount": 6 },
+      { "slug": "Purple Prizm", "salesCount": 6 },
+      { "slug": "Green Prizm", "salesCount": 5 },
+      { "slug": "Pink Velocity Prizm", "salesCount": 5 },
+      { "slug": "Teal Prizm", "salesCount": 3 },
+      { "slug": "Checkerboard", "salesCount": 2 },
+      { "slug": "WNBA Logo", "salesCount": 2 }
+    ],
+    "notSourced": [
+      "Cracked Ice (42+47+3 sales) -- the source's stated ladder has no rung called 'Cracked Ice'; only 'Ice Prizms'. Not minted -- would be inventing a rung the source does not state.",
+      "Image Variation <X> Prizm (17+15+7 sales) -- image/photo variations are a distinct card identity per project_image_variations_are_named_cards.md doctrine, not this package's base ladder; needs its own acquisition pass against a variations gallery source.",
+      "9 insert sets (Fearless..Clark-Mania!, Signatures/Throwback Signatures) -- see heldSections above."
+    ]
+  }
+}
