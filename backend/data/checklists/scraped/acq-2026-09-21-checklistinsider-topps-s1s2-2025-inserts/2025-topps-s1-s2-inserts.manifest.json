@@ -1,0 +1,138 @@
+{
+  "scrapedAt": "2026-09-21T15:40:00.000Z",
+  "source": "checklistinsider-2026-09-21",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Topps Series 1 + Series 2 Baseball -- named insert/autograph/relic sets",
+  "productKey": "2025-topps-s1-s2-inserts",
+  "setKey": "topps",
+  "rowCount": 2622,
+  "distinctCards": 429,
+  "parallelColumnAuthoritative": true,
+  "mintedBy": "Acquisition follow-up (2026-09-21) to R40/#2373-#2376: those PRs staged the BASE ladder only and explicitly flagged named insert/auto/relic sets as out of scope for a follow-up (see 2025-topps-series2-baseball.manifest.json notMinted.insertSets). Diagnosed against a read-only sold_comps sample (baseball/2025/topps, 300 sales, id-prefix hiq:baseball:2025:topps:): of 52 distinct unbacked ids, 50 pointread as genuinely absent (2 were a printRun-suffix mismatch, not a checklist gap) and the majority named exactly these 8 insert/auto/relic sets by cardNumber prefix (BSA/BSA2, CC/CC2, CCAR/CCA2, SMLB, PPA).",
+  "sourceUrls": [
+    "https://www.checklistinsider.com/2025-topps-series-1-baseball",
+    "https://www.checklistinsider.com/2025-topps-series-2-baseball"
+  ],
+  "sourcePageSha256": {
+    "2025-topps-series-1-baseball": "6bdd329098d0ab091784078f22126fe3cd4314615889c12e4dbe8bc53772cd80",
+    "2025-topps-series-2-baseball": "d3c5467849cb14e69f7acdab486b41780ae5c97937cdaecf36e70015d009fb71"
+  },
+  "sectionsIncluded": [
+    {
+      "category": "auto-baseball-stars-autographs",
+      "sourceHeading": "Baseball Stars Autographs Checklist (Series 1 page)",
+      "cards": 102,
+      "cardNumberPrefix": "BSA-",
+      "isAuto": true,
+      "parallelsVerbatim": "Blue /150 or less; Gold /50 or less; Orange /25; Black /10; Red /5; Platinum 1/1.",
+      "note": "Odds 1:150 Hobby. Roster + ladder both read directly off the Series 1 page's own 'Baseball Stars Autographs Checklist102 cards...Parallels:...' sentence, immediately followed by the 102 BSA-coded rows."
+    },
+    {
+      "category": "auto-baseball-stars-autographs",
+      "sourceHeading": "Baseball Stars Autographs Checklist (Series 2 page)",
+      "cards": 105,
+      "cardNumberPrefix": "BSA2- (80 cards) + BSA- (25 cards continuing the Series 1 numbering for repeat players)",
+      "isAuto": true,
+      "parallelsVerbatim": "Blue /150; Gold /50; Orange /25; Black /10; Red /5; Platinum 1/1.",
+      "note": "The Series 2 page states ONE set of 105 cards under this heading but the source itself mixes two code shapes: BSA2-xx for new S2-only players and BSA-xx (bare) for players repeating a Series 1 BSA code. Both shapes verified as part of the SAME stated 105-card roster (counted directly off the page: 80 BSA2- rows + 25 BSA- rows immediately following, ending exactly at the next section marker 'Baseball Stars Dual Autographs'). Included in the SAME category as the Series 1 BSA rows above; cardNumber is the source's own code in each case, so no BSA- vs BSA2- collision is possible (they are disjoint by construction -- the 25 trailing BSA- codes here are checked against the 102 Series-1 BSA- codes and do not overlap)."
+    },
+    {
+      "category": "insert-stars-of-mlb",
+      "sourceHeading": "Stars of MLB Checklist (Series 1 page)",
+      "cards": 30,
+      "cardNumberPrefix": "SMLB-1 through SMLB-30",
+      "isAuto": false,
+      "parallelsVerbatim": "Gold Foilboard /50; Orange Foilboard /25; Black Foilboard /10; Red Foilboard /5; FoilFractor 1/1.",
+      "note": "Retail exclusive per the source (distribution note, not a roster restriction -- all 30 cards carry the full ladder per R40 doctrine)."
+    },
+    {
+      "category": "insert-city-connect-swatch-collection",
+      "sourceHeading": "City Connect Swatch Collection Checklist (Series 1 page)",
+      "cards": 36,
+      "cardNumberPrefix": "CC-AA through CC-ZN (2-3 letter player-initial codes)",
+      "isAuto": false,
+      "parallelsVerbatim": "Blue /150; Gold /50; Orange /25; Black /10; Red /5; Platinum 1/1.",
+      "note": "NAME-COLLISION CHECK: the Series 1 workbook also carries 25 NUMERIC 'CC-1'..'CC-25' rows under the same bare 'CC' prefix, but those are verified (via the page's own text, line-anchored) to be a DIFFERENT, unrelated insert -- 'Companion Cards' (a Super Box exclusive, 25 cards, CC-1 Shohei Ohtani / CC-2 Mike Trout / CC-3 Ronald Acuna Jr. / ...). Deliberately EXCLUDED from this package (not sourced/verified this round) to avoid conflating two sets that happen to share a 'CC' prefix in the workbook. Only the 36 initials-coded City Connect Swatch cards (CC-AA..CC-ZN) are included here."
+    },
+    {
+      "category": "auto-city-connect-swatch-collection-autograph-relics",
+      "sourceHeading": "City Connect Swatch Collection Autograph Relics Checklist (Series 1 page)",
+      "cards": 24,
+      "cardNumberPrefix": "CCAR-",
+      "isAuto": true,
+      "parallelsVerbatim": "Gold /50; Orange /25; Black /10; Red /5; Platinum 1/1.",
+      "note": "No Blue rung on this set (verified: the source's Parallels sentence for CCAR omits Blue, unlike the non-auto CC ladder above -- not an omission on our part)."
+    },
+    {
+      "category": "insert-city-connect-swatch-collection",
+      "sourceHeading": "City Connect Swatch Collection Checklist (Series 2 page)",
+      "cards": 47,
+      "cardNumberPrefix": "CC2-",
+      "isAuto": false,
+      "parallelsVerbatim": "Blue /150; Gold /50; Orange /25; Black /10; Red /5; Platinum 1/1.",
+      "note": "Same category as the Series 1 City Connect Swatch rows (continuous product across both series, same ladder verbatim)."
+    },
+    {
+      "category": "auto-city-connect-swatch-collection-autograph-relics",
+      "sourceHeading": "City Connect Swatch Collection Autograph Relics Checklist (Series 2 page)",
+      "cards": 35,
+      "cardNumberPrefix": "CCA2- (32 cards) + CCAR- (3 cards continuing Series 1 numbering)",
+      "isAuto": true,
+      "parallelsVerbatim": "Gold /50; Orange /25; Black /10; Red /5; Platinum 1/1.",
+      "note": "Same mixed-code-shape pattern as BSA2/BSA above: the Series 2 page states 35 cards under this heading, delivered as 32 CCA2- rows followed immediately by 3 CCAR- rows (continuing Series 1's own CCAR numbering) before the next section marker ('Heavy Lumber Autograph Relics'). The 3 trailing CCAR- codes are checked against the 24 Series-1 CCAR- codes and do not overlap."
+    },
+    {
+      "category": "auto-postseason-performance-autographs",
+      "sourceHeading": "Postseason Performance Autographs Checklist (Series 2 page)",
+      "cards": 50,
+      "cardNumberPrefix": "PPA-",
+      "isAuto": true,
+      "parallelsVerbatim": "Orange /25; Black /10; Red /5; FoilFractor 1/1.",
+      "note": "Distinct from 2023's 'Postseason Performance Autograph Relics' package already in the repo (a relic product, different name and ladder) -- this 2025 set is stated as 'Postseason Performance Autographs' (no Relics in the name) with its own smaller ladder; category named accordingly, no spelling collision."
+    }
+  ],
+  "rowCount_check": "2,622 rows total: BSA-S1(102x6=612) + SMLB(30x5=150) + CC(36x6=216) + CCAR(24x5=120) -- these four SKIP their blank-parallel base row because it is already staged and merged in acq-2026-09-20-beckett-topps-series1-2025-baseball/2025-topps-series1-baseball.csv (verified: exact grep-count match, 102/30/36/24 rows respectively, category+cardNumber identical) -- + BSA2(105x7=735) + CC2(47x7=329) + CCA2(35x6=210) + PPA(50x5=250), which DO include their base row because neither exists anywhere else in the repo (verified: 0 hits for these 4 categories in the Series 2 base file and repo-wide grep). This package is additive-only: it never re-stages a row another already-merged package already carries.",
+  "notMinted": {
+    "companionCards": {
+      "names": [
+        "CC-1 through CC-25, 'Companion Cards', Super Box exclusive"
+      ],
+      "reason": "Shares the bare 'CC' cardNumber prefix with City Connect Swatch in the raw workbook parse but is a DIFFERENT, unrelated insert per the source page's own text. Held out of this package rather than risk conflating two sets under one category -- candidate for its own follow-up package."
+    },
+    "otherSeries1And2InsertSets": {
+      "names": [
+        "1990 Topps Baseball (+ Chrome/Chrome Mojo/All-Star variants)",
+        "2024 All Topps Team",
+        "2024 Greatest Hits",
+        "All Aces",
+        "Call to the Hall",
+        "Heavy Lumber (+ Autograph Relics)",
+        "Home Field Advantage (+ Legendary)",
+        "Plakata",
+        "Training Grounds",
+        "Topps Mega Stars",
+        "Flagship Real One Autographs/Relics",
+        "Major League Material (+ Autographs/Dual/Dual Autographs)",
+        "Rickwood Relic Collection (+ Autograph Relics)",
+        "World Champion Autographs (+ Dual)",
+        "Signature Tunes Dual Autographs",
+        "First Pitch Autographs",
+        "Base Rookies/Variations/Big Apple/All Positions/Player Number/Cardinals Variation Autographs",
+        "In the Name Relics",
+        "Rounding the Bases (+ Relics/Dual Relics/Autograph Relics)",
+        "Topps Flagship Autograph Patch",
+        "Companion Cards",
+        "Fanatics Authentic Redemption"
+      ],
+      "reason": "All fully readable on the same two source pages (verified present with card-by-card rosters and verbatim parallel ladders during this diagnosis) but NOT staged in this package -- kept to the highest-confidence, highest-sales-impact subset (BSA/BSA2, CC/CC2, CCAR/CCA2, SMLB, PPA) that this diagnosis directly measured as unbacked in the sold_comps sample. Candidates for a follow-up package; sources already confirmed reachable and well-structured."
+    }
+  },
+  "spellingAudit": "category names follow the repo's existing convention exactly (auto-baseball-stars-autographs, auto-postseason-performance-autographs match the spelling already used in acq-2026-09-20-beckett-topps-series1-2023-baseball's own CSV, cross-checked by direct grep before naming these). Parallel names (Blue/Gold/Orange/Black/Red/Platinum/FoilFractor/Gold Foilboard/etc.) are the source's own words verbatim, no reformatting beyond stripping the 'or less' odds qualifier from the printRun-bearing cell into a note (printRun value itself is the stated ceiling, e.g. Blue /150 or less -> printRun 150).",
+  "selectCardsOnlyAudit": "No 'select cards only' language found in any of the 8 sections' own Parallels sentences; each ladder is stated to apply to the full named roster (102/105/30/36/24/47/35/50 cards respectively), not a named subset.",
+  "provenance": {
+    "cardsFrom": "checklistinsider.com page text (not the xlsx workbook, which returns 'category: none' for inserts) -- extracted directly from each section's own 'X Checklist<N> cards...' marker through to the next such marker, verified the extracted row count against the source's own stated card count for all 8 sections (exact match, see sectionsIncluded[].cards).",
+    "rungsFrom": "each section's own stated 'Parallels: ...' sentence, verbatim, immediately following its card-count/odds sentence on the same source page.",
+    "printRunsFrom": "the source's stated print run only (the number after each colour name); FoilFractor/Platinum listed as 1/1 recorded as printRun 1."
+  }
+}
