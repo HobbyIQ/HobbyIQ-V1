@@ -41,9 +41,27 @@
  *         primitives the two repoint lanes call in the same order
  *         (extractCardNumberFromTitle+sameCardNumber, statedFinishFromChecklist+
  *         parallelTheTitleAllows, playerTheTitleAllows) -- no new title parser;
- *   AND the OTHER side fails (a), (b), or (c). Both directions are tried
- *   (long-wins-over-short and short-wins-over-long); whichever side alone
- *   clears all three is the winner.
+ *     (d) the title does not name a year or product that CONTRADICTS the
+ *         candidate's own cell -- `titleContradictsCandidateCell`
+ *         (extractYearFromTitle, inferSetKeyFromTitle+productAncestry);
+ *     (e) the title does not NAME AN IDENTITY MORE SPECIFIC than the
+ *         candidate itself -- `titleNamesMoreSpecificThanCandidate` (below):
+ *         a named parallel/insert/variation the candidate's own checklist row
+ *         does not carry means "absent beats wrong" cuts the OTHER way here,
+ *         and this candidate fails rather than winning by the other side's
+ *         elimination (coordinator review of #2381, HIGH -- a checklist row
+ *         merely MISSING for the true, more-specific identity must never let
+ *         a generic BASE identity win by default: "2025 Topps Chrome Update
+ *         Cal Raleigh Image Variation SSP #USC45", "Adley Rutschman 2023
+ *         Topps #250 Image Variation RC" and "2025 Panini Donruss - DOWNTOWN
+ *         Tyler Shough #19" all measured resolving to plain base before this
+ *         gate existed);
+ *   AND the OTHER side fails (a)-(e). BOTH sides' OWN titles are checked
+ *   (coordinator review of #2381, MEDIUM -- a candidate must clear every
+ *   gate against EACH side's independently-populated `title` field, not just
+ *   the short row's), and both directions are tried (long-wins-over-short
+ *   and short-wins-over-long); whichever side alone clears every gate is the
+ *   winner.
  *
  *   RULE 2 -- BOTH SIDES CHECKLIST-BACKED: the MORE SPECIFIC wins, ONLY when
  *   it strictly REFINES the other -- `moreSpecificRefines` below, composed
@@ -56,24 +74,31 @@
  *     - the LOSING side's own parallel segment is `base` or blank
  *       (`normParallelForRung`, the same case-insensitive human-form compare
  *       resolve-split-identity-parks.cjs and the sibling lanes already use);
- *     - the sale's TITLE NAMES the winner's parallel words --
- *       `statedFinishFromChecklist(title, {setKey, year})` returns a finish
- *       whose words are a SUBSET of the winner's own parallel words (never
- *       the reverse: the title may say less than the checklist's full name,
- *       it may never say a DIFFERENT one -- see `titleNamesWinnerParallel`).
- *   Otherwise (both checklist-backed, neither refines the other, or the
- *   title never names the winner's own words) the pair is LEFT
- *   `both-sides-valid` -- never guessed past by richness or length.
+ *     - on EITHER side's own title, `statedFinishFromChecklist(title,
+ *       {setKey, year})` returns a finish whose words are a SUBSET of the
+ *       winner's own parallel words (never the reverse: the title may say
+ *       less than the checklist's full name, it may never say a DIFFERENT
+ *       one -- see the inline `titleNamesWinner` check inside
+ *       `moreSpecificRefines`), AND
+ *     - NEITHER title names something MORE SPECIFIC than the winner itself
+ *       (an insert, a print run, a finer variation tier the winner's own row
+ *       does not carry -- `titleNamesMoreSpecificThanCandidate`, the SAME
+ *       named-card gate rule 1 applies).
+ *   Otherwise (both checklist-backed, neither refines the other, or a title
+ *   names the winner's words but ALSO names something more specific) the
+ *   pair is LEFT `both-sides-valid` -- never guessed past by richness or
+ *   length.
  *
  *   RULE 3 -- GRADE axis. The side whose grade fields agree with a grader
- *   TOKEN in the title wins -- `parseGradeFromTitle` (gradeParser.ts, repo
+ *   TOKEN in EITHER title wins -- `parseGradeFromTitle` (gradeParser.ts, repo
  *   doctrine "grade from grader token only": a numeral counts only when it
  *   follows PSA/BGS/SGC/CGC/CSG/HGA/... literally in the title, never an
  *   adjective or a card number). A side wins when its `gradeKeyOf` (the SAME
  *   raw-is-a-grade-too key collapse-ch-synthetic-twins.cjs already uses)
  *   equals the title's parsed (company, value); the other side must NOT
- *   equal it. When neither side's grade matches the title's own token (or
- *   the title carries no grader token at all), the pair is LEFT
+ *   equal it. When the two titles state DIFFERENT grader tokens (coordinator
+ *   review of #2381, MEDIUM), or neither side's grade matches the token found
+ *   (or neither title carries one at all), the pair is LEFT
  *   `neither-side-backed`.
  *
  * (2) NEITHER PASSES rule 1 -> LEFT `neither-side-backed`, named and counted
@@ -88,21 +113,31 @@
  * produces the short shape, and a future backfill re-derives it). When the
  * winner is the SHORT side's own identity, this is the sweep lane's ordinary
  * collapse (`decideSyntheticTwin`'s ordinary `collapse` path is reused
- * outright once the disagreement is resolved in the short row's favour --
- * see `applyResolution`). When the winner is the LONG side's identity, the
- * short row's hobbyiqCardId/cardId/grade fields are overwritten with the
- * winner's OWN values (never folded -- a fold only fills what is MISSING,
- * and this is a correction of a value that is PRESENT but wrong) before the
- * short row is kept and the long row is dropped. A cardId change is a
- * RELOCATION (the pool partitions on /cardId), so this goes through
- * `relocateSoldComp` (scripts/lib/relocate-sold-comp.cjs) exactly as the
- * sweep lane's own collapse does -- upsert the corrected short-shaped
- * document, verify the read-back, THEN delete the long row with a plan-time
- * `ifMatchEtag` (split-row guard #2339's own conditional-delete mechanism).
- * A ledger field `twinResolved: {at, by, winner, loser, rule}` -- ONE object,
- * one Cosmos field -- is stamped on the kept document (Cosmos's patch op cap
- * is 10; this lane never patches at all, it goes through the SAME full-doc
- * upsert path relocateSoldComp already uses, so the cap does not apply, but
+ * outright once the disagreement is resolved in the short row's favour).
+ * When the winner is the LONG side's identity, the short row's ENTIRE
+ * identity field family (cardId, hobbyiqCardId, sport, cardYear, cardNumber,
+ * parallel, isAuto, playerName -- or the three grade fields, for a grade-axis
+ * win) is overwritten TOGETHER with the winner's OWN values (coordinator
+ * review of #2381, HIGH: production previously overwrote hobbyiqCardId alone,
+ * leaving every OTHER identity field at the losing identity and never
+ * recomputing `contentHash` -- never folded, a fold only fills what is
+ * MISSING and this is a correction of a value that is PRESENT but wrong)
+ * before the short row is kept and the long row is dropped. `contentHash` is
+ * recomputed against the NEW identity (`contentHashOf`, mirroring
+ * repoint-sales-to-sibling-product.cjs's own `keep.contentHash =
+ * contentHashOf(keep)` after any identity change) and the result is run
+ * through `guardSoldCompDoc` before it is ever handed to the write path, in
+ * REPORT as in APPLY, so a malformed winning identity parks rather than
+ * writing silently. A cardId change is a RELOCATION (the pool partitions on
+ * /cardId), so this goes through `relocateSoldComp`
+ * (scripts/lib/relocate-sold-comp.cjs) exactly as the sweep lane's own
+ * collapse does -- upsert the corrected short-shaped document, verify the
+ * read-back, THEN delete the long row with a plan-time `ifMatchEtag`
+ * (split-row guard #2339's own conditional-delete mechanism). A ledger field
+ * `twinResolved: {at, by, winner, loser, rule}` -- ONE object, one Cosmos
+ * field -- is stamped on the kept document (Cosmos's patch op cap is 10;
+ * this lane never patches at all, it goes through the SAME full-doc upsert
+ * path relocateSoldComp already uses, so the cap does not apply, but
  * the ledger is still kept to ONE field by convention with every other D19
  * repair stamp).
  *
@@ -143,13 +178,16 @@
  *      (NDJSON directory, set by the runner, not an operator input);
  *      CATALOG_CACHE_MAX=20000 (per-cell checklist row cache ceiling).
  * Requires dist/ (catalogAuthorityOf, playerIdentityKey, parseGradeFromTitle,
- *      parseHobbyIqCardId/sameCardNumber, statedFinishFromChecklist,
- *      parallelTheTitleAllows, playerTheTitleAllows, extractCardNumberFromTitle,
- *      cleanPlayerName, reportWrites, splitIdentityWriteGuard via
- *      relocate-sold-comp.cjs's own lazy dist load) plus
- *      scripts/collapse-ch-synthetic-twins.cjs and scripts/lib/rematch-classify.cjs
- *      (isStrictChecklistSource -- consulted alongside catalogAuthorityOf,
- *      see isChecklistBacked below for why both are asked).
+ *      parseHobbyIqCardId/sameCardNumber/slugify, statedFinishFromChecklist,
+ *      parallelTheTitleAllows, playerTheTitleAllows, extractCardNumberFromTitle/
+ *      extractPrintRunFromTitle, cleanPlayerName, readVariationFromTitle,
+ *      insertSetNamedInTitle, isRegisteredProduct, productAncestry,
+ *      inferSetKeyFromTitle, extractYearFromTitle, guardSoldCompDoc,
+ *      reportWrites, splitIdentityWriteGuard via relocate-sold-comp.cjs's own
+ *      lazy dist load) plus scripts/collapse-ch-synthetic-twins.cjs and
+ *      scripts/lib/rematch-classify.cjs (isStrictChecklistSource --
+ *      consulted alongside catalogAuthorityOf, see isChecklistBacked below
+ *      for why both are asked).
  */
 "use strict";
 const path = require("path");
@@ -159,7 +197,7 @@ const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 
 const {
-  relocateSoldComp, stripSystem, isMissing, cents, foldMissing,
+  relocateSoldComp, stripSystem, isMissing, cents, foldMissing, contentHashOf,
 } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 // THE SWEEP LANE'S OWN PROOF PREDICATE + GATES -- imported, never
 // re-implemented, per the task's own instruction.
@@ -242,11 +280,141 @@ function catalogPrefixFor(hiqId) {
 }
 
 /**
+ * THE NAMED-CARD GATE (coordinator review of #2381, HIGH). A candidate side
+ * may only win when the sale's title does not NAME an identity MORE SPECIFIC
+ * than that side's own -- "absent beats wrong" cuts both ways: a checklist
+ * row that is merely MISSING for the true (more specific) identity must never
+ * let a generic BASE identity win by default, because the title itself is
+ * already the evidence that the sale is not base.
+ *
+ * MEASURED (owner's real-data trial, 320 pairs): three resolutions collapsed
+ * a named variation/insert onto plain base --
+ *   "2025 Topps Chrome Update Cal Raleigh Image Variation SSP #USC45" -> base
+ *   "Adley Rutschman 2023 Topps #250 Image Variation RC" -> base
+ *   "2025 Panini Donruss - DOWNTOWN Tyler Shough #19" -> base
+ * -- in every case the WINNING side's checklist row was simply absent for the
+ * named variation/insert, and rule 1/2 let the OTHER (base) side win by
+ * elimination rather than refusing on the title's own evidence.
+ *
+ * Four independent readers, each already shipped and called elsewhere in
+ * this repo, ORed together (a title tripping ANY one of them is enough):
+ *   - `readVariationFromTitle` (variationVocabulary.ts) -- STRONG reads only
+ *     (Image Variation, Image Variation SSP, "SP-CHROME" label forms, named
+ *     kinds). A WEAK marker alone (bare "SP"/"IV" out of context) is
+ *     deliberately NOT gated on here -- that file's own doctrine is "reported
+ *     for the seam to corroborate against the checklist, never guessed", and
+ *     this gate has no checklist row to corroborate a weak marker against.
+ *   - `insertSetNamedInTitle` (insertSetTitleReader.ts), scoped to the
+ *     CANDIDATE's own (sport, year, setKey) -- an insert set the title names,
+ *     REGISTERED or not (an unregistered match is still evidence the sale is
+ *     not base, even though this lane cannot address it; see that function's
+ *     own "R70 park signal" doctrine). ALSO tried under the candidate's bare
+ *     brand root (`panini-` stripped) when that root is independently
+ *     `isRegisteredProduct` -- Panini's own corpus sometimes files an insert
+ *     under the bare manufacturer word for a family that is ALSO registered
+ *     under its own `panini-` spelling (measured: Donruss "Downtown" is
+ *     indexed under bare `donruss`, not `panini-donruss`) -- a narrow,
+ *     table-free widening of WHICH KEY to query, never a guess about which
+ *     product the card belongs to.
+ *   - `statedFinishFromChecklist` naming a parallel that is NOT a subset of
+ *     the candidate's own parallel words (the same subset test
+ *     `moreSpecificRefines` already applies, inverted: if it fails there, the
+ *     title names something the CANDIDATE itself does not carry).
+ *   - `extractPrintRunFromTitle` finding a print-run fraction ("/25") while
+ *     the candidate identity carries none -- a numbered parallel the
+ *     candidate's own slug does not reflect.
+ *
+ * Returns `{ moreSpecific: false }` when the title names nothing the
+ * candidate does not already carry, or `{ moreSpecific: true, evidence }`
+ * naming which reader tripped.
+ */
+function titleNamesMoreSpecificThanCandidate(deps, sale, candidateParsed, candidateRow) {
+  const title = String(sale.title ?? "");
+  if (!title.trim() || !candidateParsed) return { moreSpecific: false };
+
+  const variation = deps.readVariationFromTitle(title.toLowerCase());
+  if (variation.finish) {
+    const candidateParallelWords = normParallelForRung(candidateRow?.parallel ?? candidateParsed.parallel).split(/\s+/).filter(Boolean);
+    const variationWords = normParallelForRung(variation.finish).split(/\s+/).filter(Boolean);
+    const candidateAlreadyNamesIt = variationWords.every((w) => candidateParallelWords.includes(w));
+    if (!candidateAlreadyNamesIt) {
+      return { moreSpecific: true, evidence: `title states a variation ("${variation.finish}") the candidate identity (parallel="${candidateRow?.parallel ?? candidateParsed.parallel ?? "base"}") does not carry` };
+    }
+  }
+
+  const insertCandidates = new Set([candidateParsed.setKey]);
+  const bareBrand = String(candidateParsed.setKey ?? "").replace(/^panini-/, "");
+  if (bareBrand && bareBrand !== candidateParsed.setKey && deps.isRegisteredProduct(bareBrand)) insertCandidates.add(bareBrand);
+  for (const setKey of insertCandidates) {
+    const inserts = deps.insertSetNamedInTitle({ title, sport: candidateParsed.sport, year: candidateParsed.year, setKey, playerName: sale.playerName });
+    if (inserts.length) {
+      return { moreSpecific: true, evidence: `title names insert set "${inserts.map((m) => m.root).join(", ")}" under ${setKey}, which the candidate identity (setKey=${candidateParsed.setKey}) does not carry` };
+    }
+  }
+
+  const titleFinish = deps.statedFinishFromChecklist(title, { setKey: candidateParsed.setKey, year: candidateParsed.year });
+  if (titleFinish) {
+    const candidateParallelWords = normParallelForRung(candidateRow?.parallel ?? candidateParsed.parallel).split(/\s+/).filter(Boolean);
+    const titleWords = normParallelForRung(titleFinish).split(/\s+/).filter(Boolean);
+    const candidateAlreadyNamesIt = titleWords.length > 0 && titleWords.every((w) => candidateParallelWords.includes(w));
+    if (!candidateAlreadyNamesIt) {
+      return { moreSpecific: true, evidence: `title states a parallel ("${titleFinish}") the candidate identity (parallel="${candidateRow?.parallel ?? candidateParsed.parallel ?? "base"}") does not carry` };
+    }
+  }
+
+  const titlePrintRun = deps.extractPrintRunFromTitle(title);
+  if (titlePrintRun && !candidateParsed.printRun) {
+    return { moreSpecific: true, evidence: `title states a print run (/${titlePrintRun}) the candidate identity does not carry` };
+  }
+
+  return { moreSpecific: false };
+}
+
+/**
+ * THE YEAR/PRODUCT CROSS-CHECK (coordinator review of #2381, HIGH). The
+ * title's own stated year (`extractYearFromTitle`) and inferred product
+ * (`inferSetKeyFromTitle` + `productAncestry`) must not CONTRADICT the
+ * candidate's own cell -- a candidate whose year or product the title itself
+ * disagrees with fails, regardless of how well its checklist row otherwise
+ * matches. Silence (the title states neither) is never a contradiction.
+ */
+function titleContradictsCandidateCell(deps, sale, candidateParsed) {
+  const title = String(sale.title ?? "");
+  if (!title.trim() || !candidateParsed) return { contradicts: false };
+
+  const titleYear = deps.extractYearFromTitle(title);
+  if (titleYear && Number(titleYear) !== Number(candidateParsed.year)) {
+    return { contradicts: true, detail: `title states year ${titleYear}, candidate cell is ${candidateParsed.year}` };
+  }
+
+  const inferred = deps.inferSetKeyFromTitle(title, candidateParsed.cardNumber ?? undefined);
+  const titleSetKey = inferred && inferred !== "Unknown" ? deps.slugify(inferred) : "";
+  if (titleSetKey && titleSetKey !== candidateParsed.setKey) {
+    const ancestry = deps.productAncestry(candidateParsed.setKey);
+    const titleAncestry = deps.productAncestry(titleSetKey);
+    // Silence, not a contradiction, whenever either key sits on the other's
+    // own ancestry chain (an ancestor names less than the candidate; a
+    // registered child of the candidate is a specialization of it, not a
+    // rival) -- the SAME directional reading repoint-sales-to-sibling-
+    // product.cjs's own titleNamesFromProduct already applies.
+    const agrees = ancestry.includes(titleSetKey) || titleAncestry.includes(candidateParsed.setKey);
+    if (!agrees && deps.isRegisteredProduct(titleSetKey)) {
+      return { contradicts: true, detail: `title infers product "${inferred}" (${titleSetKey}), which is neither the candidate's own product (${candidateParsed.setKey}) nor on its ancestry chain` };
+    }
+  }
+
+  return { contradicts: false };
+}
+
+/**
  * RULE 1's per-side evaluation: does `hiqId` resolve to a STRICT checklist
  * row (any parallel, same card number) whose roster names `salePlayer`, and
- * does the title not contradict that row? Returns the winning row or null.
- * `checklistRowsForNumber` is a Map<normNumber, row[]> the caller preloaded
- * once per (sport, year, setKey) cell.
+ * does the title not contradict that row -- OR name something MORE SPECIFIC
+ * than it? Returns the winning row or null. `checklistRowsForNumber` is a
+ * Map<normNumber, row[]> the caller preloaded once per (sport, year, setKey)
+ * cell. `sale` here is whichever SIDE's own document the caller is evaluating
+ * titles from (both are tried by the caller -- see
+ * evaluateHobbyiqCardIdSideBothTitles).
  */
 function evaluateHobbyiqCardIdSide(deps, hiqId, sale, checklistRowsByNumber) {
   const parsed = catalogPrefixFor(hiqId);
@@ -258,7 +426,33 @@ function evaluateHobbyiqCardIdSide(deps, hiqId, sale, checklistRowsByNumber) {
   if (!rosterRows.length) return { row: null, reason: "roster-does-not-name-player" };
   const nonContradicted = rosterRows.filter((r) => !deps.titleContradictsTarget(sale, r).contradicts);
   if (!nonContradicted.length) return { row: null, reason: "title-contradicts-every-candidate-row" };
-  return { row: nonContradicted[0], reason: "ok" };
+  const cellOk = nonContradicted.filter((r) => !titleContradictsCandidateCell(deps, sale, parsed).contradicts);
+  if (!cellOk.length) return { row: null, reason: "title-contradicts-candidate-cell" };
+  const notMoreSpecific = cellOk.filter((r) => !titleNamesMoreSpecificThanCandidate(deps, sale, parsed, r).moreSpecific);
+  if (!notMoreSpecific.length) {
+    const evidence = titleNamesMoreSpecificThanCandidate(deps, sale, parsed, cellOk[0]).evidence;
+    return { row: null, reason: "title-names-a-more-specific-card", evidence };
+  }
+  return { row: notMoreSpecific[0], reason: "ok" };
+}
+
+/**
+ * Evaluate a candidate hobbyiqCardId against BOTH sides' own titles
+ * (coordinator review of #2381, MEDIUM) -- production previously hardcoded
+ * `sale = short`, so a genuine contradiction visible only on the LONG row's
+ * own independently-populated `title` field was invisible whenever the SHORT
+ * row's title happened to look silent or agreeable. A candidate now wins only
+ * when it clears `evaluateHobbyiqCardIdSide` against EACH side's own title
+ * (player name likewise: each side's own `playerName`, not a splice) --  a
+ * contradiction OR a more-specific-card read surfaced by EITHER title/player
+ * pairing is enough to fail the candidate.
+ */
+function evaluateHobbyiqCardIdSideBothTitles(deps, hiqId, long, short, checklistRowsByNumber) {
+  const viaLong = evaluateHobbyiqCardIdSide(deps, hiqId, long, checklistRowsByNumber);
+  if (!viaLong.row) return viaLong;
+  const viaShort = evaluateHobbyiqCardIdSide(deps, hiqId, short, checklistRowsByNumber);
+  if (!viaShort.row) return viaShort;
+  return viaShort;
 }
 
 /**
@@ -269,8 +463,14 @@ function evaluateHobbyiqCardIdSide(deps, hiqId, sale, checklistRowsByNumber) {
  * `winnerRow`/`loserRow` are the checklist rows evaluateHobbyiqCardIdSide
  * already proved for each side (both must be checklist-backed for rule 2 to
  * even be attempted -- the caller enforces that before calling this).
+ *
+ * BOTH titles are checked (coordinator review of #2381, MEDIUM/HIGH):
+ * refinement requires the title (on EITHER side's own document) to name the
+ * winner's words, and must NOT (on either title) name something even MORE
+ * specific than the winner -- the same named-card gate rule 1 applies, so a
+ * refinement can never mint an under-specified named-card resolution either.
  */
-function moreSpecificRefines(deps, sale, winnerParsed, winnerRow, loserParsed) {
+function moreSpecificRefines(deps, long, short, winnerParsed, winnerRow, loserParsed) {
   if (!winnerParsed || !loserParsed) return { refines: false, reason: "unparseable-slug" };
   if (!deps.sameCardNumber(winnerParsed.cardNumber, loserParsed.cardNumber)) return { refines: false, reason: "different-card-number" };
   if (winnerParsed.isAuto !== loserParsed.isAuto) return { refines: false, reason: "different-auto-flag" };
@@ -278,44 +478,59 @@ function moreSpecificRefines(deps, sale, winnerParsed, winnerRow, loserParsed) {
   if (loserParallel !== "base" && loserParallel !== "") return { refines: false, reason: "loser-parallel-is-not-base-or-blank" };
   const winnerParallelWords = normParallelForRung(winnerRow?.parallel ?? winnerParsed.parallel).split(/\s+/).filter(Boolean);
   if (!winnerParallelWords.length) return { refines: false, reason: "winner-names-no-parallel-either" };
-  const titleFinish = deps.statedFinishFromChecklist(String(sale.title ?? ""), { setKey: winnerParsed.setKey, year: winnerParsed.year });
-  if (!titleFinish) return { refines: false, reason: "title-names-no-parallel" };
-  const titleWords = new Set(normParallelForRung(titleFinish).split(/\s+/).filter(Boolean));
-  // The title's stated words must be a SUBSET of the winner's own parallel
-  // words -- the title may under-state ("Refractor" on a "Blue Refractor"
-  // winner), it may never name a THIRD, different parallel.
-  const titleNamesWinner = [...titleWords].every((w) => winnerParallelWords.includes(w)) && titleWords.size > 0;
-  if (!titleNamesWinner) return { refines: false, reason: "title-names-a-different-parallel-than-the-winner" };
+
+  let anyTitleNamesWinner = false;
+  for (const sale of [short, long]) {
+    const titleFinish = deps.statedFinishFromChecklist(String(sale.title ?? ""), { setKey: winnerParsed.setKey, year: winnerParsed.year });
+    if (titleFinish) {
+      const titleWords = new Set(normParallelForRung(titleFinish).split(/\s+/).filter(Boolean));
+      // The title's stated words must be a SUBSET of the winner's own
+      // parallel words -- the title may under-state ("Refractor" on a "Blue
+      // Refractor" winner), it may never name a THIRD, different parallel.
+      const titleNamesWinner = [...titleWords].every((w) => winnerParallelWords.includes(w)) && titleWords.size > 0;
+      if (!titleNamesWinner) return { refines: false, reason: "title-names-a-different-parallel-than-the-winner" };
+      anyTitleNamesWinner = true;
+    }
+    // Named-card gate, rule 2's own half: neither title may name something
+    // MORE specific than the winner either (an insert, a print run, a finer
+    // variation tier the winner's own row does not carry) -- checked on
+    // BOTH titles regardless of whether this one stated a parallel.
+    const moreSpecific = titleNamesMoreSpecificThanCandidate(deps, sale, winnerParsed, winnerRow);
+    if (moreSpecific.moreSpecific) return { refines: false, reason: `title-names-a-more-specific-card: ${moreSpecific.evidence}` };
+  }
+  if (!anyTitleNamesWinner) return { refines: false, reason: "title-names-no-parallel" };
   return { refines: true, reason: "same-number-same-auto-loser-is-base-title-names-winner-parallel" };
 }
 
 /**
- * ONE disagreeing pair -> a resolution verdict. Pure, no I/O.
+ * ONE disagreeing pair -> a resolution verdict. Pure, no I/O. Both sides'
+ * OWN titles are consulted throughout (coordinator review of #2381, MEDIUM)
+ * -- there is no single `sale` argument any more.
  *
  * @returns {{verdict:"resolved", winner:"long"|"short", rule:string, detail:string}
  *          | {verdict:"both-sides-valid"|"neither-side-backed", detail:string}}
  */
-function resolveHobbyiqCardIdDisagreement(deps, long, short, sale) {
+function resolveHobbyiqCardIdDisagreement(deps, long, short) {
   const longParsed = catalogPrefixFor(long.hobbyiqCardId);
   const shortParsed = catalogPrefixFor(short.hobbyiqCardId);
   const longRowsByNumber = deps.checklistRowsByNumber(longParsed);
   const shortRowsByNumber = deps.checklistRowsByNumber(shortParsed);
-  const longEval = evaluateHobbyiqCardIdSide(deps, long.hobbyiqCardId, sale, longRowsByNumber);
-  const shortEval = evaluateHobbyiqCardIdSide(deps, short.hobbyiqCardId, sale, shortRowsByNumber);
+  const longEval = evaluateHobbyiqCardIdSideBothTitles(deps, long.hobbyiqCardId, long, short, longRowsByNumber);
+  const shortEval = evaluateHobbyiqCardIdSideBothTitles(deps, short.hobbyiqCardId, long, short, shortRowsByNumber);
 
   const longOk = longEval.row !== null;
   const shortOk = shortEval.row !== null;
 
-  // RULE 1: exactly one side clears checklist+roster+title.
-  if (longOk && !shortOk) return { verdict: "resolved", winner: "long", rule: "checklist-and-roster", detail: `long hobbyiqCardId=${long.hobbyiqCardId} resolves to a strict checklist row naming this player; short (${short.hobbyiqCardId}) fails: ${shortEval.reason}` };
-  if (shortOk && !longOk) return { verdict: "resolved", winner: "short", rule: "checklist-and-roster", detail: `short hobbyiqCardId=${short.hobbyiqCardId} resolves to a strict checklist row naming this player; long (${long.hobbyiqCardId}) fails: ${longEval.reason}` };
+  // RULE 1: exactly one side clears checklist+roster+title(s)+named-card gate.
+  if (longOk && !shortOk) return { verdict: "resolved", winner: "long", rule: "checklist-and-roster", detail: `long hobbyiqCardId=${long.hobbyiqCardId} resolves to a strict checklist row naming this player; short (${short.hobbyiqCardId}) fails: ${shortEval.reason}${shortEval.evidence ? ` (${shortEval.evidence})` : ""}`, winnerRow: longEval.row };
+  if (shortOk && !longOk) return { verdict: "resolved", winner: "short", rule: "checklist-and-roster", detail: `short hobbyiqCardId=${short.hobbyiqCardId} resolves to a strict checklist row naming this player; long (${long.hobbyiqCardId}) fails: ${longEval.reason}${longEval.evidence ? ` (${longEval.evidence})` : ""}`, winnerRow: shortEval.row };
 
   // RULE 2: both sides checklist-backed -- try refinement in both directions.
   if (longOk && shortOk) {
-    const longRefinesShort = moreSpecificRefines(deps, sale, longParsed, longEval.row, shortParsed);
-    if (longRefinesShort.refines) return { verdict: "resolved", winner: "long", rule: "more-specific-refines", detail: `long ${long.hobbyiqCardId} refines short ${short.hobbyiqCardId}: ${longRefinesShort.reason}` };
-    const shortRefinesLong = moreSpecificRefines(deps, sale, shortParsed, shortEval.row, longParsed);
-    if (shortRefinesLong.refines) return { verdict: "resolved", winner: "short", rule: "more-specific-refines", detail: `short ${short.hobbyiqCardId} refines long ${long.hobbyiqCardId}: ${shortRefinesLong.reason}` };
+    const longRefinesShort = moreSpecificRefines(deps, long, short, longParsed, longEval.row, shortParsed);
+    if (longRefinesShort.refines) return { verdict: "resolved", winner: "long", rule: "more-specific-refines", detail: `long ${long.hobbyiqCardId} refines short ${short.hobbyiqCardId}: ${longRefinesShort.reason}`, winnerRow: longEval.row };
+    const shortRefinesLong = moreSpecificRefines(deps, long, short, shortParsed, shortEval.row, longParsed);
+    if (shortRefinesLong.refines) return { verdict: "resolved", winner: "short", rule: "more-specific-refines", detail: `short ${short.hobbyiqCardId} refines long ${long.hobbyiqCardId}: ${shortRefinesLong.reason}`, winnerRow: shortEval.row };
     return { verdict: "both-sides-valid", detail: `both hobbyiqCardId values (long=${long.hobbyiqCardId}, short=${short.hobbyiqCardId}) resolve to a strict checklist row naming this player, and neither strictly refines the other` };
   }
 
@@ -324,14 +539,24 @@ function resolveHobbyiqCardIdDisagreement(deps, long, short, sale) {
 }
 
 /**
- * RULE 3: grade axis. The side whose grade agrees with a grader TOKEN in the
- * title wins (grade from grader token only -- gradeParser.ts's
- * parseGradeFromTitle). Pure.
+ * RULE 3: grade axis. The side whose grade agrees with a grader TOKEN in
+ * EITHER title wins (grade from grader token only -- gradeParser.ts's
+ * parseGradeFromTitle). Coordinator review of #2381, MEDIUM: a grade token
+ * may appear on either row's own title, and if the two titles STATE
+ * DIFFERENT grades, that is itself a disagreement this lane must not paper
+ * over by picking one arbitrarily -- left, never guessed. Pure.
  */
-function resolveGradeDisagreement(deps, long, short, sale) {
-  const titleGrade = deps.parseGradeFromTitle(String(sale.title ?? ""));
-  if (!titleGrade) return { verdict: "neither-side-backed", detail: "the title carries no grader token at all -- grade from grader token only, never inferred" };
-  const titleKey = `${String(titleGrade.gradeCompany).toUpperCase()}|${titleGrade.gradeValue}`;
+function resolveGradeDisagreement(deps, long, short) {
+  const longTitleGrade = deps.parseGradeFromTitle(String(long.title ?? ""));
+  const shortTitleGrade = deps.parseGradeFromTitle(String(short.title ?? ""));
+  const keyOf = (g) => (g ? `${String(g.gradeCompany).toUpperCase()}|${g.gradeValue}` : null);
+  const longTitleKey = keyOf(longTitleGrade);
+  const shortTitleKey = keyOf(shortTitleGrade);
+  if (longTitleKey && shortTitleKey && longTitleKey !== shortTitleKey) {
+    return { verdict: "neither-side-backed", detail: `the two titles state DIFFERENT grader tokens (long title reads ${longTitleKey}, short title reads ${shortTitleKey}) -- never guessed past` };
+  }
+  const titleKey = longTitleKey ?? shortTitleKey;
+  if (!titleKey) return { verdict: "neither-side-backed", detail: "neither title carries a grader token at all -- grade from grader token only, never inferred" };
   const longKey = gradeKeyOf(long);
   const shortKey = gradeKeyOf(short);
   const longMatches = longKey === titleKey;
@@ -344,48 +569,69 @@ function resolveGradeDisagreement(deps, long, short, sale) {
 
 /**
  * THE ONE ENTRY POINT: given a `twins-disagree` verdict from
- * decideSyntheticTwin, resolve it. `axis` names which field disagreed.
+ * decideSyntheticTwin, resolve it. `axis` names which field disagreed. Both
+ * documents are always passed; there is no single `sale` any more.
  */
-function resolveDisagreement(deps, axis, long, short, sale) {
-  if (axis === "hobbyiqCardId") return resolveHobbyiqCardIdDisagreement(deps, long, short, sale);
-  if (axis === "grade") return resolveGradeDisagreement(deps, long, short, sale);
+function resolveDisagreement(deps, axis, long, short) {
+  if (axis === "hobbyiqCardId") return resolveHobbyiqCardIdDisagreement(deps, long, short);
+  if (axis === "grade") return resolveGradeDisagreement(deps, long, short);
   return { verdict: "neither-side-backed", detail: `unknown disagreement axis "${axis}"` };
 }
 
 /**
  * ACTION: build the kept document once a pair is resolved. The SHORT row's
- * address is ALWAYS kept (this pool's own KEEP RULE); when the winner is the
- * LONG side, the short row's identity fields are OVERWRITTEN (not folded --
- * a fold only fills what is missing, and a resolved disagreement means the
- * short row's own value was WRONG, not absent) with the long row's values.
- * The ledger stamp is ONE object field.
+ * ADDRESS is ALWAYS kept (this pool's own KEEP RULE); when the winner is the
+ * LONG side, the short row's ENTIRE identity field family is OVERWRITTEN
+ * (never folded -- a fold only fills what is missing, and a resolved
+ * disagreement means the short row's own value was WRONG, not absent) with
+ * the winning identity, `contentHash` is recomputed against the NEW identity
+ * (mirroring repoint-sales-to-sibling-product.cjs's own
+ * `keep.contentHash = contentHashOf(keep)` after any identity change), and
+ * the result is run through `guardSoldCompDoc` so a malformed winning
+ * identity parks rather than writes silently. The ledger stamp is ONE object
+ * field.
+ *
+ * `winnerRow` is the checklist row RULE 1/2 proved for the winning side (its
+ * OWN `playerName`/`parallel` spelling -- the canonical checklist form, not
+ * whatever the losing row happened to store) when the axis is hobbyiqCardId;
+ * absent for a grade-axis resolution, where only the three grade fields move.
  */
-function buildResolution(long, short, resolution, axis, now) {
+function buildResolution(deps, long, short, resolution, axis, now, winnerRow) {
   const keep = stripSystem(short);
   const loserId = resolution.winner === "long" ? short.id : long.id;
   const winnerId = resolution.winner === "long" ? long.id : short.id;
   if (resolution.winner === "long") {
     if (axis === "hobbyiqCardId") {
+      const winnerParsed = catalogPrefixFor(long.hobbyiqCardId);
+      keep.cardId = long.cardId;
       keep.hobbyiqCardId = long.hobbyiqCardId;
-      // cardId only changes when the winning slug's own partition differs
-      // from the short row's current cardId -- decided by the caller, which
-      // knows the pool's own partition convention; this function only sets
-      // the FIELDS, the caller (applyResolution) decides whether that is a
-      // relocation.
+      if (winnerParsed) {
+        keep.sport = winnerParsed.sport;
+        keep.cardYear = winnerParsed.year;
+        keep.cardNumber = winnerParsed.cardNumber;
+        keep.parallel = winnerRow?.parallel ?? winnerParsed.parallel;
+        keep.isAuto = winnerParsed.isAuto;
+      }
+      keep.playerName = winnerRow?.playerName ?? long.playerName ?? keep.playerName;
+      keep.contentHash = contentHashOf(keep);
     } else if (axis === "grade") {
       keep.gradeCompany = long.gradeCompany;
       keep.gradeValue = long.gradeValue;
       keep.gradeQualifier = long.gradeQualifier ?? null;
+      keep.contentHash = contentHashOf(keep);
     }
   }
   keep.twinResolved = { at: now, by: "resolve-disagreeing-sale-twins", winner: winnerId, loser: loserId, rule: resolution.rule };
+  if (deps?.guardSoldCompDoc) deps.guardSoldCompDoc(keep, { guardedBy: "resolve-disagreeing-sale-twins" });
   return keep;
 }
 
 module.exports = {
   isChecklistBacked, catalogRowPlayerKeys, playerMatchesRow, catalogPrefixFor,
-  evaluateHobbyiqCardIdSide, moreSpecificRefines, resolveHobbyiqCardIdDisagreement,
-  resolveGradeDisagreement, resolveDisagreement, buildResolution, normParallelForRung, normNumber,
+  evaluateHobbyiqCardIdSide, evaluateHobbyiqCardIdSideBothTitles, moreSpecificRefines,
+  titleNamesMoreSpecificThanCandidate, titleContradictsCandidateCell,
+  resolveHobbyiqCardIdDisagreement, resolveGradeDisagreement, resolveDisagreement,
+  buildResolution, normParallelForRung, normNumber,
   __setSweepDepsForTest: (d) => { SWEEP_DEPS = d; },
 };
 
@@ -405,13 +651,20 @@ async function main() {
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
   const { playerIdentityKey } = require(path.join(backend, "dist/services/catalog/playerIdentityKey.js"));
-  const { parseHobbyIqCardId, sameCardNumber } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+  const { parseHobbyIqCardId, sameCardNumber, slugify } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { statedFinishFromChecklist } = require(path.join(backend, "dist/services/portfolioiq/statedFinishFromChecklist.js"));
   const { parallelTheTitleAllows } = require(path.join(backend, "dist/services/portfolioiq/titleOutranksVendorTag.js"));
   const { playerTheTitleAllows, playerNameKey } = require(path.join(backend, "dist/services/portfolioiq/playerTheTitleAllows.js"));
   const { cleanPlayerName } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
-  const { extractCardNumberFromTitle } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js"));
+  const { extractCardNumberFromTitle, extractPrintRunFromTitle } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js"));
   const { parseGradeFromTitle } = require(path.join(backend, "dist/services/portfolioiq/gradeParser.js"));
+  const { readVariationFromTitle } = require(path.join(backend, "dist/services/catalog/variationVocabulary.js"));
+  const { insertSetNamedInTitle } = require(path.join(backend, "dist/services/portfolioiq/insertSetTitleReader.js"));
+  const { isRegisteredProduct } = require(path.join(backend, "dist/services/catalog/resolveProductByChecklist.js"));
+  const { productAncestry } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
+  const { inferSetKeyFromTitle } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
+  const { extractYearFromTitle } = require(path.join(backend, "dist/services/portfolioiq/slugRederivation.service.js"));
+  const { guardSoldCompDoc } = require(path.join(backend, "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
 
   SWEEP_DEPS = { catalogAuthorityOf, parseHobbyIqCardId };
 
@@ -564,6 +817,9 @@ async function main() {
   const deps = {
     playerIdentityKey, titleContradictsTarget, statedFinishFromChecklist,
     sameCardNumber, parseGradeFromTitle,
+    readVariationFromTitle, insertSetNamedInTitle, isRegisteredProduct,
+    extractPrintRunFromTitle, extractYearFromTitle, inferSetKeyFromTitle,
+    productAncestry, slugify, guardSoldCompDoc,
     checklistRowsByNumber: () => new Map(), // placeholder; real cache-backed fn bound per-partition below
   };
 
@@ -617,12 +873,17 @@ async function main() {
     };
 
     for (const long of longRows) {
-      if (isProtected(long)) { stats.protected++; continue; }
-      if (isParkedSide(long)) { stats.parkedSide++; continue; }
+      // PLAN_OUT gets protected/parked-side rows too (coordinator review of
+      // #2381, LOW) -- same auditability doctrine as the sweep lane's own
+      // emitPlanRow calls for these classes; a REPORT that silently drops
+      // them cannot be audited row by row before the matching APPLY runs.
+      if (isProtected(long)) { stats.protected++; emitPlanRow("protected", null, long, null, { reason: "long-row-pinned-or-flagged" }); continue; }
+      if (isParkedSide(long)) { stats.parkedSide++; emitPlanRow("parked-side", null, long, null, { reason: "long-row-parked" }); continue; }
       const parsedId = parseLongSyntheticId(long.id);
       const candidateShorts = shortRows.filter((s) => cents(s.price) === Math.round(Number(parsedId.priceCents) || NaN));
       for (const short of candidateShorts) {
-        if (isProtected(short) || isParkedSide(short)) continue;
+        if (isProtected(short)) { stats.protected++; emitPlanRow("protected", null, long, short, { reason: "short-row-pinned-or-flagged" }); continue; }
+        if (isParkedSide(short)) { stats.parkedSide++; emitPlanRow("parked-side", null, long, short, { reason: "short-row-parked" }); continue; }
         const d = decideSyntheticTwin(long, short, { dayCounts, longDayCounts });
         if (d.verdict !== "twins-disagree") continue;
         stats.disagreePairsSeen++;
@@ -639,7 +900,7 @@ async function main() {
           return cache.get(`${parsed.sport}|${parsed.year}|${parsed.setKey}`) ?? new Map();
         };
 
-        const resolution = resolveDisagreement(deps, d.axis, long, short, short);
+        const resolution = resolveDisagreement(deps, d.axis, long, short);
         if (resolution.verdict === "both-sides-valid") {
           stats.bothSidesValid++;
           if (examples.length < 30) examples.push(`  BOTH-SIDES-VALID  ${cardId}  long=${long.id} short=${short.id}: ${resolution.detail}`);
@@ -661,7 +922,13 @@ async function main() {
         if (examples.length < 30) examples.push(`  RESOLVED (${resolution.rule}, winner=${resolution.winner})  ${cardId}  long=${long.id} short=${short.id}: ${resolution.detail}`);
 
         const now = new Date().toISOString();
-        const keep = buildResolution(long, short, resolution, d.axis, now);
+        // buildResolution sets the FULL identity field family (including
+        // cardId, when the winner is long -- exercised directly whenever the
+        // long row's cardId differs from the short row's, which today's
+        // same-partition population never does, but a future population
+        // that crosses partitions would) and recomputes contentHash + runs
+        // guardSoldCompDoc, so nothing further touches identity here.
+        const keep = buildResolution(deps, long, short, resolution, d.axis, now, resolution.winnerRow);
         // CARRY the sweep lane's own repair-ledger fold too -- a resolved
         // pair is still a collapse, and any long-only repair state
         // (rekeyedAt/splitResolved/etc.) the short row lacks should still
@@ -674,19 +941,6 @@ async function main() {
         keep.collapsedReason = "CF-CH-DAILY-DOUBLE-WRITE: the same CH sale under a synthetic id and CardHedge's own vendor sale id, DISAGREEING identity resolved by evidence (resolve-disagreeing-sale-twins)";
 
         emitPlanRow(APPLY ? "resolve" : "would-resolve", resolution.rule, long, short, { winner: resolution.winner, axis: d.axis, detail: resolution.detail });
-
-        // cardId only changes when the WINNING side's identity implies a
-        // different partition than the short row's own current cardId --
-        // true only when the winner is "long" AND axis is hobbyiqCardId AND
-        // the long row's own cardId differs from the short row's. In this
-        // pool both rows already share ONE partition (the CH card id) by
-        // construction of the sweep's own population query, so a resolved
-        // pair here never actually changes cardId -- the relocation path
-        // exists for correctness if a future population ever crosses
-        // partitions, exercised directly in the test suite's own fixture.
-        if (resolution.winner === "long" && String(keep.cardId ?? short.cardId) !== String(short.cardId)) {
-          keep.cardId = long.cardId;
-        }
 
         const res = await relocateSoldComp(pool, { keep, drop: [{ id: long.id, cardId: long.cardId, ifMatchEtag: long._etag }], retry, verifyFields: ["twinResolved"], dryRun: !APPLY });
         if (!res.ok && res.stage !== "done") { stats.failed++; console.log(`  FAILED at ${res.stage} ${keep.id}: ${String(res.error).slice(0, 100)}`); continue; }
