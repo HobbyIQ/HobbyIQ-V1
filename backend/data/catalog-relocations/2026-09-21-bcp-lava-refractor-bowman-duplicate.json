@@ -1,0 +1,936 @@
+{
+ "generatedAt": "2026-09-21T15:32:08Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "PR #2392 (merged 2026-09-21) ingested 150 checklist rows hiq:baseball:2025:bowman:bcp-<N>:lava-refractor:no-auto:num-399 (source checklistinsider-2026-09-21, package backend/data/checklists/scraped/acq-2026-09-21-checklistinsider-bowman-chrome-prospects-lava-2025). They are DUPLICATES: the same rung already existed for the same cards at hiq:baseball:2025:bowman-chrome:bcp-<N>:lava-refractor:no-auto:num-399 (source checklistinsider-2026-08-27). 2025 BCP- rows live under the bowman-chrome: id prefix (6,000+ rows) -- that is the canonical home; one card, one row.",
+ "ordering": "CATALOG ONLY. This list retires the 150 bowman: duplicate rows. No reslug is needed: the canonical bowman-chrome: row already exists at every address, so nothing is minted and no companion pool-relocation list is required for the catalog rows themselves. ONE sold_comps row was found resident at a retired bowman: address (BCP-69, tca-ebay::358876121523) -- reported, not moved, by this PR; see census.salesResidentAtRetiredAddresses.",
+ "rulings": [
+  "CF-ONE-CARD-ONE-ROW-ONE-POOL. The bowman-chrome: id prefix already carries the full 2025 BCP- population (6,000+ rows, source checklistinsider-2026-08-27 among others). PR #2392's bowman: rows are a second row for the same 150 cards -- a split pool that would silently halve each card's comp count.",
+  "VERIFICATION IS PER-ID, READ-ONLY. Before listing each id, the bowman: row was point-read and confirmed to carry source exactly \"checklistinsider-2026-09-21\" (i.e. it is a #2392 row, not some other pre-existing row at that address), and its bowman-chrome: twin was point-read and confirmed present with matching cardNumber, printRun (399) and player. All 150 of 150 candidate ids passed both checks; none failed.",
+  "RETIRE IS A DELETE in this lane (catalogVisibility.ts:23-25 - every state is matchable, only visibility is tiered), and retireCatalogRow re-points nothing. None of the 150 rows have graded children (PR #2392 minted base rows only), so no graded-child entries are named here.",
+  "THE COST, STATED. A cross-check of sold_comps (STARTSWITH hiq:baseball:2025:bowman:bcp- + CONTAINS lava-refractor) found exactly ONE resident row: tca-ebay::358876121523 at BCP-69 (hobbyiqCardId hiq:baseball:2025:bowman:bcp-69:lava-refractor:no-auto). It is reported here, not moved -- the retire hands it to the rematch, same as every other retire in this lane."
+ ],
+ "census": {
+  "catalogRowsRetired": 150,
+  "byRole": {
+   "base-no-auto": 150
+  },
+  "stampedBy": {
+   "checklistinsider-2026-09-21": 150
+  },
+  "survivingIdentityPrefix": "hiq:baseball:2025:bowman-chrome:bcp-<N>:lava-refractor:no-auto:num-399",
+  "survivingSource": "checklistinsider-2026-08-27",
+  "reslugEntries": 0,
+  "salesResidentAtRetiredAddresses": 1,
+  "salesResidentDetail": [
+   {
+    "id": "tca-ebay::358876121523",
+    "cardId": "hiq:baseball:2025:bowman:bcp-69:lava-refractor:no-auto:num-399",
+    "source": "tca-ebay",
+    "note": "reported only, not moved by this PR"
+   }
+  ]
+ },
+ "entries": [
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-1:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-1 Walker Jenkins: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-1:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-2:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-2 Zyhir Hope: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-2:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-3:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-3 Romeo Sanabria: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-3:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-4:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-4 Asbel Gonzalez: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-4:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-5:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-5 Franyerber Montilla: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-5:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-6:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-6 Wen-Hui Pan: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-6:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-7:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-7 Gregory Barrios: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-7:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-8:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-8 Dawel Joseph: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-8:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-9:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-9 Esteban Mejia: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-9:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-10:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-10 Cade Horton: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-10:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-11:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-11 Jackson Humphries: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-11:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-12:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-12 Hayden Alvarez: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-12:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-13:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-13 Josue Briceno: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-13:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-14:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-14 Owen Wild: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-14:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-15:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-15 Walker Janek: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-15:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-16:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-16 Engelth Urena: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-16:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-17:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-17 Colt Emerson: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-17:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-18:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-18 Ichiro Cano Hernandez: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-18:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-19:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-19 Fabian Lopez: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-19:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-20:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-20 Ashly Andujar: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-20:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-21:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-21 Slade Caldwell: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-21:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-22:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-22 JJ Wetherholt: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-22:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-23:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-23 Lazaro Montes: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-23:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-24:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-24 Max Clark: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-24:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-25:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-25 Quinn Mathews: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-25:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-26:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-26 Jancel Villarroel: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-26:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-27:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-27 Yu-Min Lin: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-27:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-28:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-28 Carlos Tavares: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-28:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-29:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-29 David Ortiz Jr.: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-29:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-30:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-30 Bishop Letson: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-30:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-31:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-31 Ricardo Yan: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-31:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-32:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-32 Cole Fontenelle: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-32:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-33:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-33 Aron Estrada: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-33:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-34:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-34 Rafael Flores: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-34:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-35:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-35 Will Simpson: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-35:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-36:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-36 Yophery Rodriguez: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-36:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-37:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-37 Esmith Pineda: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-37:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-38:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-38 Luis Pena: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-38:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-39:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-39 James Tibbs III: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-39:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-40:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-40 Robert Calaz: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-40:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-41:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-41 Mitch Jebb: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-41:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-42:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-42 Kristian Campbell: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-42:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-43:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-43 Jhostynxon Garcia: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-43:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-44:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-44 Hagen Smith: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-44:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-45:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-45 Victor Rodrigues: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-45:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-46:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-46 Cam Caminiti: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-46:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-47:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-47 Dylan Fien: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-47:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-48:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-48 Cam Smith: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-48:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-49:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-49 Bryce Rainer: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-49:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-50:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-50 Jesus Made: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-50:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-51:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-51 Hyun-Seok Jang: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-51:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-52:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-52 Ismael Javier: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-52:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-53:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-53 Jacob Bresnahan: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-53:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-54:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-54 Aidan Miller: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-54:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-55:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-55 Gary Gill Hill: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-55:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-56:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-56 Chase Mobley: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-56:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-57:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-57 Chase Hampton: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-57:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-58:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-58 Jonathon Long: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-58:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-59:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-59 Leo De Vries: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-59:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-60:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-60 Jack Penney: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-60:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-61:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-61 D'Angelo Ortiz: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-61:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-62:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-62 Luke Sinnard: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-62:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-63:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-63 George Klassen: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-63:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-64:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-64 Jack Lines: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-64:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-65:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-65 Aroon Escobar: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-65:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-66:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-66 Sammy Hernandez: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-66:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-67:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-67 Franklin Arias: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-67:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-68:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-68 Javier Mogollon: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-68:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-69:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-69 Thomas White: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-69:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-70:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-70 Esteban Gonzalez: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-70:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-71:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-71 Richard Matic: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-71:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-72:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-72 Paulino Santana: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-72:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-73:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-73 Steven Echavarria: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-73:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-74:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-74 Zack Showalter: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-74:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-75:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-75 Charlie Condon: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-75:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-76:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-76 Blake Wolters: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-76:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-77:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-77 Khadim Diaw: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-77:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-78:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-78 Payton Eeles: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-78:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-79:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-79 Kevin McGonigle: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-79:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-80:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-80 Edgleen Perez: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-80:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-81:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-81 Aidan Smith: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-81:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-82:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-82 Kevyn Castillo: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-82:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-83:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-83 Émilien Pitre: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-83:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-84:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-84 Jansel Luis: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-84:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-85:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-85 Jared Sundstrom: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-85:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-86:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-86 Konnor Griffin: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-86:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-87:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-87 Didier Fuentes: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-87:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-88:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-88 Jesus Lopez: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-88:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-89:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-89 Sean Keys: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-89:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-90:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-90 Andrew Morris: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-90:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-91:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-91 PJ Morlando: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-91:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-92:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-92 Bo Walker: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-92:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-93:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-93 Seaver King: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-93:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-94:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-94 Marcos Torres: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-94:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-95:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-95 Tsung-Che Cheng: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-95:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-96:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-96 Humberto Cruz: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-96:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-97:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-97 Cameron Sullivan: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-97:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-98:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-98 Anderson Brito: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-98:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-99:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-99 Naibel Mariano: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-99:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-100:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-100 Sammy Stafura: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-100:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-101:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-101 Tink Hence: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-101:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-102:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-102 Nate Nankil: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-102:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-103:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-103 Jac Caglianone: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-103:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-104:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-104 Cobb Hightower: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-104:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-105:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-105 Jonah Tong: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-105:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-106:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-106 Jose Perdomo: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-106:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-107:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-107 Christian Moore: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-107:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-108:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-108 Carson Benge: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-108:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-109:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-109 Samuel Basallo: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-109:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-110:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-110 Fernando Cruz: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-110:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-111:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-111 Jose Pirela: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-111:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-112:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-112 Cody Freeman: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-112:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-113:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-113 Caden Kendle: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-113:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-114:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-114 Nick Kurtz: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-114:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-115:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-115 Eduardo Quintero: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-115:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-116:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-116 Andrew Painter: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-116:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-117:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-117 Jesus Tillero: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-117:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-118:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-118 Kyle Teel: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-118:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-119:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-119 Hyungchan Um: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-119:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-120:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-120 Caleb Lomavita: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-120:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-121:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-121 Winston Santos: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-121:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-122:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-122 Chase Burns: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-122:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-123:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-123 Jhonayker Ugarte: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-123:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-124:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-124 Elvin Garcia: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-124:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-125:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-125 Alejandro Rosario: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-125:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-126:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-126 Jhancarlos Lara: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-126:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-127:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-127 Emil Morales: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-127:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-128:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-128 Cory Lewis: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-128:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-129:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-129 Malcolm Moore: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-129:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-130:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-130 Conrad Cason: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-130:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-131:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-131 Travis Bazzana: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-131:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-132:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-132 Braden Montgomery: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-132:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-133:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-133 Sebastian Walcott: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-133:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-134:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-134 Onil Perez: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-134:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-135:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-135 Lucas Ramirez: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-135:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-136:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-136 Josh Knoth: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-136:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-137:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-137 Kellon Lindsey: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-137:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-138:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-138 Druw Jones: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-138:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-139:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-139 Kyle DeBarge: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-139:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-140:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-140 Luis Merejo: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-140:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-141:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-141 Chen-Wei Lin: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-141:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-142:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-142 Santiago Suarez: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-142:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-143:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-143 Jakob Wright: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-143:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-144:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-144 Pablo Guerrero: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-144:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-145:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-145 Matt Wilkinson: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-145:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-146:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-146 Yeremi Cabrera: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-146:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-147:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-147 Jhonny Level: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-147:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-148:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-148 Braylon Payne: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-148:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-149:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-149 Alex Mooney: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-149:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  },
+  {
+   "id": "hiq:baseball:2025:bowman:bcp-150:lava-refractor:no-auto:num-399",
+   "action": "retire",
+   "reason": "Duplicate of the canonical 2025 Bowman Chrome Prospects Lava Refractor /399 rung. PR #2392 (2026-09-21, source checklistinsider-2026-09-21) minted this rung under the bowman: id prefix, but the same rung for the same card already existed under the bowman-chrome: id prefix (source checklistinsider-2026-08-27, part of the 6,000+ row 2025 BCP- canonical population). One card, one row: bowman-chrome: is the canonical home for 2025 BCP- rows, and this bowman: twin is retired so the pool consolidates onto the canonical address.",
+   "evidence": "BCP-150 Charles McAdoo: bowman: row verified (READ-ONLY point read, 2026-09-21) with source exactly \"checklistinsider-2026-09-21\"; its canonical twin hiq:baseball:2025:bowman-chrome:bcp-150:lava-refractor:no-auto:num-399 verified present with matching cardNumber, printRun (399) and player. Retired row is the bowman: duplicate; the bowman-chrome: twin is the surviving canonical row."
+  }
+ ]
+}
