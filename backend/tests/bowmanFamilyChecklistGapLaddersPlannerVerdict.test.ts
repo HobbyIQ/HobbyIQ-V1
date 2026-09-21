@@ -44,6 +44,17 @@
  * All setKeys (bowman-mega, bowman-draft, bowman, bowman-chrome) were
  * already registered in productSetKeys.ts before this PR -- no
  * registrations made here.
+ *
+ * CF-DRAFT-SAPPHIRE-REKEY (2026-09-21, separate follow-on PR). The "Draft
+ * Sapphire ladder" describe block above described a package staged under
+ * setKey=bowman-draft. That was the wrong product key -- 2025 Bowman Draft
+ * Sapphire is its own registered product, bowman-draft-sapphire. The
+ * bowman-draft-keyed package (acq-2026-09-21-checklistinsider-bowman-draft-
+ * sapphire-ladder-2025) is REMOVED and its describe block below replaced
+ * with one for the rekeyed replacement package (setKey=bowman-draft-
+ * sapphire), which mints only the 53 rungs (the SS- ladder) that do not
+ * already exist under bowman-draft-sapphire. See that package's manifest
+ * for the full dedup measurement.
  */
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync } from "node:fs";
@@ -136,38 +147,65 @@ describe("2026 Bowman Mega Box Baseball insert subsets (BMA-/RMA-/BST-/ES-) — 
   });
 });
 
-describe("2025 Bowman Draft Sapphire Baseball ladder — PASS, bare spelling matching source + sale slugs", () => {
+describe("2025 Bowman Draft Sapphire Baseball ladder, REKEYED — PASS, setKey=bowman-draft-sapphire", () => {
+  // CF-DRAFT-SAPPHIRE-REKEY (2026-09-21). The prior package in this describe
+  // block staged setKey=bowman-draft — the WRONG product key. 2025 Bowman
+  // Draft Sapphire is its own registered product, bowman-draft-sapphire
+  // (productSetKeys.ts, parent bowman-draft). Confirmed two ways: (1) the
+  // built dist's computeHobbyIqCardId/inferSetKeyFromTitle key a real
+  // "2025 Bowman Draft Sapphire ... #BDC-12 Gold Sapphire" title to
+  // bowman-draft-sapphire, for both BDC- and CPA- card-number prefixes; (2)
+  // card_catalog already carries 4,751 rows at the bowman-draft-sapphire: id
+  // prefix for these 263 cardNumbers, versus 1,648 sapphire-parallel rows
+  // misfiled under bowman-draft:. The "91% of sales sit under bowman-draft"
+  // evidence that justified the old key was itself a defect (a stale key
+  // mirror job, fixed 2026-09-21; a separate nightly move relocates ~8,761
+  // sales bowman-draft -> bowman-draft-sapphire).
+  //
+  // Rung-level dedup against the OLD package's spelling found EVERY row
+  // already present under bowman-draft-sapphire, because that setKey's own
+  // BDC- (non-auto) rows use the BARE colour word ("Gold", "Orange", ...),
+  // not "Gold Sapphire" — a third spelling the old package would have
+  // minted. Rebuilding to the MAJORITY existing bowman-draft-sapphire
+  // spelling per rung (bare colour for BDC-, "X Sapphire" for CPA-/SSA-,
+  // unchanged) found 1,357 of 1,410 candidate rungs already resident; the
+  // remaining 53 are the entire insert-sapphire-selections (SS-) ladder,
+  // which has no existing catalog presence at any spelling.
   it("planStagedDirectory reports zero collisions, zero unregistered, expected row count", () => {
-    const { entry } = planPackage("acq-2026-09-21-checklistinsider-bowman-draft-sapphire-ladder-2025");
+    const { entry } = planPackage("acq-2026-09-21-checklistinsider-bowman-draft-sapphire-ladder-2025-rekeyed");
     expect(entry.product).not.toBeNull();
     expect(entry.product.sport).toBe("baseball");
     expect(entry.product.year).toBe(2025);
-    expect(entry.product.setKey).toBe("bowman-draft");
+    expect(entry.product.setKey).toBe("bowman-draft-sapphire");
     expect(entry.plan.unregistered).toEqual([]);
     expect(entry.plan.collisions).toEqual([]);
-    expect(entry.plan.rows).toBe(1410);
+    expect(entry.plan.rows).toBe(53);
   });
 
-  it("has no exact-duplicate rows and uses the BARE spelling (no '...Refractor' suffix) for every Sapphire rung, matching the sale-side slugs", () => {
-    const { dir, file } = planPackage("acq-2026-09-21-checklistinsider-bowman-draft-sapphire-ladder-2025");
+  it("has no exact-duplicate rows", () => {
+    const { dir, file } = planPackage("acq-2026-09-21-checklistinsider-bowman-draft-sapphire-ladder-2025-rekeyed");
     expectNoExactDuplicateRows(dir, file);
-    const csv = readFileSync(join(dir, file), "utf8");
-    expect(csv.includes(",Yellow Sapphire,")).toBe(true);
-    expect(csv.includes(",Gold Sapphire,")).toBe(true);
-    expect(csv.includes(",Orange Sapphire,")).toBe(true);
-    expect(csv.includes(",Black Sapphire,")).toBe(true);
-    expect(csv.includes(",Red Sapphire,")).toBe(true);
-    expect(csv.includes(",Green Sapphire,")).toBe(true);
-    // no '...Sapphire Refractor' spelling anywhere -- that slug shape belongs
-    // to the different product bowman-chrome-sapphire, and zero live sales
-    // under the bowman-draft prefix use it.
-    expect(/Sapphire Refractor/.test(csv)).toBe(false);
   });
 
-  it("does not mint a Blue Sapphire rung — the source page states none, despite 69 blue-sapphire sales existing", () => {
-    const { dir, file } = planPackage("acq-2026-09-21-checklistinsider-bowman-draft-sapphire-ladder-2025");
+  it("is restricted to the SS- (Sapphire Selections) subset only — every other rung already existed under bowman-draft-sapphire", () => {
+    const { dir, file } = planPackage("acq-2026-09-21-checklistinsider-bowman-draft-sapphire-ladder-2025-rekeyed");
+    const lines = readFileSync(join(dir, file), "utf8").trim().split("\n").slice(1);
+    expect(lines.length).toBe(53);
+    for (const line of lines) {
+      const [category, cardNumber] = line.split(",");
+      expect(category, cardNumber).toBe("insert-sapphire-selections");
+      expect(cardNumber.toUpperCase().startsWith("SS-"), cardNumber).toBe(true);
+    }
+  });
+
+  it("uses bare colour spelling (Gold/Orange/Red) matching the bowman-draft-sapphire BDC- majority — never a '...Sapphire' or '...Refractor' suffix", () => {
+    const { dir, file } = planPackage("acq-2026-09-21-checklistinsider-bowman-draft-sapphire-ladder-2025-rekeyed");
     const csv = readFileSync(join(dir, file), "utf8");
-    expect(/Blue Sapphire/i.test(csv)).toBe(false);
+    expect(csv.includes(",Gold,")).toBe(true);
+    expect(csv.includes(",Orange,")).toBe(true);
+    expect(csv.includes(",Red,")).toBe(true);
+    expect(/Sapphire/.test(csv)).toBe(false);
+    expect(/Refractor/.test(csv)).toBe(false);
   });
 });
 

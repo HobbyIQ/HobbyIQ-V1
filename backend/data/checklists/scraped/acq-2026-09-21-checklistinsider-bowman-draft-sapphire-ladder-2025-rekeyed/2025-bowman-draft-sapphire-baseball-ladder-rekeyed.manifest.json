@@ -1,0 +1,39 @@
+{
+  "scrapedAt": "2026-09-21T13:00:00.000Z",
+  "rekeyedAt": "2026-09-21T19:00:00.000Z",
+  "rekeyNote": "REPLACES acq-2026-09-21-checklistinsider-bowman-draft-sapphire-ladder-2025, which staged this same source ladder under setKey=bowman-draft. That was the wrong product key: 2025 Bowman Draft Sapphire is its own registered product, bowman-draft-sapphire (productSetKeys.ts:670, parent bowman-draft), and card_catalog already carries 4,751 rows under the hiq:baseball:2025:bowman-draft-sapphire: id prefix versus only 1,648 sapphire-parallel rows misfiled under hiq:baseball:2025:bowman-draft:. The '91% of sales sit under bowman-draft' evidence that justified the old package's key was itself a defect: a nightly job with a stale key mirror had been downgrading sapphire sales to bowman-draft; that job was fixed 2026-09-21 and a separate nightly move relocates ~8,761 sales bowman-draft -> bowman-draft-sapphire. The engine was verified directly (dist build, 2026-09-21): computeHobbyIqCardId + inferSetKeyFromTitle key a real '2025 Bowman Draft Sapphire ... #BDC-12 Gold Sapphire' title to bowman-draft-sapphire for both BDC- and CPA- card-number prefixes -- not bowman-draft.",
+  "sourceUrl": "https://www.checklistinsider.com/2025-bowman-draft-sapphire-baseball",
+  "sourcePageSha256": "429db60dfddec878fc27cb6b20ca5941cfa2c3bd440562e6a26347b7fc780c1b",
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2026/02/2025-Bowman-Draft-Sapphire-Baseball-Checklist-Downloads-Excel-spreadsheet.xlsx",
+  "source": "checklistinsider-2026-09-21",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Bowman Draft Sapphire Baseball",
+  "productKey": "2025-bowman-draft-sapphire-baseball",
+  "setKey": "bowman-draft-sapphire",
+  "rowCount": 53,
+  "baseCards": 18,
+  "mintedBy": "Rekey of the 2026-09-21 checklistinsider Draft Sapphire ladder acquisition onto its correct product key, bowman-draft-sapphire, DEDUPED AT RUNG LEVEL against every existing card_catalog row for these 263 cardNumbers (sport=baseball, cardYear=2025), across ALL setKeys -- not only bowman-draft-sapphire. A per-cardNumber point-check (263 queries, READ-ONLY, paced) fetched 51,848 existing rows total; of those, 4,751 already sit at the bowman-draft-sapphire: id prefix for this package's cardNumbers.",
+  "dedupMethod": {
+    "keying": "For every (cardNumber, parallel, printRun, isAuto) point in this package, the drop decision checked ONLY existing bowman-draft-sapphire: rows for a same-rung match (case-insensitive parallel, exact printRun and isAuto) -- rows under sibling setKeys (bowman-draft, bowman-chrome-sapphire, topps-chrome-sapphire, topps) were consulted for spelling comparison only, never for the drop decision, per instruction.",
+    "spellingDiscoveryForcedARebuild": "The FIRST dedup pass (against the OLD package's bare-Sapphire spelling, e.g. 'Gold Sapphire' for the BDC- base ladder) found EVERY one of the 1,410 rows already present under bowman-draft-sapphire -- because that setKey's own catalog rows do not use the bare-Sapphire spelling for the BDC- (non-auto) ladder. Measured directly (4,751 existing bowman-draft-sapphire rows for these 263 cardNumbers, grouped by printRun+isAuto+parallel, distinct-cardNumber counts): the BDC- base ladder's MAJORITY existing spelling is the bare COLOUR WORD alone ('Yellow' 200/200, 'Gold' 201/201, 'Orange' 200/200, 'Black' 200/200, 'Red' 200/200, 'Padparadscha' 200/200 cards), against a 63-card-per-rung '...Sapphire Refractor'-suffixed minority (the same fork the ORIGINAL bowman-draft-keyed package's manifest flagged, except that fork lives under bowman-draft-sapphire, not bowman-draft, and this package's own working spelling ('Gold Sapphire' etc, matching neither) was a THIRD, never-before-seen spelling that would have minted yet another fork. Rebuilt this package's non-auto BDC- rows to the bare-colour majority spelling before re-running dedup.",
+    "autoRungsSpelling": "The CPA-/SSA- AUTO ladders' majority existing spelling IS 'X Sapphire' (e.g. 'Orange Sapphire' 45/60 cards vs 'Orange Sapphire Refractors' 15/60; 'Red Sapphire' 45/60 vs 'Red Sapphire Refractors' 15/60; 'Gold Sapphire' 30/32; 'Black Sapphire' 30/30 sole spelling; 'Padparadscha Sapphire' 30/45 vs 'SuperFractor' 15/45; 'Green Sapphire' 33/33 supersets the 30-card 'Green Sapphire Refractor' subset exactly) -- this package's original 'X Sapphire' spelling for auto rungs was ALREADY the majority match, unchanged.",
+    "result": "1,357 of the 1,410 candidate rows are rung-level twins of rows already resident under bowman-draft-sapphire once spelling is corrected to the majority form (not 404 -- the original 404 count was measured against the WRONG spelling, which under-detected true duplicates). 53 rows are genuinely new: the entire insert-sapphire-selections (SS-) ladder, 18 cards x up to 3 rungs each (Gold/Orange/Red; SS-7 has no Gold rung per the source page), which has NO existing catalog presence under any setKey at any spelling for these cardNumbers."
+  },
+  "ladders": {
+    "SS- (Sapphire Selections Checklist, 18 cards) -- the only rungs this package writes": [
+      { "parallel": "Gold", "printRun": 50, "sourceText": "Gold Sapphire /50 (rewritten to bare 'Gold' to match the bowman-draft-sapphire BDC-/SS- majority spelling)" },
+      { "parallel": "Orange", "printRun": 25, "sourceText": "Orange Sapphire /25 (rewritten to bare 'Orange')" },
+      { "parallel": "Red", "printRun": 5, "sourceText": "Red Sapphire /5 (rewritten to bare 'Red')" }
+    ]
+  },
+  "categoryMinted": {
+    "insert-sapphire-selections": "SS- rows only -- BDC- base, CPA- auto and SSA- auto rungs were all already resident under bowman-draft-sapphire and are not re-minted by this package"
+  },
+  "settledSetKey": "bowman-draft-sapphire -- confirmed both by computeHobbyIqCardId/inferSetKeyFromTitle (dist build, 2026-09-21) and by card_catalog's own existing 4,751-row population at this id prefix for these 263 cardNumbers.",
+  "provenance": {
+    "cardsFrom": "checklistinsider.com xlsx workbook (tabular-inferred layout via backend/scripts/scrape-checklistinsider.cjs), same 263-row source as the superseded package",
+    "rungsFrom": "the source page's own SS- ladder (Gold Sapphire /50, Orange Sapphire /25, Red Sapphire /5), spelling rewritten to bare colour words to match the bowman-draft-sapphire BDC- majority spelling for the same colours",
+    "dedup": "263 cardNumbers point-checked against ALL existing card_catalog rows (sport=baseball, cardYear=2025, matching cardNumber, any setKey) -- 51,848 rows fetched; drop decision scoped to bowman-draft-sapphire: rows only; 1,357 of 1,410 candidate (cardNumber, parallel, printRun, isAuto) rungs already exist there once spelling is corrected to the majority form; 53 SS- rows are new and kept."
+  }
+}
