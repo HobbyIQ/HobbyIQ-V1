@@ -489,6 +489,17 @@ on:
           # disagreement or a same-day-price ambiguity. See its own module
           # header for the full proof predicate.
           - collapse-ch-synthetic-twins
+          # resolve-disagreeing-sale-twins (2026-09-20). Of the 23,688
+          # `twins-disagree` pairs collapse-ch-synthetic-twins.cjs's REPORT
+          # found and deliberately leaves (a proven CardHedge twin whose two
+          # copies carry DIFFERENT identities -- hobbyiqCardId or grade),
+          # this lane decides which side is right using ONLY evidence:
+          # checklist+roster, then more-specific-refines, then a grader-token
+          # title read for the grade axis. Never guesses; an undecided pair
+          # is LEFT `both-sides-valid` or `neither-side-backed`. Reuses the
+          # sweep lane's own proof predicate and protected/parked gates by
+          # import, never re-implemented. See its own module header.
+          - resolve-disagreeing-sale-twins
 
           - audit-all-holdings
           - rename-setkey
@@ -2267,7 +2278,10 @@ jobs:
           # fold-candidate GROUP -- same auditability doctrine as
           # resolve-split-identity-parks's own PLAN_OUT, same fixed-path-
           # guarded-on-script convention (no new input).
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
+          # resolve-disagreeing-sale-twins (2026-09-20): one NDJSON record per
+          # twins-disagree pair -- same fixed-path-guarded-on-script
+          # convention, no new input.
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -3424,6 +3438,40 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (collapsed=${N:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=collapse-ch-synthetic-twins -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
+
+      # resolve-disagreeing-sale-twins's own audit trail -- every resolved,
+      # both-sides-valid, neither-side-backed, protected and parked pair this
+      # run saw. Same PLAN_OUT mechanism (env set above, guarded on script)
+      # collapse-ch-synthetic-twins.cjs uses: no new upload-artifact step
+      # shape, no new workflow_dispatch input.
+      - name: Upload the resolve-disagreeing-sale-twins log
+        if: ${{ always() && inputs.script == 'resolve-disagreeing-sale-twins' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: resolve-disagreeing-sale-twins-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/resolve-disagreeing-sale-twins-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the disagreeing-twin resolution until the slot is clean
+        if: ${{ !cancelled() && inputs.script == 'resolve-disagreeing-sale-twins' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: resolve-disagreeing-sale-twins
+          preamble: |
+            N=$(grep -aoE "^  (APPLIED|WOULD APPLY) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "resolved=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (resolved=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (resolved=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=resolve-disagreeing-sale-twins -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
 
       - name: Self-relaunch the ruled setKey rename until the slot is clean
         if: ${{ !cancelled() && inputs.script == 'rename-setkey' }}
