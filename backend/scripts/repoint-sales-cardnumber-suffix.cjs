@@ -476,11 +476,39 @@ async function main() {
     process.exitCode = 4;
   }
 
-  reportWrites({
-    job: "repoint-sales-cardnumber-suffix",
-    intended: planned, written: s.relocated,
-    skipped: s.candidates - s.relocated - s.failed, failed: s.failed,
-  });
+  // COUNTER FIX (2025 REPORT run 35625031826, exit 4 "COUNTERS DO NOT ADD
+  // UP ... OVER by 237"): `intended` here used to be `planned` -- ONLY the
+  // candidates that reached the write stage (passed the destination-
+  // checklist and player-match guards) -- while `skipped` was counted as
+  // `s.candidates - s.relocated - s.failed`, which folds in
+  // `refusedDestinationNotOnChecklist` (237 in that run) even though those
+  // rows never became `planned` in the first place. `intended` must be the
+  // SAME population every outcome (`written`/`skipped`/`refused`/`failed`)
+  // is drawn from -- `s.candidates`, exactly as the "reconciled: candidates
+  // = accounted-for" line two lines above this already uses, and exactly
+  // the convention repoint-sales-parallel-suffix.cjs's own reportWrites call
+  // follows (`intended: salesBefore`, the WHOLE population, never a
+  // narrower "would write" subset). Every refusal class now lands in
+  // `refused` (named, on-purpose declines) rather than being smeared into
+  // `skipped`; `skipped` covers only `notReached` (budget-truncated, never
+  // decided at all). Guarded by `if (APPLY)` -- same convention as
+  // repoint-sales-parallel-suffix.cjs and resolve-disagreeing-sale-twins.cjs
+  // (#2400): a REPORT run's own "reconciled: candidates = accounted-for"
+  // line above already balances and is the correctness signal for REPORT;
+  // reportWrites()'s exit-4 gate is reserved for APPLY, where "written"
+  // means a confirmed Cosmos write, not a "would write" prediction.
+  const refusedTotal = s.refusedDestinationNotOnChecklist + s.refusedDifferentPlayer
+    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged;
+  if (APPLY) {
+    reportWrites({
+      job: "repoint-sales-cardnumber-suffix",
+      intended: s.candidates,
+      written: s.relocated + s.collapsedOntoResident,
+      refused: refusedTotal,
+      skipped: s.notReached,
+      failed: s.failed,
+    });
+  }
 
   if (s.failed) { console.error(`::error::${f(s.failed)} sale(s) failed.`); process.exitCode = 4; }
 }
