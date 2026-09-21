@@ -1,0 +1,80 @@
+{
+  "scrapedAt": "2026-09-20T20:00:00.000Z",
+  "sourceUrl": "https://www.checklistinsider.com/2025-topps-update-series-baseball",
+  "sourcePageSha256": "7b1f840a0375b4a2826c4806dfdd3578cb5fabffccd2703946d83e9378ca2f34",
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2025/09/2025-Topps-Update-Series-Baseball-Checklist-Downloads-Excel-spreadsheet.xlsx",
+  "xlsxSha256": "7b77a85f73f76ce574633a9d7046c8d58f86986e2bfb798c88ec463d35f26786",
+  "source": "checklistinsider-2026-09-20",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Topps Update Series Baseball",
+  "productKey": "2025-topps-update-series-baseball",
+  "setKey": "topps-update-series",
+  "rowCount": 14000,
+  "baseCards": 350,
+  "cardNumberRange": "US1-US350",
+  "parallelColumnAuthoritative": true,
+  "mintedBy": "R40 (Drew, 2026-09-20): one row per (base card x STATED rung); Update Series is its own product `topps-update-series` per Drew's 2026-09-20 ruling (US-prefixed numbers, does not share the flagship `topps` key).",
+  "rungsMinted": [
+    { "parallel": "Diamante Foil", "printRun": null, "note": "Hanger exclusive" },
+    { "parallel": "Holo Foil", "printRun": null, "note": "Retail exclusive" },
+    { "parallel": "Pink Diamante Foil", "printRun": null, "note": "Hanger exclusive" },
+    { "parallel": "Sandglitter", "printRun": null, "note": "HTA Hobby Jumbo exclusive" },
+    { "parallel": "Silver Crackle Foil", "printRun": null, "note": "Super Box exclusive" },
+    { "parallel": "Topps Pattern Foil", "sourceSpelling": "Topps Foil Pattern", "printRun": null, "note": "Fanatics exclusive; SPELLING ALIGNED to the catalog's existing baseball/2025/topps rung, per the same audit as the Series 2 package's manifest (this Update Series file is its own product-year cell, `topps-update-series`, but the identical rung name is aligned for consistency across the 2025 Topps family rather than left divergent)." },
+    { "parallel": "Gold Border", "printRun": 2025 },
+    { "parallel": "Rainbow Foil", "printRun": null },
+    { "parallel": "Aqua Rainbow Foil", "printRun": null },
+    { "parallel": "Aqua Holo Foil", "printRun": null, "note": "Retail exclusive" },
+    { "parallel": "Pink Holo Foil", "printRun": 800, "note": "Retail exclusive" },
+    { "parallel": "Purple Holo Foil", "printRun": 250, "note": "Retail exclusive" },
+    { "parallel": "Purple Rainbow Foil", "printRun": 250, "note": "Hobby exclusive" },
+    { "parallel": "Blue Holo Foil", "printRun": 150, "note": "Retail exclusive" },
+    { "parallel": "Blue Rainbow Foil", "printRun": 150, "note": "Hobby exclusive" },
+    { "parallel": "Green Holo Foil", "printRun": 99, "note": "Retail exclusive" },
+    { "parallel": "Green Rainbow Foil", "printRun": 99, "note": "Hobby exclusive" },
+    { "parallel": "Vintage Stock", "printRun": 99 },
+    { "parallel": "Independence Day", "printRun": 76 },
+    { "parallel": "Gold Diamante Foil", "printRun": 50, "note": "Hanger exclusive" },
+    { "parallel": "Gold Holo Foil", "printRun": 50, "note": "Retail exclusive" },
+    { "parallel": "Gold Rainbow Foil", "printRun": 50, "note": "Hobby exclusive" },
+    { "parallel": "Canvas Parallel", "printRun": 50 },
+    { "parallel": "Memorial Day Camo", "printRun": 25 },
+    { "parallel": "Orange Diamante Foil", "printRun": 25, "note": "Hanger exclusive" },
+    { "parallel": "Orange Holo Foil", "printRun": 25, "note": "Retail exclusive" },
+    { "parallel": "Orange Rainbow Foil", "printRun": 25, "note": "Hobby exclusive" },
+    { "parallel": "Wood", "printRun": 25 },
+    { "parallel": "Black Diamante Foil", "printRun": 10, "note": "Hanger exclusive" },
+    { "parallel": "Black Holo Foil", "printRun": 10, "note": "Retail exclusive" },
+    { "parallel": "Black Rainbow Foil", "printRun": 10, "note": "Hobby exclusive" },
+    { "parallel": "Clear Variation", "printRun": 10, "note": "Confirmed inside this product's own 'Base Parallels List' <ul> (unlike the 2025 Series 2 page, where the same-named rung sits in prose, is short-printed 1:826, and is correctly held out -- see that package's manifest)." },
+    { "parallel": "Red Diamante Foil", "printRun": 5, "note": "Hanger exclusive" },
+    { "parallel": "Red Holo Foil", "printRun": 5, "note": "Retail exclusive" },
+    { "parallel": "Red Rainbow Foil", "printRun": 5, "note": "Hobby exclusive" },
+    { "parallel": "Platinum Holo Foil", "printRun": 1, "note": "Retail exclusive" },
+    { "parallel": "First Card", "printRun": 1 },
+    { "parallel": "FoilFractor", "printRun": 1, "note": "Hobby Exclusive" },
+    { "parallel": "Printing Plates", "printRun": 1 }
+  ],
+  "rungsMintedCount": 39,
+  "notMinted": {
+    "holidayValueBlasterParallels": {
+      "names": ["Jack O'Lantern /99", "Ghost", "Mummy /50", "Black Cat /10", "Witches Hat /5", "Bats 1/1"],
+      "reason": "Value Blaster-exclusive Halloween theme cards over the BASE card; distinct sub-line from the main base parallel ladder, not staged this package."
+    },
+    "goldenMirrorImageVariations": {
+      "reason": "Golden Mirror Autographs / image-variation cards are a distinct card identity per doctrine (project_image_variations_are_named_cards), stated on the source with their own short-print odds (1:482 Hobby etc.) -- not a colour rung of the numbered base card, held out of this ladder."
+    },
+    "insertSets": {
+      "reason": "Named insert/autograph/relic sets (First Pitch, Home Field Advantage, Topps Black Gold, Bleacher Reachers, Most Valuable, Night Terrors, All-Star Stitches, etc.) are out of scope for this base-ladder package."
+    }
+  },
+  "spellingAudit": "Same audit as the sibling 2025 Topps Series 2 package's manifest (cross-checked against backend/data/checklist-parallel-names.json's topps-family entries and every other staged Topps CSV in the repo). `Topps Foil Pattern` aligned to `Topps Pattern Foil` for consistency with the catalog's spelling in the sibling 2025 flagship cell, even though this product's own cell (`topps-update-series`) is a fresh product with no pre-existing rows to collide with -- aligning avoids introducing a second spelling into the 2025 Topps family that a future census would have to reconcile. No other collisions found for this product's rungs.",
+  "selectCardsOnlyAudit": "Verified against the source page's own prose: no 'select cards only' / roster-restriction language appears anywhere in the 2025 Topps Update Series Baseball Base Parallels List. All 39 rungs above apply to the full 350-card base run (distribution-only notes -- Hobby/Retail/Hanger/Fanatics/Super Box exclusive -- are NOT roster restrictions per R40 and are recorded as notes, not omitted).",
+  "cardNumberRangeVerified": "US1-US350, no gaps found in the source's own numbered checklist.",
+  "provenance": {
+    "cardsFrom": "checklistinsider.com xlsx workbook (tabular-inferred layout via backend/scripts/scrape-checklistinsider.cjs), US-prefixed base rows US1-US350; workbook carries no card-level print runs for this product (all null) -- print runs come from the page's own stated ladder, not the workbook.",
+    "rungsFrom": "the source page's own stated ladder under '2025 Topps Update Series Baseball Base Parallels List', verbatim except the one spelling alignment noted above; no rung is inferred and none is taken from a sale",
+    "printRunsFrom": "the source's stated print run only; blank where the source states none"
+  }
+}

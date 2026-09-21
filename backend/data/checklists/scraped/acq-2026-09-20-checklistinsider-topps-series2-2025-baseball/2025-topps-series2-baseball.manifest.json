@@ -1,0 +1,86 @@
+{
+  "scrapedAt": "2026-09-20T20:00:00.000Z",
+  "sourceUrl": "https://www.checklistinsider.com/2025-topps-series-2-baseball",
+  "sourcePageSha256": "992cb86b1ecb98cdfde3ddf8d44d0ba96a396438e1197423eb0b4a3a95f3729e",
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2025/05/2025-Topps-Series-2-Baseball-Checklist-Downloads-Excel-spreadsheet.xlsx",
+  "xlsxSha256": "fbf61f80abb434dbc1aaaff0814bbb330ec7442bcc8c9002e2d3bf7a04c334c0",
+  "source": "checklistinsider-2026-09-20",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Topps Series 2 Baseball",
+  "productKey": "2025-topps-series2-baseball",
+  "setKey": "topps",
+  "rowCount": 14000,
+  "baseCards": 350,
+  "cardNumberRange": "351-700",
+  "parallelColumnAuthoritative": true,
+  "mintedBy": "R40 (Drew, 2026-09-20): one row per (base card x STATED rung); flagship Topps Series 1 + Series 2 base share the bare `topps` setKey per Drew's 2026-09-20 ruling (numbering is continuous 1-700 across both series, sales never state the series).",
+  "rungsMinted": [
+    { "parallel": "Topps Pattern Foil", "sourceSpelling": "Topps Foil Pattern", "printRun": null, "note": "1:2 Fanatics Box; SPELLING ALIGNED to the catalog's existing baseball/2025/topps rung (204,584 strict rows) which spells this parallel `Topps Pattern Foil` -> topps-pattern-foil; the source page itself says `Topps Foil Pattern`, recorded here so the source text is never lost." },
+    { "parallel": "Silver Crackle Foilboard", "printRun": null, "note": "1:3 Super Box" },
+    { "parallel": "Diamante Foil", "printRun": null, "note": "1:1 Hanger" },
+    { "parallel": "Holo Foil", "printRun": null, "note": "odds vary by format" },
+    { "parallel": "Pink Diamante Foil", "printRun": null, "note": "1:11 Hanger" },
+    { "parallel": "Rainbow Foil", "printRun": null, "note": "odds vary by format" },
+    { "parallel": "Aqua Rainbow Foil", "printRun": null, "note": "odds vary by format" },
+    { "parallel": "Aqua Holo Foil", "printRun": null, "note": "odds vary by format" },
+    { "parallel": "Sandglitter", "printRun": null, "note": "1:2 Jumbo" },
+    { "parallel": "Gold", "printRun": 2025 },
+    { "parallel": "Pink Holo Foil", "printRun": 800, "note": "Retail" },
+    { "parallel": "Purple Rainbow Foil", "printRun": 250, "note": "Hobby" },
+    { "parallel": "Purple Holo Foil", "printRun": 250, "note": "Retail" },
+    { "parallel": "Blue Rainbow Foil", "printRun": 150, "note": "Hobby" },
+    { "parallel": "Blue Holo Foil", "printRun": 150, "note": "Retail" },
+    { "parallel": "Green Rainbow Foil", "printRun": 99, "note": "Hobby" },
+    { "parallel": "Green Holo Foil", "printRun": 99, "note": "Retail" },
+    { "parallel": "Vintage Stock", "printRun": 99 },
+    { "parallel": "Independence Day", "printRun": 76 },
+    { "parallel": "Black", "printRun": 74, "note": "Hobby/Jumbo; carries both Series 1 and Series 2 cards" },
+    { "parallel": "Gold Rainbow Foil", "printRun": 50, "note": "Hobby" },
+    { "parallel": "Gold Holo Foil", "printRun": 50, "note": "Retail" },
+    { "parallel": "Gold Diamante Foil", "printRun": 50, "note": "Hanger" },
+    { "parallel": "Canvas", "printRun": 50 },
+    { "parallel": "Memorial Day Camo", "printRun": 25 },
+    { "parallel": "Orange Rainbow Foil", "printRun": 25, "note": "Hobby" },
+    { "parallel": "Orange Holo Foil", "printRun": 25, "note": "Retail" },
+    { "parallel": "Orange Diamante Foil", "printRun": 25, "note": "Hanger" },
+    { "parallel": "Wood", "printRun": 25 },
+    { "parallel": "Black Rainbow Foil", "printRun": 10, "note": "Hobby" },
+    { "parallel": "Black Holo Foil", "printRun": 10, "note": "Retail" },
+    { "parallel": "Black Diamante Foil", "printRun": 10, "note": "Hanger" },
+    { "parallel": "Red Rainbow Foil", "printRun": 5, "note": "Hobby" },
+    { "parallel": "Red Holo Foil", "printRun": 5, "note": "Retail" },
+    { "parallel": "Red Diamante Foil", "printRun": 5, "note": "Hanger" },
+    { "parallel": "FoilFractor", "printRun": 1, "note": "Hobby/Jumbo" },
+    { "parallel": "Platinum Holo Foil", "printRun": 1, "note": "Retail" },
+    { "parallel": "First Card", "printRun": 1 },
+    { "parallel": "Printing Plates", "printRun": 1 }
+  ],
+  "rungsMintedCount": 39,
+  "notMinted": {
+    "clearVariation": {
+      "printRun": 10,
+      "sourceText": "The acetate Clear Variation (/10) also returns, averaging 1:826 Hobby packs.",
+      "reason": "REVIEW FIX: Clear Variation is grouped in the source's prose with Golden Mirror Variation / Team Color Border Variations / True Photo Variations -- a base PHOTO VARIATION (distinct card identity per doctrine, project_image_variations_are_named_cards), not a colour rung of the numbered base card, and it is short-printed (1:826 Hobby, not a per-card guarantee). Confirmed absent from the actual '2025 Topps Series 2 Baseball Base Parallels List' <ul> itself (checked by extracting that exact <ul> element, not just nearby prose) -- unlike 2025 Topps UPDATE Series, where Clear Variation IS inside that product's own Base Parallels List <ul> and is correctly minted there. Held out of this ladder rather than stamped across all 350 base cards."
+    },
+    "holidayValueBlasterParallels": {
+      "names": ["Hot Dog /99", "Statue of Liberty /50", "Beach Umbrella /25", "Fireworks /5", "Waves 1/1"],
+      "reason": "Value Blaster-exclusive summer Holiday theme cards over the BASE Sun card; distinct sub-line from the main base parallel ladder, not staged this package -- held for a follow-up with its own roster confirmation."
+    },
+    "namedBaseVariations": {
+      "names": ["Golden Mirror Variations", "Team Color Border Variations", "True Photo Variations", "Player Number Variations (/9)", "All Positions Variations (/9)", "Big Apple Variation"],
+      "reason": "These are short-printed ALTERNATE-PHOTO base variations, a distinct card identity per doctrine (project_image_variations_are_named_cards), not a parallel-colour rung of the numbered base card -- held out of this ladder package. Several (`All Positions Variations`, `Big Apple Variation`) are also explicitly select-cards/format-exclusive per the source and would need their own roster, not the full 350."
+    },
+    "insertSets": {
+      "reason": "Named insert/autograph/relic sets (1990 Topps Baseball, K Zone, OPS Leaders, Dynamic Duos, Heavy Lumber, First Pitch, Home Field Advantage, World Champion Autographs, etc.) are out of scope for this base-ladder package; several correspond to the PDC/RRR/BSAU/MLM/HL/MYS/SF unbacked-sales prefixes named in the census evidence and are candidates for a follow-up insert-set acquisition with their own manifests."
+    }
+  },
+  "spellingAudit": "Cross-checked every rung name in this ladder against backend/data/checklist-parallel-names.json's topps-family entries (normalized, word-order/plural/punctuation-insensitive) and against every other staged Topps CSV in the repo (acq-2026-09-15-ladders, today's acq-2026-09-20-beckett-topps-* packages). One real collision found and fixed: `Topps Foil Pattern` (this source's spelling) vs `Topps Pattern Foil` (the live catalog's own spelling for baseball/2025/topps, per reviewer) -- these are DIFFERENT slugs (topps-foil-pattern vs topps-pattern-foil), so using the source's word order would have minted a duplicate rung. Aligned to the catalog's spelling; source spelling preserved in `sourceSpelling`. Apostrophe-only differences elsewhere (e.g. straight vs curly quote in Mother's/Father's Day) were checked and confirmed to slug identically via computeHobbyIqCardId -- no action needed. `Gold Holo Foil` / `Holo Gold Foil` and `FoilFractor` / `Foilfractor` matches found in the census belong to unrelated products (2024 Topps Tier One, 2023 Topps Big League) in different cells -- not a collision risk for this cell.",
+  "selectCardsOnlyAudit": "Verified against the source page's own prose: no 'select cards only' / roster-restriction language appears anywhere in the 2025 Topps Series 2 Baseball Base Parallels List. All 39 minted rungs apply to the full 350-card base run (distribution-only notes -- Hobby/Retail/Hanger/Jumbo exclusive -- are NOT roster restrictions per R40 and are recorded as notes, not omitted). Clear Variation is the one exception discussed above, correctly held out.",
+  "cardNumberGapFound": "Card #594 (Team Card - Athletics) is a genuine base card omitted by the workbook parser's person-name heuristic (team-only rows have no player name and fail the shape test); added back manually after confirming its presence in the source page's own card-by-card list (verbatim: '594 Team Card - Athletics'). Final base roster is the full 350 cards, #351-700 with no gaps.",
+  "provenance": {
+    "cardsFrom": "checklistinsider.com xlsx workbook (tabular-inferred layout via backend/scripts/scrape-checklistinsider.cjs), base-numeric rows #351-700 only; workbook carries no card-level print runs for this product (all null) -- print runs come from the page's own stated ladder, not the workbook.",
+    "rungsFrom": "the source page's own stated ladder under '2025 Topps Series 2 Baseball Base Parallels List', verbatim except the one spelling alignment noted above; no rung is inferred and none is taken from a sale",
+    "printRunsFrom": "the source's stated print run only; blank where the source states none"
+  }
+}
