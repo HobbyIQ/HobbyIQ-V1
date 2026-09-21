@@ -119,6 +119,7 @@
  */
 "use strict";
 const path = require("path");
+const fs = require("node:fs");
 const crypto = require("node:crypto");
 const backend = path.resolve(__dirname, "..");
 
@@ -201,11 +202,26 @@ async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const { parseListingIdentity } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
   const { computeHobbyIqCardId, slugify } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+  const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+  const { playerIdentityKey } = require(path.join(backend, "dist/services/catalog/playerIdentityKey.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+
+  const isChecklist = (source) => catalogAuthorityOf(source) === "checklist";
+
+  /** Does the sale's own player match the destination catalog row's player?
+   *  Absence on either side is NOT a match -- absent beats wrong, mirrors
+   *  repoint-sales-parallel-suffix.cjs's own playerMatches verbatim. */
+  function playerMatches(salePlayerName, targetPlayerName) {
+    const saleKey = playerIdentityKey(salePlayerName);
+    if (!saleKey || !targetPlayerName) return false;
+    const targetNames = String(targetPlayerName).split(/\s*[/&]\s*/).map((n) => playerIdentityKey(n)).filter(Boolean);
+    return targetNames.includes(saleKey);
+  }
 
   const client = new CosmosClient(conn);
   const db = client.database(process.env.COSMOS_DATABASE || "hobbyiq");
   const pool = db.container("sold_comps");
+  const cat = db.container("card_catalog");
 
   console.log(`  scope (${SCOPE_CELLS.length} cell${SCOPE_CELLS.length === 1 ? "" : "s"})    ${SCOPE_CELLS.join(", ")}`);
   console.log(`  target setKeys   ${SET_KEYS.join(", ")}`);
@@ -217,14 +233,53 @@ async function main() {
     scanned: 0, otherShard: 0, candidates: 0,
     relocated: 0, collapsedOntoResident: 0,
     refusedNotSuffixRestore: 0, refusedUnparsed: 0, refusedEtagChanged: 0,
-    refusedDestinationCollision: 0,
+    refusedDestinationNotOnChecklist: 0, refusedDifferentPlayer: 0,
+    refusedPinnedOrFlagged: 0, refusedPossibleTwinAtDestination: 0,
     failed: 0, notReached: 0,
   };
   let stoppedAtBudget = false;
   let planned = 0;
+  const refusals = {
+    "destination-not-on-checklist": [], "different-player": [],
+    "pinned-or-flagged": [], "possible-twin-at-destination": [],
+  };
+
+  // PLAN_OUT -- one NDJSON record per in-scope sale, same auditability
+  // doctrine as repoint-sales-parallel-suffix.cjs's own PLAN_OUT (fixed path
+  // the runner sets, guarded on script name, never a new workflow input).
+  const PLAN_OUT = str(process.env.PLAN_OUT);
+  let planFd = null;
+  if (PLAN_OUT) {
+    try {
+      fs.mkdirSync(PLAN_OUT, { recursive: true });
+      const planPath = path.join(PLAN_OUT, `plan-slot-${SHARD_SCOPE.SLOT}.ndjson`);
+      planFd = fs.openSync(planPath, "w");
+      console.log(`  plan file         ${planPath}`);
+    } catch (e) {
+      console.log(`\n::warning::could not open PLAN_OUT (${PLAN_OUT}): ${e?.message}`);
+      planFd = null;
+    }
+  }
+  function emitPlanRow(sale, action, reason, extra = {}) {
+    if (!planFd) return;
+    const record = {
+      action, reason,
+      id: sale?.id ?? null, source: sale?.source ?? null, title: sale?.title ?? null,
+      cardId: sale?.cardId ?? null, hobbyiqCardId: sale?.hobbyiqCardId ?? null,
+      fromCardNumber: extra.fromCardNumber ?? null, toCardNumber: extra.toCardNumber ?? null,
+      target: extra.target ?? null,
+    };
+    try { fs.appendFileSync(planFd, JSON.stringify(record) + "\n"); }
+    catch (e) { console.log(`\n::warning::PLAN_OUT write failed for ${sale?.id}: ${e?.message}`); }
+  }
 
   async function residentAt(saleId, cardId) {
     try { return (await pool.item(saleId, cardId).read()).resource ?? null; }
+    catch (e) { if (e?.code === 404 || e?.statusCode === 404) return null; throw e; }
+  }
+
+  async function catalogRowAt(id) {
+    try { return (await cat.item(id, id).read()).resource ?? null; }
     catch (e) { if (e?.code === 404 || e?.statusCode === 404) return null; throw e; }
   }
 
@@ -237,6 +292,17 @@ async function main() {
     // Only ever act on the BARE year-coded shape this defect actually
     // produces -- never a general re-derivation of every sale's identity.
     if (!/^(b2[3-9]|bdc|bcp|f\d{1,3})$/.test(oldSeg)) return;
+
+    // Never touch a parked/flagged/excluded/verified/user-seeded row --
+    // the shared relocate lib does NOT enforce this ("a parked row still
+    // MOVES"), so this lane must, same doctrine as repoint-sales-parallel-
+    // suffix.cjs's own guard.
+    if (sale.verifiedByUser === true || sale.flaggedWrong === true || sale.excludedFromFmv === true || sale.identityUnverified === true) {
+      s.refusedPinnedOrFlagged++;
+      refusals["pinned-or-flagged"].push(`  ${sale.id}@${currentId}: parked/flagged/verified/excluded row -- never touched by this lane`);
+      emitPlanRow(sale, "refused", "pinned-or-flagged", { fromCardNumber: oldSeg });
+      return;
+    }
 
     const parsed = parseListingIdentity(String(sale.title || ""));
     if (!parsed.cardNumber) { s.refusedUnparsed++; return; }
@@ -269,25 +335,74 @@ async function main() {
     const newSegOfResult = cardNumberSegmentOf(newId);
     if (!isSuffixRestore(oldSeg, newSegOfResult || "")) { s.refusedNotSuffixRestore++; return; }
 
-    planned++;
-    if (!APPLY) { s.relocated++; return; }
-
-    const resident = await residentAt(sale.id, newId);
-    if (resident && contentHashOf(resident) !== contentHashOf({ ...sale, cardId: newId, hobbyiqCardId: newId })) {
-      s.refusedDestinationCollision++;
+    // ── THE DESTINATION MUST BE A STRICT CHECKLIST ROW, PLAYER-MATCHED.
+    // Mirrors repoint-sales-parallel-suffix.cjs (~L939-972): this lane never
+    // moves a sale onto an address unless the catalog itself attests that
+    // card at that address, and the row's own player agrees with the
+    // sale's -- absent beats wrong, never a guess from the title alone.
+    let destRow;
+    try {
+      destRow = await catalogRowAt(newId);
+    } catch (e) {
+      s.failed++;
+      console.log(`\n::warning::catalog read failed for ${sale.id} -> ${newId}: ${e?.message || e}`);
       return;
     }
-    if (resident) { s.collapsedOntoResident++; return; }
+    if (!destRow || !isChecklist(destRow.source)) {
+      s.refusedDestinationNotOnChecklist++;
+      refusals["destination-not-on-checklist"].push(`  ${sale.id}@${currentId} -> ${newId}: no STRICT checklist row at the destination -- refused, never minted from a sale`);
+      emitPlanRow(sale, "refused", "destination-not-on-checklist", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
+      return;
+    }
+    if (!playerMatches(sale.playerName, destRow.playerName)) {
+      s.refusedDifferentPlayer++;
+      refusals["different-player"].push(`  ${sale.id}@${currentId} -> ${newId}: sale player "${sale.playerName ?? ""}" does not match checklist player "${destRow.playerName ?? ""}" -- refused`);
+      emitPlanRow(sale, "refused", "different-player", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
+      return;
+    }
+
+    planned++;
+
+    // Collision / twin detection runs in BOTH modes -- a REPORT must show
+    // what would happen, not stop short and claim a bare "would relocate"
+    // for a move that would actually collide. Mirrors repoint-sales-
+    // parallel-suffix.cjs, which checks `residentAt` unconditionally and
+    // only gates the WRITE itself on `dryRun: !APPLY` inside relocateSoldComp.
+    const resident = await residentAt(sale.id, newId);
+    if (resident) {
+      // POSSIBLE-TWIN-AT-DESTINATION: a doc already sits at (this sale's id,
+      // newId). Only a byte-identical twin (the SAME sale, already moved) is
+      // safe to collapse onto; any other resident is a DIFFERENT document
+      // that happens to share this sale's id, and moving over it would
+      // silently erase it -- refused, never overwritten.
+      if (contentHashOf(resident) === contentHashOf({ ...sale, cardId: newId, hobbyiqCardId: newId })) {
+        s.collapsedOntoResident++;
+        if (APPLY) { try { await pool.item(sale.id, sale.cardId).delete(); } catch { /* best effort; the sale is a proven duplicate either way */ } }
+        emitPlanRow(sale, "collapse", "same-sale-resident", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
+        return;
+      }
+      s.refusedPossibleTwinAtDestination++;
+      refusals["possible-twin-at-destination"].push(`  ${sale.id}@${currentId} -> ${newId}: a DIFFERENT document already resides at (${sale.id}, ${newId}) -- refused, neither moved`);
+      emitPlanRow(sale, "refused", "possible-twin-at-destination", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
+      return;
+    }
 
     try {
       const keep = stripSystem({ ...sale, cardId: newId, hobbyiqCardId: newId, cardNumber: parsed.cardNumber });
       const result = await relocateSoldComp(pool, {
         keep, drop: [{ id: sale.id, cardId: sale.cardId }],
         verifyFields: ["cardId", "hobbyiqCardId", "cardNumber"],
+        dryRun: !APPLY,
       });
-      if (result?.ok) s.relocated++;
-      else if (result?.staleSincePlan?.length) s.refusedEtagChanged++;
-      else s.failed++;
+      if (result?.ok) {
+        s.relocated++;
+        emitPlanRow(sale, "relocate", "cardnumber-suffix-restore", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
+      } else if (result?.staleSincePlan?.length) {
+        s.refusedEtagChanged++;
+        emitPlanRow(sale, "refused", "stale-since-plan", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
+      } else {
+        s.failed++;
+      }
     } catch (e) {
       s.failed++;
       console.log(`\n::warning::relocate failed for ${sale.id}: ${e?.message || e}`);
@@ -323,20 +438,43 @@ async function main() {
   }
 
   console.log("");
-  console.log(`sales scanned                        ${f(s.scanned)}${SHARD_SCOPE.SHARDED ? `  (${f(s.otherShard)} in other shards)` : ""}`);
-  console.log(`  candidates (bare year-coded shape)  ${f(s.candidates)}`);
-  console.log(`  ${APPLY ? "RELOCATED" : "WOULD RELOCATE"}                   ${f(s.relocated)}`);
-  console.log(`  COLLAPSED onto a resident            ${f(s.collapsedOntoResident)}`);
-  console.log(`  REFUSED: not a suffix restore         ${f(s.refusedNotSuffixRestore)}`);
-  console.log(`  REFUSED: unparsed / no cardNumber     ${f(s.refusedUnparsed)}`);
-  console.log(`  REFUSED: destination collision        ${f(s.refusedDestinationCollision)}`);
-  console.log(`  REFUSED: stale since the read          ${f(s.refusedEtagChanged)}`);
-  console.log(`  failed                                ${f(s.failed)}`);
-  console.log(`  not reached (budget)                   ${f(s.notReached)}`);
+  for (const [reason, lines] of Object.entries(refusals)) {
+    if (!lines.length) continue;
+    console.log(`\n  REFUSED (${reason}), up to 20 shown:`);
+    for (const line of lines.slice(0, 20)) console.log(line);
+  }
+
+  console.log("");
+  console.log(`sales scanned                          ${f(s.scanned)}${SHARD_SCOPE.SHARDED ? `  (${f(s.otherShard)} in other shards)` : ""}`);
+  console.log(`  candidates (bare year-coded shape)    ${f(s.candidates)}`);
+  console.log(`  ${APPLY ? "RELOCATED" : "WOULD RELOCATE"}                     ${f(s.relocated)}`);
+  console.log(`  COLLAPSED onto a resident (same sale)  ${f(s.collapsedOntoResident)}`);
+  console.log(`  REFUSED: not a suffix restore           ${f(s.refusedNotSuffixRestore)}`);
+  console.log(`  REFUSED: unparsed / no cardNumber       ${f(s.refusedUnparsed)}`);
+  console.log(`  REFUSED: pinned/flagged/verified/excl.  ${f(s.refusedPinnedOrFlagged)}`);
+  console.log(`  REFUSED: destination-not-on-checklist   ${f(s.refusedDestinationNotOnChecklist)}`);
+  console.log(`  REFUSED: different-player               ${f(s.refusedDifferentPlayer)}`);
+  console.log(`  REFUSED: possible-twin-at-destination   ${f(s.refusedPossibleTwinAtDestination)}`);
+  console.log(`  REFUSED: stale since the read            ${f(s.refusedEtagChanged)}`);
+  console.log(`  failed                                  ${f(s.failed)}`);
+  console.log(`  not reached (budget)                     ${f(s.notReached)}`);
   if (stoppedAtBudget || CLOCK.outOfClock()) {
     console.log(`  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- the slot has more to do`);
   }
   if (!APPLY) console.log(`\nREPORT ONLY -- nothing was written. Re-run with BACKFILL_APPLY=true to apply.`);
+
+  // RECONCILE. Every candidate this lane's suffix-restore predicate found is
+  // moved, collapsed onto a proven duplicate, refused (named), failed, or
+  // not reached before the budget -- never silently dropped.
+  const candidateOutcomes = s.relocated + s.collapsedOntoResident
+    + s.refusedDestinationNotOnChecklist + s.refusedDifferentPlayer
+    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged
+    + s.failed + s.notReached;
+  console.log(`\n  reconciled: candidates ${f(s.candidates)} = accounted-for ${f(candidateOutcomes)}`);
+  if (candidateOutcomes !== s.candidates) {
+    console.error("  !! RECONCILE MISMATCH -- a candidate was neither moved, collapsed, refused, failed nor left unreached");
+    process.exitCode = 4;
+  }
 
   reportWrites({
     job: "repoint-sales-cardnumber-suffix",
