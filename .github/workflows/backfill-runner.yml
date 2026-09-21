@@ -257,6 +257,29 @@ on:
           # 'all' escape hatch. The pilot dispatch is scope=basketball:2024
           # titles=panini-prizm.
           - repoint-sales-parallel-suffix
+          # STAMP-MOVING NOTICE: this lane changes NO derivation source file
+          # -- CF-DASH-SUFFIX-IS-PART-OF-THE-NUMBER (commit 80482103,
+          # 2026-09-12/13) already fixed the parser bug that truncated
+          # letters-then-digits card numbers with a dash suffix ("#B24-CMO"
+          # -> "B24"). This lane REALIZES that already-shipped fix on STORED
+          # rows minted before it landed: 1,095 sold_comps rows measured at
+          # hiq:baseball:2024:bowmans-best:b24:* (90 players collapsed onto
+          # ONE address), all _ts pre-fix and all already carrying
+          # __migratedByBackfill from a run that itself predates the fix.
+          # Blast radius (20,000-row sample, 4 sports): 381 rows are this
+          # exact suffix-restoring shape (b25:286, b24:68, f15:16, b23:11).
+          # Re-parses each in-scope sale's own title with the LIVE parser and
+          # moves it ONLY when the result is a STRICT, hyphen-bounded suffix
+          # extension of the stored cardNumber segment ("b24" -> "b24-cmo"),
+          # AND the destination is a STRICT checklist row, AND that row's
+          # player matches the sale's -- never a guess from the title alone,
+          # never touches a verifiedByUser/flaggedWrong/excludedFromFmv/
+          # identityUnverified row. SCOPE is sport:year cells (`scope`); the
+          # target setKey list rides `titles`, same convention as every
+          # sibling repoint lane above. Both are REQUIRED, no 'all' escape
+          # hatch. The pilot dispatch is scope=baseball:2024
+          # titles=bowmans-best.
+          - repoint-sales-cardnumber-suffix
           # CF-INGEST-KEEPS-STORED-IDENTITY repair (Drew, 2026-09-19, PR #2331
           # follow-up). The R66/R67/R70 ingest-time insert re-key only ever
           # fires for a FRESH sale being written today; a sale that landed in
@@ -2289,7 +2312,7 @@ jobs:
           # resolve-disagreeing-sale-twins (2026-09-20): one NDJSON record per
           # twins-disagree pair -- same fixed-path-guarded-on-script
           # convention, no new input.
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -3769,6 +3792,39 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (relocated=${R:-0} patched=${P:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-parallel-suffix -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+
+      - name: Upload the repoint-sales-cardnumber-suffix log
+        if: ${{ always() && inputs.script == 'repoint-sales-cardnumber-suffix' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: repoint-sales-cardnumber-suffix-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/repoint-sales-cardnumber-suffix-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the cardnumber-suffix repoint until the scope is clean
+        # Same discipline as the parallel-suffix sibling immediately above:
+        # stops at its own 110-minute budget and PRINTS its summary; idempotent
+        # by construction (a relocated sale's own cardNumber segment no longer
+        # matches the bare year-coded candidate shape on a re-scan).
+        if: ${{ !cancelled() && inputs.script == 'repoint-sales-cardnumber-suffix' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: repoint-sales-cardnumber-suffix
+          preamble: |
+            R=$(grep -aoE "(RELOCATED|WOULD RELOCATE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "relocated=${R:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (relocated=${R:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (relocated=${R:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-cardnumber-suffix -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
       # This lane's whole point is the stored insert sales the R66/R67/R70
       # ingest-time re-key can never reach (CF-INGEST-KEEPS-STORED-IDENTITY),
