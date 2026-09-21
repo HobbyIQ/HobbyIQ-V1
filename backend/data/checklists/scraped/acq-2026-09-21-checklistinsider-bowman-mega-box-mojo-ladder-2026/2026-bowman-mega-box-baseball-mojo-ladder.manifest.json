@@ -1,0 +1,65 @@
+{
+  "scrapedAt": "2026-09-21T13:00:00.000Z",
+  "revisedAt": "2026-09-21T15:00:00.000Z",
+  "revisionNote": "REVISED after independent review found three defects in the original version of this file: (1) it included 2,970 of 3,852 rows on prefixes (BST-/ES-/MF-/BMA-/RMA-/CRA-/CPA-) this same manifest's own text said were excluded, with every BMA-/RMA-/CPA-/CRA- autograph row wrongly carrying isAuto=false; (2) the source page's actual BASE roster for this product is 100 cards (50 numeric + 50 BCP-, each section explicitly stated '50 cards' on the page), not 268 -- the original file's card list came from the raw xlsx scrape without restricting to the two base-roster sections, so it silently absorbed every insert/auto subset's cards too; (3) 288 of the original rows were byte-identical duplicates, because the xlsx workbook itself repeats 20 of the 100 base card numbers (confirmed by direct inspection of the raw scrape: cardNumbers 3, 18, 35, 39, 41, 58, 68, 75, 83, 93, BCP-1, BCP-2, BCP-16, BCP-77, BCP-82, BCP-92, BCP-96, BCP-115, BCP-135, BCP-145 each appear twice), and this file's row-expansion multiplied each duplicate roster row by the full 17-rung ladder without deduping first. This revision restricts the roster to exactly the 100 cards the page's 'Base Mega Chrome Mojo Checklist' (50 cards) and 'Prospects Mega Chrome Mojo Checklist' (50 cards) sections state, dedupes by cardNumber before expansion, and corrects a false manifest claim (the original said Rose Gold Mojo Refractor had zero new rows; in fact 222 were present in the original CSV -- the LADDER array never actually excluded it, only the display name was trimmed). The BST-/ES-/BMA-/RMA- insert subsets this file previously absorbed now live in a SEPARATE package, acq-2026-09-21-checklistinsider-bowman-mega-box-insert-ladders-2026/, with correct isAuto flags. CPA-/CRA- and MF- are NOT staged anywhere -- see that package's manifest for why.",
+  "sourceUrl": "https://www.checklistinsider.com/2026-bowman-mega-box-baseball",
+  "sourcePageSha256": "c41d983fafc05220449876da8ac6e16bc3a1a8a96dddb90c5bf0e2e411801c54",
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2026/04/2026-Bowman-Mega-Box-Baseball-Checklist-Downloads-Excel-spreadsheet.xlsx",
+  "source": "checklistinsider-2026-09-21",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Bowman Mega Box Baseball (Base Mega Chrome Mojo Checklist + Prospects Mega Chrome Mojo Checklist)",
+  "productKey": "2026-bowman-mega-box-baseball",
+  "setKey": "bowman-mega",
+  "rowCount": 1504,
+  "baseCards": 100,
+  "baseCardsNote": "Confirmed by direct HTML inspection: the page states 'Base Mega Chrome Mojo Checklist -- 50 cards. Skip-numbered.' and 'Prospects Mega Chrome Mojo Checklist -- 50 cards. Skip-numbered.' -- exactly 50 numeric card numbers (1-100, skip-numbered, e.g. 1,2,3,6,7,9...) and 50 BCP- numbers. Verified the raw xlsx scrape yields exactly 100 distinct card numbers across these two prefixes (120 raw rows before dedup, 20 of them exact duplicates -- see revisionNote).",
+  "mintedBy": "Bowman-family baseball checklist-gap acquisition (2026-09-21, revised same day after review). Diagnosis of a ~300-sale sample of 2026 bowman-chrome-mega-box unbacked sold_comps rows found 26/300 (8.7%) unbacked, and every one was the same defect: the source page's own 17-rung Mojo Refractor colour ladder (Sky Blue /499 down to Rose Gold 1/1) is only partially minted onto the mega box's own base card numbers in card_catalog -- e.g. catalog carried BCP-116 only under 'Yellow Mojo Refractor /75' while sales for BCP-116 were 'Green Mojo Refractor'. This package expands the TRUE 100-card base roster x full 17-rung ladder and keeps only the (cardNumber, parallel) pairs NOT already present in card_catalog (246 already existed and were skipped).",
+  "rungsMinted": [
+    { "parallel": "Sky Blue Mojo Refractor", "printRun": 499 },
+    { "parallel": "Neon Green Mojo Refractor", "printRun": 399 },
+    { "parallel": "Fuchsia Mojo Refractor", "printRun": 299 },
+    { "parallel": "Burgundy Mojo Refractor", "printRun": 275 },
+    { "parallel": "Purple Mojo Refractor", "printRun": 250 },
+    { "parallel": "Pink Mojo Refractor", "printRun": 199 },
+    { "parallel": "Navy Mojo Refractor", "printRun": 175 },
+    { "parallel": "Blue Mojo Refractor", "printRun": 150 },
+    { "parallel": "Aqua Mojo Refractor", "printRun": 125 },
+    { "parallel": "Green Mojo Refractor", "printRun": 99 },
+    { "parallel": "Yellow Mojo Refractor", "printRun": 75 },
+    { "parallel": "Gold Mojo Refractor", "printRun": 50 },
+    { "parallel": "Orange Mojo Refractor", "printRun": 25 },
+    { "parallel": "Black & White Mojo Refractor", "printRun": 15 },
+    { "parallel": "Black Mojo Refractor", "printRun": 10 },
+    { "parallel": "Red Mojo Refractor", "printRun": 5 },
+    { "parallel": "Rose Gold Mojo Refractor", "printRun": 1, "note": "222 rows in this CSV -- confirmed present, not omitted." }
+  ],
+  "prospectsExtraRung": {
+    "parallel": "Lazer Refractor",
+    "printRun": null,
+    "note": "The 'Prospects Mega Chrome Mojo Checklist' (BCP-) section states one extra unnumbered rung not present in the base numeric section: 'Lazer Refractor (1:3)'. No print run stated (1:3 is a pack-odds ratio, not a serial). Minted only for BCP- rows, category insert-prospects-mega-chrome-mojo."
+  },
+  "rungsMintedCount": 17,
+  "categoryMinted": {
+    "base": "the 50 numeric base card numbers",
+    "insert-prospects-mega-chrome-mojo": "the 50 BCP- prospect card numbers (same 17-rung ladder plus the Lazer Refractor extra above)"
+  },
+  "duplicateHandling": "20 of the 100 base card numbers appear twice in the source xlsx workbook (a known checklistinsider nested-list scraping artifact, per the task brief's own warning). Deduped by cardNumber before ladder expansion -- confirmed zero exact-duplicate output rows by a row-level JSON-equality check, and pinned by a new test assertion in bowmanFamilyChecklistGapLaddersPlannerVerdict.test.ts.",
+  "notMinted": {
+    "insertSetPrefixes": {
+      "names": ["BST- (Bowman Sterling Chrome Mojo)", "ES- (Electric Sluggers Chrome Mojo)", "BMA- (Bowman Prospects Mega Autographs)", "RMA- (Bowman Rookies Mega Autographs)"],
+      "reason": "Each of these subsets carries its OWN roster and its OWN stated Mojo ladder (different rung sets / print runs than the base ladder) -- moved to the sibling package acq-2026-09-21-checklistinsider-bowman-mega-box-insert-ladders-2026/ with correct auto flags, rather than folded into this base-ladder file."
+    },
+    "cpaCraMfPrefixes": {
+      "names": ["CPA- (Prospects Image Variation Autographs)", "CRA- (Rookie Image Variation Autographs)", "MF- (Mega Futures Chrome Mojo)"],
+      "reason": "The source page states NO 'Parallels:' ladder at all for any of these three sections (confirmed by direct HTML inspection: each section lists only its roster and pack odds, no parallel list) -- MF- has zero rungs stated anywhere on the page; CPA- and CRA- ('Prospects/Rookie Image Variation Autographs') likewise have no stated ladder. Per doctrine (no-synthetic-parallels), none of these three are staged anywhere in this PR. Left out and listed here rather than guessed."
+    }
+  },
+  "spellingAudit": "Parallel names taken verbatim from the source's own stated ladder (extractLadders() via backend/scripts/scrape-checklistinsider.cjs, 'Base Parallels List & Odds' heading, 17/17 rungs matched with print runs). Cross-checked against card_catalog's own existing bowman-mega spellings for the same colour words -- identical, no alignment needed.",
+  "selectCardsOnlyAudit": "No 'select cards only' language found on the source page's Base Parallels List sections; the ladder applies to all 100 base numbers per the page's own odds tables (odds stated per pack, not per named card).",
+  "provenance": {
+    "cardsFrom": "checklistinsider.com's own HTML page structure (two explicitly-labelled '50 cards' sections), cross-verified against the xlsx workbook's raw card list restricted to the numeric and BCP- prefixes only",
+    "rungsFrom": "the source page's own stated 'Base Parallels List & Odds' heading, verbatim, all 17 rungs with print runs, plus the Prospects section's one extra 'Lazer Refractor' rung",
+    "dedup": "existing card_catalog rows for setKey=bowman-mega, sport=baseball, cardYear=2026 were read via a bounded point-read/query pass (805 existing rows) and any (cardNumber, parallel) pair already present was excluded from this CSV -- 246 of the 1,750 theoretical rows (100 cards x 17 rungs + 50 BCP x 1 Lazer) were already covered."
+  }
+}

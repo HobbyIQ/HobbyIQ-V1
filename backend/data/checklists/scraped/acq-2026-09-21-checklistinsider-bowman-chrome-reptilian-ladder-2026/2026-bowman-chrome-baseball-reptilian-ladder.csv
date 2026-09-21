@@ -1,0 +1,717 @@
+category,cardNumber,parallel,isAuto,printRun,player
+insert-chrome-prospects,BCP-66,Reptilian Fuchsia Refractor,false,199,Wyatt Sanford
+insert-chrome-prospects,BCP-66,Reptilian Blue Refractor,false,150,Wyatt Sanford
+insert-chrome-prospects,BCP-66,Reptilian Gold Refractor,false,50,Wyatt Sanford
+insert-chrome-prospects,BCP-66,Reptilian Orange Refractor,false,25,Wyatt Sanford
+insert-chrome-prospects,BCP-66,Reptilian Red Refractor,false,5,Wyatt Sanford
+insert-chrome-prospects,BCP-66,Reptilian Green Refractor,false,99,Wyatt Sanford
+insert-chrome-prospects,BCP-106,Reptilian Fuchsia Refractor,false,199,Francisco Espinoza
+insert-chrome-prospects,BCP-106,Reptilian Blue Refractor,false,150,Francisco Espinoza
+insert-chrome-prospects,BCP-106,Reptilian Gold Refractor,false,50,Francisco Espinoza
+insert-chrome-prospects,BCP-106,Reptilian Orange Refractor,false,25,Francisco Espinoza
+insert-chrome-prospects,BCP-106,Reptilian Red Refractor,false,5,Francisco Espinoza
+insert-chrome-prospects,BCP-106,Reptilian Green Refractor,false,99,Francisco Espinoza
+insert-chrome-prospects,BCP-17,Reptilian Fuchsia Refractor,false,199,Caden Scarborough
+insert-chrome-prospects,BCP-17,Reptilian Blue Refractor,false,150,Caden Scarborough
+insert-chrome-prospects,BCP-17,Reptilian Gold Refractor,false,50,Caden Scarborough
+insert-chrome-prospects,BCP-17,Reptilian Orange Refractor,false,25,Caden Scarborough
+insert-chrome-prospects,BCP-17,Reptilian Red Refractor,false,5,Caden Scarborough
+insert-chrome-prospects,BCP-17,Reptilian Green Refractor,false,99,Caden Scarborough
+insert-chrome-prospects,BCP-145,Reptilian Fuchsia Refractor,false,199,Kevin McGonigle
+insert-chrome-prospects,BCP-145,Reptilian Blue Refractor,false,150,Kevin McGonigle
+insert-chrome-prospects,BCP-145,Reptilian Gold Refractor,false,50,Kevin McGonigle
+insert-chrome-prospects,BCP-145,Reptilian Orange Refractor,false,25,Kevin McGonigle
+insert-chrome-prospects,BCP-145,Reptilian Red Refractor,false,5,Kevin McGonigle
+insert-chrome-prospects,BCP-145,Reptilian Green Refractor,false,99,Kevin McGonigle
+insert-chrome-prospects,BCP-151,Reptilian Fuchsia Refractor,false,199,Seong-Jun Kim
+insert-chrome-prospects,BCP-151,Reptilian Blue Refractor,false,150,Seong-Jun Kim
+insert-chrome-prospects,BCP-151,Reptilian Orange Refractor,false,25,Seong-Jun Kim
+insert-chrome-prospects,BCP-151,Reptilian Green Refractor,false,99,Seong-Jun Kim
+insert-chrome-prospects,BCP-41,Reptilian Fuchsia Refractor,false,199,Brailyn Antunez
+insert-chrome-prospects,BCP-41,Reptilian Blue Refractor,false,150,Brailyn Antunez
+insert-chrome-prospects,BCP-41,Reptilian Gold Refractor,false,50,Brailyn Antunez
+insert-chrome-prospects,BCP-41,Reptilian Orange Refractor,false,25,Brailyn Antunez
+insert-chrome-prospects,BCP-41,Reptilian Red Refractor,false,5,Brailyn Antunez
+insert-chrome-prospects,BCP-41,Reptilian Green Refractor,false,99,Brailyn Antunez
+insert-chrome-prospects,BCP-183,Reptilian Fuchsia Refractor,false,199,Hyun Seung Lee
+insert-chrome-prospects,BCP-183,Reptilian Blue Refractor,false,150,Hyun Seung Lee
+insert-chrome-prospects,BCP-183,Reptilian Gold Refractor,false,50,Hyun Seung Lee
+insert-chrome-prospects,BCP-183,Reptilian Orange Refractor,false,25,Hyun Seung Lee
+insert-chrome-prospects,BCP-183,Reptilian Red Refractor,false,5,Hyun Seung Lee
+insert-chrome-prospects,BCP-234,Reptilian Fuchsia Refractor,false,199,Kevin Alvarez
+insert-chrome-prospects,BCP-234,Reptilian Gold Refractor,false,50,Kevin Alvarez
+insert-chrome-prospects,BCP-234,Reptilian Orange Refractor,false,25,Kevin Alvarez
+insert-chrome-prospects,BCP-234,Reptilian Red Refractor,false,5,Kevin Alvarez
+insert-chrome-prospects,BCP-238,Reptilian Fuchsia Refractor,false,199,Seth Hernandez
+insert-chrome-prospects,BCP-238,Reptilian Blue Refractor,false,150,Seth Hernandez
+insert-chrome-prospects,BCP-238,Reptilian Gold Refractor,false,50,Seth Hernandez
+insert-chrome-prospects,BCP-238,Reptilian Orange Refractor,false,25,Seth Hernandez
+insert-chrome-prospects,BCP-238,Reptilian Red Refractor,false,5,Seth Hernandez
+insert-chrome-prospects,BCP-238,Reptilian Green Refractor,false,99,Seth Hernandez
+insert-chrome-prospects,BCP-152,Reptilian Fuchsia Refractor,false,199,Wandy Asigen
+insert-chrome-prospects,BCP-152,Reptilian Blue Refractor,false,150,Wandy Asigen
+insert-chrome-prospects,BCP-152,Reptilian Gold Refractor,false,50,Wandy Asigen
+insert-chrome-prospects,BCP-152,Reptilian Orange Refractor,false,25,Wandy Asigen
+insert-chrome-prospects,BCP-152,Reptilian Red Refractor,false,5,Wandy Asigen
+insert-chrome-prospects,BCP-155,Reptilian Fuchsia Refractor,false,199,John Gil
+insert-chrome-prospects,BCP-155,Reptilian Blue Refractor,false,150,John Gil
+insert-chrome-prospects,BCP-155,Reptilian Gold Refractor,false,50,John Gil
+insert-chrome-prospects,BCP-155,Reptilian Orange Refractor,false,25,John Gil
+insert-chrome-prospects,BCP-160,Reptilian Fuchsia Refractor,false,199,Johenssy Colome
+insert-chrome-prospects,BCP-160,Reptilian Blue Refractor,false,150,Johenssy Colome
+insert-chrome-prospects,BCP-160,Reptilian Gold Refractor,false,50,Johenssy Colome
+insert-chrome-prospects,BCP-160,Reptilian Orange Refractor,false,25,Johenssy Colome
+insert-chrome-prospects,BCP-160,Reptilian Red Refractor,false,5,Johenssy Colome
+insert-chrome-prospects,BCP-160,Reptilian Green Refractor,false,99,Johenssy Colome
+insert-chrome-prospects,BCP-164,Reptilian Fuchsia Refractor,false,199,JoJo Parker
+insert-chrome-prospects,BCP-164,Reptilian Blue Refractor,false,150,JoJo Parker
+insert-chrome-prospects,BCP-164,Reptilian Gold Refractor,false,50,JoJo Parker
+insert-chrome-prospects,BCP-164,Reptilian Orange Refractor,false,25,JoJo Parker
+insert-chrome-prospects,BCP-164,Reptilian Red Refractor,false,5,JoJo Parker
+insert-chrome-prospects,BCP-164,Reptilian Green Refractor,false,99,JoJo Parker
+insert-chrome-prospects,BCP-167,Reptilian Fuchsia Refractor,false,199,Ezequiel Melbourne
+insert-chrome-prospects,BCP-167,Reptilian Blue Refractor,false,150,Ezequiel Melbourne
+insert-chrome-prospects,BCP-167,Reptilian Gold Refractor,false,50,Ezequiel Melbourne
+insert-chrome-prospects,BCP-167,Reptilian Orange Refractor,false,25,Ezequiel Melbourne
+insert-chrome-prospects,BCP-167,Reptilian Red Refractor,false,5,Ezequiel Melbourne
+insert-chrome-prospects,BCP-167,Reptilian Green Refractor,false,99,Ezequiel Melbourne
+insert-chrome-prospects,BCP-175,Reptilian Fuchsia Refractor,false,199,Randy Santana
+insert-chrome-prospects,BCP-175,Reptilian Gold Refractor,false,50,Randy Santana
+insert-chrome-prospects,BCP-175,Reptilian Orange Refractor,false,25,Randy Santana
+insert-chrome-prospects,BCP-175,Reptilian Red Refractor,false,5,Randy Santana
+insert-chrome-prospects,BCP-175,Reptilian Green Refractor,false,99,Randy Santana
+insert-chrome-prospects,BCP-178,Reptilian Fuchsia Refractor,false,199,Wilton Guerrero Jr.
+insert-chrome-prospects,BCP-178,Reptilian Blue Refractor,false,150,Wilton Guerrero Jr.
+insert-chrome-prospects,BCP-178,Reptilian Gold Refractor,false,50,Wilton Guerrero Jr.
+insert-chrome-prospects,BCP-178,Reptilian Orange Refractor,false,25,Wilton Guerrero Jr.
+insert-chrome-prospects,BCP-178,Reptilian Red Refractor,false,5,Wilton Guerrero Jr.
+insert-chrome-prospects,BCP-178,Reptilian Green Refractor,false,99,Wilton Guerrero Jr.
+insert-chrome-prospects,BCP-185,Reptilian Fuchsia Refractor,false,199,Ricky Duran
+insert-chrome-prospects,BCP-185,Reptilian Blue Refractor,false,150,Ricky Duran
+insert-chrome-prospects,BCP-185,Reptilian Gold Refractor,false,50,Ricky Duran
+insert-chrome-prospects,BCP-185,Reptilian Orange Refractor,false,25,Ricky Duran
+insert-chrome-prospects,BCP-185,Reptilian Red Refractor,false,5,Ricky Duran
+insert-chrome-prospects,BCP-185,Reptilian Green Refractor,false,99,Ricky Duran
+insert-chrome-prospects,BCP-190,Reptilian Fuchsia Refractor,false,199,Sebastian Dos Santos
+insert-chrome-prospects,BCP-190,Reptilian Blue Refractor,false,150,Sebastian Dos Santos
+insert-chrome-prospects,BCP-190,Reptilian Gold Refractor,false,50,Sebastian Dos Santos
+insert-chrome-prospects,BCP-190,Reptilian Orange Refractor,false,25,Sebastian Dos Santos
+insert-chrome-prospects,BCP-190,Reptilian Red Refractor,false,5,Sebastian Dos Santos
+insert-chrome-prospects,BCP-190,Reptilian Green Refractor,false,99,Sebastian Dos Santos
+insert-chrome-prospects,BCP-191,Reptilian Fuchsia Refractor,false,199,Dawvris Brito
+insert-chrome-prospects,BCP-191,Reptilian Gold Refractor,false,50,Dawvris Brito
+insert-chrome-prospects,BCP-191,Reptilian Orange Refractor,false,25,Dawvris Brito
+insert-chrome-prospects,BCP-191,Reptilian Red Refractor,false,5,Dawvris Brito
+insert-chrome-prospects,BCP-191,Reptilian Green Refractor,false,99,Dawvris Brito
+insert-chrome-prospects,BCP-197,Reptilian Fuchsia Refractor,false,199,Juan Rijo
+insert-chrome-prospects,BCP-197,Reptilian Blue Refractor,false,150,Juan Rijo
+insert-chrome-prospects,BCP-197,Reptilian Gold Refractor,false,50,Juan Rijo
+insert-chrome-prospects,BCP-197,Reptilian Orange Refractor,false,25,Juan Rijo
+insert-chrome-prospects,BCP-197,Reptilian Green Refractor,false,99,Juan Rijo
+insert-chrome-prospects,BCP-199,Reptilian Fuchsia Refractor,false,199,Walker Jenkins
+insert-chrome-prospects,BCP-199,Reptilian Gold Refractor,false,50,Walker Jenkins
+insert-chrome-prospects,BCP-199,Reptilian Orange Refractor,false,25,Walker Jenkins
+insert-chrome-prospects,BCP-199,Reptilian Red Refractor,false,5,Walker Jenkins
+insert-chrome-prospects,BCP-199,Reptilian Green Refractor,false,99,Walker Jenkins
+insert-chrome-prospects,BCP-209,Reptilian Fuchsia Refractor,false,199,Ethan Holliday
+insert-chrome-prospects,BCP-209,Reptilian Blue Refractor,false,150,Ethan Holliday
+insert-chrome-prospects,BCP-209,Reptilian Gold Refractor,false,50,Ethan Holliday
+insert-chrome-prospects,BCP-209,Reptilian Orange Refractor,false,25,Ethan Holliday
+insert-chrome-prospects,BCP-209,Reptilian Red Refractor,false,5,Ethan Holliday
+insert-chrome-prospects,BCP-209,Reptilian Green Refractor,false,99,Ethan Holliday
+insert-chrome-prospects,BCP-216,Reptilian Fuchsia Refractor,false,199,Enmanuel Merlo
+insert-chrome-prospects,BCP-216,Reptilian Blue Refractor,false,150,Enmanuel Merlo
+insert-chrome-prospects,BCP-216,Reptilian Gold Refractor,false,50,Enmanuel Merlo
+insert-chrome-prospects,BCP-216,Reptilian Orange Refractor,false,25,Enmanuel Merlo
+insert-chrome-prospects,BCP-216,Reptilian Red Refractor,false,5,Enmanuel Merlo
+insert-chrome-prospects,BCP-216,Reptilian Green Refractor,false,99,Enmanuel Merlo
+insert-chrome-prospects,BCP-220,Reptilian Fuchsia Refractor,false,199,Angel Nunez
+insert-chrome-prospects,BCP-220,Reptilian Blue Refractor,false,150,Angel Nunez
+insert-chrome-prospects,BCP-220,Reptilian Orange Refractor,false,25,Angel Nunez
+insert-chrome-prospects,BCP-220,Reptilian Red Refractor,false,5,Angel Nunez
+insert-chrome-prospects,BCP-220,Reptilian Green Refractor,false,99,Angel Nunez
+insert-chrome-prospects,BCP-231,Reptilian Fuchsia Refractor,false,199,Sebastian Walcott
+insert-chrome-prospects,BCP-231,Reptilian Blue Refractor,false,150,Sebastian Walcott
+insert-chrome-prospects,BCP-231,Reptilian Gold Refractor,false,50,Sebastian Walcott
+insert-chrome-prospects,BCP-231,Reptilian Orange Refractor,false,25,Sebastian Walcott
+insert-chrome-prospects,BCP-231,Reptilian Red Refractor,false,5,Sebastian Walcott
+insert-chrome-prospects,BCP-231,Reptilian Green Refractor,false,99,Sebastian Walcott
+insert-chrome-prospects,BCP-233,Reptilian Fuchsia Refractor,false,199,Dante Nori
+insert-chrome-prospects,BCP-233,Reptilian Blue Refractor,false,150,Dante Nori
+insert-chrome-prospects,BCP-233,Reptilian Gold Refractor,false,50,Dante Nori
+insert-chrome-prospects,BCP-233,Reptilian Orange Refractor,false,25,Dante Nori
+insert-chrome-prospects,BCP-233,Reptilian Green Refractor,false,99,Dante Nori
+insert-chrome-prospects,BCP-246,Reptilian Fuchsia Refractor,false,199,Garielvin Silverio
+insert-chrome-prospects,BCP-246,Reptilian Blue Refractor,false,150,Garielvin Silverio
+insert-chrome-prospects,BCP-246,Reptilian Orange Refractor,false,25,Garielvin Silverio
+insert-chrome-prospects,BCP-248,Reptilian Fuchsia Refractor,false,199,Cooper Pratt
+insert-chrome-prospects,BCP-248,Reptilian Blue Refractor,false,150,Cooper Pratt
+insert-chrome-prospects,BCP-248,Reptilian Gold Refractor,false,50,Cooper Pratt
+insert-chrome-prospects,BCP-248,Reptilian Orange Refractor,false,25,Cooper Pratt
+insert-chrome-prospects,BCP-248,Reptilian Red Refractor,false,5,Cooper Pratt
+insert-chrome-prospects,BCP-154,Reptilian Fuchsia Refractor,false,199,Colt Emerson
+insert-chrome-prospects,BCP-154,Reptilian Blue Refractor,false,150,Colt Emerson
+insert-chrome-prospects,BCP-154,Reptilian Gold Refractor,false,50,Colt Emerson
+insert-chrome-prospects,BCP-154,Reptilian Orange Refractor,false,25,Colt Emerson
+insert-chrome-prospects,BCP-158,Reptilian Fuchsia Refractor,false,199,Fabricio Blanco
+insert-chrome-prospects,BCP-158,Reptilian Blue Refractor,false,150,Fabricio Blanco
+insert-chrome-prospects,BCP-158,Reptilian Orange Refractor,false,25,Fabricio Blanco
+insert-chrome-prospects,BCP-158,Reptilian Red Refractor,false,5,Fabricio Blanco
+insert-chrome-prospects,BCP-158,Reptilian Green Refractor,false,99,Fabricio Blanco
+insert-chrome-prospects,BCP-159,Reptilian Fuchsia Refractor,false,199,Christian Zazueta
+insert-chrome-prospects,BCP-159,Reptilian Blue Refractor,false,150,Christian Zazueta
+insert-chrome-prospects,BCP-159,Reptilian Orange Refractor,false,25,Christian Zazueta
+insert-chrome-prospects,BCP-159,Reptilian Red Refractor,false,5,Christian Zazueta
+insert-chrome-prospects,BCP-159,Reptilian Green Refractor,false,99,Christian Zazueta
+insert-chrome-prospects,BCP-168,Reptilian Fuchsia Refractor,false,199,Joseph Sullivan
+insert-chrome-prospects,BCP-168,Reptilian Orange Refractor,false,25,Joseph Sullivan
+insert-chrome-prospects,BCP-168,Reptilian Red Refractor,false,5,Joseph Sullivan
+insert-chrome-prospects,BCP-171,Reptilian Fuchsia Refractor,false,199,Brandon Clarke
+insert-chrome-prospects,BCP-171,Reptilian Blue Refractor,false,150,Brandon Clarke
+insert-chrome-prospects,BCP-171,Reptilian Gold Refractor,false,50,Brandon Clarke
+insert-chrome-prospects,BCP-171,Reptilian Orange Refractor,false,25,Brandon Clarke
+insert-chrome-prospects,BCP-171,Reptilian Green Refractor,false,99,Brandon Clarke
+insert-chrome-prospects,BCP-172,Reptilian Fuchsia Refractor,false,199,Leonardo Reynoso
+insert-chrome-prospects,BCP-172,Reptilian Blue Refractor,false,150,Leonardo Reynoso
+insert-chrome-prospects,BCP-172,Reptilian Gold Refractor,false,50,Leonardo Reynoso
+insert-chrome-prospects,BCP-172,Reptilian Orange Refractor,false,25,Leonardo Reynoso
+insert-chrome-prospects,BCP-172,Reptilian Red Refractor,false,5,Leonardo Reynoso
+insert-chrome-prospects,BCP-172,Reptilian Green Refractor,false,99,Leonardo Reynoso
+insert-chrome-prospects,BCP-174,Reptilian Fuchsia Refractor,false,199,Aiva Arquette
+insert-chrome-prospects,BCP-174,Reptilian Blue Refractor,false,150,Aiva Arquette
+insert-chrome-prospects,BCP-174,Reptilian Gold Refractor,false,50,Aiva Arquette
+insert-chrome-prospects,BCP-174,Reptilian Orange Refractor,false,25,Aiva Arquette
+insert-chrome-prospects,BCP-174,Reptilian Green Refractor,false,99,Aiva Arquette
+insert-chrome-prospects,BCP-177,Reptilian Fuchsia Refractor,false,199,Juan Rujano
+insert-chrome-prospects,BCP-177,Reptilian Gold Refractor,false,50,Juan Rujano
+insert-chrome-prospects,BCP-177,Reptilian Orange Refractor,false,25,Juan Rujano
+insert-chrome-prospects,BCP-177,Reptilian Green Refractor,false,99,Juan Rujano
+insert-chrome-prospects,BCP-181,Reptilian Fuchsia Refractor,false,199,Logan Sauve
+insert-chrome-prospects,BCP-181,Reptilian Blue Refractor,false,150,Logan Sauve
+insert-chrome-prospects,BCP-181,Reptilian Gold Refractor,false,50,Logan Sauve
+insert-chrome-prospects,BCP-181,Reptilian Orange Refractor,false,25,Logan Sauve
+insert-chrome-prospects,BCP-181,Reptilian Red Refractor,false,5,Logan Sauve
+insert-chrome-prospects,BCP-181,Reptilian Green Refractor,false,99,Logan Sauve
+insert-chrome-prospects,BCP-182,Reptilian Fuchsia Refractor,false,199,Jaiden Lo Re
+insert-chrome-prospects,BCP-182,Reptilian Blue Refractor,false,150,Jaiden Lo Re
+insert-chrome-prospects,BCP-182,Reptilian Gold Refractor,false,50,Jaiden Lo Re
+insert-chrome-prospects,BCP-182,Reptilian Orange Refractor,false,25,Jaiden Lo Re
+insert-chrome-prospects,BCP-182,Reptilian Green Refractor,false,99,Jaiden Lo Re
+insert-chrome-prospects,BCP-186,Reptilian Fuchsia Refractor,false,199,Brendan Jones
+insert-chrome-prospects,BCP-186,Reptilian Blue Refractor,false,150,Brendan Jones
+insert-chrome-prospects,BCP-186,Reptilian Gold Refractor,false,50,Brendan Jones
+insert-chrome-prospects,BCP-186,Reptilian Orange Refractor,false,25,Brendan Jones
+insert-chrome-prospects,BCP-186,Reptilian Green Refractor,false,99,Brendan Jones
+insert-chrome-prospects,BCP-187,Reptilian Fuchsia Refractor,false,199,Wyatt Vincent
+insert-chrome-prospects,BCP-187,Reptilian Blue Refractor,false,150,Wyatt Vincent
+insert-chrome-prospects,BCP-187,Reptilian Gold Refractor,false,50,Wyatt Vincent
+insert-chrome-prospects,BCP-187,Reptilian Orange Refractor,false,25,Wyatt Vincent
+insert-chrome-prospects,BCP-187,Reptilian Red Refractor,false,5,Wyatt Vincent
+insert-chrome-prospects,BCP-187,Reptilian Green Refractor,false,99,Wyatt Vincent
+insert-chrome-prospects,BCP-188,Reptilian Fuchsia Refractor,false,199,Wilder Dalis
+insert-chrome-prospects,BCP-188,Reptilian Blue Refractor,false,150,Wilder Dalis
+insert-chrome-prospects,BCP-188,Reptilian Gold Refractor,false,50,Wilder Dalis
+insert-chrome-prospects,BCP-188,Reptilian Orange Refractor,false,25,Wilder Dalis
+insert-chrome-prospects,BCP-188,Reptilian Red Refractor,false,5,Wilder Dalis
+insert-chrome-prospects,BCP-188,Reptilian Green Refractor,false,99,Wilder Dalis
+insert-chrome-prospects,BCP-195,Reptilian Fuchsia Refractor,false,199,Braylen Wimmer
+insert-chrome-prospects,BCP-195,Reptilian Blue Refractor,false,150,Braylen Wimmer
+insert-chrome-prospects,BCP-195,Reptilian Gold Refractor,false,50,Braylen Wimmer
+insert-chrome-prospects,BCP-195,Reptilian Orange Refractor,false,25,Braylen Wimmer
+insert-chrome-prospects,BCP-195,Reptilian Red Refractor,false,5,Braylen Wimmer
+insert-chrome-prospects,BCP-195,Reptilian Green Refractor,false,99,Braylen Wimmer
+insert-chrome-prospects,BCP-196,Reptilian Fuchsia Refractor,false,199,Jett Williams
+insert-chrome-prospects,BCP-196,Reptilian Blue Refractor,false,150,Jett Williams
+insert-chrome-prospects,BCP-196,Reptilian Gold Refractor,false,50,Jett Williams
+insert-chrome-prospects,BCP-196,Reptilian Orange Refractor,false,25,Jett Williams
+insert-chrome-prospects,BCP-196,Reptilian Red Refractor,false,5,Jett Williams
+insert-chrome-prospects,BCP-196,Reptilian Green Refractor,false,99,Jett Williams
+insert-chrome-prospects,BCP-198,Reptilian Fuchsia Refractor,false,199,Louis Andujar
+insert-chrome-prospects,BCP-198,Reptilian Blue Refractor,false,150,Louis Andujar
+insert-chrome-prospects,BCP-198,Reptilian Gold Refractor,false,50,Louis Andujar
+insert-chrome-prospects,BCP-198,Reptilian Orange Refractor,false,25,Louis Andujar
+insert-chrome-prospects,BCP-198,Reptilian Red Refractor,false,5,Louis Andujar
+insert-chrome-prospects,BCP-198,Reptilian Green Refractor,false,99,Louis Andujar
+insert-chrome-prospects,BCP-205,Reptilian Fuchsia Refractor,false,199,Eduardo Quintero
+insert-chrome-prospects,BCP-205,Reptilian Blue Refractor,false,150,Eduardo Quintero
+insert-chrome-prospects,BCP-205,Reptilian Gold Refractor,false,50,Eduardo Quintero
+insert-chrome-prospects,BCP-211,Reptilian Fuchsia Refractor,false,199,Juneiker Caceres
+insert-chrome-prospects,BCP-211,Reptilian Blue Refractor,false,150,Juneiker Caceres
+insert-chrome-prospects,BCP-211,Reptilian Gold Refractor,false,50,Juneiker Caceres
+insert-chrome-prospects,BCP-211,Reptilian Orange Refractor,false,25,Juneiker Caceres
+insert-chrome-prospects,BCP-213,Reptilian Fuchsia Refractor,false,199,Mike Sirota
+insert-chrome-prospects,BCP-213,Reptilian Blue Refractor,false,150,Mike Sirota
+insert-chrome-prospects,BCP-213,Reptilian Gold Refractor,false,50,Mike Sirota
+insert-chrome-prospects,BCP-213,Reptilian Orange Refractor,false,25,Mike Sirota
+insert-chrome-prospects,BCP-213,Reptilian Red Refractor,false,5,Mike Sirota
+insert-chrome-prospects,BCP-213,Reptilian Green Refractor,false,99,Mike Sirota
+insert-chrome-prospects,BCP-215,Reptilian Fuchsia Refractor,false,199,Gavin Fien
+insert-chrome-prospects,BCP-215,Reptilian Gold Refractor,false,50,Gavin Fien
+insert-chrome-prospects,BCP-215,Reptilian Orange Refractor,false,25,Gavin Fien
+insert-chrome-prospects,BCP-215,Reptilian Red Refractor,false,5,Gavin Fien
+insert-chrome-prospects,BCP-215,Reptilian Green Refractor,false,99,Gavin Fien
+insert-chrome-prospects,BCP-225,Reptilian Fuchsia Refractor,false,199,Alexander Pio
+insert-chrome-prospects,BCP-225,Reptilian Gold Refractor,false,50,Alexander Pio
+insert-chrome-prospects,BCP-225,Reptilian Orange Refractor,false,25,Alexander Pio
+insert-chrome-prospects,BCP-225,Reptilian Green Refractor,false,99,Alexander Pio
+insert-chrome-prospects,BCP-226,Reptilian Fuchsia Refractor,false,199,Wellington Aracena
+insert-chrome-prospects,BCP-226,Reptilian Blue Refractor,false,150,Wellington Aracena
+insert-chrome-prospects,BCP-226,Reptilian Gold Refractor,false,50,Wellington Aracena
+insert-chrome-prospects,BCP-226,Reptilian Orange Refractor,false,25,Wellington Aracena
+insert-chrome-prospects,BCP-226,Reptilian Red Refractor,false,5,Wellington Aracena
+insert-chrome-prospects,BCP-229,Reptilian Fuchsia Refractor,false,199,Randy Guzman
+insert-chrome-prospects,BCP-229,Reptilian Blue Refractor,false,150,Randy Guzman
+insert-chrome-prospects,BCP-229,Reptilian Gold Refractor,false,50,Randy Guzman
+insert-chrome-prospects,BCP-229,Reptilian Orange Refractor,false,25,Randy Guzman
+insert-chrome-prospects,BCP-230,Reptilian Fuchsia Refractor,false,199,Jose Castro
+insert-chrome-prospects,BCP-230,Reptilian Blue Refractor,false,150,Jose Castro
+insert-chrome-prospects,BCP-230,Reptilian Gold Refractor,false,50,Jose Castro
+insert-chrome-prospects,BCP-230,Reptilian Orange Refractor,false,25,Jose Castro
+insert-chrome-prospects,BCP-230,Reptilian Green Refractor,false,99,Jose Castro
+insert-chrome-prospects,BCP-232,Reptilian Fuchsia Refractor,false,199,Yunior Amparo
+insert-chrome-prospects,BCP-232,Reptilian Blue Refractor,false,150,Yunior Amparo
+insert-chrome-prospects,BCP-232,Reptilian Green Refractor,false,99,Yunior Amparo
+insert-chrome-prospects,BCP-237,Reptilian Fuchsia Refractor,false,199,Austin Overn
+insert-chrome-prospects,BCP-237,Reptilian Blue Refractor,false,150,Austin Overn
+insert-chrome-prospects,BCP-237,Reptilian Gold Refractor,false,50,Austin Overn
+insert-chrome-prospects,BCP-237,Reptilian Orange Refractor,false,25,Austin Overn
+insert-chrome-prospects,BCP-237,Reptilian Red Refractor,false,5,Austin Overn
+insert-chrome-prospects,BCP-237,Reptilian Green Refractor,false,99,Austin Overn
+insert-chrome-prospects,BCP-33,Reptilian Fuchsia Refractor,false,199,Coy James
+insert-chrome-prospects,BCP-33,Reptilian Blue Refractor,false,150,Coy James
+insert-chrome-prospects,BCP-33,Reptilian Gold Refractor,false,50,Coy James
+insert-chrome-prospects,BCP-33,Reptilian Orange Refractor,false,25,Coy James
+insert-chrome-prospects,BCP-33,Reptilian Red Refractor,false,5,Coy James
+insert-chrome-prospects,BCP-33,Reptilian Green Refractor,false,99,Coy James
+insert-chrome-prospects,BCP-96,Reptilian Fuchsia Refractor,false,199,Jesus Made
+insert-chrome-prospects,BCP-96,Reptilian Blue Refractor,false,150,Jesus Made
+insert-chrome-prospects,BCP-96,Reptilian Gold Refractor,false,50,Jesus Made
+insert-chrome-prospects,BCP-96,Reptilian Orange Refractor,false,25,Jesus Made
+insert-chrome-prospects,BCP-96,Reptilian Red Refractor,false,5,Jesus Made
+insert-chrome-prospects,BCP-96,Reptilian Green Refractor,false,99,Jesus Made
+insert-chrome-prospects,BCP-149,Reptilian Fuchsia Refractor,false,199,Andrew Fischer
+insert-chrome-prospects,BCP-149,Reptilian Blue Refractor,false,150,Andrew Fischer
+insert-chrome-prospects,BCP-149,Reptilian Gold Refractor,false,50,Andrew Fischer
+insert-chrome-prospects,BCP-149,Reptilian Orange Refractor,false,25,Andrew Fischer
+insert-chrome-prospects,BCP-149,Reptilian Red Refractor,false,5,Andrew Fischer
+insert-chrome-prospects,BCP-149,Reptilian Green Refractor,false,99,Andrew Fischer
+insert-chrome-prospects,BCP-29,Reptilian Fuchsia Refractor,false,199,Victor Arias
+insert-chrome-prospects,BCP-29,Reptilian Blue Refractor,false,150,Victor Arias
+insert-chrome-prospects,BCP-29,Reptilian Gold Refractor,false,50,Victor Arias
+insert-chrome-prospects,BCP-29,Reptilian Orange Refractor,false,25,Victor Arias
+insert-chrome-prospects,BCP-29,Reptilian Red Refractor,false,5,Victor Arias
+insert-chrome-prospects,BCP-29,Reptilian Green Refractor,false,99,Victor Arias
+insert-chrome-prospects,BCP-157,Reptilian Fuchsia Refractor,false,199,Rubel Arias
+insert-chrome-prospects,BCP-157,Reptilian Blue Refractor,false,150,Rubel Arias
+insert-chrome-prospects,BCP-157,Reptilian Gold Refractor,false,50,Rubel Arias
+insert-chrome-prospects,BCP-157,Reptilian Orange Refractor,false,25,Rubel Arias
+insert-chrome-prospects,BCP-157,Reptilian Red Refractor,false,5,Rubel Arias
+insert-chrome-prospects,BCP-161,Reptilian Fuchsia Refractor,false,199,Diego Frontado
+insert-chrome-prospects,BCP-161,Reptilian Blue Refractor,false,150,Diego Frontado
+insert-chrome-prospects,BCP-161,Reptilian Gold Refractor,false,50,Diego Frontado
+insert-chrome-prospects,BCP-161,Reptilian Orange Refractor,false,25,Diego Frontado
+insert-chrome-prospects,BCP-161,Reptilian Red Refractor,false,5,Diego Frontado
+insert-chrome-prospects,BCP-162,Reptilian Fuchsia Refractor,false,199,Talon Haley
+insert-chrome-prospects,BCP-162,Reptilian Blue Refractor,false,150,Talon Haley
+insert-chrome-prospects,BCP-162,Reptilian Gold Refractor,false,50,Talon Haley
+insert-chrome-prospects,BCP-162,Reptilian Orange Refractor,false,25,Talon Haley
+insert-chrome-prospects,BCP-162,Reptilian Red Refractor,false,5,Talon Haley
+insert-chrome-prospects,BCP-162,Reptilian Green Refractor,false,99,Talon Haley
+insert-chrome-prospects,BCP-163,Reptilian Fuchsia Refractor,false,199,Francisco Renteria
+insert-chrome-prospects,BCP-163,Reptilian Gold Refractor,false,50,Francisco Renteria
+insert-chrome-prospects,BCP-163,Reptilian Orange Refractor,false,25,Francisco Renteria
+insert-chrome-prospects,BCP-163,Reptilian Red Refractor,false,5,Francisco Renteria
+insert-chrome-prospects,BCP-163,Reptilian Green Refractor,false,99,Francisco Renteria
+insert-chrome-prospects,BCP-166,Reptilian Fuchsia Refractor,false,199,Hagen Smith
+insert-chrome-prospects,BCP-166,Reptilian Blue Refractor,false,150,Hagen Smith
+insert-chrome-prospects,BCP-166,Reptilian Gold Refractor,false,50,Hagen Smith
+insert-chrome-prospects,BCP-166,Reptilian Orange Refractor,false,25,Hagen Smith
+insert-chrome-prospects,BCP-166,Reptilian Red Refractor,false,5,Hagen Smith
+insert-chrome-prospects,BCP-166,Reptilian Green Refractor,false,99,Hagen Smith
+insert-chrome-prospects,BCP-169,Reptilian Fuchsia Refractor,false,199,Sebastian Blanco
+insert-chrome-prospects,BCP-169,Reptilian Blue Refractor,false,150,Sebastian Blanco
+insert-chrome-prospects,BCP-169,Reptilian Orange Refractor,false,25,Sebastian Blanco
+insert-chrome-prospects,BCP-169,Reptilian Red Refractor,false,5,Sebastian Blanco
+insert-chrome-prospects,BCP-169,Reptilian Green Refractor,false,99,Sebastian Blanco
+insert-chrome-prospects,BCP-170,Reptilian Fuchsia Refractor,false,199,Leo De Vries
+insert-chrome-prospects,BCP-170,Reptilian Blue Refractor,false,150,Leo De Vries
+insert-chrome-prospects,BCP-170,Reptilian Gold Refractor,false,50,Leo De Vries
+insert-chrome-prospects,BCP-170,Reptilian Orange Refractor,false,25,Leo De Vries
+insert-chrome-prospects,BCP-170,Reptilian Red Refractor,false,5,Leo De Vries
+insert-chrome-prospects,BCP-170,Reptilian Green Refractor,false,99,Leo De Vries
+insert-chrome-prospects,BCP-180,Reptilian Fuchsia Refractor,false,199,Jaider Suarez
+insert-chrome-prospects,BCP-180,Reptilian Gold Refractor,false,50,Jaider Suarez
+insert-chrome-prospects,BCP-180,Reptilian Orange Refractor,false,25,Jaider Suarez
+insert-chrome-prospects,BCP-180,Reptilian Green Refractor,false,99,Jaider Suarez
+insert-chrome-prospects,BCP-184,Reptilian Fuchsia Refractor,false,199,Gustavo Baptista
+insert-chrome-prospects,BCP-184,Reptilian Blue Refractor,false,150,Gustavo Baptista
+insert-chrome-prospects,BCP-184,Reptilian Gold Refractor,false,50,Gustavo Baptista
+insert-chrome-prospects,BCP-184,Reptilian Orange Refractor,false,25,Gustavo Baptista
+insert-chrome-prospects,BCP-184,Reptilian Green Refractor,false,99,Gustavo Baptista
+insert-chrome-prospects,BCP-193,Reptilian Fuchsia Refractor,false,199,Juan Rojas
+insert-chrome-prospects,BCP-193,Reptilian Blue Refractor,false,150,Juan Rojas
+insert-chrome-prospects,BCP-193,Reptilian Gold Refractor,false,50,Juan Rojas
+insert-chrome-prospects,BCP-193,Reptilian Orange Refractor,false,25,Juan Rojas
+insert-chrome-prospects,BCP-193,Reptilian Red Refractor,false,5,Juan Rojas
+insert-chrome-prospects,BCP-194,Reptilian Fuchsia Refractor,false,199,Angeibel Gomez
+insert-chrome-prospects,BCP-194,Reptilian Gold Refractor,false,50,Angeibel Gomez
+insert-chrome-prospects,BCP-194,Reptilian Red Refractor,false,5,Angeibel Gomez
+insert-chrome-prospects,BCP-194,Reptilian Green Refractor,false,99,Angeibel Gomez
+insert-chrome-prospects,BCP-201,Reptilian Fuchsia Refractor,false,199,Joniel Hernandez
+insert-chrome-prospects,BCP-201,Reptilian Blue Refractor,false,150,Joniel Hernandez
+insert-chrome-prospects,BCP-201,Reptilian Gold Refractor,false,50,Joniel Hernandez
+insert-chrome-prospects,BCP-201,Reptilian Orange Refractor,false,25,Joniel Hernandez
+insert-chrome-prospects,BCP-201,Reptilian Red Refractor,false,5,Joniel Hernandez
+insert-chrome-prospects,BCP-201,Reptilian Green Refractor,false,99,Joniel Hernandez
+insert-chrome-prospects,BCP-202,Reptilian Fuchsia Refractor,false,199,Avery Owusu-Asiedu
+insert-chrome-prospects,BCP-202,Reptilian Blue Refractor,false,150,Avery Owusu-Asiedu
+insert-chrome-prospects,BCP-202,Reptilian Gold Refractor,false,50,Avery Owusu-Asiedu
+insert-chrome-prospects,BCP-202,Reptilian Orange Refractor,false,25,Avery Owusu-Asiedu
+insert-chrome-prospects,BCP-202,Reptilian Red Refractor,false,5,Avery Owusu-Asiedu
+insert-chrome-prospects,BCP-202,Reptilian Green Refractor,false,99,Avery Owusu-Asiedu
+insert-chrome-prospects,BCP-203,Reptilian Fuchsia Refractor,false,199,Stharlin Torres
+insert-chrome-prospects,BCP-203,Reptilian Blue Refractor,false,150,Stharlin Torres
+insert-chrome-prospects,BCP-203,Reptilian Gold Refractor,false,50,Stharlin Torres
+insert-chrome-prospects,BCP-203,Reptilian Orange Refractor,false,25,Stharlin Torres
+insert-chrome-prospects,BCP-203,Reptilian Red Refractor,false,5,Stharlin Torres
+insert-chrome-prospects,BCP-203,Reptilian Green Refractor,false,99,Stharlin Torres
+insert-chrome-prospects,BCP-204,Reptilian Fuchsia Refractor,false,199,Angel De Los Santos
+insert-chrome-prospects,BCP-204,Reptilian Blue Refractor,false,150,Angel De Los Santos
+insert-chrome-prospects,BCP-204,Reptilian Gold Refractor,false,50,Angel De Los Santos
+insert-chrome-prospects,BCP-204,Reptilian Orange Refractor,false,25,Angel De Los Santos
+insert-chrome-prospects,BCP-204,Reptilian Red Refractor,false,5,Angel De Los Santos
+insert-chrome-prospects,BCP-206,Reptilian Fuchsia Refractor,false,199,Adrian Lunar
+insert-chrome-prospects,BCP-206,Reptilian Blue Refractor,false,150,Adrian Lunar
+insert-chrome-prospects,BCP-206,Reptilian Gold Refractor,false,50,Adrian Lunar
+insert-chrome-prospects,BCP-206,Reptilian Orange Refractor,false,25,Adrian Lunar
+insert-chrome-prospects,BCP-206,Reptilian Red Refractor,false,5,Adrian Lunar
+insert-chrome-prospects,BCP-207,Reptilian Fuchsia Refractor,false,199,Santiago Solarte
+insert-chrome-prospects,BCP-207,Reptilian Blue Refractor,false,150,Santiago Solarte
+insert-chrome-prospects,BCP-207,Reptilian Orange Refractor,false,25,Santiago Solarte
+insert-chrome-prospects,BCP-207,Reptilian Red Refractor,false,5,Santiago Solarte
+insert-chrome-prospects,BCP-207,Reptilian Green Refractor,false,99,Santiago Solarte
+insert-chrome-prospects,BCP-210,Reptilian Fuchsia Refractor,false,199,Angel Salio
+insert-chrome-prospects,BCP-210,Reptilian Gold Refractor,false,50,Angel Salio
+insert-chrome-prospects,BCP-210,Reptilian Orange Refractor,false,25,Angel Salio
+insert-chrome-prospects,BCP-210,Reptilian Green Refractor,false,99,Angel Salio
+insert-chrome-prospects,BCP-214,Reptilian Fuchsia Refractor,false,199,Owen Ayers
+insert-chrome-prospects,BCP-214,Reptilian Blue Refractor,false,150,Owen Ayers
+insert-chrome-prospects,BCP-214,Reptilian Gold Refractor,false,50,Owen Ayers
+insert-chrome-prospects,BCP-214,Reptilian Orange Refractor,false,25,Owen Ayers
+insert-chrome-prospects,BCP-214,Reptilian Red Refractor,false,5,Owen Ayers
+insert-chrome-prospects,BCP-217,Reptilian Fuchsia Refractor,false,199,Sir Jamison Jones
+insert-chrome-prospects,BCP-217,Reptilian Blue Refractor,false,150,Sir Jamison Jones
+insert-chrome-prospects,BCP-217,Reptilian Gold Refractor,false,50,Sir Jamison Jones
+insert-chrome-prospects,BCP-217,Reptilian Red Refractor,false,5,Sir Jamison Jones
+insert-chrome-prospects,BCP-217,Reptilian Green Refractor,false,99,Sir Jamison Jones
+insert-chrome-prospects,BCP-218,Reptilian Fuchsia Refractor,false,199,Caleb Bonemer
+insert-chrome-prospects,BCP-218,Reptilian Blue Refractor,false,150,Caleb Bonemer
+insert-chrome-prospects,BCP-218,Reptilian Gold Refractor,false,50,Caleb Bonemer
+insert-chrome-prospects,BCP-218,Reptilian Orange Refractor,false,25,Caleb Bonemer
+insert-chrome-prospects,BCP-218,Reptilian Red Refractor,false,5,Caleb Bonemer
+insert-chrome-prospects,BCP-218,Reptilian Green Refractor,false,99,Caleb Bonemer
+insert-chrome-prospects,BCP-219,Reptilian Fuchsia Refractor,false,199,Yadier Muñoz
+insert-chrome-prospects,BCP-219,Reptilian Blue Refractor,false,150,Yadier Muñoz
+insert-chrome-prospects,BCP-219,Reptilian Gold Refractor,false,50,Yadier Muñoz
+insert-chrome-prospects,BCP-219,Reptilian Orange Refractor,false,25,Yadier Muñoz
+insert-chrome-prospects,BCP-219,Reptilian Green Refractor,false,99,Yadier Muñoz
+insert-chrome-prospects,BCP-221,Reptilian Fuchsia Refractor,false,199,Manuel Bolivar
+insert-chrome-prospects,BCP-221,Reptilian Blue Refractor,false,150,Manuel Bolivar
+insert-chrome-prospects,BCP-221,Reptilian Gold Refractor,false,50,Manuel Bolivar
+insert-chrome-prospects,BCP-221,Reptilian Orange Refractor,false,25,Manuel Bolivar
+insert-chrome-prospects,BCP-221,Reptilian Red Refractor,false,5,Manuel Bolivar
+insert-chrome-prospects,BCP-221,Reptilian Green Refractor,false,99,Manuel Bolivar
+insert-chrome-prospects,BCP-222,Reptilian Fuchsia Refractor,false,199,Jeancer Custodio
+insert-chrome-prospects,BCP-222,Reptilian Blue Refractor,false,150,Jeancer Custodio
+insert-chrome-prospects,BCP-222,Reptilian Gold Refractor,false,50,Jeancer Custodio
+insert-chrome-prospects,BCP-222,Reptilian Green Refractor,false,99,Jeancer Custodio
+insert-chrome-prospects,BCP-223,Reptilian Fuchsia Refractor,false,199,Elaineiker Coronado
+insert-chrome-prospects,BCP-223,Reptilian Blue Refractor,false,150,Elaineiker Coronado
+insert-chrome-prospects,BCP-223,Reptilian Gold Refractor,false,50,Elaineiker Coronado
+insert-chrome-prospects,BCP-223,Reptilian Orange Refractor,false,25,Elaineiker Coronado
+insert-chrome-prospects,BCP-223,Reptilian Red Refractor,false,5,Elaineiker Coronado
+insert-chrome-prospects,BCP-223,Reptilian Green Refractor,false,99,Elaineiker Coronado
+insert-chrome-prospects,BCP-224,Reptilian Fuchsia Refractor,false,199,Dax Kilby
+insert-chrome-prospects,BCP-224,Reptilian Blue Refractor,false,150,Dax Kilby
+insert-chrome-prospects,BCP-224,Reptilian Gold Refractor,false,50,Dax Kilby
+insert-chrome-prospects,BCP-224,Reptilian Orange Refractor,false,25,Dax Kilby
+insert-chrome-prospects,BCP-224,Reptilian Red Refractor,false,5,Dax Kilby
+insert-chrome-prospects,BCP-224,Reptilian Green Refractor,false,99,Dax Kilby
+insert-chrome-prospects,BCP-227,Reptilian Fuchsia Refractor,false,199,Pedro Gomez
+insert-chrome-prospects,BCP-227,Reptilian Blue Refractor,false,150,Pedro Gomez
+insert-chrome-prospects,BCP-227,Reptilian Gold Refractor,false,50,Pedro Gomez
+insert-chrome-prospects,BCP-227,Reptilian Orange Refractor,false,25,Pedro Gomez
+insert-chrome-prospects,BCP-227,Reptilian Green Refractor,false,99,Pedro Gomez
+insert-chrome-prospects,BCP-228,Reptilian Fuchsia Refractor,false,199,Jeyson Horton
+insert-chrome-prospects,BCP-228,Reptilian Blue Refractor,false,150,Jeyson Horton
+insert-chrome-prospects,BCP-228,Reptilian Gold Refractor,false,50,Jeyson Horton
+insert-chrome-prospects,BCP-228,Reptilian Orange Refractor,false,25,Jeyson Horton
+insert-chrome-prospects,BCP-228,Reptilian Green Refractor,false,99,Jeyson Horton
+insert-chrome-prospects,BCP-236,Reptilian Fuchsia Refractor,false,199,Max Clark
+insert-chrome-prospects,BCP-236,Reptilian Blue Refractor,false,150,Max Clark
+insert-chrome-prospects,BCP-236,Reptilian Gold Refractor,false,50,Max Clark
+insert-chrome-prospects,BCP-236,Reptilian Orange Refractor,false,25,Max Clark
+insert-chrome-prospects,BCP-236,Reptilian Red Refractor,false,5,Max Clark
+insert-chrome-prospects,BCP-236,Reptilian Green Refractor,false,99,Max Clark
+insert-chrome-prospects,BCP-240,Reptilian Fuchsia Refractor,false,199,Ariel Roque
+insert-chrome-prospects,BCP-240,Reptilian Blue Refractor,false,150,Ariel Roque
+insert-chrome-prospects,BCP-240,Reptilian Gold Refractor,false,50,Ariel Roque
+insert-chrome-prospects,BCP-240,Reptilian Orange Refractor,false,25,Ariel Roque
+insert-chrome-prospects,BCP-240,Reptilian Red Refractor,false,5,Ariel Roque
+insert-chrome-prospects,BCP-240,Reptilian Green Refractor,false,99,Ariel Roque
+insert-chrome-prospects,BCP-241,Reptilian Fuchsia Refractor,false,199,Elian Rosario
+insert-chrome-prospects,BCP-241,Reptilian Blue Refractor,false,150,Elian Rosario
+insert-chrome-prospects,BCP-241,Reptilian Gold Refractor,false,50,Elian Rosario
+insert-chrome-prospects,BCP-241,Reptilian Orange Refractor,false,25,Elian Rosario
+insert-chrome-prospects,BCP-241,Reptilian Green Refractor,false,99,Elian Rosario
+insert-chrome-prospects,BCP-244,Reptilian Fuchsia Refractor,false,199,Jesús Made
+insert-chrome-prospects,BCP-244,Reptilian Blue Refractor,false,150,Jesús Made
+insert-chrome-prospects,BCP-244,Reptilian Gold Refractor,false,50,Jesús Made
+insert-chrome-prospects,BCP-244,Reptilian Orange Refractor,false,25,Jesús Made
+insert-chrome-prospects,BCP-244,Reptilian Green Refractor,false,99,Jesús Made
+insert-chrome-prospects,BCP-247,Reptilian Fuchsia Refractor,false,199,Erick De La Cruz
+insert-chrome-prospects,BCP-247,Reptilian Blue Refractor,false,150,Erick De La Cruz
+insert-chrome-prospects,BCP-247,Reptilian Gold Refractor,false,50,Erick De La Cruz
+insert-chrome-prospects,BCP-247,Reptilian Orange Refractor,false,25,Erick De La Cruz
+insert-chrome-prospects,BCP-247,Reptilian Green Refractor,false,99,Erick De La Cruz
+insert-chrome-prospects,BCP-249,Reptilian Fuchsia Refractor,false,199,Andri Hidalgo
+insert-chrome-prospects,BCP-249,Reptilian Blue Refractor,false,150,Andri Hidalgo
+insert-chrome-prospects,BCP-249,Reptilian Gold Refractor,false,50,Andri Hidalgo
+insert-chrome-prospects,BCP-249,Reptilian Orange Refractor,false,25,Andri Hidalgo
+insert-chrome-prospects,BCP-249,Reptilian Red Refractor,false,5,Andri Hidalgo
+insert-chrome-prospects,BCP-249,Reptilian Green Refractor,false,99,Andri Hidalgo
+insert-chrome-prospects,BCP-251,Reptilian Fuchsia Refractor,false,199,Jim Palmer
+insert-chrome-prospects,BCP-251,Reptilian Blue Refractor,false,150,Jim Palmer
+insert-chrome-prospects,BCP-251,Reptilian Gold Refractor,false,50,Jim Palmer
+insert-chrome-prospects,BCP-251,Reptilian Orange Refractor,false,25,Jim Palmer
+insert-chrome-prospects,BCP-251,Reptilian Red Refractor,false,5,Jim Palmer
+insert-chrome-prospects,BCP-251,Reptilian Green Refractor,false,99,Jim Palmer
+insert-chrome-prospects,BCP-176,Reptilian Fuchsia Refractor,false,199,Gregory Pio
+insert-chrome-prospects,BCP-176,Reptilian Blue Refractor,false,150,Gregory Pio
+insert-chrome-prospects,BCP-176,Reptilian Gold Refractor,false,50,Gregory Pio
+insert-chrome-prospects,BCP-176,Reptilian Orange Refractor,false,25,Gregory Pio
+insert-chrome-prospects,BCP-176,Reptilian Red Refractor,false,5,Gregory Pio
+insert-chrome-prospects,BCP-176,Reptilian Green Refractor,false,99,Gregory Pio
+insert-chrome-prospects,BCP-243,Reptilian Fuchsia Refractor,false,199,Steele Hall
+insert-chrome-prospects,BCP-243,Reptilian Blue Refractor,false,150,Steele Hall
+insert-chrome-prospects,BCP-243,Reptilian Gold Refractor,false,50,Steele Hall
+insert-chrome-prospects,BCP-243,Reptilian Orange Refractor,false,25,Steele Hall
+insert-chrome-prospects,BCP-243,Reptilian Green Refractor,false,99,Steele Hall
+insert-chrome-prospects,BCP-179,Reptilian Fuchsia Refractor,false,199,Samil Serrano
+insert-chrome-prospects,BCP-179,Reptilian Blue Refractor,false,150,Samil Serrano
+insert-chrome-prospects,BCP-179,Reptilian Gold Refractor,false,50,Samil Serrano
+insert-chrome-prospects,BCP-179,Reptilian Orange Refractor,false,25,Samil Serrano
+insert-chrome-prospects,BCP-179,Reptilian Red Refractor,false,5,Samil Serrano
+insert-chrome-prospects,BCP-179,Reptilian Green Refractor,false,99,Samil Serrano
+insert-chrome-prospects,BCP-173,Reptilian Fuchsia Refractor,false,199,Luis De La Torre
+insert-chrome-prospects,BCP-173,Reptilian Gold Refractor,false,50,Luis De La Torre
+insert-chrome-prospects,BCP-173,Reptilian Orange Refractor,false,25,Luis De La Torre
+insert-chrome-prospects,BCP-173,Reptilian Red Refractor,false,5,Luis De La Torre
+insert-chrome-prospects,BCP-173,Reptilian Green Refractor,false,99,Luis De La Torre
+insert-chrome-prospects,BCP-192,Reptilian Fuchsia Refractor,false,199,Ricky Moneys
+insert-chrome-prospects,BCP-192,Reptilian Blue Refractor,false,150,Ricky Moneys
+insert-chrome-prospects,BCP-192,Reptilian Orange Refractor,false,25,Ricky Moneys
+insert-chrome-prospects,BCP-192,Reptilian Red Refractor,false,5,Ricky Moneys
+insert-chrome-prospects,BCP-192,Reptilian Green Refractor,false,99,Ricky Moneys
+insert-chrome-prospects,BCP-208,Reptilian Fuchsia Refractor,false,199,Cleiner Ramirez
+insert-chrome-prospects,BCP-208,Reptilian Blue Refractor,false,150,Cleiner Ramirez
+insert-chrome-prospects,BCP-208,Reptilian Gold Refractor,false,50,Cleiner Ramirez
+insert-chrome-prospects,BCP-208,Reptilian Orange Refractor,false,25,Cleiner Ramirez
+insert-chrome-prospects,BCP-208,Reptilian Red Refractor,false,5,Cleiner Ramirez
+insert-chrome-prospects,BCP-208,Reptilian Green Refractor,false,99,Cleiner Ramirez
+insert-chrome-prospects,BCP-250,Reptilian Fuchsia Refractor,false,199,Yordani Soto
+insert-chrome-prospects,BCP-250,Reptilian Blue Refractor,false,150,Yordani Soto
+insert-chrome-prospects,BCP-250,Reptilian Gold Refractor,false,50,Yordani Soto
+insert-chrome-prospects,BCP-250,Reptilian Orange Refractor,false,25,Yordani Soto
+insert-chrome-prospects,BCP-250,Reptilian Green Refractor,false,99,Yordani Soto
+insert-chrome-prospects,BCP-200,Reptilian Fuchsia Refractor,false,199,Luis Hernandez
+insert-chrome-prospects,BCP-200,Reptilian Gold Refractor,false,50,Luis Hernandez
+insert-chrome-prospects,BCP-200,Reptilian Red Refractor,false,5,Luis Hernandez
+insert-chrome-prospects,BCP-200,Reptilian Green Refractor,false,99,Luis Hernandez
+insert-chrome-prospects,BCP-165,Reptilian Fuchsia Refractor,false,199,Darell Morel
+insert-chrome-prospects,BCP-165,Reptilian Blue Refractor,false,150,Darell Morel
+insert-chrome-prospects,BCP-165,Reptilian Orange Refractor,false,25,Darell Morel
+insert-chrome-prospects,BCP-165,Reptilian Red Refractor,false,5,Darell Morel
+insert-chrome-prospects,BCP-165,Reptilian Green Refractor,false,99,Darell Morel
+insert-chrome-prospects,BCP-235,Reptilian Fuchsia Refractor,false,199,Alfredo Duno
+insert-chrome-prospects,BCP-235,Reptilian Blue Refractor,false,150,Alfredo Duno
+insert-chrome-prospects,BCP-235,Reptilian Gold Refractor,false,50,Alfredo Duno
+insert-chrome-prospects,BCP-235,Reptilian Orange Refractor,false,25,Alfredo Duno
+insert-chrome-prospects,BCP-235,Reptilian Red Refractor,false,5,Alfredo Duno
+insert-chrome-prospects,BCP-235,Reptilian Green Refractor,false,99,Alfredo Duno
+insert-chrome-prospects,BCP-242,Reptilian Fuchsia Refractor,false,199,Randy Arias
+insert-chrome-prospects,BCP-242,Reptilian Blue Refractor,false,150,Randy Arias
+insert-chrome-prospects,BCP-242,Reptilian Gold Refractor,false,50,Randy Arias
+insert-chrome-prospects,BCP-242,Reptilian Orange Refractor,false,25,Randy Arias
+insert-chrome-prospects,BCP-242,Reptilian Red Refractor,false,5,Randy Arias
+insert-chrome-prospects,BCP-245,Reptilian Fuchsia Refractor,false,199,Eli Willits
+insert-chrome-prospects,BCP-245,Reptilian Blue Refractor,false,150,Eli Willits
+insert-chrome-prospects,BCP-245,Reptilian Orange Refractor,false,25,Eli Willits
+insert-chrome-prospects,BCP-245,Reptilian Red Refractor,false,5,Eli Willits
+insert-chrome-prospects,BCP-245,Reptilian Green Refractor,false,99,Eli Willits
+insert-chrome-prospects,BCP-189,Reptilian Fuchsia Refractor,false,199,Emil Morales
+insert-chrome-prospects,BCP-189,Reptilian Blue Refractor,false,150,Emil Morales
+insert-chrome-prospects,BCP-189,Reptilian Gold Refractor,false,50,Emil Morales
+insert-chrome-prospects,BCP-189,Reptilian Orange Refractor,false,25,Emil Morales
+insert-chrome-prospects,BCP-189,Reptilian Red Refractor,false,5,Emil Morales
+insert-chrome-prospects,BCP-189,Reptilian Green Refractor,false,99,Emil Morales
+insert-chrome-prospects,BCP-212,Reptilian Fuchsia Refractor,false,199,Nelson Rada
+insert-chrome-prospects,BCP-212,Reptilian Blue Refractor,false,150,Nelson Rada
+insert-chrome-prospects,BCP-212,Reptilian Gold Refractor,false,50,Nelson Rada
+insert-chrome-prospects,BCP-212,Reptilian Orange Refractor,false,25,Nelson Rada
+insert-chrome-prospects,BCP-212,Reptilian Red Refractor,false,5,Nelson Rada
+insert-chrome-prospects,BCP-212,Reptilian Green Refractor,false,99,Nelson Rada
+insert-chrome-prospects,BCP-239,Reptilian Fuchsia Refractor,false,199,Samy Natera Jr.
+insert-chrome-prospects,BCP-239,Reptilian Blue Refractor,false,150,Samy Natera Jr.
+insert-chrome-prospects,BCP-239,Reptilian Gold Refractor,false,50,Samy Natera Jr.
+insert-chrome-prospects,BCP-239,Reptilian Orange Refractor,false,25,Samy Natera Jr.
+insert-chrome-prospects,BCP-239,Reptilian Red Refractor,false,5,Samy Natera Jr.
+insert-chrome-prospects,BCP-239,Reptilian Green Refractor,false,99,Samy Natera Jr.
+insert-chrome-prospects,BCP-141,Reptilian Fuchsia Refractor,false,199,Justin Gonzales
+insert-chrome-prospects,BCP-141,Reptilian Blue Refractor,false,150,Justin Gonzales
+insert-chrome-prospects,BCP-141,Reptilian Gold Refractor,false,50,Justin Gonzales
+insert-chrome-prospects,BCP-141,Reptilian Orange Refractor,false,25,Justin Gonzales
+insert-chrome-prospects,BCP-141,Reptilian Red Refractor,false,5,Justin Gonzales
+insert-chrome-prospects,BCP-141,Reptilian Green Refractor,false,99,Justin Gonzales
+insert-chrome-prospects,BCP-156,Reptilian Fuchsia Refractor,false,199,Isaias Castillo
+insert-chrome-prospects,BCP-156,Reptilian Blue Refractor,false,150,Isaias Castillo
+insert-chrome-prospects,BCP-156,Reptilian Gold Refractor,false,50,Isaias Castillo
+insert-chrome-prospects,BCP-156,Reptilian Orange Refractor,false,25,Isaias Castillo
+insert-chrome-prospects,BCP-156,Reptilian Red Refractor,false,5,Isaias Castillo
+insert-chrome-prospects,BCP-156,Reptilian Green Refractor,false,99,Isaias Castillo
+insert-chrome-prospects,BCP-21,Reptilian Fuchsia Refractor,false,199,Roldy Brito
+insert-chrome-prospects,BCP-21,Reptilian Blue Refractor,false,150,Roldy Brito
+insert-chrome-prospects,BCP-21,Reptilian Gold Refractor,false,50,Roldy Brito
+insert-chrome-prospects,BCP-21,Reptilian Orange Refractor,false,25,Roldy Brito
+insert-chrome-prospects,BCP-21,Reptilian Red Refractor,false,5,Roldy Brito
+insert-chrome-prospects,BCP-21,Reptilian Green Refractor,false,99,Roldy Brito
+insert-chrome-prospects,BCP-104,Reptilian Fuchsia Refractor,false,199,Henry Lalane
+insert-chrome-prospects,BCP-104,Reptilian Blue Refractor,false,150,Henry Lalane
+insert-chrome-prospects,BCP-104,Reptilian Gold Refractor,false,50,Henry Lalane
+insert-chrome-prospects,BCP-104,Reptilian Orange Refractor,false,25,Henry Lalane
+insert-chrome-prospects,BCP-104,Reptilian Red Refractor,false,5,Henry Lalane
+insert-chrome-prospects,BCP-104,Reptilian Green Refractor,false,99,Henry Lalane
+insert-chrome-prospects,BCP-40,Reptilian Fuchsia Refractor,false,199,Aiva Arquette
+insert-chrome-prospects,BCP-40,Reptilian Blue Refractor,false,150,Aiva Arquette
+insert-chrome-prospects,BCP-40,Reptilian Gold Refractor,false,50,Aiva Arquette
+insert-chrome-prospects,BCP-40,Reptilian Orange Refractor,false,25,Aiva Arquette
+insert-chrome-prospects,BCP-40,Reptilian Red Refractor,false,5,Aiva Arquette
+insert-chrome-prospects,BCP-40,Reptilian Green Refractor,false,99,Aiva Arquette
+insert-chrome-prospects,BCP-148,Reptilian Fuchsia Refractor,false,199,Dillon Lewis
+insert-chrome-prospects,BCP-148,Reptilian Blue Refractor,false,150,Dillon Lewis
+insert-chrome-prospects,BCP-148,Reptilian Gold Refractor,false,50,Dillon Lewis
+insert-chrome-prospects,BCP-148,Reptilian Orange Refractor,false,25,Dillon Lewis
+insert-chrome-prospects,BCP-148,Reptilian Red Refractor,false,5,Dillon Lewis
+insert-chrome-prospects,BCP-148,Reptilian Green Refractor,false,99,Dillon Lewis
+insert-chrome-prospects,BCP-125,Reptilian Fuchsia Refractor,false,199,Wei-En Lin
+insert-chrome-prospects,BCP-125,Reptilian Blue Refractor,false,150,Wei-En Lin
+insert-chrome-prospects,BCP-125,Reptilian Gold Refractor,false,50,Wei-En Lin
+insert-chrome-prospects,BCP-125,Reptilian Orange Refractor,false,25,Wei-En Lin
+insert-chrome-prospects,BCP-125,Reptilian Red Refractor,false,5,Wei-En Lin
+insert-chrome-prospects,BCP-125,Reptilian Green Refractor,false,99,Wei-En Lin
+insert-chrome-prospects,BCP-115,Reptilian Fuchsia Refractor,false,199,Jj Wetherholt Green Grass
+insert-chrome-prospects,BCP-115,Reptilian Blue Refractor,false,150,Jj Wetherholt Green Grass
+insert-chrome-prospects,BCP-115,Reptilian Gold Refractor,false,50,Jj Wetherholt Green Grass
+insert-chrome-prospects,BCP-115,Reptilian Orange Refractor,false,25,Jj Wetherholt Green Grass
+insert-chrome-prospects,BCP-115,Reptilian Red Refractor,false,5,Jj Wetherholt Green Grass
+insert-chrome-prospects,BCP-115,Reptilian Green Refractor,false,99,Jj Wetherholt Green Grass
+insert-chrome-prospects,BCP-153,Reptilian Fuchsia Refractor,false,199,Alex Lodise
+insert-chrome-prospects,BCP-153,Reptilian Blue Refractor,false,150,Alex Lodise
+insert-chrome-prospects,BCP-153,Reptilian Orange Refractor,false,25,Alex Lodise
+insert-chrome-prospects,BCP-153,Reptilian Red Refractor,false,5,Alex Lodise
+insert-chrome-prospects,BCP-153,Reptilian Green Refractor,false,99,Alex Lodise
+insert-chrome-prospects,BCP-16,Reptilian Fuchsia Refractor,false,199,Marek Houston
+insert-chrome-prospects,BCP-16,Reptilian Blue Refractor,false,150,Marek Houston
+insert-chrome-prospects,BCP-16,Reptilian Gold Refractor,false,50,Marek Houston
+insert-chrome-prospects,BCP-16,Reptilian Orange Refractor,false,25,Marek Houston
+insert-chrome-prospects,BCP-16,Reptilian Red Refractor,false,5,Marek Houston
+insert-chrome-prospects,BCP-16,Reptilian Green Refractor,false,99,Marek Houston
+insert-chrome-prospects,BCP-47,Reptilian Fuchsia Refractor,false,199,Handelfry Encarnacion
+insert-chrome-prospects,BCP-47,Reptilian Blue Refractor,false,150,Handelfry Encarnacion
+insert-chrome-prospects,BCP-47,Reptilian Gold Refractor,false,50,Handelfry Encarnacion
+insert-chrome-prospects,BCP-47,Reptilian Orange Refractor,false,25,Handelfry Encarnacion
+insert-chrome-prospects,BCP-47,Reptilian Red Refractor,false,5,Handelfry Encarnacion
+insert-chrome-prospects,BCP-47,Reptilian Green Refractor,false,99,Handelfry Encarnacion
+insert-chrome-prospects,BCP-135,Reptilian Fuchsia Refractor,false,199,Wehiwa Aloy
+insert-chrome-prospects,BCP-135,Reptilian Blue Refractor,false,150,Wehiwa Aloy
+insert-chrome-prospects,BCP-135,Reptilian Gold Refractor,false,50,Wehiwa Aloy
+insert-chrome-prospects,BCP-135,Reptilian Orange Refractor,false,25,Wehiwa Aloy
+insert-chrome-prospects,BCP-135,Reptilian Red Refractor,false,5,Wehiwa Aloy
+insert-chrome-prospects,BCP-135,Reptilian Green Refractor,false,99,Wehiwa Aloy
+insert-chrome-prospects,BCP-59,Reptilian Fuchsia Refractor,false,199,Brendan Tunink
+insert-chrome-prospects,BCP-59,Reptilian Blue Refractor,false,150,Brendan Tunink
+insert-chrome-prospects,BCP-59,Reptilian Gold Refractor,false,50,Brendan Tunink
+insert-chrome-prospects,BCP-59,Reptilian Orange Refractor,false,25,Brendan Tunink
+insert-chrome-prospects,BCP-59,Reptilian Red Refractor,false,5,Brendan Tunink
+insert-chrome-prospects,BCP-59,Reptilian Green Refractor,false,99,Brendan Tunink
+insert-chrome-prospects,BCP-72,Reptilian Fuchsia Refractor,false,199,Luis Arana
+insert-chrome-prospects,BCP-72,Reptilian Blue Refractor,false,150,Luis Arana
+insert-chrome-prospects,BCP-72,Reptilian Gold Refractor,false,50,Luis Arana
+insert-chrome-prospects,BCP-72,Reptilian Orange Refractor,false,25,Luis Arana
+insert-chrome-prospects,BCP-72,Reptilian Red Refractor,false,5,Luis Arana
+insert-chrome-prospects,BCP-72,Reptilian Green Refractor,false,99,Luis Arana
+insert-chrome-prospects,BCP-252,Reptilian Fuchsia Refractor,false,199,Rogers Hornsby
+insert-chrome-prospects,BCP-252,Reptilian Gold Refractor,false,50,Rogers Hornsby
+insert-chrome-prospects,BCP-252,Reptilian Orange Refractor,false,25,Rogers Hornsby
+insert-chrome-prospects,BCP-252,Reptilian Red Refractor,false,5,Rogers Hornsby
+insert-chrome-prospects,BCP-252,Reptilian Green Refractor,false,99,Rogers Hornsby
+insert-chrome-prospects,BCP-15,Reptilian Fuchsia Refractor,false,199,Gage Jump
+insert-chrome-prospects,BCP-15,Reptilian Blue Refractor,false,150,Gage Jump
+insert-chrome-prospects,BCP-15,Reptilian Gold Refractor,false,50,Gage Jump
+insert-chrome-prospects,BCP-15,Reptilian Orange Refractor,false,25,Gage Jump
+insert-chrome-prospects,BCP-15,Reptilian Red Refractor,false,5,Gage Jump
+insert-chrome-prospects,BCP-15,Reptilian Green Refractor,false,99,Gage Jump
+insert-chrome-prospects,BCP-100,Reptilian Fuchsia Refractor,false,199,Marconi German
+insert-chrome-prospects,BCP-100,Reptilian Blue Refractor,false,150,Marconi German
+insert-chrome-prospects,BCP-100,Reptilian Gold Refractor,false,50,Marconi German
+insert-chrome-prospects,BCP-100,Reptilian Orange Refractor,false,25,Marconi German
+insert-chrome-prospects,BCP-100,Reptilian Red Refractor,false,5,Marconi German
+insert-chrome-prospects,BCP-100,Reptilian Green Refractor,false,99,Marconi German
+insert-chrome-prospects,BCP-64,Reptilian Fuchsia Refractor,false,199,George Lombard Jr.
+insert-chrome-prospects,BCP-64,Reptilian Blue Refractor,false,150,George Lombard Jr.
+insert-chrome-prospects,BCP-64,Reptilian Gold Refractor,false,50,George Lombard Jr.
+insert-chrome-prospects,BCP-64,Reptilian Orange Refractor,false,25,George Lombard Jr.
+insert-chrome-prospects,BCP-64,Reptilian Red Refractor,false,5,George Lombard Jr.
+insert-chrome-prospects,BCP-64,Reptilian Green Refractor,false,99,George Lombard Jr.
+insert-chrome-prospects,BCP-69,Reptilian Fuchsia Refractor,false,199,Owen Carey
+insert-chrome-prospects,BCP-69,Reptilian Blue Refractor,false,150,Owen Carey
+insert-chrome-prospects,BCP-69,Reptilian Gold Refractor,false,50,Owen Carey
+insert-chrome-prospects,BCP-69,Reptilian Orange Refractor,false,25,Owen Carey
+insert-chrome-prospects,BCP-69,Reptilian Red Refractor,false,5,Owen Carey
+insert-chrome-prospects,BCP-69,Reptilian Green Refractor,false,99,Owen Carey
+insert-chrome-prospects,BCP-88,Reptilian Fuchsia Refractor,false,199,Dasan Hill
+insert-chrome-prospects,BCP-88,Reptilian Blue Refractor,false,150,Dasan Hill
+insert-chrome-prospects,BCP-88,Reptilian Gold Refractor,false,50,Dasan Hill
+insert-chrome-prospects,BCP-88,Reptilian Orange Refractor,false,25,Dasan Hill
+insert-chrome-prospects,BCP-88,Reptilian Red Refractor,false,5,Dasan Hill
+insert-chrome-prospects,BCP-88,Reptilian Green Refractor,false,99,Dasan Hill
+insert-chrome-prospects,BCP-98,Reptilian Fuchsia Refractor,false,199,Walker Jenkins
+insert-chrome-prospects,BCP-98,Reptilian Blue Refractor,false,150,Walker Jenkins
+insert-chrome-prospects,BCP-98,Reptilian Gold Refractor,false,50,Walker Jenkins
+insert-chrome-prospects,BCP-98,Reptilian Orange Refractor,false,25,Walker Jenkins
+insert-chrome-prospects,BCP-98,Reptilian Red Refractor,false,5,Walker Jenkins
+insert-chrome-prospects,BCP-98,Reptilian Green Refractor,false,99,Walker Jenkins
+insert-chrome-prospects,BCP-77,Reptilian Fuchsia Refractor,false,199,Daniel Pierce
+insert-chrome-prospects,BCP-77,Reptilian Blue Refractor,false,150,Daniel Pierce
+insert-chrome-prospects,BCP-77,Reptilian Gold Refractor,false,50,Daniel Pierce
+insert-chrome-prospects,BCP-77,Reptilian Orange Refractor,false,25,Daniel Pierce
+insert-chrome-prospects,BCP-77,Reptilian Red Refractor,false,5,Daniel Pierce
+insert-chrome-prospects,BCP-77,Reptilian Green Refractor,false,99,Daniel Pierce
+insert-chrome-prospects,BCP-19,Reptilian Fuchsia Refractor,false,199,Kade Anderson Gold
+insert-chrome-prospects,BCP-19,Reptilian Blue Refractor,false,150,Kade Anderson Gold
+insert-chrome-prospects,BCP-19,Reptilian Gold Refractor,false,50,Kade Anderson Gold
+insert-chrome-prospects,BCP-19,Reptilian Orange Refractor,false,25,Kade Anderson Gold
+insert-chrome-prospects,BCP-19,Reptilian Red Refractor,false,5,Kade Anderson Gold
+insert-chrome-prospects,BCP-19,Reptilian Green Refractor,false,99,Kade Anderson Gold
+insert-chrome-prospects,BCP-92,Reptilian Fuchsia Refractor,false,199,Konnor Griffin
+insert-chrome-prospects,BCP-92,Reptilian Blue Refractor,false,150,Konnor Griffin
+insert-chrome-prospects,BCP-92,Reptilian Gold Refractor,false,50,Konnor Griffin
+insert-chrome-prospects,BCP-92,Reptilian Orange Refractor,false,25,Konnor Griffin
+insert-chrome-prospects,BCP-92,Reptilian Red Refractor,false,5,Konnor Griffin
+insert-chrome-prospects,BCP-92,Reptilian Green Refractor,false,99,Konnor Griffin
+insert-chrome-prospects,BCP-25,Reptilian Fuchsia Refractor,false,199,Juan Sanchez
+insert-chrome-prospects,BCP-25,Reptilian Blue Refractor,false,150,Juan Sanchez
+insert-chrome-prospects,BCP-25,Reptilian Gold Refractor,false,50,Juan Sanchez
+insert-chrome-prospects,BCP-25,Reptilian Orange Refractor,false,25,Juan Sanchez
+insert-chrome-prospects,BCP-25,Reptilian Red Refractor,false,5,Juan Sanchez
+insert-chrome-prospects,BCP-25,Reptilian Green Refractor,false,99,Juan Sanchez

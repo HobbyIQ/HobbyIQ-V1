@@ -1,0 +1,61 @@
+{
+  "scrapedAt": "2026-09-21T13:00:00.000Z",
+  "revisedAt": "2026-09-21T15:00:00.000Z",
+  "revisionNote": "REVISED after independent review found the original version of this file copied card_catalog's OWN pre-existing (and apparently erroneous) Reptilian ladder -- including a 'Reptilian Black Refractor /10' rung that does NOT appear anywhere on the cited source page -- instead of reading the source page itself. Rebuilt from a fresh, direct read of https://www.checklistinsider.com/2026-bowman-baseball's 'Chrome Prospects Checklist' section, which states: Reptilian Fuchsia Refractor /199, Reptilian Blue Refractor /150, Reptilian Gold Refractor /50, Reptilian Orange Refractor /25, Reptilian Red Refractor /5 (all under 'Hobby Exclusive Parallels'), and 'Green Reptilian Refractor /99' (under 'Retail Exclusive Parallels', word order aligned to the catalog's own 'Reptilian Green Refractor' spelling for the same rung). NO 'Reptilian Black Refractor' or 'Reptilian Green Refractor /99' (non-Retail) is stated on this page. See the corroboration finding and the flagged pre-existing catalog discrepancy below.",
+  "sourceUrl": "https://www.checklistinsider.com/2026-bowman-baseball",
+  "sourcePageSha256": "0f78eb2dd06aa2f42cad2b624cb77203977cbbbd89372de0bae851751c1b5640",
+  "source": "checklistinsider-2026-09-21",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Bowman Chrome Baseball (Chrome Prospects Checklist, BCP- prefix)",
+  "productKey": "2026-bowman-chrome-baseball",
+  "setKey": "bowman-chrome",
+  "rowCount": 716,
+  "mintedBy": "Bowman-family baseball checklist-gap acquisition (2026-09-21, revised same day after review). Diagnosis of a ~300-sale sample of 2026 bowman-chrome unbacked sold_comps rows found 46/300 (15%) unbacked, no wrong-key defect, dominated by BCP- cards missing one or more Reptilian Refractor colours. This package fills every (cardNumber, colour) pair in the SOURCE-STATED 6-colour ladder (Fuchsia/Blue/Gold/Orange/Red/Green) not already present in card_catalog, across all 133 distinct BCP- numbers -- 82 pairs were already covered and skipped.",
+  "rungsMintedVerbatim": [
+    { "sourceText": "Reptilian Fuchsia Refractor /199", "mintedAs": "Reptilian Fuchsia Refractor", "printRun": 199, "section": "Hobby Exclusive Parallels" },
+    { "sourceText": "Reptilian Blue Refractor /150", "mintedAs": "Reptilian Blue Refractor", "printRun": 150, "section": "Chrome Prospects Checklist (main ladder)" },
+    { "sourceText": "Reptilian Gold Refractor /50", "mintedAs": "Reptilian Gold Refractor", "printRun": 50, "section": "Chrome Prospects Checklist (main ladder)" },
+    { "sourceText": "Reptilian Orange Refractor /25", "mintedAs": "Reptilian Orange Refractor", "printRun": 25, "section": "Hobby Exclusive Parallels" },
+    { "sourceText": "Reptilian Red Refractor /5", "mintedAs": "Reptilian Red Refractor", "printRun": 5, "section": "Chrome Prospects Checklist (main ladder)" },
+    { "sourceText": "Green Reptilian Refractor /99", "mintedAs": "Reptilian Green Refractor", "printRun": 99, "section": "Retail Exclusive Parallels", "spellingNote": "source word order is 'Green Reptilian Refractor'; minted as 'Reptilian Green Refractor' to match card_catalog's own existing spelling for this rung (95 rows already present under that exact spelling) -- same rung, catalog's own established spelling reused per doctrine, not a second spelling added." }
+  ],
+  "notMinted": {
+    "reptilianBlackRefractor": {
+      "reason": "There is NO 'Reptilian Black Refractor' anywhere on https://www.checklistinsider.com/2026-bowman-baseball -- confirmed by an exhaustive regex scan of every 'Reptilian'-adjacent phrase on the Chrome Prospects Checklist AND Chrome Prospects Autographs Checklist sections (6 matches total, listed in rungsMintedVerbatim above, none mentioning Black). NOT minted here."
+    },
+    "unnumberedBareReptilianRefractor": {
+      "sourceText": "Reptilian Refractor (1:10 Hobby; 1:13 Jumbo; 1:6 Blaster)",
+      "reason": "A bare, unnumbered 'Reptilian Refractor' heading rung also appears on the page (odds only, no /N). Not minted as its own row here because it reads as the SECTION LABEL for the whole colour ladder (the page's own convention: e.g. 'Bowman LogoFractor' appears once bare then again at /35 -- the bare mention is the parallel family's heading, the numbered mentions are the actual pullable cards). Held out to avoid inventing a 7th rung with no print run and no distinct card identity."
+    }
+  },
+  "corroboration": {
+    "secondSourceChecked": "baseball.cards (https://baseball.cards/checklists/2026-bowman-chrome-baseball/), an independently-generated site (Astro-built, not a checklistinsider mirror), fetched 2026-09-21",
+    "secondSourceLadder": "Reptilian Blue Refractor /150, Reptilian Green Refractor /99, Reptilian Gold Refractor /50, Reptilian Orange Refractor /25, Reptilian Black Refractor /10, Reptilian Red Refractor /5 -- SIX colours, NO Fuchsia.",
+    "disagreement": "checklistinsider states Fuchsia /199 but no Black; baseball.cards states Black /10 but no Fuchsia. Both agree on Blue /150, Gold /50, Orange /25, Red /5, and a Green rung at /99 (checklistinsider: 'Green Reptilian Refractor', Retail-exclusive; baseball.cards: 'Reptilian Green Refractor', no exclusivity noted).",
+    "resolution": "This package follows checklistinsider.com only, per the task brief's sourcing order and because it is the site backend/scripts/scrape-checklistinsider.cjs is built against and whose ladder text was verified byte-for-byte against the live page's raw HTML in this same revision. The baseball.cards Black /10 rung is NOT minted here -- flagged for the owner to decide whether a follow-up package should add it once corroborated by a third source (Topps' own ripped.topps.com returned HTTP 200 to a plain curl fetch in this session but 403'd to the WebFetch tool; not independently readable this session)."
+  },
+  "existingCatalogDiscrepancyFlaggedNotTouched": {
+    "parallel": "Reptilian Black Refractor",
+    "setKey": "bowman-chrome",
+    "sport": "baseball",
+    "cardYear": 2026,
+    "exactRowCount": 181,
+    "printRunsStored": [10, null],
+    "sourcesStored": ["checklistinsider-2026-08-11", "catalog-explode-actuals-2026-08-12", "checklistinsider-2026-08-27", "and others"],
+    "exampleIds": [
+      "hiq:baseball:2026:bowman-chrome:bcp-160:reptilian-black-refractor:auto:num-10",
+      "hiq:baseball:2026:bowman-chrome:bcp-171:reptilian-black-refractor:auto:num-10",
+      "hiq:baseball:2026:bowman-chrome:bcp-187:reptilian-black-refractor:auto:num-10",
+      "hiq:baseball:2026:bowman-chrome:bcp-29:reptilian-black-refractor:no-auto:num-10",
+      "hiq:baseball:2026:bowman-chrome:10:reptilian-black-refractor:no-auto:num-10"
+    ],
+    "note": "181 pre-existing rows carry a rung ('Reptilian Black Refractor /10') this session could not corroborate on checklistinsider.com's CURRENT page for either the Chrome Prospects Checklist or Chrome Prospects Autographs Checklist sections. A second independent source (baseball.cards) DOES state a Black /10 rung, so this may be a real rung the checklistinsider page simply omits (product pages are sometimes edited after initial print-run data is published) rather than a fabrication -- but this session cannot confirm which. NOT deleted, NOT modified -- reported here only, per instruction, for the owner to queue a repair/verification pass (e.g. re-check checklistinsider's page history, or accept baseball.cards as sufficient corroboration)."
+  },
+  "spellingAudit": "'Reptilian' (single L) matches card_catalog's own existing spelling for this product's bowman-chrome rows (Green/Blue/Gold/Orange/Red variants already present, 87-181 rows each). A DIFFERENT catalog product (setKey=bowman, the flagship non-Chrome BP- rungs) spells the same word 'Reptillian' (double L) -- a separate, pre-existing spelling split in a different product this package does not touch.",
+  "provenance": {
+    "playerNamesFrom": "card_catalog's own existing rows for each of the 133 BCP- numbers (their other, already-catalogued parallels)",
+    "rungsFrom": "a fresh, direct fetch of the source page in this revision (sha256 above), read verbatim -- not reused from any prior scrape or from card_catalog's existing data",
+    "dedup": "existing card_catalog rows for setKey=bowman-chrome, sport=baseball, cardYear=2026, cardNumber LIKE 'BCP-%' were read via a bounded query pass and only (cardNumber, parallel) pairs not already present were minted -- 82 of the theoretical 798 rows (133 x 6) were already covered."
+  }
+}
