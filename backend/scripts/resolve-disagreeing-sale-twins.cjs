@@ -221,6 +221,16 @@ const PLAN_OUT = String(process.env.PLAN_OUT || "").trim();
 /** Row-budgeted LRU ceiling for the per-cell checklist cache -- never an
  *  unbounded map over a long run. */
 const CATALOG_CACHE_MAX = Number(process.env.CATALOG_CACHE_MAX || 20000);
+// OWNER RULING (2026-09-21) OPT-IN. Rides the EXISTING `TITLES` runner env
+// (no new workflow_dispatch input) -- a `;`-separated token list, same
+// convention resolve-split-identity-parks.cjs's own parseTitlesInput uses
+// for exclude-winner:/exclude-id:. Absent the literal token
+// "rule:named-and-specific" (case-insensitive, whitespace-trimmed),
+// resolveBothSidesValidByRule is NEVER attempted and every both-sides-valid
+// pair keeps today's byte-for-byte default behaviour (left, untouched).
+const NAMED_AND_SPECIFIC_TOKEN = "rule:named-and-specific";
+const NAMED_AND_SPECIFIC_OPT_IN = String(process.env.TITLES ?? "")
+  .split(";").map((s) => s.trim().toLowerCase()).includes(NAMED_AND_SPECIFIC_TOKEN);
 const f = (n) => Number(n ?? 0).toLocaleString();
 const shardOf = (key) => parseInt(crypto.createHash("sha1").update(String(key)).digest("hex").slice(0, 8), 16) % SLOTS;
 const started = Date.now();
@@ -240,6 +250,15 @@ const retry = async (fn, tries = 8) => { let wait = 500; for (let a = 0; ; a++) 
 
 const normParallelForRung = (p) => String(p ?? "").trim().toLowerCase().replace(/\s+/g, " ") || "base";
 const normNumber = (n) => String(n ?? "").trim().toLowerCase();
+
+// soldCompsStore.service.ts's own module-private USER_SEED_SOURCES literal,
+// byte-for-byte copied -- same discipline resolve-split-identity-parks.cjs,
+// repoint-sales-to-sibling-product.cjs and fold-catalog-duplicate-rungs.cjs
+// already keep in sync by inspection (not exported, so no import is
+// possible). This lane's own population is source='cardhedge' only (never a
+// user-seed source today), but the OWNER RULING names user-seed rows
+// explicitly among "never flag" cases, so this is checked defensively.
+const USER_SEED_SOURCES = new Set(["ebay-user-purchase", "ebay-user-sale", "manual-user-entry", "user-verified"]);
 
 // ── RESUME CURSOR (coordinator report on run 35589416039: a REPORT relaunch
 // restarts from zero and loops forever). Copies fold-catalog-duplicate-
@@ -553,6 +572,128 @@ function moreSpecificRefines(deps, long, short, winnerParsed, winnerRow, loserPa
 }
 
 /**
+ * OWNER RULING (2026-09-21). Of the pairs `resolveHobbyiqCardIdDisagreement`
+ * itself leaves `both-sides-valid` (both ids are strict-checklist-backed,
+ * neither passes RULE 2's refinement test), two NARROW shapes are still
+ * decidable on structure alone, no title evidence needed -- gated behind an
+ * explicit opt-in (see TITLES parsing below), never run by default.
+ *
+ *   R1 -- BASE vs NAMED PARALLEL. The two ids differ ONLY in the parallel
+ *   segment, one side's parallel is `base` (blank counts as base, same
+ *   normParallelForRung the rest of this file already uses) and the other
+ *   names something else; card number, setKey, year and isAuto are IDENTICAL
+ *   on both sides. A `:num-N` print-run suffix on the NAMED side only is
+ *   allowed (a numbered named parallel is still "the named side"); a print
+ *   run on the BASE side, or DIFFERING print runs on both named sides, falls
+ *   through to R2's own comparison (which requires the parallel to be
+ *   IDENTICAL) and fails that too -- correctly left.
+ *
+ *   R2 -- AUTO/NUM-N AXIS ONLY. The two ids are identical on parallel,
+ *   card number, setKey and year, and differ ONLY on isAuto and/or the
+ *   `:num-N` print-run suffix. The MORE SPECIFIC side (auto=true, or a
+ *   numbered print run present) wins WHEN IT IS MORE SPECIFIC ON BOTH AXES
+ *   IT DIFFERS ON -- i.e. the other side is never itself more specific on a
+ *   DIFFERENT axis (one auto-but-unnumbered vs the other numbered-but-no-
+ *   auto is a genuine cross-axis disagreement, left).
+ *
+ * Returns `{ verdict:"flagged", rule:"base-vs-named-parallel"|"auto-or-num-specificity",
+ * keeper:"long"|"short", detail }` or `{ verdict:"left" }` -- this function
+ * NEVER decides EXCLUSION eligibility on protected/parked state (the caller
+ * already refused those pairs before RULE 1/2 ever ran; this is purely the
+ * structural axis test).
+ */
+function resolveBothSidesValidByRule(longParsed, shortParsed) {
+  if (!longParsed || !shortParsed) return { verdict: "left" };
+  if (!deps_sameCardNumberOk(longParsed, shortParsed)) return { verdict: "left" };
+  if (String(longParsed.setKey) !== String(shortParsed.setKey)) return { verdict: "left" };
+  if (Number(longParsed.year) !== Number(shortParsed.year)) return { verdict: "left" };
+
+  const longParallel = normParallelForRung(longParsed.parallel);
+  const shortParallel = normParallelForRung(shortParsed.parallel);
+  const longIsBase = longParallel === "base";
+  const shortIsBase = shortParallel === "base";
+
+  // ── R1: base vs named parallel -- same auto flag REQUIRED (an auto/no-auto
+  // difference alongside a parallel difference is TWO axes moving at once,
+  // never this rule's population -- left for a human).
+  if (longParsed.isAuto === shortParsed.isAuto && longIsBase !== shortIsBase) {
+    const namedSide = longIsBase ? "short" : "long";
+    const baseSide = longIsBase ? "long" : "short";
+    const namedParsed = namedSide === "long" ? longParsed : shortParsed;
+    const baseParsed = baseSide === "long" ? longParsed : shortParsed;
+    // A print-run suffix is allowed on the NAMED side only -- the base side
+    // must carry none (a numbered BASE identity is itself a more specific
+    // claim this rule does not adjudicate).
+    if (baseParsed.printRun) return { verdict: "left" };
+    return {
+      verdict: "flagged", rule: "base-vs-named-parallel", keeper: namedSide,
+      detail: `ids differ only in the parallel segment (named="${namedParsed.parallel}" vs base) -- named copy keeps pricing, base copy excluded`,
+    };
+  }
+
+  // ── R2: auto/num-N axis only -- parallel and everything else IDENTICAL.
+  if (longParallel === shortParallel) {
+    const longAuto = Boolean(longParsed.isAuto), shortAuto = Boolean(shortParsed.isAuto);
+    const longNum = longParsed.printRun ? Number(longParsed.printRun) : null;
+    const shortNum = shortParsed.printRun ? Number(shortParsed.printRun) : null;
+    const autoDiffers = longAuto !== shortAuto;
+    const numDiffers = (longNum !== null) !== (shortNum !== null);
+    if (!autoDiffers && !numDiffers) return { verdict: "left" }; // no disagreement on either axis -- not this rule's population
+    // Cross-axis disagreement: one side more specific on auto, the OTHER
+    // more specific on num -- neither is strictly more specific; left.
+    const longMoreSpecificAuto = longAuto && !shortAuto;
+    const shortMoreSpecificAuto = shortAuto && !longAuto;
+    const longMoreSpecificNum = longNum !== null && shortNum === null;
+    const shortMoreSpecificNum = shortNum !== null && longNum === null;
+    const longWins = (longMoreSpecificAuto || (!autoDiffers)) && (longMoreSpecificNum || (!numDiffers)) && (longMoreSpecificAuto || longMoreSpecificNum);
+    const shortWins = (shortMoreSpecificAuto || (!autoDiffers)) && (shortMoreSpecificNum || (!numDiffers)) && (shortMoreSpecificAuto || shortMoreSpecificNum);
+    if (longWins && !shortWins) {
+      return { verdict: "flagged", rule: "auto-or-num-specificity", keeper: "long", detail: `ids differ only on auto/print-run (long more specific: auto=${longAuto} num=${longNum ?? "none"} vs short auto=${shortAuto} num=${shortNum ?? "none"}) -- more specific copy keeps pricing` };
+    }
+    if (shortWins && !longWins) {
+      return { verdict: "flagged", rule: "auto-or-num-specificity", keeper: "short", detail: `ids differ only on auto/print-run (short more specific: auto=${shortAuto} num=${shortNum ?? "none"} vs long auto=${longAuto} num=${longNum ?? "none"}) -- more specific copy keeps pricing` };
+    }
+    return { verdict: "left" }; // cross-axis (each more specific on a DIFFERENT axis) or neither strictly dominates
+  }
+
+  return { verdict: "left" };
+}
+/** sameCardNumber is a real dist/-authored predicate elsewhere in this file;
+ *  this rule only needs a structural, dependency-free equality (both parsed
+ *  objects already came off the SAME parseHobbyIqCardId reader), so it
+ *  compares the parsed cardNumber strings case-insensitively rather than
+ *  pull a live dep into a function that must stay pure/dependency-free for
+ *  the caller's own resolveHobbyiqCardIdDisagreement to call it without a
+ *  deps object. */
+function deps_sameCardNumberOk(longParsed, shortParsed) {
+  return String(longParsed.cardNumber ?? "").trim().toLowerCase() === String(shortParsed.cardNumber ?? "").trim().toLowerCase();
+}
+
+/**
+ * OWNER RULING write shape: the LOSING (plainer/base) copy is flagged
+ * `excludedFromFmv: true`, never deleted or relocated -- a PATCH on the
+ * loser's OWN existing (id, cardId) address, never a relocateSoldComp call
+ * (there is no address change here at all). ONE object-valued ledger field
+ * (`twinDisagreeExcluded: {at, to, from, by}`), same compact shape
+ * resolve-split-identity-parks.cjs's own `splitResolved` uses, so a reader
+ * already familiar with that stamp recognises this one on sight.
+ *
+ * Returns the JSON-Patch ops array for the loser doc -- 3 ops
+ * (excludedFromFmv, excludedFromFmvReason, twinDisagreeExcluded), always
+ * well under Cosmos's 10-op patch ceiling.
+ */
+function buildFlagExclusion(loser, keeper, rule, now) {
+  return [
+    { op: "set", path: "/excludedFromFmv", value: true },
+    { op: "set", path: "/excludedFromFmvReason", value: `twin-disagree-${rule}` },
+    {
+      op: "set", path: "/twinDisagreeExcluded",
+      value: { at: now, to: keeper.id, from: loser.id, by: "resolve-disagreeing-sale-twins" },
+    },
+  ];
+}
+
+/**
  * ONE disagreeing pair -> a resolution verdict. Pure, no I/O. Both sides'
  * OWN titles are consulted throughout (coordinator review of #2381, MEDIUM)
  * -- there is no single `sale` argument any more.
@@ -681,8 +822,10 @@ module.exports = {
   evaluateHobbyiqCardIdSide, evaluateHobbyiqCardIdSideBothTitles, moreSpecificRefines,
   titleNamesMoreSpecificThanCandidate, titleContradictsCandidateCell,
   resolveHobbyiqCardIdDisagreement, resolveGradeDisagreement, resolveDisagreement,
-  buildResolution, normParallelForRung, normNumber,
+  resolveBothSidesValidByRule, buildFlagExclusion,
+  buildResolution, normParallelForRung, normNumber, USER_SEED_SOURCES,
   decodeResume, encodeResume, RESUME_HOP_UNIT, MAX_RESUME_HOPS,
+  NAMED_AND_SPECIFIC_TOKEN, NAMED_AND_SPECIFIC_OPT_IN,
   __setSweepDepsForTest: (d) => { SWEEP_DEPS = d; },
   // Exported for white-box testing of the throttle-drop mechanism only --
   // `throttleStats` lets a test simulate 429 pressure without paying real
@@ -865,6 +1008,10 @@ async function main() {
     bothSidesValid: 0, neitherSideBacked: 0,
     winnerLong: 0, winnerShort: 0,
     applied: 0, failed: 0, duplicatesLeft: 0, staleSincePlan: 0, alreadyGone: 0, notReached: 0,
+    // OWNER RULING (2026-09-21), opt-in only (NAMED_AND_SPECIFIC_OPT_IN) --
+    // both-sides-valid pairs this run additionally flags rather than leaves.
+    flaggedBaseVsNamedParallel: 0, flaggedAutoOrNumSpecificity: 0,
+    flagApplied: 0, flagFailed: 0, flagStaleSincePlan: 0,
   };
   const examples = [];
   let stopReason = null;
@@ -1055,9 +1202,79 @@ async function main() {
 
         const resolution = resolveDisagreement(deps, d.axis, long, short);
         if (resolution.verdict === "both-sides-valid") {
-          stats.bothSidesValid++;
-          if (examples.length < 30) examples.push(`  BOTH-SIDES-VALID  ${cardId}  long=${long.id} short=${short.id}: ${resolution.detail}`);
-          emitPlanRow("left", null, long, short, { verdict: "both-sides-valid", detail: resolution.detail, axis: d.axis });
+          // ── OWNER RULING (2026-09-21), opt-in only. R1/R2 only ever apply
+          // to the hobbyiqCardId axis (grade-axis disagreements are
+          // explicitly NOT ruled -- left, same as always) -- and only once
+          // isProtected/isParkedSide has ALREADY refused this pair above, so
+          // neither side here can be pinned/verifiedByUser/excludedFromFmv/
+          // flaggedWrong/parked by construction. USER_SEED_SOURCES is still
+          // checked directly (isProtected does not read `source`, and the
+          // hard requirement names user-seed rows explicitly).
+          let flagVerdict = { verdict: "left" };
+          if (NAMED_AND_SPECIFIC_OPT_IN && d.axis === "hobbyiqCardId"
+              && !USER_SEED_SOURCES.has(String(long.source ?? "")) && !USER_SEED_SOURCES.has(String(short.source ?? ""))) {
+            const longParsed = catalogPrefixFor(long.hobbyiqCardId);
+            const shortParsed = catalogPrefixFor(short.hobbyiqCardId);
+            flagVerdict = resolveBothSidesValidByRule(longParsed, shortParsed);
+          }
+          if (flagVerdict.verdict !== "flagged") {
+            stats.bothSidesValid++;
+            if (examples.length < 30) examples.push(`  BOTH-SIDES-VALID  ${cardId}  long=${long.id} short=${short.id}: ${resolution.detail}`);
+            emitPlanRow("left", null, long, short, { verdict: "both-sides-valid", detail: resolution.detail, axis: d.axis });
+            continue;
+          }
+
+          const keeper = flagVerdict.keeper === "long" ? long : short;
+          const loser = flagVerdict.keeper === "long" ? short : long;
+          // NEVER flag when the keeper copy is itself flagged/excluded/
+          // parked -- would leave the sale priced nowhere. isProtected/
+          // isParkedSide already refused the WHOLE pair above whenever
+          // EITHER side trips them, so this is a defensive, redundant
+          // re-check at the point of the write decision, never reachable
+          // in practice today, but the hard requirement is named per-side
+          // (never flag BOTH; never leave a flagged keeper) so it is
+          // checked explicitly here too, right before the write.
+          if (isProtected(keeper) || isParkedSide(keeper)) {
+            stats.bothSidesValid++;
+            if (examples.length < 30) examples.push(`  BOTH-SIDES-VALID  ${cardId}  long=${long.id} short=${short.id}: keeper side is itself protected/parked -- refused, left`);
+            emitPlanRow("left", null, long, short, { verdict: "both-sides-valid", detail: `${resolution.detail} (rule ${flagVerdict.rule} would flag ${loser.id}, but its keeper ${keeper.id} is itself protected/parked -- refused)`, axis: d.axis });
+            continue;
+          }
+
+          if (flagVerdict.rule === "base-vs-named-parallel") stats.flaggedBaseVsNamedParallel++;
+          else stats.flaggedAutoOrNumSpecificity++;
+          if (examples.length < 30) examples.push(`  FLAGGED (${flagVerdict.rule}, keeper=${flagVerdict.keeper})  ${cardId}  long=${long.id} short=${short.id}: ${flagVerdict.detail}`);
+
+          const now = new Date().toISOString();
+          const ops = buildFlagExclusion(loser, keeper, flagVerdict.rule, now);
+          emitPlanRow(APPLY ? "flag-exclude" : "would-flag-exclude", flagVerdict.rule, long, short, { keeper: flagVerdict.keeper, loserId: loser.id, detail: flagVerdict.detail });
+
+          if (APPLY) {
+            try {
+              const planEtag = loser._etag;
+              const fresh = await retry(() => pool.item(loser.id, loser.cardId).read());
+              if (planEtag && fresh?.resource?._etag && fresh.resource._etag !== planEtag) {
+                stats.flagStaleSincePlan++;
+                console.log(`  STALE SINCE PLAN (flag) ${loser.id}@${loser.cardId}: changed since this run's own planning read; nothing written`);
+                continue;
+              }
+              // PATCH BY PARTITION: sold_comps ids are unique only within a
+              // partition (/cardId) -- (id, cardId) addresses the loser doc
+              // exactly, on its OWN existing partition, no relocation.
+              await retry(() => pool.item(loser.id, loser.cardId).patch(ops, planEtag ? { accessCondition: { type: "IfMatch", condition: planEtag } } : undefined));
+              stats.flagApplied++;
+            } catch (e) {
+              if (e?.code === 412 || e?.statusCode === 412) {
+                stats.flagStaleSincePlan++;
+                console.log(`  STALE SINCE PLAN (flag, 412) ${loser.id}@${loser.cardId}: nothing written`);
+              } else {
+                stats.flagFailed++;
+                console.log(`  FLAG FAILED ${loser.id}@${loser.cardId}: ${String(e?.message ?? e).slice(0, 100)}`);
+              }
+            }
+          } else {
+            stats.flagApplied++; // REPORT counts what WOULD apply, same convention as `applied` above
+          }
           continue;
         }
         if (resolution.verdict === "neither-side-backed") {
@@ -1175,18 +1392,25 @@ async function main() {
   console.log(`  RESOLVED: grader-token-in-title ${f(stats.resolvedGraderToken)}`);
   console.log(`    winner=long                  ${f(stats.winnerLong)}`);
   console.log(`    winner=short                 ${f(stats.winnerShort)}`);
-  console.log(`  LEFT: both-sides-valid         ${f(stats.bothSidesValid)}   <- both checklist-backed, neither refines the other`);
+  console.log(`  LEFT: both-sides-valid         ${f(stats.bothSidesValid)}   <- both checklist-backed, neither refines the other${NAMED_AND_SPECIFIC_OPT_IN ? " (after the R1/R2 opt-in attempt below)" : ""}`);
   console.log(`  LEFT: neither-side-backed      ${f(stats.neitherSideBacked)}   <- no strict checklist row (or grader token) backs either side`);
   console.log(`  ${APPLY ? "APPLIED" : "WOULD APPLY"}                       ${f(stats.applied)}`);
   console.log(`  failed                         ${f(stats.failed)}`);
   console.log(`    duplicates left              ${f(stats.duplicatesLeft)}   <- kept row written, the long row's delete failed: the sale is in the pool twice, never lost`);
   console.log(`    stale since plan (412)       ${f(stats.staleSincePlan)}   <- the long row changed since this run's own planning read; nothing deleted`);
   console.log(`  not reached                    ${f(stats.notReached)}`);
-  const reconciled = stats.resolvedChecklistRoster + stats.resolvedMoreSpecific + stats.resolvedGraderToken + stats.bothSidesValid + stats.neitherSideBacked + stats.protected + stats.parkedSide;
+  console.log(`\n  OWNER RULING (2026-09-21) opt-in "${NAMED_AND_SPECIFIC_TOKEN}"  ${NAMED_AND_SPECIFIC_OPT_IN ? "ON" : "off (default -- both-sides-valid pairs are only ever left)"}`);
+  console.log(`  FLAGGED: base-vs-named-parallel  ${f(stats.flaggedBaseVsNamedParallel)}   <- R1: named copy keeps pricing, base copy excludedFromFmv`);
+  console.log(`  FLAGGED: auto-or-num-specificity ${f(stats.flaggedAutoOrNumSpecificity)}   <- R2: more specific copy keeps pricing, plainer copy excludedFromFmv`);
+  console.log(`    ${APPLY ? "APPLIED" : "WOULD APPLY"} (flag)              ${f(stats.flagApplied)}`);
+  console.log(`    failed (flag)                 ${f(stats.flagFailed)}`);
+  console.log(`    stale since plan (flag, 412)  ${f(stats.flagStaleSincePlan)}`);
+  const flaggedTotal = stats.flaggedBaseVsNamedParallel + stats.flaggedAutoOrNumSpecificity;
+  const reconciled = stats.resolvedChecklistRoster + stats.resolvedMoreSpecific + stats.resolvedGraderToken + stats.bothSidesValid + stats.neitherSideBacked + stats.protected + stats.parkedSide + flaggedTotal;
   const reconcileBalances = stats.disagreePairsSeen === reconciled;
-  console.log(`  reconcile: disagree pairs seen ${f(stats.disagreePairsSeen)} == resolved+left+protected+parked ${f(reconciled)}  ${reconcileBalances ? "OK" : "MISMATCH"}`);
+  console.log(`  reconcile: disagree pairs seen ${f(stats.disagreePairsSeen)} == resolved+left+protected+parked+flagged ${f(reconciled)}  ${reconcileBalances ? "OK" : "MISMATCH"}`);
   if (examples.length) { console.log("  examples:"); for (const e of examples) console.log(e); }
-  if (APPLY) reportWrites({ job: "resolve-disagreeing-sale-twins", intended: stats.resolvedChecklistRoster + stats.resolvedMoreSpecific + stats.resolvedGraderToken, written: stats.applied, skipped: stats.bothSidesValid + stats.neitherSideBacked + stats.protected + stats.parkedSide, failed: stats.failed });
+  if (APPLY) reportWrites({ job: "resolve-disagreeing-sale-twins", intended: stats.resolvedChecklistRoster + stats.resolvedMoreSpecific + stats.resolvedGraderToken + flaggedTotal, written: stats.applied + stats.flagApplied, skipped: stats.bothSidesValid + stats.neitherSideBacked + stats.protected + stats.parkedSide, failed: stats.failed + stats.flagFailed });
   if (stopReason) console.log(`\n${stopReason}`);
   if (planFd) { try { fs.closeSync(planFd); } catch { /* best effort */ } }
 
@@ -1203,7 +1427,7 @@ async function main() {
   // CF-A-SALE-IS-NEVER-LOST reconciliation does for its own scanned/
   // moved+patched+refused+failed+left tally.
   if (!reconcileBalances) {
-    console.error(`!! CF-AN-UNBALANCED-RECONCILE-IS-A-BUG-NOT-A-BANNER-LINE: disagree pairs seen ${f(stats.disagreePairsSeen)} != resolved+left+protected+parked ${f(reconciled)}. A pair is uncounted or double-counted. Exit 4.`);
+    console.error(`!! CF-AN-UNBALANCED-RECONCILE-IS-A-BUG-NOT-A-BANNER-LINE: disagree pairs seen ${f(stats.disagreePairsSeen)} != resolved+left+protected+parked+flagged ${f(reconciled)}. A pair is uncounted or double-counted. Exit 4.`);
     process.exitCode = 4;
   }
 }
