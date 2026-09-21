@@ -253,6 +253,22 @@ export interface MoveCatalogRowResult {
    *  `salesRelocated === false`, so the caller need not have kept its own
    *  copy to report them. */
   salesRelocateFailures?: readonly string[];
+  /**
+   * CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES (review finding
+   * on this PR, 2026-09-20). `true` iff the old row's delete reported
+   * "already gone" (404) at its RESOLVED partition key AND a read at that
+   * SAME address then found a document anyway -- i.e. the delete's own
+   * network call raced, or something about the address disagreed between the
+   * two calls. Set ONLY on that genuine disagreement, never on an ordinary
+   * "the row was already gone" 404 (which stays silent, as it always has).
+   * A caller seeing this must not report a clean fold: the old row survived.
+   */
+  orphanedOldRow?: true;
+  /** The ids of any graded children whose delete hit the SAME race/disagreement
+   *  `orphanedOldRow` describes, for the parent row's own delete. Omitted
+   *  entirely when empty, never an empty array a caller has to check the
+   *  length of. */
+  orphanedGradedChildren?: readonly string[];
 }
 
 export interface RetireCatalogRowOptions {
@@ -270,6 +286,13 @@ export interface RetireCatalogRowResult {
    *  nothing in Cosmos records it -- and nothing is stamped on the sales:
    *  the rematch owns unplaced sales. */
   reason: string;
+  /** `true` iff the delete reported "already gone" at the resolved partition
+   *  key AND a read at that SAME address then found a document anyway. See
+   *  MoveCatalogRowResult.orphanedOldRow for the full explanation -- this is
+   *  the same signal for retireCatalogRow's own delete. */
+  orphaned?: true;
+  /** Graded children whose own delete hit the same race/disagreement. */
+  orphanedGradedChildren?: readonly string[];
 }
 
 // ── field hygiene ────────────────────────────────────────────────────────────
@@ -995,8 +1018,17 @@ async function forEachPage<T>(
   } while (token);
 }
 
-/** Delete; a 404 is "already gone", which is the state we wanted. */
-async function deleteTolerant(container: Container, id: string, pk: string, retry: CatalogOpsRetry): Promise<boolean> {
+/**
+ * Delete; a 404 is "already gone", which is the state we wanted.
+ *
+ * `pk` accepts anything `container.item()` does (a string, or the None
+ * partition key sentinel `pkFor`/`resolveNonePk` resolve to below) — never
+ * narrowed to `string`, because a caller that narrowed it here is exactly
+ * how CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES's None-pk
+ * bug reached this function: every prior caller passed `cardId ?? id`, a
+ * STRING that is wrong for a row with no `cardId` at all.
+ */
+async function deleteTolerant(container: Container, id: string, pk: PartitionKey, retry: CatalogOpsRetry): Promise<boolean> {
   try {
     await retry(() => container.item(id, pk).delete());
     return true;
@@ -1004,6 +1036,50 @@ async function deleteTolerant(container: Container, id: string, pk: string, retr
     if ((err as { code?: number })?.code === 404) return false;
     throw err;
   }
+}
+
+/**
+ * Delete a row and VERIFY it is actually gone from the address just deleted,
+ * rather than trusting `deleteTolerant`'s tolerant-404 in isolation.
+ *
+ * CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES (review finding
+ * on this PR, 2026-09-20). `moveCatalogRow` computed the old row's partition
+ * key as `String(oldRow.cardId ?? oldId)` — correct for a row that carries a
+ * `cardId`, and WRONG for the KNOWN "None partition" population
+ * (`scripts/lib/catalog-none-pk.cjs`'s own header, and
+ * `retire-self-derived-identities.cjs`'s measurement: every sampled
+ * `user-verified:*` row carries no `cardId` at all). For such a row the old
+ * code deleted at `(id, id)` — a partition that never held the document —
+ * got a 404, and `deleteTolerant` reported that as "already gone" (`false`,
+ * read as success by every caller): the REAL row, sitting at the None
+ * partition key, survives untouched while the caller believes the fold
+ * completed. A silent orphan duplicate for every caller of `moveCatalogRow`.
+ *
+ * The fix has two parts:
+ *   1. resolve the pk the SAME way `patchCatalogRowFields` already does for
+ *      a WRITE to a None-pk row (`pkFor`, defined below — cardId when
+ *      present, else the lazily-resolved None sentinel), not a string
+ *      fallback to `id`;
+ *   2. after a `false` (404) result, READ at that SAME resolved address
+ *      before believing "already gone" — a 404 on `delete` and a 404 on the
+ *      immediately following `read` at the identical address is genuinely
+ *      "not there"; a `read` that FINDS something means the delete's own
+ *      network call raced or the SDK's partition-key encoding of the
+ *      sentinel disagreed with the delete call's, and THAT is reported as a
+ *      failure rather than silently counted as a successful retirement.
+ */
+async function deleteAndVerifyGone(container: Container, id: string, pk: PartitionKey, retry: CatalogOpsRetry): Promise<{ deleted: boolean; orphaned: boolean }> {
+  const deleted = await deleteTolerant(container, id, pk, retry);
+  if (deleted) return { deleted: true, orphaned: false };
+  // The delete reported "already gone" (404). Confirm nothing lives at the
+  // SAME address it just tried before treating that as the intended state.
+  try {
+    const { resource } = await retry(() => container.item(id, pk).read<CatalogRowDoc>());
+    if (resource) return { deleted: false, orphaned: true };
+  } catch (err) {
+    if ((err as { code?: number })?.code !== 404) throw err;
+  }
+  return { deleted: false, orphaned: false };
 }
 
 /** Point read at (slug, slug) -- ~1 RU, and correct for every row written
@@ -1043,13 +1119,17 @@ export function isGradedChildOf(row: { id: string; parentSlug?: string | null },
 
 const GRADED_CHILDREN_QUERY = "SELECT c.id, c.cardId, c.parentSlug FROM c WHERE STARTSWITH(c.id, @p) AND IS_DEFINED(c.gradeTier)";
 
+/** Every orphan `deleteAndVerifyGone` reports across one call, so a caller
+ *  that retires N graded children in a loop learns about every one of them
+ *  rather than only the last. */
 async function retireGradedChildren(
   container: Container,
   parentId: string,
   retry: CatalogOpsRetry,
   dryRun: boolean,
-): Promise<number> {
+): Promise<{ retired: number; orphans: string[] }> {
   let n = 0;
+  const orphans: string[] = [];
   await forEachPage<{ id: string; cardId?: string; parentSlug?: string | null }>(
     container,
     { query: GRADED_CHILDREN_QUERY, parameters: [{ name: "@p", value: parentId + ":" }] },
@@ -1057,12 +1137,19 @@ async function retireGradedChildren(
     async (rows) => {
       for (const g of rows) {
         if (!isGradedChildOf(g, parentId)) continue;
-        if (!dryRun) await deleteTolerant(container, g.id, g.cardId ?? g.id, retry);
+        if (!dryRun) {
+          // pkFor, not `g.cardId ?? g.id` -- a graded child minted with no
+          // `cardId` at all lives at Cosmos's own None partition key, the
+          // SAME defect this PR's review found in the parent row's own
+          // delete below.
+          const { orphaned } = await deleteAndVerifyGone(container, g.id, pkFor(g.id, g.cardId), retry);
+          if (orphaned) orphans.push(g.id);
+        }
         n++;
       }
     },
   );
-  return n;
+  return { retired: n, orphans };
 }
 
 // ── the two operations ───────────────────────────────────────────────────────
@@ -1288,24 +1375,47 @@ export async function moveCatalogRow(
   }
 
   // 3. Graded children of the old slug. Regenerable from the survivor by
-  //    materialize-graded-identities; they do not move. A rehomed row keeps
-  //    its own ladder. Retired regardless of `salesRelocated`: a graded child
-  //    is unrelated to the sales hazard above and is always safe to retire
-  //    once the survivor exists.
-  const gradedChildrenRetired = rehome ? 0 : await retireGradedChildren(container, oldId, retry, dryRun);
+  //    materialize-graded-identities (it derives a graded identity from a
+  //    base card plus GRADED SALE EVIDENCE in sold_comps -- never from the
+  //    parent catalog row's own fields -- and step 2 above has already
+  //    re-pointed those sales onto the survivor before this runs, so the
+  //    survivor's own re-run regenerates exactly this ladder). They do not
+  //    move. A rehomed row keeps its own ladder. Retired regardless of
+  //    `salesRelocated`: a graded child is unrelated to the sales hazard
+  //    above and is always safe to retire once the survivor exists.
+  const gradedRetire = rehome ? { retired: 0, orphans: [] as string[] } : await retireGradedChildren(container, oldId, retry, dryRun);
+  const gradedChildrenRetired = gradedRetire.retired;
 
   // 4. The old row, last -- on a rehome, the copy in the foreign partition.
   //    REFUSED when the caller's own relocation could not confirm every sale
   //    moved: the survivor and its graded-child cleanup already happened
   //    (both are safe on their own), but deleting the old row now would leave
   //    an unrelocated sale pointing at nothing at all.
-  if (!dryRun && salesRelocated !== false) await deleteTolerant(container, oldId, oldPk, retry);
+  //
+  //    CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES (review
+  //    finding on this PR). `oldPk` above is a STRING kept for rehome
+  //    detection and the `rehomedFrom`/vendorIds bookkeeping -- correct for a
+  //    row that carries a real (possibly foreign) `cardId`, but a row with NO
+  //    `cardId` at all (the None-partition population) is not addressable by
+  //    `String(undefined ?? oldId)` (== oldId), which points at a partition
+  //    the row never lived in. `pkFor` resolves the SAME way
+  //    `patchCatalogRowFields` already does for a WRITE to such a row, and
+  //    `deleteAndVerifyGone` confirms nothing is left at that resolved
+  //    address before this call is allowed to call it "already gone".
+  let orphanedOldRow = false;
+  if (!dryRun && salesRelocated !== false) {
+    const deletePk = pkFor(oldId, oldRow.cardId as string | null | undefined);
+    const { orphaned } = await deleteAndVerifyGone(container, oldId, deletePk, retry);
+    orphanedOldRow = orphaned;
+  }
 
   return {
     action, newSlug, salesRepointed, gradedChildrenRetired, survivor, decision,
     ...(playerArbitration ? { playerArbitration } : {}),
     ...(salesRelocated !== undefined ? { salesRelocated } : {}),
     ...(salesRelocateFailures ? { salesRelocateFailures } : {}),
+    ...(orphanedOldRow ? { orphanedOldRow: true } : {}),
+    ...(gradedRetire.orphans.length ? { orphanedGradedChildren: gradedRetire.orphans } : {}),
   };
 }
 
@@ -1326,10 +1436,18 @@ export async function retireCatalogRow(
   if (!why) throw new Error("retireCatalogRow: reason is required");
   const retry = opts.retry ?? noRetry;
   const dryRun = opts.dryRun === true;
-  const pk = cardId ? String(cardId) : id;
+  // CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES (review finding
+  // on this PR, 2026-09-20). This function carried the SAME bug moveCatalogRow
+  // did, independently: `cardId ? String(cardId) : id` guesses `id` for a row
+  // with no `cardId` at all, which is exactly the None-partition population.
+  // `pkFor` resolves it the same way `patchCatalogRowFields` (a WRITE path)
+  // already does.
+  const pk = pkFor(id, cardId);
 
-  const gradedChildrenRetired = await retireGradedChildren(container, id, retry, dryRun);
+  const gradedRetire = await retireGradedChildren(container, id, retry, dryRun);
+  const gradedChildrenRetired = gradedRetire.retired;
   let rowDeleted: boolean;
+  let orphaned = false;
   if (dryRun) {
     // Report what a real run would delete, at the cost of one point read.
     try {
@@ -1340,7 +1458,9 @@ export async function retireCatalogRow(
       rowDeleted = false;
     }
   } else {
-    rowDeleted = await deleteTolerant(container, id, pk, retry);
+    const result = await deleteAndVerifyGone(container, id, pk, retry);
+    rowDeleted = result.deleted;
+    orphaned = result.orphaned;
   }
   return {
     action: rowDeleted || gradedChildrenRetired > 0 ? "retire" : "noop",
@@ -1348,6 +1468,8 @@ export async function retireCatalogRow(
     rowDeleted,
     gradedChildrenRetired,
     reason: why,
+    ...(orphaned ? { orphaned: true } : {}),
+    ...(gradedRetire.orphans.length ? { orphanedGradedChildren: gradedRetire.orphans } : {}),
   };
 }
 

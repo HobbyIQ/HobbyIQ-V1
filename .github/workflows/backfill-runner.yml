@@ -443,6 +443,27 @@ on:
           - repair-truncated-card-year
           - repair-select-subbrand-misslug
           - fold-checklist-numbered-twins
+          # fold-catalog-duplicate-rungs (PR #2377 unblock, 2026-09-20). The
+          # SAME card held twice in card_catalog as two STRICT rows whose
+          # parallel slug differs only by RESPELLING (plural or product-word
+          # order) -- 301,115 pairs across 60 modern cells, and the split
+          # pool BLOCKS sale repairs (54,413 sales refused in one cell as
+          # `catalog-duplicate-rung`). Groups strict+non-strict rows of one
+          # `scope` cell by (setKey, cardNumber, isAuto, num- segment, sub
+          # segment, CANONICAL parallel slug) -- the canonical slug is
+          # computed by calling the REAL compiled normalizeParallel /
+          # computeHobbyIqCardId (PR #2377's own fold table), never
+          # re-implemented. A group folds only when it has >= 2 rows whose
+          # STORED ids differ; the survivor is the row already at the
+          # canonical id, or (when neither is) the highest-authority row is
+          # re-keyed onto it. Refuses by name -- writing nothing for the
+          # group -- on a different player, a user-verified/user-seed row
+          # that is not the chosen survivor, or an underivable canonical id.
+          # SCOPE (REQUIRED): comma `sport:year` cells, e.g. basketball:2024
+          # -- there is no whole-catalog sweep and the inherited defaults
+          # ('', 'refractor', 'all') are all refused. `titles` (REQUIRED):
+          # comma setKeys narrowing the cell, e.g. panini-prizm.
+          - fold-catalog-duplicate-rungs
           - apply-cpa-product-rule
           - consolidate-catalog-duplicates
           - revert-d30-base-onto-one-of-one
@@ -2206,7 +2227,14 @@ jobs:
           # other lane's own env -- every other script here already reads
           # BCP_TITLES for its own `titles`-carried meaning, and TITLES was
           # simply never wired for this one.
-          TITLES: ${{ inputs.script == 'resolve-split-identity-parks' && inputs.titles || '' }}
+          # fold-catalog-duplicate-rungs (2026-09-20) reads the SAME plain
+          # TITLES env var as its REQUIRED comma-separated setKey list
+          # narrowing a SCOPE cell (e.g. panini-prizm) -- guarded into the
+          # SAME expression as resolve-split-identity-parks's own use of this
+          # var (both scripts read `TITLES` directly, never BCP_TITLES, and
+          # the `||` chain keeps them from stepping on one another since
+          # `inputs.script` can only equal one value per dispatch).
+          TITLES: ${{ inputs.script == 'resolve-split-identity-parks' && inputs.titles || inputs.script == 'fold-catalog-duplicate-rungs' && inputs.titles || '' }}
           # route-backing-gaps (2026-09-20). The GAP ROUTER reads `titles` as
           # an OPTIONAL comma-separated setKey filter (SET_KEYS) -- NOT a
           # from>to pair list like the sibling repoint lanes above: this lane
@@ -2235,7 +2263,11 @@ jobs:
           # PLAN_OUT, and the SAME fixed-path-guarded-on-script convention
           # (no new input; workflow_dispatch is at 24 of 25). Uploaded by the
           # SAME step that already uploads this lane's backfill.log, below.
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || '' }}
+          # fold-catalog-duplicate-rungs (2026-09-20): one NDJSON record per
+          # fold-candidate GROUP -- same auditability doctrine as
+          # resolve-split-identity-parks's own PLAN_OUT, same fixed-path-
+          # guarded-on-script convention (no new input).
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -2541,6 +2573,23 @@ jobs:
         with:
           name: fold-checklist-numbered-twins-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
           path: /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      # The catalog-duplicate-rungs fold's log carries the banner (cells, rows
+      # scanned, groups, would-fold rows, survivors re-keyed, sales to
+      # re-point, refusals BY CLASS, failed, RU) and the top-40 (loser slug ->
+      # canonical slug) pairs -- the evidence an APPLY dispatch is quotable
+      # from. PLAN_OUT's own NDJSON (one record per fold-candidate GROUP) is
+      # uploaded alongside it, same doctrine as resolve-split-identity-parks.
+      - name: Upload the catalog-duplicate-rungs fold log
+        if: ${{ always() && inputs.script == 'fold-catalog-duplicate-rungs' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fold-catalog-duplicate-rungs-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/fold-catalog-duplicate-rungs-plan/
           if-no-files-found: warn
           retention-days: 90
 
@@ -3227,6 +3276,30 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (folded=${N:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-checklist-numbered-twins -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
+
+      - name: Self-relaunch the catalog-duplicate-rungs fold until the slot is clean
+        # Stops at its own RUN_MINUTES budget and PRINTS its summary; a run
+        # killed by the 150-minute step ceiling prints nothing. CF-RELAUNCH-
+        # ONLY-ON-BUDGET (#1361): relaunch iff the marker printed, never on a
+        # count. A re-run after a budget stop is idempotent by construction:
+        # a group this run folds no longer has >= 2 distinct stored ids, so
+        # it drops out of the next run's own candidate set.
+        if: ${{ !cancelled() && inputs.script == 'fold-catalog-duplicate-rungs' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: fold-catalog-duplicate-rungs
+          preamble: |
+            N=$(grep -aoE "^  rows removed +[0-9,]+|^  would-fold rows \(catalog rows removed\) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "removed=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (removed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} scope=${{ inputs.scope }} titles=${{ inputs.titles }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (removed=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-catalog-duplicate-rungs -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
       - name: Self-relaunch the CPA product rule until the slot is decided
         if: ${{ !cancelled() && inputs.script == 'apply-cpa-product-rule' }}
