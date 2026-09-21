@@ -27,6 +27,37 @@ const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/w
 // CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS + CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE.
 // The clock and the exit come from the SHARED helper, never a local copy.
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+// CF-A-HAND-ROLLED-MIRROR-DRIFTS (2026-09-21, sale-side wrong-product sweep).
+// This file used to carry its own "short list of the most-common patterns"
+// copy of normalizeSetKey, and that copy is what wrote the defect: it had no
+// rule at all for `topps-206` / `bowmans-best` (both fell to the bare brand
+// catch-all), and it hand-collapsed `bowman-chrome-draft` -> `bowman-chrome`
+// and `topps-chrome-update(-series)` -> `topps-chrome` with an explicit
+// "collapse subset" comment -- both directly contradicting the RULED keys
+// normalizeSetKey has carried since D23/R26. Worse, because this script reads
+// its TWO WITNESSES (the catalog's own `set` text AND the sold_comps row's
+// `setName`) through the SAME mirror, and `setName` on a tca-ebay row is
+// already a canonical HYPHENATED slug ("bowman-chrome-sapphire"), the space-
+// only regexes never matched it either -- so a row that arrived at the
+// CORRECT specialized key had that correct key read back as unrecognized,
+// fell through to the bare brand word, and got REWRITTEN DOWN to the flagship
+// pool by this same "fix" script. The one normalizeSetKey the TS ingest path
+// already uses is imported here instead, so this lane can never again diverge
+// from the ruled vocabulary it exists to apply.
+const { normalizeSetKey } = require(path.join(__dirname, "..", "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+const { isProductSetKey } = require(path.join(__dirname, "..", "dist/services/catalog/productSetKeys.js"));
+// `isProductSetKey` alone is not the whole "recognized" universe: `topps-206`
+// (defect 1) is a RULED key carried only in setkey-reconciliation.json's
+// `distinct` verdicts (reconcileSetKey's fixed points), never registered in
+// PRODUCT_SET_KEYS. Both tables have to be consulted or a ruled-but-
+// unregistered key reads as "unrecognized" here and this script's two-witness
+// check refuses to apply it -- silently undoing the very fix this file exists
+// to make. Read once at module load (613 entries, cheap) rather than per row.
+const { reconciledFixedPoints } = require(path.join(__dirname, "..", "dist/services/catalog/setKeyReconciliation.js"));
+const RECOGNIZED_SET_KEYS = new Set(reconciledFixedPoints());
+function isRecognizedSetKey(setKey) {
+  return isProductSetKey(setKey) || RECOGNIZED_SET_KEYS.has(setKey);
+}
 
 // Accept either BACKFILL_MODE=apply|dry OR BACKFILL_APPLY=true|false
 // (workflow dispatch passes BACKFILL_APPLY; local dev uses BACKFILL_MODE).
@@ -80,69 +111,36 @@ const RESERVE_MS = Number(process.env.RESERVE_MS || 90 * 1000);
 const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
 const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
 
-// Mirror of prod normalizeSetKey (short list of the most-common patterns).
-// If a set text doesn't match, we return null and skip the row.
+// CF-A-HAND-ROLLED-MIRROR-DRIFTS. Delegates to the ONE normalizeSetKey the
+// TS ingest path uses (imported above from dist), rather than re-deriving a
+// second, hand-maintained "short list" that can silently fall behind every
+// key the vocabulary learns. Two differences from a bare normalizeSetKey
+// call, both required to keep this function's existing contract:
+//
+//   (a) normalizeSetKey never returns null -- an unrecognized string comes
+//       back slugified-but-unchanged (CF-slug-passthrough). This function's
+//       callers (loadCatalogMap's canonicalization and the two-witness
+//       check) both treat null as "no opinion, skip" and would otherwise
+//       treat a random unslugified catalog string as a confident witness.
+//       isRecognizedSetKey gates the return to the registered vocabulary
+//       (PRODUCT_SET_KEYS, brand catch-alls included -- "topps"/"bowman"/
+//       "panini" are themselves registered product keys) PLUS the
+//       setkey-reconciliation.json fixed points (`topps-206` lives only
+//       there), so an unmatched text still yields null exactly as it did
+//       before.
+//   (b) the input arrives as either title-style text ("2024 Topps 206
+//       Baseball") OR an already-hyphenated slug read back off a sold_comps
+//       row ("bowman-chrome-sapphire") -- normalizeSetKey handles both
+//       (slugify is idempotent on an already-slugified string), which is
+//       exactly the case the old space-only regexes broke on: a row that
+//       had already been correctly resolved to a specialization had that
+//       correct slug read back as unrecognized and rewritten down to its
+//       flagship ancestor by this same "fix" script.
 function normalizeSetToCanonical(setText) {
-  const s = String(setText || "").toLowerCase();
+  const s = String(setText || "").trim();
   if (!s) return null;
-  // Sapphire first — distinct product
-  if (/bowman chrome sapphire|bowman sapphire/.test(s)) return "bowman-chrome-sapphire";
-  if (/topps chrome sapphire/.test(s)) return "topps-chrome-sapphire";
-  // Bowman family
-  if (/bowman chrome draft|bowman draft chrome/.test(s)) return "bowman-chrome"; // collapse subset
-  if (/bowman chrome/.test(s)) return "bowman-chrome";
-  if (/chrome prospect/.test(s)) return "bowman-chrome";
-  if (/bowman platinum/.test(s)) return "bowman-platinum";
-  if (/bowman sterling/.test(s)) return "bowman-sterling";
-  if (/bowman draft/.test(s)) return "bowman-draft";
-  if (/bowman mega/.test(s)) return "bowman-mega";
-  if (/bowman heritage/.test(s)) return "bowman-heritage";
-  if (/bowman inception/.test(s)) return "bowman-inception";
-  if (/bowman transcendent/.test(s)) return "bowman-transcendent";
-  if (/\bbowman\b/.test(s)) return "bowman";
-  // Topps family — Chrome Platinum + Update etc. first
-  if (/topps chrome platinum/.test(s)) return "topps-chrome-platinum";
-  if (/topps chrome update|chrome update/.test(s)) return "topps-chrome"; // collapse subset
-  if (/topps chrome black/.test(s)) return "topps-chrome-black";
-  if (/topps chrome/.test(s)) return "topps-chrome";
-  if (/topps heritage/.test(s)) return "topps-heritage";
-  if (/topps finest|^finest\b/.test(s)) return "topps-finest";
-  if (/topps pristine/.test(s)) return "topps-pristine";
-  if (/topps transcendent/.test(s)) return "topps-transcendent";
-  if (/topps dynasty/.test(s)) return "topps-dynasty";
-  if (/topps tribute/.test(s)) return "topps-tribute";
-  if (/topps museum/.test(s)) return "topps-museum-collection";
-  if (/topps stadium/.test(s)) return "topps-stadium-club";
-  if (/topps allen|allen.*ginter/.test(s)) return "topps-allen-ginter";
-  if (/topps gypsy/.test(s)) return "topps-gypsy-queen";
-  if (/topps archives/.test(s)) return "topps-archives";
-  if (/topps inception/.test(s)) return "topps-inception";
-  if (/topps five star/.test(s)) return "topps-five-star";
-  if (/topps definitive/.test(s)) return "topps-definitive";
-  if (/topps big league/.test(s)) return "topps-big-league";
-  if (/\btopps\b/.test(s)) return "topps";
-  // Panini
-  if (/donruss champions/.test(s)) return "donruss-champions";
-  if (/panini prizm|^prizm/.test(s)) return "panini-prizm";
-  if (/panini select/.test(s)) return "panini-select";
-  if (/panini mosaic/.test(s)) return "panini-mosaic";
-  if (/panini donruss optic|donruss optic|panini optic/.test(s)) return "panini-optic";
-  if (/panini donruss|donruss/.test(s)) return "panini-donruss";
-  if (/panini contenders/.test(s)) return "panini-contenders";
-  if (/panini immaculate/.test(s)) return "panini-immaculate";
-  if (/panini flawless/.test(s)) return "panini-flawless";
-  if (/national treasures/.test(s)) return "panini-national-treasures";
-  if (/panini absolute/.test(s)) return "panini-absolute";
-  if (/panini chronicled|panini chronicles/.test(s)) return "panini-chronicles";
-  if (/panini illusions/.test(s)) return "panini-illusions";
-  if (/panini prestige/.test(s)) return "panini-prestige";
-  if (/panini diamond kings/.test(s)) return "panini-diamond-kings";
-  if (/panini phoenix/.test(s)) return "panini-phoenix";
-  if (/panini/.test(s)) return "panini";
-  // Others
-  if (/upper deck/.test(s)) return "upper-deck";
-  if (/fleer/.test(s)) return "fleer";
-  return null;
+  const canonical = normalizeSetKey(s);
+  return isRecognizedSetKey(canonical) ? canonical : null;
 }
 
 async function withRetry(fn, attempts = 5, baseMs = 250) {
@@ -403,12 +401,27 @@ async function main() {
   return { client, budget: CLOCK };
 }
 
-// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too -- a failure
-// path that exits and a success path that hopes is the asymmetry that cost four
-// reconciled-clean runs their exit codes.
-main()
-  .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
-  .catch(async (e) => {
-    console.error(e);
-    await finishLane(1, { budget: CLOCK });
-  });
+// CF-TESTABLE-WITHOUT-A-COSMOS-CONNECTION (2026-09-21, sale-side wrong-product
+// sweep). `normalizeSetToCanonical` is the one piece of this file with
+// interesting branching logic that does not touch Cosmos, and it is exactly
+// the function that regressed silently (see the comment above its
+// definition) because nothing exercised it in CI. Exported so a unit test can
+// import the pure function directly WITHOUT triggering `main()` (which
+// `process.exit(1)`s immediately when COSMOS_CONNECTION_STRING is unset --
+// fine for a human running the script, fatal for a test process that merely
+// wants the pure function). Gated on `require.main === module`, the standard
+// Node idiom: `node scripts/backfill-catalog-driven-canonicalize.cjs` is
+// unchanged, and a `require()` from a test imports without side effects.
+module.exports = { normalizeSetToCanonical };
+
+if (require.main === module) {
+  // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too -- a
+  // failure path that exits and a success path that hopes is the asymmetry
+  // that cost four reconciled-clean runs their exit codes.
+  main()
+    .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
+    .catch(async (e) => {
+      console.error(e);
+      await finishLane(1, { budget: CLOCK });
+    });
+}
