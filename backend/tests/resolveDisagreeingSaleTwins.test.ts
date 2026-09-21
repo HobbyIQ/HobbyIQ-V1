@@ -1593,30 +1593,52 @@ describe("resolve-disagreeing-sale-twins carries the fleet discipline", () => {
   // edited here) checks `stopped at the .*budget` FIRST, unconditionally,
   // BEFORE it ever looks at the exit code -- so a run that hits its budget
   // AND fails its own COUNTERS DO NOT ADD UP reconciliation still gets
-  // re-dispatched (run 35633516657's own log carried BOTH lines). The fix
-  // lives in THIS lane's own `dispatch` input (which the calling step owns,
-  // not the composite action), refusing to run `gh workflow run` at all
-  // whenever the log itself says the counters do not add up.
+  // re-dispatched (run 35633516657's own log carried BOTH lines). The
+  // composite executes `${{ inputs.budget-notice }}` THEN `${{ inputs.dispatch
+  // }}`, in that order, in the SAME shell, only on the budget-marker branch --
+  // so the guard lives in THIS lane's own `budget-notice` input (which the
+  // calling step owns, not the composite action) and `exit 1`s there BEFORE
+  // `dispatch` is ever reached. `dispatch` itself stays a PURE one-line `gh
+  // workflow run ...` immediately after `dispatch: |` -- required by
+  // relaunchNeverCallsAKilledRunFinished.test.ts's own
+  // `dispatch: \|\n\s+gh workflow run backfill-runner\.yml` pin (that file
+  // asserts a step which delegates `${{ inputs.dispatch }}` to the composite
+  // actually SUPPLIES a dispatch line the budget branch can run -- inserting
+  // an `if` before the command there would still satisfy re-dispatch-fires
+  // correctness but breaks that pin's exact-adjacency parse, which is a
+  // signal to fix the SHAPE, never to weaken that test).
   describe("relaunch guard: a COUNTERS-mismatch verdict blocks the re-dispatch even when the budget marker is ALSO present", () => {
-    it("the dispatch input checks for COUNTERS DO NOT ADD UP and exits 1 before ever running gh workflow run", () => {
+    it("the budget-notice input checks for COUNTERS DO NOT ADD UP and exits 1 before dispatch is ever reached; dispatch itself stays a pure one-liner", () => {
       const yml = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "workflows", "backfill-runner.yml"), "utf8");
       const step = yml.split(/\n(?=      - name:)/).find((st) => st.includes("inputs.script == 'resolve-disagreeing-sale-twins'") && /gh workflow run backfill-runner\.yml/.test(st));
       expect(step, "resolve-disagreeing-sale-twins relaunch step not found").toBeTruthy();
       // The guard variable is set in `preamble` (grepping the SAME log the
-      // outcome test itself reads) and consumed in `dispatch` -- both run in
-      // the SAME shell per relaunch-on-marker/action.yml's own contract.
+      // outcome test itself reads) and consumed in `budget-notice` -- both
+      // run in the SAME shell per relaunch-on-marker/action.yml's own
+      // contract, and both run strictly before `dispatch`.
       expect(step).toMatch(/COUNTERS_MISMATCH=\$\(grep -acE "COUNTERS DO NOT ADD UP" \/tmp\/backfill\.log \|\| true\)/);
-      // The dispatch body's own guard: checked BEFORE the `gh workflow run`
-      // line, refusing (exit 1) rather than silently no-op'ing, so the step
-      // (and therefore the job) is red rather than quietly green.
-      const dispatchBlock = /dispatch: \|([\s\S]*?)\n {6}- name:/.exec(step! + "\n      - name:");
-      expect(dispatchBlock, "dispatch block not found").toBeTruthy();
-      const body = dispatchBlock![1];
+
+      // `dispatch:` is a PURE one-liner -- the exact shape
+      // relaunchNeverCallsAKilledRunFinished.test.ts's own delegation pin
+      // requires (`dispatch: \|\n\s+gh workflow run backfill-runner\.yml`,
+      // nothing else in between).
+      const dispatchBlock = /dispatch: \|\n( +)gh workflow run backfill-runner\.yml[^\n]*\n/.exec(step!);
+      expect(dispatchBlock, "dispatch block must be the pure gh workflow run one-liner").toBeTruthy();
+
+      // The guard lives in `budget-notice:`, strictly BEFORE `dispatch:` in
+      // the step's own text (matching composite execution order) and BEFORE
+      // the `gh workflow run` line it protects.
+      const budgetNoticeBlock = /budget-notice: \|([\s\S]*?)\n {10}finished-notice:/.exec(step!);
+      expect(budgetNoticeBlock, "budget-notice block not found").toBeTruthy();
+      const body = budgetNoticeBlock![1];
       const guardIdx = body.indexOf('if [ "${COUNTERS_MISMATCH:-0}" != "0" ]');
-      const dispatchIdx = body.indexOf("gh workflow run backfill-runner.yml");
+      const noticeIdx = body.indexOf("::notice::budget hit");
       expect(guardIdx).toBeGreaterThanOrEqual(0);
-      expect(dispatchIdx).toBeGreaterThan(guardIdx);
+      expect(noticeIdx).toBeGreaterThan(guardIdx);
       expect(body).toMatch(/exit 1/);
+      const budgetNoticeOffset = step!.indexOf("budget-notice: |");
+      const dispatchOffset = step!.indexOf("dispatch: |");
+      expect(dispatchOffset).toBeGreaterThan(budgetNoticeOffset);
     });
 
     it("the composite action itself is untouched (protected -- the fix never edits relaunch-on-marker/action.yml)", () => {
@@ -1638,7 +1660,8 @@ describe("resolve-disagreeing-sale-twins carries the fleet discipline", () => {
       const logHasBudgetMarker = true; // "stopped at the 120-minute budget..."
       const logHasCountersMismatch = true; // "!! resolve-disagreeing-sale-twins: COUNTERS DO NOT ADD UP"
       expect(logHasBudgetMarker).toBe(true); // branch (a) in relaunch-on-marker WOULD fire
-      // Simulates the fixed `dispatch` body's own shell guard.
+      // Simulates the fixed `budget-notice` body's own shell guard (runs
+      // strictly before `dispatch` in the composite's own execution order).
       const COUNTERS_MISMATCH = logHasCountersMismatch ? "1" : "0";
       let dispatchRan = false;
       let refused = false;
