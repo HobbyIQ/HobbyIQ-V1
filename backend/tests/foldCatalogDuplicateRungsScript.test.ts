@@ -671,10 +671,39 @@ describe("fold-catalog-duplicate-rungs -- workflow wiring (backfill-runner.yml)"
 // order preserved under concurrency, measured speedup); these are the
 // structural/source-text pins for the same fix.
 describe("fold-catalog-duplicate-rungs -- concurrency (source pins)", () => {
-  it("runs groups with bounded concurrency, honouring CONCURRENCY/BACKFILL_CONCURRENCY, default 16", () => {
-    expect(source).toContain("process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 16");
-    expect(source).toContain("orderedGroups.slice(i, i + CONCURRENCY)");
+  it("runs groups with bounded concurrency, honouring CONCURRENCY/BACKFILL_CONCURRENCY, default 6", () => {
+    // Default 6, not 16 (review finding, 2026-09-21): sold_comps is shared
+    // with production pricing reads at a routine 10,000 RU/s day; the
+    // dispatch `concurrency` input raises it explicitly.
+    expect(source).toContain("process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 6");
+    expect(source).toContain("orderedGroups.slice(i, i + batchSize)");
     expect(source).toContain("Promise.all(batch.map(([key, rows]) => processGroup(key, rows)))");
+  });
+
+  it("auto-throttles to concurrency 2 after 20 throttles this run, one-way, never restored", () => {
+    expect(source).toContain("const THROTTLE_TRIP_AT = 20");
+    expect(source).toContain("const THROTTLE_CONCURRENCY = 2");
+    expect(source).toContain("function effectiveConcurrency()");
+    expect(source).toContain("throttleStats.count >= THROTTLE_TRIP_AT");
+    // The drop is a ONE-WAY latch (droppedTo2), never re-checked back up.
+    expect(source).toContain("throttleStats.droppedTo2 = true");
+    expect(source).not.toMatch(/droppedTo2\s*=\s*false/);
+  });
+
+  it("counts every retried Cosmos call as a throttle, in the ONE shared retry() every call goes through", () => {
+    expect(source).toContain("throttleStats.count++");
+    // The increment lives inside retry()'s own catch, not duplicated at each
+    // call site.
+    const retryIdx = source.indexOf("const retry = async (fn, tries = 8) => {");
+    const incrementIdx = source.indexOf("throttleStats.count++");
+    expect(retryIdx).toBeGreaterThan(-1);
+    expect(incrementIdx).toBeGreaterThan(retryIdx);
+    expect(incrementIdx).toBeLessThan(source.indexOf("\n};", retryIdx));
+  });
+
+  it("the throttle count and any drop are surfaced in the heartbeat and the final banner", () => {
+    expect(source).toMatch(/heartbeat.*throttles \$\{f\(throttleStats\.count\)\}/);
+    expect(source).toContain("throttles (429/503/timeout)");
   });
 
   it("processGroup is a single extracted function -- one body for both REPORT and APPLY, no gate duplicated or skipped", () => {
@@ -689,7 +718,11 @@ describe("fold-catalog-duplicate-rungs -- concurrency (source pins)", () => {
   });
 
   it("the budget check runs BEFORE each batch, never after, and a batch already admitted is allowed to finish", () => {
-    const idx = source.indexOf("for (let i = 0; i < orderedGroups.length; i += CONCURRENCY)");
+    // The loop's own increment moved from the `for` header to `i +=
+    // batch.length` inside the body (review finding, 2026-09-21: the batch
+    // size is no longer fixed, it is read fresh via effectiveConcurrency()
+    // every iteration so a mid-run throttle drop takes effect immediately).
+    const idx = source.indexOf("for (let i = 0; i < orderedGroups.length; )");
     expect(idx).toBeGreaterThan(-1);
     const clockIdx = source.indexOf("CLOCK.outOfClock()", idx);
     const batchIdx = source.indexOf("await Promise.all(batch.map", idx);
@@ -706,8 +739,29 @@ describe("fold-catalog-duplicate-rungs -- resume cursor (source pins)", () => {
     expect(source).toContain("const encodeResume = ({ hop, offset }) =>");
   });
 
-  it("a resume offset SLICES the deterministic group order rather than re-querying with a filter", () => {
-    expect(source).toContain("orderedGroups = orderedGroups.slice(RESUME.offset)");
+  it("orderedGroups is explicitly SORTED BY GROUP KEY before any offset is applied", () => {
+    // Review finding (2026-09-21): a resume offset is only meaningful into a
+    // deterministic order, and relying on "a Map's insertion order happens
+    // to be stable" was prose, not a guarantee. The sort makes it explicit.
+    expect(source).toContain("[...groups.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))");
+  });
+
+  it("APPLY NEVER honours a resume offset -- it always rescans at 0; only REPORT slices", () => {
+    // The BLOCKING review finding (2026-09-21): every relaunch is a new
+    // process that rebuilds `groups` from a fresh scan, and under APPLY the
+    // earlier hop has FOLDED (deleted) groups away -- the fresh scan is
+    // shorter, so slicing it by a stale numeric offset would skip arbitrary
+    // never-folded groups, forever. REPORT writes nothing, so its offset
+    // into the (now sorted) order is safe.
+    expect(source).toContain("const REPORT_RESUME_OFFSET = APPLY ? 0 : RESUME.offset;");
+    expect(source).toContain("orderedGroups = orderedGroups.slice(REPORT_RESUME_OFFSET)");
+    // The next cursor's offset is forced to 0 under APPLY.
+    expect(source).toContain("const nextOffset = APPLY ? 0 : REPORT_RESUME_OFFSET + groupsDone;");
+  });
+
+  it("APPLY still carries the hop forward, bounded by a hop cap so a non-converging corpus cannot relaunch forever", () => {
+    expect(source).toContain("const MAX_RESUME_HOPS = 30");
+    expect(source).toContain("RESUME.hop >= MAX_RESUME_HOPS");
   });
 
   it("a LIMIT stop and a genuine budget stop are DIFFERENT things -- only the budget stop sets stoppedMidScan", () => {
@@ -727,11 +781,13 @@ describe("fold-catalog-duplicate-rungs -- resume cursor (source pins)", () => {
     expect(source).toContain("if (stoppedMidScan) {");
     // stopReason starts null (its declaration) and is REASSIGNED exactly
     // once, inside the stoppedMidScan guard -- never anywhere the ordinary
-    // exhaustion path of the outer `for` loop can reach.
+    // exhaustion path of the outer `for` loop can reach. The one real
+    // assignment is a ternary (APPLY vs REPORT wording), still ONE
+    // assignment statement.
     const assignments = [...source.matchAll(/stopReason\s*=/g)];
     expect(assignments.length).toBe(2); // `let stopReason = null;` + the one real assignment
     expect(source).toContain("let stopReason = null;");
-    const onlyRealAssignmentIdx = source.indexOf("stopReason = `stopped at the");
+    const onlyRealAssignmentIdx = source.indexOf("stopReason = APPLY");
     expect(onlyRealAssignmentIdx).toBeGreaterThan(-1);
     const guardIdx = source.indexOf("if (stoppedMidScan) {");
     expect(onlyRealAssignmentIdx).toBeGreaterThan(guardIdx);
@@ -751,6 +807,6 @@ describe("fold-catalog-duplicate-rungs -- runLane is container-injectable for te
   it("main() is a thin wrapper around runLane, which is exported", () => {
     expect(source).toContain("async function runLane({ cat, pool, portfolio })");
     expect(source).toContain("const result = await runLane({ cat, pool, portfolio });");
-    expect(source).toContain("runLane,\n};");
+    expect(source).toContain("numSegmentOf, subSegmentOf, isUserVerified, runLane,");
   });
 });

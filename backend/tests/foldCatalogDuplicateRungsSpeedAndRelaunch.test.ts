@@ -278,11 +278,11 @@ describe("fold-catalog-duplicate-rungs -- resume, not rescan", () => {
     expect(res2.stats.rowsRemoved).toBe(20);
   });
 
-  it("a resume offset genuinely SKIPS the first N groups rather than rescanning them", async () => {
+  it("a resume offset genuinely SKIPS the first N groups rather than rescanning them (REPORT)", async () => {
     const rows = makeGroupRows(6);
     const w = world(rows);
-    // Encode hop=0, offset=3: skip the first 3 groups of the deterministic
-    // pass-1 order.
+    // Encode hop=0, offset=3: skip the first 3 groups of the deterministic,
+    // GROUP-KEY-SORTED pass-1 order.
     const { runLane } = loadLane({ RUN_MINUTES: "120", CONCURRENCY: "16", SCAN_LIMIT: "3" });
     const res = await runLane({ cat: w.cat as any, pool: w.pool as any, portfolio: w.portfolio as any });
     // Only 3 of the 6 groups were decided THIS run (the other 3 were
@@ -290,6 +290,99 @@ describe("fold-catalog-duplicate-rungs -- resume, not rescan", () => {
     expect(res.groupsDone).toBe(3);
     expect(res.totalGroupsThisSlot).toBe(6);
     expect(res.stats.rowsRemoved).toBe(3);
+  });
+
+  it("the REPORT resume offset slices a GROUP-KEY-SORTED order, not raw scan/insertion order", async () => {
+    // Build groups whose Map insertion order (by card number 1,2,3,...) is
+    // the REVERSE of their group-key sort order (card number is padded so
+    // string sort matches numeric sort here: "1" < "2" < "3"). Confirms the
+    // slice is over the SORTED list the fix introduced, not whatever order
+    // pass 1 happened to insert them in.
+    const rows = makeGroupRows(5);
+    // Shuffle the seed rows so insertion order into the fake (and therefore
+    // into pass 1's result set) does NOT match group-key order.
+    const shuffled = [...rows].reverse();
+    const w = world(shuffled);
+    const { runLane } = loadLane({ RUN_MINUTES: "120", CONCURRENCY: "16", SCAN_LIMIT: "2" });
+    const res = await runLane({ cat: w.cat as any, pool: w.pool as any, portfolio: w.portfolio as any });
+    // Offset 2 of 5 groups sorted by key ("...:1:...", "...:2:...", ...) --
+    // cards 3, 4, 5 are decided; cards 1, 2 are skipped (resumed-past). REPORT
+    // never writes, so this is asserted via the counts, not doc presence.
+    expect(res.groupsDone).toBe(3);
+    expect(res.stats.rowsRemoved).toBe(3);
+  });
+});
+
+describe("fold-catalog-duplicate-rungs -- APPLY never honours a resume offset (BLOCKING fix, 2026-09-21)", () => {
+  it("an APPLY run interrupted mid-scan, then relaunched, folds EVERY original candidate -- none silently skipped", async () => {
+    // The exact shape the review named: hop 1 folds SOME groups (deleting
+    // their loser rows) before hitting its budget; hop 2 is a NEW process
+    // that rebuilds `groups` from a FRESH scan of the same (now smaller)
+    // corpus. If hop 2 sliced that fresh, shorter list by hop 1's own
+    // numeric offset, it would skip whichever groups now happen to sit at
+    // the front -- not the ones hop 1 actually folded.
+    const N = 10;
+    const rows = makeGroupRows(N);
+    const w = world(rows);
+    // Real per-call latency, so each BATCH takes a controllable amount of
+    // real wall time -- the budget check runs BEFORE each batch, so with
+    // CONCURRENCY=3 the 1st batch (groups 1-3, sorted by key) completes,
+    // then the clock trips before batch 2 is admitted.
+    w.cat.delayMs = 40;
+    w.pool.delayMs = 10;
+
+    // Hop 1: APPLY, a budget that fits ~1 batch (3 groups) and no more.
+    // RUN_MINUTES is real wall-clock: 1 batch of 3 groups at ~40ms/call x a
+    // few calls per group is roughly 150-250ms; a 400ms budget with a 250ms
+    // reserve leaves room for exactly one batch before the reserve check
+    // trips ahead of a second.
+    const { runLane: hop1 } = loadLane({ RUN_MINUTES: String(400 / 60000), RESERVE_MS: "250", CONCURRENCY: "3", APPLY: "true" });
+    const res1 = await hop1({ cat: w.cat as any, pool: w.pool as any, portfolio: w.portfolio as any });
+    const foldedAfterHop1 = res1.stats.rowsRemoved;
+    // The scenario only tests something if hop 1 made partial (not full,
+    // not zero) progress -- assert that shape rather than assume it, so a
+    // timing change that makes this pass/fail for the wrong reason is caught.
+    expect(foldedAfterHop1).toBeGreaterThan(0);
+    expect(foldedAfterHop1).toBeLessThan(N);
+    expect(res1.stopReason).not.toBeNull();
+    const m = /scan_limit=(\d+)/.exec(res1.stopReason ?? "");
+    expect(m).not.toBeNull();
+    const scanLimit = m![1];
+    // THE FIX: the next cursor's OFFSET is always 0 under APPLY (only the
+    // hop advances) -- encodeResume(hop*1_000_000 + 0) is an exact multiple
+    // of 1,000,000.
+    expect(Number(scanLimit) % 1_000_000).toBe(0);
+    expect(res1.stopReason).toContain("APPLY always RESCANS from the top");
+
+    // Hop 2: the SAME world (same live fake -- a real relaunch is a NEW
+    // process reading the SAME Cosmos account), dispatched with hop 1's own
+    // scan_limit. It must fold every group hop 1 had not yet reached --
+    // and it must NOT need to re-fold anything hop 1 already did (those
+    // groups are gone from the fresh scan on their own).
+    const { runLane: hop2 } = loadLane({ RUN_MINUTES: "120", CONCURRENCY: "6", APPLY: "true", SCAN_LIMIT: scanLimit });
+    const res2 = await hop2({ cat: w.cat as any, pool: w.pool as any, portfolio: w.portfolio as any });
+    expect(res2.stopReason).toBeNull();
+    expect(res2.stats.rowsRemoved).toBe(N - foldedAfterHop1);
+
+    // GROUND TRUTH: every original candidate's loser row is gone and its
+    // survivor row is present -- none silently skipped across the two hops.
+    for (let i = 0; i < N; i++) {
+      const canonicalId = `hiq:basketball:2024:panini-prizm:${i + 1}:white-prizm:no-auto`;
+      const loserId = `hiq:basketball:2024:panini-prizm:${i + 1}:white-prizms:no-auto`;
+      expect(w.cat.docs.has(canonicalId)).toBe(true);
+      expect(w.cat.docs.has(loserId)).toBe(false);
+    }
+  });
+
+  it("APPLY's own resume message never claims a REPORT-shaped offset", () => {
+    const source = require("node:fs").readFileSync(scriptPath, "utf8");
+    expect(source).toContain('? `stopped at the ${RUN_MINUTES}-minute budget — the relaunch resumes at scan_limit=${nextResume} (hop ${RESUME.hop + 1}; APPLY always RESCANS from the top');
+  });
+
+  it("the hop cap aborts rather than relaunching forever if a corpus never converges", () => {
+    const source = require("node:fs").readFileSync(scriptPath, "utf8");
+    expect(source).toContain("MAX_RESUME_HOPS = 30");
+    expect(source).toContain("HOP_CAP");
   });
 });
 
@@ -335,8 +428,36 @@ describe("fold-catalog-duplicate-rungs -- bounded concurrency, per-group order p
     // specific run, to avoid a flaky per-test clock assertion here.
   });
 
-  it("honours the concurrency input's default of 16 groups at once", () => {
-    expect(require("node:fs").readFileSync(scriptPath, "utf8")).toMatch(/CONCURRENCY \|\| process\.env\.BACKFILL_CONCURRENCY \|\| 16/);
+  it("honours the concurrency input's default of 6 groups at once (sold_comps is shared with production pricing)", () => {
+    expect(require("node:fs").readFileSync(scriptPath, "utf8")).toMatch(/CONCURRENCY \|\| process\.env\.BACKFILL_CONCURRENCY \|\| 6/);
+  });
+
+  it("an operator-raised CONCURRENCY still runs correctly end to end", async () => {
+    const rows = makeGroupRows(12);
+    const w = world(rows);
+    const { runLane } = loadLane({ RUN_MINUTES: "120", CONCURRENCY: "20" });
+    const res = await runLane({ cat: w.cat as any, pool: w.pool as any, portfolio: w.portfolio as any });
+    expect(res.stats.rowsRemoved).toBe(12);
+    expect(res.stopReason).toBeNull();
+  });
+
+  it("crossing 20 throttles drops effective concurrency to 2 for the rest of the run and still folds every group correctly", async () => {
+    // WHITE-BOX: `throttleStats` is exported for exactly this -- simulating
+    // 20+ throttles via real retry() backoff would cost 500ms-15s PER
+    // attempt (10+ seconds minimum for 20 throttles), which does not belong
+    // in a fast unit test. Pre-loading the counter past the trip point
+    // exercises the SAME effectiveConcurrency() branch a real run would hit
+    // after 20 genuine 429s, without paying the real backoff delay for each
+    // one -- the counting logic itself (retry()'s own `throttleStats.count++`
+    // on every retried call) is pinned separately, structurally, in
+    // foldCatalogDuplicateRungsScript.test.ts.
+    const rows = makeGroupRows(10);
+    const w = world(rows);
+    const { runLane, throttleStats } = loadLane({ RUN_MINUTES: "120", CONCURRENCY: "6" }) as any;
+    throttleStats.count = 20; // already at the trip threshold before the run starts
+    const res = await runLane({ cat: w.cat as any, pool: w.pool as any, portfolio: w.portfolio as any });
+    expect(res.stats.rowsRemoved).toBe(10); // every group still folds correctly at concurrency 2
+    expect(throttleStats.droppedTo2).toBe(true);
   });
 });
 
