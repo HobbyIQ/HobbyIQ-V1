@@ -1,0 +1,2162 @@
+category,cardNumber,parallel,isAuto,printRun,player
+insert-paper-prospects,BP-8,Sky Blue Border,false,499,Anderson Araujo
+insert-paper-prospects,BP-8,Neon Green Border,false,399,Anderson Araujo
+insert-paper-prospects,BP-8,Fuchsia Border,false,299,Anderson Araujo
+insert-paper-prospects,BP-8,Purple Border,false,250,Anderson Araujo
+insert-paper-prospects,BP-8,Purple Pattern,false,250,Anderson Araujo
+insert-paper-prospects,BP-8,Pink Border,false,175,Anderson Araujo
+insert-paper-prospects,BP-8,Blue Border,false,150,Anderson Araujo
+insert-paper-prospects,BP-8,Blue Pattern,false,150,Anderson Araujo
+insert-paper-prospects,BP-8,Green Border,false,99,Anderson Araujo
+insert-paper-prospects,BP-8,Green Border Pattern,false,99,Anderson Araujo
+insert-paper-prospects,BP-8,Yellow Pattern,false,75,Anderson Araujo
+insert-paper-prospects,BP-8,Gold Border,false,50,Anderson Araujo
+insert-paper-prospects,BP-8,Gold Border Pattern,false,50,Anderson Araujo
+insert-paper-prospects,BP-8,Orange Border,false,25,Anderson Araujo
+insert-paper-prospects,BP-8,Orange Border Pattern,false,25,Anderson Araujo
+insert-paper-prospects,BP-8,Black Border,false,25,Anderson Araujo
+insert-paper-prospects,BP-8,Red Border,false,5,Anderson Araujo
+insert-paper-prospects,BP-8,Platinum Border,false,1,Anderson Araujo
+insert-paper-prospects,BP-44,Sky Blue Border,false,499,Billy Carlson
+insert-paper-prospects,BP-44,Neon Green Border,false,399,Billy Carlson
+insert-paper-prospects,BP-44,Purple Border,false,250,Billy Carlson
+insert-paper-prospects,BP-44,Purple Pattern,false,250,Billy Carlson
+insert-paper-prospects,BP-44,Pink Border,false,175,Billy Carlson
+insert-paper-prospects,BP-44,Blue Pattern,false,150,Billy Carlson
+insert-paper-prospects,BP-44,Green Border,false,99,Billy Carlson
+insert-paper-prospects,BP-44,Green Border Pattern,false,99,Billy Carlson
+insert-paper-prospects,BP-44,Yellow Border,false,75,Billy Carlson
+insert-paper-prospects,BP-44,Gold Border,false,50,Billy Carlson
+insert-paper-prospects,BP-44,Gold Border Pattern,false,50,Billy Carlson
+insert-paper-prospects,BP-44,Orange Border,false,25,Billy Carlson
+insert-paper-prospects,BP-44,Orange Border Pattern,false,25,Billy Carlson
+insert-paper-prospects,BP-44,Black Border,false,25,Billy Carlson
+insert-paper-prospects,BP-44,Black Border Pattern,false,25,Billy Carlson
+insert-paper-prospects,BP-44,Red Border,false,5,Billy Carlson
+insert-paper-prospects,BP-44,Platinum Border,false,1,Billy Carlson
+insert-paper-prospects,BP-33,Sky Blue Border,false,499,Coy James
+insert-paper-prospects,BP-33,Neon Green Border,false,399,Coy James
+insert-paper-prospects,BP-33,Fuchsia Border,false,299,Coy James
+insert-paper-prospects,BP-33,Purple Border,false,250,Coy James
+insert-paper-prospects,BP-33,Purple Pattern,false,250,Coy James
+insert-paper-prospects,BP-33,Pink Border,false,175,Coy James
+insert-paper-prospects,BP-33,Blue Border,false,150,Coy James
+insert-paper-prospects,BP-33,Blue Pattern,false,150,Coy James
+insert-paper-prospects,BP-33,Green Border,false,99,Coy James
+insert-paper-prospects,BP-33,Green Border Pattern,false,99,Coy James
+insert-paper-prospects,BP-33,Yellow Border,false,75,Coy James
+insert-paper-prospects,BP-33,Yellow Pattern,false,75,Coy James
+insert-paper-prospects,BP-33,Gold Border,false,50,Coy James
+insert-paper-prospects,BP-33,Gold Border Pattern,false,50,Coy James
+insert-paper-prospects,BP-33,Orange Border,false,25,Coy James
+insert-paper-prospects,BP-33,Orange Border Pattern,false,25,Coy James
+insert-paper-prospects,BP-33,Black Border,false,25,Coy James
+insert-paper-prospects,BP-33,Black Border Pattern,false,25,Coy James
+insert-paper-prospects,BP-33,Red Border,false,5,Coy James
+insert-paper-prospects,BP-33,Platinum Border,false,1,Coy James
+insert-paper-prospects,BP-132,Sky Blue Border,false,499,Keyner Martinez
+insert-paper-prospects,BP-132,Fuchsia Border,false,299,Keyner Martinez
+insert-paper-prospects,BP-132,Purple Border,false,250,Keyner Martinez
+insert-paper-prospects,BP-132,Blue Border,false,150,Keyner Martinez
+insert-paper-prospects,BP-132,Blue Pattern,false,150,Keyner Martinez
+insert-paper-prospects,BP-132,Green Border,false,99,Keyner Martinez
+insert-paper-prospects,BP-132,Green Border Pattern,false,99,Keyner Martinez
+insert-paper-prospects,BP-132,Yellow Border,false,75,Keyner Martinez
+insert-paper-prospects,BP-132,Yellow Pattern,false,75,Keyner Martinez
+insert-paper-prospects,BP-132,Gold Border,false,50,Keyner Martinez
+insert-paper-prospects,BP-132,Gold Border Pattern,false,50,Keyner Martinez
+insert-paper-prospects,BP-132,Black Border,false,25,Keyner Martinez
+insert-paper-prospects,BP-132,Black Border Pattern,false,25,Keyner Martinez
+insert-paper-prospects,BP-132,Red Border,false,5,Keyner Martinez
+insert-paper-prospects,BP-132,Platinum Border,false,1,Keyner Martinez
+insert-paper-prospects,BP-124,Sky Blue Border,false,499,Riley Nelson
+insert-paper-prospects,BP-124,Neon Green Border,false,399,Riley Nelson
+insert-paper-prospects,BP-124,Fuchsia Border,false,299,Riley Nelson
+insert-paper-prospects,BP-124,Purple Border,false,250,Riley Nelson
+insert-paper-prospects,BP-124,Pink Border,false,175,Riley Nelson
+insert-paper-prospects,BP-124,Blue Border,false,150,Riley Nelson
+insert-paper-prospects,BP-124,Blue Pattern,false,150,Riley Nelson
+insert-paper-prospects,BP-124,Green Border,false,99,Riley Nelson
+insert-paper-prospects,BP-124,Green Border Pattern,false,99,Riley Nelson
+insert-paper-prospects,BP-124,Yellow Border,false,75,Riley Nelson
+insert-paper-prospects,BP-124,Yellow Pattern,false,75,Riley Nelson
+insert-paper-prospects,BP-124,Gold Border,false,50,Riley Nelson
+insert-paper-prospects,BP-124,Gold Border Pattern,false,50,Riley Nelson
+insert-paper-prospects,BP-124,Orange Border,false,25,Riley Nelson
+insert-paper-prospects,BP-124,Orange Border Pattern,false,25,Riley Nelson
+insert-paper-prospects,BP-124,Black Border,false,25,Riley Nelson
+insert-paper-prospects,BP-124,Black Border Pattern,false,25,Riley Nelson
+insert-paper-prospects,BP-124,Platinum Border,false,1,Riley Nelson
+insert-paper-prospects,BP-2,Sky Blue Border,false,499,Max Clark
+insert-paper-prospects,BP-2,Neon Green Border,false,399,Max Clark
+insert-paper-prospects,BP-2,Fuchsia Border,false,299,Max Clark
+insert-paper-prospects,BP-2,Purple Border,false,250,Max Clark
+insert-paper-prospects,BP-2,Purple Pattern,false,250,Max Clark
+insert-paper-prospects,BP-2,Blue Border,false,150,Max Clark
+insert-paper-prospects,BP-2,Blue Pattern,false,150,Max Clark
+insert-paper-prospects,BP-2,Green Border,false,99,Max Clark
+insert-paper-prospects,BP-2,Green Border Pattern,false,99,Max Clark
+insert-paper-prospects,BP-2,Yellow Border,false,75,Max Clark
+insert-paper-prospects,BP-2,Gold Border,false,50,Max Clark
+insert-paper-prospects,BP-2,Gold Border Pattern,false,50,Max Clark
+insert-paper-prospects,BP-2,Orange Border,false,25,Max Clark
+insert-paper-prospects,BP-2,Orange Border Pattern,false,25,Max Clark
+insert-paper-prospects,BP-2,Black Border,false,25,Max Clark
+insert-paper-prospects,BP-2,Black Border Pattern,false,25,Max Clark
+insert-paper-prospects,BP-2,Red Border,false,5,Max Clark
+insert-paper-prospects,BP-9,Sky Blue Border,false,499,Tyler Bremner
+insert-paper-prospects,BP-9,Neon Green Border,false,399,Tyler Bremner
+insert-paper-prospects,BP-9,Fuchsia Border,false,299,Tyler Bremner
+insert-paper-prospects,BP-9,Pink Border,false,175,Tyler Bremner
+insert-paper-prospects,BP-9,Blue Border,false,150,Tyler Bremner
+insert-paper-prospects,BP-9,Green Border,false,99,Tyler Bremner
+insert-paper-prospects,BP-9,Green Border Pattern,false,99,Tyler Bremner
+insert-paper-prospects,BP-9,Yellow Border,false,75,Tyler Bremner
+insert-paper-prospects,BP-9,Yellow Pattern,false,75,Tyler Bremner
+insert-paper-prospects,BP-9,Gold Border,false,50,Tyler Bremner
+insert-paper-prospects,BP-9,Gold Border Pattern,false,50,Tyler Bremner
+insert-paper-prospects,BP-9,Orange Border,false,25,Tyler Bremner
+insert-paper-prospects,BP-9,Orange Border Pattern,false,25,Tyler Bremner
+insert-paper-prospects,BP-9,Black Border,false,25,Tyler Bremner
+insert-paper-prospects,BP-9,Black Border Pattern,false,25,Tyler Bremner
+insert-paper-prospects,BP-9,Red Border,false,5,Tyler Bremner
+insert-paper-prospects,BP-9,Platinum Border,false,1,Tyler Bremner
+insert-paper-prospects,BP-92,Sky Blue Border,false,499,Konnor Griffin
+insert-paper-prospects,BP-92,Neon Green Border,false,399,Konnor Griffin
+insert-paper-prospects,BP-92,Purple Border,false,250,Konnor Griffin
+insert-paper-prospects,BP-92,Pink Border,false,175,Konnor Griffin
+insert-paper-prospects,BP-92,Blue Border,false,150,Konnor Griffin
+insert-paper-prospects,BP-92,Blue Pattern,false,150,Konnor Griffin
+insert-paper-prospects,BP-92,Green Border,false,99,Konnor Griffin
+insert-paper-prospects,BP-92,Green Border Pattern,false,99,Konnor Griffin
+insert-paper-prospects,BP-92,Yellow Border,false,75,Konnor Griffin
+insert-paper-prospects,BP-92,Yellow Pattern,false,75,Konnor Griffin
+insert-paper-prospects,BP-92,Gold Border,false,50,Konnor Griffin
+insert-paper-prospects,BP-92,Gold Border Pattern,false,50,Konnor Griffin
+insert-paper-prospects,BP-92,Orange Border,false,25,Konnor Griffin
+insert-paper-prospects,BP-92,Orange Border Pattern,false,25,Konnor Griffin
+insert-paper-prospects,BP-92,Black Border Pattern,false,25,Konnor Griffin
+insert-paper-prospects,BP-92,Red Border,false,5,Konnor Griffin
+insert-paper-prospects,BP-92,Platinum Border,false,1,Konnor Griffin
+insert-paper-prospects,BP-87,Sky Blue Border,false,499,Jean Carlos Sio
+insert-paper-prospects,BP-87,Neon Green Border,false,399,Jean Carlos Sio
+insert-paper-prospects,BP-87,Purple Border,false,250,Jean Carlos Sio
+insert-paper-prospects,BP-87,Purple Pattern,false,250,Jean Carlos Sio
+insert-paper-prospects,BP-87,Pink Border,false,175,Jean Carlos Sio
+insert-paper-prospects,BP-87,Blue Border,false,150,Jean Carlos Sio
+insert-paper-prospects,BP-87,Blue Pattern,false,150,Jean Carlos Sio
+insert-paper-prospects,BP-87,Green Border Pattern,false,99,Jean Carlos Sio
+insert-paper-prospects,BP-87,Yellow Border,false,75,Jean Carlos Sio
+insert-paper-prospects,BP-87,Yellow Pattern,false,75,Jean Carlos Sio
+insert-paper-prospects,BP-87,Gold Border,false,50,Jean Carlos Sio
+insert-paper-prospects,BP-87,Gold Border Pattern,false,50,Jean Carlos Sio
+insert-paper-prospects,BP-87,Orange Border,false,25,Jean Carlos Sio
+insert-paper-prospects,BP-87,Orange Border Pattern,false,25,Jean Carlos Sio
+insert-paper-prospects,BP-87,Black Border Pattern,false,25,Jean Carlos Sio
+insert-paper-prospects,BP-87,Red Border,false,5,Jean Carlos Sio
+insert-paper-prospects,BP-87,Platinum Border,false,1,Jean Carlos Sio
+insert-paper-prospects,BP-81,Sky Blue Border,false,499,Jose Urbina
+insert-paper-prospects,BP-81,Neon Green Border,false,399,Jose Urbina
+insert-paper-prospects,BP-81,Fuchsia Border,false,299,Jose Urbina
+insert-paper-prospects,BP-81,Purple Border,false,250,Jose Urbina
+insert-paper-prospects,BP-81,Purple Pattern,false,250,Jose Urbina
+insert-paper-prospects,BP-81,Pink Border,false,175,Jose Urbina
+insert-paper-prospects,BP-81,Blue Border,false,150,Jose Urbina
+insert-paper-prospects,BP-81,Green Border,false,99,Jose Urbina
+insert-paper-prospects,BP-81,Green Border Pattern,false,99,Jose Urbina
+insert-paper-prospects,BP-81,Gold Border,false,50,Jose Urbina
+insert-paper-prospects,BP-81,Gold Border Pattern,false,50,Jose Urbina
+insert-paper-prospects,BP-81,Orange Border,false,25,Jose Urbina
+insert-paper-prospects,BP-81,Orange Border Pattern,false,25,Jose Urbina
+insert-paper-prospects,BP-81,Black Border,false,25,Jose Urbina
+insert-paper-prospects,BP-81,Black Border Pattern,false,25,Jose Urbina
+insert-paper-prospects,BP-81,Red Border,false,5,Jose Urbina
+insert-paper-prospects,BP-81,Platinum Border,false,1,Jose Urbina
+insert-paper-prospects,BP-75,Sky Blue Border,false,499,Juan Torres
+insert-paper-prospects,BP-75,Neon Green Border,false,399,Juan Torres
+insert-paper-prospects,BP-75,Purple Border,false,250,Juan Torres
+insert-paper-prospects,BP-75,Purple Pattern,false,250,Juan Torres
+insert-paper-prospects,BP-75,Pink Border,false,175,Juan Torres
+insert-paper-prospects,BP-75,Blue Border,false,150,Juan Torres
+insert-paper-prospects,BP-75,Blue Pattern,false,150,Juan Torres
+insert-paper-prospects,BP-75,Green Border Pattern,false,99,Juan Torres
+insert-paper-prospects,BP-75,Yellow Border,false,75,Juan Torres
+insert-paper-prospects,BP-75,Yellow Pattern,false,75,Juan Torres
+insert-paper-prospects,BP-75,Gold Border,false,50,Juan Torres
+insert-paper-prospects,BP-75,Gold Border Pattern,false,50,Juan Torres
+insert-paper-prospects,BP-75,Orange Border Pattern,false,25,Juan Torres
+insert-paper-prospects,BP-75,Black Border,false,25,Juan Torres
+insert-paper-prospects,BP-75,Black Border Pattern,false,25,Juan Torres
+insert-paper-prospects,BP-75,Red Border,false,5,Juan Torres
+insert-paper-prospects,BP-75,Platinum Border,false,1,Juan Torres
+insert-paper-prospects,BP-20,Sky Blue Border,false,499,Theo Gillen
+insert-paper-prospects,BP-20,Neon Green Border,false,399,Theo Gillen
+insert-paper-prospects,BP-20,Fuchsia Border,false,299,Theo Gillen
+insert-paper-prospects,BP-20,Purple Border,false,250,Theo Gillen
+insert-paper-prospects,BP-20,Pink Border,false,175,Theo Gillen
+insert-paper-prospects,BP-20,Blue Border,false,150,Theo Gillen
+insert-paper-prospects,BP-20,Blue Pattern,false,150,Theo Gillen
+insert-paper-prospects,BP-20,Green Border,false,99,Theo Gillen
+insert-paper-prospects,BP-20,Green Border Pattern,false,99,Theo Gillen
+insert-paper-prospects,BP-20,Yellow Border,false,75,Theo Gillen
+insert-paper-prospects,BP-20,Yellow Pattern,false,75,Theo Gillen
+insert-paper-prospects,BP-20,Gold Border,false,50,Theo Gillen
+insert-paper-prospects,BP-20,Gold Border Pattern,false,50,Theo Gillen
+insert-paper-prospects,BP-20,Orange Border,false,25,Theo Gillen
+insert-paper-prospects,BP-20,Orange Border Pattern,false,25,Theo Gillen
+insert-paper-prospects,BP-20,Black Border,false,25,Theo Gillen
+insert-paper-prospects,BP-20,Black Border Pattern,false,25,Theo Gillen
+insert-paper-prospects,BP-20,Red Border,false,5,Theo Gillen
+insert-paper-prospects,BP-20,Platinum Border,false,1,Theo Gillen
+insert-paper-prospects,BP-100,Sky Blue Border,false,499,Marconi German
+insert-paper-prospects,BP-100,Neon Green Border,false,399,Marconi German
+insert-paper-prospects,BP-100,Fuchsia Border,false,299,Marconi German
+insert-paper-prospects,BP-100,Purple Border,false,250,Marconi German
+insert-paper-prospects,BP-100,Purple Pattern,false,250,Marconi German
+insert-paper-prospects,BP-100,Pink Border,false,175,Marconi German
+insert-paper-prospects,BP-100,Blue Border,false,150,Marconi German
+insert-paper-prospects,BP-100,Green Border,false,99,Marconi German
+insert-paper-prospects,BP-100,Green Border Pattern,false,99,Marconi German
+insert-paper-prospects,BP-100,Yellow Pattern,false,75,Marconi German
+insert-paper-prospects,BP-100,Gold Border,false,50,Marconi German
+insert-paper-prospects,BP-100,Gold Border Pattern,false,50,Marconi German
+insert-paper-prospects,BP-100,Orange Border,false,25,Marconi German
+insert-paper-prospects,BP-100,Orange Border Pattern,false,25,Marconi German
+insert-paper-prospects,BP-100,Black Border,false,25,Marconi German
+insert-paper-prospects,BP-100,Black Border Pattern,false,25,Marconi German
+insert-paper-prospects,BP-100,Red Border,false,5,Marconi German
+insert-paper-prospects,BP-112,Sky Blue Border,false,499,Jamie Arnold
+insert-paper-prospects,BP-112,Neon Green Border,false,399,Jamie Arnold
+insert-paper-prospects,BP-112,Fuchsia Border,false,299,Jamie Arnold
+insert-paper-prospects,BP-112,Purple Border,false,250,Jamie Arnold
+insert-paper-prospects,BP-112,Purple Pattern,false,250,Jamie Arnold
+insert-paper-prospects,BP-112,Pink Border,false,175,Jamie Arnold
+insert-paper-prospects,BP-112,Blue Border,false,150,Jamie Arnold
+insert-paper-prospects,BP-112,Blue Pattern,false,150,Jamie Arnold
+insert-paper-prospects,BP-112,Green Border,false,99,Jamie Arnold
+insert-paper-prospects,BP-112,Green Border Pattern,false,99,Jamie Arnold
+insert-paper-prospects,BP-112,Yellow Border,false,75,Jamie Arnold
+insert-paper-prospects,BP-112,Yellow Pattern,false,75,Jamie Arnold
+insert-paper-prospects,BP-112,Gold Border Pattern,false,50,Jamie Arnold
+insert-paper-prospects,BP-112,Orange Border,false,25,Jamie Arnold
+insert-paper-prospects,BP-112,Orange Border Pattern,false,25,Jamie Arnold
+insert-paper-prospects,BP-112,Black Border,false,25,Jamie Arnold
+insert-paper-prospects,BP-112,Black Border Pattern,false,25,Jamie Arnold
+insert-paper-prospects,BP-112,Red Border,false,5,Jamie Arnold
+insert-paper-prospects,BP-112,Platinum Border,false,1,Jamie Arnold
+insert-paper-prospects,BP-84,Sky Blue Border,false,499,David Hagaman
+insert-paper-prospects,BP-84,Neon Green Border,false,399,David Hagaman
+insert-paper-prospects,BP-84,Fuchsia Border,false,299,David Hagaman
+insert-paper-prospects,BP-84,Purple Border,false,250,David Hagaman
+insert-paper-prospects,BP-84,Purple Pattern,false,250,David Hagaman
+insert-paper-prospects,BP-84,Pink Border,false,175,David Hagaman
+insert-paper-prospects,BP-84,Blue Border,false,150,David Hagaman
+insert-paper-prospects,BP-84,Blue Pattern,false,150,David Hagaman
+insert-paper-prospects,BP-84,Green Border,false,99,David Hagaman
+insert-paper-prospects,BP-84,Green Border Pattern,false,99,David Hagaman
+insert-paper-prospects,BP-84,Yellow Border,false,75,David Hagaman
+insert-paper-prospects,BP-84,Yellow Pattern,false,75,David Hagaman
+insert-paper-prospects,BP-84,Gold Border,false,50,David Hagaman
+insert-paper-prospects,BP-84,Gold Border Pattern,false,50,David Hagaman
+insert-paper-prospects,BP-84,Orange Border,false,25,David Hagaman
+insert-paper-prospects,BP-84,Orange Border Pattern,false,25,David Hagaman
+insert-paper-prospects,BP-84,Black Border,false,25,David Hagaman
+insert-paper-prospects,BP-84,Black Border Pattern,false,25,David Hagaman
+insert-paper-prospects,BP-84,Red Border,false,5,David Hagaman
+insert-paper-prospects,BP-84,Platinum Border,false,1,David Hagaman
+insert-paper-prospects,BP-144,Sky Blue Border,false,499,Colby Shelton
+insert-paper-prospects,BP-144,Purple Border,false,250,Colby Shelton
+insert-paper-prospects,BP-144,Purple Pattern,false,250,Colby Shelton
+insert-paper-prospects,BP-144,Blue Border,false,150,Colby Shelton
+insert-paper-prospects,BP-144,Blue Pattern,false,150,Colby Shelton
+insert-paper-prospects,BP-144,Green Border Pattern,false,99,Colby Shelton
+insert-paper-prospects,BP-144,Yellow Border,false,75,Colby Shelton
+insert-paper-prospects,BP-144,Yellow Pattern,false,75,Colby Shelton
+insert-paper-prospects,BP-144,Gold Border,false,50,Colby Shelton
+insert-paper-prospects,BP-144,Gold Border Pattern,false,50,Colby Shelton
+insert-paper-prospects,BP-144,Orange Border,false,25,Colby Shelton
+insert-paper-prospects,BP-144,Orange Border Pattern,false,25,Colby Shelton
+insert-paper-prospects,BP-144,Black Border,false,25,Colby Shelton
+insert-paper-prospects,BP-144,Black Border Pattern,false,25,Colby Shelton
+insert-paper-prospects,BP-144,Red Border,false,5,Colby Shelton
+insert-paper-prospects,BP-144,Platinum Border,false,1,Colby Shelton
+insert-paper-prospects,BP-45,Sky Blue Border,false,499,Seong-Jun Kim
+insert-paper-prospects,BP-45,Fuchsia Border,false,299,Seong-Jun Kim
+insert-paper-prospects,BP-45,Purple Border,false,250,Seong-Jun Kim
+insert-paper-prospects,BP-45,Pink Border,false,175,Seong-Jun Kim
+insert-paper-prospects,BP-45,Blue Border,false,150,Seong-Jun Kim
+insert-paper-prospects,BP-45,Blue Pattern,false,150,Seong-Jun Kim
+insert-paper-prospects,BP-45,Green Border,false,99,Seong-Jun Kim
+insert-paper-prospects,BP-45,Green Border Pattern,false,99,Seong-Jun Kim
+insert-paper-prospects,BP-45,Yellow Border,false,75,Seong-Jun Kim
+insert-paper-prospects,BP-45,Yellow Pattern,false,75,Seong-Jun Kim
+insert-paper-prospects,BP-45,Gold Border,false,50,Seong-Jun Kim
+insert-paper-prospects,BP-45,Gold Border Pattern,false,50,Seong-Jun Kim
+insert-paper-prospects,BP-45,Orange Border,false,25,Seong-Jun Kim
+insert-paper-prospects,BP-45,Orange Border Pattern,false,25,Seong-Jun Kim
+insert-paper-prospects,BP-45,Black Border,false,25,Seong-Jun Kim
+insert-paper-prospects,BP-45,Black Border Pattern,false,25,Seong-Jun Kim
+insert-paper-prospects,BP-45,Red Border,false,5,Seong-Jun Kim
+insert-paper-prospects,BP-45,Platinum Border,false,1,Seong-Jun Kim
+insert-paper-prospects,BP-34,Sky Blue Border,false,499,Cristopher Polanco
+insert-paper-prospects,BP-34,Purple Border,false,250,Cristopher Polanco
+insert-paper-prospects,BP-34,Purple Pattern,false,250,Cristopher Polanco
+insert-paper-prospects,BP-34,Pink Border,false,175,Cristopher Polanco
+insert-paper-prospects,BP-34,Blue Border,false,150,Cristopher Polanco
+insert-paper-prospects,BP-34,Blue Pattern,false,150,Cristopher Polanco
+insert-paper-prospects,BP-34,Green Border,false,99,Cristopher Polanco
+insert-paper-prospects,BP-34,Green Border Pattern,false,99,Cristopher Polanco
+insert-paper-prospects,BP-34,Yellow Border,false,75,Cristopher Polanco
+insert-paper-prospects,BP-34,Gold Border,false,50,Cristopher Polanco
+insert-paper-prospects,BP-34,Gold Border Pattern,false,50,Cristopher Polanco
+insert-paper-prospects,BP-34,Orange Border,false,25,Cristopher Polanco
+insert-paper-prospects,BP-34,Black Border,false,25,Cristopher Polanco
+insert-paper-prospects,BP-34,Black Border Pattern,false,25,Cristopher Polanco
+insert-paper-prospects,BP-34,Red Border,false,5,Cristopher Polanco
+insert-paper-prospects,BP-34,Platinum Border,false,1,Cristopher Polanco
+insert-paper-prospects,BP-146,Sky Blue Border,false,499,Matt Klein
+insert-paper-prospects,BP-146,Fuchsia Border,false,299,Matt Klein
+insert-paper-prospects,BP-146,Purple Border,false,250,Matt Klein
+insert-paper-prospects,BP-146,Purple Pattern,false,250,Matt Klein
+insert-paper-prospects,BP-146,Pink Border,false,175,Matt Klein
+insert-paper-prospects,BP-146,Blue Border,false,150,Matt Klein
+insert-paper-prospects,BP-146,Green Border,false,99,Matt Klein
+insert-paper-prospects,BP-146,Green Border Pattern,false,99,Matt Klein
+insert-paper-prospects,BP-146,Yellow Pattern,false,75,Matt Klein
+insert-paper-prospects,BP-146,Gold Border Pattern,false,50,Matt Klein
+insert-paper-prospects,BP-146,Orange Border,false,25,Matt Klein
+insert-paper-prospects,BP-146,Orange Border Pattern,false,25,Matt Klein
+insert-paper-prospects,BP-146,Black Border,false,25,Matt Klein
+insert-paper-prospects,BP-146,Red Border,false,5,Matt Klein
+insert-paper-prospects,BP-146,Platinum Border,false,1,Matt Klein
+insert-paper-prospects,BP-78,Sky Blue Border,false,499,Dax Kilby
+insert-paper-prospects,BP-78,Neon Green Border,false,399,Dax Kilby
+insert-paper-prospects,BP-78,Fuchsia Border,false,299,Dax Kilby
+insert-paper-prospects,BP-78,Purple Border,false,250,Dax Kilby
+insert-paper-prospects,BP-78,Purple Pattern,false,250,Dax Kilby
+insert-paper-prospects,BP-78,Pink Border,false,175,Dax Kilby
+insert-paper-prospects,BP-78,Blue Border,false,150,Dax Kilby
+insert-paper-prospects,BP-78,Blue Pattern,false,150,Dax Kilby
+insert-paper-prospects,BP-78,Green Border,false,99,Dax Kilby
+insert-paper-prospects,BP-78,Green Border Pattern,false,99,Dax Kilby
+insert-paper-prospects,BP-78,Yellow Border,false,75,Dax Kilby
+insert-paper-prospects,BP-78,Yellow Pattern,false,75,Dax Kilby
+insert-paper-prospects,BP-78,Gold Border,false,50,Dax Kilby
+insert-paper-prospects,BP-78,Gold Border Pattern,false,50,Dax Kilby
+insert-paper-prospects,BP-78,Orange Border Pattern,false,25,Dax Kilby
+insert-paper-prospects,BP-78,Black Border Pattern,false,25,Dax Kilby
+insert-paper-prospects,BP-78,Red Border,false,5,Dax Kilby
+insert-paper-prospects,BP-78,Platinum Border,false,1,Dax Kilby
+insert-paper-prospects,BP-95,Sky Blue Border,false,499,Eli Willits
+insert-paper-prospects,BP-95,Neon Green Border,false,399,Eli Willits
+insert-paper-prospects,BP-95,Fuchsia Border,false,299,Eli Willits
+insert-paper-prospects,BP-95,Purple Border,false,250,Eli Willits
+insert-paper-prospects,BP-95,Pink Border,false,175,Eli Willits
+insert-paper-prospects,BP-95,Blue Border,false,150,Eli Willits
+insert-paper-prospects,BP-95,Blue Pattern,false,150,Eli Willits
+insert-paper-prospects,BP-95,Green Border,false,99,Eli Willits
+insert-paper-prospects,BP-95,Green Border Pattern,false,99,Eli Willits
+insert-paper-prospects,BP-95,Yellow Border,false,75,Eli Willits
+insert-paper-prospects,BP-95,Yellow Pattern,false,75,Eli Willits
+insert-paper-prospects,BP-95,Gold Border,false,50,Eli Willits
+insert-paper-prospects,BP-95,Gold Border Pattern,false,50,Eli Willits
+insert-paper-prospects,BP-95,Orange Border,false,25,Eli Willits
+insert-paper-prospects,BP-95,Black Border,false,25,Eli Willits
+insert-paper-prospects,BP-95,Black Border Pattern,false,25,Eli Willits
+insert-paper-prospects,BP-95,Red Border,false,5,Eli Willits
+insert-paper-prospects,BP-95,Platinum Border,false,1,Eli Willits
+insert-paper-prospects,BP-82,Sky Blue Border,false,499,Edward Florentino
+insert-paper-prospects,BP-82,Neon Green Border,false,399,Edward Florentino
+insert-paper-prospects,BP-82,Fuchsia Border,false,299,Edward Florentino
+insert-paper-prospects,BP-82,Purple Border,false,250,Edward Florentino
+insert-paper-prospects,BP-82,Purple Pattern,false,250,Edward Florentino
+insert-paper-prospects,BP-82,Pink Border,false,175,Edward Florentino
+insert-paper-prospects,BP-82,Blue Border,false,150,Edward Florentino
+insert-paper-prospects,BP-82,Blue Pattern,false,150,Edward Florentino
+insert-paper-prospects,BP-82,Green Border,false,99,Edward Florentino
+insert-paper-prospects,BP-82,Green Border Pattern,false,99,Edward Florentino
+insert-paper-prospects,BP-82,Yellow Border,false,75,Edward Florentino
+insert-paper-prospects,BP-82,Yellow Pattern,false,75,Edward Florentino
+insert-paper-prospects,BP-82,Gold Border,false,50,Edward Florentino
+insert-paper-prospects,BP-82,Gold Border Pattern,false,50,Edward Florentino
+insert-paper-prospects,BP-82,Orange Border,false,25,Edward Florentino
+insert-paper-prospects,BP-82,Orange Border Pattern,false,25,Edward Florentino
+insert-paper-prospects,BP-82,Black Border,false,25,Edward Florentino
+insert-paper-prospects,BP-82,Black Border Pattern,false,25,Edward Florentino
+insert-paper-prospects,BP-82,Red Border,false,5,Edward Florentino
+insert-paper-prospects,BP-82,Platinum Border,false,1,Edward Florentino
+insert-paper-prospects,BP-28,Sky Blue Border,false,499,Carlos Virahonda
+insert-paper-prospects,BP-28,Neon Green Border,false,399,Carlos Virahonda
+insert-paper-prospects,BP-28,Fuchsia Border,false,299,Carlos Virahonda
+insert-paper-prospects,BP-28,Pink Border,false,175,Carlos Virahonda
+insert-paper-prospects,BP-28,Blue Border,false,150,Carlos Virahonda
+insert-paper-prospects,BP-28,Green Border,false,99,Carlos Virahonda
+insert-paper-prospects,BP-28,Yellow Border,false,75,Carlos Virahonda
+insert-paper-prospects,BP-28,Yellow Pattern,false,75,Carlos Virahonda
+insert-paper-prospects,BP-28,Gold Border,false,50,Carlos Virahonda
+insert-paper-prospects,BP-28,Gold Border Pattern,false,50,Carlos Virahonda
+insert-paper-prospects,BP-28,Orange Border,false,25,Carlos Virahonda
+insert-paper-prospects,BP-28,Orange Border Pattern,false,25,Carlos Virahonda
+insert-paper-prospects,BP-28,Black Border,false,25,Carlos Virahonda
+insert-paper-prospects,BP-28,Black Border Pattern,false,25,Carlos Virahonda
+insert-paper-prospects,BP-28,Red Border,false,5,Carlos Virahonda
+insert-paper-prospects,BP-28,Platinum Border,false,1,Carlos Virahonda
+insert-paper-prospects,BP-4,Sky Blue Border,false,499,James Quinn-Irons
+insert-paper-prospects,BP-4,Neon Green Border,false,399,James Quinn-Irons
+insert-paper-prospects,BP-4,Fuchsia Border,false,299,James Quinn-Irons
+insert-paper-prospects,BP-4,Purple Border,false,250,James Quinn-Irons
+insert-paper-prospects,BP-4,Purple Pattern,false,250,James Quinn-Irons
+insert-paper-prospects,BP-4,Pink Border,false,175,James Quinn-Irons
+insert-paper-prospects,BP-4,Blue Border,false,150,James Quinn-Irons
+insert-paper-prospects,BP-4,Green Border,false,99,James Quinn-Irons
+insert-paper-prospects,BP-4,Green Border Pattern,false,99,James Quinn-Irons
+insert-paper-prospects,BP-4,Yellow Border,false,75,James Quinn-Irons
+insert-paper-prospects,BP-4,Yellow Pattern,false,75,James Quinn-Irons
+insert-paper-prospects,BP-4,Gold Border,false,50,James Quinn-Irons
+insert-paper-prospects,BP-4,Gold Border Pattern,false,50,James Quinn-Irons
+insert-paper-prospects,BP-4,Orange Border,false,25,James Quinn-Irons
+insert-paper-prospects,BP-4,Orange Border Pattern,false,25,James Quinn-Irons
+insert-paper-prospects,BP-4,Black Border,false,25,James Quinn-Irons
+insert-paper-prospects,BP-4,Black Border Pattern,false,25,James Quinn-Irons
+insert-paper-prospects,BP-4,Red Border,false,5,James Quinn-Irons
+insert-paper-prospects,BP-4,Platinum Border,false,1,James Quinn-Irons
+insert-paper-prospects,BP-3,Sky Blue Border,false,499,Yojancel Cabrera
+insert-paper-prospects,BP-3,Fuchsia Border,false,299,Yojancel Cabrera
+insert-paper-prospects,BP-3,Purple Border,false,250,Yojancel Cabrera
+insert-paper-prospects,BP-3,Pink Border,false,175,Yojancel Cabrera
+insert-paper-prospects,BP-3,Blue Border,false,150,Yojancel Cabrera
+insert-paper-prospects,BP-3,Blue Pattern,false,150,Yojancel Cabrera
+insert-paper-prospects,BP-3,Green Border,false,99,Yojancel Cabrera
+insert-paper-prospects,BP-3,Green Border Pattern,false,99,Yojancel Cabrera
+insert-paper-prospects,BP-3,Yellow Border,false,75,Yojancel Cabrera
+insert-paper-prospects,BP-3,Yellow Pattern,false,75,Yojancel Cabrera
+insert-paper-prospects,BP-3,Gold Border,false,50,Yojancel Cabrera
+insert-paper-prospects,BP-3,Gold Border Pattern,false,50,Yojancel Cabrera
+insert-paper-prospects,BP-3,Orange Border,false,25,Yojancel Cabrera
+insert-paper-prospects,BP-3,Orange Border Pattern,false,25,Yojancel Cabrera
+insert-paper-prospects,BP-3,Black Border,false,25,Yojancel Cabrera
+insert-paper-prospects,BP-3,Black Border Pattern,false,25,Yojancel Cabrera
+insert-paper-prospects,BP-3,Red Border,false,5,Yojancel Cabrera
+insert-paper-prospects,BP-3,Platinum Border,false,1,Yojancel Cabrera
+insert-paper-prospects,BP-13,Sky Blue Border,false,499,Blake Mitchell
+insert-paper-prospects,BP-13,Neon Green Border,false,399,Blake Mitchell
+insert-paper-prospects,BP-13,Fuchsia Border,false,299,Blake Mitchell
+insert-paper-prospects,BP-13,Purple Border,false,250,Blake Mitchell
+insert-paper-prospects,BP-13,Purple Pattern,false,250,Blake Mitchell
+insert-paper-prospects,BP-13,Pink Border,false,175,Blake Mitchell
+insert-paper-prospects,BP-13,Blue Border,false,150,Blake Mitchell
+insert-paper-prospects,BP-13,Blue Pattern,false,150,Blake Mitchell
+insert-paper-prospects,BP-13,Green Border,false,99,Blake Mitchell
+insert-paper-prospects,BP-13,Yellow Border,false,75,Blake Mitchell
+insert-paper-prospects,BP-13,Yellow Pattern,false,75,Blake Mitchell
+insert-paper-prospects,BP-13,Gold Border,false,50,Blake Mitchell
+insert-paper-prospects,BP-13,Gold Border Pattern,false,50,Blake Mitchell
+insert-paper-prospects,BP-13,Orange Border,false,25,Blake Mitchell
+insert-paper-prospects,BP-13,Orange Border Pattern,false,25,Blake Mitchell
+insert-paper-prospects,BP-13,Black Border,false,25,Blake Mitchell
+insert-paper-prospects,BP-13,Black Border Pattern,false,25,Blake Mitchell
+insert-paper-prospects,BP-13,Red Border,false,5,Blake Mitchell
+insert-paper-prospects,BP-13,Platinum Border,false,1,Blake Mitchell
+insert-paper-prospects,BP-15,Sky Blue Border,false,499,Gage Jump
+insert-paper-prospects,BP-15,Fuchsia Border,false,299,Gage Jump
+insert-paper-prospects,BP-15,Purple Border,false,250,Gage Jump
+insert-paper-prospects,BP-15,Purple Pattern,false,250,Gage Jump
+insert-paper-prospects,BP-15,Pink Border,false,175,Gage Jump
+insert-paper-prospects,BP-15,Blue Pattern,false,150,Gage Jump
+insert-paper-prospects,BP-15,Green Border,false,99,Gage Jump
+insert-paper-prospects,BP-15,Green Border Pattern,false,99,Gage Jump
+insert-paper-prospects,BP-15,Yellow Border,false,75,Gage Jump
+insert-paper-prospects,BP-15,Yellow Pattern,false,75,Gage Jump
+insert-paper-prospects,BP-15,Gold Border,false,50,Gage Jump
+insert-paper-prospects,BP-15,Gold Border Pattern,false,50,Gage Jump
+insert-paper-prospects,BP-15,Orange Border,false,25,Gage Jump
+insert-paper-prospects,BP-15,Orange Border Pattern,false,25,Gage Jump
+insert-paper-prospects,BP-15,Black Border,false,25,Gage Jump
+insert-paper-prospects,BP-15,Black Border Pattern,false,25,Gage Jump
+insert-paper-prospects,BP-15,Red Border,false,5,Gage Jump
+insert-paper-prospects,BP-15,Platinum Border,false,1,Gage Jump
+insert-paper-prospects,BP-18,Sky Blue Border,false,499,Blaine Bullard
+insert-paper-prospects,BP-18,Neon Green Border,false,399,Blaine Bullard
+insert-paper-prospects,BP-18,Fuchsia Border,false,299,Blaine Bullard
+insert-paper-prospects,BP-18,Purple Border,false,250,Blaine Bullard
+insert-paper-prospects,BP-18,Blue Border,false,150,Blaine Bullard
+insert-paper-prospects,BP-18,Blue Pattern,false,150,Blaine Bullard
+insert-paper-prospects,BP-18,Green Border Pattern,false,99,Blaine Bullard
+insert-paper-prospects,BP-18,Yellow Border,false,75,Blaine Bullard
+insert-paper-prospects,BP-18,Yellow Pattern,false,75,Blaine Bullard
+insert-paper-prospects,BP-18,Gold Border Pattern,false,50,Blaine Bullard
+insert-paper-prospects,BP-18,Orange Border,false,25,Blaine Bullard
+insert-paper-prospects,BP-18,Orange Border Pattern,false,25,Blaine Bullard
+insert-paper-prospects,BP-18,Black Border,false,25,Blaine Bullard
+insert-paper-prospects,BP-18,Black Border Pattern,false,25,Blaine Bullard
+insert-paper-prospects,BP-18,Red Border,false,5,Blaine Bullard
+insert-paper-prospects,BP-18,Platinum Border,false,1,Blaine Bullard
+insert-paper-prospects,BP-23,Sky Blue Border,false,499,Enddy Azocar
+insert-paper-prospects,BP-23,Neon Green Border,false,399,Enddy Azocar
+insert-paper-prospects,BP-23,Fuchsia Border,false,299,Enddy Azocar
+insert-paper-prospects,BP-23,Purple Border,false,250,Enddy Azocar
+insert-paper-prospects,BP-23,Purple Pattern,false,250,Enddy Azocar
+insert-paper-prospects,BP-23,Blue Border,false,150,Enddy Azocar
+insert-paper-prospects,BP-23,Blue Pattern,false,150,Enddy Azocar
+insert-paper-prospects,BP-23,Green Border,false,99,Enddy Azocar
+insert-paper-prospects,BP-23,Green Border Pattern,false,99,Enddy Azocar
+insert-paper-prospects,BP-23,Yellow Border,false,75,Enddy Azocar
+insert-paper-prospects,BP-23,Yellow Pattern,false,75,Enddy Azocar
+insert-paper-prospects,BP-23,Gold Border,false,50,Enddy Azocar
+insert-paper-prospects,BP-23,Gold Border Pattern,false,50,Enddy Azocar
+insert-paper-prospects,BP-23,Orange Border,false,25,Enddy Azocar
+insert-paper-prospects,BP-23,Orange Border Pattern,false,25,Enddy Azocar
+insert-paper-prospects,BP-23,Black Border,false,25,Enddy Azocar
+insert-paper-prospects,BP-23,Black Border Pattern,false,25,Enddy Azocar
+insert-paper-prospects,BP-23,Red Border,false,5,Enddy Azocar
+insert-paper-prospects,BP-23,Platinum Border,false,1,Enddy Azocar
+insert-paper-prospects,BP-26,Sky Blue Border,false,499,Sean Paul Liñan
+insert-paper-prospects,BP-26,Neon Green Border,false,399,Sean Paul Liñan
+insert-paper-prospects,BP-26,Fuchsia Border,false,299,Sean Paul Liñan
+insert-paper-prospects,BP-26,Purple Border,false,250,Sean Paul Liñan
+insert-paper-prospects,BP-26,Purple Pattern,false,250,Sean Paul Liñan
+insert-paper-prospects,BP-26,Pink Border,false,175,Sean Paul Liñan
+insert-paper-prospects,BP-26,Blue Border,false,150,Sean Paul Liñan
+insert-paper-prospects,BP-26,Green Border,false,99,Sean Paul Liñan
+insert-paper-prospects,BP-26,Green Border Pattern,false,99,Sean Paul Liñan
+insert-paper-prospects,BP-26,Yellow Border,false,75,Sean Paul Liñan
+insert-paper-prospects,BP-26,Yellow Pattern,false,75,Sean Paul Liñan
+insert-paper-prospects,BP-26,Gold Border Pattern,false,50,Sean Paul Liñan
+insert-paper-prospects,BP-26,Orange Border,false,25,Sean Paul Liñan
+insert-paper-prospects,BP-26,Orange Border Pattern,false,25,Sean Paul Liñan
+insert-paper-prospects,BP-26,Black Border,false,25,Sean Paul Liñan
+insert-paper-prospects,BP-26,Black Border Pattern,false,25,Sean Paul Liñan
+insert-paper-prospects,BP-26,Red Border,false,5,Sean Paul Liñan
+insert-paper-prospects,BP-26,Platinum Border,false,1,Sean Paul Liñan
+insert-paper-prospects,BP-27,Sky Blue Border,false,499,Franklin Arias
+insert-paper-prospects,BP-27,Neon Green Border,false,399,Franklin Arias
+insert-paper-prospects,BP-27,Fuchsia Border,false,299,Franklin Arias
+insert-paper-prospects,BP-27,Purple Border,false,250,Franklin Arias
+insert-paper-prospects,BP-27,Purple Pattern,false,250,Franklin Arias
+insert-paper-prospects,BP-27,Pink Border,false,175,Franklin Arias
+insert-paper-prospects,BP-27,Blue Border,false,150,Franklin Arias
+insert-paper-prospects,BP-27,Blue Pattern,false,150,Franklin Arias
+insert-paper-prospects,BP-27,Green Border,false,99,Franklin Arias
+insert-paper-prospects,BP-27,Green Border Pattern,false,99,Franklin Arias
+insert-paper-prospects,BP-27,Yellow Border,false,75,Franklin Arias
+insert-paper-prospects,BP-27,Gold Border,false,50,Franklin Arias
+insert-paper-prospects,BP-27,Orange Border,false,25,Franklin Arias
+insert-paper-prospects,BP-27,Orange Border Pattern,false,25,Franklin Arias
+insert-paper-prospects,BP-27,Black Border,false,25,Franklin Arias
+insert-paper-prospects,BP-27,Black Border Pattern,false,25,Franklin Arias
+insert-paper-prospects,BP-27,Red Border,false,5,Franklin Arias
+insert-paper-prospects,BP-27,Platinum Border,false,1,Franklin Arias
+insert-paper-prospects,BP-30,Sky Blue Border,false,499,Alimber Santa
+insert-paper-prospects,BP-30,Neon Green Border,false,399,Alimber Santa
+insert-paper-prospects,BP-30,Pink Border,false,175,Alimber Santa
+insert-paper-prospects,BP-30,Blue Border,false,150,Alimber Santa
+insert-paper-prospects,BP-30,Green Border,false,99,Alimber Santa
+insert-paper-prospects,BP-30,Green Border Pattern,false,99,Alimber Santa
+insert-paper-prospects,BP-30,Yellow Border,false,75,Alimber Santa
+insert-paper-prospects,BP-30,Yellow Pattern,false,75,Alimber Santa
+insert-paper-prospects,BP-30,Gold Border,false,50,Alimber Santa
+insert-paper-prospects,BP-30,Gold Border Pattern,false,50,Alimber Santa
+insert-paper-prospects,BP-30,Orange Border Pattern,false,25,Alimber Santa
+insert-paper-prospects,BP-30,Black Border,false,25,Alimber Santa
+insert-paper-prospects,BP-30,Black Border Pattern,false,25,Alimber Santa
+insert-paper-prospects,BP-30,Red Border,false,5,Alimber Santa
+insert-paper-prospects,BP-30,Platinum Border,false,1,Alimber Santa
+insert-paper-prospects,BP-37,Sky Blue Border,false,499,Gage Stanifer
+insert-paper-prospects,BP-37,Neon Green Border,false,399,Gage Stanifer
+insert-paper-prospects,BP-37,Fuchsia Border,false,299,Gage Stanifer
+insert-paper-prospects,BP-37,Purple Border,false,250,Gage Stanifer
+insert-paper-prospects,BP-37,Purple Pattern,false,250,Gage Stanifer
+insert-paper-prospects,BP-37,Pink Border,false,175,Gage Stanifer
+insert-paper-prospects,BP-37,Blue Border,false,150,Gage Stanifer
+insert-paper-prospects,BP-37,Green Border,false,99,Gage Stanifer
+insert-paper-prospects,BP-37,Green Border Pattern,false,99,Gage Stanifer
+insert-paper-prospects,BP-37,Yellow Border,false,75,Gage Stanifer
+insert-paper-prospects,BP-37,Yellow Pattern,false,75,Gage Stanifer
+insert-paper-prospects,BP-37,Gold Border,false,50,Gage Stanifer
+insert-paper-prospects,BP-37,Gold Border Pattern,false,50,Gage Stanifer
+insert-paper-prospects,BP-37,Orange Border,false,25,Gage Stanifer
+insert-paper-prospects,BP-37,Orange Border Pattern,false,25,Gage Stanifer
+insert-paper-prospects,BP-37,Black Border,false,25,Gage Stanifer
+insert-paper-prospects,BP-37,Black Border Pattern,false,25,Gage Stanifer
+insert-paper-prospects,BP-37,Red Border,false,5,Gage Stanifer
+insert-paper-prospects,BP-37,Platinum Border,false,1,Gage Stanifer
+insert-paper-prospects,BP-36,Sky Blue Border,false,499,Moisés Chace
+insert-paper-prospects,BP-36,Neon Green Border,false,399,Moisés Chace
+insert-paper-prospects,BP-36,Fuchsia Border,false,299,Moisés Chace
+insert-paper-prospects,BP-36,Purple Border,false,250,Moisés Chace
+insert-paper-prospects,BP-36,Purple Pattern,false,250,Moisés Chace
+insert-paper-prospects,BP-36,Blue Border,false,150,Moisés Chace
+insert-paper-prospects,BP-36,Blue Pattern,false,150,Moisés Chace
+insert-paper-prospects,BP-36,Green Border,false,99,Moisés Chace
+insert-paper-prospects,BP-36,Green Border Pattern,false,99,Moisés Chace
+insert-paper-prospects,BP-36,Yellow Border,false,75,Moisés Chace
+insert-paper-prospects,BP-36,Yellow Pattern,false,75,Moisés Chace
+insert-paper-prospects,BP-36,Gold Border,false,50,Moisés Chace
+insert-paper-prospects,BP-36,Orange Border,false,25,Moisés Chace
+insert-paper-prospects,BP-36,Black Border,false,25,Moisés Chace
+insert-paper-prospects,BP-36,Black Border Pattern,false,25,Moisés Chace
+insert-paper-prospects,BP-36,Red Border,false,5,Moisés Chace
+insert-paper-prospects,BP-36,Platinum Border,false,1,Moisés Chace
+insert-paper-prospects,BP-40,Sky Blue Border,false,499,Aiva Arquette
+insert-paper-prospects,BP-40,Neon Green Border,false,399,Aiva Arquette
+insert-paper-prospects,BP-40,Fuchsia Border,false,299,Aiva Arquette
+insert-paper-prospects,BP-40,Purple Pattern,false,250,Aiva Arquette
+insert-paper-prospects,BP-40,Pink Border,false,175,Aiva Arquette
+insert-paper-prospects,BP-40,Blue Border,false,150,Aiva Arquette
+insert-paper-prospects,BP-40,Blue Pattern,false,150,Aiva Arquette
+insert-paper-prospects,BP-40,Green Border,false,99,Aiva Arquette
+insert-paper-prospects,BP-40,Yellow Border,false,75,Aiva Arquette
+insert-paper-prospects,BP-40,Yellow Pattern,false,75,Aiva Arquette
+insert-paper-prospects,BP-40,Gold Border,false,50,Aiva Arquette
+insert-paper-prospects,BP-40,Gold Border Pattern,false,50,Aiva Arquette
+insert-paper-prospects,BP-40,Orange Border,false,25,Aiva Arquette
+insert-paper-prospects,BP-40,Orange Border Pattern,false,25,Aiva Arquette
+insert-paper-prospects,BP-40,Black Border,false,25,Aiva Arquette
+insert-paper-prospects,BP-40,Black Border Pattern,false,25,Aiva Arquette
+insert-paper-prospects,BP-40,Red Border,false,5,Aiva Arquette
+insert-paper-prospects,BP-40,Platinum Border,false,1,Aiva Arquette
+insert-paper-prospects,BP-47,Sky Blue Border,false,499,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Neon Green Border,false,399,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Fuchsia Border,false,299,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Purple Border,false,250,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Purple Pattern,false,250,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Pink Border,false,175,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Blue Border,false,150,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Blue Pattern,false,150,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Green Border,false,99,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Green Border Pattern,false,99,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Yellow Border,false,75,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Yellow Pattern,false,75,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Gold Border,false,50,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Orange Border,false,25,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Orange Border Pattern,false,25,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Black Border Pattern,false,25,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Red Border,false,5,Handelfry Encarnacion
+insert-paper-prospects,BP-47,Platinum Border,false,1,Handelfry Encarnacion
+insert-paper-prospects,BP-53,Sky Blue Border,false,499,Braden Montgomery
+insert-paper-prospects,BP-53,Fuchsia Border,false,299,Braden Montgomery
+insert-paper-prospects,BP-53,Purple Border,false,250,Braden Montgomery
+insert-paper-prospects,BP-53,Purple Pattern,false,250,Braden Montgomery
+insert-paper-prospects,BP-53,Pink Border,false,175,Braden Montgomery
+insert-paper-prospects,BP-53,Blue Border,false,150,Braden Montgomery
+insert-paper-prospects,BP-53,Blue Pattern,false,150,Braden Montgomery
+insert-paper-prospects,BP-53,Green Border,false,99,Braden Montgomery
+insert-paper-prospects,BP-53,Green Border Pattern,false,99,Braden Montgomery
+insert-paper-prospects,BP-53,Yellow Border,false,75,Braden Montgomery
+insert-paper-prospects,BP-53,Yellow Pattern,false,75,Braden Montgomery
+insert-paper-prospects,BP-53,Gold Border,false,50,Braden Montgomery
+insert-paper-prospects,BP-53,Gold Border Pattern,false,50,Braden Montgomery
+insert-paper-prospects,BP-53,Orange Border,false,25,Braden Montgomery
+insert-paper-prospects,BP-53,Orange Border Pattern,false,25,Braden Montgomery
+insert-paper-prospects,BP-53,Black Border,false,25,Braden Montgomery
+insert-paper-prospects,BP-53,Platinum Border,false,1,Braden Montgomery
+insert-paper-prospects,BP-55,Sky Blue Border,false,499,Andrew Salas
+insert-paper-prospects,BP-55,Neon Green Border,false,399,Andrew Salas
+insert-paper-prospects,BP-55,Fuchsia Border,false,299,Andrew Salas
+insert-paper-prospects,BP-55,Purple Border,false,250,Andrew Salas
+insert-paper-prospects,BP-55,Purple Pattern,false,250,Andrew Salas
+insert-paper-prospects,BP-55,Pink Border,false,175,Andrew Salas
+insert-paper-prospects,BP-55,Blue Border,false,150,Andrew Salas
+insert-paper-prospects,BP-55,Green Border,false,99,Andrew Salas
+insert-paper-prospects,BP-55,Yellow Border,false,75,Andrew Salas
+insert-paper-prospects,BP-55,Yellow Pattern,false,75,Andrew Salas
+insert-paper-prospects,BP-55,Gold Border,false,50,Andrew Salas
+insert-paper-prospects,BP-55,Gold Border Pattern,false,50,Andrew Salas
+insert-paper-prospects,BP-55,Orange Border Pattern,false,25,Andrew Salas
+insert-paper-prospects,BP-55,Black Border Pattern,false,25,Andrew Salas
+insert-paper-prospects,BP-55,Red Border,false,5,Andrew Salas
+insert-paper-prospects,BP-55,Platinum Border,false,1,Andrew Salas
+insert-paper-prospects,BP-59,Sky Blue Border,false,499,Brendan Tunink
+insert-paper-prospects,BP-59,Neon Green Border,false,399,Brendan Tunink
+insert-paper-prospects,BP-59,Fuchsia Border,false,299,Brendan Tunink
+insert-paper-prospects,BP-59,Purple Border,false,250,Brendan Tunink
+insert-paper-prospects,BP-59,Purple Pattern,false,250,Brendan Tunink
+insert-paper-prospects,BP-59,Pink Border,false,175,Brendan Tunink
+insert-paper-prospects,BP-59,Blue Border,false,150,Brendan Tunink
+insert-paper-prospects,BP-59,Blue Pattern,false,150,Brendan Tunink
+insert-paper-prospects,BP-59,Green Border,false,99,Brendan Tunink
+insert-paper-prospects,BP-59,Green Border Pattern,false,99,Brendan Tunink
+insert-paper-prospects,BP-59,Yellow Border,false,75,Brendan Tunink
+insert-paper-prospects,BP-59,Yellow Pattern,false,75,Brendan Tunink
+insert-paper-prospects,BP-59,Gold Border,false,50,Brendan Tunink
+insert-paper-prospects,BP-59,Gold Border Pattern,false,50,Brendan Tunink
+insert-paper-prospects,BP-59,Orange Border,false,25,Brendan Tunink
+insert-paper-prospects,BP-59,Orange Border Pattern,false,25,Brendan Tunink
+insert-paper-prospects,BP-59,Black Border,false,25,Brendan Tunink
+insert-paper-prospects,BP-59,Black Border Pattern,false,25,Brendan Tunink
+insert-paper-prospects,BP-59,Red Border,false,5,Brendan Tunink
+insert-paper-prospects,BP-59,Platinum Border,false,1,Brendan Tunink
+insert-paper-prospects,BP-63,Sky Blue Border,false,499,Leo De Vries
+insert-paper-prospects,BP-63,Neon Green Border,false,399,Leo De Vries
+insert-paper-prospects,BP-63,Fuchsia Border,false,299,Leo De Vries
+insert-paper-prospects,BP-63,Purple Border,false,250,Leo De Vries
+insert-paper-prospects,BP-63,Purple Pattern,false,250,Leo De Vries
+insert-paper-prospects,BP-63,Pink Border,false,175,Leo De Vries
+insert-paper-prospects,BP-63,Blue Pattern,false,150,Leo De Vries
+insert-paper-prospects,BP-63,Green Border,false,99,Leo De Vries
+insert-paper-prospects,BP-63,Green Border Pattern,false,99,Leo De Vries
+insert-paper-prospects,BP-63,Yellow Border,false,75,Leo De Vries
+insert-paper-prospects,BP-63,Gold Border Pattern,false,50,Leo De Vries
+insert-paper-prospects,BP-63,Orange Border,false,25,Leo De Vries
+insert-paper-prospects,BP-63,Orange Border Pattern,false,25,Leo De Vries
+insert-paper-prospects,BP-63,Red Border,false,5,Leo De Vries
+insert-paper-prospects,BP-63,Platinum Border,false,1,Leo De Vries
+insert-paper-prospects,BP-70,Sky Blue Border,false,499,Kash Mayfield
+insert-paper-prospects,BP-70,Neon Green Border,false,399,Kash Mayfield
+insert-paper-prospects,BP-70,Fuchsia Border,false,299,Kash Mayfield
+insert-paper-prospects,BP-70,Purple Border,false,250,Kash Mayfield
+insert-paper-prospects,BP-70,Purple Pattern,false,250,Kash Mayfield
+insert-paper-prospects,BP-70,Pink Border,false,175,Kash Mayfield
+insert-paper-prospects,BP-70,Blue Pattern,false,150,Kash Mayfield
+insert-paper-prospects,BP-70,Green Border,false,99,Kash Mayfield
+insert-paper-prospects,BP-70,Yellow Border,false,75,Kash Mayfield
+insert-paper-prospects,BP-70,Yellow Pattern,false,75,Kash Mayfield
+insert-paper-prospects,BP-70,Gold Border,false,50,Kash Mayfield
+insert-paper-prospects,BP-70,Gold Border Pattern,false,50,Kash Mayfield
+insert-paper-prospects,BP-70,Orange Border Pattern,false,25,Kash Mayfield
+insert-paper-prospects,BP-70,Black Border,false,25,Kash Mayfield
+insert-paper-prospects,BP-70,Black Border Pattern,false,25,Kash Mayfield
+insert-paper-prospects,BP-70,Red Border,false,5,Kash Mayfield
+insert-paper-prospects,BP-70,Platinum Border,false,1,Kash Mayfield
+insert-paper-prospects,BP-71,Sky Blue Border,false,499,Enyervert Perez
+insert-paper-prospects,BP-71,Neon Green Border,false,399,Enyervert Perez
+insert-paper-prospects,BP-71,Purple Border,false,250,Enyervert Perez
+insert-paper-prospects,BP-71,Purple Pattern,false,250,Enyervert Perez
+insert-paper-prospects,BP-71,Pink Border,false,175,Enyervert Perez
+insert-paper-prospects,BP-71,Blue Border,false,150,Enyervert Perez
+insert-paper-prospects,BP-71,Green Border,false,99,Enyervert Perez
+insert-paper-prospects,BP-71,Green Border Pattern,false,99,Enyervert Perez
+insert-paper-prospects,BP-71,Yellow Border,false,75,Enyervert Perez
+insert-paper-prospects,BP-71,Yellow Pattern,false,75,Enyervert Perez
+insert-paper-prospects,BP-71,Gold Border,false,50,Enyervert Perez
+insert-paper-prospects,BP-71,Gold Border Pattern,false,50,Enyervert Perez
+insert-paper-prospects,BP-71,Orange Border,false,25,Enyervert Perez
+insert-paper-prospects,BP-71,Orange Border Pattern,false,25,Enyervert Perez
+insert-paper-prospects,BP-71,Black Border,false,25,Enyervert Perez
+insert-paper-prospects,BP-71,Black Border Pattern,false,25,Enyervert Perez
+insert-paper-prospects,BP-71,Red Border,false,5,Enyervert Perez
+insert-paper-prospects,BP-71,Platinum Border,false,1,Enyervert Perez
+insert-paper-prospects,BP-83,Sky Blue Border,false,499,Josue De Paula
+insert-paper-prospects,BP-83,Neon Green Border,false,399,Josue De Paula
+insert-paper-prospects,BP-83,Fuchsia Border,false,299,Josue De Paula
+insert-paper-prospects,BP-83,Purple Pattern,false,250,Josue De Paula
+insert-paper-prospects,BP-83,Pink Border,false,175,Josue De Paula
+insert-paper-prospects,BP-83,Blue Border,false,150,Josue De Paula
+insert-paper-prospects,BP-83,Green Border,false,99,Josue De Paula
+insert-paper-prospects,BP-83,Green Border Pattern,false,99,Josue De Paula
+insert-paper-prospects,BP-83,Yellow Border,false,75,Josue De Paula
+insert-paper-prospects,BP-83,Gold Border,false,50,Josue De Paula
+insert-paper-prospects,BP-83,Gold Border Pattern,false,50,Josue De Paula
+insert-paper-prospects,BP-83,Orange Border,false,25,Josue De Paula
+insert-paper-prospects,BP-83,Orange Border Pattern,false,25,Josue De Paula
+insert-paper-prospects,BP-83,Black Border,false,25,Josue De Paula
+insert-paper-prospects,BP-83,Black Border Pattern,false,25,Josue De Paula
+insert-paper-prospects,BP-83,Red Border,false,5,Josue De Paula
+insert-paper-prospects,BP-83,Platinum Border,false,1,Josue De Paula
+insert-paper-prospects,BP-91,Sky Blue Border,false,499,Elian Peña
+insert-paper-prospects,BP-91,Neon Green Border,false,399,Elian Peña
+insert-paper-prospects,BP-91,Fuchsia Border,false,299,Elian Peña
+insert-paper-prospects,BP-91,Purple Border,false,250,Elian Peña
+insert-paper-prospects,BP-91,Pink Border,false,175,Elian Peña
+insert-paper-prospects,BP-91,Blue Border,false,150,Elian Peña
+insert-paper-prospects,BP-91,Blue Pattern,false,150,Elian Peña
+insert-paper-prospects,BP-91,Green Border,false,99,Elian Peña
+insert-paper-prospects,BP-91,Green Border Pattern,false,99,Elian Peña
+insert-paper-prospects,BP-91,Yellow Pattern,false,75,Elian Peña
+insert-paper-prospects,BP-91,Gold Border,false,50,Elian Peña
+insert-paper-prospects,BP-91,Gold Border Pattern,false,50,Elian Peña
+insert-paper-prospects,BP-91,Orange Border,false,25,Elian Peña
+insert-paper-prospects,BP-91,Black Border,false,25,Elian Peña
+insert-paper-prospects,BP-91,Black Border Pattern,false,25,Elian Peña
+insert-paper-prospects,BP-91,Red Border,false,5,Elian Peña
+insert-paper-prospects,BP-91,Platinum Border,false,1,Elian Peña
+insert-paper-prospects,BP-94,Sky Blue Border,false,499,Ricardo Cova
+insert-paper-prospects,BP-94,Neon Green Border,false,399,Ricardo Cova
+insert-paper-prospects,BP-94,Fuchsia Border,false,299,Ricardo Cova
+insert-paper-prospects,BP-94,Purple Border,false,250,Ricardo Cova
+insert-paper-prospects,BP-94,Purple Pattern,false,250,Ricardo Cova
+insert-paper-prospects,BP-94,Blue Border,false,150,Ricardo Cova
+insert-paper-prospects,BP-94,Blue Pattern,false,150,Ricardo Cova
+insert-paper-prospects,BP-94,Green Border,false,99,Ricardo Cova
+insert-paper-prospects,BP-94,Yellow Border,false,75,Ricardo Cova
+insert-paper-prospects,BP-94,Yellow Pattern,false,75,Ricardo Cova
+insert-paper-prospects,BP-94,Gold Border,false,50,Ricardo Cova
+insert-paper-prospects,BP-94,Gold Border Pattern,false,50,Ricardo Cova
+insert-paper-prospects,BP-94,Orange Border,false,25,Ricardo Cova
+insert-paper-prospects,BP-94,Black Border,false,25,Ricardo Cova
+insert-paper-prospects,BP-94,Black Border Pattern,false,25,Ricardo Cova
+insert-paper-prospects,BP-94,Red Border,false,5,Ricardo Cova
+insert-paper-prospects,BP-94,Platinum Border,false,1,Ricardo Cova
+insert-paper-prospects,BP-99,Sky Blue Border,false,499,Bryce Rainer
+insert-paper-prospects,BP-99,Purple Border,false,250,Bryce Rainer
+insert-paper-prospects,BP-99,Purple Pattern,false,250,Bryce Rainer
+insert-paper-prospects,BP-99,Pink Border,false,175,Bryce Rainer
+insert-paper-prospects,BP-99,Blue Border,false,150,Bryce Rainer
+insert-paper-prospects,BP-99,Blue Pattern,false,150,Bryce Rainer
+insert-paper-prospects,BP-99,Green Border,false,99,Bryce Rainer
+insert-paper-prospects,BP-99,Yellow Border,false,75,Bryce Rainer
+insert-paper-prospects,BP-99,Gold Border,false,50,Bryce Rainer
+insert-paper-prospects,BP-99,Gold Border Pattern,false,50,Bryce Rainer
+insert-paper-prospects,BP-99,Orange Border,false,25,Bryce Rainer
+insert-paper-prospects,BP-99,Orange Border Pattern,false,25,Bryce Rainer
+insert-paper-prospects,BP-99,Black Border,false,25,Bryce Rainer
+insert-paper-prospects,BP-99,Black Border Pattern,false,25,Bryce Rainer
+insert-paper-prospects,BP-99,Red Border,false,5,Bryce Rainer
+insert-paper-prospects,BP-99,Platinum Border,false,1,Bryce Rainer
+insert-paper-prospects,BP-98,Sky Blue Border,false,499,Walker Jenkins
+insert-paper-prospects,BP-98,Neon Green Border,false,399,Walker Jenkins
+insert-paper-prospects,BP-98,Purple Border,false,250,Walker Jenkins
+insert-paper-prospects,BP-98,Purple Pattern,false,250,Walker Jenkins
+insert-paper-prospects,BP-98,Pink Border,false,175,Walker Jenkins
+insert-paper-prospects,BP-98,Blue Border,false,150,Walker Jenkins
+insert-paper-prospects,BP-98,Blue Pattern,false,150,Walker Jenkins
+insert-paper-prospects,BP-98,Green Border,false,99,Walker Jenkins
+insert-paper-prospects,BP-98,Green Border Pattern,false,99,Walker Jenkins
+insert-paper-prospects,BP-98,Yellow Border,false,75,Walker Jenkins
+insert-paper-prospects,BP-98,Gold Border,false,50,Walker Jenkins
+insert-paper-prospects,BP-98,Gold Border Pattern,false,50,Walker Jenkins
+insert-paper-prospects,BP-98,Orange Border,false,25,Walker Jenkins
+insert-paper-prospects,BP-98,Orange Border Pattern,false,25,Walker Jenkins
+insert-paper-prospects,BP-98,Black Border,false,25,Walker Jenkins
+insert-paper-prospects,BP-98,Black Border Pattern,false,25,Walker Jenkins
+insert-paper-prospects,BP-98,Platinum Border,false,1,Walker Jenkins
+insert-paper-prospects,BP-104,Sky Blue Border,false,499,Henry Lalane
+insert-paper-prospects,BP-104,Neon Green Border,false,399,Henry Lalane
+insert-paper-prospects,BP-104,Purple Border,false,250,Henry Lalane
+insert-paper-prospects,BP-104,Pink Border,false,175,Henry Lalane
+insert-paper-prospects,BP-104,Blue Border,false,150,Henry Lalane
+insert-paper-prospects,BP-104,Blue Pattern,false,150,Henry Lalane
+insert-paper-prospects,BP-104,Green Border,false,99,Henry Lalane
+insert-paper-prospects,BP-104,Green Border Pattern,false,99,Henry Lalane
+insert-paper-prospects,BP-104,Yellow Border,false,75,Henry Lalane
+insert-paper-prospects,BP-104,Yellow Pattern,false,75,Henry Lalane
+insert-paper-prospects,BP-104,Gold Border Pattern,false,50,Henry Lalane
+insert-paper-prospects,BP-104,Orange Border,false,25,Henry Lalane
+insert-paper-prospects,BP-104,Orange Border Pattern,false,25,Henry Lalane
+insert-paper-prospects,BP-104,Black Border Pattern,false,25,Henry Lalane
+insert-paper-prospects,BP-104,Red Border,false,5,Henry Lalane
+insert-paper-prospects,BP-104,Platinum Border,false,1,Henry Lalane
+insert-paper-prospects,BP-105,Sky Blue Border,false,499,Kade Snell
+insert-paper-prospects,BP-105,Neon Green Border,false,399,Kade Snell
+insert-paper-prospects,BP-105,Fuchsia Border,false,299,Kade Snell
+insert-paper-prospects,BP-105,Purple Border,false,250,Kade Snell
+insert-paper-prospects,BP-105,Pink Border,false,175,Kade Snell
+insert-paper-prospects,BP-105,Blue Border,false,150,Kade Snell
+insert-paper-prospects,BP-105,Blue Pattern,false,150,Kade Snell
+insert-paper-prospects,BP-105,Green Border Pattern,false,99,Kade Snell
+insert-paper-prospects,BP-105,Yellow Border,false,75,Kade Snell
+insert-paper-prospects,BP-105,Yellow Pattern,false,75,Kade Snell
+insert-paper-prospects,BP-105,Gold Border,false,50,Kade Snell
+insert-paper-prospects,BP-105,Black Border,false,25,Kade Snell
+insert-paper-prospects,BP-105,Black Border Pattern,false,25,Kade Snell
+insert-paper-prospects,BP-105,Red Border,false,5,Kade Snell
+insert-paper-prospects,BP-105,Platinum Border,false,1,Kade Snell
+insert-paper-prospects,BP-110,Sky Blue Border,false,499,Matthew Ferrara
+insert-paper-prospects,BP-110,Neon Green Border,false,399,Matthew Ferrara
+insert-paper-prospects,BP-110,Fuchsia Border,false,299,Matthew Ferrara
+insert-paper-prospects,BP-110,Purple Border,false,250,Matthew Ferrara
+insert-paper-prospects,BP-110,Purple Pattern,false,250,Matthew Ferrara
+insert-paper-prospects,BP-110,Pink Border,false,175,Matthew Ferrara
+insert-paper-prospects,BP-110,Blue Border,false,150,Matthew Ferrara
+insert-paper-prospects,BP-110,Blue Pattern,false,150,Matthew Ferrara
+insert-paper-prospects,BP-110,Green Border Pattern,false,99,Matthew Ferrara
+insert-paper-prospects,BP-110,Yellow Pattern,false,75,Matthew Ferrara
+insert-paper-prospects,BP-110,Gold Border,false,50,Matthew Ferrara
+insert-paper-prospects,BP-110,Orange Border,false,25,Matthew Ferrara
+insert-paper-prospects,BP-110,Orange Border Pattern,false,25,Matthew Ferrara
+insert-paper-prospects,BP-110,Black Border,false,25,Matthew Ferrara
+insert-paper-prospects,BP-110,Black Border Pattern,false,25,Matthew Ferrara
+insert-paper-prospects,BP-110,Red Border,false,5,Matthew Ferrara
+insert-paper-prospects,BP-109,Sky Blue Border,false,499,Truitt Madonna
+insert-paper-prospects,BP-109,Neon Green Border,false,399,Truitt Madonna
+insert-paper-prospects,BP-109,Fuchsia Border,false,299,Truitt Madonna
+insert-paper-prospects,BP-109,Purple Border,false,250,Truitt Madonna
+insert-paper-prospects,BP-109,Purple Pattern,false,250,Truitt Madonna
+insert-paper-prospects,BP-109,Pink Border,false,175,Truitt Madonna
+insert-paper-prospects,BP-109,Blue Border,false,150,Truitt Madonna
+insert-paper-prospects,BP-109,Green Border,false,99,Truitt Madonna
+insert-paper-prospects,BP-109,Green Border Pattern,false,99,Truitt Madonna
+insert-paper-prospects,BP-109,Yellow Pattern,false,75,Truitt Madonna
+insert-paper-prospects,BP-109,Gold Border,false,50,Truitt Madonna
+insert-paper-prospects,BP-109,Gold Border Pattern,false,50,Truitt Madonna
+insert-paper-prospects,BP-109,Orange Border,false,25,Truitt Madonna
+insert-paper-prospects,BP-109,Orange Border Pattern,false,25,Truitt Madonna
+insert-paper-prospects,BP-109,Black Border,false,25,Truitt Madonna
+insert-paper-prospects,BP-109,Black Border Pattern,false,25,Truitt Madonna
+insert-paper-prospects,BP-109,Red Border,false,5,Truitt Madonna
+insert-paper-prospects,BP-109,Platinum Border,false,1,Truitt Madonna
+insert-paper-prospects,BP-115,Sky Blue Border,false,499,JJ Wetherholt
+insert-paper-prospects,BP-115,Fuchsia Border,false,299,JJ Wetherholt
+insert-paper-prospects,BP-115,Purple Border,false,250,JJ Wetherholt
+insert-paper-prospects,BP-115,Purple Pattern,false,250,JJ Wetherholt
+insert-paper-prospects,BP-115,Pink Border,false,175,JJ Wetherholt
+insert-paper-prospects,BP-115,Blue Border,false,150,JJ Wetherholt
+insert-paper-prospects,BP-115,Blue Pattern,false,150,JJ Wetherholt
+insert-paper-prospects,BP-115,Green Border,false,99,JJ Wetherholt
+insert-paper-prospects,BP-115,Green Border Pattern,false,99,JJ Wetherholt
+insert-paper-prospects,BP-115,Yellow Border,false,75,JJ Wetherholt
+insert-paper-prospects,BP-115,Yellow Pattern,false,75,JJ Wetherholt
+insert-paper-prospects,BP-115,Gold Border Pattern,false,50,JJ Wetherholt
+insert-paper-prospects,BP-115,Orange Border Pattern,false,25,JJ Wetherholt
+insert-paper-prospects,BP-115,Black Border,false,25,JJ Wetherholt
+insert-paper-prospects,BP-115,Black Border Pattern,false,25,JJ Wetherholt
+insert-paper-prospects,BP-115,Red Border,false,5,JJ Wetherholt
+insert-paper-prospects,BP-115,Platinum Border,false,1,JJ Wetherholt
+insert-paper-prospects,BP-123,Sky Blue Border,false,499,JR Ritchie
+insert-paper-prospects,BP-123,Neon Green Border,false,399,JR Ritchie
+insert-paper-prospects,BP-123,Fuchsia Border,false,299,JR Ritchie
+insert-paper-prospects,BP-123,Purple Border,false,250,JR Ritchie
+insert-paper-prospects,BP-123,Pink Border,false,175,JR Ritchie
+insert-paper-prospects,BP-123,Blue Border,false,150,JR Ritchie
+insert-paper-prospects,BP-123,Blue Pattern,false,150,JR Ritchie
+insert-paper-prospects,BP-123,Green Border,false,99,JR Ritchie
+insert-paper-prospects,BP-123,Green Border Pattern,false,99,JR Ritchie
+insert-paper-prospects,BP-123,Yellow Border,false,75,JR Ritchie
+insert-paper-prospects,BP-123,Gold Border,false,50,JR Ritchie
+insert-paper-prospects,BP-123,Gold Border Pattern,false,50,JR Ritchie
+insert-paper-prospects,BP-123,Orange Border,false,25,JR Ritchie
+insert-paper-prospects,BP-123,Orange Border Pattern,false,25,JR Ritchie
+insert-paper-prospects,BP-123,Black Border,false,25,JR Ritchie
+insert-paper-prospects,BP-123,Red Border,false,5,JR Ritchie
+insert-paper-prospects,BP-121,Sky Blue Border,false,499,Keaton Anthony
+insert-paper-prospects,BP-121,Neon Green Border,false,399,Keaton Anthony
+insert-paper-prospects,BP-121,Fuchsia Border,false,299,Keaton Anthony
+insert-paper-prospects,BP-121,Purple Border,false,250,Keaton Anthony
+insert-paper-prospects,BP-121,Purple Pattern,false,250,Keaton Anthony
+insert-paper-prospects,BP-121,Pink Border,false,175,Keaton Anthony
+insert-paper-prospects,BP-121,Blue Border,false,150,Keaton Anthony
+insert-paper-prospects,BP-121,Blue Pattern,false,150,Keaton Anthony
+insert-paper-prospects,BP-121,Green Border,false,99,Keaton Anthony
+insert-paper-prospects,BP-121,Yellow Border,false,75,Keaton Anthony
+insert-paper-prospects,BP-121,Gold Border,false,50,Keaton Anthony
+insert-paper-prospects,BP-121,Gold Border Pattern,false,50,Keaton Anthony
+insert-paper-prospects,BP-121,Orange Border,false,25,Keaton Anthony
+insert-paper-prospects,BP-121,Orange Border Pattern,false,25,Keaton Anthony
+insert-paper-prospects,BP-121,Black Border,false,25,Keaton Anthony
+insert-paper-prospects,BP-121,Black Border Pattern,false,25,Keaton Anthony
+insert-paper-prospects,BP-121,Red Border,false,5,Keaton Anthony
+insert-paper-prospects,BP-121,Platinum Border,false,1,Keaton Anthony
+insert-paper-prospects,BP-127,Sky Blue Border,false,499,Seojun Moon
+insert-paper-prospects,BP-127,Neon Green Border,false,399,Seojun Moon
+insert-paper-prospects,BP-127,Fuchsia Border,false,299,Seojun Moon
+insert-paper-prospects,BP-127,Purple Border,false,250,Seojun Moon
+insert-paper-prospects,BP-127,Purple Pattern,false,250,Seojun Moon
+insert-paper-prospects,BP-127,Pink Border,false,175,Seojun Moon
+insert-paper-prospects,BP-127,Blue Border,false,150,Seojun Moon
+insert-paper-prospects,BP-127,Blue Pattern,false,150,Seojun Moon
+insert-paper-prospects,BP-127,Green Border,false,99,Seojun Moon
+insert-paper-prospects,BP-127,Green Border Pattern,false,99,Seojun Moon
+insert-paper-prospects,BP-127,Yellow Border,false,75,Seojun Moon
+insert-paper-prospects,BP-127,Yellow Pattern,false,75,Seojun Moon
+insert-paper-prospects,BP-127,Gold Border,false,50,Seojun Moon
+insert-paper-prospects,BP-127,Gold Border Pattern,false,50,Seojun Moon
+insert-paper-prospects,BP-127,Orange Border,false,25,Seojun Moon
+insert-paper-prospects,BP-127,Black Border,false,25,Seojun Moon
+insert-paper-prospects,BP-127,Black Border Pattern,false,25,Seojun Moon
+insert-paper-prospects,BP-127,Red Border,false,5,Seojun Moon
+insert-paper-prospects,BP-127,Platinum Border,false,1,Seojun Moon
+insert-paper-prospects,BP-128,Sky Blue Border,false,499,Hector Ramos
+insert-paper-prospects,BP-128,Neon Green Border,false,399,Hector Ramos
+insert-paper-prospects,BP-128,Fuchsia Border,false,299,Hector Ramos
+insert-paper-prospects,BP-128,Purple Border,false,250,Hector Ramos
+insert-paper-prospects,BP-128,Pink Border,false,175,Hector Ramos
+insert-paper-prospects,BP-128,Blue Border,false,150,Hector Ramos
+insert-paper-prospects,BP-128,Green Border,false,99,Hector Ramos
+insert-paper-prospects,BP-128,Yellow Border,false,75,Hector Ramos
+insert-paper-prospects,BP-128,Yellow Pattern,false,75,Hector Ramos
+insert-paper-prospects,BP-128,Gold Border,false,50,Hector Ramos
+insert-paper-prospects,BP-128,Gold Border Pattern,false,50,Hector Ramos
+insert-paper-prospects,BP-128,Orange Border,false,25,Hector Ramos
+insert-paper-prospects,BP-128,Orange Border Pattern,false,25,Hector Ramos
+insert-paper-prospects,BP-128,Black Border,false,25,Hector Ramos
+insert-paper-prospects,BP-128,Black Border Pattern,false,25,Hector Ramos
+insert-paper-prospects,BP-128,Red Border,false,5,Hector Ramos
+insert-paper-prospects,BP-128,Platinum Border,false,1,Hector Ramos
+insert-paper-prospects,BP-131,Sky Blue Border,false,499,Walker Janek
+insert-paper-prospects,BP-131,Neon Green Border,false,399,Walker Janek
+insert-paper-prospects,BP-131,Fuchsia Border,false,299,Walker Janek
+insert-paper-prospects,BP-131,Purple Pattern,false,250,Walker Janek
+insert-paper-prospects,BP-131,Pink Border,false,175,Walker Janek
+insert-paper-prospects,BP-131,Blue Border,false,150,Walker Janek
+insert-paper-prospects,BP-131,Blue Pattern,false,150,Walker Janek
+insert-paper-prospects,BP-131,Green Border,false,99,Walker Janek
+insert-paper-prospects,BP-131,Green Border Pattern,false,99,Walker Janek
+insert-paper-prospects,BP-131,Yellow Border,false,75,Walker Janek
+insert-paper-prospects,BP-131,Yellow Pattern,false,75,Walker Janek
+insert-paper-prospects,BP-131,Gold Border,false,50,Walker Janek
+insert-paper-prospects,BP-131,Gold Border Pattern,false,50,Walker Janek
+insert-paper-prospects,BP-131,Orange Border Pattern,false,25,Walker Janek
+insert-paper-prospects,BP-131,Black Border,false,25,Walker Janek
+insert-paper-prospects,BP-131,Black Border Pattern,false,25,Walker Janek
+insert-paper-prospects,BP-131,Red Border,false,5,Walker Janek
+insert-paper-prospects,BP-131,Platinum Border,false,1,Walker Janek
+insert-paper-prospects,BP-134,Sky Blue Border,false,499,T.J. Rumfield
+insert-paper-prospects,BP-134,Neon Green Border,false,399,T.J. Rumfield
+insert-paper-prospects,BP-134,Fuchsia Border,false,299,T.J. Rumfield
+insert-paper-prospects,BP-134,Purple Border,false,250,T.J. Rumfield
+insert-paper-prospects,BP-134,Pink Border,false,175,T.J. Rumfield
+insert-paper-prospects,BP-134,Blue Border,false,150,T.J. Rumfield
+insert-paper-prospects,BP-134,Blue Pattern,false,150,T.J. Rumfield
+insert-paper-prospects,BP-134,Green Border,false,99,T.J. Rumfield
+insert-paper-prospects,BP-134,Green Border Pattern,false,99,T.J. Rumfield
+insert-paper-prospects,BP-134,Yellow Border,false,75,T.J. Rumfield
+insert-paper-prospects,BP-134,Gold Border,false,50,T.J. Rumfield
+insert-paper-prospects,BP-134,Gold Border Pattern,false,50,T.J. Rumfield
+insert-paper-prospects,BP-134,Orange Border,false,25,T.J. Rumfield
+insert-paper-prospects,BP-134,Black Border,false,25,T.J. Rumfield
+insert-paper-prospects,BP-134,Black Border Pattern,false,25,T.J. Rumfield
+insert-paper-prospects,BP-134,Red Border,false,5,T.J. Rumfield
+insert-paper-prospects,BP-134,Platinum Border,false,1,T.J. Rumfield
+insert-paper-prospects,BP-135,Sky Blue Border,false,499,Wehiwa Aloy
+insert-paper-prospects,BP-135,Neon Green Border,false,399,Wehiwa Aloy
+insert-paper-prospects,BP-135,Fuchsia Border,false,299,Wehiwa Aloy
+insert-paper-prospects,BP-135,Purple Border,false,250,Wehiwa Aloy
+insert-paper-prospects,BP-135,Purple Pattern,false,250,Wehiwa Aloy
+insert-paper-prospects,BP-135,Pink Border,false,175,Wehiwa Aloy
+insert-paper-prospects,BP-135,Green Border,false,99,Wehiwa Aloy
+insert-paper-prospects,BP-135,Green Border Pattern,false,99,Wehiwa Aloy
+insert-paper-prospects,BP-135,Yellow Border,false,75,Wehiwa Aloy
+insert-paper-prospects,BP-135,Gold Border,false,50,Wehiwa Aloy
+insert-paper-prospects,BP-135,Gold Border Pattern,false,50,Wehiwa Aloy
+insert-paper-prospects,BP-135,Orange Border Pattern,false,25,Wehiwa Aloy
+insert-paper-prospects,BP-135,Black Border,false,25,Wehiwa Aloy
+insert-paper-prospects,BP-135,Black Border Pattern,false,25,Wehiwa Aloy
+insert-paper-prospects,BP-135,Red Border,false,5,Wehiwa Aloy
+insert-paper-prospects,BP-142,Sky Blue Border,false,499,Brady Ebel
+insert-paper-prospects,BP-142,Neon Green Border,false,399,Brady Ebel
+insert-paper-prospects,BP-142,Purple Border,false,250,Brady Ebel
+insert-paper-prospects,BP-142,Purple Pattern,false,250,Brady Ebel
+insert-paper-prospects,BP-142,Pink Border,false,175,Brady Ebel
+insert-paper-prospects,BP-142,Blue Border,false,150,Brady Ebel
+insert-paper-prospects,BP-142,Blue Pattern,false,150,Brady Ebel
+insert-paper-prospects,BP-142,Green Border,false,99,Brady Ebel
+insert-paper-prospects,BP-142,Green Border Pattern,false,99,Brady Ebel
+insert-paper-prospects,BP-142,Yellow Border,false,75,Brady Ebel
+insert-paper-prospects,BP-142,Yellow Pattern,false,75,Brady Ebel
+insert-paper-prospects,BP-142,Gold Border,false,50,Brady Ebel
+insert-paper-prospects,BP-142,Gold Border Pattern,false,50,Brady Ebel
+insert-paper-prospects,BP-142,Orange Border,false,25,Brady Ebel
+insert-paper-prospects,BP-142,Orange Border Pattern,false,25,Brady Ebel
+insert-paper-prospects,BP-142,Black Border,false,25,Brady Ebel
+insert-paper-prospects,BP-142,Black Border Pattern,false,25,Brady Ebel
+insert-paper-prospects,BP-142,Platinum Border,false,1,Brady Ebel
+insert-paper-prospects,BP-140,Sky Blue Border,false,499,Pedro Ibarguen
+insert-paper-prospects,BP-140,Neon Green Border,false,399,Pedro Ibarguen
+insert-paper-prospects,BP-140,Fuchsia Border,false,299,Pedro Ibarguen
+insert-paper-prospects,BP-140,Purple Border,false,250,Pedro Ibarguen
+insert-paper-prospects,BP-140,Purple Pattern,false,250,Pedro Ibarguen
+insert-paper-prospects,BP-140,Pink Border,false,175,Pedro Ibarguen
+insert-paper-prospects,BP-140,Blue Border,false,150,Pedro Ibarguen
+insert-paper-prospects,BP-140,Blue Pattern,false,150,Pedro Ibarguen
+insert-paper-prospects,BP-140,Green Border,false,99,Pedro Ibarguen
+insert-paper-prospects,BP-140,Green Border Pattern,false,99,Pedro Ibarguen
+insert-paper-prospects,BP-140,Yellow Border,false,75,Pedro Ibarguen
+insert-paper-prospects,BP-140,Yellow Pattern,false,75,Pedro Ibarguen
+insert-paper-prospects,BP-140,Gold Border,false,50,Pedro Ibarguen
+insert-paper-prospects,BP-140,Gold Border Pattern,false,50,Pedro Ibarguen
+insert-paper-prospects,BP-140,Orange Border,false,25,Pedro Ibarguen
+insert-paper-prospects,BP-140,Orange Border Pattern,false,25,Pedro Ibarguen
+insert-paper-prospects,BP-140,Black Border,false,25,Pedro Ibarguen
+insert-paper-prospects,BP-140,Black Border Pattern,false,25,Pedro Ibarguen
+insert-paper-prospects,BP-140,Red Border,false,5,Pedro Ibarguen
+insert-paper-prospects,BP-140,Platinum Border,false,1,Pedro Ibarguen
+insert-paper-prospects,BP-143,Sky Blue Border,false,499,Kaelen Culpepper
+insert-paper-prospects,BP-143,Neon Green Border,false,399,Kaelen Culpepper
+insert-paper-prospects,BP-143,Fuchsia Border,false,299,Kaelen Culpepper
+insert-paper-prospects,BP-143,Purple Pattern,false,250,Kaelen Culpepper
+insert-paper-prospects,BP-143,Pink Border,false,175,Kaelen Culpepper
+insert-paper-prospects,BP-143,Blue Border,false,150,Kaelen Culpepper
+insert-paper-prospects,BP-143,Blue Pattern,false,150,Kaelen Culpepper
+insert-paper-prospects,BP-143,Green Border,false,99,Kaelen Culpepper
+insert-paper-prospects,BP-143,Green Border Pattern,false,99,Kaelen Culpepper
+insert-paper-prospects,BP-143,Yellow Border,false,75,Kaelen Culpepper
+insert-paper-prospects,BP-143,Yellow Pattern,false,75,Kaelen Culpepper
+insert-paper-prospects,BP-143,Gold Border,false,50,Kaelen Culpepper
+insert-paper-prospects,BP-143,Gold Border Pattern,false,50,Kaelen Culpepper
+insert-paper-prospects,BP-143,Orange Border,false,25,Kaelen Culpepper
+insert-paper-prospects,BP-143,Orange Border Pattern,false,25,Kaelen Culpepper
+insert-paper-prospects,BP-143,Black Border,false,25,Kaelen Culpepper
+insert-paper-prospects,BP-143,Black Border Pattern,false,25,Kaelen Culpepper
+insert-paper-prospects,BP-143,Platinum Border,false,1,Kaelen Culpepper
+insert-paper-prospects,BP-148,Sky Blue Border,false,499,Dillon Lewis
+insert-paper-prospects,BP-148,Neon Green Border,false,399,Dillon Lewis
+insert-paper-prospects,BP-148,Fuchsia Border,false,299,Dillon Lewis
+insert-paper-prospects,BP-148,Purple Border,false,250,Dillon Lewis
+insert-paper-prospects,BP-148,Purple Pattern,false,250,Dillon Lewis
+insert-paper-prospects,BP-148,Pink Border,false,175,Dillon Lewis
+insert-paper-prospects,BP-148,Green Border,false,99,Dillon Lewis
+insert-paper-prospects,BP-148,Yellow Border,false,75,Dillon Lewis
+insert-paper-prospects,BP-148,Yellow Pattern,false,75,Dillon Lewis
+insert-paper-prospects,BP-148,Gold Border,false,50,Dillon Lewis
+insert-paper-prospects,BP-148,Orange Border,false,25,Dillon Lewis
+insert-paper-prospects,BP-148,Black Border,false,25,Dillon Lewis
+insert-paper-prospects,BP-148,Red Border,false,5,Dillon Lewis
+insert-paper-prospects,BP-148,Platinum Border,false,1,Dillon Lewis
+insert-paper-prospects,BP-5,Sky Blue Border,false,499,Tyson Lewis
+insert-paper-prospects,BP-5,Neon Green Border,false,399,Tyson Lewis
+insert-paper-prospects,BP-5,Fuchsia Border,false,299,Tyson Lewis
+insert-paper-prospects,BP-5,Purple Border,false,250,Tyson Lewis
+insert-paper-prospects,BP-5,Purple Pattern,false,250,Tyson Lewis
+insert-paper-prospects,BP-5,Pink Border,false,175,Tyson Lewis
+insert-paper-prospects,BP-5,Blue Border,false,150,Tyson Lewis
+insert-paper-prospects,BP-5,Blue Pattern,false,150,Tyson Lewis
+insert-paper-prospects,BP-5,Green Border,false,99,Tyson Lewis
+insert-paper-prospects,BP-5,Green Border Pattern,false,99,Tyson Lewis
+insert-paper-prospects,BP-5,Yellow Border,false,75,Tyson Lewis
+insert-paper-prospects,BP-5,Yellow Pattern,false,75,Tyson Lewis
+insert-paper-prospects,BP-5,Gold Border,false,50,Tyson Lewis
+insert-paper-prospects,BP-5,Gold Border Pattern,false,50,Tyson Lewis
+insert-paper-prospects,BP-5,Orange Border,false,25,Tyson Lewis
+insert-paper-prospects,BP-5,Orange Border Pattern,false,25,Tyson Lewis
+insert-paper-prospects,BP-5,Black Border,false,25,Tyson Lewis
+insert-paper-prospects,BP-5,Red Border,false,5,Tyson Lewis
+insert-paper-prospects,BP-5,Platinum Border,false,1,Tyson Lewis
+insert-paper-prospects,BP-6,Sky Blue Border,false,499,Jared Jones
+insert-paper-prospects,BP-6,Neon Green Border,false,399,Jared Jones
+insert-paper-prospects,BP-6,Fuchsia Border,false,299,Jared Jones
+insert-paper-prospects,BP-6,Purple Border,false,250,Jared Jones
+insert-paper-prospects,BP-6,Pink Border,false,175,Jared Jones
+insert-paper-prospects,BP-6,Blue Border,false,150,Jared Jones
+insert-paper-prospects,BP-6,Green Border,false,99,Jared Jones
+insert-paper-prospects,BP-6,Green Border Pattern,false,99,Jared Jones
+insert-paper-prospects,BP-6,Yellow Border,false,75,Jared Jones
+insert-paper-prospects,BP-6,Yellow Pattern,false,75,Jared Jones
+insert-paper-prospects,BP-6,Gold Border Pattern,false,50,Jared Jones
+insert-paper-prospects,BP-6,Orange Border,false,25,Jared Jones
+insert-paper-prospects,BP-6,Orange Border Pattern,false,25,Jared Jones
+insert-paper-prospects,BP-6,Black Border,false,25,Jared Jones
+insert-paper-prospects,BP-6,Black Border Pattern,false,25,Jared Jones
+insert-paper-prospects,BP-6,Red Border,false,5,Jared Jones
+insert-paper-prospects,BP-7,Sky Blue Border,false,499,Kendry Chourio
+insert-paper-prospects,BP-7,Neon Green Border,false,399,Kendry Chourio
+insert-paper-prospects,BP-7,Fuchsia Border,false,299,Kendry Chourio
+insert-paper-prospects,BP-7,Purple Border,false,250,Kendry Chourio
+insert-paper-prospects,BP-7,Purple Pattern,false,250,Kendry Chourio
+insert-paper-prospects,BP-7,Pink Border,false,175,Kendry Chourio
+insert-paper-prospects,BP-7,Blue Border,false,150,Kendry Chourio
+insert-paper-prospects,BP-7,Blue Pattern,false,150,Kendry Chourio
+insert-paper-prospects,BP-7,Green Border,false,99,Kendry Chourio
+insert-paper-prospects,BP-7,Yellow Border,false,75,Kendry Chourio
+insert-paper-prospects,BP-7,Yellow Pattern,false,75,Kendry Chourio
+insert-paper-prospects,BP-7,Gold Border,false,50,Kendry Chourio
+insert-paper-prospects,BP-7,Gold Border Pattern,false,50,Kendry Chourio
+insert-paper-prospects,BP-7,Orange Border,false,25,Kendry Chourio
+insert-paper-prospects,BP-7,Orange Border Pattern,false,25,Kendry Chourio
+insert-paper-prospects,BP-7,Black Border,false,25,Kendry Chourio
+insert-paper-prospects,BP-7,Black Border Pattern,false,25,Kendry Chourio
+insert-paper-prospects,BP-7,Red Border,false,5,Kendry Chourio
+insert-paper-prospects,BP-7,Platinum Border,false,1,Kendry Chourio
+insert-paper-prospects,BP-11,Sky Blue Border,false,499,David Shields
+insert-paper-prospects,BP-11,Neon Green Border,false,399,David Shields
+insert-paper-prospects,BP-11,Purple Border,false,250,David Shields
+insert-paper-prospects,BP-11,Purple Pattern,false,250,David Shields
+insert-paper-prospects,BP-11,Pink Border,false,175,David Shields
+insert-paper-prospects,BP-11,Blue Border,false,150,David Shields
+insert-paper-prospects,BP-11,Blue Pattern,false,150,David Shields
+insert-paper-prospects,BP-11,Green Border,false,99,David Shields
+insert-paper-prospects,BP-11,Green Border Pattern,false,99,David Shields
+insert-paper-prospects,BP-11,Yellow Border,false,75,David Shields
+insert-paper-prospects,BP-11,Gold Border Pattern,false,50,David Shields
+insert-paper-prospects,BP-11,Orange Border,false,25,David Shields
+insert-paper-prospects,BP-11,Orange Border Pattern,false,25,David Shields
+insert-paper-prospects,BP-11,Black Border,false,25,David Shields
+insert-paper-prospects,BP-11,Black Border Pattern,false,25,David Shields
+insert-paper-prospects,BP-11,Red Border,false,5,David Shields
+insert-paper-prospects,BP-11,Platinum Border,false,1,David Shields
+insert-paper-prospects,BP-12,Sky Blue Border,false,499,Jase Mitchell
+insert-paper-prospects,BP-12,Neon Green Border,false,399,Jase Mitchell
+insert-paper-prospects,BP-12,Fuchsia Border,false,299,Jase Mitchell
+insert-paper-prospects,BP-12,Purple Border,false,250,Jase Mitchell
+insert-paper-prospects,BP-12,Purple Pattern,false,250,Jase Mitchell
+insert-paper-prospects,BP-12,Pink Border,false,175,Jase Mitchell
+insert-paper-prospects,BP-12,Blue Border,false,150,Jase Mitchell
+insert-paper-prospects,BP-12,Blue Pattern,false,150,Jase Mitchell
+insert-paper-prospects,BP-12,Green Border,false,99,Jase Mitchell
+insert-paper-prospects,BP-12,Green Border Pattern,false,99,Jase Mitchell
+insert-paper-prospects,BP-12,Yellow Border,false,75,Jase Mitchell
+insert-paper-prospects,BP-12,Gold Border,false,50,Jase Mitchell
+insert-paper-prospects,BP-12,Gold Border Pattern,false,50,Jase Mitchell
+insert-paper-prospects,BP-12,Orange Border,false,25,Jase Mitchell
+insert-paper-prospects,BP-12,Orange Border Pattern,false,25,Jase Mitchell
+insert-paper-prospects,BP-12,Black Border,false,25,Jase Mitchell
+insert-paper-prospects,BP-12,Black Border Pattern,false,25,Jase Mitchell
+insert-paper-prospects,BP-12,Red Border,false,5,Jase Mitchell
+insert-paper-prospects,BP-12,Platinum Border,false,1,Jase Mitchell
+insert-paper-prospects,BP-16,Sky Blue Border,false,499,Marek Houston
+insert-paper-prospects,BP-16,Neon Green Border,false,399,Marek Houston
+insert-paper-prospects,BP-16,Fuchsia Border,false,299,Marek Houston
+insert-paper-prospects,BP-16,Purple Border,false,250,Marek Houston
+insert-paper-prospects,BP-16,Purple Pattern,false,250,Marek Houston
+insert-paper-prospects,BP-16,Pink Border,false,175,Marek Houston
+insert-paper-prospects,BP-16,Blue Border,false,150,Marek Houston
+insert-paper-prospects,BP-16,Blue Pattern,false,150,Marek Houston
+insert-paper-prospects,BP-16,Green Border,false,99,Marek Houston
+insert-paper-prospects,BP-16,Yellow Border,false,75,Marek Houston
+insert-paper-prospects,BP-16,Yellow Pattern,false,75,Marek Houston
+insert-paper-prospects,BP-16,Gold Border,false,50,Marek Houston
+insert-paper-prospects,BP-16,Gold Border Pattern,false,50,Marek Houston
+insert-paper-prospects,BP-16,Orange Border,false,25,Marek Houston
+insert-paper-prospects,BP-16,Orange Border Pattern,false,25,Marek Houston
+insert-paper-prospects,BP-16,Black Border,false,25,Marek Houston
+insert-paper-prospects,BP-16,Black Border Pattern,false,25,Marek Houston
+insert-paper-prospects,BP-16,Red Border,false,5,Marek Houston
+insert-paper-prospects,BP-17,Sky Blue Border,false,499,Caden Scarborough
+insert-paper-prospects,BP-17,Neon Green Border,false,399,Caden Scarborough
+insert-paper-prospects,BP-17,Fuchsia Border,false,299,Caden Scarborough
+insert-paper-prospects,BP-17,Purple Pattern,false,250,Caden Scarborough
+insert-paper-prospects,BP-17,Pink Border,false,175,Caden Scarborough
+insert-paper-prospects,BP-17,Blue Border,false,150,Caden Scarborough
+insert-paper-prospects,BP-17,Blue Pattern,false,150,Caden Scarborough
+insert-paper-prospects,BP-17,Green Border,false,99,Caden Scarborough
+insert-paper-prospects,BP-17,Green Border Pattern,false,99,Caden Scarborough
+insert-paper-prospects,BP-17,Yellow Border,false,75,Caden Scarborough
+insert-paper-prospects,BP-17,Yellow Pattern,false,75,Caden Scarborough
+insert-paper-prospects,BP-17,Gold Border,false,50,Caden Scarborough
+insert-paper-prospects,BP-17,Orange Border,false,25,Caden Scarborough
+insert-paper-prospects,BP-17,Orange Border Pattern,false,25,Caden Scarborough
+insert-paper-prospects,BP-17,Black Border,false,25,Caden Scarborough
+insert-paper-prospects,BP-17,Black Border Pattern,false,25,Caden Scarborough
+insert-paper-prospects,BP-17,Red Border,false,5,Caden Scarborough
+insert-paper-prospects,BP-17,Platinum Border,false,1,Caden Scarborough
+insert-paper-prospects,BP-19,Sky Blue Border,false,499,Kade Anderson
+insert-paper-prospects,BP-19,Neon Green Border,false,399,Kade Anderson
+insert-paper-prospects,BP-19,Fuchsia Border,false,299,Kade Anderson
+insert-paper-prospects,BP-19,Purple Border,false,250,Kade Anderson
+insert-paper-prospects,BP-19,Purple Pattern,false,250,Kade Anderson
+insert-paper-prospects,BP-19,Pink Border,false,175,Kade Anderson
+insert-paper-prospects,BP-19,Blue Border,false,150,Kade Anderson
+insert-paper-prospects,BP-19,Blue Pattern,false,150,Kade Anderson
+insert-paper-prospects,BP-19,Green Border,false,99,Kade Anderson
+insert-paper-prospects,BP-19,Green Border Pattern,false,99,Kade Anderson
+insert-paper-prospects,BP-19,Yellow Border,false,75,Kade Anderson
+insert-paper-prospects,BP-19,Gold Border,false,50,Kade Anderson
+insert-paper-prospects,BP-19,Gold Border Pattern,false,50,Kade Anderson
+insert-paper-prospects,BP-19,Orange Border,false,25,Kade Anderson
+insert-paper-prospects,BP-19,Orange Border Pattern,false,25,Kade Anderson
+insert-paper-prospects,BP-19,Black Border,false,25,Kade Anderson
+insert-paper-prospects,BP-19,Black Border Pattern,false,25,Kade Anderson
+insert-paper-prospects,BP-19,Red Border,false,5,Kade Anderson
+insert-paper-prospects,BP-19,Platinum Border,false,1,Kade Anderson
+insert-paper-prospects,BP-22,Sky Blue Border,false,499,Deniel Ortiz
+insert-paper-prospects,BP-22,Neon Green Border,false,399,Deniel Ortiz
+insert-paper-prospects,BP-22,Fuchsia Border,false,299,Deniel Ortiz
+insert-paper-prospects,BP-22,Purple Border,false,250,Deniel Ortiz
+insert-paper-prospects,BP-22,Pink Border,false,175,Deniel Ortiz
+insert-paper-prospects,BP-22,Blue Pattern,false,150,Deniel Ortiz
+insert-paper-prospects,BP-22,Green Border,false,99,Deniel Ortiz
+insert-paper-prospects,BP-22,Green Border Pattern,false,99,Deniel Ortiz
+insert-paper-prospects,BP-22,Yellow Border,false,75,Deniel Ortiz
+insert-paper-prospects,BP-22,Yellow Pattern,false,75,Deniel Ortiz
+insert-paper-prospects,BP-22,Gold Border,false,50,Deniel Ortiz
+insert-paper-prospects,BP-22,Gold Border Pattern,false,50,Deniel Ortiz
+insert-paper-prospects,BP-22,Orange Border,false,25,Deniel Ortiz
+insert-paper-prospects,BP-22,Orange Border Pattern,false,25,Deniel Ortiz
+insert-paper-prospects,BP-22,Black Border,false,25,Deniel Ortiz
+insert-paper-prospects,BP-22,Black Border Pattern,false,25,Deniel Ortiz
+insert-paper-prospects,BP-22,Red Border,false,5,Deniel Ortiz
+insert-paper-prospects,BP-22,Platinum Border,false,1,Deniel Ortiz
+insert-paper-prospects,BP-24,Sky Blue Border,false,499,Edward Duran
+insert-paper-prospects,BP-24,Neon Green Border,false,399,Edward Duran
+insert-paper-prospects,BP-24,Fuchsia Border,false,299,Edward Duran
+insert-paper-prospects,BP-24,Purple Border,false,250,Edward Duran
+insert-paper-prospects,BP-24,Pink Border,false,175,Edward Duran
+insert-paper-prospects,BP-24,Blue Border,false,150,Edward Duran
+insert-paper-prospects,BP-24,Green Border,false,99,Edward Duran
+insert-paper-prospects,BP-24,Green Border Pattern,false,99,Edward Duran
+insert-paper-prospects,BP-24,Yellow Border,false,75,Edward Duran
+insert-paper-prospects,BP-24,Yellow Pattern,false,75,Edward Duran
+insert-paper-prospects,BP-24,Gold Border,false,50,Edward Duran
+insert-paper-prospects,BP-24,Gold Border Pattern,false,50,Edward Duran
+insert-paper-prospects,BP-24,Orange Border,false,25,Edward Duran
+insert-paper-prospects,BP-24,Orange Border Pattern,false,25,Edward Duran
+insert-paper-prospects,BP-24,Black Border,false,25,Edward Duran
+insert-paper-prospects,BP-24,Black Border Pattern,false,25,Edward Duran
+insert-paper-prospects,BP-25,Sky Blue Border,false,499,Juan Sanchez
+insert-paper-prospects,BP-25,Purple Border,false,250,Juan Sanchez
+insert-paper-prospects,BP-25,Purple Pattern,false,250,Juan Sanchez
+insert-paper-prospects,BP-25,Pink Border,false,175,Juan Sanchez
+insert-paper-prospects,BP-25,Blue Border,false,150,Juan Sanchez
+insert-paper-prospects,BP-25,Blue Pattern,false,150,Juan Sanchez
+insert-paper-prospects,BP-25,Green Border,false,99,Juan Sanchez
+insert-paper-prospects,BP-25,Green Border Pattern,false,99,Juan Sanchez
+insert-paper-prospects,BP-25,Yellow Border,false,75,Juan Sanchez
+insert-paper-prospects,BP-25,Orange Border Pattern,false,25,Juan Sanchez
+insert-paper-prospects,BP-25,Black Border,false,25,Juan Sanchez
+insert-paper-prospects,BP-25,Black Border Pattern,false,25,Juan Sanchez
+insert-paper-prospects,BP-25,Red Border,false,5,Juan Sanchez
+insert-paper-prospects,BP-25,Platinum Border,false,1,Juan Sanchez
+insert-paper-prospects,BP-29,Sky Blue Border,false,499,Victor Arias
+insert-paper-prospects,BP-29,Neon Green Border,false,399,Victor Arias
+insert-paper-prospects,BP-29,Fuchsia Border,false,299,Victor Arias
+insert-paper-prospects,BP-29,Purple Border,false,250,Victor Arias
+insert-paper-prospects,BP-29,Purple Pattern,false,250,Victor Arias
+insert-paper-prospects,BP-29,Blue Border,false,150,Victor Arias
+insert-paper-prospects,BP-29,Green Border,false,99,Victor Arias
+insert-paper-prospects,BP-29,Green Border Pattern,false,99,Victor Arias
+insert-paper-prospects,BP-29,Yellow Border,false,75,Victor Arias
+insert-paper-prospects,BP-29,Yellow Pattern,false,75,Victor Arias
+insert-paper-prospects,BP-29,Gold Border,false,50,Victor Arias
+insert-paper-prospects,BP-29,Gold Border Pattern,false,50,Victor Arias
+insert-paper-prospects,BP-29,Orange Border,false,25,Victor Arias
+insert-paper-prospects,BP-29,Orange Border Pattern,false,25,Victor Arias
+insert-paper-prospects,BP-29,Black Border,false,25,Victor Arias
+insert-paper-prospects,BP-29,Black Border Pattern,false,25,Victor Arias
+insert-paper-prospects,BP-29,Red Border,false,5,Victor Arias
+insert-paper-prospects,BP-29,Platinum Border,false,1,Victor Arias
+insert-paper-prospects,BP-31,Sky Blue Border,false,499,Brent Iredale
+insert-paper-prospects,BP-31,Fuchsia Border,false,299,Brent Iredale
+insert-paper-prospects,BP-31,Purple Border,false,250,Brent Iredale
+insert-paper-prospects,BP-31,Blue Border,false,150,Brent Iredale
+insert-paper-prospects,BP-31,Blue Pattern,false,150,Brent Iredale
+insert-paper-prospects,BP-31,Yellow Border,false,75,Brent Iredale
+insert-paper-prospects,BP-31,Gold Border,false,50,Brent Iredale
+insert-paper-prospects,BP-31,Gold Border Pattern,false,50,Brent Iredale
+insert-paper-prospects,BP-31,Orange Border Pattern,false,25,Brent Iredale
+insert-paper-prospects,BP-31,Black Border,false,25,Brent Iredale
+insert-paper-prospects,BP-31,Red Border,false,5,Brent Iredale
+insert-paper-prospects,BP-31,Platinum Border,false,1,Brent Iredale
+insert-paper-prospects,BP-35,Sky Blue Border,false,499,Travis Bazzana
+insert-paper-prospects,BP-35,Neon Green Border,false,399,Travis Bazzana
+insert-paper-prospects,BP-35,Fuchsia Border,false,299,Travis Bazzana
+insert-paper-prospects,BP-35,Purple Border,false,250,Travis Bazzana
+insert-paper-prospects,BP-35,Pink Border,false,175,Travis Bazzana
+insert-paper-prospects,BP-35,Blue Border,false,150,Travis Bazzana
+insert-paper-prospects,BP-35,Blue Pattern,false,150,Travis Bazzana
+insert-paper-prospects,BP-35,Green Border,false,99,Travis Bazzana
+insert-paper-prospects,BP-35,Green Border Pattern,false,99,Travis Bazzana
+insert-paper-prospects,BP-35,Yellow Border,false,75,Travis Bazzana
+insert-paper-prospects,BP-35,Yellow Pattern,false,75,Travis Bazzana
+insert-paper-prospects,BP-35,Gold Border,false,50,Travis Bazzana
+insert-paper-prospects,BP-35,Gold Border Pattern,false,50,Travis Bazzana
+insert-paper-prospects,BP-35,Orange Border,false,25,Travis Bazzana
+insert-paper-prospects,BP-35,Orange Border Pattern,false,25,Travis Bazzana
+insert-paper-prospects,BP-35,Black Border,false,25,Travis Bazzana
+insert-paper-prospects,BP-35,Black Border Pattern,false,25,Travis Bazzana
+insert-paper-prospects,BP-35,Red Border,false,5,Travis Bazzana
+insert-paper-prospects,BP-35,Platinum Border,false,1,Travis Bazzana
+insert-paper-prospects,BP-48,Sky Blue Border,false,499,Shotaro Morii
+insert-paper-prospects,BP-48,Neon Green Border,false,399,Shotaro Morii
+insert-paper-prospects,BP-48,Fuchsia Border,false,299,Shotaro Morii
+insert-paper-prospects,BP-48,Purple Border,false,250,Shotaro Morii
+insert-paper-prospects,BP-48,Purple Pattern,false,250,Shotaro Morii
+insert-paper-prospects,BP-48,Blue Border,false,150,Shotaro Morii
+insert-paper-prospects,BP-48,Green Border,false,99,Shotaro Morii
+insert-paper-prospects,BP-48,Green Border Pattern,false,99,Shotaro Morii
+insert-paper-prospects,BP-48,Yellow Pattern,false,75,Shotaro Morii
+insert-paper-prospects,BP-48,Gold Border,false,50,Shotaro Morii
+insert-paper-prospects,BP-48,Orange Border,false,25,Shotaro Morii
+insert-paper-prospects,BP-48,Orange Border Pattern,false,25,Shotaro Morii
+insert-paper-prospects,BP-48,Black Border Pattern,false,25,Shotaro Morii
+insert-paper-prospects,BP-48,Red Border,false,5,Shotaro Morii
+insert-paper-prospects,BP-48,Platinum Border,false,1,Shotaro Morii
+insert-paper-prospects,BP-51,Sky Blue Border,false,499,Sebastian Walcott
+insert-paper-prospects,BP-51,Neon Green Border,false,399,Sebastian Walcott
+insert-paper-prospects,BP-51,Fuchsia Border,false,299,Sebastian Walcott
+insert-paper-prospects,BP-51,Purple Border,false,250,Sebastian Walcott
+insert-paper-prospects,BP-51,Purple Pattern,false,250,Sebastian Walcott
+insert-paper-prospects,BP-51,Blue Pattern,false,150,Sebastian Walcott
+insert-paper-prospects,BP-51,Green Border,false,99,Sebastian Walcott
+insert-paper-prospects,BP-51,Yellow Border,false,75,Sebastian Walcott
+insert-paper-prospects,BP-51,Yellow Pattern,false,75,Sebastian Walcott
+insert-paper-prospects,BP-51,Gold Border,false,50,Sebastian Walcott
+insert-paper-prospects,BP-51,Gold Border Pattern,false,50,Sebastian Walcott
+insert-paper-prospects,BP-51,Orange Border,false,25,Sebastian Walcott
+insert-paper-prospects,BP-51,Orange Border Pattern,false,25,Sebastian Walcott
+insert-paper-prospects,BP-51,Black Border,false,25,Sebastian Walcott
+insert-paper-prospects,BP-51,Black Border Pattern,false,25,Sebastian Walcott
+insert-paper-prospects,BP-51,Red Border,false,5,Sebastian Walcott
+insert-paper-prospects,BP-51,Platinum Border,false,1,Sebastian Walcott
+insert-paper-prospects,BP-54,Sky Blue Border,false,499,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Fuchsia Border,false,299,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Purple Border,false,250,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Purple Pattern,false,250,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Pink Border,false,175,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Blue Border,false,150,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Blue Pattern,false,150,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Green Border,false,99,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Green Border Pattern,false,99,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Yellow Pattern,false,75,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Gold Border,false,50,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Gold Border Pattern,false,50,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Orange Border,false,25,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Orange Border Pattern,false,25,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Black Border,false,25,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Black Border Pattern,false,25,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Red Border,false,5,Rainiel Rodriguez
+insert-paper-prospects,BP-54,Platinum Border,false,1,Rainiel Rodriguez
+insert-paper-prospects,BP-56,Sky Blue Border,false,499,Josuar Gonzalez
+insert-paper-prospects,BP-56,Neon Green Border,false,399,Josuar Gonzalez
+insert-paper-prospects,BP-56,Fuchsia Border,false,299,Josuar Gonzalez
+insert-paper-prospects,BP-56,Purple Pattern,false,250,Josuar Gonzalez
+insert-paper-prospects,BP-56,Pink Border,false,175,Josuar Gonzalez
+insert-paper-prospects,BP-56,Blue Border,false,150,Josuar Gonzalez
+insert-paper-prospects,BP-56,Blue Pattern,false,150,Josuar Gonzalez
+insert-paper-prospects,BP-56,Green Border,false,99,Josuar Gonzalez
+insert-paper-prospects,BP-56,Yellow Border,false,75,Josuar Gonzalez
+insert-paper-prospects,BP-56,Yellow Pattern,false,75,Josuar Gonzalez
+insert-paper-prospects,BP-56,Gold Border,false,50,Josuar Gonzalez
+insert-paper-prospects,BP-56,Gold Border Pattern,false,50,Josuar Gonzalez
+insert-paper-prospects,BP-56,Orange Border,false,25,Josuar Gonzalez
+insert-paper-prospects,BP-56,Orange Border Pattern,false,25,Josuar Gonzalez
+insert-paper-prospects,BP-56,Black Border,false,25,Josuar Gonzalez
+insert-paper-prospects,BP-56,Black Border Pattern,false,25,Josuar Gonzalez
+insert-paper-prospects,BP-56,Red Border,false,5,Josuar Gonzalez
+insert-paper-prospects,BP-57,Sky Blue Border,false,499,Felnin Celesten
+insert-paper-prospects,BP-57,Neon Green Border,false,399,Felnin Celesten
+insert-paper-prospects,BP-57,Fuchsia Border,false,299,Felnin Celesten
+insert-paper-prospects,BP-57,Purple Border,false,250,Felnin Celesten
+insert-paper-prospects,BP-57,Purple Pattern,false,250,Felnin Celesten
+insert-paper-prospects,BP-57,Blue Border,false,150,Felnin Celesten
+insert-paper-prospects,BP-57,Blue Pattern,false,150,Felnin Celesten
+insert-paper-prospects,BP-57,Green Border,false,99,Felnin Celesten
+insert-paper-prospects,BP-57,Yellow Border,false,75,Felnin Celesten
+insert-paper-prospects,BP-57,Yellow Pattern,false,75,Felnin Celesten
+insert-paper-prospects,BP-57,Gold Border,false,50,Felnin Celesten
+insert-paper-prospects,BP-57,Gold Border Pattern,false,50,Felnin Celesten
+insert-paper-prospects,BP-57,Orange Border,false,25,Felnin Celesten
+insert-paper-prospects,BP-57,Orange Border Pattern,false,25,Felnin Celesten
+insert-paper-prospects,BP-57,Black Border,false,25,Felnin Celesten
+insert-paper-prospects,BP-57,Black Border Pattern,false,25,Felnin Celesten
+insert-paper-prospects,BP-57,Platinum Border,false,1,Felnin Celesten
+insert-paper-prospects,BP-58,Sky Blue Border,false,499,Jude Warwick
+insert-paper-prospects,BP-58,Neon Green Border,false,399,Jude Warwick
+insert-paper-prospects,BP-58,Fuchsia Border,false,299,Jude Warwick
+insert-paper-prospects,BP-58,Purple Border,false,250,Jude Warwick
+insert-paper-prospects,BP-58,Pink Border,false,175,Jude Warwick
+insert-paper-prospects,BP-58,Green Border,false,99,Jude Warwick
+insert-paper-prospects,BP-58,Green Border Pattern,false,99,Jude Warwick
+insert-paper-prospects,BP-58,Yellow Border,false,75,Jude Warwick
+insert-paper-prospects,BP-58,Gold Border,false,50,Jude Warwick
+insert-paper-prospects,BP-58,Gold Border Pattern,false,50,Jude Warwick
+insert-paper-prospects,BP-58,Orange Border,false,25,Jude Warwick
+insert-paper-prospects,BP-58,Orange Border Pattern,false,25,Jude Warwick
+insert-paper-prospects,BP-58,Black Border,false,25,Jude Warwick
+insert-paper-prospects,BP-58,Black Border Pattern,false,25,Jude Warwick
+insert-paper-prospects,BP-58,Red Border,false,5,Jude Warwick
+insert-paper-prospects,BP-60,Sky Blue Border,false,499,Isaiah Jackson
+insert-paper-prospects,BP-60,Neon Green Border,false,399,Isaiah Jackson
+insert-paper-prospects,BP-60,Fuchsia Border,false,299,Isaiah Jackson
+insert-paper-prospects,BP-60,Purple Border,false,250,Isaiah Jackson
+insert-paper-prospects,BP-60,Pink Border,false,175,Isaiah Jackson
+insert-paper-prospects,BP-60,Blue Border,false,150,Isaiah Jackson
+insert-paper-prospects,BP-60,Blue Pattern,false,150,Isaiah Jackson
+insert-paper-prospects,BP-60,Green Border,false,99,Isaiah Jackson
+insert-paper-prospects,BP-60,Green Border Pattern,false,99,Isaiah Jackson
+insert-paper-prospects,BP-60,Yellow Border,false,75,Isaiah Jackson
+insert-paper-prospects,BP-60,Gold Border,false,50,Isaiah Jackson
+insert-paper-prospects,BP-60,Gold Border Pattern,false,50,Isaiah Jackson
+insert-paper-prospects,BP-60,Orange Border,false,25,Isaiah Jackson
+insert-paper-prospects,BP-60,Orange Border Pattern,false,25,Isaiah Jackson
+insert-paper-prospects,BP-60,Black Border,false,25,Isaiah Jackson
+insert-paper-prospects,BP-60,Black Border Pattern,false,25,Isaiah Jackson
+insert-paper-prospects,BP-60,Red Border,false,5,Isaiah Jackson
+insert-paper-prospects,BP-60,Platinum Border,false,1,Isaiah Jackson
+insert-paper-prospects,BP-62,Sky Blue Border,false,499,Josh Owens
+insert-paper-prospects,BP-62,Neon Green Border,false,399,Josh Owens
+insert-paper-prospects,BP-62,Purple Border,false,250,Josh Owens
+insert-paper-prospects,BP-62,Purple Pattern,false,250,Josh Owens
+insert-paper-prospects,BP-62,Pink Border,false,175,Josh Owens
+insert-paper-prospects,BP-62,Blue Border,false,150,Josh Owens
+insert-paper-prospects,BP-62,Blue Pattern,false,150,Josh Owens
+insert-paper-prospects,BP-62,Green Border,false,99,Josh Owens
+insert-paper-prospects,BP-62,Green Border Pattern,false,99,Josh Owens
+insert-paper-prospects,BP-62,Yellow Border,false,75,Josh Owens
+insert-paper-prospects,BP-62,Gold Border,false,50,Josh Owens
+insert-paper-prospects,BP-62,Gold Border Pattern,false,50,Josh Owens
+insert-paper-prospects,BP-62,Orange Border,false,25,Josh Owens
+insert-paper-prospects,BP-62,Orange Border Pattern,false,25,Josh Owens
+insert-paper-prospects,BP-62,Black Border,false,25,Josh Owens
+insert-paper-prospects,BP-62,Black Border Pattern,false,25,Josh Owens
+insert-paper-prospects,BP-62,Red Border,false,5,Josh Owens
+insert-paper-prospects,BP-62,Platinum Border,false,1,Josh Owens
+insert-paper-prospects,BP-65,Sky Blue Border,false,499,Nelly Taylor
+insert-paper-prospects,BP-65,Neon Green Border,false,399,Nelly Taylor
+insert-paper-prospects,BP-65,Fuchsia Border,false,299,Nelly Taylor
+insert-paper-prospects,BP-65,Purple Border,false,250,Nelly Taylor
+insert-paper-prospects,BP-65,Purple Pattern,false,250,Nelly Taylor
+insert-paper-prospects,BP-65,Blue Pattern,false,150,Nelly Taylor
+insert-paper-prospects,BP-65,Green Border,false,99,Nelly Taylor
+insert-paper-prospects,BP-65,Green Border Pattern,false,99,Nelly Taylor
+insert-paper-prospects,BP-65,Yellow Border,false,75,Nelly Taylor
+insert-paper-prospects,BP-65,Yellow Pattern,false,75,Nelly Taylor
+insert-paper-prospects,BP-65,Gold Border,false,50,Nelly Taylor
+insert-paper-prospects,BP-65,Orange Border,false,25,Nelly Taylor
+insert-paper-prospects,BP-65,Orange Border Pattern,false,25,Nelly Taylor
+insert-paper-prospects,BP-65,Black Border,false,25,Nelly Taylor
+insert-paper-prospects,BP-65,Black Border Pattern,false,25,Nelly Taylor
+insert-paper-prospects,BP-65,Red Border,false,5,Nelly Taylor
+insert-paper-prospects,BP-69,Sky Blue Border,false,499,Owen Carey
+insert-paper-prospects,BP-69,Fuchsia Border,false,299,Owen Carey
+insert-paper-prospects,BP-69,Purple Border,false,250,Owen Carey
+insert-paper-prospects,BP-69,Blue Border,false,150,Owen Carey
+insert-paper-prospects,BP-69,Blue Pattern,false,150,Owen Carey
+insert-paper-prospects,BP-69,Green Border,false,99,Owen Carey
+insert-paper-prospects,BP-69,Green Border Pattern,false,99,Owen Carey
+insert-paper-prospects,BP-69,Yellow Border,false,75,Owen Carey
+insert-paper-prospects,BP-69,Yellow Pattern,false,75,Owen Carey
+insert-paper-prospects,BP-69,Gold Border Pattern,false,50,Owen Carey
+insert-paper-prospects,BP-69,Orange Border,false,25,Owen Carey
+insert-paper-prospects,BP-69,Orange Border Pattern,false,25,Owen Carey
+insert-paper-prospects,BP-69,Black Border Pattern,false,25,Owen Carey
+insert-paper-prospects,BP-69,Red Border,false,5,Owen Carey
+insert-paper-prospects,BP-77,Sky Blue Border,false,499,Daniel Pierce
+insert-paper-prospects,BP-77,Neon Green Border,false,399,Daniel Pierce
+insert-paper-prospects,BP-77,Purple Border,false,250,Daniel Pierce
+insert-paper-prospects,BP-77,Purple Pattern,false,250,Daniel Pierce
+insert-paper-prospects,BP-77,Pink Border,false,175,Daniel Pierce
+insert-paper-prospects,BP-77,Blue Border,false,150,Daniel Pierce
+insert-paper-prospects,BP-77,Green Border Pattern,false,99,Daniel Pierce
+insert-paper-prospects,BP-77,Yellow Border,false,75,Daniel Pierce
+insert-paper-prospects,BP-77,Yellow Pattern,false,75,Daniel Pierce
+insert-paper-prospects,BP-77,Gold Border,false,50,Daniel Pierce
+insert-paper-prospects,BP-77,Gold Border Pattern,false,50,Daniel Pierce
+insert-paper-prospects,BP-77,Orange Border,false,25,Daniel Pierce
+insert-paper-prospects,BP-77,Orange Border Pattern,false,25,Daniel Pierce
+insert-paper-prospects,BP-77,Black Border,false,25,Daniel Pierce
+insert-paper-prospects,BP-77,Black Border Pattern,false,25,Daniel Pierce
+insert-paper-prospects,BP-77,Red Border,false,5,Daniel Pierce
+insert-paper-prospects,BP-80,Sky Blue Border,false,499,Thomas White
+insert-paper-prospects,BP-80,Neon Green Border,false,399,Thomas White
+insert-paper-prospects,BP-80,Fuchsia Border,false,299,Thomas White
+insert-paper-prospects,BP-80,Purple Border,false,250,Thomas White
+insert-paper-prospects,BP-80,Purple Pattern,false,250,Thomas White
+insert-paper-prospects,BP-80,Pink Border,false,175,Thomas White
+insert-paper-prospects,BP-80,Blue Border,false,150,Thomas White
+insert-paper-prospects,BP-80,Green Border,false,99,Thomas White
+insert-paper-prospects,BP-80,Green Border Pattern,false,99,Thomas White
+insert-paper-prospects,BP-80,Yellow Border,false,75,Thomas White
+insert-paper-prospects,BP-80,Yellow Pattern,false,75,Thomas White
+insert-paper-prospects,BP-80,Gold Border,false,50,Thomas White
+insert-paper-prospects,BP-80,Gold Border Pattern,false,50,Thomas White
+insert-paper-prospects,BP-80,Orange Border,false,25,Thomas White
+insert-paper-prospects,BP-80,Orange Border Pattern,false,25,Thomas White
+insert-paper-prospects,BP-80,Black Border,false,25,Thomas White
+insert-paper-prospects,BP-80,Black Border Pattern,false,25,Thomas White
+insert-paper-prospects,BP-80,Red Border,false,5,Thomas White
+insert-paper-prospects,BP-80,Platinum Border,false,1,Thomas White
+insert-paper-prospects,BP-79,Sky Blue Border,false,499,Esteban Mejia
+insert-paper-prospects,BP-79,Neon Green Border,false,399,Esteban Mejia
+insert-paper-prospects,BP-79,Fuchsia Border,false,299,Esteban Mejia
+insert-paper-prospects,BP-79,Purple Border,false,250,Esteban Mejia
+insert-paper-prospects,BP-79,Purple Pattern,false,250,Esteban Mejia
+insert-paper-prospects,BP-79,Pink Border,false,175,Esteban Mejia
+insert-paper-prospects,BP-79,Blue Border,false,150,Esteban Mejia
+insert-paper-prospects,BP-79,Blue Pattern,false,150,Esteban Mejia
+insert-paper-prospects,BP-79,Green Border,false,99,Esteban Mejia
+insert-paper-prospects,BP-79,Green Border Pattern,false,99,Esteban Mejia
+insert-paper-prospects,BP-79,Yellow Border,false,75,Esteban Mejia
+insert-paper-prospects,BP-79,Yellow Pattern,false,75,Esteban Mejia
+insert-paper-prospects,BP-79,Gold Border,false,50,Esteban Mejia
+insert-paper-prospects,BP-79,Orange Border,false,25,Esteban Mejia
+insert-paper-prospects,BP-79,Orange Border Pattern,false,25,Esteban Mejia
+insert-paper-prospects,BP-79,Black Border,false,25,Esteban Mejia
+insert-paper-prospects,BP-79,Black Border Pattern,false,25,Esteban Mejia
+insert-paper-prospects,BP-79,Red Border,false,5,Esteban Mejia
+insert-paper-prospects,BP-79,Platinum Border,false,1,Esteban Mejia
+insert-paper-prospects,BP-85,Sky Blue Border,false,499,Anthony Frobose
+insert-paper-prospects,BP-85,Neon Green Border,false,399,Anthony Frobose
+insert-paper-prospects,BP-85,Fuchsia Border,false,299,Anthony Frobose
+insert-paper-prospects,BP-85,Purple Border,false,250,Anthony Frobose
+insert-paper-prospects,BP-85,Purple Pattern,false,250,Anthony Frobose
+insert-paper-prospects,BP-85,Pink Border,false,175,Anthony Frobose
+insert-paper-prospects,BP-85,Blue Border,false,150,Anthony Frobose
+insert-paper-prospects,BP-85,Blue Pattern,false,150,Anthony Frobose
+insert-paper-prospects,BP-85,Green Border,false,99,Anthony Frobose
+insert-paper-prospects,BP-85,Green Border Pattern,false,99,Anthony Frobose
+insert-paper-prospects,BP-85,Yellow Pattern,false,75,Anthony Frobose
+insert-paper-prospects,BP-85,Gold Border,false,50,Anthony Frobose
+insert-paper-prospects,BP-85,Gold Border Pattern,false,50,Anthony Frobose
+insert-paper-prospects,BP-85,Orange Border,false,25,Anthony Frobose
+insert-paper-prospects,BP-85,Orange Border Pattern,false,25,Anthony Frobose
+insert-paper-prospects,BP-85,Black Border,false,25,Anthony Frobose
+insert-paper-prospects,BP-85,Black Border Pattern,false,25,Anthony Frobose
+insert-paper-prospects,BP-85,Platinum Border,false,1,Anthony Frobose
+insert-paper-prospects,BP-89,Sky Blue Border,false,499,Kendry Martinez
+insert-paper-prospects,BP-89,Neon Green Border,false,399,Kendry Martinez
+insert-paper-prospects,BP-89,Fuchsia Border,false,299,Kendry Martinez
+insert-paper-prospects,BP-89,Purple Border,false,250,Kendry Martinez
+insert-paper-prospects,BP-89,Purple Pattern,false,250,Kendry Martinez
+insert-paper-prospects,BP-89,Pink Border,false,175,Kendry Martinez
+insert-paper-prospects,BP-89,Blue Border,false,150,Kendry Martinez
+insert-paper-prospects,BP-89,Green Border,false,99,Kendry Martinez
+insert-paper-prospects,BP-89,Yellow Border,false,75,Kendry Martinez
+insert-paper-prospects,BP-89,Gold Border,false,50,Kendry Martinez
+insert-paper-prospects,BP-89,Gold Border Pattern,false,50,Kendry Martinez
+insert-paper-prospects,BP-89,Orange Border,false,25,Kendry Martinez
+insert-paper-prospects,BP-89,Orange Border Pattern,false,25,Kendry Martinez
+insert-paper-prospects,BP-89,Black Border,false,25,Kendry Martinez
+insert-paper-prospects,BP-89,Black Border Pattern,false,25,Kendry Martinez
+insert-paper-prospects,BP-89,Red Border,false,5,Kendry Martinez
+insert-paper-prospects,BP-89,Platinum Border,false,1,Kendry Martinez
+insert-paper-prospects,BP-96,Sky Blue Border,false,499,Jesús Made
+insert-paper-prospects,BP-96,Neon Green Border,false,399,Jesús Made
+insert-paper-prospects,BP-96,Purple Border,false,250,Jesús Made
+insert-paper-prospects,BP-96,Purple Pattern,false,250,Jesús Made
+insert-paper-prospects,BP-96,Pink Border,false,175,Jesús Made
+insert-paper-prospects,BP-96,Blue Border,false,150,Jesús Made
+insert-paper-prospects,BP-96,Blue Pattern,false,150,Jesús Made
+insert-paper-prospects,BP-96,Green Border,false,99,Jesús Made
+insert-paper-prospects,BP-96,Green Border Pattern,false,99,Jesús Made
+insert-paper-prospects,BP-96,Yellow Border,false,75,Jesús Made
+insert-paper-prospects,BP-96,Yellow Pattern,false,75,Jesús Made
+insert-paper-prospects,BP-96,Gold Border,false,50,Jesús Made
+insert-paper-prospects,BP-96,Orange Border,false,25,Jesús Made
+insert-paper-prospects,BP-96,Orange Border Pattern,false,25,Jesús Made
+insert-paper-prospects,BP-96,Black Border,false,25,Jesús Made
+insert-paper-prospects,BP-96,Red Border,false,5,Jesús Made
+insert-paper-prospects,BP-96,Platinum Border,false,1,Jesús Made
+insert-paper-prospects,BP-97,Sky Blue Border,false,499,Daniel Hernandez
+insert-paper-prospects,BP-97,Neon Green Border,false,399,Daniel Hernandez
+insert-paper-prospects,BP-97,Fuchsia Border,false,299,Daniel Hernandez
+insert-paper-prospects,BP-97,Purple Border,false,250,Daniel Hernandez
+insert-paper-prospects,BP-97,Purple Pattern,false,250,Daniel Hernandez
+insert-paper-prospects,BP-97,Pink Border,false,175,Daniel Hernandez
+insert-paper-prospects,BP-97,Blue Border,false,150,Daniel Hernandez
+insert-paper-prospects,BP-97,Blue Pattern,false,150,Daniel Hernandez
+insert-paper-prospects,BP-97,Green Border,false,99,Daniel Hernandez
+insert-paper-prospects,BP-97,Green Border Pattern,false,99,Daniel Hernandez
+insert-paper-prospects,BP-97,Yellow Border,false,75,Daniel Hernandez
+insert-paper-prospects,BP-97,Gold Border,false,50,Daniel Hernandez
+insert-paper-prospects,BP-97,Gold Border Pattern,false,50,Daniel Hernandez
+insert-paper-prospects,BP-97,Orange Border,false,25,Daniel Hernandez
+insert-paper-prospects,BP-97,Orange Border Pattern,false,25,Daniel Hernandez
+insert-paper-prospects,BP-97,Black Border,false,25,Daniel Hernandez
+insert-paper-prospects,BP-97,Black Border Pattern,false,25,Daniel Hernandez
+insert-paper-prospects,BP-97,Red Border,false,5,Daniel Hernandez
+insert-paper-prospects,BP-97,Platinum Border,false,1,Daniel Hernandez
+insert-paper-prospects,BP-102,Sky Blue Border,false,499,Eric Hartman
+insert-paper-prospects,BP-102,Neon Green Border,false,399,Eric Hartman
+insert-paper-prospects,BP-102,Fuchsia Border,false,299,Eric Hartman
+insert-paper-prospects,BP-102,Purple Border,false,250,Eric Hartman
+insert-paper-prospects,BP-102,Pink Border,false,175,Eric Hartman
+insert-paper-prospects,BP-102,Blue Border,false,150,Eric Hartman
+insert-paper-prospects,BP-102,Green Border,false,99,Eric Hartman
+insert-paper-prospects,BP-102,Green Border Pattern,false,99,Eric Hartman
+insert-paper-prospects,BP-102,Yellow Border,false,75,Eric Hartman
+insert-paper-prospects,BP-102,Yellow Pattern,false,75,Eric Hartman
+insert-paper-prospects,BP-102,Gold Border,false,50,Eric Hartman
+insert-paper-prospects,BP-102,Gold Border Pattern,false,50,Eric Hartman
+insert-paper-prospects,BP-102,Orange Border,false,25,Eric Hartman
+insert-paper-prospects,BP-102,Orange Border Pattern,false,25,Eric Hartman
+insert-paper-prospects,BP-102,Black Border,false,25,Eric Hartman
+insert-paper-prospects,BP-102,Black Border Pattern,false,25,Eric Hartman
+insert-paper-prospects,BP-102,Red Border,false,5,Eric Hartman
+insert-paper-prospects,BP-102,Platinum Border,false,1,Eric Hartman
+insert-paper-prospects,BP-106,Sky Blue Border,false,499,Francisco Espinoza
+insert-paper-prospects,BP-106,Fuchsia Border,false,299,Francisco Espinoza
+insert-paper-prospects,BP-106,Purple Border,false,250,Francisco Espinoza
+insert-paper-prospects,BP-106,Pink Border,false,175,Francisco Espinoza
+insert-paper-prospects,BP-106,Blue Border,false,150,Francisco Espinoza
+insert-paper-prospects,BP-106,Blue Pattern,false,150,Francisco Espinoza
+insert-paper-prospects,BP-106,Green Border,false,99,Francisco Espinoza
+insert-paper-prospects,BP-106,Yellow Border,false,75,Francisco Espinoza
+insert-paper-prospects,BP-106,Yellow Pattern,false,75,Francisco Espinoza
+insert-paper-prospects,BP-106,Gold Border,false,50,Francisco Espinoza
+insert-paper-prospects,BP-106,Gold Border Pattern,false,50,Francisco Espinoza
+insert-paper-prospects,BP-106,Orange Border,false,25,Francisco Espinoza
+insert-paper-prospects,BP-106,Orange Border Pattern,false,25,Francisco Espinoza
+insert-paper-prospects,BP-106,Black Border,false,25,Francisco Espinoza
+insert-paper-prospects,BP-106,Black Border Pattern,false,25,Francisco Espinoza
+insert-paper-prospects,BP-106,Red Border,false,5,Francisco Espinoza
+insert-paper-prospects,BP-106,Platinum Border,false,1,Francisco Espinoza
+insert-paper-prospects,BP-107,Sky Blue Border,false,499,Miguel Mendez
+insert-paper-prospects,BP-107,Fuchsia Border,false,299,Miguel Mendez
+insert-paper-prospects,BP-107,Purple Border,false,250,Miguel Mendez
+insert-paper-prospects,BP-107,Purple Pattern,false,250,Miguel Mendez
+insert-paper-prospects,BP-107,Pink Border,false,175,Miguel Mendez
+insert-paper-prospects,BP-107,Blue Border,false,150,Miguel Mendez
+insert-paper-prospects,BP-107,Blue Pattern,false,150,Miguel Mendez
+insert-paper-prospects,BP-107,Green Border,false,99,Miguel Mendez
+insert-paper-prospects,BP-107,Green Border Pattern,false,99,Miguel Mendez
+insert-paper-prospects,BP-107,Yellow Border,false,75,Miguel Mendez
+insert-paper-prospects,BP-107,Gold Border,false,50,Miguel Mendez
+insert-paper-prospects,BP-107,Gold Border Pattern,false,50,Miguel Mendez
+insert-paper-prospects,BP-107,Orange Border,false,25,Miguel Mendez
+insert-paper-prospects,BP-107,Orange Border Pattern,false,25,Miguel Mendez
+insert-paper-prospects,BP-107,Black Border,false,25,Miguel Mendez
+insert-paper-prospects,BP-107,Black Border Pattern,false,25,Miguel Mendez
+insert-paper-prospects,BP-107,Red Border,false,5,Miguel Mendez
+insert-paper-prospects,BP-107,Platinum Border,false,1,Miguel Mendez
+insert-paper-prospects,BP-108,Sky Blue Border,false,499,Colt Emerson
+insert-paper-prospects,BP-108,Fuchsia Border,false,299,Colt Emerson
+insert-paper-prospects,BP-108,Purple Border,false,250,Colt Emerson
+insert-paper-prospects,BP-108,Pink Border,false,175,Colt Emerson
+insert-paper-prospects,BP-108,Blue Border,false,150,Colt Emerson
+insert-paper-prospects,BP-108,Green Border,false,99,Colt Emerson
+insert-paper-prospects,BP-108,Green Border Pattern,false,99,Colt Emerson
+insert-paper-prospects,BP-108,Yellow Border,false,75,Colt Emerson
+insert-paper-prospects,BP-108,Gold Border,false,50,Colt Emerson
+insert-paper-prospects,BP-108,Gold Border Pattern,false,50,Colt Emerson
+insert-paper-prospects,BP-108,Orange Border,false,25,Colt Emerson
+insert-paper-prospects,BP-108,Orange Border Pattern,false,25,Colt Emerson
+insert-paper-prospects,BP-108,Black Border,false,25,Colt Emerson
+insert-paper-prospects,BP-108,Black Border Pattern,false,25,Colt Emerson
+insert-paper-prospects,BP-108,Red Border,false,5,Colt Emerson
+insert-paper-prospects,BP-108,Platinum Border,false,1,Colt Emerson
+insert-paper-prospects,BP-111,Sky Blue Border,false,499,Carson Benge
+insert-paper-prospects,BP-111,Neon Green Border,false,399,Carson Benge
+insert-paper-prospects,BP-111,Fuchsia Border,false,299,Carson Benge
+insert-paper-prospects,BP-111,Purple Border,false,250,Carson Benge
+insert-paper-prospects,BP-111,Purple Pattern,false,250,Carson Benge
+insert-paper-prospects,BP-111,Pink Border,false,175,Carson Benge
+insert-paper-prospects,BP-111,Blue Border,false,150,Carson Benge
+insert-paper-prospects,BP-111,Green Border,false,99,Carson Benge
+insert-paper-prospects,BP-111,Green Border Pattern,false,99,Carson Benge
+insert-paper-prospects,BP-111,Yellow Border,false,75,Carson Benge
+insert-paper-prospects,BP-111,Gold Border,false,50,Carson Benge
+insert-paper-prospects,BP-111,Gold Border Pattern,false,50,Carson Benge
+insert-paper-prospects,BP-111,Orange Border,false,25,Carson Benge
+insert-paper-prospects,BP-111,Orange Border Pattern,false,25,Carson Benge
+insert-paper-prospects,BP-111,Black Border,false,25,Carson Benge
+insert-paper-prospects,BP-111,Black Border Pattern,false,25,Carson Benge
+insert-paper-prospects,BP-111,Red Border,false,5,Carson Benge
+insert-paper-prospects,BP-111,Platinum Border,false,1,Carson Benge
+insert-paper-prospects,BP-117,Sky Blue Border,false,499,Victor Figueroa
+insert-paper-prospects,BP-117,Neon Green Border,false,399,Victor Figueroa
+insert-paper-prospects,BP-117,Fuchsia Border,false,299,Victor Figueroa
+insert-paper-prospects,BP-117,Pink Border,false,175,Victor Figueroa
+insert-paper-prospects,BP-117,Blue Border,false,150,Victor Figueroa
+insert-paper-prospects,BP-117,Green Border,false,99,Victor Figueroa
+insert-paper-prospects,BP-117,Yellow Border,false,75,Victor Figueroa
+insert-paper-prospects,BP-117,Yellow Pattern,false,75,Victor Figueroa
+insert-paper-prospects,BP-117,Gold Border,false,50,Victor Figueroa
+insert-paper-prospects,BP-117,Gold Border Pattern,false,50,Victor Figueroa
+insert-paper-prospects,BP-117,Orange Border,false,25,Victor Figueroa
+insert-paper-prospects,BP-117,Orange Border Pattern,false,25,Victor Figueroa
+insert-paper-prospects,BP-117,Black Border,false,25,Victor Figueroa
+insert-paper-prospects,BP-117,Black Border Pattern,false,25,Victor Figueroa
+insert-paper-prospects,BP-117,Red Border,false,5,Victor Figueroa
+insert-paper-prospects,BP-117,Platinum Border,false,1,Victor Figueroa
+insert-paper-prospects,BP-119,Sky Blue Border,false,499,Mathias Lacombe
+insert-paper-prospects,BP-119,Neon Green Border,false,399,Mathias Lacombe
+insert-paper-prospects,BP-119,Fuchsia Border,false,299,Mathias Lacombe
+insert-paper-prospects,BP-119,Purple Border,false,250,Mathias Lacombe
+insert-paper-prospects,BP-119,Purple Pattern,false,250,Mathias Lacombe
+insert-paper-prospects,BP-119,Pink Border,false,175,Mathias Lacombe
+insert-paper-prospects,BP-119,Blue Border,false,150,Mathias Lacombe
+insert-paper-prospects,BP-119,Blue Pattern,false,150,Mathias Lacombe
+insert-paper-prospects,BP-119,Green Border,false,99,Mathias Lacombe
+insert-paper-prospects,BP-119,Green Border Pattern,false,99,Mathias Lacombe
+insert-paper-prospects,BP-119,Yellow Border,false,75,Mathias Lacombe
+insert-paper-prospects,BP-119,Yellow Pattern,false,75,Mathias Lacombe
+insert-paper-prospects,BP-119,Gold Border Pattern,false,50,Mathias Lacombe
+insert-paper-prospects,BP-119,Orange Border,false,25,Mathias Lacombe
+insert-paper-prospects,BP-119,Orange Border Pattern,false,25,Mathias Lacombe
+insert-paper-prospects,BP-119,Black Border,false,25,Mathias Lacombe
+insert-paper-prospects,BP-119,Black Border Pattern,false,25,Mathias Lacombe
+insert-paper-prospects,BP-119,Red Border,false,5,Mathias Lacombe
+insert-paper-prospects,BP-125,Sky Blue Border,false,499,Wei-En Lin
+insert-paper-prospects,BP-125,Neon Green Border,false,399,Wei-En Lin
+insert-paper-prospects,BP-125,Fuchsia Border,false,299,Wei-En Lin
+insert-paper-prospects,BP-125,Purple Border,false,250,Wei-En Lin
+insert-paper-prospects,BP-125,Purple Pattern,false,250,Wei-En Lin
+insert-paper-prospects,BP-125,Pink Border,false,175,Wei-En Lin
+insert-paper-prospects,BP-125,Blue Border,false,150,Wei-En Lin
+insert-paper-prospects,BP-125,Blue Pattern,false,150,Wei-En Lin
+insert-paper-prospects,BP-125,Green Border,false,99,Wei-En Lin
+insert-paper-prospects,BP-125,Green Border Pattern,false,99,Wei-En Lin
+insert-paper-prospects,BP-125,Yellow Border,false,75,Wei-En Lin
+insert-paper-prospects,BP-125,Yellow Pattern,false,75,Wei-En Lin
+insert-paper-prospects,BP-125,Gold Border Pattern,false,50,Wei-En Lin
+insert-paper-prospects,BP-125,Orange Border,false,25,Wei-En Lin
+insert-paper-prospects,BP-125,Orange Border Pattern,false,25,Wei-En Lin
+insert-paper-prospects,BP-125,Black Border,false,25,Wei-En Lin
+insert-paper-prospects,BP-125,Black Border Pattern,false,25,Wei-En Lin
+insert-paper-prospects,BP-125,Red Border,false,5,Wei-En Lin
+insert-paper-prospects,BP-125,Platinum Border,false,1,Wei-En Lin
+insert-paper-prospects,BP-126,Sky Blue Border,false,499,Gavin Fien
+insert-paper-prospects,BP-126,Neon Green Border,false,399,Gavin Fien
+insert-paper-prospects,BP-126,Purple Border,false,250,Gavin Fien
+insert-paper-prospects,BP-126,Purple Pattern,false,250,Gavin Fien
+insert-paper-prospects,BP-126,Pink Border,false,175,Gavin Fien
+insert-paper-prospects,BP-126,Blue Border,false,150,Gavin Fien
+insert-paper-prospects,BP-126,Blue Pattern,false,150,Gavin Fien
+insert-paper-prospects,BP-126,Green Border,false,99,Gavin Fien
+insert-paper-prospects,BP-126,Green Border Pattern,false,99,Gavin Fien
+insert-paper-prospects,BP-126,Yellow Border,false,75,Gavin Fien
+insert-paper-prospects,BP-126,Yellow Pattern,false,75,Gavin Fien
+insert-paper-prospects,BP-126,Gold Border,false,50,Gavin Fien
+insert-paper-prospects,BP-126,Gold Border Pattern,false,50,Gavin Fien
+insert-paper-prospects,BP-126,Orange Border Pattern,false,25,Gavin Fien
+insert-paper-prospects,BP-126,Black Border,false,25,Gavin Fien
+insert-paper-prospects,BP-126,Black Border Pattern,false,25,Gavin Fien
+insert-paper-prospects,BP-126,Red Border,false,5,Gavin Fien
+insert-paper-prospects,BP-126,Platinum Border,false,1,Gavin Fien
+insert-paper-prospects,BP-129,Sky Blue Border,false,499,Seaver King
+insert-paper-prospects,BP-129,Neon Green Border,false,399,Seaver King
+insert-paper-prospects,BP-129,Fuchsia Border,false,299,Seaver King
+insert-paper-prospects,BP-129,Purple Border,false,250,Seaver King
+insert-paper-prospects,BP-129,Purple Pattern,false,250,Seaver King
+insert-paper-prospects,BP-129,Pink Border,false,175,Seaver King
+insert-paper-prospects,BP-129,Blue Border,false,150,Seaver King
+insert-paper-prospects,BP-129,Blue Pattern,false,150,Seaver King
+insert-paper-prospects,BP-129,Green Border,false,99,Seaver King
+insert-paper-prospects,BP-129,Green Border Pattern,false,99,Seaver King
+insert-paper-prospects,BP-129,Yellow Border,false,75,Seaver King
+insert-paper-prospects,BP-129,Yellow Pattern,false,75,Seaver King
+insert-paper-prospects,BP-129,Gold Border,false,50,Seaver King
+insert-paper-prospects,BP-129,Orange Border,false,25,Seaver King
+insert-paper-prospects,BP-129,Black Border,false,25,Seaver King
+insert-paper-prospects,BP-129,Black Border Pattern,false,25,Seaver King
+insert-paper-prospects,BP-129,Red Border,false,5,Seaver King
+insert-paper-prospects,BP-129,Platinum Border,false,1,Seaver King
+insert-paper-prospects,BP-130,Sky Blue Border,false,499,Kenly Hunter
+insert-paper-prospects,BP-130,Neon Green Border,false,399,Kenly Hunter
+insert-paper-prospects,BP-130,Fuchsia Border,false,299,Kenly Hunter
+insert-paper-prospects,BP-130,Purple Border,false,250,Kenly Hunter
+insert-paper-prospects,BP-130,Pink Border,false,175,Kenly Hunter
+insert-paper-prospects,BP-130,Blue Border,false,150,Kenly Hunter
+insert-paper-prospects,BP-130,Blue Pattern,false,150,Kenly Hunter
+insert-paper-prospects,BP-130,Green Border,false,99,Kenly Hunter
+insert-paper-prospects,BP-130,Green Border Pattern,false,99,Kenly Hunter
+insert-paper-prospects,BP-130,Yellow Border,false,75,Kenly Hunter
+insert-paper-prospects,BP-130,Yellow Pattern,false,75,Kenly Hunter
+insert-paper-prospects,BP-130,Gold Border,false,50,Kenly Hunter
+insert-paper-prospects,BP-130,Gold Border Pattern,false,50,Kenly Hunter
+insert-paper-prospects,BP-130,Orange Border,false,25,Kenly Hunter
+insert-paper-prospects,BP-130,Orange Border Pattern,false,25,Kenly Hunter
+insert-paper-prospects,BP-130,Black Border,false,25,Kenly Hunter
+insert-paper-prospects,BP-130,Black Border Pattern,false,25,Kenly Hunter
+insert-paper-prospects,BP-130,Red Border,false,5,Kenly Hunter
+insert-paper-prospects,BP-130,Platinum Border,false,1,Kenly Hunter
+insert-paper-prospects,BP-133,Sky Blue Border,false,499,Xavier Neyens
+insert-paper-prospects,BP-133,Neon Green Border,false,399,Xavier Neyens
+insert-paper-prospects,BP-133,Fuchsia Border,false,299,Xavier Neyens
+insert-paper-prospects,BP-133,Purple Border,false,250,Xavier Neyens
+insert-paper-prospects,BP-133,Purple Pattern,false,250,Xavier Neyens
+insert-paper-prospects,BP-133,Pink Border,false,175,Xavier Neyens
+insert-paper-prospects,BP-133,Blue Border,false,150,Xavier Neyens
+insert-paper-prospects,BP-133,Blue Pattern,false,150,Xavier Neyens
+insert-paper-prospects,BP-133,Green Border,false,99,Xavier Neyens
+insert-paper-prospects,BP-133,Green Border Pattern,false,99,Xavier Neyens
+insert-paper-prospects,BP-133,Yellow Border,false,75,Xavier Neyens
+insert-paper-prospects,BP-133,Yellow Pattern,false,75,Xavier Neyens
+insert-paper-prospects,BP-133,Gold Border,false,50,Xavier Neyens
+insert-paper-prospects,BP-133,Gold Border Pattern,false,50,Xavier Neyens
+insert-paper-prospects,BP-133,Orange Border,false,25,Xavier Neyens
+insert-paper-prospects,BP-133,Orange Border Pattern,false,25,Xavier Neyens
+insert-paper-prospects,BP-133,Black Border,false,25,Xavier Neyens
+insert-paper-prospects,BP-133,Black Border Pattern,false,25,Xavier Neyens
+insert-paper-prospects,BP-133,Platinum Border,false,1,Xavier Neyens
+insert-paper-prospects,BP-136,Sky Blue Border,false,499,Gavin Kilen
+insert-paper-prospects,BP-136,Neon Green Border,false,399,Gavin Kilen
+insert-paper-prospects,BP-136,Fuchsia Border,false,299,Gavin Kilen
+insert-paper-prospects,BP-136,Purple Border,false,250,Gavin Kilen
+insert-paper-prospects,BP-136,Purple Pattern,false,250,Gavin Kilen
+insert-paper-prospects,BP-136,Pink Border,false,175,Gavin Kilen
+insert-paper-prospects,BP-136,Blue Border,false,150,Gavin Kilen
+insert-paper-prospects,BP-136,Blue Pattern,false,150,Gavin Kilen
+insert-paper-prospects,BP-136,Green Border,false,99,Gavin Kilen
+insert-paper-prospects,BP-136,Green Border Pattern,false,99,Gavin Kilen
+insert-paper-prospects,BP-136,Yellow Pattern,false,75,Gavin Kilen
+insert-paper-prospects,BP-136,Gold Border,false,50,Gavin Kilen
+insert-paper-prospects,BP-136,Orange Border,false,25,Gavin Kilen
+insert-paper-prospects,BP-136,Black Border,false,25,Gavin Kilen
+insert-paper-prospects,BP-136,Black Border Pattern,false,25,Gavin Kilen
+insert-paper-prospects,BP-136,Red Border,false,5,Gavin Kilen
+insert-paper-prospects,BP-145,Sky Blue Border,false,499,Kevin McGonigle
+insert-paper-prospects,BP-145,Fuchsia Border,false,299,Kevin McGonigle
+insert-paper-prospects,BP-145,Purple Border,false,250,Kevin McGonigle
+insert-paper-prospects,BP-145,Pink Border,false,175,Kevin McGonigle
+insert-paper-prospects,BP-145,Green Border,false,99,Kevin McGonigle
+insert-paper-prospects,BP-145,Green Border Pattern,false,99,Kevin McGonigle
+insert-paper-prospects,BP-145,Yellow Pattern,false,75,Kevin McGonigle
+insert-paper-prospects,BP-145,Gold Border,false,50,Kevin McGonigle
+insert-paper-prospects,BP-145,Gold Border Pattern,false,50,Kevin McGonigle
+insert-paper-prospects,BP-145,Orange Border,false,25,Kevin McGonigle
+insert-paper-prospects,BP-145,Black Border Pattern,false,25,Kevin McGonigle
+insert-paper-prospects,BP-145,Red Border,false,5,Kevin McGonigle
+insert-paper-prospects,BP-145,Platinum Border,false,1,Kevin McGonigle
+insert-paper-prospects,BP-147,Sky Blue Border,false,499,JoJo Parker
+insert-paper-prospects,BP-147,Neon Green Border,false,399,JoJo Parker
+insert-paper-prospects,BP-147,Fuchsia Border,false,299,JoJo Parker
+insert-paper-prospects,BP-147,Purple Border,false,250,JoJo Parker
+insert-paper-prospects,BP-147,Pink Border,false,175,JoJo Parker
+insert-paper-prospects,BP-147,Blue Border,false,150,JoJo Parker
+insert-paper-prospects,BP-147,Blue Pattern,false,150,JoJo Parker
+insert-paper-prospects,BP-147,Green Border,false,99,JoJo Parker
+insert-paper-prospects,BP-147,Green Border Pattern,false,99,JoJo Parker
+insert-paper-prospects,BP-147,Yellow Border,false,75,JoJo Parker
+insert-paper-prospects,BP-147,Yellow Pattern,false,75,JoJo Parker
+insert-paper-prospects,BP-147,Gold Border,false,50,JoJo Parker
+insert-paper-prospects,BP-147,Orange Border,false,25,JoJo Parker
+insert-paper-prospects,BP-147,Orange Border Pattern,false,25,JoJo Parker
+insert-paper-prospects,BP-147,Black Border,false,25,JoJo Parker
+insert-paper-prospects,BP-147,Black Border Pattern,false,25,JoJo Parker
+insert-paper-prospects,BP-147,Red Border,false,5,JoJo Parker
+insert-paper-prospects,BP-147,Platinum Border,false,1,JoJo Parker
+insert-paper-prospects,BP-66,Sky Blue Border,false,499,Wyatt Sanford
+insert-paper-prospects,BP-66,Neon Green Border,false,399,Wyatt Sanford
+insert-paper-prospects,BP-66,Fuchsia Border,false,299,Wyatt Sanford
+insert-paper-prospects,BP-66,Purple Border,false,250,Wyatt Sanford
+insert-paper-prospects,BP-66,Pink Border,false,175,Wyatt Sanford
+insert-paper-prospects,BP-66,Green Border,false,99,Wyatt Sanford
+insert-paper-prospects,BP-66,Green Border Pattern,false,99,Wyatt Sanford
+insert-paper-prospects,BP-66,Yellow Border,false,75,Wyatt Sanford
+insert-paper-prospects,BP-66,Yellow Pattern,false,75,Wyatt Sanford
+insert-paper-prospects,BP-66,Gold Border,false,50,Wyatt Sanford
+insert-paper-prospects,BP-66,Gold Border Pattern,false,50,Wyatt Sanford
+insert-paper-prospects,BP-66,Orange Border Pattern,false,25,Wyatt Sanford
+insert-paper-prospects,BP-66,Black Border,false,25,Wyatt Sanford
+insert-paper-prospects,BP-66,Black Border Pattern,false,25,Wyatt Sanford
+insert-paper-prospects,BP-66,Platinum Border,false,1,Wyatt Sanford
+insert-paper-prospects,BP-74,Sky Blue Border,false,499,Jack Wheeler
+insert-paper-prospects,BP-74,Neon Green Border,false,399,Jack Wheeler
+insert-paper-prospects,BP-74,Fuchsia Border,false,299,Jack Wheeler
+insert-paper-prospects,BP-74,Purple Pattern,false,250,Jack Wheeler
+insert-paper-prospects,BP-74,Pink Border,false,175,Jack Wheeler
+insert-paper-prospects,BP-74,Blue Pattern,false,150,Jack Wheeler
+insert-paper-prospects,BP-74,Green Border,false,99,Jack Wheeler
+insert-paper-prospects,BP-74,Green Border Pattern,false,99,Jack Wheeler
+insert-paper-prospects,BP-74,Yellow Border,false,75,Jack Wheeler
+insert-paper-prospects,BP-74,Yellow Pattern,false,75,Jack Wheeler
+insert-paper-prospects,BP-74,Gold Border,false,50,Jack Wheeler
+insert-paper-prospects,BP-74,Gold Border Pattern,false,50,Jack Wheeler
+insert-paper-prospects,BP-74,Orange Border Pattern,false,25,Jack Wheeler
+insert-paper-prospects,BP-74,Black Border,false,25,Jack Wheeler
+insert-paper-prospects,BP-74,Red Border,false,5,Jack Wheeler
+insert-paper-prospects,BP-74,Platinum Border,false,1,Jack Wheeler
+insert-paper-prospects,BP-86,Sky Blue Border,false,499,Zyhir Hope
+insert-paper-prospects,BP-86,Neon Green Border,false,399,Zyhir Hope
+insert-paper-prospects,BP-86,Fuchsia Border,false,299,Zyhir Hope
+insert-paper-prospects,BP-86,Purple Border,false,250,Zyhir Hope
+insert-paper-prospects,BP-86,Purple Pattern,false,250,Zyhir Hope
+insert-paper-prospects,BP-86,Pink Border,false,175,Zyhir Hope
+insert-paper-prospects,BP-86,Blue Border,false,150,Zyhir Hope
+insert-paper-prospects,BP-86,Blue Pattern,false,150,Zyhir Hope
+insert-paper-prospects,BP-86,Green Border Pattern,false,99,Zyhir Hope
+insert-paper-prospects,BP-86,Yellow Border,false,75,Zyhir Hope
+insert-paper-prospects,BP-86,Gold Border,false,50,Zyhir Hope
+insert-paper-prospects,BP-86,Gold Border Pattern,false,50,Zyhir Hope
+insert-paper-prospects,BP-86,Orange Border,false,25,Zyhir Hope
+insert-paper-prospects,BP-86,Orange Border Pattern,false,25,Zyhir Hope
+insert-paper-prospects,BP-86,Black Border,false,25,Zyhir Hope
+insert-paper-prospects,BP-86,Black Border Pattern,false,25,Zyhir Hope
+insert-paper-prospects,BP-86,Red Border,false,5,Zyhir Hope
+insert-paper-prospects,BP-86,Platinum Border,false,1,Zyhir Hope
+insert-paper-prospects,BP-116,Sky Blue Border,false,499,Dauri Fernandez
+insert-paper-prospects,BP-116,Neon Green Border,false,399,Dauri Fernandez
+insert-paper-prospects,BP-116,Fuchsia Border,false,299,Dauri Fernandez
+insert-paper-prospects,BP-116,Purple Border,false,250,Dauri Fernandez
+insert-paper-prospects,BP-116,Purple Pattern,false,250,Dauri Fernandez
+insert-paper-prospects,BP-116,Pink Border,false,175,Dauri Fernandez
+insert-paper-prospects,BP-116,Blue Border,false,150,Dauri Fernandez
+insert-paper-prospects,BP-116,Green Border,false,99,Dauri Fernandez
+insert-paper-prospects,BP-116,Green Border Pattern,false,99,Dauri Fernandez
+insert-paper-prospects,BP-116,Yellow Border,false,75,Dauri Fernandez
+insert-paper-prospects,BP-116,Yellow Pattern,false,75,Dauri Fernandez
+insert-paper-prospects,BP-116,Gold Border,false,50,Dauri Fernandez
+insert-paper-prospects,BP-116,Gold Border Pattern,false,50,Dauri Fernandez
+insert-paper-prospects,BP-116,Orange Border Pattern,false,25,Dauri Fernandez
+insert-paper-prospects,BP-116,Black Border,false,25,Dauri Fernandez
+insert-paper-prospects,BP-116,Black Border Pattern,false,25,Dauri Fernandez
+insert-paper-prospects,BP-116,Red Border,false,5,Dauri Fernandez
+insert-paper-prospects,BP-116,Platinum Border,false,1,Dauri Fernandez
+insert-paper-prospects,BP-120,Sky Blue Border,false,499,Luis Peña
+insert-paper-prospects,BP-120,Neon Green Border,false,399,Luis Peña
+insert-paper-prospects,BP-120,Fuchsia Border,false,299,Luis Peña
+insert-paper-prospects,BP-120,Purple Border,false,250,Luis Peña
+insert-paper-prospects,BP-120,Purple Pattern,false,250,Luis Peña
+insert-paper-prospects,BP-120,Pink Border,false,175,Luis Peña
+insert-paper-prospects,BP-120,Blue Border,false,150,Luis Peña
+insert-paper-prospects,BP-120,Blue Pattern,false,150,Luis Peña
+insert-paper-prospects,BP-120,Green Border,false,99,Luis Peña
+insert-paper-prospects,BP-120,Green Border Pattern,false,99,Luis Peña
+insert-paper-prospects,BP-120,Yellow Border,false,75,Luis Peña
+insert-paper-prospects,BP-120,Yellow Pattern,false,75,Luis Peña
+insert-paper-prospects,BP-120,Gold Border,false,50,Luis Peña
+insert-paper-prospects,BP-120,Gold Border Pattern,false,50,Luis Peña
+insert-paper-prospects,BP-120,Orange Border,false,25,Luis Peña
+insert-paper-prospects,BP-120,Orange Border Pattern,false,25,Luis Peña
+insert-paper-prospects,BP-120,Black Border,false,25,Luis Peña
+insert-paper-prospects,BP-120,Black Border Pattern,false,25,Luis Peña
+insert-paper-prospects,BP-120,Red Border,false,5,Luis Peña
+insert-paper-prospects,BP-139,Sky Blue Border,false,499,Edgar Montero
+insert-paper-prospects,BP-139,Fuchsia Border,false,299,Edgar Montero
+insert-paper-prospects,BP-139,Purple Border,false,250,Edgar Montero
+insert-paper-prospects,BP-139,Pink Border,false,175,Edgar Montero
+insert-paper-prospects,BP-139,Blue Border,false,150,Edgar Montero
+insert-paper-prospects,BP-139,Blue Pattern,false,150,Edgar Montero
+insert-paper-prospects,BP-139,Green Border Pattern,false,99,Edgar Montero
+insert-paper-prospects,BP-139,Yellow Border,false,75,Edgar Montero
+insert-paper-prospects,BP-139,Yellow Pattern,false,75,Edgar Montero
+insert-paper-prospects,BP-139,Gold Border,false,50,Edgar Montero
+insert-paper-prospects,BP-139,Gold Border Pattern,false,50,Edgar Montero
+insert-paper-prospects,BP-139,Orange Border,false,25,Edgar Montero
+insert-paper-prospects,BP-139,Orange Border Pattern,false,25,Edgar Montero
+insert-paper-prospects,BP-139,Black Border,false,25,Edgar Montero
+insert-paper-prospects,BP-139,Red Border,false,5,Edgar Montero
+insert-paper-prospects,BP-139,Platinum Border,false,1,Edgar Montero
+insert-paper-prospects,BP-150,Sky Blue Border,false,499,Wilder Dalis
+insert-paper-prospects,BP-150,Neon Green Border,false,399,Wilder Dalis
+insert-paper-prospects,BP-150,Fuchsia Border,false,299,Wilder Dalis
+insert-paper-prospects,BP-150,Purple Border,false,250,Wilder Dalis
+insert-paper-prospects,BP-150,Purple Pattern,false,250,Wilder Dalis
+insert-paper-prospects,BP-150,Blue Border,false,150,Wilder Dalis
+insert-paper-prospects,BP-150,Blue Pattern,false,150,Wilder Dalis
+insert-paper-prospects,BP-150,Green Border,false,99,Wilder Dalis
+insert-paper-prospects,BP-150,Green Border Pattern,false,99,Wilder Dalis
+insert-paper-prospects,BP-150,Yellow Border,false,75,Wilder Dalis
+insert-paper-prospects,BP-150,Yellow Pattern,false,75,Wilder Dalis
+insert-paper-prospects,BP-150,Gold Border,false,50,Wilder Dalis
+insert-paper-prospects,BP-150,Gold Border Pattern,false,50,Wilder Dalis
+insert-paper-prospects,BP-150,Orange Border Pattern,false,25,Wilder Dalis
+insert-paper-prospects,BP-150,Black Border,false,25,Wilder Dalis
+insert-paper-prospects,BP-150,Black Border Pattern,false,25,Wilder Dalis
+insert-paper-prospects,BP-150,Platinum Border,false,1,Wilder Dalis
+insert-paper-prospects,BP-21,Sky Blue Border,false,499,Roldy Brito
+insert-paper-prospects,BP-21,Neon Green Border,false,399,Roldy Brito
+insert-paper-prospects,BP-21,Fuchsia Border,false,299,Roldy Brito
+insert-paper-prospects,BP-21,Pink Border,false,175,Roldy Brito
+insert-paper-prospects,BP-21,Blue Border,false,150,Roldy Brito
+insert-paper-prospects,BP-21,Blue Pattern,false,150,Roldy Brito
+insert-paper-prospects,BP-21,Green Border,false,99,Roldy Brito
+insert-paper-prospects,BP-21,Green Border Pattern,false,99,Roldy Brito
+insert-paper-prospects,BP-21,Yellow Border,false,75,Roldy Brito
+insert-paper-prospects,BP-21,Yellow Pattern,false,75,Roldy Brito
+insert-paper-prospects,BP-21,Gold Border,false,50,Roldy Brito
+insert-paper-prospects,BP-21,Gold Border Pattern,false,50,Roldy Brito
+insert-paper-prospects,BP-21,Orange Border,false,25,Roldy Brito
+insert-paper-prospects,BP-21,Orange Border Pattern,false,25,Roldy Brito
+insert-paper-prospects,BP-21,Black Border,false,25,Roldy Brito
+insert-paper-prospects,BP-21,Black Border Pattern,false,25,Roldy Brito
+insert-paper-prospects,BP-21,Platinum Border,false,1,Roldy Brito
+insert-paper-prospects,BP-42,Sky Blue Border,false,499,David Davalillo
+insert-paper-prospects,BP-42,Fuchsia Border,false,299,David Davalillo
+insert-paper-prospects,BP-42,Purple Border,false,250,David Davalillo
+insert-paper-prospects,BP-42,Pink Border,false,175,David Davalillo
+insert-paper-prospects,BP-42,Blue Border,false,150,David Davalillo
+insert-paper-prospects,BP-42,Blue Pattern,false,150,David Davalillo
+insert-paper-prospects,BP-42,Green Border,false,99,David Davalillo
+insert-paper-prospects,BP-42,Green Border Pattern,false,99,David Davalillo
+insert-paper-prospects,BP-42,Yellow Border,false,75,David Davalillo
+insert-paper-prospects,BP-42,Gold Border,false,50,David Davalillo
+insert-paper-prospects,BP-42,Orange Border,false,25,David Davalillo
+insert-paper-prospects,BP-42,Orange Border Pattern,false,25,David Davalillo
+insert-paper-prospects,BP-42,Black Border,false,25,David Davalillo
+insert-paper-prospects,BP-42,Black Border Pattern,false,25,David Davalillo
+insert-paper-prospects,BP-42,Red Border,false,5,David Davalillo
+insert-paper-prospects,BP-42,Platinum Border,false,1,David Davalillo
+insert-paper-prospects,BP-67,Sky Blue Border,false,499,Arjun Nimmala
+insert-paper-prospects,BP-67,Neon Green Border,false,399,Arjun Nimmala
+insert-paper-prospects,BP-67,Fuchsia Border,false,299,Arjun Nimmala
+insert-paper-prospects,BP-67,Purple Border,false,250,Arjun Nimmala
+insert-paper-prospects,BP-67,Purple Pattern,false,250,Arjun Nimmala
+insert-paper-prospects,BP-67,Pink Border,false,175,Arjun Nimmala
+insert-paper-prospects,BP-67,Green Border,false,99,Arjun Nimmala
+insert-paper-prospects,BP-67,Green Border Pattern,false,99,Arjun Nimmala
+insert-paper-prospects,BP-67,Yellow Border,false,75,Arjun Nimmala
+insert-paper-prospects,BP-67,Yellow Pattern,false,75,Arjun Nimmala
+insert-paper-prospects,BP-67,Orange Border,false,25,Arjun Nimmala
+insert-paper-prospects,BP-67,Orange Border Pattern,false,25,Arjun Nimmala
+insert-paper-prospects,BP-67,Black Border,false,25,Arjun Nimmala
+insert-paper-prospects,BP-67,Black Border Pattern,false,25,Arjun Nimmala
+insert-paper-prospects,BP-67,Red Border,false,5,Arjun Nimmala
+insert-paper-prospects,BP-67,Platinum Border,false,1,Arjun Nimmala
+insert-paper-prospects,BP-39,Sky Blue Border,false,499,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Neon Green Border,false,399,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Fuchsia Border,false,299,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Purple Border,false,250,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Purple Pattern,false,250,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Pink Border,false,175,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Blue Border,false,150,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Blue Pattern,false,150,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Green Border Pattern,false,99,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Yellow Border,false,75,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Yellow Pattern,false,75,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Gold Border,false,50,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Gold Border Pattern,false,50,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Orange Border,false,25,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Orange Border Pattern,false,25,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Black Border,false,25,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Black Border Pattern,false,25,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Red Border,false,5,Ryan Waldschmidt
+insert-paper-prospects,BP-39,Platinum Border,false,1,Ryan Waldschmidt
+insert-paper-prospects,BP-72,Sky Blue Border,false,499,Luis Arana
+insert-paper-prospects,BP-72,Neon Green Border,false,399,Luis Arana
+insert-paper-prospects,BP-72,Fuchsia Border,false,299,Luis Arana
+insert-paper-prospects,BP-72,Purple Border,false,250,Luis Arana
+insert-paper-prospects,BP-72,Pink Border,false,175,Luis Arana
+insert-paper-prospects,BP-72,Blue Border,false,150,Luis Arana
+insert-paper-prospects,BP-72,Blue Pattern,false,150,Luis Arana
+insert-paper-prospects,BP-72,Green Border,false,99,Luis Arana
+insert-paper-prospects,BP-72,Green Border Pattern,false,99,Luis Arana
+insert-paper-prospects,BP-72,Yellow Border,false,75,Luis Arana
+insert-paper-prospects,BP-72,Yellow Pattern,false,75,Luis Arana
+insert-paper-prospects,BP-72,Gold Border,false,50,Luis Arana
+insert-paper-prospects,BP-72,Gold Border Pattern,false,50,Luis Arana
+insert-paper-prospects,BP-72,Orange Border,false,25,Luis Arana
+insert-paper-prospects,BP-72,Orange Border Pattern,false,25,Luis Arana
+insert-paper-prospects,BP-72,Black Border Pattern,false,25,Luis Arana
+insert-paper-prospects,BP-72,Red Border,false,5,Luis Arana
+insert-paper-prospects,BP-72,Platinum Border,false,1,Luis Arana
+insert-paper-prospects,BP-61,Sky Blue Border,false,499,Chris Arroyo
+insert-paper-prospects,BP-61,Fuchsia Border,false,299,Chris Arroyo
+insert-paper-prospects,BP-61,Purple Border,false,250,Chris Arroyo
+insert-paper-prospects,BP-61,Purple Pattern,false,250,Chris Arroyo
+insert-paper-prospects,BP-61,Pink Border,false,175,Chris Arroyo
+insert-paper-prospects,BP-61,Blue Border,false,150,Chris Arroyo
+insert-paper-prospects,BP-61,Blue Pattern,false,150,Chris Arroyo
+insert-paper-prospects,BP-61,Green Border,false,99,Chris Arroyo
+insert-paper-prospects,BP-61,Green Border Pattern,false,99,Chris Arroyo
+insert-paper-prospects,BP-61,Yellow Border,false,75,Chris Arroyo
+insert-paper-prospects,BP-61,Gold Border,false,50,Chris Arroyo
+insert-paper-prospects,BP-61,Gold Border Pattern,false,50,Chris Arroyo
+insert-paper-prospects,BP-61,Orange Border,false,25,Chris Arroyo
+insert-paper-prospects,BP-61,Orange Border Pattern,false,25,Chris Arroyo
+insert-paper-prospects,BP-61,Black Border,false,25,Chris Arroyo
+insert-paper-prospects,BP-61,Black Border Pattern,false,25,Chris Arroyo
+insert-paper-prospects,BP-61,Red Border,false,5,Chris Arroyo
+insert-paper-prospects,BP-61,Platinum Border,false,1,Chris Arroyo
+insert-paper-prospects,BP-73,Sky Blue Border,false,499,Charles Davalan
+insert-paper-prospects,BP-73,Neon Green Border,false,399,Charles Davalan
+insert-paper-prospects,BP-73,Purple Border,false,250,Charles Davalan
+insert-paper-prospects,BP-73,Purple Pattern,false,250,Charles Davalan
+insert-paper-prospects,BP-73,Pink Border,false,175,Charles Davalan
+insert-paper-prospects,BP-73,Blue Border,false,150,Charles Davalan
+insert-paper-prospects,BP-73,Blue Pattern,false,150,Charles Davalan
+insert-paper-prospects,BP-73,Green Border,false,99,Charles Davalan
+insert-paper-prospects,BP-73,Green Border Pattern,false,99,Charles Davalan
+insert-paper-prospects,BP-73,Yellow Border,false,75,Charles Davalan
+insert-paper-prospects,BP-73,Gold Border,false,50,Charles Davalan
+insert-paper-prospects,BP-73,Gold Border Pattern,false,50,Charles Davalan
+insert-paper-prospects,BP-73,Orange Border,false,25,Charles Davalan
+insert-paper-prospects,BP-73,Orange Border Pattern,false,25,Charles Davalan
+insert-paper-prospects,BP-73,Black Border,false,25,Charles Davalan
+insert-paper-prospects,BP-73,Black Border Pattern,false,25,Charles Davalan
+insert-paper-prospects,BP-73,Red Border,false,5,Charles Davalan
+insert-paper-prospects,BP-73,Platinum Border,false,1,Charles Davalan
+insert-paper-prospects,BP-93,Sky Blue Border,false,499,Jorge Quintana
+insert-paper-prospects,BP-93,Neon Green Border,false,399,Jorge Quintana
+insert-paper-prospects,BP-93,Fuchsia Border,false,299,Jorge Quintana
+insert-paper-prospects,BP-93,Purple Pattern,false,250,Jorge Quintana
+insert-paper-prospects,BP-93,Pink Border,false,175,Jorge Quintana
+insert-paper-prospects,BP-93,Blue Border,false,150,Jorge Quintana
+insert-paper-prospects,BP-93,Blue Pattern,false,150,Jorge Quintana
+insert-paper-prospects,BP-93,Green Border,false,99,Jorge Quintana
+insert-paper-prospects,BP-93,Green Border Pattern,false,99,Jorge Quintana
+insert-paper-prospects,BP-93,Yellow Border,false,75,Jorge Quintana
+insert-paper-prospects,BP-93,Yellow Pattern,false,75,Jorge Quintana
+insert-paper-prospects,BP-93,Gold Border,false,50,Jorge Quintana
+insert-paper-prospects,BP-93,Gold Border Pattern,false,50,Jorge Quintana
+insert-paper-prospects,BP-93,Orange Border,false,25,Jorge Quintana
+insert-paper-prospects,BP-93,Orange Border Pattern,false,25,Jorge Quintana
+insert-paper-prospects,BP-93,Black Border,false,25,Jorge Quintana
+insert-paper-prospects,BP-93,Black Border Pattern,false,25,Jorge Quintana
+insert-paper-prospects,BP-93,Red Border,false,5,Jorge Quintana
+insert-paper-prospects,BP-93,Platinum Border,false,1,Jorge Quintana
+insert-paper-prospects,BP-114,Sky Blue Border,false,499,Argenis Cayama
+insert-paper-prospects,BP-114,Neon Green Border,false,399,Argenis Cayama
+insert-paper-prospects,BP-114,Fuchsia Border,false,299,Argenis Cayama
+insert-paper-prospects,BP-114,Purple Border,false,250,Argenis Cayama
+insert-paper-prospects,BP-114,Purple Pattern,false,250,Argenis Cayama
+insert-paper-prospects,BP-114,Pink Border,false,175,Argenis Cayama
+insert-paper-prospects,BP-114,Green Border,false,99,Argenis Cayama
+insert-paper-prospects,BP-114,Yellow Border,false,75,Argenis Cayama
+insert-paper-prospects,BP-114,Gold Border,false,50,Argenis Cayama
+insert-paper-prospects,BP-114,Gold Border Pattern,false,50,Argenis Cayama
+insert-paper-prospects,BP-114,Orange Border,false,25,Argenis Cayama
+insert-paper-prospects,BP-114,Orange Border Pattern,false,25,Argenis Cayama
+insert-paper-prospects,BP-114,Black Border Pattern,false,25,Argenis Cayama
+insert-paper-prospects,BP-114,Red Border,false,5,Argenis Cayama
+insert-paper-prospects,BP-114,Platinum Border,false,1,Argenis Cayama

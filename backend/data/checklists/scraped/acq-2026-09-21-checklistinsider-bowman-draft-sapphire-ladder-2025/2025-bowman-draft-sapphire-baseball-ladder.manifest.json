@@ -1,0 +1,58 @@
+{
+  "scrapedAt": "2026-09-21T13:00:00.000Z",
+  "sourceUrl": "https://www.checklistinsider.com/2025-bowman-draft-sapphire-baseball",
+  "sourcePageSha256": "429db60dfddec878fc27cb6b20ca5941cfa2c3bd440562e6a26347b7fc780c1b",
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2026/02/2025-Bowman-Draft-Sapphire-Baseball-Checklist-Downloads-Excel-spreadsheet.xlsx",
+  "source": "checklistinsider-2026-09-21",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Bowman Draft Sapphire Baseball",
+  "productKey": "2025-bowman-draft-sapphire-baseball",
+  "setKey": "bowman-draft",
+  "rowCount": 1445,
+  "baseCards": 263,
+  "mintedBy": "Bowman-family baseball checklist-gap acquisition (2026-09-21). Diagnosis of a ~300-sale sample of 2025 bowman-draft unbacked sold_comps rows found 67/300 (22%) unbacked; 19 of those were a wrong-key matcher defect (2025 Bowman Draft CHROME sales minting under setKey=bowman-chrome, out of scope for a checklist CSV -- flagged separately) and the remaining 48 were genuine ladder gaps on the Sapphire subset: CPA- prospect autos missing their Green/Gold/Orange/Black/Red/Padparadscha Sapphire rungs (e.g. CPA-SHA, CPA-GK, CPA-PF, CPA-CB), SS- Sapphire Selections inserts missing their own Gold/Orange/Red Sapphire + SuperFractor rungs (e.g. SS-5, SS-9, SS-14, SS-17), and BDC- base cards missing several Sapphire colour rungs (e.g. BDC-153, BDC-101, BDC-58, BDC-126, BDC-28, BDC-187, BDC-162, BDC-6, BDC-94, BDC-48). This package expands the FULL rosters (200 BDC-, 18 SS-, 30 CPA-, 15 SSA-, all read from the source's own xlsx workbook) against their own stated ladders and keeps only (cardNumber, parallel) pairs not already present in card_catalog under setKey=bowman-draft OR bowman-draft-sapphire (both checked; 3,238 existing distinct pairs found combined; 52 of the theoretical 1,497 rows were already covered and skipped).",
+  "ladders": {
+    "BDC- (Base Draft Sapphire Checklist, 200 cards)": [
+      { "parallel": "Yellow Sapphire", "printRun": 75 },
+      { "parallel": "Gold Sapphire", "printRun": 50 },
+      { "parallel": "Orange Sapphire", "printRun": 25 },
+      { "parallel": "Black Sapphire", "printRun": 10 },
+      { "parallel": "Red Sapphire", "printRun": 5 },
+      { "parallel": "Padparadscha Sapphire", "printRun": 1 }
+    ],
+    "CPA- (Sapphire Chrome Prospect Autographs Checklist, 30 cards, auto)": [
+      { "parallel": "Green Sapphire", "printRun": 99 },
+      { "parallel": "Gold Sapphire", "printRun": 50 },
+      { "parallel": "Orange Sapphire", "printRun": 25 },
+      { "parallel": "Black Sapphire", "printRun": 10 },
+      { "parallel": "Red Sapphire", "printRun": 5 },
+      { "parallel": "Padparadscha Sapphire", "printRun": 1 }
+    ],
+    "SSA- (Sapphire Selections Autographs Checklist, 15 cards, auto)": [
+      { "parallel": "Orange Sapphire", "printRun": 25 },
+      { "parallel": "Red Sapphire", "printRun": 5 },
+      { "parallel": "SuperFractor", "printRun": 1 }
+    ],
+    "SS- (Sapphire Selections Checklist, 18 cards)": [
+      { "parallel": "Gold Sapphire", "printRun": 50 },
+      { "parallel": "Orange Sapphire", "printRun": 25 },
+      { "parallel": "Red Sapphire", "printRun": 5 },
+      { "parallel": "SuperFractor", "printRun": 1 }
+    ]
+  },
+  "categoryMinted": {
+    "base": "BDC- rows (Base Draft Sapphire ladder)",
+    "insert-sapphire-selections": "SS- rows",
+    "insert-sapphire-chrome-prospect-autographs": "CPA- rows",
+    "insert-sapphire-selections-autographs": "SSA- rows"
+  },
+  "settledSetKey": "bowman-draft -- the sale-side hobbyiqCardId for these Sapphire sales mints under setKey=bowman-draft, not the sibling bowman-draft-sapphire (confirmed against a live sale sample: hiq:baseball:2025:bowman-draft:cpa-sha:green:auto, hiq:baseball:2025:bowman-draft:ss-5:base:no-auto). This CSV is filed under setKey=bowman-draft so its rows land at the SAME id prefix the sales already use; the sibling bowman-draft-sapphire key already carries a separate, overlapping set of rows from an earlier source and was checked (not written to) purely for dedup.",
+  "spellingAudit": "Parallel names verbatim from the source page's four stated ladders (Base Draft Sapphire Checklist, Sapphire Chrome Prospect Autographs Checklist, Sapphire Selections Autographs Checklist, Sapphire Selections Checklist), cross-checked against existing card_catalog spellings for the same colour words under both bowman-draft and bowman-draft-sapphire (Yellow/Gold/Orange/Black/Red/Green/Padparadscha Sapphire, SuperFractor) -- identical, no alignment needed.",
+  "selectCardsOnlyAudit": "No 'select cards only' / roster-restriction language on the source page for any of the four ladders; each applies to its full named roster (BDC- 1-200, CPA- all 30 signers, SSA- all 15 signers, SS- all 18).",
+  "provenance": {
+    "cardsFrom": "checklistinsider.com xlsx workbook (tabular-inferred layout via backend/scripts/scrape-checklistinsider.cjs), 263 total rows across all four subsets, verified against the HTML page's own numbered card-by-card lists for BDC-1..200",
+    "rungsFrom": "the source page's own four stated ladders, verbatim, all rungs with print runs",
+    "dedup": "existing card_catalog rows for setKey IN (bowman-draft, bowman-draft-sapphire), sport=baseball, cardYear=2025 were read via a bounded query pass (3,944 + 817 = 4,761 existing rows) and any (cardNumber, parallel) pair already present in either key was excluded from this CSV."
+  }
+}
