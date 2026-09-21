@@ -1904,7 +1904,7 @@ jobs:
           # this very expression and asserts every script it names is in the
           # dropdown whitelist AND calls runnerShardScope without alwaysShard.
           # Drop a script from the line and that suite turns red.
-          SHARD: ${{ (inputs.script == 'repair-tiffany-pool-enumeration' || inputs.script == 'repair-tiffany-rung-to-product' || inputs.script == 'retire-self-derived-identities' || inputs.script == 'repair-bowman-product-refile' || inputs.script == 'rekey-product-setkey' || inputs.script == 'repair-finish-collision-refile' || inputs.script == 'reslug-ruled-alias' || inputs.script == 'repair-cpa-draft-refile' || inputs.script == 'repair-clc-signature-unsigned') && inputs.parents_only == true && 'true' || '' }}
+          SHARD: ${{ (inputs.script == 'repair-tiffany-pool-enumeration' || inputs.script == 'repair-tiffany-rung-to-product' || inputs.script == 'retire-self-derived-identities' || inputs.script == 'repair-bowman-product-refile' || inputs.script == 'rekey-product-setkey' || inputs.script == 'repair-finish-collision-refile' || inputs.script == 'reslug-ruled-alias' || inputs.script == 'repair-cpa-draft-refile' || inputs.script == 'repair-clc-signature-unsigned' || inputs.script == 'resolve-disagreeing-sale-twins') && inputs.parents_only == true && 'true' || '' }}
           # Optional year scoping (ingest-checklists-end-to-end, rehome-catalog-
           # rows-to-own-partition, dedupe-catalog-partition-shadows, merge-bare-
           # colour-parallels, repair-refractor-mislabel).
@@ -3482,6 +3482,16 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
+      # RESUME (2026-09-21, follow-up review after run 35578577288/35589416039).
+      # A REPORT relaunch used to restart from zero every hop and loop
+      # forever (a report drains nothing, so "budget hit" never converged).
+      # Now rides the EXISTING `scan_limit` input with the SAME hop*1,000,000
+      # + offset cursor fold-catalog-duplicate-rungs.cjs's own relaunch step
+      # already parses off its log -- copied byte-for-byte here. THE REAL
+      # SLOT/SLOTS are parsed off the script's own `shard  slot X/Y` banner
+      # line (never the raw dispatch inputs verbatim): a slot=0 dispatch that
+      # never opted into SHARD prints slot 0/1 honestly, and the notice must
+      # say what the run ACTUALLY did.
       - name: Self-relaunch the disagreeing-twin resolution until the slot is clean
         if: ${{ !cancelled() && inputs.script == 'resolve-disagreeing-sale-twins' }}
         env:
@@ -3493,12 +3503,19 @@ jobs:
           preamble: |
             N=$(grep -aoE "^  (APPLIED|WOULD APPLY) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
             echo "resolved=${N:-0}"
+            REAL_SLOT=$(grep -aoE "shard +slot [0-9]+/[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+/[0-9]+" | cut -d/ -f1 || true)
+            REAL_SLOTS=$(grep -aoE "shard +slot [0-9]+/[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+/[0-9]+" | cut -d/ -f2 || true)
+            REAL_SLOT="${REAL_SLOT:-${{ inputs.slot }}}"
+            REAL_SLOTS="${REAL_SLOTS:-${{ inputs.slots }}}"
+            echo "realSlot=$REAL_SLOT realSlots=$REAL_SLOTS"
+            RESUME_ARG=$(grep -aoE "the relaunch resumes at scan_limit=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$" || true)
+            echo "resumeArg=${RESUME_ARG:-0}"
           budget-notice: |
-            echo "::notice::budget hit (resolved=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            echo "::notice::budget hit (resolved=${N:-0}) — re-dispatching slot ${REAL_SLOT}/${REAL_SLOTS} RESUMING at scan_limit=${RESUME_ARG:-0} (not a rescan from zero) to continue"
           finished-notice: |
-            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (resolved=${N:-0}) — done, no re-dispatch."
+            echo "::notice::slot ${REAL_SLOT}/${REAL_SLOTS} finished within budget (resolved=${N:-0}) — done, no re-dispatch."
           dispatch: |
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=resolve-disagreeing-sale-twins -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=resolve-disagreeing-sale-twins -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}" -f scan_limit="${RESUME_ARG:-0}" -f parents_only="${{ inputs.parents_only }}"
 
       - name: Self-relaunch the ruled setKey rename until the slot is clean
         if: ${{ !cancelled() && inputs.script == 'rename-setkey' }}

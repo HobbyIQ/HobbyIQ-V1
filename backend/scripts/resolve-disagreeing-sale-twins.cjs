@@ -225,12 +225,38 @@ const f = (n) => Number(n ?? 0).toLocaleString();
 const shardOf = (key) => parseInt(crypto.createHash("sha1").update(String(key)).digest("hex").slice(0, 8), 16) % SLOTS;
 const started = Date.now();
 const budgetLeft = () => RUN_MINUTES * 60000 - (Date.now() - started);
-const retry = async (fn, tries = 8) => { let wait = 500; for (let a = 0; ; a++) { try { return await fn(); } catch (e) { const msg = String(e?.message ?? e); if (!/request rate|429|ETIMEDOUT|ECONNRESET|503/i.test(msg) || a >= tries) throw e; await new Promise((r) => setTimeout(r, wait)); wait = Math.min(wait * 2, 15000); } } };
+// THROTTLE COUNT (coordinator report on run 35578577288, speed finding --
+// mirrors fold-catalog-duplicate-rungs.cjs's own throttleStats byte-for-byte).
+// sold_comps is SHARED with production pricing reads, so every retried call
+// (429/503/timeout, through this ONE shared retry() wrapper) is
+// production-relevant contention this lane caused; module-scope so `retry`
+// (also module-scope, called before any partition-local closure exists) can
+// increment it, and exported below for white-box testing of the throttle-drop
+// mechanism without paying real retry() backoff delays.
+const throttleStats = { count: 0, droppedTo2: false };
+const retry = async (fn, tries = 8) => { let wait = 500; for (let a = 0; ; a++) { try { return await fn(); } catch (e) { const msg = String(e?.message ?? e); if (!/request rate|429|ETIMEDOUT|ECONNRESET|503/i.test(msg) || a >= tries) throw e; throttleStats.count++; await new Promise((r) => setTimeout(r, wait)); wait = Math.min(wait * 2, 15000); } } };
 
 // ── pure ───────────────────────────────────────────────────────────────────
 
 const normParallelForRung = (p) => String(p ?? "").trim().toLowerCase().replace(/\s+/g, " ") || "base";
 const normNumber = (n) => String(n ?? "").trim().toLowerCase();
+
+// ── RESUME CURSOR (coordinator report on run 35589416039: a REPORT relaunch
+// restarts from zero and loops forever). Copies fold-catalog-duplicate-
+// rungs.cjs's own convention byte-for-byte: hop*1,000,000 + offset, riding the
+// EXISTING `scan_limit` dispatch input (no new one). Module-scope and pure so
+// a test can pin the encode/decode round-trip without any Cosmos or clock.
+const RESUME_HOP_UNIT = 1_000_000;
+/** Hops after which this chain ABORTS rather than relaunching again -- APPLY
+ *  has no offset to rely on for termination (it rescans every hop), so a
+ *  population that somehow never converges must not relaunch forever on the
+ *  hop counter alone. */
+const MAX_RESUME_HOPS = 30;
+function decodeResume(raw) {
+  const v = Math.max(0, Math.floor(Number(raw || 0)) || 0);
+  return { hop: Math.floor(v / RESUME_HOP_UNIT), offset: v % RESUME_HOP_UNIT };
+}
+const encodeResume = ({ hop, offset }) => hop * RESUME_HOP_UNIT + offset;
 
 /**
  * THE STRICT-CHECKLIST TEST. Both readers are consulted, not one, because
@@ -656,7 +682,12 @@ module.exports = {
   titleNamesMoreSpecificThanCandidate, titleContradictsCandidateCell,
   resolveHobbyiqCardIdDisagreement, resolveGradeDisagreement, resolveDisagreement,
   buildResolution, normParallelForRung, normNumber,
+  decodeResume, encodeResume, RESUME_HOP_UNIT, MAX_RESUME_HOPS,
   __setSweepDepsForTest: (d) => { SWEEP_DEPS = d; },
+  // Exported for white-box testing of the throttle-drop mechanism only --
+  // `throttleStats` lets a test simulate 429 pressure without paying real
+  // retry() backoff delays (500ms-15s per attempt) for 20+ real throttles.
+  throttleStats,
 };
 
 // Lazily-bound TS-authored deps -- assigned in main() once dist/ is required,
@@ -820,12 +851,12 @@ async function main() {
   // finds (any card carrying a long-shaped row) -- this lane's own decision
   // (decideSyntheticTwin) then narrows each partition to just the
   // twins-disagree pairs.
-  const cards = [];
+  const allCards = [];
   {
     const it = pool.items.query({ query: `SELECT DISTINCT VALUE c.cardId FROM c WHERE c.source = 'cardhedge' AND RegexMatch(c.id, "^cardhedge::ch-daily::.*::.*::[0-9]+$")` }, { maxItemCount: 500 });
-    while (it.hasMoreResults()) { const { resources } = await retry(() => it.fetchNext()); for (const id of resources ?? []) if (id) cards.push(String(id)); }
+    while (it.hasMoreResults()) { const { resources } = await retry(() => it.fetchNext()); for (const id of resources ?? []) if (id) allCards.push(String(id)); }
   }
-  console.log(`  ${f(cards.length)} CH cards carry a long-id-shaped row (same population as the sweep lane)`);
+  console.log(`  ${f(allCards.length)} CH cards carry a long-id-shaped row (same population as the sweep lane)`);
 
   const stats = {
     partitions: 0, otherShard: 0, rowsRead: 0,
@@ -836,22 +867,91 @@ async function main() {
     applied: 0, failed: 0, duplicatesLeft: 0, staleSincePlan: 0, alreadyGone: 0, notReached: 0,
   };
   const examples = [];
-  let stopReason = null, i = 0;
+  let stopReason = null;
 
-  const deps = {
+  const baseDeps = {
     playerIdentityKey, titleContradictsTarget, statedFinishFromChecklist,
     sameCardNumber, parseGradeFromTitle,
     readVariationFromTitle, insertSetNamedInTitle, isRegisteredProduct,
     extractPrintRunFromTitle, extractYearFromTitle, inferSetKeyFromTitle,
     productAncestry, slugify, guardSoldCompDoc,
-    checklistRowsByNumber: () => new Map(), // placeholder; real cache-backed fn bound per-partition below
   };
 
-  for (const cardId of cards) {
-    if (LIMIT && stats.partitions >= LIMIT) { stats.notReached += cards.length - i; break; }
-    if (budgetLeft() < RESERVE_MS) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget`; stats.notReached += cards.length - i; break; }
-    i++;
-    if (SLOTS > 1 && shardOf(cardId) !== SLOT) { stats.otherShard++; continue; }
+  // ── SHARDING (coordinator report on run 35578577288: dispatched
+  // slot=0 slots=8, ran "slot 0/1" -- the whole population, and a real
+  // fan-out of slots 0..7 would have run EIGHT COPIES over the same pairs).
+  // The lane always called runnerShardScope correctly; what was missing was
+  // the workflow's own SHARD env wire (see backfill-runner.yml's SHARD
+  // expression) -- this script cannot fix that from inside itself, so it
+  // now also prints the fold-catalog-duplicate-rungs.cjs convention's
+  // explicit `shard  slot X/Y` line (in ADDITION to SHARD_SCOPE.banner()'s
+  // own prose banner) so the runner's relaunch step can parse the REAL
+  // slot/slots off the log rather than trust the raw dispatch inputs
+  // verbatim (a slot=0 dispatch that never opted in still prints slot 0/1
+  // here, honestly, and the relaunch notice below reads THIS line).
+  console.log(`  shard         slot ${SLOT}/${SLOTS}  on sha1(cardId) -- a whole CH partition (and every pair inside it) lands on ONE slot, never straddling two`);
+  const shardedCards = SLOTS > 1
+    ? allCards.filter((cardId) => { const mine = shardOf(cardId) === SLOT; if (!mine) stats.otherShard++; return mine; })
+    : allCards;
+
+  // ── DETERMINISTIC ORDER + RESUME CURSOR (coordinator report: "a REPORT
+  // relaunch restarts from zero and loops forever", cancelled run
+  // 35589416039). Copies fold-catalog-duplicate-rungs.cjs's own convention
+  // byte-for-byte: hop*1,000,000 + offset, riding the EXISTING `scan_limit`
+  // dispatch input (no new one), a hop cap so a chain that never converges
+  // cannot relaunch forever, APPLY ALWAYS RESCANS AT OFFSET 0 (a resolved
+  // pair drops out of the fresh population on its own -- decideSyntheticTwin
+  // no longer proves it twins-disagree once one copy is gone -- so slicing a
+  // rebuilt, potentially-reordered scan by a stale numeric offset would skip
+  // arbitrary never-resolved pairs, forever), and REPORT's offset is only
+  // ever valid because the order it indexes into is SORTED, not "however the
+  // population query happened to return it".
+  const RESUME = decodeResume(process.env.SCAN_LIMIT);
+  if (RESUME.hop >= MAX_RESUME_HOPS) {
+    throw new Error(`RESOLVE_DISAGREEING_SALE_TWINS_HOP_CAP: this chain has already relaunched ${RESUME.hop} time(s) (cap ${MAX_RESUME_HOPS}) without converging -- ABORTING rather than relaunching again. Re-dispatch deliberately (scan_limit=0) only after checking why the population is not shrinking.`);
+  }
+  const orderedCards = [...shardedCards].sort();
+  const totalCardsThisSlot = orderedCards.length;
+  const REPORT_RESUME_OFFSET = APPLY ? 0 : RESUME.offset;
+  if (APPLY && RESUME.offset > 0) {
+    console.log(`  RESUME (APPLY)   scan_limit carried a non-zero offset (${f(RESUME.offset)}) from an earlier hop -- IGNORED under APPLY: every relaunch rescans from the top, because a pair an earlier hop resolved no longer proves twins-disagree and simply will not appear in this fresh scan. Only the hop count (${f(RESUME.hop)}) carries forward, for the hop cap.`);
+  }
+  const cardsThisRun = REPORT_RESUME_OFFSET > 0 ? orderedCards.slice(REPORT_RESUME_OFFSET) : orderedCards;
+  if (REPORT_RESUME_OFFSET > 0) {
+    console.log(`  RESUMED (REPORT) skipping the first ${f(REPORT_RESUME_OFFSET)} of ${f(totalCardsThisSlot)} sorted CH partition(s) on this slot an earlier relaunch already decided (hop ${RESUME.hop}) -> ${f(cardsThisRun.length)} left. Valid because REPORT writes nothing, so the population and this sort are unchanged between hops.`);
+  }
+
+  // ── CONCURRENCY, ACROSS PARTITIONS ONLY (coordinator report: 80,770 pairs
+  // in 120 minutes is ~11 pairs/s). Copies fold-catalog-duplicate-rungs.cjs's
+  // own convention: a partition is the unit of concurrency (its own pairs
+  // stay strictly serial within it -- two pairs sharing a `long` row must
+  // never decide/write concurrently), default 6 (safe headroom on a shared
+  // 10,000-RU/s sold_comps day), the `concurrency`/`CONCURRENCY`/
+  // `BACKFILL_CONCURRENCY` dispatch input raises it, and every retried
+  // Cosmos call (429/503/timeout, the ONE shared `retry()` wrapper) trips a
+  // one-way step-down to 2 after 20 throttles in this run.
+  const REQUESTED_CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 6));
+  const THROTTLE_TRIP_AT = 20;
+  const THROTTLE_CONCURRENCY = 2;
+  function effectiveConcurrency() {
+    if (throttleStats.count >= THROTTLE_TRIP_AT) {
+      if (!throttleStats.droppedTo2) {
+        throttleStats.droppedTo2 = true;
+        console.log(`\n  THROTTLED: ${f(throttleStats.count)} retries (429/503/timeout) hit in this run -- dropping concurrency from ${f(REQUESTED_CONCURRENCY)} to ${f(THROTTLE_CONCURRENCY)} for the REST of this run. sold_comps is shared with production pricing; this lane backs off rather than compete for it.`);
+      }
+      return THROTTLE_CONCURRENCY;
+    }
+    return REQUESTED_CONCURRENCY;
+  }
+  console.log(`  concurrency   ${REQUESTED_CONCURRENCY} partition(s) at once (across partitions only -- one partition's own pairs stay strictly serial); auto-drops to ${THROTTLE_CONCURRENCY} after ${THROTTLE_TRIP_AT} throttles this run`);
+
+  /** ONE partition's whole unit of work -- population read, day-count
+   *  precompute, per-pair decide+write, all strictly serial WITHIN this
+   *  call. Different partitions run concurrently (the caller's batches);
+   *  this function's own body is otherwise byte-identical to the original
+   *  single-loop version, just parameterized so several can run at once
+   *  without racing on a shared mutable `deps.checklistRowsByNumber`. */
+  async function processPartition(cardId) {
     stats.partitions++;
 
     const rows = [];
@@ -861,7 +961,7 @@ async function main() {
 
     const longRows = rows.filter((r) => parseLongSyntheticId(r.id));
     const shortRows = rows.filter((r) => isCanonicalChDailyId(r.id));
-    if (!longRows.length || !shortRows.length) continue; // nothing to disagree about in this partition
+    if (!longRows.length || !shortRows.length) return; // nothing to disagree about in this partition
 
     const dayCounts = new Map(), longDayCounts = new Map();
     // Same date-only uniqueness precompute the sweep lane runs, needed so
@@ -885,44 +985,73 @@ async function main() {
       longDayCounts.set(key, (longDayCounts.get(key) ?? 0) + 1);
     }
 
-    // Bind this partition's checklist cache lookup: parses the slug's
-    // (sport, year, setKey) and loads it (cached across the whole run, not
-    // per pair).
-    deps.checklistRowsByNumber = (parsed) => {
-      if (!parsed) return new Map();
-      // Synchronous surface over an async cache load is not possible here,
-      // so the cache is PRE-WARMED per candidate pair below instead; this
-      // placeholder exists only for the module-level export's default.
-      return cache.get(`${parsed.sport}|${parsed.year}|${parsed.setKey}`) ?? new Map();
-    };
+    // Partition-LOCAL deps: a fresh object per partition, never a shared
+    // mutable closure -- concurrent partitions each bind their OWN
+    // checklistRowsByNumber against the SAME shared LRU cache (safe: reads
+    // and cache inserts are synchronous between awaits), so two partitions
+    // running at once can never race on which cell the other's lookup
+    // resolves to.
+    const deps = { ...baseDeps, checklistRowsByNumber: (parsed) => (parsed ? cache.get(`${parsed.sport}|${parsed.year}|${parsed.setKey}`) ?? new Map() : new Map()) };
 
     for (const long of longRows) {
-      // PLAN_OUT gets protected/parked-side rows too (coordinator review of
-      // #2381, LOW) -- same auditability doctrine as the sweep lane's own
-      // emitPlanRow calls for these classes; a REPORT that silently drops
-      // them cannot be audited row by row before the matching APPLY runs.
-      if (isProtected(long)) { stats.protected++; emitPlanRow("protected", null, long, null, { reason: "long-row-pinned-or-flagged" }); continue; }
-      if (isParkedSide(long)) { stats.parkedSide++; emitPlanRow("parked-side", null, long, null, { reason: "long-row-parked" }); continue; }
       const parsedId = parseLongSyntheticId(long.id);
       const candidateShorts = shortRows.filter((s) => cents(s.price) === Math.round(Number(parsedId.priceCents) || NaN));
       for (const short of candidateShorts) {
-        if (isProtected(short)) { stats.protected++; emitPlanRow("protected", null, long, short, { reason: "short-row-pinned-or-flagged" }); continue; }
-        if (isParkedSide(short)) { stats.parkedSide++; emitPlanRow("parked-side", null, long, short, { reason: "short-row-parked" }); continue; }
+        // ── RECONCILE FIX (coordinator report on run 35578577288: "twins-
+        // disagree pairs seen 80,770" vs "resolved+left+protected+parked
+        // 106,741 MISMATCH"). The bug: isProtected/isParkedSide used to gate
+        // BEFORE decideSyntheticTwin ever ran, once per LONG ROW and again
+        // per CANDIDATE SHORT -- so a protected/parked row was counted into
+        // `protected`/`parkedSide` for EVERY (long, short) pairing it
+        // appeared in, including pairings decideSyntheticTwin would have
+        // called `not-a-match`, `ambiguous-multi-sale-day`, or an ordinary
+        // `collapse` (no disagreement at all). Those are NOT part of this
+        // lane's own population (`disagreePairsSeen` only counts pairs
+        // PROVEN `twins-disagree`), so the right-hand side of the reconcile
+        // counted rows the left-hand side never counted -- exactly the
+        // "counted without being counted as seen" the coordinator named.
+        //
+        // FIX: decideSyntheticTwin (pure, no I/O) is now the FIRST thing
+        // checked, before ANY protected/parked gate. `disagreePairsSeen` and
+        // the protected/parked counters now increment on the SAME
+        // condition -- `d.verdict === "twins-disagree"` -- so every pair
+        // that adds to one side of the reconcile also adds to the other.
+        // Only a pair confirmed to be a genuine disagreement is EVER
+        // classified as protected/parked/resolved/left; a not-a-match,
+        // ambiguous, or ordinary-collapse pairing is silently skipped here
+        // exactly as it always was, uncounted on EITHER side, because it is
+        // not this lane's population at all (it belongs to -- and is
+        // already counted by -- the sweep lane's own REPORT).
         const d = decideSyntheticTwin(long, short, { dayCounts, longDayCounts });
         if (d.verdict !== "twins-disagree") continue;
         stats.disagreePairsSeen++;
 
+        // PLAN_OUT gets protected/parked-side pairs too (coordinator review
+        // of #2381, LOW) -- same auditability doctrine as the sweep lane's
+        // own emitPlanRow calls for these classes; a REPORT that silently
+        // drops them cannot be audited row by row before the matching APPLY
+        // runs. Checked NOW, after the pair is proven a genuine
+        // disagreement, never before -- see the FIX note above.
+        if (isProtected(long) || isProtected(short)) {
+          stats.protected++;
+          emitPlanRow("protected", null, long, short, { reason: isProtected(long) ? "long-row-pinned-or-flagged" : "short-row-pinned-or-flagged" });
+          continue;
+        }
+        if (isParkedSide(long) || isParkedSide(short)) {
+          stats.parkedSide++;
+          emitPlanRow("parked-side", null, long, short, { reason: isParkedSide(long) ? "long-row-parked" : "short-row-parked" });
+          continue;
+        }
+
         // PRE-WARM the checklist cache for both sides' cells before calling
         // the pure resolver -- one Cosmos round trip per (sport,year,setKey)
-        // per run, never per pair, via the MRU cache above.
+        // per run, never per pair, via the MRU cache above (shared ACROSS
+        // partitions on purpose -- a cell many partitions' pairs reference
+        // is loaded once, not once per partition).
         for (const hiq of [long.hobbyiqCardId, short.hobbyiqCardId]) {
           const parsed = parseHobbyIqCardId(String(hiq ?? ""));
           if (parsed) await loadChecklistRowsByNumber(cat, parsed.sport, parsed.year, parsed.setKey);
         }
-        deps.checklistRowsByNumber = (parsed) => {
-          if (!parsed) return new Map();
-          return cache.get(`${parsed.sport}|${parsed.year}|${parsed.setKey}`) ?? new Map();
-        };
 
         const resolution = resolveDisagreement(deps, d.axis, long, short);
         if (resolution.verdict === "both-sides-valid") {
@@ -976,7 +1105,67 @@ async function main() {
     }
   }
 
+  // ── HEARTBEAT: partitions done/total + ETA, once per minute, on stderr
+  // (matches runner-budget.cjs's own narration convention and fold-catalog-
+  // duplicate-rungs.cjs's own per-minute cadence). ──────────────────────────
+  let partitionsDone = 0;
+  let lastHeartbeatAt = Date.now();
+  const HEARTBEAT_MS = 60 * 1000;
+  function maybeHeartbeat() {
+    const now = Date.now();
+    if (now - lastHeartbeatAt < HEARTBEAT_MS) return;
+    lastHeartbeatAt = now;
+    const elapsedS = (now - started) / 1000;
+    const rate = partitionsDone / Math.max(elapsedS, 1);
+    const remaining = cardsThisRun.length - partitionsDone;
+    const etaS = rate > 0 ? Math.round(remaining / rate) : null;
+    const eta = etaS === null ? "unknown" : etaS < 60 ? `${etaS}s` : `${Math.round(etaS / 60)}m`;
+    console.error(`  narrate: heartbeat pairs ${f(stats.disagreePairsSeen)} decided so far  partitions ${f(partitionsDone)}/${f(cardsThisRun.length)} this run (${f(totalCardsThisSlot)} total this slot)  rate ${rate.toFixed(1)} partitions/s  ETA ${eta}  throttles ${f(throttleStats.count)}${throttleStats.droppedTo2 ? ` (DROPPED to concurrency ${THROTTLE_CONCURRENCY})` : ""}`);
+  }
+
+  // `stoppedMidScan` is set ONLY by the CLOCK branch below -- a LIMIT stop is
+  // an operator-requested slice (a dry-run sizing a probe), never a budget
+  // exhaustion, and must never print the relaunch marker (coordinator
+  // report: a FINISHED scan printing the marker anyway re-dispatches
+  // forever, since a report drains nothing on the next hop).
+  let stoppedMidScan = false;
+  outer:
+  for (let idx = 0; idx < cardsThisRun.length; ) {
+    const batchSize = effectiveConcurrency();
+    if (LIMIT && stats.partitions >= LIMIT) { stats.notReached += cardsThisRun.length - idx; break outer; }
+    // Checked BEFORE each batch starts, never after -- the same "checked
+    // before the unit, never at the loop top alone" rule runner-budget.cjs's
+    // own header states, applied to a BATCH of partitions rather than one.
+    if (budgetLeft() < RESERVE_MS) {
+      stats.notReached += cardsThisRun.length - idx;
+      stoppedMidScan = true;
+      break outer;
+    }
+    const batch = cardsThisRun.slice(idx, idx + batchSize);
+    await Promise.all(batch.map((cardId) => processPartition(cardId)));
+    partitionsDone += batch.length;
+    idx += batch.length;
+    maybeHeartbeat();
+  }
+
+  // A REPORT (or APPLY) THAT FINISHED ITS SCAN NEVER PRINTS THE BUDGET
+  // MARKER (coordinator report: run 35589416039, cancelled -- a REPORT
+  // relaunch restarted from zero and looped forever because the marker
+  // printed after the scan had already decided everything in scope).
+  // `stoppedMidScan` is set ONLY inside the batch loop above, so a scan that
+  // runs to completion (the `for` exhausts `cardsThisRun` without ever
+  // hitting `break outer`) leaves it `false` and `stopReason` stays `null`.
+  if (stoppedMidScan) {
+    const nextOffset = APPLY ? 0 : REPORT_RESUME_OFFSET + partitionsDone;
+    const nextResume = encodeResume({ hop: RESUME.hop + 1, offset: nextOffset });
+    stopReason = APPLY
+      ? `stopped at the ${RUN_MINUTES}-minute budget — the relaunch resumes at scan_limit=${nextResume} (hop ${RESUME.hop + 1}; APPLY always RESCANS from the top -- resolved pairs already dropped out of the next scan on their own, so offset stays 0)`
+      : `stopped at the ${RUN_MINUTES}-minute budget — the relaunch resumes at scan_limit=${nextResume} (hop ${RESUME.hop + 1}, offset ${f(nextOffset)} of ${f(totalCardsThisSlot)} this slot)`;
+  }
+  console.log(`\n  partitions this run  decided ${f(partitionsDone)} of ${f(cardsThisRun.length)} in scope this run (resume offset ${f(REPORT_RESUME_OFFSET)}${APPLY ? " -- APPLY always rescans at 0" : ""}, ${f(totalCardsThisSlot)} total this slot, hop ${f(RESUME.hop)})`);
+
   console.log(`\n${APPLY ? "APPLIED" : "REPORT ONLY -- nothing written"}`);
+  console.log(`  throttles (429/503/timeout)   ${f(throttleStats.count)}${throttleStats.droppedTo2 ? `   <- concurrency was DROPPED to ${THROTTLE_CONCURRENCY} for the rest of this run after ${THROTTLE_TRIP_AT} throttles` : ""}`);
   console.log(`  CH partitions scanned         ${f(stats.partitions)}   (${f(stats.otherShard)} belonging to other slots; ${f(stats.rowsRead)} rows read)`);
   console.log(`  twins-disagree pairs seen     ${f(stats.disagreePairsSeen)}`);
   console.log(`  protected                     ${f(stats.protected)}   <- verifiedByUser/flaggedWrong/excludedFromFmv/pinned; never touched`);
@@ -994,16 +1183,34 @@ async function main() {
   console.log(`    stale since plan (412)       ${f(stats.staleSincePlan)}   <- the long row changed since this run's own planning read; nothing deleted`);
   console.log(`  not reached                    ${f(stats.notReached)}`);
   const reconciled = stats.resolvedChecklistRoster + stats.resolvedMoreSpecific + stats.resolvedGraderToken + stats.bothSidesValid + stats.neitherSideBacked + stats.protected + stats.parkedSide;
-  console.log(`  reconcile: disagree pairs seen ${f(stats.disagreePairsSeen)} == resolved+left+protected+parked ${f(reconciled)}  ${stats.disagreePairsSeen === reconciled ? "OK" : "MISMATCH"}`);
+  const reconcileBalances = stats.disagreePairsSeen === reconciled;
+  console.log(`  reconcile: disagree pairs seen ${f(stats.disagreePairsSeen)} == resolved+left+protected+parked ${f(reconciled)}  ${reconcileBalances ? "OK" : "MISMATCH"}`);
   if (examples.length) { console.log("  examples:"); for (const e of examples) console.log(e); }
   if (APPLY) reportWrites({ job: "resolve-disagreeing-sale-twins", intended: stats.resolvedChecklistRoster + stats.resolvedMoreSpecific + stats.resolvedGraderToken, written: stats.applied, skipped: stats.bothSidesValid + stats.neitherSideBacked + stats.protected + stats.parkedSide, failed: stats.failed });
   if (stopReason) console.log(`\n${stopReason}`);
   if (planFd) { try { fs.closeSync(planFd); } catch { /* best effort */ } }
+
+  // CF-AN-UNBALANCED-RECONCILE-IS-A-BUG-NOT-A-BANNER-LINE (coordinator report
+  // on run 35578577288). "disagree pairs seen" and "resolved+left+protected+
+  // parked" are two independent tallies over the SAME per-pair classification
+  // (see the RECONCILE FIX comment above the main loop) -- if they ever
+  // disagree, either a pair is double-counted across two buckets or a bucket
+  // is counting something the pair-seen tally never saw. Neither is a number
+  // an operator can act on, and an APPLY run whose own banner cannot be
+  // trusted must not be treated as having applied correctly just because it
+  // exited 0. So this exits NON-ZERO in BOTH modes -- REPORT and APPLY alike
+  // -- exactly as repoint-sales-to-sibling-product.cjs's own
+  // CF-A-SALE-IS-NEVER-LOST reconciliation does for its own scanned/
+  // moved+patched+refused+failed+left tally.
+  if (!reconcileBalances) {
+    console.error(`!! CF-AN-UNBALANCED-RECONCILE-IS-A-BUG-NOT-A-BANNER-LINE: disagree pairs seen ${f(stats.disagreePairsSeen)} != resolved+left+protected+parked ${f(reconciled)}. A pair is uncounted or double-counted. Exit 4.`);
+    process.exitCode = 4;
+  }
 }
 
 if (require.main === module) // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809).
 main()
-  .then((ctx) => finishLane(0, ctx || {}))
+  .then((ctx) => finishLane(process.exitCode || 0, ctx || {}))
   .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message);
     await finishLane(3);
   });
