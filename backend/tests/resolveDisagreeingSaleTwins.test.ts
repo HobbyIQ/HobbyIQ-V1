@@ -824,6 +824,75 @@ describe("resolve-disagreeing-sale-twins carries the fleet discipline", () => {
     expect(src).toMatch(/guardSoldCompDoc/);
   });
 
+  // ── coordinator lesson from the fold-catalog-duplicate-rungs.cjs sibling
+  // lane's pilot: a FINISHED report drains its whole population and has
+  // nothing left to continue -- if it printed the budget marker anyway, the
+  // runner's relaunch step would re-dispatch it forever, since a marker-gated
+  // relaunch fires in BOTH report and apply mode (CF-REPORT-RELAUNCHES-AS-A-
+  // REPORT, D34) and has no OTHER way to tell "done" from "stopped mid-scan".
+  // The marker's own text must therefore be reachable from EXACTLY ONE
+  // source location, gated on the real clock check, never printed
+  // unconditionally at the end of the scan.
+  describe("the budget marker is printed ONLY from the real mid-scan clock check, never on a finished scan", () => {
+    it("the marker string appears in exactly ONE place in the source, inside the budgetLeft() < RESERVE_MS branch", () => {
+      const markerLines = [...src.matchAll(/stopReason\s*=\s*`stopped at the/g)];
+      expect(markerLines).toHaveLength(1);
+      // The ONE assignment site is textually inside the loop's own
+      // budget-check line, not a separate unconditional statement reachable
+      // after the loop exhausts its population.
+      expect(src).toMatch(/if\s*\(budgetLeft\(\)\s*<\s*RESERVE_MS\)\s*\{\s*stopReason\s*=\s*`stopped at the/);
+    });
+
+    it("stopReason initializes to null and the print is gated on it -- a scan that never breaks on budget never prints the marker", () => {
+      expect(src).toMatch(/let stopReason = null/);
+      // The ONLY console.log of stopReason is itself gated on `if (stopReason)`.
+      const printSites = [...src.matchAll(/console\.log\(`\\n\$\{stopReason\}`\)/g)];
+      expect(printSites).toHaveLength(1);
+      expect(src).toMatch(/if\s*\(stopReason\)\s*console\.log\(`\\n\$\{stopReason\}`\)/);
+    });
+
+    it("a LIMIT-triggered stop (an operator soft cap, not a real clock stop) does NOT set stopReason and therefore never prints the marker", () => {
+      // The LIMIT branch increments notReached and breaks, exactly like the
+      // budget branch, but must NOT assign stopReason -- a soft cap for
+      // testing is not a reason to relaunch, and conflating the two would
+      // make a bounded LIMIT=10 smoke run re-dispatch itself forever.
+      const limitBranch = /if\s*\(LIMIT\s*&&\s*stats\.partitions\s*>=\s*LIMIT\)\s*\{\s*stats\.notReached[^}]*\}/.exec(src);
+      expect(limitBranch, "LIMIT branch not found in the shipped source").toBeTruthy();
+      expect(limitBranch![0]).not.toMatch(/stopReason/);
+    });
+
+    it("behavioral: a loop that exhausts its whole population (never once out of clock) leaves stopReason null, by direct simulation of the shipped predicate shape", () => {
+      // Mirrors the shipped loop's own control flow with a budgetLeft() that
+      // never dips below RESERVE_MS -- a finished scan, by construction.
+      const RESERVE_MS = 90000;
+      const budgetLeftAlwaysHealthy = () => RESERVE_MS * 10; // always well clear of the reserve
+      const cards = ["a", "b", "c"];
+      let stopReason: string | null = null;
+      let i = 0;
+      for (const _cardId of cards) {
+        if (budgetLeftAlwaysHealthy() < RESERVE_MS) { stopReason = "stopped at the 120-minute budget"; break; }
+        i++;
+      }
+      expect(stopReason).toBeNull();
+      expect(i).toBe(cards.length); // every card was actually reached
+    });
+
+    it("behavioral: a genuinely mid-scan clock stop (budgetLeft dips below the reserve before the population is exhausted) DOES set stopReason", () => {
+      const RESERVE_MS = 90000;
+      let calls = 0;
+      const budgetLeftDipsOnThirdCall = () => { calls++; return calls >= 3 ? RESERVE_MS / 2 : RESERVE_MS * 10; };
+      const cards = ["a", "b", "c", "d", "e"];
+      let stopReason: string | null = null;
+      let i = 0;
+      for (const _cardId of cards) {
+        if (budgetLeftDipsOnThirdCall() < RESERVE_MS) { stopReason = "stopped at the 120-minute budget"; break; }
+        i++;
+      }
+      expect(stopReason).not.toBeNull();
+      expect(i).toBeLessThan(cards.length); // genuinely stopped before the population was exhausted
+    });
+  });
+
   it("carries no 0x08/0x00 bytes -- a heredoc-authored file would turn \\b into 0x08", () => {
     const buf = fs.readFileSync(path.join(__dirname, "..", "scripts", "resolve-disagreeing-sale-twins.cjs"));
     let has08 = false, has00 = false;
