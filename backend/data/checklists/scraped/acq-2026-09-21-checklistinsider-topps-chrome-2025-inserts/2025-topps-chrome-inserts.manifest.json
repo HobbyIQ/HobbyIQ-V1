@@ -1,0 +1,81 @@
+{
+  "scrapedAt": "2026-09-21T16:40:00.000Z",
+  "source": "checklistinsider-2026-09-21",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Topps Chrome Update Series Baseball -- named insert/autograph sets",
+  "productKey": "2025-topps-chrome-inserts",
+  "setKey": "topps-chrome-update-series",
+  "rowCount": 3421,
+  "parallelColumnAuthoritative": true,
+  "mintedBy": "Diagnosed against a read-only sold_comps sample (baseball/2025/topps-chrome, 300-sale sample): 25 distinct ids point-read genuinely absent. Most (USC*, USA-*) are a WRONG-KEY defect -- sales are landing under bare topps-chrome instead of the already-registered, already-partially-backed topps-chrome-update-series (confirmed: hiq:baseball:2025:topps-chrome-update-series:usc145:base:no-auto FOUND, blue-wave-refractor NOT FOUND -- a real ladder gap under the correct key, not sourced this package, flagged for a follow-up). The remaining genuine gaps named 5 insert/autograph sets by cardNumber prefix -- AC (Chrome Update Autographs), CRDA (Rookie Debut Autographs), CHRU (Chromeography), CLA (Chrome Legends Autographs), NT (Night Terrors) -- all found on checklistinsider.com's 2025 Topps Chrome Update Series product page (NOT the base 2025 Topps Chrome page, which does not carry these codes).",
+  "sourceUrls": [
+    "https://www.checklistinsider.com/2025-topps-chrome-update-series-baseball"
+  ],
+  "sectionsIncluded": [
+    {
+      "category": "auto-chrome-update-autographs",
+      "sourceHeading": "Chrome Update Autographs Checklist127 cards.",
+      "cards": 110,
+      "cardNumberPrefix": "AC-",
+      "isAuto": true,
+      "parallelsVerbatim": "Refractor /499; Purple Speckle Refractor /299; Purple Refractor /250; Aqua Wave Refractor /199; Blue Refractor /150; Blue RayWave Refractor /150; Green Refractor /99 (Retail SKUs); Gold Refractor /50; Gold Wave Refractor /50 (Hobby SKUs); Orange Refractor /25 (Hobby); Orange Wave Refractor /25 (Hobby SKUs); Black Refractor /10 (Hobby SKUs); Red Refractor /5; Red Wave Refractor /5 (Hobby SKUs); SuperFractor 1/1. (a 'Black & White Mini-Diamond Refactor (Breaker)' unnumbered rung is also listed but held out -- see notMinted below)",
+      "note": "The page states 127 cards under this ONE heading, but the roster is AC- (110 cards) immediately followed by a 17-card RA- continuation with NO section boundary in the source text. Only the AC- portion is staged (matches this task's target prefix list); the trailing RA- continuation is out of scope and not independently verified this round."
+    },
+    {
+      "category": "auto-rookie-debut-autographs",
+      "sourceHeading": "Rookie Debut Autographs Checklist61 cards.",
+      "cards": 61,
+      "cardNumberPrefix": "CRDA-",
+      "isAuto": true,
+      "parallelsVerbatim": "Refractor /499; Purple Speckle Refractor /299; Purple Refractor /250; Aqua Wave Refractor /199; Blue Refractor /150; Blue RayWave Refractor /150; Gold Refractor /50; Gold Wave Refractor /50 (Hobby SKUs); Orange Refractor /25 (Hobby); Orange Wave Refractor /25 (Hobby SKUs); Black Refractor /10 (Hobby SKUs); Red Refractor /5; Red Wave Refractor /5 (Hobby SKUs); SuperFractor 1/1; Printing Plates 1/1. (a 'Black & White Mini-Diamond Refractor (Breaker)' unnumbered rung also listed but held out)"
+    },
+    {
+      "category": "auto-chromeography",
+      "sourceHeading": "Chromeography Checklist27 cards.",
+      "cards": 27,
+      "cardNumberPrefix": "CHRU-",
+      "isAuto": true,
+      "parallelsVerbatim": "Blue Refractor /150; Green Refractor /99; Gold Refractor /50; Orange Refractor /25; Black Refractor /10; Red Refractor /5; SuperFractor 1/1.",
+      "note": "Under the page's own '2025 Topps Chrome Update Series Baseball Autograph Checklist' super-heading -- an autograph set, isAuto=true."
+    },
+    {
+      "category": "auto-chrome-legends-autographs",
+      "sourceHeading": "Chrome Legends Autographs Checklist49 cards.",
+      "cards": 49,
+      "cardNumberPrefix": "CLA-",
+      "isAuto": true,
+      "parallelsVerbatim": "base card stated /50 (Hobby SKUs exclusive); Orange Refractor /25; Black Refractor /10; Red Refractor /5; SuperFractor 1/1; Printing Plates 1/1.",
+      "note": "UNLIKE every other section in this package, the base (blank-parallel) row here is NOT unnumbered -- the source states the base card itself as '/50' ('Chrome Legends Autographs Checklist49 cards. /50. ... Hobby SKUs exclusive.'). printRun=50 is recorded on the blank-parallel row; the 5 listed Parallels are additional rungs above that base /50 print."
+    },
+    {
+      "category": "insert-night-terrors",
+      "sourceHeading": "Night Terrors Checklist25 cards.",
+      "cards": 25,
+      "cardNumberPrefix": "NT-",
+      "isAuto": false,
+      "parallelsVerbatim": "Green Refractor /99; Gold Refractor /50; Orange Refractor /25; Black Refractor /10; Red Refractor /5; SuperFractor 1/1."
+    }
+  ],
+  "notMinted": {
+    "breakerOnlyUnnumberedRungs": {
+      "names": ["Black & White Mini-Diamond Refractor (Breaker) -- AC and CRDA sections"],
+      "reason": "An unnumbered, distribution-restricted (Breaker-format-only) rung listed alongside the numbered ladder on both AC and CRDA. Held out to match this package's convention of only minting rungs with a stated print run or a clean base/no-print-run shape, consistent with the repo's existing doctrine that a distribution note (Hobby/Retail/Breaker-only) is not itself a roster restriction but an unnumbered NAMED variant needs its own explicit confirmation before minting -- deferred to keep this package's scope tight, not because it is doubted."
+    },
+    "raContinuationOfChromeUpdateAutographs": {
+      "reason": "17-card RA- continuation of the 127-card Chrome Update Autographs set, immediately following AC- with no section boundary. Out of this task's target prefix scope (nt-, cla-, ac-, crda-, chru-); not independently roster-verified."
+    },
+    "uscUsaBaseLadderGap": {
+      "reason": "The USC/USA-prefixed base numbered cards (e.g. USC145, USA-KC) already have a blank-parallel base row staged under the correct topps-chrome-update-series key (confirmed: hiq:baseball:2025:topps-chrome-update-series:usc145:base:no-auto FOUND) but are missing several colour rungs (blue-wave-refractor, aqua-refractor, etc.) -- this is the BASE ladder for the product, not a named insert, and is out of scope for this insert-focused package. Flagged as a follow-up candidate."
+    }
+  },
+  "spellingAudit": "category names follow the established convention; no duplicate-spelling collisions found against the repo's existing Topps Chrome packages (checked: no prior 2025 topps-chrome-update-series base or insert package exists in the repo to collide with).",
+  "selectCardsOnlyAudit": "No 'select cards only' language in any of these 5 sections' own text.",
+  "duplicateLineCheck": "0 byte-identical duplicate CSV lines.",
+  "isAutoConsistencyCheck": "Every row for a given cardNumber prefix carries the SAME isAuto value (AC-/CRDA-/CHRU-/CLA- all true; NT- all false).",
+  "provenance": {
+    "cardsFrom": "checklistinsider.com's 2025 Topps Chrome Update Series Baseball page text, each section's own 'X Checklist<N> cards...' marker through to the next marker, verified against the page's own stated card count for AC (adjusted for the RA- continuation held out), CRDA, CHRU, CLA, NT (exact match, all 5).",
+    "rungsFrom": "each section's own stated 'Parallels:' list, verbatim, immediately following its card-count/odds sentence on the same source page.",
+    "printRunsFrom": "the source's stated print run only."
+  }
+}

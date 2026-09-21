@@ -1,0 +1,113 @@
+{
+  "scrapedAt": "2026-09-21T16:20:00.000Z",
+  "source": "checklistinsider-2026-09-21",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Topps Series 1 + Series 2 Baseball -- wave 2 named insert/autograph/relic sets",
+  "productKey": "2025-topps-s1-s2-inserts-wave2",
+  "setKey": "topps",
+  "rowCount": 1981,
+  "parallelColumnAuthoritative": true,
+  "mintedBy": "Wave 2 of the follow-up acquisition to R40/#2373-#2376, continuing PR #2388's wave 1 (BSA/BSA2, CC/CC2, CCAR/CCA2, SMLB, PPA). Stages the sets listed in #2388's manifest notMinted.otherSeries1And2InsertSets that this diagnosis confirmed were named by the sold_comps unbacked-sales sample: World Champion Dual Autographs (WCDA), Major League Material Dual (MLMD2), First Pitch Autographs (FPA, both S1 and S2 waves), 1990 Topps Baseball All-Star Relics (90ASR), 1990 Topps Chrome Baseball All-Star Autographs Mojo (90CAS), 1990 Topps Autographs (90A-/90AU- mixed code shapes, one 201-card set).",
+  "sourceUrls": [
+    "https://www.checklistinsider.com/2025-topps-series-1-baseball",
+    "https://www.checklistinsider.com/2025-topps-series-2-baseball"
+  ],
+  "sectionsIncluded": [
+    {
+      "category": "auto-world-champion-dual-autographs",
+      "sourceHeading": "World Champion Dual Autographs Checklist (Series 2 page)",
+      "cards": 13,
+      "cardNumberPrefix": "WCDA-",
+      "isAuto": true,
+      "parallelsVerbatim": "Red /5; FoilFractor 1/1.",
+      "note": "DUAL-SIGNER cards: each WCDA- code carries TWO players on the source page (one card code, two consecutive 'Player - Team' lines). player field is 'PlayerA & PlayerB', both read directly off the source, not invented."
+    },
+    {
+      "category": "insert-major-league-material-dual",
+      "sourceHeading": "Major League Material Dual Checklist (Series 2 page)",
+      "cards": 30,
+      "cardNumberPrefix": "MLMD2-",
+      "isAuto": false,
+      "parallelsVerbatim": "Gold /50; Orange /25; Black /10; Red /5; Platinum 1/1.",
+      "note": "Same dual-signer shape as WCDA above."
+    },
+    {
+      "category": "auto-first-pitch-autographs",
+      "sourceHeading": "First Pitch Autographs Checklist (Series 1 page)",
+      "cards": 9,
+      "cardNumberPrefix": "FPA-",
+      "isAuto": true,
+      "parallelsVerbatim": "Gold /50; Orange /25; Black /10; Red /5; Platinum 1/1.",
+      "note": "/99 print run on the base card itself per the source ('First Pitch Autographs Checklist9 cards. /99.'); recorded as a note only, not as this package's printRun column (which is reserved for the colour-rung print runs, matching the repo's existing convention for other /N-base-card sets)."
+    },
+    {
+      "category": "auto-first-pitch-autographs",
+      "sourceHeading": "First Pitch Autographs (2024) Checklist (Series 2 page)",
+      "cards": 4,
+      "cardNumberPrefix": "FPA-",
+      "isAuto": true,
+      "parallelsVerbatim": "Gold /50; Orange /25; Black /10; Red /5; FoilFractor 1/1.",
+      "note": "SAME category as the Series 1 First Pitch Autographs set above (source names this '(2024)' as a second wave of the same insert, not a distinct product) but its OWN final rung is FoilFractor, not Platinum -- kept verbatim per its own stated ladder, not aligned to the Series 1 wave's ladder. Card codes verified disjoint from the Series 1 FPA- codes (FPA-AB/CR/CS/JK/JT/JW/LA/MM/NC vs FPA-GRA/MIZ/MLO/TRAN -- no overlap)."
+    },
+    {
+      "category": "insert-1990-topps-baseball-all-star-relics",
+      "sourceHeading": "1990 Topps Baseball All-Star Relics Checklist (Series 2 page)",
+      "cards": 44,
+      "cardNumberPrefix": "90ASR-",
+      "isAuto": false,
+      "parallelsVerbatim": "Blue /150; Gold /50; Orange /25; Black /10; Red /5; Platinum 1/1."
+    },
+    {
+      "category": "auto-1990-topps-chrome-baseball-all-star-autographs-mojo",
+      "sourceHeading": "1990 Topps Chrome Baseball All-Star Autographs Mojo Checklist (Series 2 page)",
+      "cards": 40,
+      "cardNumberPrefix": "90CAS-",
+      "isAuto": true,
+      "parallelsVerbatim": "Gold Refractor /50 or less; Orange Refractor /25 or less; Red Refractor /5 or less; SuperFractor 1/1.",
+      "note": "Hobby/Jumbo Silver Pack exclusive per the source (distribution note, not a roster restriction)."
+    },
+    {
+      "category": "auto-1990-topps-autographs",
+      "sourceHeading": "1990 Topps Autographs Checklist (Series 1 page)",
+      "cards": 201,
+      "cardNumberPrefix": "90A- (131 cards) + 90AU- (69 cards) + 1 embedded on the marker line",
+      "isAuto": true,
+      "parallelsVerbatim": "Gold /50; Orange /25; Black /10; Red /5; Platinum 1/1.",
+      "note": "ONE stated 201-card set delivered under two code shapes with no section boundary between them (same mixed-code-shape pattern as PR #2388's BSA/BSA2 and CCAR/CCA2) -- verified the combined roster (131 + 69 + 1 embedded = 201) matches the source's own stated count exactly."
+    },
+    {
+      "category": "insert-stars-of-mlb",
+      "sourceHeading": "Stars of MLB Checklist (Series 2 page, marked 'Continuation insert')",
+      "cards": 30,
+      "cardNumberPrefix": "SMLB-31 through SMLB-60",
+      "isAuto": false,
+      "parallelsVerbatim": "Gold Foil /50; Orange Foil /25; Black Foil /10; Red Foil /5; FoilFractor 1/1.",
+      "note": "FLAGGED FOR REVIEW, NOT DECIDED: found by review of #2388 (SMLB-1..30, staged there, are the Series 1 half of this SAME product). #2388's own S1 ladder reads verbatim 'Gold Foilboard /50; Orange Foilboard /25; Black Foilboard /10; Red Foilboard /5; FoilFractor 1/1' -- this Series 2 continuation states 'Foil' where Series 1 states 'Foilboard' for the identical colour/print-run combination (Gold/50, Orange/25, Black/10, Red/5). Same rung or a genuinely distinct one? Not decided here -- staged EXACTLY as the Series 2 page states it (Foil, not Foilboard), because the two halves cover disjoint cardNumbers (#1-30 vs #31-60, zero overlap, confirmed) so there is no collision either way and no technical reason to pick one spelling over the other. computeHobbyIqCardId slugs them differently (gold-foilboard vs gold-foil) -- verified directly. Needs Drew's call on whether Series 2's rung name should be aligned to Series 1's or left as its own distinct rung name."
+    }
+  ],
+  "notIncludedFromThisDiagnosis": {
+    "rrr": {
+      "reason": "RRR- was named in the original sold_comps sample under bare 'topps', but no RRR- roster exists anywhere on either the 2025 Topps Series 1 or Series 2 checklistinsider pages (searched both, case-insensitive, zero hits). Catalog already carries RRR- rows under the CORRECT sibling key topps-update-series (confirmed present in the original diagnosis, e.g. hiq:baseball:2025:topps-update-series:rrr-hb:orange). The topps-prefixed RRR- sales are very likely a wrong-key/sale-side classification issue (RRR belongs to Update Series, not Series 1/2), not a checklist gap -- not staged, flagged for engineering."
+    },
+    "raInChromeUpdateAutographs": {
+      "reason": "See acq-2026-09-21-checklistinsider-topps-chrome-2025-inserts's own manifest: the 'Chrome Update Autographs' 127-card set splits into AC- (110, staged there) + a 17-card RA- continuation with no section boundary. RA- is out of this diagnosis's target prefix list (nt-, cla-, ac-, crda-, chru-) and was not independently roster-verified -- not staged."
+    },
+    "bowmansBestCrossover": {
+      "reason": "BS- prefix (Bowman's Best Showpieces crossover insert, seen in the original sample title 'Topps 2025 Bowman's Best Shohei Ohtani...Showpieces mini diamond') is a different product's own crossover insert, not a Topps Series 1/2 flagship set -- explicitly out of scope per this task's instruction."
+    },
+    "usNumberedUpdateRows": {
+      "reason": "US###-numbered rows seen under bare topps in the original sample belong to topps-update-series (already registered, already has base rows) -- a wrong-key sale-side issue, not a Series 1/2 checklist gap. Out of scope per this task's instruction."
+    }
+  },
+  "spellingAudit": "category names follow the established convention (auto-/insert- + slugified source heading), cross-checked against every category name already in the repo's Topps packages (including PR #2388's wave 1) before naming -- no duplicate-spelling collisions found. Parallel names are each section's own words verbatim.",
+  "selectCardsOnlyAudit": "No 'select cards only' language in any of these 7 sections' own Parallels sentences.",
+  "duplicateLineCheck": "0 byte-identical duplicate CSV lines (checked: 1,981 body lines, 1,981 distinct) -- see the sibling pin test's own assertion.",
+  "isAutoConsistencyCheck": "Every row for a given cardNumber prefix carries the SAME isAuto value (WCDA-/FPA-/90CAS-/90A-/90AU- all true; MLMD2-/90ASR- all false) -- verified by tallying the isAuto distribution per prefix before staging (0 mixed-prefix rows).",
+  "additiveOnlyCheck": "fpa_s1 (9 codes) and 90au (201 codes) already had their blank-parallel base row staged in acq-2026-09-20-beckett-topps-series1-2025-baseball's own CSV -- discovered because computeHobbyIqCardId does NOT read the CSV's `category` column at all (verified directly in ingest-checklist-csv-to-catalog.cjs: only sport/year/setKey/cardNumber/parallel/isAuto/printRun feed the id), so a blank-parallel row under my own category name (auto-first-pitch-autographs / auto-1990-topps-autographs) collides on id with the base package's row filed under a DIFFERENT category label (auto-2024-first-pitch-autographs / auto-1990-topps-baseball-autographs) for the exact same card. Both base rows skipped in this package; only their missing colour rungs are added.",
+  "provenance": {
+    "cardsFrom": "checklistinsider.com page text (Series 1 and Series 2 product pages), each section's own 'X Checklist<N> cards...' marker through to the next marker, verified against the page's own stated card count for all 7 sections (exact match).",
+    "rungsFrom": "each section's own stated 'Parallels: ...' sentence, verbatim.",
+    "printRunsFrom": "the source's stated print run only."
+  }
+}

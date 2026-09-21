@@ -1,0 +1,68 @@
+{
+  "scrapedAt": "2026-09-21T17:10:00.000Z",
+  "source": "checklistinsider-2026-09-21",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Topps Chrome Black Baseball -- Ivory Autographs missing rungs",
+  "productKey": "2026-topps-chrome-black-inserts",
+  "setKey": "topps-chrome-black",
+  "rowCount": 68,
+  "parallelColumnAuthoritative": true,
+  "mintedBy": "Diagnosed against a read-only sold_comps sample (baseball/2026/topps-chrome, 300-sale sample): 9 distinct ids point-read genuinely absent, all Topps Chrome Black named-insert prefixes (dam-, sfa-, dod-, noc-, cba-, iva-). Sourced all 6 named sets from checklistinsider.com's 2026 Topps Chrome Black Baseball product page (Autographs/CBA-, Super Futures Autographs/SFA-, Damascus/DAM-, Depth of Darkness/DOD-, Nocturnal/NOC-, Ivory Autographs/IVA-) and built full base+ladder CSVs for all 6 (2,030 rows). BEFORE staging, ran a full 2,030-row point-read verification pass against live card_catalog (read-only, no writes) to confirm each row was genuinely absent rather than assumed -- discovered CBA (1,554 rows), SFA (132), DAM (60), DOD (60) and NOC (80) are ALL ALREADY FULLY STAGED in the catalog (1,886 of 2,030 rows FOUND). Only Ivory Autographs' two Trim-Refractor rungs (Orange Trim Refractor /25, Red Trim Refractor /5) were genuinely missing -- 68 of 144 IVA rows; IVA's own base row and SuperFractor row are already staged. This package stages ONLY those 68 rows.",
+  "sourceUrls": [
+    "https://www.checklistinsider.com/2026-topps-chrome-black-baseball"
+  ],
+  "sectionsIncluded": [
+    {
+      "category": "auto-ivory-autographs",
+      "sourceHeading": "Ivory Autographs Checklist36 cards.",
+      "cardsAffected": 34,
+      "cardNumberPrefix": "IVA-",
+      "isAuto": true,
+      "parallelsVerbatim": "Orange Trim Refractor /25; Red Trim Refractor /5.",
+      "note": "Full stated ladder is 'base card /50 or less; Orange Trim Refractor /25; Red Trim Refractor /5; SuperFractor 1/1' -- the base row and SuperFractor row are ALREADY STAGED in card_catalog (verified by direct point-read, e.g. hiq:baseball:2026:topps-chrome-black:iva-bb:base:auto:num-50 and ...superfractor:auto:num-1 both FOUND). Only the two Trim-Refractor rungs were missing, across 34 of the set's 36 cards (2 cards were already fully complete -- not all 36 needed both rungs added, verified per-row not assumed uniform)."
+    }
+  ],
+  "sectionsSourcedButNotStaged_alreadyComplete": [
+    {
+      "category": "(would have been auto-2026-topps-chrome-black-autographs)",
+      "sourceHeading": "Autographs Checklist111 cards.",
+      "cardNumberPrefix": "CBA-",
+      "reason": "ALL 1,554 rows (111 cards x 1 base + 13 rungs) verified FOUND in card_catalog by direct point-read. Fully staged elsewhere already; not re-staged."
+    },
+    {
+      "category": "(would have been auto-super-futures-autographs)",
+      "sourceHeading": "Super Futures Autographs Checklist22 cards.",
+      "cardNumberPrefix": "SFA-",
+      "reason": "ALL 132 rows verified FOUND. Fully staged elsewhere already."
+    },
+    {
+      "category": "(would have been insert-damascus)",
+      "sourceHeading": "Damascus Checklist30 cards.",
+      "cardNumberPrefix": "DAM-",
+      "reason": "ALL 60 rows verified FOUND. Fully staged elsewhere already."
+    },
+    {
+      "category": "(would have been insert-depth-of-darkness)",
+      "sourceHeading": "Depth of Darkness Checklist20 cards.",
+      "cardNumberPrefix": "DOD-",
+      "reason": "ALL 60 rows verified FOUND. Fully staged elsewhere already."
+    },
+    {
+      "category": "(would have been insert-nocturnal)",
+      "sourceHeading": "Nocturnal Checklist40 cards.",
+      "cardNumberPrefix": "NOC-",
+      "reason": "ALL 80 rows verified FOUND. Fully staged elsewhere already."
+    }
+  ],
+  "diagnosisNote": "The original sold_comps sample (300 sales under baseball/2026/topps-chrome, bare key) named these 6 prefixes as 'unbacked', which is why they were sourced. The full-package point-read check revealed 5 of 6 are actually already complete under the CORRECT registered key topps-chrome-black -- meaning the original sample's unbacked sales were very likely landing on the WRONG key (bare topps-chrome instead of topps-chrome-black), the same class of defect diagnosed for USC/USA rows under 2025 topps-chrome (see the sibling acq-2026-09-21-checklistinsider-topps-chrome-2025-inserts package's manifest). Flagged for engineering; not something a checklist package can fix.",
+  "selectCardsOnlyAudit": "No 'select cards only' language on the Ivory Autographs section.",
+  "duplicateLineCheck": "0 byte-identical duplicate CSV lines.",
+  "isAutoConsistencyCheck": "All 68 rows are IVA- prefix, isAuto=true throughout (Ivory Autographs is an on-card autograph set).",
+  "provenance": {
+    "cardsFrom": "checklistinsider.com's 2026 Topps Chrome Black Baseball page text, Ivory Autographs section roster (36 cards, verified against the page's own stated count).",
+    "rungsFrom": "the section's own stated 'Parallels:' list, verbatim -- only the two rungs a live point-read check confirmed absent are staged.",
+    "printRunsFrom": "the source's stated print run only.",
+    "verificationMethod": "Read-only point-reads (catalog.item(id,id).read(), single-partition since id==cardId==partition key) against every one of the 2,030 rows this diagnosis originally built for all 6 sections, run before staging anything, to avoid re-staging rows another package or ingest already carries."
+  }
+}
