@@ -152,42 +152,32 @@ describe("the shipped reference carries its stamp", () => {
   it("records the stamp and the commit the census was measured under", () => {
     expect(TABLE.measuredUnder).toBeTruthy();
     expect(TABLE.measuredUnder.stamp).toMatch(/^d[0-9a-f]{12}\+/);
-    // 9c862660 — main at the 2026-09-21 32-slot census dispatch (PR #2377,
-    // "three identity fixes: duplicate-rung word order, Prizm Black, Topps
-    // flagship alias", stamp-moving). Slots 0-9/11-31 were walked with
-    // SOURCES=backing (the catalog backing-count batch); slot 10's own
-    // backing-armed chain thrashed the catalog preload cache (12k+ evictions,
-    // 28.7M+ RU, ~107k rows per 2-hour budget) and was cancelled, then
-    // re-dispatched as a plain census (no SOURCES) under the SAME commit —
-    // confirmed the classification counts/shares this table reads are
-    // identical either way (SOURCES only gates the additive `backing` block,
-    // never the classify loop), so mixing the two artifact shapes for one
-    // slot table is sound. The deriver did not move on main during the
-    // census window, so one commit names the tree every artifact was
+    // 62497120 — main at the 2026-09-21 32-slot census dispatch (PR #2393,
+    // "scope 11 autograph-set cardNumber prefixes to product-year, not
+    // global", stamp-moving: parseTitleIdentity.service.ts and
+    // rematch-derive-identity.cjs both changed). Plain census, all 32 slots
+    // (no SOURCES=backing — not needed for this re-baseline), one run each,
+    // no relaunch chains. One commit names the tree every artifact was
     // measured under.
-    expect(TABLE.measuredUnder.commit).toBe("9c8626609c25375b8203b3c9f7dbb7de12ac1cb3");
+    expect(TABLE.measuredUnder.commit).toBe("6249712dd9ab90e859c37522212de00d3f508abf");
     // pricingContract.ts exists now, so the stamp carries its version.
     expect(TABLE.measuredUnder.contract).toBe("2026-09-06.a");
     // The 32-slot reference stays 32 slots (#1888 stands), every slot finished.
     expect(TABLE.slotCount).toBe(32);
     expect(TABLE.classifiedTotal).toBeGreaterThan(11_000_000);
-    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.324, 2);
+    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.322, 2);
   });
 
   it("says WHAT FRACTION of the corpus it saw, and which slots are partial", () => {
     // A REFERENCE BUILT FROM BUDGET-STOPPED WALKS IS STILL A REFERENCE, BUT IT
     // MUST SAY SO. In the 2026-09-21 census every one of the 32 slots' FINAL
-    // artifact finished its walk in a single run (slots 12 and 14 each hit
-    // the 120-minute budget once and self-relaunched — forwarding
-    // SOURCES=backing correctly per #2360 — and their relaunch finished
-    // clean; slot 10's backing-armed chain was cancelled by the owner after
-    // cache-thrashing and re-run as a plain census, also finishing clean in
-    // one run), so no FINAL artifact is partial. Coverage reads 128% because
-    // `sold_comps` grew past the shard-table measurement (organic ingest) —
-    // the shard table still gates on SLOTS=32, not on absolute row count.
-    // Recording `classified` alone would have presented a half-walked slot
-    // and a finished one as equally authoritative, which is why the fields
-    // exist.
+    // artifact finished its walk in a single run — all 32 slots completed in
+    // one hop each, no relaunch chains, no slot hit its budget — so no FINAL
+    // artifact is partial. Coverage reads 128% because `sold_comps` grew past
+    // the shard-table measurement (organic ingest) — the shard table still
+    // gates on SLOTS=32, not on absolute row count. Recording `classified`
+    // alone would have presented a half-walked slot and a finished one as
+    // equally authoritative, which is why the fields exist.
     expect(TABLE.coverage.classified).toBe(TABLE.classifiedTotal);
     expect(TABLE.coverage.coverage).toBeCloseTo(1.28, 2);
     expect(TABLE.coverage.partialSlots).toEqual([]);
