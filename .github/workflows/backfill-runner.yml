@@ -2245,7 +2245,15 @@ jobs:
           # var (both scripts read `TITLES` directly, never BCP_TITLES, and
           # the `||` chain keeps them from stepping on one another since
           # `inputs.script` can only equal one value per dispatch).
-          TITLES: ${{ inputs.script == 'resolve-split-identity-parks' && inputs.titles || inputs.script == 'fold-catalog-duplicate-rungs' && inputs.titles || '' }}
+          # resolve-disagreeing-sale-twins (OWNER RULING, 2026-09-21): reads a
+          # `;`-separated TITLES token list for its OWN opt-in gate (the
+          # literal token "rule:named-and-specific" arms the R1/R2
+          # both-sides-valid flagging rules) -- same `TITLES` var, same
+          # guarded-on-script `||` chain, never BCP_TITLES. Without this the
+          # feature has no dispatch path at all: the script only ever reads
+          # process.env.TITLES, which this workflow never set for this
+          # script before now.
+          TITLES: ${{ inputs.script == 'resolve-split-identity-parks' && inputs.titles || inputs.script == 'fold-catalog-duplicate-rungs' && inputs.titles || inputs.script == 'resolve-disagreeing-sale-twins' && inputs.titles || '' }}
           # route-backing-gaps (2026-09-20). The GAP ROUTER reads `titles` as
           # an OPTIONAL comma-separated setKey filter (SET_KEYS) -- NOT a
           # from>to pair list like the sibling repoint lanes above: this lane
@@ -3515,7 +3523,7 @@ jobs:
           finished-notice: |
             echo "::notice::slot ${REAL_SLOT}/${REAL_SLOTS} finished within budget (resolved=${N:-0}) — done, no re-dispatch."
           dispatch: |
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=resolve-disagreeing-sale-twins -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}" -f scan_limit="${RESUME_ARG:-0}" -f parents_only="${{ inputs.parents_only }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=resolve-disagreeing-sale-twins -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}" -f scan_limit="${RESUME_ARG:-0}" -f parents_only="${{ inputs.parents_only }}" -f titles="${{ inputs.titles }}"
 
       - name: Self-relaunch the ruled setKey rename until the slot is clean
         if: ${{ !cancelled() && inputs.script == 'rename-setkey' }}

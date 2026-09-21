@@ -271,11 +271,31 @@ const RESUME_HOP_UNIT = 1_000_000;
  *  population that somehow never converges must not relaunch forever on the
  *  hop counter alone. */
 const MAX_RESUME_HOPS = 30;
+// REVIEW FIX (coordinator, PR #2391 review): the OWNER RULING opt-in
+// (NAMED_AND_SPECIFIC_OPT_IN) is now folded INTO the resume cursor's own
+// signature, well above the hop range -- 100 * RESUME_HOP_UNIT
+// (100,000,000), deliberately more than 3x MAX_RESUME_HOPS's own
+// hop*RESUME_HOP_UNIT ceiling (30 * 1,000,000 = 30,000,000) so encoding the
+// EXACT boundary hop value (MAX_RESUME_HOPS itself, which the hop-cap test
+// below exercises on purpose) can never collide with the rule bit's own
+// unit. A cursor minted by a rule-OFF run carries ruleBit=0; a rule-ON run
+// carries ruleBit=1. decodeResume returns the decoded ruleBit; the CALLER
+// (main(), the only place that knows the CURRENT run's own
+// NAMED_AND_SPECIFIC_OPT_IN) compares it against that live value -- a
+// mismatch means this cursor was minted under a DIFFERENT rule state than
+// the run about to consume it, and resuming it anyway would silently mix
+// rule-on and rule-off outcomes across hops of what is supposed to be ONE
+// chain's own consistent scan. The caller treats a mismatch exactly like an
+// absent/zero cursor: hop 0, offset 0 -- a fresh restart, never a silent
+// carry-forward of the wrong rule state.
+const RESUME_RULE_UNIT = 100 * RESUME_HOP_UNIT;
 function decodeResume(raw) {
   const v = Math.max(0, Math.floor(Number(raw || 0)) || 0);
-  return { hop: Math.floor(v / RESUME_HOP_UNIT), offset: v % RESUME_HOP_UNIT };
+  const ruleBit = Math.floor(v / RESUME_RULE_UNIT) % 2;
+  const withinRule = v % RESUME_RULE_UNIT;
+  return { hop: Math.floor(withinRule / RESUME_HOP_UNIT), offset: withinRule % RESUME_HOP_UNIT, ruleBit };
 }
-const encodeResume = ({ hop, offset }) => hop * RESUME_HOP_UNIT + offset;
+const encodeResume = ({ hop, offset, ruleBit }) => (ruleBit ? RESUME_RULE_UNIT : 0) + hop * RESUME_HOP_UNIT + offset;
 
 /**
  * THE STRICT-CHECKLIST TEST. Both readers are consulted, not one, because
@@ -321,7 +341,18 @@ function playerMatchesRow(playerIdentityKeyFn, salePlayer, rowPlayer) {
 function catalogPrefixFor(hiqId) {
   const parsed = SWEEP_DEPS.parseHobbyIqCardId(String(hiqId ?? ""));
   if (!parsed) return null;
-  return { sport: parsed.sport, year: parsed.year, setKey: parsed.setKey, cardNumber: parsed.cardNumber, parallel: parsed.parallel, isAuto: parsed.isAuto, printRun: parsed.printRun ?? null };
+  // REVIEW FIX (coordinator, PR #2391 review): the slug's OPTIONAL `sub-`
+  // segment (hobbyIqCardId.service.ts's own CF-A-SUBSET-IS-PART-OF-THE-
+  // IDENTITY-WHEN-IT-HAS-TO-BE) was DROPPED here, even though
+  // parseHobbyIqCardId returns it -- two ids whose ONLY difference is the
+  // subset (e.g. "sub-cards-that-never-were" vs "sub-johnson-reprints" at
+  // the SAME card number) were indistinguishable from a base-vs-named-
+  // parallel pair downstream, which R1 would then wrongly flag as a
+  // base/named SAME-card disagreement. Carried through explicitly (null
+  // when absent, never "" or "base" -- a blank subset means "no clash flag
+  // at all", a DIFFERENT state from a named subset, and must never
+  // silently equal it).
+  return { sport: parsed.sport, year: parsed.year, setKey: parsed.setKey, cardNumber: parsed.cardNumber, parallel: parsed.parallel, isAuto: parsed.isAuto, printRun: parsed.printRun ?? null, subsetName: parsed.subsetName ?? null };
 }
 
 /**
@@ -607,6 +638,14 @@ function resolveBothSidesValidByRule(longParsed, shortParsed) {
   if (!deps_sameCardNumberOk(longParsed, shortParsed)) return { verdict: "left" };
   if (String(longParsed.setKey) !== String(shortParsed.setKey)) return { verdict: "left" };
   if (Number(longParsed.year) !== Number(shortParsed.year)) return { verdict: "left" };
+  // REVIEW FIX (coordinator, PR #2391 review): the subset segment is part of
+  // the identity whenever it is present at all (hobbyIqCardId.service.ts's
+  // own CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE) -- two ids
+  // sharing card number/setKey/year but naming DIFFERENT subsets (or one
+  // named, one not) are DIFFERENT CARDS, never a base-vs-named-parallel or
+  // auto/num-N pair on the SAME card. Required equal for BOTH R1 and R2 --
+  // null (no clash flag) only equals null, never a named subset string.
+  if (String(longParsed.subsetName ?? "") !== String(shortParsed.subsetName ?? "")) return { verdict: "left" };
 
   const longParallel = normParallelForRung(longParsed.parallel);
   const shortParallel = normParallelForRung(shortParsed.parallel);
@@ -667,6 +706,34 @@ function resolveBothSidesValidByRule(longParsed, shortParsed) {
  *  deps object. */
 function deps_sameCardNumberOk(longParsed, shortParsed) {
   return String(longParsed.cardNumber ?? "").trim().toLowerCase() === String(shortParsed.cardNumber ?? "").trim().toLowerCase();
+}
+
+/**
+ * REVIEW FIX (coordinator, PR #2391 review): isProtected/isParkedSide alone
+ * are NOT the full set of fields the FMV readers themselves exclude a row
+ * on -- exactPoolReader.ts's own WHERE clause (the exact-cell pool) and
+ * soldCompsGradeReader.ts's own (the cross-grade pool) both ALSO refuse
+ * `c.priceAnomaly = true`, which neither isProtected nor isParkedSide reads
+ * (byte-for-byte from those two files' own predicate lists):
+ *   exactPoolReader.ts:      priceAnomaly, flaggedWrong, excludedFromFmv,
+ *                            identityUnverified (matched-by-hiq carve-out)
+ *   soldCompsGradeReader.ts: flaggedWrong, excludedFromFmv, identityUnverified
+ *     (soldCompsGradeReader.ts does not itself filter priceAnomaly, but a
+ *     keeper flagged priceAnomaly is STILL excluded from the exact-cell
+ *     pool above, which is reason enough on its own never to leave a flagged
+ *     loser's sale priced ONLY through a keeper the exact pool itself
+ *     already refuses to read -- the union of both readers' exclusion
+ *     fields is what "the keeper actually prices" means here, not either
+ *     reader alone).
+ * A keeper failing ANY of these must never receive a flagged loser -- the
+ * sale would price nowhere. Checked wherever isProtected/isParkedSide are
+ * checked on the keeper (both the plan-time gate note and the pre-write
+ * gate use this SAME function, so a keeper that becomes priceAnomaly
+ * between plan and write is caught at the point closest to the actual
+ * Cosmos write, not just once at plan time).
+ */
+function keeperExcludedFromPricing(doc) {
+  return isProtected(doc) || isParkedSide(doc) || doc?.priceAnomaly === true;
 }
 
 /**
@@ -822,9 +889,9 @@ module.exports = {
   evaluateHobbyiqCardIdSide, evaluateHobbyiqCardIdSideBothTitles, moreSpecificRefines,
   titleNamesMoreSpecificThanCandidate, titleContradictsCandidateCell,
   resolveHobbyiqCardIdDisagreement, resolveGradeDisagreement, resolveDisagreement,
-  resolveBothSidesValidByRule, buildFlagExclusion,
+  resolveBothSidesValidByRule, buildFlagExclusion, keeperExcludedFromPricing,
   buildResolution, normParallelForRung, normNumber, USER_SEED_SOURCES,
-  decodeResume, encodeResume, RESUME_HOP_UNIT, MAX_RESUME_HOPS,
+  decodeResume, encodeResume, RESUME_HOP_UNIT, RESUME_RULE_UNIT, MAX_RESUME_HOPS,
   NAMED_AND_SPECIFIC_TOKEN, NAMED_AND_SPECIFIC_OPT_IN,
   __setSweepDepsForTest: (d) => { SWEEP_DEPS = d; },
   // Exported for white-box testing of the throttle-drop mechanism only --
@@ -1053,7 +1120,23 @@ async function main() {
   // arbitrary never-resolved pairs, forever), and REPORT's offset is only
   // ever valid because the order it indexes into is SORTED, not "however the
   // population query happened to return it".
-  const RESUME = decodeResume(process.env.SCAN_LIMIT);
+  let RESUME = decodeResume(process.env.SCAN_LIMIT);
+  // REVIEW FIX (coordinator, PR #2391 review): a cursor minted while the
+  // OWNER RULING opt-in was OFF (or ON) must never be resumed by a run
+  // whose OWN opt-in state disagrees -- that would silently mix rule-on and
+  // rule-off outcomes across hops of what is supposed to be ONE chain's own
+  // consistent scan (a pair the first hop left both-sides-valid under
+  // rule-off could be flagged on the very next hop under rule-on, with no
+  // record that the rule state ever changed mid-chain). A mismatch is
+  // treated exactly like an absent/zero cursor: a fresh restart at hop 0,
+  // offset 0, under the CURRENT run's own (correct) rule state.
+  const currentRuleBit = NAMED_AND_SPECIFIC_OPT_IN ? 1 : 0;
+  if (RESUME.hop > 0 || RESUME.offset > 0) {
+    if (RESUME.ruleBit !== currentRuleBit) {
+      console.log(`  RESUME (RULE MISMATCH)  scan_limit's own cursor was minted under opt-in=${RESUME.ruleBit ? "ON" : "OFF"}, but this run's opt-in is ${currentRuleBit ? "ON" : "OFF"} -- the cursor is DISCARDED (fresh restart at hop 0, offset 0) rather than resumed under a rule state it was never minted for.`);
+      RESUME = { hop: 0, offset: 0, ruleBit: currentRuleBit };
+    }
+  }
   if (RESUME.hop >= MAX_RESUME_HOPS) {
     throw new Error(`RESOLVE_DISAGREEING_SALE_TWINS_HOP_CAP: this chain has already relaunched ${RESUME.hop} time(s) (cap ${MAX_RESUME_HOPS}) without converging -- ABORTING rather than relaunching again. Re-dispatch deliberately (scan_limit=0) only after checking why the population is not shrinking.`);
   }
@@ -1227,17 +1310,20 @@ async function main() {
           const keeper = flagVerdict.keeper === "long" ? long : short;
           const loser = flagVerdict.keeper === "long" ? short : long;
           // NEVER flag when the keeper copy is itself flagged/excluded/
-          // parked -- would leave the sale priced nowhere. isProtected/
-          // isParkedSide already refused the WHOLE pair above whenever
-          // EITHER side trips them, so this is a defensive, redundant
-          // re-check at the point of the write decision, never reachable
-          // in practice today, but the hard requirement is named per-side
-          // (never flag BOTH; never leave a flagged keeper) so it is
-          // checked explicitly here too, right before the write.
-          if (isProtected(keeper) || isParkedSide(keeper)) {
+          // parked/priceAnomaly -- would leave the sale priced nowhere
+          // (keeperExcludedFromPricing -- see its own header for the full
+          // field list, matching BOTH FMV readers' own WHERE clauses, not
+          // just isProtected/isParkedSide). isProtected/isParkedSide already
+          // refused the WHOLE pair above whenever EITHER side trips them,
+          // but priceAnomaly is NOT one of those two gates, so this is the
+          // FIRST point priceAnomaly is ever checked on the keeper -- not
+          // redundant. Checked again immediately before the write below
+          // (plan-time and pre-write both use the SAME function) in case the
+          // keeper's own priceAnomaly flips between plan and write.
+          if (keeperExcludedFromPricing(keeper)) {
             stats.bothSidesValid++;
-            if (examples.length < 30) examples.push(`  BOTH-SIDES-VALID  ${cardId}  long=${long.id} short=${short.id}: keeper side is itself protected/parked -- refused, left`);
-            emitPlanRow("left", null, long, short, { verdict: "both-sides-valid", detail: `${resolution.detail} (rule ${flagVerdict.rule} would flag ${loser.id}, but its keeper ${keeper.id} is itself protected/parked -- refused)`, axis: d.axis });
+            if (examples.length < 30) examples.push(`  BOTH-SIDES-VALID  ${cardId}  long=${long.id} short=${short.id}: keeper side is itself protected/parked/priceAnomaly -- refused, left`);
+            emitPlanRow("left", null, long, short, { verdict: "both-sides-valid", detail: `${resolution.detail} (rule ${flagVerdict.rule} would flag ${loser.id}, but its keeper ${keeper.id} is itself protected/parked/priceAnomaly -- refused)`, axis: d.axis });
             continue;
           }
 
@@ -1251,6 +1337,24 @@ async function main() {
 
           if (APPLY) {
             try {
+              // PRE-WRITE KEEPER RE-CHECK (coordinator review of #2391): the
+              // plan-time check above ran before the checklist cache
+              // pre-warm and every earlier pair in this partition's own
+              // loop -- a keeper's own priceAnomaly/excludedFromFmv/
+              // flaggedWrong/identityUnverified state can still change in
+              // that window (including THIS run flagging the very same doc
+              // as some OTHER pair's loser). Re-read the keeper's CURRENT
+              // state, immediately before the loser's write, and refuse
+              // rather than flag a loser whose keeper no longer prices.
+              const freshKeeper = await retry(() => pool.item(keeper.id, keeper.cardId).read()).catch((e) => {
+                if (e?.code === 404 || e?.statusCode === 404) return null;
+                throw e;
+              });
+              if (freshKeeper?.resource && keeperExcludedFromPricing(freshKeeper.resource)) {
+                stats.flagStaleSincePlan++;
+                console.log(`  STALE SINCE PLAN (flag) ${loser.id}@${loser.cardId}: keeper ${keeper.id} became protected/parked/priceAnomaly since plan; nothing written`);
+                continue;
+              }
               const planEtag = loser._etag;
               const fresh = await retry(() => pool.item(loser.id, loser.cardId).read());
               if (planEtag && fresh?.resource?._etag && fresh.resource._etag !== planEtag) {
@@ -1374,7 +1478,7 @@ async function main() {
   // hitting `break outer`) leaves it `false` and `stopReason` stays `null`.
   if (stoppedMidScan) {
     const nextOffset = APPLY ? 0 : REPORT_RESUME_OFFSET + partitionsDone;
-    const nextResume = encodeResume({ hop: RESUME.hop + 1, offset: nextOffset });
+    const nextResume = encodeResume({ hop: RESUME.hop + 1, offset: nextOffset, ruleBit: currentRuleBit });
     stopReason = APPLY
       ? `stopped at the ${RUN_MINUTES}-minute budget — the relaunch resumes at scan_limit=${nextResume} (hop ${RESUME.hop + 1}; APPLY always RESCANS from the top -- resolved pairs already dropped out of the next scan on their own, so offset stays 0)`
       : `stopped at the ${RUN_MINUTES}-minute budget — the relaunch resumes at scan_limit=${nextResume} (hop ${RESUME.hop + 1}, offset ${f(nextOffset)} of ${f(totalCardsThisSlot)} this slot)`;
