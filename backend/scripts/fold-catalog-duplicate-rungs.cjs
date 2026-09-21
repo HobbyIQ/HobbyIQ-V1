@@ -307,7 +307,7 @@ async function main() {
   const setKeys = RAW_TITLES.map(lower);
 
   const groups = new Map(); // groupKey -> rows[]
-  let rowsRead = 0, rowsOtherShardPre = 0;
+  let rowsRead = 0, rowsOtherShardPre = 0, scanRU = 0;
   for (const { sport, year } of cells) {
     const q = {
       query: `SELECT c.id, c.cardId, c.source, c.sport, c.year, c.cardYear, c.setKey, c.cardNumber,
@@ -342,6 +342,7 @@ async function main() {
       const page = await retry(() => it.fetchNext());
       const resources = page.resources ?? [];
       const pageRU = page.requestCharge || 0;
+      scanRU += pageRU;
       if (resources.length === 0 && pageRU === 0) {
         consecutiveEmptyPages++;
         if (consecutiveEmptyPages >= 20) {
@@ -566,6 +567,7 @@ async function main() {
   console.log(`\n${APPLY ? "APPLIED" : "REPORT ONLY -- nothing written"}`);
   console.log(`  cells                       ${f(cells.length)}`);
   console.log(`  rows scanned                ${f(rowsRead)}`);
+  console.log(`  RU (pass-1 scan only)       ${f(Math.round(scanRU))}   <- moveCatalogRow/relocateSoldComp do not surface their own RU back to this caller, so writes are not in this total`);
   console.log(`  groups                      ${f(stats.groupsScanned)}`);
   console.log(`  groups, single row          ${f(stats.groupsSingleRow)}   <- nothing to fold`);
   console.log(`  groups, already one id      ${f(stats.groupsAlreadyOneId)}   <- rows agree on the stored id already`);
