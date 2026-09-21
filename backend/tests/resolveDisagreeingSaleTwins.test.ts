@@ -30,6 +30,7 @@
  * input count, byte scan).
  */
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -550,6 +551,300 @@ describe("resolveHobbyiqCardIdDisagreement: RULE 2, both sides checklist-backed"
   });
 });
 
+// ── OWNER RULING (2026-09-21): resolveBothSidesValidByRule -- R1 (base vs
+// named parallel) and R2 (auto/num-N specificity), attempted ONLY on pairs
+// resolveHobbyiqCardIdDisagreement itself already left both-sides-valid.
+describe("resolveBothSidesValidByRule: R1 -- base vs named parallel", () => {
+  const base = (over: Record<string, unknown> = {}) => ({ sport: "baseball", year: 2026, setKey: "bowman", cardNumber: "cpa-eha", parallel: "base", isAuto: false, printRun: null, ...over });
+
+  it("named parallel beats base -- ids differ ONLY in the parallel segment, everything else equal -> flagged, keeper=named side", () => {
+    const long = base({ parallel: "Gold Refractor" });
+    const short = base({ parallel: "base" });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result).toMatchObject({ verdict: "flagged", rule: "base-vs-named-parallel", keeper: "long" });
+  });
+
+  it("same shape, base is on the LONG side instead -> keeper=short", () => {
+    const long = base({ parallel: "base" });
+    const short = base({ parallel: "Gold Refractor" });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result).toMatchObject({ verdict: "flagged", rule: "base-vs-named-parallel", keeper: "short" });
+  });
+
+  it("blank parallel counts as base (normParallelForRung), same as the literal string \"base\"", () => {
+    const long = base({ parallel: "" });
+    const short = base({ parallel: "Gold Refractor" });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result).toMatchObject({ verdict: "flagged", rule: "base-vs-named-parallel", keeper: "short" });
+  });
+
+  it("a :num-N suffix on the NAMED side only is allowed -- still flags", () => {
+    const long = base({ parallel: "Gold Refractor", printRun: 25 });
+    const short = base({ parallel: "base" });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result).toMatchObject({ verdict: "flagged", rule: "base-vs-named-parallel", keeper: "long" });
+  });
+
+  it("a print run on the BASE side is refused -- left (a numbered base identity is its own more-specific claim)", () => {
+    const long = base({ parallel: "Gold Refractor" });
+    const short = base({ parallel: "base", printRun: 25 });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result.verdict).toBe("left");
+  });
+
+  it("REFUSAL: card number differs -> left, never ruled", () => {
+    const long = base({ parallel: "Gold Refractor", cardNumber: "cpa-eha" });
+    const short = base({ parallel: "base", cardNumber: "cpa-ehb" });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result.verdict).toBe("left");
+  });
+
+  it("REFUSAL: setKey differs (different product) -> left, never ruled", () => {
+    const long = base({ parallel: "Gold Refractor", setKey: "bowman" });
+    const short = base({ parallel: "base", setKey: "bowman-chrome" });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result.verdict).toBe("left");
+  });
+
+  it("REFUSAL: year differs -> left, never ruled", () => {
+    const long = base({ parallel: "Gold Refractor", year: 2026 });
+    const short = base({ parallel: "base", year: 2025 });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result.verdict).toBe("left");
+  });
+
+  it("REFUSAL: named parallel A vs named parallel B (both named, neither base) -> left, never ruled", () => {
+    const long = base({ parallel: "Gold Refractor" });
+    const short = base({ parallel: "Blue Refractor" });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result.verdict).toBe("left");
+  });
+
+  it("REFUSAL: parallel differs AND auto flag differs (two axes moving at once) -> left, never ruled", () => {
+    const long = base({ parallel: "Gold Refractor", isAuto: true });
+    const short = base({ parallel: "base", isAuto: false });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result.verdict).toBe("left");
+  });
+
+  // ── REVIEW FIX (coordinator, PR #2391 review): the subset segment
+  // (hobbyIqCardId.service.ts's own hiq:sport:year:setKey[:sub-X]:number:
+  // parallel:autoFlag[:num-N]) is part of the card's identity whenever
+  // present -- two ids naming DIFFERENT subsets at the SAME card number are
+  // DIFFERENT CARDS, never a base-vs-named-parallel pair on the same card.
+  describe("ADVERSARIAL: different subset segment must stay LEFT, never R1-flagged", () => {
+    it("same card number/setKey/year/auto, one base one named parallel, but DIFFERENT subsets -> left (would have wrongly flagged before the fix)", () => {
+      const long = base({ parallel: "Gold Refractor", subsetName: "cards-that-never-were" });
+      const short = base({ parallel: "base", subsetName: "johnson-reprints" });
+      const result = mod.resolveBothSidesValidByRule(long, short);
+      expect(result.verdict).toBe("left");
+    });
+
+    it("one side names a subset, the other names none at all -> left (absent subset != named subset)", () => {
+      const long = base({ parallel: "Gold Refractor", subsetName: "cards-that-never-were" });
+      const short = base({ parallel: "base", subsetName: null });
+      const result = mod.resolveBothSidesValidByRule(long, short);
+      expect(result.verdict).toBe("left");
+    });
+
+    it("SAME subset on both sides -> R1 still flags normally (the fix narrows population, it does not disable the rule)", () => {
+      const long = base({ parallel: "Gold Refractor", subsetName: "cards-that-never-were" });
+      const short = base({ parallel: "base", subsetName: "cards-that-never-were" });
+      const result = mod.resolveBothSidesValidByRule(long, short);
+      expect(result).toMatchObject({ verdict: "flagged", rule: "base-vs-named-parallel", keeper: "long" });
+    });
+
+    it("neither side names a subset (both null/absent) -> R1 still flags normally (the common case, unaffected)", () => {
+      const long = base({ parallel: "Gold Refractor" });
+      const short = base({ parallel: "base" });
+      const result = mod.resolveBothSidesValidByRule(long, short);
+      expect(result).toMatchObject({ verdict: "flagged", rule: "base-vs-named-parallel", keeper: "long" });
+    });
+  });
+});
+
+describe("resolveBothSidesValidByRule: R2 -- auto/num-N axis only", () => {
+  const base = (over: Record<string, unknown> = {}) => ({ sport: "baseball", year: 2026, setKey: "bowman", cardNumber: "cpa-eha", parallel: "gold-refractor", isAuto: false, printRun: null, ...over });
+
+  it("auto beats no-auto -- same parallel/number/setKey/year, differ only on isAuto -> flagged, keeper=auto side", () => {
+    const long = base({ isAuto: true });
+    const short = base({ isAuto: false });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result).toMatchObject({ verdict: "flagged", rule: "auto-or-num-specificity", keeper: "long" });
+  });
+
+  it("numbered (:num-N) beats unnumbered -- same parallel/number/setKey/year/auto, differ only on printRun -> flagged, keeper=numbered side", () => {
+    const long = base({ printRun: 25 });
+    const short = base({ printRun: null });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result).toMatchObject({ verdict: "flagged", rule: "auto-or-num-specificity", keeper: "long" });
+  });
+
+  it("more specific on BOTH axes (auto AND numbered) still resolves cleanly against a plain plainer side", () => {
+    const long = base({ isAuto: true, printRun: 10 });
+    const short = base({ isAuto: false, printRun: null });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result).toMatchObject({ verdict: "flagged", rule: "auto-or-num-specificity", keeper: "long" });
+  });
+
+  it("REFUSAL: cross-axis disagreement -- one side auto-unnumbered, the other numbered-no-auto -> left, never ruled", () => {
+    const long = base({ isAuto: true, printRun: null });
+    const short = base({ isAuto: false, printRun: 25 });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result.verdict).toBe("left");
+  });
+
+  it("REFUSAL: identical on every axis (not this rule's population -- decideSyntheticTwin would not even call this a disagreement) -> left", () => {
+    const long = base();
+    const short = base();
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result.verdict).toBe("left");
+  });
+
+  it("REFUSAL: parallel itself differs (R2 requires IDENTICAL parallel) -> falls through, left unless R1's own base/named shape applies", () => {
+    const long = base({ parallel: "gold-refractor", isAuto: true });
+    const short = base({ parallel: "blue-refractor", isAuto: false });
+    const result = mod.resolveBothSidesValidByRule(long, short);
+    expect(result.verdict).toBe("left");
+  });
+
+  describe("ADVERSARIAL: different subset segment must stay LEFT, never R2-flagged", () => {
+    it("same parallel/number/setKey/year, differ only on isAuto, but DIFFERENT subsets -> left (would have wrongly flagged before the fix)", () => {
+      const long = base({ isAuto: true, subsetName: "cards-that-never-were" });
+      const short = base({ isAuto: false, subsetName: "johnson-reprints" });
+      const result = mod.resolveBothSidesValidByRule(long, short);
+      expect(result.verdict).toBe("left");
+    });
+
+    it("one side names a subset, the other names none -> left", () => {
+      const long = base({ isAuto: true, subsetName: "cards-that-never-were" });
+      const short = base({ isAuto: false, subsetName: null });
+      const result = mod.resolveBothSidesValidByRule(long, short);
+      expect(result.verdict).toBe("left");
+    });
+
+    it("SAME subset on both sides -> R2 still flags normally", () => {
+      const long = base({ isAuto: true, subsetName: "cards-that-never-were" });
+      const short = base({ isAuto: false, subsetName: "cards-that-never-were" });
+      const result = mod.resolveBothSidesValidByRule(long, short);
+      expect(result).toMatchObject({ verdict: "flagged", rule: "auto-or-num-specificity", keeper: "long" });
+    });
+  });
+});
+
+describe("catalogPrefixFor: carries the subset segment through (REVIEW FIX, PR #2391 review)", () => {
+  it("a slug with a sub- segment parses subsetName onto the returned prefix", () => {
+    mod.__setSweepDepsForTest({
+      parseHobbyIqCardId: (id: string) => {
+        if (id !== "hiq:basketball:2000:topps-chrome:sub-cards-that-never-were:mj1:refractor:no-auto") return null;
+        return { sport: "basketball", year: 2000, setKey: "topps-chrome", cardNumber: "mj1", parallel: "refractor", isAuto: false, printRun: null, subsetName: "cards-that-never-were", subsetInId: true };
+      },
+    });
+    const prefix = mod.catalogPrefixFor("hiq:basketball:2000:topps-chrome:sub-cards-that-never-were:mj1:refractor:no-auto");
+    expect(prefix).toMatchObject({ subsetName: "cards-that-never-were" });
+  });
+
+  it("a slug with NO sub- segment carries subsetName: null, never undefined or empty string", () => {
+    mod.__setSweepDepsForTest({
+      parseHobbyIqCardId: (id: string) => ({ sport: "baseball", year: 2026, setKey: "bowman", cardNumber: "cpa-eha", parallel: "base", isAuto: false, printRun: null }),
+    });
+    const prefix = mod.catalogPrefixFor("hiq:baseball:2026:bowman:cpa-eha:base:no-auto");
+    expect(prefix?.subsetName).toBeNull();
+  });
+});
+
+describe("buildFlagExclusion: the flag-only write shape (patch, never a relocation)", () => {
+  it("writes excludedFromFmv=true, a reason string, and ONE compact ledger object -- 3 ops total, well under the 10-op cap", () => {
+    const loser = { id: "cardhedge::ch-daily::9931002211", cardId: "CARD1" };
+    const keeper = { id: "cardhedge::ch-daily::CARD1::2026-07-03T01:19:00+00:00::14000" };
+    const ops = mod.buildFlagExclusion(loser, keeper, "base-vs-named-parallel", "2026-09-21T00:00:00Z");
+    expect(ops.length).toBeLessThanOrEqual(10);
+    expect(ops).toEqual([
+      { op: "set", path: "/excludedFromFmv", value: true },
+      { op: "set", path: "/excludedFromFmvReason", value: "twin-disagree-base-vs-named-parallel" },
+      { op: "set", path: "/twinDisagreeExcluded", value: { at: "2026-09-21T00:00:00Z", to: keeper.id, from: loser.id, by: "resolve-disagreeing-sale-twins" } },
+    ]);
+  });
+
+  it("R2's rule name flows through into the same ledger shape", () => {
+    const loser = { id: "loser-id", cardId: "CARD1" };
+    const keeper = { id: "keeper-id" };
+    const ops = mod.buildFlagExclusion(loser, keeper, "auto-or-num-specificity", "2026-09-21T00:00:00Z");
+    expect(ops.find((o: { path: string }) => o.path === "/excludedFromFmvReason")).toMatchObject({ value: "twin-disagree-auto-or-num-specificity" });
+  });
+
+  it("the fake Cosmos itself REFUSES a >10-op patch -- a regression that grows buildFlagExclusion's ops list fails this suite, not just prod", async () => {
+    function patchOpLimitExceeded() { return Object.assign(new Error("The number of patch operations cannot exceed '10'."), { code: 400 }); }
+    const item = { patch: async (ops: unknown[]) => { if (ops.length > 10) throw patchOpLimitExceeded(); return { resource: {} }; } };
+    const ops = mod.buildFlagExclusion({ id: "x", cardId: "y" }, { id: "z" }, "base-vs-named-parallel", "2026-09-21T00:00:00Z");
+    await expect(item.patch(ops)).resolves.toBeTruthy();
+    await expect(item.patch([...ops, ...Array.from({ length: 8 }, (_, i) => ({ op: "set", path: "/f" + i, value: i }))])).rejects.toThrow(/cannot exceed '10'/);
+  });
+});
+
+describe("OWNER RULING opt-in: NAMED_AND_SPECIFIC_OPT_IN reads the 'rule:named-and-specific' token off TITLES", () => {
+  it("the token constant is exactly 'rule:named-and-specific'", () => {
+    expect(mod.NAMED_AND_SPECIFIC_TOKEN).toBe("rule:named-and-specific");
+  });
+
+  it("USER_SEED_SOURCES is exported and matches soldCompsStore.service.ts's own literal byte-for-byte", () => {
+    expect([...mod.USER_SEED_SOURCES].sort()).toEqual(["ebay-user-purchase", "ebay-user-sale", "manual-user-entry", "user-verified"].sort());
+  });
+
+  // NAMED_AND_SPECIFIC_OPT_IN is computed once at module load from
+  // process.env.TITLES -- a fresh subprocess per TITLES value is the only
+  // way to exercise the parse itself (this test file's own top-level
+  // `require` already ran with whatever TITLES this process started with).
+  function optInFor(titles: string | undefined): boolean {
+    const out = execFileSync(process.execPath, ["-e",
+      "const m = require(process.argv[1]); process.stdout.write(String(m.NAMED_AND_SPECIFIC_OPT_IN));",
+      path.join(__dirname, "..", "scripts", "resolve-disagreeing-sale-twins.cjs"),
+    ], {
+      cwd: path.join(__dirname, ".."),
+      env: { PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\\Windows", ...(titles !== undefined ? { TITLES: titles } : {}) },
+      encoding: "utf8",
+    });
+    return out.trim() === "true";
+  }
+
+  it("default (TITLES unset) -> opt-in is OFF", () => {
+    expect(optInFor(undefined)).toBe(false);
+  });
+
+  it("TITLES carrying unrelated tokens only -> opt-in stays OFF", () => {
+    expect(optInFor("exclude-id:tca-ebay::227353572453")).toBe(false);
+  });
+
+  it("TITLES carrying exactly 'rule:named-and-specific' -> opt-in is ON", () => {
+    expect(optInFor("rule:named-and-specific")).toBe(true);
+  });
+
+  it("the token is recognised alongside other ';'-separated segments, in either position", () => {
+    expect(optInFor("exclude-id:foo;rule:named-and-specific")).toBe(true);
+    expect(optInFor("rule:named-and-specific;exclude-id:foo")).toBe(true);
+  });
+
+  it("the token match is case-insensitive and trims whitespace around segments", () => {
+    expect(optInFor(" RULE:NAMED-AND-SPECIFIC ")).toBe(true);
+    expect(optInFor("Rule:Named-And-Specific")).toBe(true);
+  });
+});
+
+describe("default (no opt-in) behaviour is byte-for-byte unchanged: both-sides-valid pairs that WOULD flag under R1/R2 still verdict both-sides-valid with the opt-in off", () => {
+  it("resolveHobbyiqCardIdDisagreement itself never calls resolveBothSidesValidByRule -- the opt-in gate lives ONLY in main()'s processPartition, never in the pure resolver a caller might reuse without opting in", () => {
+    const src = fs.readFileSync(path.join(__dirname, "..", "scripts", "resolve-disagreeing-sale-twins.cjs"), "utf8");
+    const fn = /function resolveHobbyiqCardIdDisagreement\([\s\S]*?\n\}\n/.exec(src);
+    expect(fn, "resolveHobbyiqCardIdDisagreement not found").toBeTruthy();
+    expect(fn![0]).not.toMatch(/resolveBothSidesValidByRule/);
+  });
+
+  it("the opt-in check and the R1/R2 call both live inside processPartition's own both-sides-valid branch, gated on NAMED_AND_SPECIFIC_OPT_IN", () => {
+    const src = fs.readFileSync(path.join(__dirname, "..", "scripts", "resolve-disagreeing-sale-twins.cjs"), "utf8");
+    expect(src).toMatch(/if \(NAMED_AND_SPECIFIC_OPT_IN && d\.axis === "hobbyiqCardId"/);
+    expect(src).toMatch(/resolveBothSidesValidByRule\(longParsed, shortParsed\)/);
+  });
+});
+
 describe("resolveGradeDisagreement: RULE 3, grade from grader token only", () => {
   it("the grader token in the title decides -- the agreeing side wins", () => {
     const long = longRow({ gradeCompany: "PSA", gradeValue: 10, title: "... PSA 10 ..." });
@@ -797,7 +1092,14 @@ describe("resolve-disagreeing-sale-twins carries the fleet discipline", () => {
     expect(src).toMatch(/stopped at the \$\{RUN_MINUTES\}-minute budget/);
     expect(src).toMatch(/\breportWrites\(/);
     expect(src).toMatch(/\brelocateSoldComp\(/);
-    expect(src).not.toMatch(/\.items\.upsert\(|\.items\.create\(|\.delete\(\)|\.patch\(/);
+    // A resolved pair (winner/loser identity) writes ONLY through
+    // relocateSoldComp -- never a raw upsert/create/bare delete here.
+    expect(src).not.toMatch(/\.items\.upsert\(|\.items\.create\(|\.delete\(\)/);
+    // OWNER RULING (2026-09-21): the flag-only write (R1/R2, both-sides-
+    // valid pairs) is a single, capped PATCH on the loser's OWN existing
+    // address -- never a relocation -- so `.patch(` itself is now
+    // deliberately present, gated behind the opt-in.
+    expect(src).toMatch(/\.patch\(ops,/);
   });
 
   it("imports the sweep lane's proof predicate and gates rather than re-implementing them", () => {
@@ -999,25 +1301,49 @@ describe("resolve-disagreeing-sale-twins carries the fleet discipline", () => {
 
   // ── REVIEW ROUND 3: RESUME CURSOR (coordinator report on run 35589416039)
   describe("resume cursor: rides scan_limit, copies fold-catalog-duplicate-rungs.cjs's convention", () => {
-    it("decodeResume/encodeResume round-trip: hop*1,000,000 + offset", () => {
-      expect(mod.decodeResume(0)).toEqual({ hop: 0, offset: 0 });
-      expect(mod.decodeResume(5)).toEqual({ hop: 0, offset: 5 });
-      expect(mod.decodeResume(1_000_005)).toEqual({ hop: 1, offset: 5 });
-      expect(mod.decodeResume(2_000_123)).toEqual({ hop: 2, offset: 123 });
-      expect(mod.encodeResume({ hop: 1, offset: 5 })).toBe(1_000_005);
-      expect(mod.encodeResume({ hop: 0, offset: 0 })).toBe(0);
+    it("decodeResume/encodeResume round-trip: hop*1,000,000 + offset (ruleBit=0)", () => {
+      expect(mod.decodeResume(0)).toEqual({ hop: 0, offset: 0, ruleBit: 0 });
+      expect(mod.decodeResume(5)).toEqual({ hop: 0, offset: 5, ruleBit: 0 });
+      expect(mod.decodeResume(1_000_005)).toEqual({ hop: 1, offset: 5, ruleBit: 0 });
+      expect(mod.decodeResume(2_000_123)).toEqual({ hop: 2, offset: 123, ruleBit: 0 });
+      expect(mod.encodeResume({ hop: 1, offset: 5, ruleBit: 0 })).toBe(1_000_005);
+      expect(mod.encodeResume({ hop: 0, offset: 0, ruleBit: 0 })).toBe(0);
     });
 
     it("decodeResume never returns a negative hop/offset for garbage input", () => {
-      expect(mod.decodeResume(-5)).toEqual({ hop: 0, offset: 0 });
-      expect(mod.decodeResume(NaN)).toEqual({ hop: 0, offset: 0 });
-      expect(mod.decodeResume(undefined)).toEqual({ hop: 0, offset: 0 });
-      expect(mod.decodeResume("not-a-number")).toEqual({ hop: 0, offset: 0 });
+      expect(mod.decodeResume(-5)).toEqual({ hop: 0, offset: 0, ruleBit: 0 });
+      expect(mod.decodeResume(NaN)).toEqual({ hop: 0, offset: 0, ruleBit: 0 });
+      expect(mod.decodeResume(undefined)).toEqual({ hop: 0, offset: 0, ruleBit: 0 });
+      expect(mod.decodeResume("not-a-number")).toEqual({ hop: 0, offset: 0, ruleBit: 0 });
     });
 
     it("MAX_RESUME_HOPS caps a chain that never converges", () => {
       expect(mod.MAX_RESUME_HOPS).toBe(30);
       expect(mod.decodeResume(mod.MAX_RESUME_HOPS * mod.RESUME_HOP_UNIT).hop).toBe(mod.MAX_RESUME_HOPS);
+    });
+
+    // ── OWNER RULING opt-in folded into the cursor signature (coordinator
+    // review of #2391) -- a cursor minted under one rule state must never be
+    // silently resumed under the other.
+    it("encodeResume/decodeResume round-trip carries ruleBit=1 without disturbing hop/offset", () => {
+      expect(mod.decodeResume(mod.encodeResume({ hop: 3, offset: 42, ruleBit: 1 }))).toEqual({ hop: 3, offset: 42, ruleBit: 1 });
+      expect(mod.decodeResume(mod.encodeResume({ hop: 3, offset: 42, ruleBit: 0 }))).toEqual({ hop: 3, offset: 42, ruleBit: 0 });
+    });
+
+    it("RESUME_RULE_UNIT sits well above MAX_RESUME_HOPS * RESUME_HOP_UNIT -- encoding the exact hop-cap boundary never collides with the rule bit", () => {
+      const boundary = mod.encodeResume({ hop: mod.MAX_RESUME_HOPS, offset: 0, ruleBit: 0 });
+      expect(mod.decodeResume(boundary)).toEqual({ hop: mod.MAX_RESUME_HOPS, offset: 0, ruleBit: 0 });
+      const boundaryRuleOn = mod.encodeResume({ hop: mod.MAX_RESUME_HOPS, offset: 0, ruleBit: 1 });
+      expect(mod.decodeResume(boundaryRuleOn)).toEqual({ hop: mod.MAX_RESUME_HOPS, offset: 0, ruleBit: 1 });
+    });
+
+    it("the shipped source discards a cursor whose ruleBit disagrees with the CURRENT run's own opt-in, restarting fresh at hop 0", () => {
+      expect(src).toMatch(/RESUME\.ruleBit !== currentRuleBit/);
+      expect(src).toMatch(/RESUME = \{ hop: 0, offset: 0, ruleBit: currentRuleBit \}/);
+    });
+
+    it("the relaunch's own encodeResume call carries the CURRENT run's ruleBit forward, not the old cursor's", () => {
+      expect(src).toMatch(/encodeResume\(\{ hop: RESUME\.hop \+ 1, offset: nextOffset, ruleBit: currentRuleBit \}\)/);
     });
 
     it("the shipped source aborts (throws) once RESUME.hop reaches MAX_RESUME_HOPS, never relaunching past it", () => {
@@ -1166,6 +1492,24 @@ describe("resolve-disagreeing-sale-twins carries the fleet discipline", () => {
     expect(yml).toMatch(/inputs\.script == 'resolve-disagreeing-sale-twins' && '\/tmp\/resolve-disagreeing-sale-twins-plan'/);
   });
 
+  // ── REVIEW FIX (coordinator, PR #2391 review): the feature had no
+  // dispatch path at all -- TITLES was never wired for this script, and the
+  // relaunch dispatch never forwarded `titles`, so a resumed hop would
+  // silently drop the opt-in token.
+  it("TITLES is wired for resolve-disagreeing-sale-twins in the SAME guarded-on-script expression as the sibling lanes", () => {
+    const yml = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "workflows", "backfill-runner.yml"), "utf8");
+    const line = yml.split("\n").find((l) => l.trim().startsWith("TITLES:"));
+    expect(line, "no TITLES: line found in backfill-runner.yml").toBeTruthy();
+    expect(line).toMatch(/inputs\.script == 'resolve-disagreeing-sale-twins' && inputs\.titles/);
+  });
+
+  it("the relaunch dispatch forwards -f titles=... so a resumed hop keeps the rule opt-in", () => {
+    const yml = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "workflows", "backfill-runner.yml"), "utf8");
+    const step = yml.split(/\n(?=      - name:)/).find((st) => st.includes("inputs.script == 'resolve-disagreeing-sale-twins'") && /gh workflow run backfill-runner\.yml/.test(st));
+    expect(step, "resolve-disagreeing-sale-twins has no relaunch dispatch").toBeTruthy();
+    expect(step).toMatch(/-f titles="\$\{\{ inputs\.titles \}\}"/);
+  });
+
   it("the workflow file stays under GitHub's 512 KB per-workflow ceiling", () => {
     const stat = fs.statSync(path.join(__dirname, "..", "..", ".github", "workflows", "backfill-runner.yml"));
     expect(stat.size).toBeLessThan(512 * 1024);
@@ -1198,10 +1542,113 @@ describe("REPORT == APPLY parity: the pure decision never branches on APPLY", ()
 });
 
 describe("plan rows == intended: every disagreeing pair this run sees is either resolved or named-left", () => {
-  it("the reconcile line in the shipped source compares disagree pairs seen against resolved+left+protected+parked", () => {
+  it("the reconcile line in the shipped source compares disagree pairs seen against resolved+left+protected+parked+flagged", () => {
     expect(src()).toMatch(/reconcile: disagree pairs seen/);
+    expect(src()).toMatch(/resolved\+left\+protected\+parked\+flagged/);
   });
+
+  it("the reconcile sum in the shipped source includes flaggedTotal (flaggedBaseVsNamedParallel + flaggedAutoOrNumSpecificity)", () => {
+    expect(src()).toMatch(/const flaggedTotal = stats\.flaggedBaseVsNamedParallel \+ stats\.flaggedAutoOrNumSpecificity;/);
+    expect(src()).toMatch(/const reconciled = stats\.resolvedChecklistRoster \+ stats\.resolvedMoreSpecific \+ stats\.resolvedGraderToken \+ stats\.bothSidesValid \+ stats\.neitherSideBacked \+ stats\.protected \+ stats\.parkedSide \+ flaggedTotal;/);
+  });
+
+  it("REVIEW: reconcile balances behaviorally -- simulating the exact counting shape the source uses, a flagged pair is counted exactly once (never double-counted into both bothSidesValid and flaggedTotal)", () => {
+    // Mirrors the shipped both-sides-valid branch's own control flow: a pair
+    // that resolves "flagged" increments EXACTLY ONE of
+    // flaggedBaseVsNamedParallel/flaggedAutoOrNumSpecificity and NEVER
+    // bothSidesValid; a pair that stays "left" increments bothSidesValid and
+    // NEVER a flagged counter -- the same mutual exclusivity the `continue`
+    // after each branch enforces in the real loop.
+    const stats = { bothSidesValid: 0, neitherSideBacked: 0, protected: 0, parkedSide: 0, resolvedChecklistRoster: 0, resolvedMoreSpecific: 0, resolvedGraderToken: 0, flaggedBaseVsNamedParallel: 0, flaggedAutoOrNumSpecificity: 0 };
+    let disagreePairsSeen = 0;
+    function simulatePair(outcome: "left" | "flagged-r1" | "flagged-r2" | "resolved-checklist" | "protected" | "parked") {
+      disagreePairsSeen++;
+      if (outcome === "left") stats.bothSidesValid++;
+      else if (outcome === "flagged-r1") stats.flaggedBaseVsNamedParallel++;
+      else if (outcome === "flagged-r2") stats.flaggedAutoOrNumSpecificity++;
+      else if (outcome === "resolved-checklist") stats.resolvedChecklistRoster++;
+      else if (outcome === "protected") stats.protected++;
+      else if (outcome === "parked") stats.parkedSide++;
+    }
+    for (const o of ["left", "flagged-r1", "flagged-r2", "flagged-r1", "resolved-checklist", "protected", "parked", "left"] as const) simulatePair(o);
+    const flaggedTotal = stats.flaggedBaseVsNamedParallel + stats.flaggedAutoOrNumSpecificity;
+    const reconciled = stats.resolvedChecklistRoster + stats.resolvedMoreSpecific + stats.resolvedGraderToken + stats.bothSidesValid + stats.neitherSideBacked + stats.protected + stats.parkedSide + flaggedTotal;
+    expect(disagreePairsSeen).toBe(reconciled);
+    expect(flaggedTotal).toBe(3);
+    expect(stats.bothSidesValid).toBe(2);
+  });
+
   function src() {
     return fs.readFileSync(path.join(__dirname, "..", "scripts", "resolve-disagreeing-sale-twins.cjs"), "utf8");
   }
+});
+
+describe("OWNER RULING guard: never flag when the keeper copy is itself flagged/excluded/parked/priceAnomaly (would leave the sale priced nowhere)", () => {
+  it("the shipped source re-checks keeperExcludedFromPricing on the KEEPER, at the point of the flag decision, before ever writing", () => {
+    const src = fs.readFileSync(path.join(__dirname, "..", "scripts", "resolve-disagreeing-sale-twins.cjs"), "utf8");
+    expect(src).toMatch(/if \(keeperExcludedFromPricing\(keeper\)\) \{/);
+  });
+
+  it("the shipped source re-checks the keeper AGAIN, immediately before the write (a keeper can become priceAnomaly/excluded between plan-time and write)", () => {
+    const src = fs.readFileSync(path.join(__dirname, "..", "scripts", "resolve-disagreeing-sale-twins.cjs"), "utf8");
+    expect(src).toMatch(/pool\.item\(keeper\.id, keeper\.cardId\)\.read\(\)/);
+    expect(src).toMatch(/keeperExcludedFromPricing\(freshKeeper\.resource\)/);
+  });
+
+  // ── REVIEW FIX (coordinator, PR #2391 review): priceAnomaly is a field
+  // the FMV readers themselves exclude on (exactPoolReader.ts's own WHERE
+  // clause: "(NOT IS_DEFINED(c.priceAnomaly) OR c.priceAnomaly != true)"),
+  // which neither isProtected nor isParkedSide reads at all -- BEHAVIORAL
+  // proof, not just a source-regex match.
+  describe("keeperExcludedFromPricing: the FULL exclusion set, not just isProtected/isParkedSide", () => {
+    it("priceAnomaly=true on the keeper is caught, even though isProtected/isParkedSide would both say false", () => {
+      const doc = { priceAnomaly: true };
+      expect(sweep.isProtected(doc)).toBe(false);
+      expect(sweep.isParkedSide(doc)).toBe(false);
+      expect(mod.keeperExcludedFromPricing(doc)).toBe(true);
+    });
+
+    it("still catches everything isProtected/isParkedSide already caught (verifiedByUser, flaggedWrong, excludedFromFmv, pinned, identityUnverified)", () => {
+      expect(mod.keeperExcludedFromPricing({ verifiedByUser: true })).toBe(true);
+      expect(mod.keeperExcludedFromPricing({ flaggedWrong: true })).toBe(true);
+      expect(mod.keeperExcludedFromPricing({ excludedFromFmv: true })).toBe(true);
+      expect(mod.keeperExcludedFromPricing({ pinned: true })).toBe(true);
+      expect(mod.keeperExcludedFromPricing({ identityUnverified: true })).toBe(true);
+    });
+
+    it("a clean keeper (none of the exclusion fields set) is NOT excluded", () => {
+      expect(mod.keeperExcludedFromPricing({ priceAnomaly: false, excludedFromFmv: false })).toBe(false);
+      expect(mod.keeperExcludedFromPricing({})).toBe(false);
+    });
+  });
+
+  it("isProtected/isParkedSide themselves (imported from the sweep lane) are what gate BOTH sides before RULE 1/2/3 or R1/R2 ever run -- a protected/parked pair never reaches both-sides-valid at all", () => {
+    expect(sweep.isProtected({ excludedFromFmv: true })).toBe(true);
+    expect(sweep.isProtected({ pinned: true })).toBe(true);
+    expect(sweep.isParkedSide({ identityUnverified: true })).toBe(true);
+  });
+
+  it("never flags BOTH copies: buildFlagExclusion is a per-loser call -- the shipped source calls it exactly once per flagged pair, naming ONE loser", () => {
+    const src = fs.readFileSync(path.join(__dirname, "..", "scripts", "resolve-disagreeing-sale-twins.cjs"), "utf8");
+    const matches = src.match(/buildFlagExclusion\(loser, keeper, flagVerdict\.rule, now\)/g) ?? [];
+    expect(matches.length).toBe(1); // one call site, one loser, one keeper -- never both
+  });
+
+  // BEHAVIORAL (not source-regex): re-derives the exact decision the shipped
+  // both-sides-valid branch makes -- flagVerdict picks a keeper/loser, then
+  // isProtected/isParkedSide on the KEEPER refuses the write. A mutation that
+  // deletes this re-check (or checks the LOSER instead of the keeper) is
+  // caught here because the assertion is on the DECISION, not on source text.
+  it("a keeper that is itself excludedFromFmv/pinned/parked is refused, never written -- decided the SAME way the shipped branch decides it", () => {
+    const long = { sport: "baseball", year: 2026, setKey: "bowman", cardNumber: "cpa-eha", parallel: "Gold Refractor", isAuto: false, printRun: null };
+    const short = { sport: "baseball", year: 2026, setKey: "bowman", cardNumber: "cpa-eha", parallel: "base", isAuto: false, printRun: null };
+    const flagVerdict = mod.resolveBothSidesValidByRule(long, short);
+    expect(flagVerdict).toMatchObject({ verdict: "flagged", keeper: "long" });
+    // The shipped branch's own keeper/loser selection:
+    const longDoc = { id: "long-id", cardId: "C1", excludedFromFmv: true }; // keeper, but already excluded
+    const shortDoc = { id: "short-id", cardId: "C1" };
+    const keeperDoc = flagVerdict.keeper === "long" ? longDoc : shortDoc;
+    const refused = sweep.isProtected(keeperDoc) || sweep.isParkedSide(keeperDoc);
+    expect(refused).toBe(true); // the shipped code's own `continue` (left, not flagged) fires here
+  });
 });
