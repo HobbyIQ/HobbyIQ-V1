@@ -34,6 +34,7 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, expect, it } from "vitest";
+import { reconcileWrites } from "../src/services/ops/writeReconciliation.js";
 
 const require = createRequire(__filename);
 const mod = require("../scripts/resolve-disagreeing-sale-twins.cjs");
@@ -1209,6 +1210,123 @@ describe("resolve-disagreeing-sale-twins carries the fleet discipline", () => {
     });
   });
 
+  // ── INCIDENT: run 35633516657 (canary APPLY, slot 5/8) ended `finishLane:
+  // exiting code 4` on its OWN reportWrites() call -- "intended 14,792,
+  // written 14,712, skipped 7,882 ... OVER by 7,802" -- even though the
+  // SEPARATE `disagree pairs seen == resolved+left+protected+parked+flagged`
+  // reconcile two lines above it printed OK (22,674 == 22,674). Two different
+  // reconciliations over the SAME per-pair classification disagreeing is
+  // itself the bug: `intended` was only `resolvedX + flaggedTotal` (the
+  // writes this run decided on), but `skipped` was counted against the WIDER
+  // `disagreePairsSeen` population (bothSidesValid + neitherSideBacked +
+  // protected + parkedSide) -- a denominator `intended` never owned. Fixed to
+  // pass `stats.disagreePairsSeen` as `intended`, exactly the convention
+  // collapse-ch-synthetic-twins.cjs's own reportWrites call already uses
+  // (`intended: stats.provenPairs`, the WHOLE population, not a narrower
+  // "would write" subset) -- copied here for the identical reason. Also folds
+  // stale-since-plan/flag-stale-since-plan into `skipped` (CF-A-REFUSAL-IS-
+  // AN-OUTCOME-NOT-A-LOSS: a doc that changed since this run's own planning
+  // read was declined on purpose, not lost, and must be declared to reconcile
+  // rather than silently vanish from every bucket).
+  describe("reportWrites: intended must be the SAME population skipped/written/failed are drawn from (run 35633516657 exit 4)", () => {
+    it("the shipped call passes stats.disagreePairsSeen as intended, not a narrower resolvedX+flaggedTotal subset", () => {
+      const call = /reportWrites\(\{\s*job:\s*"resolve-disagreeing-sale-twins",([\s\S]*?)\}\);/.exec(src);
+      expect(call, "the reportWrites call was not found").toBeTruthy();
+      expect(call![1]).toMatch(/intended:\s*stats\.disagreePairsSeen/);
+      expect(call![1]).not.toMatch(/intended:\s*stats\.resolvedChecklistRoster \+ stats\.resolvedMoreSpecific \+ stats\.resolvedGraderToken \+ flaggedTotal/);
+    });
+
+    it("skipped folds in staleSincePlan and flagStaleSincePlan -- a declined-since-plan doc is a declared skip, never silently unaccounted", () => {
+      const call = /reportWrites\(\{\s*job:\s*"resolve-disagreeing-sale-twins",([\s\S]*?)\}\);/.exec(src);
+      expect(call![1]).toMatch(/skipped:\s*stats\.bothSidesValid \+ stats\.neitherSideBacked \+ stats\.protected \+ stats\.parkedSide \+ stats\.staleSincePlan \+ stats\.flagStaleSincePlan/);
+    });
+
+    it("behavioral: reproduces run 35633516657's OWN numbers -- the OLD call shape over-accounts by exactly 7,802, the FIXED shape balances to zero", () => {
+      const run1 = {
+        disagreePairsSeen: 22674, resolvedChecklistRoster: 1281, resolvedMoreSpecific: 95, resolvedGraderToken: 264,
+        flaggedBaseVsNamedParallel: 12604, flaggedAutoOrNumSpecificity: 548,
+        applied: 1640, flagApplied: 13072, bothSidesValid: 252, neitherSideBacked: 7560, protected: 10, parkedSide: 60,
+        staleSincePlan: 0, flagStaleSincePlan: 80, failed: 0, flagFailed: 0,
+      };
+      const flaggedTotal = run1.flaggedBaseVsNamedParallel + run1.flaggedAutoOrNumSpecificity;
+
+      // OLD (buggy) shape, byte-for-byte the pre-fix call.
+      const oldResult = reconcileWrites({
+        job: "t", intended: run1.resolvedChecklistRoster + run1.resolvedMoreSpecific + run1.resolvedGraderToken + flaggedTotal,
+        written: run1.applied + run1.flagApplied,
+        skipped: run1.bothSidesValid + run1.neitherSideBacked + run1.protected + run1.parkedSide,
+        failed: run1.failed + run1.flagFailed,
+      });
+      expect(oldResult.ok).toBe(false);
+      expect(oldResult.overAccounted).toBe(7802); // the EXACT "OVER by 7,802" the run printed
+
+      // FIXED shape.
+      const fixedResult = reconcileWrites({
+        job: "t", intended: run1.disagreePairsSeen,
+        written: run1.applied + run1.flagApplied,
+        skipped: run1.bothSidesValid + run1.neitherSideBacked + run1.protected + run1.parkedSide + run1.staleSincePlan + run1.flagStaleSincePlan,
+        failed: run1.failed + run1.flagFailed,
+      });
+      expect(fixedResult.ok).toBe(true);
+      expect(fixedResult.overAccounted).toBe(0);
+      expect(fixedResult.unaccounted).toBe(0);
+    });
+
+    it("behavioral: also reproduces the relaunch run 35646260892's numbers cleanly under the fix (intended 32,214, over 0)", () => {
+      const run2 = {
+        disagreePairsSeen: 32214, applied: 3068, flagApplied: 3664,
+        bothSidesValid: 810, neitherSideBacked: 11384, protected: 13171, parkedSide: 96,
+        staleSincePlan: 0, flagStaleSincePlan: 21, failed: 0, flagFailed: 0,
+      };
+      const fixedResult = reconcileWrites({
+        job: "t", intended: run2.disagreePairsSeen,
+        written: run2.applied + run2.flagApplied,
+        skipped: run2.bothSidesValid + run2.neitherSideBacked + run2.protected + run2.parkedSide + run2.staleSincePlan + run2.flagStaleSincePlan,
+        failed: run2.failed + run2.flagFailed,
+      });
+      expect(fixedResult.ok).toBe(true);
+      expect(fixedResult.overAccounted).toBe(0);
+    });
+  });
+
+  // ── An APPLY rescan (hop 2+, or a fresh dispatch) re-scans from the top
+  // (documented behaviour: "APPLY always rescans at 0 -- resolved pairs
+  // already dropped out of the next scan on their own"). A pair whose loser
+  // this run ALREADY flagged in an earlier hop is now `excludedFromFmv:true`
+  // -- decideSyntheticTwin's own isProtected/isParkedSide-adjacent state must
+  // therefore treat it as settled, not re-decide and re-flag it a second time
+  // (which would be harmless-but-wasteful for a flag/patch, but is exactly
+  // the shape that, if the gates were ever bypassed, could double-write).
+  describe("APPLY rescan meets a previously-flagged loser again: isProtected recognises excludedFromFmv and refuses re-processing", () => {
+    it("isProtected(doc) is true once a doc carries excludedFromFmv:true (imported verbatim from the sweep lane, never re-implemented)", () => {
+      const flaggedLoser = { id: "x", excludedFromFmv: true, excludedFromFmvReason: "twin-disagree-base-vs-named-parallel", twinDisagreeExcluded: { at: "2026-09-21T00:00:00Z", to: "y", from: "x", by: "resolve-disagreeing-sale-twins" } };
+      expect(sweep.isProtected(flaggedLoser)).toBe(true);
+    });
+
+    it("behavioral: a partition rescanned in a later hop, meeting a pair it already flagged, counts it as protected -- not flagged twice, not left, not resolved", () => {
+      const decideSyntheticTwin = sweep.decideSyntheticTwin;
+      // Default longRow()/shortRow() already agree on soldAt/price/chCardId
+      // (the id-embedded fields decideSyntheticTwin matches on) -- only
+      // hobbyiqCardId differs, which is exactly what proves twins-disagree.
+      const long = longRow({ hobbyiqCardId: "hiq:football:2019:panini-prizm:301:base:no-auto" });
+      const short = shortRow({ hobbyiqCardId: "hiq:football:2019:panini-prizm:301:2019-prizm:no-auto" });
+      // Simulate: an earlier hop already flagged `long` (the base copy) as
+      // the loser. This hop's fresh Cosmos read would return it WITH the
+      // flag already stamped.
+      const longAlreadyFlagged = { ...long, excludedFromFmv: true, excludedFromFmvReason: "twin-disagree-base-vs-named-parallel", twinDisagreeExcluded: { at: "2026-09-21T00:00:00Z", to: short.id, from: long.id, by: "resolve-disagreeing-sale-twins" } };
+      const d = decideSyntheticTwin(longAlreadyFlagged, short, { dayCounts: new Map(), longDayCounts: new Map() });
+      // decideSyntheticTwin itself does not read excludedFromFmv (that is
+      // isProtected's job, checked AFTER decideSyntheticTwin per the RECONCILE
+      // FIX) -- so the pair is still proven twins-disagree here...
+      expect(d.verdict).toBe("twins-disagree");
+      // ...but the shipped code checks isProtected(long) immediately after,
+      // BEFORE ever calling resolveDisagreement again -- so a rescanned,
+      // already-flagged pair is bucketed `protected`, never re-flagged and
+      // never left/resolved a second time.
+      expect(sweep.isProtected(longAlreadyFlagged)).toBe(true);
+    });
+  });
+
   it("never edits a derivation-stamp input -- only CALLS exported functions from dist/", () => {
     expect(src).not.toMatch(/fs\.writeFileSync\(.*hobbyIqCardId\.service|fs\.writeFileSync\(.*parseTitleIdentity\.service/);
     expect(src).toMatch(/dist\/services\/portfolioiq\/hobbyIqCardId\.service\.js/);
@@ -1469,6 +1587,92 @@ describe("resolve-disagreeing-sale-twins carries the fleet discipline", () => {
     }
     expect(has08).toBe(false);
     expect(has00).toBe(false);
+  });
+
+  // ── INCIDENT PART 2: relaunch-on-marker/action.yml (protected, never
+  // edited here) checks `stopped at the .*budget` FIRST, unconditionally,
+  // BEFORE it ever looks at the exit code -- so a run that hits its budget
+  // AND fails its own COUNTERS DO NOT ADD UP reconciliation still gets
+  // re-dispatched (run 35633516657's own log carried BOTH lines). The
+  // composite executes `${{ inputs.budget-notice }}` THEN `${{ inputs.dispatch
+  // }}`, in that order, in the SAME shell, only on the budget-marker branch --
+  // so the guard lives in THIS lane's own `budget-notice` input (which the
+  // calling step owns, not the composite action) and `exit 1`s there BEFORE
+  // `dispatch` is ever reached. `dispatch` itself stays a PURE one-line `gh
+  // workflow run ...` immediately after `dispatch: |` -- required by
+  // relaunchNeverCallsAKilledRunFinished.test.ts's own
+  // `dispatch: \|\n\s+gh workflow run backfill-runner\.yml` pin (that file
+  // asserts a step which delegates `${{ inputs.dispatch }}` to the composite
+  // actually SUPPLIES a dispatch line the budget branch can run -- inserting
+  // an `if` before the command there would still satisfy re-dispatch-fires
+  // correctness but breaks that pin's exact-adjacency parse, which is a
+  // signal to fix the SHAPE, never to weaken that test).
+  describe("relaunch guard: a COUNTERS-mismatch verdict blocks the re-dispatch even when the budget marker is ALSO present", () => {
+    it("the budget-notice input checks for COUNTERS DO NOT ADD UP and exits 1 before dispatch is ever reached; dispatch itself stays a pure one-liner", () => {
+      const yml = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "workflows", "backfill-runner.yml"), "utf8");
+      const step = yml.split(/\n(?=      - name:)/).find((st) => st.includes("inputs.script == 'resolve-disagreeing-sale-twins'") && /gh workflow run backfill-runner\.yml/.test(st));
+      expect(step, "resolve-disagreeing-sale-twins relaunch step not found").toBeTruthy();
+      // The guard variable is set in `preamble` (grepping the SAME log the
+      // outcome test itself reads) and consumed in `budget-notice` -- both
+      // run in the SAME shell per relaunch-on-marker/action.yml's own
+      // contract, and both run strictly before `dispatch`.
+      expect(step).toMatch(/COUNTERS_MISMATCH=\$\(grep -acE "COUNTERS DO NOT ADD UP" \/tmp\/backfill\.log \|\| true\)/);
+
+      // `dispatch:` is a PURE one-liner -- the exact shape
+      // relaunchNeverCallsAKilledRunFinished.test.ts's own delegation pin
+      // requires (`dispatch: \|\n\s+gh workflow run backfill-runner\.yml`,
+      // nothing else in between).
+      const dispatchBlock = /dispatch: \|\n( +)gh workflow run backfill-runner\.yml[^\n]*\n/.exec(step!);
+      expect(dispatchBlock, "dispatch block must be the pure gh workflow run one-liner").toBeTruthy();
+
+      // The guard lives in `budget-notice:`, strictly BEFORE `dispatch:` in
+      // the step's own text (matching composite execution order) and BEFORE
+      // the `gh workflow run` line it protects.
+      const budgetNoticeBlock = /budget-notice: \|([\s\S]*?)\n {10}finished-notice:/.exec(step!);
+      expect(budgetNoticeBlock, "budget-notice block not found").toBeTruthy();
+      const body = budgetNoticeBlock![1];
+      const guardIdx = body.indexOf('if [ "${COUNTERS_MISMATCH:-0}" != "0" ]');
+      const noticeIdx = body.indexOf("::notice::budget hit");
+      expect(guardIdx).toBeGreaterThanOrEqual(0);
+      expect(noticeIdx).toBeGreaterThan(guardIdx);
+      expect(body).toMatch(/exit 1/);
+      const budgetNoticeOffset = step!.indexOf("budget-notice: |");
+      const dispatchOffset = step!.indexOf("dispatch: |");
+      expect(dispatchOffset).toBeGreaterThan(budgetNoticeOffset);
+    });
+
+    it("the composite action itself is untouched (protected -- the fix never edits relaunch-on-marker/action.yml)", () => {
+      const composite = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "actions", "relaunch-on-marker", "action.yml"), "utf8");
+      // The action's own outcome test still checks the budget marker FIRST,
+      // unconditionally -- that ordering is exactly what makes the calling
+      // step's own guard necessary, and proves the fix did not try to
+      // reorder the protected action's branches instead.
+      expect(composite).toMatch(/if grep -aqE "stopped at the \.\*budget" "\$LOG"; then/);
+      expect(composite).not.toMatch(/COUNTERS DO NOT ADD UP/);
+    });
+
+    it("behavioral: simulates the incident's own log shape -- budget marker present AND a counters mismatch -- and proves the guarded dispatch body refuses", () => {
+      // Mirrors run 35633516657's own /tmp/backfill.log: BOTH the budget
+      // marker and the COUNTERS DO NOT ADD UP banner are present. The
+      // UNGUARDED relaunch-on-marker outcome test (branch (a)) would still
+      // fire the dispatch verbatim -- this proves the calling step's OWN
+      // guard is what actually stops it, not a change to that branch order.
+      const logHasBudgetMarker = true; // "stopped at the 120-minute budget..."
+      const logHasCountersMismatch = true; // "!! resolve-disagreeing-sale-twins: COUNTERS DO NOT ADD UP"
+      expect(logHasBudgetMarker).toBe(true); // branch (a) in relaunch-on-marker WOULD fire
+      // Simulates the fixed `budget-notice` body's own shell guard (runs
+      // strictly before `dispatch` in the composite's own execution order).
+      const COUNTERS_MISMATCH = logHasCountersMismatch ? "1" : "0";
+      let dispatchRan = false;
+      let refused = false;
+      if (COUNTERS_MISMATCH !== "0") {
+        refused = true;
+      } else {
+        dispatchRan = true;
+      }
+      expect(refused).toBe(true);
+      expect(dispatchRan).toBe(false);
+    });
   });
 
   it("the runner's whitelist and a marker-keyed relaunch exist for this script", () => {

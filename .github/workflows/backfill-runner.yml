@@ -3541,7 +3541,24 @@ jobs:
             echo "realSlot=$REAL_SLOT realSlots=$REAL_SLOTS"
             RESUME_ARG=$(grep -aoE "the relaunch resumes at scan_limit=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$" || true)
             echo "resumeArg=${RESUME_ARG:-0}"
+            # COUNTERS-MISMATCH GUARD (run 35633516657: the budget marker and
+            # the lane's own "COUNTERS DO NOT ADD UP" exit-4 verdict printed in
+            # the SAME log -- relaunch-on-marker/action.yml's outcome test
+            # checks the budget marker FIRST, unconditionally, and dispatches
+            # before it ever looks at the exit code, so a lane that hits its
+            # budget AND fails its own reconciliation still gets re-dispatched.
+            # That composite action is protected (never edited here); the fix
+            # instead lives in THIS lane's own `dispatch` input, which the
+            # action runs verbatim -- it now refuses to run `gh workflow run`
+            # at all when the log itself says the counters do not add up,
+            # regardless of which branch the action's own outcome test took.
+            COUNTERS_MISMATCH=$(grep -acE "COUNTERS DO NOT ADD UP" /tmp/backfill.log || true)
+            echo "countersMismatch=${COUNTERS_MISMATCH:-0}"
           budget-notice: |
+            if [ "${COUNTERS_MISMATCH:-0}" != "0" ]; then
+              echo "::error::COUNTERS DO NOT ADD UP was printed in this run's own log -- the reconciliation the lane trusts itself is broken, so NOTHING it counted (including the budget marker that would normally justify a resume) can be trusted either. Re-dispatch REFUSED; investigate before re-running slot ${REAL_SLOT}/${REAL_SLOTS} scan_limit=${RESUME_ARG:-0}."
+              exit 1
+            fi
             echo "::notice::budget hit (resolved=${N:-0}) — re-dispatching slot ${REAL_SLOT}/${REAL_SLOTS} RESUMING at scan_limit=${RESUME_ARG:-0} (not a rescan from zero) to continue"
           finished-notice: |
             echo "::notice::slot ${REAL_SLOT}/${REAL_SLOTS} finished within budget (resolved=${N:-0}) — done, no re-dispatch."

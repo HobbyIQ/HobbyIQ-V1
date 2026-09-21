@@ -1514,7 +1514,23 @@ async function main() {
   const reconcileBalances = stats.disagreePairsSeen === reconciled;
   console.log(`  reconcile: disagree pairs seen ${f(stats.disagreePairsSeen)} == resolved+left+protected+parked+flagged ${f(reconciled)}  ${reconcileBalances ? "OK" : "MISMATCH"}`);
   if (examples.length) { console.log("  examples:"); for (const e of examples) console.log(e); }
-  if (APPLY) reportWrites({ job: "resolve-disagreeing-sale-twins", intended: stats.resolvedChecklistRoster + stats.resolvedMoreSpecific + stats.resolvedGraderToken + flaggedTotal, written: stats.applied + stats.flagApplied, skipped: stats.bothSidesValid + stats.neitherSideBacked + stats.protected + stats.parkedSide, failed: stats.failed + stats.flagFailed });
+  // COUNTER FIX (run 35633516657, exit 4 "COUNTERS DO NOT ADD UP ... OVER by
+  // 7,802"): `intended` here used to be ONLY the writes this run decided on
+  // (resolvedX + flaggedTotal), while `skipped` was counted against the FULL
+  // `disagreePairsSeen` population (bothSidesValid + neitherSideBacked +
+  // protected + parkedSide) -- a DIFFERENT, WIDER denominator than `intended`
+  // owned. `intended` must be the same population `written`+`skipped`+`failed`
+  // are drawn from, exactly as collapse-ch-synthetic-twins.cjs's own call
+  // does (`intended: stats.provenPairs`, the WHOLE population, not a narrower
+  // "would write" subset) -- reused here for the SAME reason. `staleSincePlan`
+  // (both the resolve-path and flag-path 412 counts) is now folded into
+  // `skipped` too: CF-A-REFUSAL-IS-AN-OUTCOME-NOT-A-LOSS names exactly this
+  // shape ("the write was declined because performing it would have been
+  // wrong, not because it failed") -- a doc that changed since this run's own
+  // planning read was never lost, but it was also never previously
+  // reconciled anywhere in this call, silently invisible to both accounted
+  // and unaccounted.
+  if (APPLY) reportWrites({ job: "resolve-disagreeing-sale-twins", intended: stats.disagreePairsSeen, written: stats.applied + stats.flagApplied, skipped: stats.bothSidesValid + stats.neitherSideBacked + stats.protected + stats.parkedSide + stats.staleSincePlan + stats.flagStaleSincePlan, failed: stats.failed + stats.flagFailed });
   if (stopReason) console.log(`\n${stopReason}`);
   if (planFd) { try { fs.closeSync(planFd); } catch { /* best effort */ } }
 
