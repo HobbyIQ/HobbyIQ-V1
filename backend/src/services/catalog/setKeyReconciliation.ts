@@ -301,6 +301,62 @@ const RULED_ALIASES: Readonly<Record<string, { to: string; why: string }>> = Obj
   "topps-sapphire-chrome-factory-set": { to: "topps-chrome-sapphire",
     why: "2016 Topps Chrome Sapphire was SOLD as a factory set — the delivery format, not a different product. 1,044 checklist rows, all 2016, the year of that release. A box configuration does not mint an identity." },
 
+  // TOPPS FLAGSHIP IS ONE KEY (Drew, 2026-09-20 ruling, this batch). D23
+  // (2026-08-30) registered `topps-series-1` / `topps-series-2` as their own
+  // addressable product keys in productSetKeys.ts, reasoning that the id
+  // should carry the product exactly as the checklist names it. Drew's
+  // ruling today overturns that split for baseball's Topps flagship
+  // specifically: "Series 1" and "Series 2" are a WITHIN-YEAR release split
+  // of the SAME flagship product (Series 2 continues Series 1's own card
+  // numbers rather than renumbering, exactly as R40's own 2023/2026 Topps
+  // Series 2 Beckett packages document), not two different sets the way
+  // Bowman vs Bowman Chrome are — and the checklist-ingest side already
+  // treats it that way: the R40 2025/2023 Topps packages staged this same
+  // week are converted with the bare setKey "topps", explicitly NOT
+  // "topps-series-1", matching "the sold_comps evidence's own resolved
+  // cardIds" per that PR's own commit message. This alias makes the
+  // deriver agree with what ingest already writes.
+  //
+  // SCOPED TO THE BASEBALL FLAGSHIP SERIES SPLIT ONLY. Not touched, and NOT
+  // aliased here:
+  //   topps-update-series / topps-updates-and-highlights  -- a DIFFERENT
+  //     release (a mid-season update checklist with its own numbers, RC
+  //     variants and price curve), never Series 1/2's continuation;
+  //   topps-chrome / any Chrome product                   -- a different
+  //     brand line entirely;
+  //   topps-flagship (football, 2026)                     -- Topps regained
+  //     the NFL license and "Topps Flagship Football" is a real standalone
+  //     PRODUCT NAME Topps itself uses, registered in productSetKeys.ts
+  //     2026-09-20 with its OWN numbered subsets (91TC-#, TD-#, NFLS-#) that
+  //     do not exist on the bare football `topps` checklist -- the opposite
+  //     shape from baseball's "Series" designators, which name no numbering
+  //     of their own;
+  //   Bowman, Bowman Chrome, every other sport's own flagship-series naming
+  //     -- this ruling is baseball-Topps-specific, not a general "drop the
+  //     series suffix" rule.
+  //
+  // productSetKeys.ts KEEPS the `topps-series-1` / `topps-series-2` table
+  // entries (S(), with `names` aliases and `refines: "topps"`) so a STORED
+  // row already carrying that setKey field, or a pricing-fallback widen via
+  // productRefinementsOf, still resolves — only the DERIVED identity moves.
+  // Every spelling productSetKeys.ts's own `names` list for these two keys
+  // carries ("topps-series-one"/"topps-s1", "topps-series-two"/"topps-s2")
+  // is aliased here too — `reconcileSetKey` runs BEFORE the product table
+  // inside normalizeSetKey, so a spelling declared only in `names` would
+  // still reach the table's own S() entry and mint the old key.
+  "topps-series-1": { to: "topps",
+    why: "Drew 2026-09-20: Topps flagship baseball is ONE key. 'Topps Series 1' derives to `topps`, matching the R40 2025/2023 Topps Series 1 Beckett packages staged the same week under the bare setKey \"topps\" (#2373/#2374) and the sold_comps evidence's own resolved cardIds. 213,796 rows measured under this id at D23 (2026-08-30) move under this ruling; productSetKeys.ts keeps the key registered so those stored rows still resolve." },
+  "topps-series-one": { to: "topps",
+    why: "Word spelling of topps-series-1 — same ruling, same evidence. productSetKeys.ts's own `names: [\"topps-series-one\", ...]` entry is the alias this table must agree with, or reconcileSetKey (which runs first) and the product table would answer differently for the same card." },
+  "topps-s1": { to: "topps",
+    why: "Abbreviated spelling of topps-series-1 — same Drew 2026-09-20 ruling, same evidence (213,796 rows at D23, moved by this ruling); kept as its own key here rather than folded silently so a future reader can find every spelling this ruling touches in one place." },
+  "topps-series-2": { to: "topps",
+    why: "Drew 2026-09-20: same ruling as topps-series-1 — Series 2 continues Series 1's own card-number line rather than renumbering (verified non-overlapping ranges in #2374), so one product key correctly spans both series as the real Topps release does. 216,000 rows measured under this id at D23 move under this ruling; productSetKeys.ts keeps the key registered so those stored rows still resolve." },
+  "topps-series-two": { to: "topps",
+    why: "Word spelling of topps-series-2 — same Drew 2026-09-20 ruling, same evidence as topps-series-1's own word-spelling alias; productSetKeys.ts's `names` list for topps-series-2 carries this exact spelling." },
+  "topps-s2": { to: "topps",
+    why: "Abbreviated spelling of topps-series-2 — same Drew 2026-09-20 ruling, same evidence (216,000 rows at D23, moved by this ruling); kept as its own key here for the same reason topps-s1 is." },
+
   // BOWMAN NSCC. #1612 ruled NSCC its OWN PRODUCT, and it is — that ruling is
   // about `bowman-chrome-nscc`, which is already a distinct product and stays
   // one. The question here was only which SPELLING names it, and that was

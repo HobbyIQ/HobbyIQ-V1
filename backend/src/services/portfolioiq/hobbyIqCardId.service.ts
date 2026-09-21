@@ -1824,6 +1824,88 @@ const PLURAL_PARALLEL_HEAD =
   /(^|-)(refractor|x-fractor|xfractor|fractor|superfractor|prizm|plate|printing-plate|parallel|mini|jumbo|wave|shimmer|holofoil|holo|foil|sparkle|pulsar|mojo|insert|autograph|relic|patch|die-cut|short-print|printing-plate)s$/;
 
 /**
+ * CF-A-PRODUCT-WORD-IS-A-SUFFIX (2026-09-20 census, duplicate-rung batch).
+ * 301,115 duplicate STRICT-row pairs measured across 60 modern cells (Prizm/
+ * Mosaic cells 25-48%): the same card, twice, because the checklist sources
+ * disagree on WORD ORDER for a product-family word -- "Green Mosaic" from one
+ * source, "Mosaic Green" from another; "Prizms Orange" here, "Orange Prizms"
+ * there. 216,168 of the 301,115 pairs (72%) are word-order-only; the plural
+ * fold above already owns the other axis.
+ *
+ * ONE CANONICAL FORM: the product-family word is a SUFFIX, singular --
+ * `green-mosaic`, `orange-prizm`, `gold-refractor` -- never a prefix, never
+ * plural. Applied ONLY when the family word sits at an EDGE of the slug
+ * (first or last token), because that is the only shape the evidence proves
+ * safe: every real duplicate pair sampled (worst-cells-examples.json,
+ * sales-side-sample-5-worst.json, all five family words audited against
+ * data/checklist-parallel-names.json's 16,007 parallel names) has the family
+ * word as a genuine prefix or suffix of an otherwise-IDENTICAL token set --
+ * moving/singularizing it never changed which OTHER words were present, so
+ * it never merges two DISTINCT rungs (checked: zero canon collisions where
+ * the non-family tokens differ, across all 660 checklist-vocabulary products
+ * that use any of these five words).
+ *
+ * CLOSED, EVIDENCE-GATED LIST -- one entry per family word actually measured
+ * with a real word-order or prefix/suffix duplicate in the census evidence:
+ *
+ *   prizm      216,168 wordOrder pairs total include prizm cells (football
+ *              /2024/panini-prizm alone: 30,224); checklist vocab shows 990
+ *              safe canon-folds, 0 risky.
+ *   mosaic     panini-mosaic cells (football/2025 13,830; basketball/2024
+ *              16,571; basketball/2025-wnba 7,892) are wordOrder-ONLY --
+ *              measured PLURAL COUNT IS ZERO for every mosaic cell and zero
+ *              "-mosaics"/"mosaics-" spellings anywhere in checklist-
+ *              parallel-names.json's 16,007 names, so mosaic is added to
+ *              THIS list and deliberately NOT to PLURAL_PARALLEL_HEAD above
+ *              -- there is no real plural spelling in the wild to fold.
+ *   optic      donruss-optic / panini-honors carry Optic as a product word
+ *              with no plural spelling in the vocabulary either (0 "-optics"
+ *              names); word-order risk is the same shape as mosaic.
+ *   select     panini-select cells show a real (small: 22-pair) word-order
+ *              duplicate (basketball|2023|panini-select) and, like mosaic
+ *              and optic, zero plural spellings in the vocabulary.
+ *   refractor  already plural-folded above; ALSO needs the suffix fix
+ *              (`silver-prizm` pattern's sibling `red-refractor` vs
+ *              `refractor-red` is the same defect family) -- 134 checklist
+ *              names carry it with a modifier on both sides, all of them
+ *              proven safe (trailing print-run/exclusivity prose, not a
+ *              second distinct rung; see the interior-placement audit).
+ *
+ * NOT ADDED: "select" the bare word is common English (see the
+ * PLURAL_PARALLEL_HEAD comment's own "Canvas"/"Stars" warning) -- this rule
+ * only fires when the word is already a FAMILY token recognized by this
+ * closed list, at an edge, so an ordinary sentence fragment never matches.
+ *
+ * A compound name where the family word is INTERIOR ("prizm-black-gold" --
+ * hypothetical) is left UNTOUCHED by construction: the edge-only anchors
+ * below cannot match it, and the evidence audit found no real checklist
+ * parallel name where reordering an interior family-word token would ever be
+ * needed to fold a genuine duplicate -- every interior occurrence measured
+ * (134 refractor / 38 mosaic / 85 select / 317 prizm / 26 optic) is trailing
+ * distribution prose ("Refractor (Blaster exclusive)", "Select Premium Patch
+ * Gold") or another product's own tribute-insert name (panini-honors citing
+ * "2022 Mosaic Green Prizm"), never a second rung of THIS product's OWN
+ * ladder.
+ */
+const PRODUCT_FAMILY_WORDS = Object.freeze(["prizm", "mosaic", "optic", "select", "refractor"]);
+
+/** Move a leading family-word token to the end, singular, when the slug's
+ *  FIRST token is one of the closed family words above and there is at
+ *  least one other token. Edge-only: a family word that is not the very
+ *  first token is left alone, by design (see CF-A-PRODUCT-WORD-IS-A-SUFFIX). */
+function foldParallelWordOrderToSuffix(s: string): string {
+  const tokens = s.split("-").filter(Boolean);
+  if (tokens.length < 2) return s;
+  const famRe = new RegExp(`^(?:${PRODUCT_FAMILY_WORDS.join("|")})s?$`);
+  const first = tokens[0];
+  if (!famRe.test(first)) return s;
+  // Singularize the family token (checklist names never pluralize these
+  // five words -- see the comment above -- but a vendor title might).
+  const singular = first.replace(/s$/, "");
+  return [...tokens.slice(1), singular].join("-");
+}
+
+/**
  * CF-A-FINISH-TOKEN-IS-ONE-TOKEN (Drew, 2026-09-07). The Pokemon finish fold,
  * SCOPED TO sport=pokemon AND TO NOTHING ELSE.
  *
@@ -1988,6 +2070,13 @@ export function normalizeParallel(parallel: string | null | undefined): string {
   // "Hieroglyphs" are all parallel NAMES whose singular is a different card.
   // Those keep their s. Only the head-noun list below folds.
   s = s.replace(PLURAL_PARALLEL_HEAD, (_m, lead: string, head: string) => lead + head);
+  // CF-A-PRODUCT-WORD-IS-A-SUFFIX: "Prizm Orange" / "Mosaic Green" /
+  // "Optic Blue" / "Select Gold" -- product-word-FIRST spellings -- fold onto
+  // the same suffix form the checklist-backed spelling already uses
+  // ("orange-prizm", "green-mosaic"). Variation text is excluded (handled
+  // above) and this must run AFTER the plural fold so "Prizms Orange" is
+  // already "prizms-orange" -> singularized here to "orange-prizm".
+  if (!isVariationText) s = foldParallelWordOrderToSuffix(s);
   if (isVariationText) return normalizeVariationSlug(s);
   if (s === "" || s === "base" || s === "none" || s === "no-parallel") {
     return "base";

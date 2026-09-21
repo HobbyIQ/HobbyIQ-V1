@@ -4125,7 +4125,41 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // by "Star" is the promo marker and never the product qualifier. Every real
   // Prizm Black title ("2025 Panini Prizm Black Football #10 Blue") is
   // untouched, because none of them says "Star".
-  if (/\bprizm\b/i.test(t) && /prizm\s+black\b(?!\s+star\b)|\bblack\s+prizm\b/i.test(t)) return "Panini Prizm Black";
+  //
+  // CF-BLACK-PRIZM-IS-A-PARALLEL-NOT-A-PRODUCT (Drew 2026-09-20 ruling, this
+  // batch). `\bblack\s+prizm\b` used to match "Black Prizm" in EITHER role:
+  // the PRODUCT name ("Prizm Black") and a plain Prizm card's trailing
+  // 1-of-1 PARALLEL ("... Black Prizm 1/1"). Both derived to
+  // panini-prizm-black -- and the second is wrong, because a regular Prizm
+  // title merely NAMING its own Black finish is not the Prizm Black release:
+  //
+  //   "2024-25 Panini Prizm Wembanyama #1 Black Prizm 1/1"  -> panini-prizm
+  //     (this title's product phrase is plain "Panini Prizm"; "Black Prizm
+  //     1/1" states the card's PARALLEL the same way "Silver Prizm" or
+  //     "Blue Prizm 1/1" would)
+  //   "2024-25 Panini Prizm Black Victor Wembanyama #1"     -> panini-prizm-black
+  //     (the product phrase itself, before the player/number, states Black)
+  //
+  // The tell is WORD ORDER plus what follows: the PRODUCT states "Prizm
+  // Black" (Prizm first); a trailing PARALLEL states "Black Prizm" (Black
+  // first) or "Black Prizm 1/1" / "Black Finite" / "Black Gold" -- Black
+  // qualifying a finish word, never introducing the brand. So only the
+  // "Prizm Black" ordering is read as the product now; "Black Prizm" (any
+  // order Black-then-Prizm, or Black followed by another finish word) falls
+  // through to the bare Prizm rule below and keeps its stated parallel.
+  // Verified against every real title in this file's own evidence
+  // (deriverChecklistRungBeatsInventedRung.test.ts, deriverStatedParallel
+  // AndNamedProduct.test.ts): every genuine Prizm Black release title in the
+  // corpus says "Prizm Black" BEFORE the sport/player/number, never after.
+  //
+  // A SECOND negative lookahead, for the same reason as "Star": "Prizm Black
+  // & White Checker" / "Prizm Black and White Checker" states the two-colour
+  // CHECKER PARALLEL of a plain Prizm card (statedParallelIsNeverEvictedTo
+  // Base.test.ts's own pinned row), not the product -- "Black" here is the
+  // first half of a compound colour pair, never the brand qualifier, the
+  // same shape "&"/"and" already marks for Black & White Shimmer elsewhere
+  // in this file.
+  if (/\bprizm\s+black\b(?!\s+star\b)(?!\s*(?:&|and)\s*white\b)/i.test(t)) return "Panini Prizm Black";
   if (/panini\s+prizm|\bprizm\b/i.test(t)) return "Panini Prizm";
   // CF-A-NAMED-TOPPS-RELEASE-IS-ITS-OWN-PRODUCT (R26, 2026-09-13). Five more
   // ruled Topps keys with no parser rule, each folded by the bare `/topps/`

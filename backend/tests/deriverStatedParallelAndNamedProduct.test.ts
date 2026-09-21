@@ -135,6 +135,58 @@ describe("class B: a named product is never folded into its flagship", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CF-BLACK-PRIZM-IS-A-PARALLEL-NOT-A-PRODUCT (Drew, 2026-09-20 ruling, same
+// batch as the duplicate-rung/Topps-flagship fixes). "Black" is part of the
+// PRODUCT phrase "Prizm Black" only when it is adjacent to "Prizm" BEFORE
+// the player/number. A plain Prizm title that merely STATES a Black finish
+// AFTER the player/number ("... Black Prizm 1/1", "Black Finite", "Black
+// Gold") is naming a parallel of the ordinary Prizm card, not the standalone
+// Prizm Black release, and must stay `panini-prizm`.
+//
+// This retracts the "PRE-EXISTING, OUT OF SCOPE" note that used to sit in
+// census0920OwnerRulingProductKeysAreFixedPoints.test.ts and updates this
+// file's own line 89 pin's SIBLING case (line 89 itself needs no change --
+// "Prizm Black Football #10 Blue" is already the PRODUCT ordering and still
+// derives to panini-prizm-black).
+// ─────────────────────────────────────────────────────────────────────────────
+describe("CF-BLACK-PRIZM-IS-A-PARALLEL-NOT-A-PRODUCT: word order decides which", () => {
+  it.each([
+    // PRODUCT phrase: "Prizm Black" BEFORE the player/number/sport word.
+    ["2025 Panini Prizm Black Football #10 Blue"],
+    ["2024-25 Panini Prizm Black Victor Wembanyama #1"],
+    ["2024 Panini Prizm Black Basketball #99 Red"],
+    ["2024 Panini Prizm Black Basketball #85 Silver"],
+    ["2024 Panini Prizm Black Basketball #156 Purple"],
+    ["2024 Panini Prizm Black Basketball #198 Snakeskin"],
+    ["2024 Panini Prizm Black Basketball #299 Blue Ice"],
+    ["2025 Panini Prizm Black Baseball #12 Base"],
+    ["2024 Panini Prizm Black Football Victor Wembanyama #1 Green"],
+  ])("PRODUCT ordering derives to panini-prizm-black: %s", (title) => {
+    expect(setKeyOf(title)).toBe("panini-prizm-black");
+  });
+
+  it.each([
+    // TRAILING PARALLEL: "Black Prizm" / "Black <finish>" AFTER the
+    // player/number, on an otherwise-plain Prizm title. Stays panini-prizm.
+    ["2024-25 Panini Prizm Basketball Victor Wembanyama Black Prizm 1/1"],
+    ["2024 Panini Prizm Wembanyama #1 Black Prizm 1/1"],
+    ["2025 Panini Prizm Football #10 Black Prizm"],
+    ["2024 Panini Prizm Basketball #217 Black Finite"],
+    ["2024 Panini Prizm Basketball #217 Black Finite 1/1"],
+    ["2024 Panini Prizm Basketball #217 Black Gold"],
+    ["2025 Panini Prizm Baseball #45 Black Gold /5"],
+    ["2024 Panini Prizm Football #99 Black Ice"],
+    ["2024 Panini Prizm Basketball #22 Black Pulsar"],
+    ["2025 Panini Prizm WNBA #7 Black Prizm 1/1", "panini-prizm-wnba"],
+    ["2024 Panini Prizm Black & White Checker Checkerboard Prizm #286 JEVON KEARSE - Raw"],
+    ["2024 Panini Prizm Black and White Checker Checkerboard Prizm #199 Base"],
+    ["2023 Panini Prizm Black Star Promo Wembanyama"],
+  ])("TRAILING PARALLEL ordering leaves the flagship (or its other ruled product): %s", (title, expected) => {
+    expect(setKeyOf(title)).toBe(expected ?? "panini-prizm");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CLASS D -- THE SPORT IS THE PRODUCT'S SPORT
 //
 // `inferSportFromTitle` is a series of word tests over the whole title, and a

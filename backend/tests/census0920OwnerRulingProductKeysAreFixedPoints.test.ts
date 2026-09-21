@@ -24,18 +24,22 @@
 // on the existing reconciliation fixed point + the parser's own regex
 // instead, so no new name-matching surface is introduced by this PR.
 //
-// KNOWN, PRE-EXISTING, OUT OF SCOPE: the title parser's Prizm/Black regex
-// (parseTitleIdentity.service.ts) routes BOTH orderings -- "Prizm Black ..."
-// (a standalone product mention) AND "... Black Prizm 1/1" (a plain Prizm
-// card whose only distinguishing feature is the Black 1-of-1 finish) -- to
-// "Panini Prizm Black" today, independent of this PR and independent of
-// whether panini-prizm-black is registered in productSetKeys.ts at all. This
-// is already deliberately ruled behavior (deriverStatedParallelAndNamedProduct
-// .test.ts pins `"2025 Panini Prizm Black Football #10 Blue" -> panini-prizm-black`
-// as the CORRECT verdict) backed by a setkey-reconciliation.json fixed point,
-// not a defect this registration introduces or is asked to fix. The tests
-// below pin the TRUE current behavior for both orderings rather than assert
-// a target behavior this PR does not implement.
+// RETRACTED 2026-09-20 (owner ruling, later the same day, this batch): this
+// note used to say the title parser's Prizm/Black regex routing BOTH
+// orderings -- "Prizm Black ..." (a standalone product mention) AND "...
+// Black Prizm 1/1" (a plain Prizm card whose only distinguishing feature is
+// the Black 1-of-1 finish) -- to "Panini Prizm Black" was PRE-EXISTING, OUT
+// OF SCOPE, deliberately ruled behavior. It is not: Drew ruled the second
+// ordering wrong. "Black" is part of the PRODUCT phrase only when it sits
+// adjacent to "Prizm" BEFORE the player/number ("Prizm Black" -- Prizm
+// first); a plain Prizm title that merely STATES a Black finish ("... Black
+// Prizm 1/1", "Black Finite", "Black Gold") names a parallel of the
+// ordinary Prizm card, the same way "Silver Prizm" or "Blue Prizm 1/1"
+// would, and must stay `panini-prizm`. Fixed by
+// CF-BLACK-PRIZM-IS-A-PARALLEL-NOT-A-PRODUCT in parseTitleIdentity.service
+// .ts; the pin in deriverStatedParallelAndNamedProduct.test.ts is updated to
+// match. The "Prizm Black ..." PRODUCT ordering (this file's next test) is
+// UNCHANGED by that ruling and still derives to panini-prizm-black.
 import { describe, it, expect } from "vitest";
 import { isProductSetKey, productParentOf, productFamilyOf } from "../src/services/catalog/productSetKeys";
 import { normalizeSetKey, resolveSetKeyForSlug } from "../src/services/portfolioiq/hobbyIqCardId.service";
@@ -72,16 +76,15 @@ describe("panini-prizm-black (basketball) is registered", () => {
   });
 
   it(
-    "PRE-EXISTING, OUT OF SCOPE: a plain Prizm title whose only Black mention is the trailing " +
-      "1-of-1 parallel ALSO derives to panini-prizm-black today (ruled behavior predating this PR " +
-      "-- see deriverStatedParallelAndNamedProduct.test.ts; this registration does not change it " +
-      "either way)",
+    "FIXED 2026-09-20: a plain Prizm title whose only Black mention is the trailing 1-of-1 " +
+      "parallel derives to panini-prizm, not panini-prizm-black (CF-BLACK-PRIZM-IS-A-PARALLEL-" +
+      "NOT-A-PRODUCT; see deriverStatedParallelAndNamedProduct.test.ts for the full class)",
     () => {
       const family = inferSetKeyFromTitle(
         "2024-25 Panini Prizm Basketball Victor Wembanyama Black Prizm 1/1",
         "1",
       );
-      expect(normalizeSetKey(family, "basketball")).toBe("panini-prizm-black");
+      expect(normalizeSetKey(family, "basketball")).toBe("panini-prizm");
     },
   );
 
