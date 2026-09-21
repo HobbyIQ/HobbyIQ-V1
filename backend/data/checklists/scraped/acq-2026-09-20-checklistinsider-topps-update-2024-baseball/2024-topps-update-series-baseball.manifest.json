@@ -41,6 +41,7 @@
     { "parallel": "Platinum", "printRun": 1 },
     { "parallel": "Printing Plates", "printRun": 1 }
   ],
+  "rungsMintedCount": 24,
   "notMinted": {
     "holidayValueBlasterParallels": {
       "names": ["Jack O'Lantern", "Ghost", "Mummy", "Black Cat", "Witches Hat", "Bats"],
@@ -50,6 +51,7 @@
       "reason": "Named insert/autograph/relic sets (All Class, Autumn Tales, Let Him Cook, Mystical, Stratospheric Stars, 1989 Topps Baseball, First Pitch, Topps Black Gold, Heavy Lumber, etc.) are out of scope for this base-ladder package."
     }
   },
+  "spellingAudit": "Cross-checked every rung name in this ladder against backend/data/checklist-parallel-names.json's topps-family entries and every other staged Topps CSV in the repo. No word-order or spelling collision found for any rung in this package (apostrophe-only variants confirmed to slug identically).",
   "selectCardsOnlyAudit": "Verified against the source page's own prose: no 'select cards only' language appears for any base-ladder rung on this page (unlike the Update Series' own Golden Mirror Autographs insert, which is odds-restricted but not part of this base rung set). All 24 rungs above apply to the full 350-card base run; distribution-only notes (Hanger/Jumbo/Retail/Super Box/Fanatics exclusive) are NOT roster restrictions per R40 and are recorded as notes.",
   "cardNumberRangeVerified": "US1-US350, no gaps found in the source's own workbook.",
   "provenance": {

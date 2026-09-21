@@ -5,7 +5,7 @@ base,US1,Holo Foil,false,,Kristian Campbell
 base,US1,Pink Diamante Foil,false,,Kristian Campbell
 base,US1,Sandglitter,false,,Kristian Campbell
 base,US1,Silver Crackle Foil,false,,Kristian Campbell
-base,US1,Topps Foil Pattern,false,,Kristian Campbell
+base,US1,Topps Pattern Foil,false,,Kristian Campbell
 base,US1,Gold Border,false,2025,Kristian Campbell
 base,US1,Rainbow Foil,false,,Kristian Campbell
 base,US1,Aqua Rainbow Foil,false,,Kristian Campbell
@@ -45,7 +45,7 @@ base,US2,Holo Foil,false,,Zac Veen
 base,US2,Pink Diamante Foil,false,,Zac Veen
 base,US2,Sandglitter,false,,Zac Veen
 base,US2,Silver Crackle Foil,false,,Zac Veen
-base,US2,Topps Foil Pattern,false,,Zac Veen
+base,US2,Topps Pattern Foil,false,,Zac Veen
 base,US2,Gold Border,false,2025,Zac Veen
 base,US2,Rainbow Foil,false,,Zac Veen
 base,US2,Aqua Rainbow Foil,false,,Zac Veen
@@ -85,7 +85,7 @@ base,US3,Holo Foil,false,,Jamie Westbrook
 base,US3,Pink Diamante Foil,false,,Jamie Westbrook
 base,US3,Sandglitter,false,,Jamie Westbrook
 base,US3,Silver Crackle Foil,false,,Jamie Westbrook
-base,US3,Topps Foil Pattern,false,,Jamie Westbrook
+base,US3,Topps Pattern Foil,false,,Jamie Westbrook
 base,US3,Gold Border,false,2025,Jamie Westbrook
 base,US3,Rainbow Foil,false,,Jamie Westbrook
 base,US3,Aqua Rainbow Foil,false,,Jamie Westbrook
@@ -125,7 +125,7 @@ base,US4,Holo Foil,false,,Alex Verdugo
 base,US4,Pink Diamante Foil,false,,Alex Verdugo
 base,US4,Sandglitter,false,,Alex Verdugo
 base,US4,Silver Crackle Foil,false,,Alex Verdugo
-base,US4,Topps Foil Pattern,false,,Alex Verdugo
+base,US4,Topps Pattern Foil,false,,Alex Verdugo
 base,US4,Gold Border,false,2025,Alex Verdugo
 base,US4,Rainbow Foil,false,,Alex Verdugo
 base,US4,Aqua Rainbow Foil,false,,Alex Verdugo
@@ -165,7 +165,7 @@ base,US5,Holo Foil,false,,Jeff Criswell
 base,US5,Pink Diamante Foil,false,,Jeff Criswell
 base,US5,Sandglitter,false,,Jeff Criswell
 base,US5,Silver Crackle Foil,false,,Jeff Criswell
-base,US5,Topps Foil Pattern,false,,Jeff Criswell
+base,US5,Topps Pattern Foil,false,,Jeff Criswell
 base,US5,Gold Border,false,2025,Jeff Criswell
 base,US5,Rainbow Foil,false,,Jeff Criswell
 base,US5,Aqua Rainbow Foil,false,,Jeff Criswell
@@ -205,7 +205,7 @@ base,US6,Holo Foil,false,,Levi Jordan
 base,US6,Pink Diamante Foil,false,,Levi Jordan
 base,US6,Sandglitter,false,,Levi Jordan
 base,US6,Silver Crackle Foil,false,,Levi Jordan
-base,US6,Topps Foil Pattern,false,,Levi Jordan
+base,US6,Topps Pattern Foil,false,,Levi Jordan
 base,US6,Gold Border,false,2025,Levi Jordan
 base,US6,Rainbow Foil,false,,Levi Jordan
 base,US6,Aqua Rainbow Foil,false,,Levi Jordan
@@ -245,7 +245,7 @@ base,US7,Holo Foil,false,,Christian Vázquez
 base,US7,Pink Diamante Foil,false,,Christian Vázquez
 base,US7,Sandglitter,false,,Christian Vázquez
 base,US7,Silver Crackle Foil,false,,Christian Vázquez
-base,US7,Topps Foil Pattern,false,,Christian Vázquez
+base,US7,Topps Pattern Foil,false,,Christian Vázquez
 base,US7,Gold Border,false,2025,Christian Vázquez
 base,US7,Rainbow Foil,false,,Christian Vázquez
 base,US7,Aqua Rainbow Foil,false,,Christian Vázquez
@@ -285,7 +285,7 @@ base,US8,Holo Foil,false,,Tanner Gordon
 base,US8,Pink Diamante Foil,false,,Tanner Gordon
 base,US8,Sandglitter,false,,Tanner Gordon
 base,US8,Silver Crackle Foil,false,,Tanner Gordon
-base,US8,Topps Foil Pattern,false,,Tanner Gordon
+base,US8,Topps Pattern Foil,false,,Tanner Gordon
 base,US8,Gold Border,false,2025,Tanner Gordon
 base,US8,Rainbow Foil,false,,Tanner Gordon
 base,US8,Aqua Rainbow Foil,false,,Tanner Gordon
@@ -325,7 +325,7 @@ base,US9,Holo Foil,false,,Jeff Hoffman
 base,US9,Pink Diamante Foil,false,,Jeff Hoffman
 base,US9,Sandglitter,false,,Jeff Hoffman
 base,US9,Silver Crackle Foil,false,,Jeff Hoffman
-base,US9,Topps Foil Pattern,false,,Jeff Hoffman
+base,US9,Topps Pattern Foil,false,,Jeff Hoffman
 base,US9,Gold Border,false,2025,Jeff Hoffman
 base,US9,Rainbow Foil,false,,Jeff Hoffman
 base,US9,Aqua Rainbow Foil,false,,Jeff Hoffman
@@ -365,7 +365,7 @@ base,US10,Holo Foil,false,,Alejandro Osuna
 base,US10,Pink Diamante Foil,false,,Alejandro Osuna
 base,US10,Sandglitter,false,,Alejandro Osuna
 base,US10,Silver Crackle Foil,false,,Alejandro Osuna
-base,US10,Topps Foil Pattern,false,,Alejandro Osuna
+base,US10,Topps Pattern Foil,false,,Alejandro Osuna
 base,US10,Gold Border,false,2025,Alejandro Osuna
 base,US10,Rainbow Foil,false,,Alejandro Osuna
 base,US10,Aqua Rainbow Foil,false,,Alejandro Osuna
@@ -405,7 +405,7 @@ base,US11,Holo Foil,false,,Agustín Ramírez
 base,US11,Pink Diamante Foil,false,,Agustín Ramírez
 base,US11,Sandglitter,false,,Agustín Ramírez
 base,US11,Silver Crackle Foil,false,,Agustín Ramírez
-base,US11,Topps Foil Pattern,false,,Agustín Ramírez
+base,US11,Topps Pattern Foil,false,,Agustín Ramírez
 base,US11,Gold Border,false,2025,Agustín Ramírez
 base,US11,Rainbow Foil,false,,Agustín Ramírez
 base,US11,Aqua Rainbow Foil,false,,Agustín Ramírez
@@ -445,7 +445,7 @@ base,US12,Holo Foil,false,,Andrés Muñoz
 base,US12,Pink Diamante Foil,false,,Andrés Muñoz
 base,US12,Sandglitter,false,,Andrés Muñoz
 base,US12,Silver Crackle Foil,false,,Andrés Muñoz
-base,US12,Topps Foil Pattern,false,,Andrés Muñoz
+base,US12,Topps Pattern Foil,false,,Andrés Muñoz
 base,US12,Gold Border,false,2025,Andrés Muñoz
 base,US12,Rainbow Foil,false,,Andrés Muñoz
 base,US12,Aqua Rainbow Foil,false,,Andrés Muñoz
@@ -485,7 +485,7 @@ base,US13,Holo Foil,false,,Jose Trevino
 base,US13,Pink Diamante Foil,false,,Jose Trevino
 base,US13,Sandglitter,false,,Jose Trevino
 base,US13,Silver Crackle Foil,false,,Jose Trevino
-base,US13,Topps Foil Pattern,false,,Jose Trevino
+base,US13,Topps Pattern Foil,false,,Jose Trevino
 base,US13,Gold Border,false,2025,Jose Trevino
 base,US13,Rainbow Foil,false,,Jose Trevino
 base,US13,Aqua Rainbow Foil,false,,Jose Trevino
@@ -525,7 +525,7 @@ base,US14,Holo Foil,false,,Denzel Clarke
 base,US14,Pink Diamante Foil,false,,Denzel Clarke
 base,US14,Sandglitter,false,,Denzel Clarke
 base,US14,Silver Crackle Foil,false,,Denzel Clarke
-base,US14,Topps Foil Pattern,false,,Denzel Clarke
+base,US14,Topps Pattern Foil,false,,Denzel Clarke
 base,US14,Gold Border,false,2025,Denzel Clarke
 base,US14,Rainbow Foil,false,,Denzel Clarke
 base,US14,Aqua Rainbow Foil,false,,Denzel Clarke
@@ -565,7 +565,7 @@ base,US15,Holo Foil,false,,Kyren Paris
 base,US15,Pink Diamante Foil,false,,Kyren Paris
 base,US15,Sandglitter,false,,Kyren Paris
 base,US15,Silver Crackle Foil,false,,Kyren Paris
-base,US15,Topps Foil Pattern,false,,Kyren Paris
+base,US15,Topps Pattern Foil,false,,Kyren Paris
 base,US15,Gold Border,false,2025,Kyren Paris
 base,US15,Rainbow Foil,false,,Kyren Paris
 base,US15,Aqua Rainbow Foil,false,,Kyren Paris
@@ -605,7 +605,7 @@ base,US16,Holo Foil,false,,Luke Keaschall
 base,US16,Pink Diamante Foil,false,,Luke Keaschall
 base,US16,Sandglitter,false,,Luke Keaschall
 base,US16,Silver Crackle Foil,false,,Luke Keaschall
-base,US16,Topps Foil Pattern,false,,Luke Keaschall
+base,US16,Topps Pattern Foil,false,,Luke Keaschall
 base,US16,Gold Border,false,2025,Luke Keaschall
 base,US16,Rainbow Foil,false,,Luke Keaschall
 base,US16,Aqua Rainbow Foil,false,,Luke Keaschall
@@ -645,7 +645,7 @@ base,US17,Holo Foil,false,,Garrett McDaniels
 base,US17,Pink Diamante Foil,false,,Garrett McDaniels
 base,US17,Sandglitter,false,,Garrett McDaniels
 base,US17,Silver Crackle Foil,false,,Garrett McDaniels
-base,US17,Topps Foil Pattern,false,,Garrett McDaniels
+base,US17,Topps Pattern Foil,false,,Garrett McDaniels
 base,US17,Gold Border,false,2025,Garrett McDaniels
 base,US17,Rainbow Foil,false,,Garrett McDaniels
 base,US17,Aqua Rainbow Foil,false,,Garrett McDaniels
@@ -685,7 +685,7 @@ base,US18,Holo Foil,false,,Evan Phillips
 base,US18,Pink Diamante Foil,false,,Evan Phillips
 base,US18,Sandglitter,false,,Evan Phillips
 base,US18,Silver Crackle Foil,false,,Evan Phillips
-base,US18,Topps Foil Pattern,false,,Evan Phillips
+base,US18,Topps Pattern Foil,false,,Evan Phillips
 base,US18,Gold Border,false,2025,Evan Phillips
 base,US18,Rainbow Foil,false,,Evan Phillips
 base,US18,Aqua Rainbow Foil,false,,Evan Phillips
@@ -725,7 +725,7 @@ base,US19,Holo Foil,false,,Rowdy Tellez
 base,US19,Pink Diamante Foil,false,,Rowdy Tellez
 base,US19,Sandglitter,false,,Rowdy Tellez
 base,US19,Silver Crackle Foil,false,,Rowdy Tellez
-base,US19,Topps Foil Pattern,false,,Rowdy Tellez
+base,US19,Topps Pattern Foil,false,,Rowdy Tellez
 base,US19,Gold Border,false,2025,Rowdy Tellez
 base,US19,Rainbow Foil,false,,Rowdy Tellez
 base,US19,Aqua Rainbow Foil,false,,Rowdy Tellez
@@ -765,7 +765,7 @@ base,US20,Holo Foil,false,,Mitch Spence
 base,US20,Pink Diamante Foil,false,,Mitch Spence
 base,US20,Sandglitter,false,,Mitch Spence
 base,US20,Silver Crackle Foil,false,,Mitch Spence
-base,US20,Topps Foil Pattern,false,,Mitch Spence
+base,US20,Topps Pattern Foil,false,,Mitch Spence
 base,US20,Gold Border,false,2025,Mitch Spence
 base,US20,Rainbow Foil,false,,Mitch Spence
 base,US20,Aqua Rainbow Foil,false,,Mitch Spence
@@ -805,7 +805,7 @@ base,US21,Holo Foil,false,,Thomas Saggese
 base,US21,Pink Diamante Foil,false,,Thomas Saggese
 base,US21,Sandglitter,false,,Thomas Saggese
 base,US21,Silver Crackle Foil,false,,Thomas Saggese
-base,US21,Topps Foil Pattern,false,,Thomas Saggese
+base,US21,Topps Pattern Foil,false,,Thomas Saggese
 base,US21,Gold Border,false,2025,Thomas Saggese
 base,US21,Rainbow Foil,false,,Thomas Saggese
 base,US21,Aqua Rainbow Foil,false,,Thomas Saggese
@@ -845,7 +845,7 @@ base,US22,Holo Foil,false,,Blade Tidwell
 base,US22,Pink Diamante Foil,false,,Blade Tidwell
 base,US22,Sandglitter,false,,Blade Tidwell
 base,US22,Silver Crackle Foil,false,,Blade Tidwell
-base,US22,Topps Foil Pattern,false,,Blade Tidwell
+base,US22,Topps Pattern Foil,false,,Blade Tidwell
 base,US22,Gold Border,false,2025,Blade Tidwell
 base,US22,Rainbow Foil,false,,Blade Tidwell
 base,US22,Aqua Rainbow Foil,false,,Blade Tidwell
@@ -885,7 +885,7 @@ base,US23,Holo Foil,false,,Gio Urshela
 base,US23,Pink Diamante Foil,false,,Gio Urshela
 base,US23,Sandglitter,false,,Gio Urshela
 base,US23,Silver Crackle Foil,false,,Gio Urshela
-base,US23,Topps Foil Pattern,false,,Gio Urshela
+base,US23,Topps Pattern Foil,false,,Gio Urshela
 base,US23,Gold Border,false,2025,Gio Urshela
 base,US23,Rainbow Foil,false,,Gio Urshela
 base,US23,Aqua Rainbow Foil,false,,Gio Urshela
@@ -925,7 +925,7 @@ base,US24,Holo Foil,false,,Yoán Moncada
 base,US24,Pink Diamante Foil,false,,Yoán Moncada
 base,US24,Sandglitter,false,,Yoán Moncada
 base,US24,Silver Crackle Foil,false,,Yoán Moncada
-base,US24,Topps Foil Pattern,false,,Yoán Moncada
+base,US24,Topps Pattern Foil,false,,Yoán Moncada
 base,US24,Gold Border,false,2025,Yoán Moncada
 base,US24,Rainbow Foil,false,,Yoán Moncada
 base,US24,Aqua Rainbow Foil,false,,Yoán Moncada
@@ -965,7 +965,7 @@ base,US25,Holo Foil,false,,Ben Rice
 base,US25,Pink Diamante Foil,false,,Ben Rice
 base,US25,Sandglitter,false,,Ben Rice
 base,US25,Silver Crackle Foil,false,,Ben Rice
-base,US25,Topps Foil Pattern,false,,Ben Rice
+base,US25,Topps Pattern Foil,false,,Ben Rice
 base,US25,Gold Border,false,2025,Ben Rice
 base,US25,Rainbow Foil,false,,Ben Rice
 base,US25,Aqua Rainbow Foil,false,,Ben Rice
@@ -1005,7 +1005,7 @@ base,US26,Holo Foil,false,,José Ramírez
 base,US26,Pink Diamante Foil,false,,José Ramírez
 base,US26,Sandglitter,false,,José Ramírez
 base,US26,Silver Crackle Foil,false,,José Ramírez
-base,US26,Topps Foil Pattern,false,,José Ramírez
+base,US26,Topps Pattern Foil,false,,José Ramírez
 base,US26,Gold Border,false,2025,José Ramírez
 base,US26,Rainbow Foil,false,,José Ramírez
 base,US26,Aqua Rainbow Foil,false,,José Ramírez
@@ -1045,7 +1045,7 @@ base,US27,Holo Foil,false,,Justin Turner
 base,US27,Pink Diamante Foil,false,,Justin Turner
 base,US27,Sandglitter,false,,Justin Turner
 base,US27,Silver Crackle Foil,false,,Justin Turner
-base,US27,Topps Foil Pattern,false,,Justin Turner
+base,US27,Topps Pattern Foil,false,,Justin Turner
 base,US27,Gold Border,false,2025,Justin Turner
 base,US27,Rainbow Foil,false,,Justin Turner
 base,US27,Aqua Rainbow Foil,false,,Justin Turner
@@ -1085,7 +1085,7 @@ base,US28,Holo Foil,false,,Grant Koch
 base,US28,Pink Diamante Foil,false,,Grant Koch
 base,US28,Sandglitter,false,,Grant Koch
 base,US28,Silver Crackle Foil,false,,Grant Koch
-base,US28,Topps Foil Pattern,false,,Grant Koch
+base,US28,Topps Pattern Foil,false,,Grant Koch
 base,US28,Gold Border,false,2025,Grant Koch
 base,US28,Rainbow Foil,false,,Grant Koch
 base,US28,Aqua Rainbow Foil,false,,Grant Koch
@@ -1125,7 +1125,7 @@ base,US29,Holo Foil,false,,Luis Matos
 base,US29,Pink Diamante Foil,false,,Luis Matos
 base,US29,Sandglitter,false,,Luis Matos
 base,US29,Silver Crackle Foil,false,,Luis Matos
-base,US29,Topps Foil Pattern,false,,Luis Matos
+base,US29,Topps Pattern Foil,false,,Luis Matos
 base,US29,Gold Border,false,2025,Luis Matos
 base,US29,Rainbow Foil,false,,Luis Matos
 base,US29,Aqua Rainbow Foil,false,,Luis Matos
@@ -1165,7 +1165,7 @@ base,US30,Holo Foil,false,,Eric Haase
 base,US30,Pink Diamante Foil,false,,Eric Haase
 base,US30,Sandglitter,false,,Eric Haase
 base,US30,Silver Crackle Foil,false,,Eric Haase
-base,US30,Topps Foil Pattern,false,,Eric Haase
+base,US30,Topps Pattern Foil,false,,Eric Haase
 base,US30,Gold Border,false,2025,Eric Haase
 base,US30,Rainbow Foil,false,,Eric Haase
 base,US30,Aqua Rainbow Foil,false,,Eric Haase
@@ -1205,7 +1205,7 @@ base,US31,Holo Foil,false,,Zach Agnos
 base,US31,Pink Diamante Foil,false,,Zach Agnos
 base,US31,Sandglitter,false,,Zach Agnos
 base,US31,Silver Crackle Foil,false,,Zach Agnos
-base,US31,Topps Foil Pattern,false,,Zach Agnos
+base,US31,Topps Pattern Foil,false,,Zach Agnos
 base,US31,Gold Border,false,2025,Zach Agnos
 base,US31,Rainbow Foil,false,,Zach Agnos
 base,US31,Aqua Rainbow Foil,false,,Zach Agnos
@@ -1245,7 +1245,7 @@ base,US32,Holo Foil,false,,Braxton Ashcraft
 base,US32,Pink Diamante Foil,false,,Braxton Ashcraft
 base,US32,Sandglitter,false,,Braxton Ashcraft
 base,US32,Silver Crackle Foil,false,,Braxton Ashcraft
-base,US32,Topps Foil Pattern,false,,Braxton Ashcraft
+base,US32,Topps Pattern Foil,false,,Braxton Ashcraft
 base,US32,Gold Border,false,2025,Braxton Ashcraft
 base,US32,Rainbow Foil,false,,Braxton Ashcraft
 base,US32,Aqua Rainbow Foil,false,,Braxton Ashcraft
@@ -1285,7 +1285,7 @@ base,US33,Holo Foil,false,,Travis d'Arnaud
 base,US33,Pink Diamante Foil,false,,Travis d'Arnaud
 base,US33,Sandglitter,false,,Travis d'Arnaud
 base,US33,Silver Crackle Foil,false,,Travis d'Arnaud
-base,US33,Topps Foil Pattern,false,,Travis d'Arnaud
+base,US33,Topps Pattern Foil,false,,Travis d'Arnaud
 base,US33,Gold Border,false,2025,Travis d'Arnaud
 base,US33,Rainbow Foil,false,,Travis d'Arnaud
 base,US33,Aqua Rainbow Foil,false,,Travis d'Arnaud
@@ -1325,7 +1325,7 @@ base,US34,Holo Foil,false,,Hayden Birdsong
 base,US34,Pink Diamante Foil,false,,Hayden Birdsong
 base,US34,Sandglitter,false,,Hayden Birdsong
 base,US34,Silver Crackle Foil,false,,Hayden Birdsong
-base,US34,Topps Foil Pattern,false,,Hayden Birdsong
+base,US34,Topps Pattern Foil,false,,Hayden Birdsong
 base,US34,Gold Border,false,2025,Hayden Birdsong
 base,US34,Rainbow Foil,false,,Hayden Birdsong
 base,US34,Aqua Rainbow Foil,false,,Hayden Birdsong
@@ -1365,7 +1365,7 @@ base,US35,Holo Foil,false,,Steven Matz
 base,US35,Pink Diamante Foil,false,,Steven Matz
 base,US35,Sandglitter,false,,Steven Matz
 base,US35,Silver Crackle Foil,false,,Steven Matz
-base,US35,Topps Foil Pattern,false,,Steven Matz
+base,US35,Topps Pattern Foil,false,,Steven Matz
 base,US35,Gold Border,false,2025,Steven Matz
 base,US35,Rainbow Foil,false,,Steven Matz
 base,US35,Aqua Rainbow Foil,false,,Steven Matz
@@ -1405,7 +1405,7 @@ base,US36,Holo Foil,false,,Luis Guerrero
 base,US36,Pink Diamante Foil,false,,Luis Guerrero
 base,US36,Sandglitter,false,,Luis Guerrero
 base,US36,Silver Crackle Foil,false,,Luis Guerrero
-base,US36,Topps Foil Pattern,false,,Luis Guerrero
+base,US36,Topps Pattern Foil,false,,Luis Guerrero
 base,US36,Gold Border,false,2025,Luis Guerrero
 base,US36,Rainbow Foil,false,,Luis Guerrero
 base,US36,Aqua Rainbow Foil,false,,Luis Guerrero
@@ -1445,7 +1445,7 @@ base,US37,Holo Foil,false,,Zebby Matthews
 base,US37,Pink Diamante Foil,false,,Zebby Matthews
 base,US37,Sandglitter,false,,Zebby Matthews
 base,US37,Silver Crackle Foil,false,,Zebby Matthews
-base,US37,Topps Foil Pattern,false,,Zebby Matthews
+base,US37,Topps Pattern Foil,false,,Zebby Matthews
 base,US37,Gold Border,false,2025,Zebby Matthews
 base,US37,Rainbow Foil,false,,Zebby Matthews
 base,US37,Aqua Rainbow Foil,false,,Zebby Matthews
@@ -1485,7 +1485,7 @@ base,US38,Holo Foil,false,,Dalton Rushing
 base,US38,Pink Diamante Foil,false,,Dalton Rushing
 base,US38,Sandglitter,false,,Dalton Rushing
 base,US38,Silver Crackle Foil,false,,Dalton Rushing
-base,US38,Topps Foil Pattern,false,,Dalton Rushing
+base,US38,Topps Pattern Foil,false,,Dalton Rushing
 base,US38,Gold Border,false,2025,Dalton Rushing
 base,US38,Rainbow Foil,false,,Dalton Rushing
 base,US38,Aqua Rainbow Foil,false,,Dalton Rushing
@@ -1525,7 +1525,7 @@ base,US39,Holo Foil,false,,Brad Lord
 base,US39,Pink Diamante Foil,false,,Brad Lord
 base,US39,Sandglitter,false,,Brad Lord
 base,US39,Silver Crackle Foil,false,,Brad Lord
-base,US39,Topps Foil Pattern,false,,Brad Lord
+base,US39,Topps Pattern Foil,false,,Brad Lord
 base,US39,Gold Border,false,2025,Brad Lord
 base,US39,Rainbow Foil,false,,Brad Lord
 base,US39,Aqua Rainbow Foil,false,,Brad Lord
@@ -1565,7 +1565,7 @@ base,US40,Holo Foil,false,,Griffin Canning
 base,US40,Pink Diamante Foil,false,,Griffin Canning
 base,US40,Sandglitter,false,,Griffin Canning
 base,US40,Silver Crackle Foil,false,,Griffin Canning
-base,US40,Topps Foil Pattern,false,,Griffin Canning
+base,US40,Topps Pattern Foil,false,,Griffin Canning
 base,US40,Gold Border,false,2025,Griffin Canning
 base,US40,Rainbow Foil,false,,Griffin Canning
 base,US40,Aqua Rainbow Foil,false,,Griffin Canning
@@ -1605,7 +1605,7 @@ base,US41,Holo Foil,false,,Curtis Mead
 base,US41,Pink Diamante Foil,false,,Curtis Mead
 base,US41,Sandglitter,false,,Curtis Mead
 base,US41,Silver Crackle Foil,false,,Curtis Mead
-base,US41,Topps Foil Pattern,false,,Curtis Mead
+base,US41,Topps Pattern Foil,false,,Curtis Mead
 base,US41,Gold Border,false,2025,Curtis Mead
 base,US41,Rainbow Foil,false,,Curtis Mead
 base,US41,Aqua Rainbow Foil,false,,Curtis Mead
@@ -1645,7 +1645,7 @@ base,US42,Holo Foil,false,,Manuel Margot
 base,US42,Pink Diamante Foil,false,,Manuel Margot
 base,US42,Sandglitter,false,,Manuel Margot
 base,US42,Silver Crackle Foil,false,,Manuel Margot
-base,US42,Topps Foil Pattern,false,,Manuel Margot
+base,US42,Topps Pattern Foil,false,,Manuel Margot
 base,US42,Gold Border,false,2025,Manuel Margot
 base,US42,Rainbow Foil,false,,Manuel Margot
 base,US42,Aqua Rainbow Foil,false,,Manuel Margot
@@ -1685,7 +1685,7 @@ base,US43,Holo Foil,false,,Mike Tauchman
 base,US43,Pink Diamante Foil,false,,Mike Tauchman
 base,US43,Sandglitter,false,,Mike Tauchman
 base,US43,Silver Crackle Foil,false,,Mike Tauchman
-base,US43,Topps Foil Pattern,false,,Mike Tauchman
+base,US43,Topps Pattern Foil,false,,Mike Tauchman
 base,US43,Gold Border,false,2025,Mike Tauchman
 base,US43,Rainbow Foil,false,,Mike Tauchman
 base,US43,Aqua Rainbow Foil,false,,Mike Tauchman
@@ -1725,7 +1725,7 @@ base,US44,Holo Foil,false,,Doug Nikhazy
 base,US44,Pink Diamante Foil,false,,Doug Nikhazy
 base,US44,Sandglitter,false,,Doug Nikhazy
 base,US44,Silver Crackle Foil,false,,Doug Nikhazy
-base,US44,Topps Foil Pattern,false,,Doug Nikhazy
+base,US44,Topps Pattern Foil,false,,Doug Nikhazy
 base,US44,Gold Border,false,2025,Doug Nikhazy
 base,US44,Rainbow Foil,false,,Doug Nikhazy
 base,US44,Aqua Rainbow Foil,false,,Doug Nikhazy
@@ -1765,7 +1765,7 @@ base,US45,Holo Foil,false,,Cam Smith
 base,US45,Pink Diamante Foil,false,,Cam Smith
 base,US45,Sandglitter,false,,Cam Smith
 base,US45,Silver Crackle Foil,false,,Cam Smith
-base,US45,Topps Foil Pattern,false,,Cam Smith
+base,US45,Topps Pattern Foil,false,,Cam Smith
 base,US45,Gold Border,false,2025,Cam Smith
 base,US45,Rainbow Foil,false,,Cam Smith
 base,US45,Aqua Rainbow Foil,false,,Cam Smith
@@ -1805,7 +1805,7 @@ base,US46,Holo Foil,false,,Ryan Pressly
 base,US46,Pink Diamante Foil,false,,Ryan Pressly
 base,US46,Sandglitter,false,,Ryan Pressly
 base,US46,Silver Crackle Foil,false,,Ryan Pressly
-base,US46,Topps Foil Pattern,false,,Ryan Pressly
+base,US46,Topps Pattern Foil,false,,Ryan Pressly
 base,US46,Gold Border,false,2025,Ryan Pressly
 base,US46,Rainbow Foil,false,,Ryan Pressly
 base,US46,Aqua Rainbow Foil,false,,Ryan Pressly
@@ -1845,7 +1845,7 @@ base,US47,Holo Foil,false,,Chase Shugart
 base,US47,Pink Diamante Foil,false,,Chase Shugart
 base,US47,Sandglitter,false,,Chase Shugart
 base,US47,Silver Crackle Foil,false,,Chase Shugart
-base,US47,Topps Foil Pattern,false,,Chase Shugart
+base,US47,Topps Pattern Foil,false,,Chase Shugart
 base,US47,Gold Border,false,2025,Chase Shugart
 base,US47,Rainbow Foil,false,,Chase Shugart
 base,US47,Aqua Rainbow Foil,false,,Chase Shugart
@@ -1885,7 +1885,7 @@ base,US48,Holo Foil,false,,Matt Thaiss
 base,US48,Pink Diamante Foil,false,,Matt Thaiss
 base,US48,Sandglitter,false,,Matt Thaiss
 base,US48,Silver Crackle Foil,false,,Matt Thaiss
-base,US48,Topps Foil Pattern,false,,Matt Thaiss
+base,US48,Topps Pattern Foil,false,,Matt Thaiss
 base,US48,Gold Border,false,2025,Matt Thaiss
 base,US48,Rainbow Foil,false,,Matt Thaiss
 base,US48,Aqua Rainbow Foil,false,,Matt Thaiss
@@ -1925,7 +1925,7 @@ base,US49,Holo Foil,false,,Michael Petersen
 base,US49,Pink Diamante Foil,false,,Michael Petersen
 base,US49,Sandglitter,false,,Michael Petersen
 base,US49,Silver Crackle Foil,false,,Michael Petersen
-base,US49,Topps Foil Pattern,false,,Michael Petersen
+base,US49,Topps Pattern Foil,false,,Michael Petersen
 base,US49,Gold Border,false,2025,Michael Petersen
 base,US49,Rainbow Foil,false,,Michael Petersen
 base,US49,Aqua Rainbow Foil,false,,Michael Petersen
@@ -1965,7 +1965,7 @@ base,US50,Holo Foil,false,,Cody Bellinger
 base,US50,Pink Diamante Foil,false,,Cody Bellinger
 base,US50,Sandglitter,false,,Cody Bellinger
 base,US50,Silver Crackle Foil,false,,Cody Bellinger
-base,US50,Topps Foil Pattern,false,,Cody Bellinger
+base,US50,Topps Pattern Foil,false,,Cody Bellinger
 base,US50,Gold Border,false,2025,Cody Bellinger
 base,US50,Rainbow Foil,false,,Cody Bellinger
 base,US50,Aqua Rainbow Foil,false,,Cody Bellinger
@@ -2005,7 +2005,7 @@ base,US51,Holo Foil,false,,Adam Frazier
 base,US51,Pink Diamante Foil,false,,Adam Frazier
 base,US51,Sandglitter,false,,Adam Frazier
 base,US51,Silver Crackle Foil,false,,Adam Frazier
-base,US51,Topps Foil Pattern,false,,Adam Frazier
+base,US51,Topps Pattern Foil,false,,Adam Frazier
 base,US51,Gold Border,false,2025,Adam Frazier
 base,US51,Rainbow Foil,false,,Adam Frazier
 base,US51,Aqua Rainbow Foil,false,,Adam Frazier
@@ -2045,7 +2045,7 @@ base,US52,Holo Foil,false,,Liam Hicks
 base,US52,Pink Diamante Foil,false,,Liam Hicks
 base,US52,Sandglitter,false,,Liam Hicks
 base,US52,Silver Crackle Foil,false,,Liam Hicks
-base,US52,Topps Foil Pattern,false,,Liam Hicks
+base,US52,Topps Pattern Foil,false,,Liam Hicks
 base,US52,Gold Border,false,2025,Liam Hicks
 base,US52,Rainbow Foil,false,,Liam Hicks
 base,US52,Aqua Rainbow Foil,false,,Liam Hicks
@@ -2085,7 +2085,7 @@ base,US53,Holo Foil,false,,Luarbert Arias
 base,US53,Pink Diamante Foil,false,,Luarbert Arias
 base,US53,Sandglitter,false,,Luarbert Arias
 base,US53,Silver Crackle Foil,false,,Luarbert Arias
-base,US53,Topps Foil Pattern,false,,Luarbert Arias
+base,US53,Topps Pattern Foil,false,,Luarbert Arias
 base,US53,Gold Border,false,2025,Luarbert Arias
 base,US53,Rainbow Foil,false,,Luarbert Arias
 base,US53,Aqua Rainbow Foil,false,,Luarbert Arias
@@ -2125,7 +2125,7 @@ base,US54,Holo Foil,false,,Jared Triolo
 base,US54,Pink Diamante Foil,false,,Jared Triolo
 base,US54,Sandglitter,false,,Jared Triolo
 base,US54,Silver Crackle Foil,false,,Jared Triolo
-base,US54,Topps Foil Pattern,false,,Jared Triolo
+base,US54,Topps Pattern Foil,false,,Jared Triolo
 base,US54,Gold Border,false,2025,Jared Triolo
 base,US54,Rainbow Foil,false,,Jared Triolo
 base,US54,Aqua Rainbow Foil,false,,Jared Triolo
@@ -2165,7 +2165,7 @@ base,US55,Holo Foil,false,,Tomoyuki Sugano
 base,US55,Pink Diamante Foil,false,,Tomoyuki Sugano
 base,US55,Sandglitter,false,,Tomoyuki Sugano
 base,US55,Silver Crackle Foil,false,,Tomoyuki Sugano
-base,US55,Topps Foil Pattern,false,,Tomoyuki Sugano
+base,US55,Topps Pattern Foil,false,,Tomoyuki Sugano
 base,US55,Gold Border,false,2025,Tomoyuki Sugano
 base,US55,Rainbow Foil,false,,Tomoyuki Sugano
 base,US55,Aqua Rainbow Foil,false,,Tomoyuki Sugano
@@ -2205,7 +2205,7 @@ base,US56,Holo Foil,false,,Dominic Canzone
 base,US56,Pink Diamante Foil,false,,Dominic Canzone
 base,US56,Sandglitter,false,,Dominic Canzone
 base,US56,Silver Crackle Foil,false,,Dominic Canzone
-base,US56,Topps Foil Pattern,false,,Dominic Canzone
+base,US56,Topps Pattern Foil,false,,Dominic Canzone
 base,US56,Gold Border,false,2025,Dominic Canzone
 base,US56,Rainbow Foil,false,,Dominic Canzone
 base,US56,Aqua Rainbow Foil,false,,Dominic Canzone
@@ -2245,7 +2245,7 @@ base,US57,Holo Foil,false,,Michael Taylor
 base,US57,Pink Diamante Foil,false,,Michael Taylor
 base,US57,Sandglitter,false,,Michael Taylor
 base,US57,Silver Crackle Foil,false,,Michael Taylor
-base,US57,Topps Foil Pattern,false,,Michael Taylor
+base,US57,Topps Pattern Foil,false,,Michael Taylor
 base,US57,Gold Border,false,2025,Michael Taylor
 base,US57,Rainbow Foil,false,,Michael Taylor
 base,US57,Aqua Rainbow Foil,false,,Michael Taylor
@@ -2285,7 +2285,7 @@ base,US58,Holo Foil,false,,Connor Joe
 base,US58,Pink Diamante Foil,false,,Connor Joe
 base,US58,Sandglitter,false,,Connor Joe
 base,US58,Silver Crackle Foil,false,,Connor Joe
-base,US58,Topps Foil Pattern,false,,Connor Joe
+base,US58,Topps Pattern Foil,false,,Connor Joe
 base,US58,Gold Border,false,2025,Connor Joe
 base,US58,Rainbow Foil,false,,Connor Joe
 base,US58,Aqua Rainbow Foil,false,,Connor Joe
@@ -2325,7 +2325,7 @@ base,US59,Holo Foil,false,,Caleb Durbin
 base,US59,Pink Diamante Foil,false,,Caleb Durbin
 base,US59,Sandglitter,false,,Caleb Durbin
 base,US59,Silver Crackle Foil,false,,Caleb Durbin
-base,US59,Topps Foil Pattern,false,,Caleb Durbin
+base,US59,Topps Pattern Foil,false,,Caleb Durbin
 base,US59,Gold Border,false,2025,Caleb Durbin
 base,US59,Rainbow Foil,false,,Caleb Durbin
 base,US59,Aqua Rainbow Foil,false,,Caleb Durbin
@@ -2365,7 +2365,7 @@ base,US60,Holo Foil,false,,Michael McGreevy
 base,US60,Pink Diamante Foil,false,,Michael McGreevy
 base,US60,Sandglitter,false,,Michael McGreevy
 base,US60,Silver Crackle Foil,false,,Michael McGreevy
-base,US60,Topps Foil Pattern,false,,Michael McGreevy
+base,US60,Topps Pattern Foil,false,,Michael McGreevy
 base,US60,Gold Border,false,2025,Michael McGreevy
 base,US60,Rainbow Foil,false,,Michael McGreevy
 base,US60,Aqua Rainbow Foil,false,,Michael McGreevy
@@ -2405,7 +2405,7 @@ base,US61,Holo Foil,false,,Elvis Alvarado
 base,US61,Pink Diamante Foil,false,,Elvis Alvarado
 base,US61,Sandglitter,false,,Elvis Alvarado
 base,US61,Silver Crackle Foil,false,,Elvis Alvarado
-base,US61,Topps Foil Pattern,false,,Elvis Alvarado
+base,US61,Topps Pattern Foil,false,,Elvis Alvarado
 base,US61,Gold Border,false,2025,Elvis Alvarado
 base,US61,Rainbow Foil,false,,Elvis Alvarado
 base,US61,Aqua Rainbow Foil,false,,Elvis Alvarado
@@ -2445,7 +2445,7 @@ base,US62,Holo Foil,false,,Joe Boyle
 base,US62,Pink Diamante Foil,false,,Joe Boyle
 base,US62,Sandglitter,false,,Joe Boyle
 base,US62,Silver Crackle Foil,false,,Joe Boyle
-base,US62,Topps Foil Pattern,false,,Joe Boyle
+base,US62,Topps Pattern Foil,false,,Joe Boyle
 base,US62,Gold Border,false,2025,Joe Boyle
 base,US62,Rainbow Foil,false,,Joe Boyle
 base,US62,Aqua Rainbow Foil,false,,Joe Boyle
@@ -2485,7 +2485,7 @@ base,US63,Holo Foil,false,,Connor Thomas
 base,US63,Pink Diamante Foil,false,,Connor Thomas
 base,US63,Sandglitter,false,,Connor Thomas
 base,US63,Silver Crackle Foil,false,,Connor Thomas
-base,US63,Topps Foil Pattern,false,,Connor Thomas
+base,US63,Topps Pattern Foil,false,,Connor Thomas
 base,US63,Gold Border,false,2025,Connor Thomas
 base,US63,Rainbow Foil,false,,Connor Thomas
 base,US63,Aqua Rainbow Foil,false,,Connor Thomas
@@ -2525,7 +2525,7 @@ base,US64,Holo Foil,false,,Ji Hwan Bae
 base,US64,Pink Diamante Foil,false,,Ji Hwan Bae
 base,US64,Sandglitter,false,,Ji Hwan Bae
 base,US64,Silver Crackle Foil,false,,Ji Hwan Bae
-base,US64,Topps Foil Pattern,false,,Ji Hwan Bae
+base,US64,Topps Pattern Foil,false,,Ji Hwan Bae
 base,US64,Gold Border,false,2025,Ji Hwan Bae
 base,US64,Rainbow Foil,false,,Ji Hwan Bae
 base,US64,Aqua Rainbow Foil,false,,Ji Hwan Bae
@@ -2565,7 +2565,7 @@ base,US65,Holo Foil,false,,Noah Cameron
 base,US65,Pink Diamante Foil,false,,Noah Cameron
 base,US65,Sandglitter,false,,Noah Cameron
 base,US65,Silver Crackle Foil,false,,Noah Cameron
-base,US65,Topps Foil Pattern,false,,Noah Cameron
+base,US65,Topps Pattern Foil,false,,Noah Cameron
 base,US65,Gold Border,false,2025,Noah Cameron
 base,US65,Rainbow Foil,false,,Noah Cameron
 base,US65,Aqua Rainbow Foil,false,,Noah Cameron
@@ -2605,7 +2605,7 @@ base,US66,Holo Foil,false,,Zack Littell
 base,US66,Pink Diamante Foil,false,,Zack Littell
 base,US66,Sandglitter,false,,Zack Littell
 base,US66,Silver Crackle Foil,false,,Zack Littell
-base,US66,Topps Foil Pattern,false,,Zack Littell
+base,US66,Topps Pattern Foil,false,,Zack Littell
 base,US66,Gold Border,false,2025,Zack Littell
 base,US66,Rainbow Foil,false,,Zack Littell
 base,US66,Aqua Rainbow Foil,false,,Zack Littell
@@ -2645,7 +2645,7 @@ base,US67,Holo Foil,false,,Nic Enright
 base,US67,Pink Diamante Foil,false,,Nic Enright
 base,US67,Sandglitter,false,,Nic Enright
 base,US67,Silver Crackle Foil,false,,Nic Enright
-base,US67,Topps Foil Pattern,false,,Nic Enright
+base,US67,Topps Pattern Foil,false,,Nic Enright
 base,US67,Gold Border,false,2025,Nic Enright
 base,US67,Rainbow Foil,false,,Nic Enright
 base,US67,Aqua Rainbow Foil,false,,Nic Enright
@@ -2685,7 +2685,7 @@ base,US68,Holo Foil,false,,Matt Mervis
 base,US68,Pink Diamante Foil,false,,Matt Mervis
 base,US68,Sandglitter,false,,Matt Mervis
 base,US68,Silver Crackle Foil,false,,Matt Mervis
-base,US68,Topps Foil Pattern,false,,Matt Mervis
+base,US68,Topps Pattern Foil,false,,Matt Mervis
 base,US68,Gold Border,false,2025,Matt Mervis
 base,US68,Rainbow Foil,false,,Matt Mervis
 base,US68,Aqua Rainbow Foil,false,,Matt Mervis
@@ -2725,7 +2725,7 @@ base,US69,Holo Foil,false,,Nick Pivetta
 base,US69,Pink Diamante Foil,false,,Nick Pivetta
 base,US69,Sandglitter,false,,Nick Pivetta
 base,US69,Silver Crackle Foil,false,,Nick Pivetta
-base,US69,Topps Foil Pattern,false,,Nick Pivetta
+base,US69,Topps Pattern Foil,false,,Nick Pivetta
 base,US69,Gold Border,false,2025,Nick Pivetta
 base,US69,Rainbow Foil,false,,Nick Pivetta
 base,US69,Aqua Rainbow Foil,false,,Nick Pivetta
@@ -2765,7 +2765,7 @@ base,US70,Holo Foil,false,,Dustin May
 base,US70,Pink Diamante Foil,false,,Dustin May
 base,US70,Sandglitter,false,,Dustin May
 base,US70,Silver Crackle Foil,false,,Dustin May
-base,US70,Topps Foil Pattern,false,,Dustin May
+base,US70,Topps Pattern Foil,false,,Dustin May
 base,US70,Gold Border,false,2025,Dustin May
 base,US70,Rainbow Foil,false,,Dustin May
 base,US70,Aqua Rainbow Foil,false,,Dustin May
@@ -2805,7 +2805,7 @@ base,US71,Holo Foil,false,,Jason Heyward
 base,US71,Pink Diamante Foil,false,,Jason Heyward
 base,US71,Sandglitter,false,,Jason Heyward
 base,US71,Silver Crackle Foil,false,,Jason Heyward
-base,US71,Topps Foil Pattern,false,,Jason Heyward
+base,US71,Topps Pattern Foil,false,,Jason Heyward
 base,US71,Gold Border,false,2025,Jason Heyward
 base,US71,Rainbow Foil,false,,Jason Heyward
 base,US71,Aqua Rainbow Foil,false,,Jason Heyward
@@ -2845,7 +2845,7 @@ base,US72,Holo Foil,false,,Tsung-Che Cheng
 base,US72,Pink Diamante Foil,false,,Tsung-Che Cheng
 base,US72,Sandglitter,false,,Tsung-Che Cheng
 base,US72,Silver Crackle Foil,false,,Tsung-Che Cheng
-base,US72,Topps Foil Pattern,false,,Tsung-Che Cheng
+base,US72,Topps Pattern Foil,false,,Tsung-Che Cheng
 base,US72,Gold Border,false,2025,Tsung-Che Cheng
 base,US72,Rainbow Foil,false,,Tsung-Che Cheng
 base,US72,Aqua Rainbow Foil,false,,Tsung-Che Cheng
@@ -2885,7 +2885,7 @@ base,US73,Holo Foil,false,,Chris Paddack
 base,US73,Pink Diamante Foil,false,,Chris Paddack
 base,US73,Sandglitter,false,,Chris Paddack
 base,US73,Silver Crackle Foil,false,,Chris Paddack
-base,US73,Topps Foil Pattern,false,,Chris Paddack
+base,US73,Topps Pattern Foil,false,,Chris Paddack
 base,US73,Gold Border,false,2025,Chris Paddack
 base,US73,Rainbow Foil,false,,Chris Paddack
 base,US73,Aqua Rainbow Foil,false,,Chris Paddack
@@ -2925,7 +2925,7 @@ base,US74,Holo Foil,false,,Travis Jankowski
 base,US74,Pink Diamante Foil,false,,Travis Jankowski
 base,US74,Sandglitter,false,,Travis Jankowski
 base,US74,Silver Crackle Foil,false,,Travis Jankowski
-base,US74,Topps Foil Pattern,false,,Travis Jankowski
+base,US74,Topps Pattern Foil,false,,Travis Jankowski
 base,US74,Gold Border,false,2025,Travis Jankowski
 base,US74,Rainbow Foil,false,,Travis Jankowski
 base,US74,Aqua Rainbow Foil,false,,Travis Jankowski
@@ -2965,7 +2965,7 @@ base,US75,Holo Foil,false,,Andrés Giménez
 base,US75,Pink Diamante Foil,false,,Andrés Giménez
 base,US75,Sandglitter,false,,Andrés Giménez
 base,US75,Silver Crackle Foil,false,,Andrés Giménez
-base,US75,Topps Foil Pattern,false,,Andrés Giménez
+base,US75,Topps Pattern Foil,false,,Andrés Giménez
 base,US75,Gold Border,false,2025,Andrés Giménez
 base,US75,Rainbow Foil,false,,Andrés Giménez
 base,US75,Aqua Rainbow Foil,false,,Andrés Giménez
@@ -3005,7 +3005,7 @@ base,US76,Holo Foil,false,,Martín Maldonado
 base,US76,Pink Diamante Foil,false,,Martín Maldonado
 base,US76,Sandglitter,false,,Martín Maldonado
 base,US76,Silver Crackle Foil,false,,Martín Maldonado
-base,US76,Topps Foil Pattern,false,,Martín Maldonado
+base,US76,Topps Pattern Foil,false,,Martín Maldonado
 base,US76,Gold Border,false,2025,Martín Maldonado
 base,US76,Rainbow Foil,false,,Martín Maldonado
 base,US76,Aqua Rainbow Foil,false,,Martín Maldonado
@@ -3045,7 +3045,7 @@ base,US77,Holo Foil,false,,Jack Dreyer
 base,US77,Pink Diamante Foil,false,,Jack Dreyer
 base,US77,Sandglitter,false,,Jack Dreyer
 base,US77,Silver Crackle Foil,false,,Jack Dreyer
-base,US77,Topps Foil Pattern,false,,Jack Dreyer
+base,US77,Topps Pattern Foil,false,,Jack Dreyer
 base,US77,Gold Border,false,2025,Jack Dreyer
 base,US77,Rainbow Foil,false,,Jack Dreyer
 base,US77,Aqua Rainbow Foil,false,,Jack Dreyer
@@ -3085,7 +3085,7 @@ base,US78,Holo Foil,false,,Trenton Brooks
 base,US78,Pink Diamante Foil,false,,Trenton Brooks
 base,US78,Sandglitter,false,,Trenton Brooks
 base,US78,Silver Crackle Foil,false,,Trenton Brooks
-base,US78,Topps Foil Pattern,false,,Trenton Brooks
+base,US78,Topps Pattern Foil,false,,Trenton Brooks
 base,US78,Gold Border,false,2025,Trenton Brooks
 base,US78,Rainbow Foil,false,,Trenton Brooks
 base,US78,Aqua Rainbow Foil,false,,Trenton Brooks
@@ -3125,7 +3125,7 @@ base,US79,Holo Foil,false,,Willie MacIver
 base,US79,Pink Diamante Foil,false,,Willie MacIver
 base,US79,Sandglitter,false,,Willie MacIver
 base,US79,Silver Crackle Foil,false,,Willie MacIver
-base,US79,Topps Foil Pattern,false,,Willie MacIver
+base,US79,Topps Pattern Foil,false,,Willie MacIver
 base,US79,Gold Border,false,2025,Willie MacIver
 base,US79,Rainbow Foil,false,,Willie MacIver
 base,US79,Aqua Rainbow Foil,false,,Willie MacIver
@@ -3165,7 +3165,7 @@ base,US80,Holo Foil,false,,Lawrence Butler
 base,US80,Pink Diamante Foil,false,,Lawrence Butler
 base,US80,Sandglitter,false,,Lawrence Butler
 base,US80,Silver Crackle Foil,false,,Lawrence Butler
-base,US80,Topps Foil Pattern,false,,Lawrence Butler
+base,US80,Topps Pattern Foil,false,,Lawrence Butler
 base,US80,Gold Border,false,2025,Lawrence Butler
 base,US80,Rainbow Foil,false,,Lawrence Butler
 base,US80,Aqua Rainbow Foil,false,,Lawrence Butler
@@ -3205,7 +3205,7 @@ base,US81,Holo Foil,false,,Danny Jansen
 base,US81,Pink Diamante Foil,false,,Danny Jansen
 base,US81,Sandglitter,false,,Danny Jansen
 base,US81,Silver Crackle Foil,false,,Danny Jansen
-base,US81,Topps Foil Pattern,false,,Danny Jansen
+base,US81,Topps Pattern Foil,false,,Danny Jansen
 base,US81,Gold Border,false,2025,Danny Jansen
 base,US81,Rainbow Foil,false,,Danny Jansen
 base,US81,Aqua Rainbow Foil,false,,Danny Jansen
@@ -3245,7 +3245,7 @@ base,US82,Holo Foil,false,,Max Kepler
 base,US82,Pink Diamante Foil,false,,Max Kepler
 base,US82,Sandglitter,false,,Max Kepler
 base,US82,Silver Crackle Foil,false,,Max Kepler
-base,US82,Topps Foil Pattern,false,,Max Kepler
+base,US82,Topps Pattern Foil,false,,Max Kepler
 base,US82,Gold Border,false,2025,Max Kepler
 base,US82,Rainbow Foil,false,,Max Kepler
 base,US82,Aqua Rainbow Foil,false,,Max Kepler
@@ -3285,7 +3285,7 @@ base,US83,Holo Foil,false,,Kris Bubic
 base,US83,Pink Diamante Foil,false,,Kris Bubic
 base,US83,Sandglitter,false,,Kris Bubic
 base,US83,Silver Crackle Foil,false,,Kris Bubic
-base,US83,Topps Foil Pattern,false,,Kris Bubic
+base,US83,Topps Pattern Foil,false,,Kris Bubic
 base,US83,Gold Border,false,2025,Kris Bubic
 base,US83,Rainbow Foil,false,,Kris Bubic
 base,US83,Aqua Rainbow Foil,false,,Kris Bubic
@@ -3325,7 +3325,7 @@ base,US84,Holo Foil,false,,Shohei Ohtani
 base,US84,Pink Diamante Foil,false,,Shohei Ohtani
 base,US84,Sandglitter,false,,Shohei Ohtani
 base,US84,Silver Crackle Foil,false,,Shohei Ohtani
-base,US84,Topps Foil Pattern,false,,Shohei Ohtani
+base,US84,Topps Pattern Foil,false,,Shohei Ohtani
 base,US84,Gold Border,false,2025,Shohei Ohtani
 base,US84,Rainbow Foil,false,,Shohei Ohtani
 base,US84,Aqua Rainbow Foil,false,,Shohei Ohtani
@@ -3365,7 +3365,7 @@ base,US85,Holo Foil,false,,Aaron Judge
 base,US85,Pink Diamante Foil,false,,Aaron Judge
 base,US85,Sandglitter,false,,Aaron Judge
 base,US85,Silver Crackle Foil,false,,Aaron Judge
-base,US85,Topps Foil Pattern,false,,Aaron Judge
+base,US85,Topps Pattern Foil,false,,Aaron Judge
 base,US85,Gold Border,false,2025,Aaron Judge
 base,US85,Rainbow Foil,false,,Aaron Judge
 base,US85,Aqua Rainbow Foil,false,,Aaron Judge
@@ -3405,7 +3405,7 @@ base,US86,Holo Foil,false,,Aaron Judge
 base,US86,Pink Diamante Foil,false,,Aaron Judge
 base,US86,Sandglitter,false,,Aaron Judge
 base,US86,Silver Crackle Foil,false,,Aaron Judge
-base,US86,Topps Foil Pattern,false,,Aaron Judge
+base,US86,Topps Pattern Foil,false,,Aaron Judge
 base,US86,Gold Border,false,2025,Aaron Judge
 base,US86,Rainbow Foil,false,,Aaron Judge
 base,US86,Aqua Rainbow Foil,false,,Aaron Judge
@@ -3445,7 +3445,7 @@ base,US87,Holo Foil,false,,Drake Baldwin
 base,US87,Pink Diamante Foil,false,,Drake Baldwin
 base,US87,Sandglitter,false,,Drake Baldwin
 base,US87,Silver Crackle Foil,false,,Drake Baldwin
-base,US87,Topps Foil Pattern,false,,Drake Baldwin
+base,US87,Topps Pattern Foil,false,,Drake Baldwin
 base,US87,Gold Border,false,2025,Drake Baldwin
 base,US87,Rainbow Foil,false,,Drake Baldwin
 base,US87,Aqua Rainbow Foil,false,,Drake Baldwin
@@ -3485,7 +3485,7 @@ base,US88,Holo Foil,false,,Dairon Blanco
 base,US88,Pink Diamante Foil,false,,Dairon Blanco
 base,US88,Sandglitter,false,,Dairon Blanco
 base,US88,Silver Crackle Foil,false,,Dairon Blanco
-base,US88,Topps Foil Pattern,false,,Dairon Blanco
+base,US88,Topps Pattern Foil,false,,Dairon Blanco
 base,US88,Gold Border,false,2025,Dairon Blanco
 base,US88,Rainbow Foil,false,,Dairon Blanco
 base,US88,Aqua Rainbow Foil,false,,Dairon Blanco
@@ -3525,7 +3525,7 @@ base,US89,Holo Foil,false,,Braydon Fisher
 base,US89,Pink Diamante Foil,false,,Braydon Fisher
 base,US89,Sandglitter,false,,Braydon Fisher
 base,US89,Silver Crackle Foil,false,,Braydon Fisher
-base,US89,Topps Foil Pattern,false,,Braydon Fisher
+base,US89,Topps Pattern Foil,false,,Braydon Fisher
 base,US89,Gold Border,false,2025,Braydon Fisher
 base,US89,Rainbow Foil,false,,Braydon Fisher
 base,US89,Aqua Rainbow Foil,false,,Braydon Fisher
@@ -3565,7 +3565,7 @@ base,US90,Holo Foil,false,,Omar Cruz
 base,US90,Pink Diamante Foil,false,,Omar Cruz
 base,US90,Sandglitter,false,,Omar Cruz
 base,US90,Silver Crackle Foil,false,,Omar Cruz
-base,US90,Topps Foil Pattern,false,,Omar Cruz
+base,US90,Topps Pattern Foil,false,,Omar Cruz
 base,US90,Gold Border,false,2025,Omar Cruz
 base,US90,Rainbow Foil,false,,Omar Cruz
 base,US90,Aqua Rainbow Foil,false,,Omar Cruz
@@ -3605,7 +3605,7 @@ base,US91,Holo Foil,false,,Tyler Heineman
 base,US91,Pink Diamante Foil,false,,Tyler Heineman
 base,US91,Sandglitter,false,,Tyler Heineman
 base,US91,Silver Crackle Foil,false,,Tyler Heineman
-base,US91,Topps Foil Pattern,false,,Tyler Heineman
+base,US91,Topps Pattern Foil,false,,Tyler Heineman
 base,US91,Gold Border,false,2025,Tyler Heineman
 base,US91,Rainbow Foil,false,,Tyler Heineman
 base,US91,Aqua Rainbow Foil,false,,Tyler Heineman
@@ -3645,7 +3645,7 @@ base,US92,Holo Foil,false,,Drew Avans
 base,US92,Pink Diamante Foil,false,,Drew Avans
 base,US92,Sandglitter,false,,Drew Avans
 base,US92,Silver Crackle Foil,false,,Drew Avans
-base,US92,Topps Foil Pattern,false,,Drew Avans
+base,US92,Topps Pattern Foil,false,,Drew Avans
 base,US92,Gold Border,false,2025,Drew Avans
 base,US92,Rainbow Foil,false,,Drew Avans
 base,US92,Aqua Rainbow Foil,false,,Drew Avans
@@ -3685,7 +3685,7 @@ base,US93,Holo Foil,false,,Jace Jung
 base,US93,Pink Diamante Foil,false,,Jace Jung
 base,US93,Sandglitter,false,,Jace Jung
 base,US93,Silver Crackle Foil,false,,Jace Jung
-base,US93,Topps Foil Pattern,false,,Jace Jung
+base,US93,Topps Pattern Foil,false,,Jace Jung
 base,US93,Gold Border,false,2025,Jace Jung
 base,US93,Rainbow Foil,false,,Jace Jung
 base,US93,Aqua Rainbow Foil,false,,Jace Jung
@@ -3725,7 +3725,7 @@ base,US94,Holo Foil,false,,Adael Amador
 base,US94,Pink Diamante Foil,false,,Adael Amador
 base,US94,Sandglitter,false,,Adael Amador
 base,US94,Silver Crackle Foil,false,,Adael Amador
-base,US94,Topps Foil Pattern,false,,Adael Amador
+base,US94,Topps Pattern Foil,false,,Adael Amador
 base,US94,Gold Border,false,2025,Adael Amador
 base,US94,Rainbow Foil,false,,Adael Amador
 base,US94,Aqua Rainbow Foil,false,,Adael Amador
@@ -3765,7 +3765,7 @@ base,US95,Holo Foil,false,,Michel Otañez
 base,US95,Pink Diamante Foil,false,,Michel Otañez
 base,US95,Sandglitter,false,,Michel Otañez
 base,US95,Silver Crackle Foil,false,,Michel Otañez
-base,US95,Topps Foil Pattern,false,,Michel Otañez
+base,US95,Topps Pattern Foil,false,,Michel Otañez
 base,US95,Gold Border,false,2025,Michel Otañez
 base,US95,Rainbow Foil,false,,Michel Otañez
 base,US95,Aqua Rainbow Foil,false,,Michel Otañez
@@ -3805,7 +3805,7 @@ base,US96,Holo Foil,false,,J.C. Escarra
 base,US96,Pink Diamante Foil,false,,J.C. Escarra
 base,US96,Sandglitter,false,,J.C. Escarra
 base,US96,Silver Crackle Foil,false,,J.C. Escarra
-base,US96,Topps Foil Pattern,false,,J.C. Escarra
+base,US96,Topps Pattern Foil,false,,J.C. Escarra
 base,US96,Gold Border,false,2025,J.C. Escarra
 base,US96,Rainbow Foil,false,,J.C. Escarra
 base,US96,Aqua Rainbow Foil,false,,J.C. Escarra
@@ -3845,7 +3845,7 @@ base,US97,Holo Foil,false,,Brandon Young
 base,US97,Pink Diamante Foil,false,,Brandon Young
 base,US97,Sandglitter,false,,Brandon Young
 base,US97,Silver Crackle Foil,false,,Brandon Young
-base,US97,Topps Foil Pattern,false,,Brandon Young
+base,US97,Topps Pattern Foil,false,,Brandon Young
 base,US97,Gold Border,false,2025,Brandon Young
 base,US97,Rainbow Foil,false,,Brandon Young
 base,US97,Aqua Rainbow Foil,false,,Brandon Young
@@ -3885,7 +3885,7 @@ base,US98,Holo Foil,false,,Jake Burger
 base,US98,Pink Diamante Foil,false,,Jake Burger
 base,US98,Sandglitter,false,,Jake Burger
 base,US98,Silver Crackle Foil,false,,Jake Burger
-base,US98,Topps Foil Pattern,false,,Jake Burger
+base,US98,Topps Pattern Foil,false,,Jake Burger
 base,US98,Gold Border,false,2025,Jake Burger
 base,US98,Rainbow Foil,false,,Jake Burger
 base,US98,Aqua Rainbow Foil,false,,Jake Burger
@@ -3925,7 +3925,7 @@ base,US99,Holo Foil,false,,Max Meyer
 base,US99,Pink Diamante Foil,false,,Max Meyer
 base,US99,Sandglitter,false,,Max Meyer
 base,US99,Silver Crackle Foil,false,,Max Meyer
-base,US99,Topps Foil Pattern,false,,Max Meyer
+base,US99,Topps Pattern Foil,false,,Max Meyer
 base,US99,Gold Border,false,2025,Max Meyer
 base,US99,Rainbow Foil,false,,Max Meyer
 base,US99,Aqua Rainbow Foil,false,,Max Meyer
@@ -3965,7 +3965,7 @@ base,US100,Holo Foil,false,,Justin Verlander
 base,US100,Pink Diamante Foil,false,,Justin Verlander
 base,US100,Sandglitter,false,,Justin Verlander
 base,US100,Silver Crackle Foil,false,,Justin Verlander
-base,US100,Topps Foil Pattern,false,,Justin Verlander
+base,US100,Topps Pattern Foil,false,,Justin Verlander
 base,US100,Gold Border,false,2025,Justin Verlander
 base,US100,Rainbow Foil,false,,Justin Verlander
 base,US100,Aqua Rainbow Foil,false,,Justin Verlander
@@ -4005,7 +4005,7 @@ base,US101,Holo Foil,false,,Paul DeJong
 base,US101,Pink Diamante Foil,false,,Paul DeJong
 base,US101,Sandglitter,false,,Paul DeJong
 base,US101,Silver Crackle Foil,false,,Paul DeJong
-base,US101,Topps Foil Pattern,false,,Paul DeJong
+base,US101,Topps Pattern Foil,false,,Paul DeJong
 base,US101,Gold Border,false,2025,Paul DeJong
 base,US101,Rainbow Foil,false,,Paul DeJong
 base,US101,Aqua Rainbow Foil,false,,Paul DeJong
@@ -4045,7 +4045,7 @@ base,US102,Holo Foil,false,,Luis Mey
 base,US102,Pink Diamante Foil,false,,Luis Mey
 base,US102,Sandglitter,false,,Luis Mey
 base,US102,Silver Crackle Foil,false,,Luis Mey
-base,US102,Topps Foil Pattern,false,,Luis Mey
+base,US102,Topps Pattern Foil,false,,Luis Mey
 base,US102,Gold Border,false,2025,Luis Mey
 base,US102,Rainbow Foil,false,,Luis Mey
 base,US102,Aqua Rainbow Foil,false,,Luis Mey
@@ -4085,7 +4085,7 @@ base,US103,Holo Foil,false,,Walker Buehler
 base,US103,Pink Diamante Foil,false,,Walker Buehler
 base,US103,Sandglitter,false,,Walker Buehler
 base,US103,Silver Crackle Foil,false,,Walker Buehler
-base,US103,Topps Foil Pattern,false,,Walker Buehler
+base,US103,Topps Pattern Foil,false,,Walker Buehler
 base,US103,Gold Border,false,2025,Walker Buehler
 base,US103,Rainbow Foil,false,,Walker Buehler
 base,US103,Aqua Rainbow Foil,false,,Walker Buehler
@@ -4125,7 +4125,7 @@ base,US104,Holo Foil,false,,Carlos Duran
 base,US104,Pink Diamante Foil,false,,Carlos Duran
 base,US104,Sandglitter,false,,Carlos Duran
 base,US104,Silver Crackle Foil,false,,Carlos Duran
-base,US104,Topps Foil Pattern,false,,Carlos Duran
+base,US104,Topps Pattern Foil,false,,Carlos Duran
 base,US104,Gold Border,false,2025,Carlos Duran
 base,US104,Rainbow Foil,false,,Carlos Duran
 base,US104,Aqua Rainbow Foil,false,,Carlos Duran
@@ -4165,7 +4165,7 @@ base,US105,Holo Foil,false,,Marcelo Mayer
 base,US105,Pink Diamante Foil,false,,Marcelo Mayer
 base,US105,Sandglitter,false,,Marcelo Mayer
 base,US105,Silver Crackle Foil,false,,Marcelo Mayer
-base,US105,Topps Foil Pattern,false,,Marcelo Mayer
+base,US105,Topps Pattern Foil,false,,Marcelo Mayer
 base,US105,Gold Border,false,2025,Marcelo Mayer
 base,US105,Rainbow Foil,false,,Marcelo Mayer
 base,US105,Aqua Rainbow Foil,false,,Marcelo Mayer
@@ -4205,7 +4205,7 @@ base,US106,Holo Foil,false,,Nick Allen
 base,US106,Pink Diamante Foil,false,,Nick Allen
 base,US106,Sandglitter,false,,Nick Allen
 base,US106,Silver Crackle Foil,false,,Nick Allen
-base,US106,Topps Foil Pattern,false,,Nick Allen
+base,US106,Topps Pattern Foil,false,,Nick Allen
 base,US106,Gold Border,false,2025,Nick Allen
 base,US106,Rainbow Foil,false,,Nick Allen
 base,US106,Aqua Rainbow Foil,false,,Nick Allen
@@ -4245,7 +4245,7 @@ base,US107,Holo Foil,false,,Bryce Harper
 base,US107,Pink Diamante Foil,false,,Bryce Harper
 base,US107,Sandglitter,false,,Bryce Harper
 base,US107,Silver Crackle Foil,false,,Bryce Harper
-base,US107,Topps Foil Pattern,false,,Bryce Harper
+base,US107,Topps Pattern Foil,false,,Bryce Harper
 base,US107,Gold Border,false,2025,Bryce Harper
 base,US107,Rainbow Foil,false,,Bryce Harper
 base,US107,Aqua Rainbow Foil,false,,Bryce Harper
@@ -4285,7 +4285,7 @@ base,US108,Holo Foil,false,,Justin Hagenman
 base,US108,Pink Diamante Foil,false,,Justin Hagenman
 base,US108,Sandglitter,false,,Justin Hagenman
 base,US108,Silver Crackle Foil,false,,Justin Hagenman
-base,US108,Topps Foil Pattern,false,,Justin Hagenman
+base,US108,Topps Pattern Foil,false,,Justin Hagenman
 base,US108,Gold Border,false,2025,Justin Hagenman
 base,US108,Rainbow Foil,false,,Justin Hagenman
 base,US108,Aqua Rainbow Foil,false,,Justin Hagenman
@@ -4325,7 +4325,7 @@ base,US109,Holo Foil,false,,Robert Hassell III
 base,US109,Pink Diamante Foil,false,,Robert Hassell III
 base,US109,Sandglitter,false,,Robert Hassell III
 base,US109,Silver Crackle Foil,false,,Robert Hassell III
-base,US109,Topps Foil Pattern,false,,Robert Hassell III
+base,US109,Topps Pattern Foil,false,,Robert Hassell III
 base,US109,Gold Border,false,2025,Robert Hassell III
 base,US109,Rainbow Foil,false,,Robert Hassell III
 base,US109,Aqua Rainbow Foil,false,,Robert Hassell III
@@ -4365,7 +4365,7 @@ base,US110,Holo Foil,false,,Josh Naylor
 base,US110,Pink Diamante Foil,false,,Josh Naylor
 base,US110,Sandglitter,false,,Josh Naylor
 base,US110,Silver Crackle Foil,false,,Josh Naylor
-base,US110,Topps Foil Pattern,false,,Josh Naylor
+base,US110,Topps Pattern Foil,false,,Josh Naylor
 base,US110,Gold Border,false,2025,Josh Naylor
 base,US110,Rainbow Foil,false,,Josh Naylor
 base,US110,Aqua Rainbow Foil,false,,Josh Naylor
@@ -4405,7 +4405,7 @@ base,US111,Holo Foil,false,,Ronny Simon
 base,US111,Pink Diamante Foil,false,,Ronny Simon
 base,US111,Sandglitter,false,,Ronny Simon
 base,US111,Silver Crackle Foil,false,,Ronny Simon
-base,US111,Topps Foil Pattern,false,,Ronny Simon
+base,US111,Topps Pattern Foil,false,,Ronny Simon
 base,US111,Gold Border,false,2025,Ronny Simon
 base,US111,Rainbow Foil,false,,Ronny Simon
 base,US111,Aqua Rainbow Foil,false,,Ronny Simon
@@ -4445,7 +4445,7 @@ base,US112,Holo Foil,false,,Romy Gonzalez
 base,US112,Pink Diamante Foil,false,,Romy Gonzalez
 base,US112,Sandglitter,false,,Romy Gonzalez
 base,US112,Silver Crackle Foil,false,,Romy Gonzalez
-base,US112,Topps Foil Pattern,false,,Romy Gonzalez
+base,US112,Topps Pattern Foil,false,,Romy Gonzalez
 base,US112,Gold Border,false,2025,Romy Gonzalez
 base,US112,Rainbow Foil,false,,Romy Gonzalez
 base,US112,Aqua Rainbow Foil,false,,Romy Gonzalez
@@ -4485,7 +4485,7 @@ base,US113,Holo Foil,false,,Drake Baldwin
 base,US113,Pink Diamante Foil,false,,Drake Baldwin
 base,US113,Sandglitter,false,,Drake Baldwin
 base,US113,Silver Crackle Foil,false,,Drake Baldwin
-base,US113,Topps Foil Pattern,false,,Drake Baldwin
+base,US113,Topps Pattern Foil,false,,Drake Baldwin
 base,US113,Gold Border,false,2025,Drake Baldwin
 base,US113,Rainbow Foil,false,,Drake Baldwin
 base,US113,Aqua Rainbow Foil,false,,Drake Baldwin
@@ -4525,7 +4525,7 @@ base,US114,Holo Foil,false,,Grant Wolfram
 base,US114,Pink Diamante Foil,false,,Grant Wolfram
 base,US114,Sandglitter,false,,Grant Wolfram
 base,US114,Silver Crackle Foil,false,,Grant Wolfram
-base,US114,Topps Foil Pattern,false,,Grant Wolfram
+base,US114,Topps Pattern Foil,false,,Grant Wolfram
 base,US114,Gold Border,false,2025,Grant Wolfram
 base,US114,Rainbow Foil,false,,Grant Wolfram
 base,US114,Aqua Rainbow Foil,false,,Grant Wolfram
@@ -4565,7 +4565,7 @@ base,US115,Holo Foil,false,,Raymond Burgos
 base,US115,Pink Diamante Foil,false,,Raymond Burgos
 base,US115,Sandglitter,false,,Raymond Burgos
 base,US115,Silver Crackle Foil,false,,Raymond Burgos
-base,US115,Topps Foil Pattern,false,,Raymond Burgos
+base,US115,Topps Pattern Foil,false,,Raymond Burgos
 base,US115,Gold Border,false,2025,Raymond Burgos
 base,US115,Rainbow Foil,false,,Raymond Burgos
 base,US115,Aqua Rainbow Foil,false,,Raymond Burgos
@@ -4605,7 +4605,7 @@ base,US116,Holo Foil,false,,Aroldis Chapman
 base,US116,Pink Diamante Foil,false,,Aroldis Chapman
 base,US116,Sandglitter,false,,Aroldis Chapman
 base,US116,Silver Crackle Foil,false,,Aroldis Chapman
-base,US116,Topps Foil Pattern,false,,Aroldis Chapman
+base,US116,Topps Pattern Foil,false,,Aroldis Chapman
 base,US116,Gold Border,false,2025,Aroldis Chapman
 base,US116,Rainbow Foil,false,,Aroldis Chapman
 base,US116,Aqua Rainbow Foil,false,,Aroldis Chapman
@@ -4645,7 +4645,7 @@ base,US117,Holo Foil,false,,Logan VanWey
 base,US117,Pink Diamante Foil,false,,Logan VanWey
 base,US117,Sandglitter,false,,Logan VanWey
 base,US117,Silver Crackle Foil,false,,Logan VanWey
-base,US117,Topps Foil Pattern,false,,Logan VanWey
+base,US117,Topps Pattern Foil,false,,Logan VanWey
 base,US117,Gold Border,false,2025,Logan VanWey
 base,US117,Rainbow Foil,false,,Logan VanWey
 base,US117,Aqua Rainbow Foil,false,,Logan VanWey
@@ -4685,7 +4685,7 @@ base,US118,Holo Foil,false,,Gage Workman
 base,US118,Pink Diamante Foil,false,,Gage Workman
 base,US118,Sandglitter,false,,Gage Workman
 base,US118,Silver Crackle Foil,false,,Gage Workman
-base,US118,Topps Foil Pattern,false,,Gage Workman
+base,US118,Topps Pattern Foil,false,,Gage Workman
 base,US118,Gold Border,false,2025,Gage Workman
 base,US118,Rainbow Foil,false,,Gage Workman
 base,US118,Aqua Rainbow Foil,false,,Gage Workman
@@ -4725,7 +4725,7 @@ base,US119,Holo Foil,false,,Blake Snell
 base,US119,Pink Diamante Foil,false,,Blake Snell
 base,US119,Sandglitter,false,,Blake Snell
 base,US119,Silver Crackle Foil,false,,Blake Snell
-base,US119,Topps Foil Pattern,false,,Blake Snell
+base,US119,Topps Pattern Foil,false,,Blake Snell
 base,US119,Gold Border,false,2025,Blake Snell
 base,US119,Rainbow Foil,false,,Blake Snell
 base,US119,Aqua Rainbow Foil,false,,Blake Snell
@@ -4765,7 +4765,7 @@ base,US120,Holo Foil,false,,Yohel Pozo
 base,US120,Pink Diamante Foil,false,,Yohel Pozo
 base,US120,Sandglitter,false,,Yohel Pozo
 base,US120,Silver Crackle Foil,false,,Yohel Pozo
-base,US120,Topps Foil Pattern,false,,Yohel Pozo
+base,US120,Topps Pattern Foil,false,,Yohel Pozo
 base,US120,Gold Border,false,2025,Yohel Pozo
 base,US120,Rainbow Foil,false,,Yohel Pozo
 base,US120,Aqua Rainbow Foil,false,,Yohel Pozo
@@ -4805,7 +4805,7 @@ base,US121,Holo Foil,false,,Ryan Johnson
 base,US121,Pink Diamante Foil,false,,Ryan Johnson
 base,US121,Sandglitter,false,,Ryan Johnson
 base,US121,Silver Crackle Foil,false,,Ryan Johnson
-base,US121,Topps Foil Pattern,false,,Ryan Johnson
+base,US121,Topps Pattern Foil,false,,Ryan Johnson
 base,US121,Gold Border,false,2025,Ryan Johnson
 base,US121,Rainbow Foil,false,,Ryan Johnson
 base,US121,Aqua Rainbow Foil,false,,Ryan Johnson
@@ -4845,7 +4845,7 @@ base,US122,Holo Foil,false,,Tyler Tolbert
 base,US122,Pink Diamante Foil,false,,Tyler Tolbert
 base,US122,Sandglitter,false,,Tyler Tolbert
 base,US122,Silver Crackle Foil,false,,Tyler Tolbert
-base,US122,Topps Foil Pattern,false,,Tyler Tolbert
+base,US122,Topps Pattern Foil,false,,Tyler Tolbert
 base,US122,Gold Border,false,2025,Tyler Tolbert
 base,US122,Rainbow Foil,false,,Tyler Tolbert
 base,US122,Aqua Rainbow Foil,false,,Tyler Tolbert
@@ -4885,7 +4885,7 @@ base,US123,Holo Foil,false,,Braxton Fulford
 base,US123,Pink Diamante Foil,false,,Braxton Fulford
 base,US123,Sandglitter,false,,Braxton Fulford
 base,US123,Silver Crackle Foil,false,,Braxton Fulford
-base,US123,Topps Foil Pattern,false,,Braxton Fulford
+base,US123,Topps Pattern Foil,false,,Braxton Fulford
 base,US123,Gold Border,false,2025,Braxton Fulford
 base,US123,Rainbow Foil,false,,Braxton Fulford
 base,US123,Aqua Rainbow Foil,false,,Braxton Fulford
@@ -4925,7 +4925,7 @@ base,US124,Holo Foil,false,,Ryan Rolison
 base,US124,Pink Diamante Foil,false,,Ryan Rolison
 base,US124,Sandglitter,false,,Ryan Rolison
 base,US124,Silver Crackle Foil,false,,Ryan Rolison
-base,US124,Topps Foil Pattern,false,,Ryan Rolison
+base,US124,Topps Pattern Foil,false,,Ryan Rolison
 base,US124,Gold Border,false,2025,Ryan Rolison
 base,US124,Rainbow Foil,false,,Ryan Rolison
 base,US124,Aqua Rainbow Foil,false,,Ryan Rolison
@@ -4965,7 +4965,7 @@ base,US125,Holo Foil,false,,Joc Pederson
 base,US125,Pink Diamante Foil,false,,Joc Pederson
 base,US125,Sandglitter,false,,Joc Pederson
 base,US125,Silver Crackle Foil,false,,Joc Pederson
-base,US125,Topps Foil Pattern,false,,Joc Pederson
+base,US125,Topps Pattern Foil,false,,Joc Pederson
 base,US125,Gold Border,false,2025,Joc Pederson
 base,US125,Rainbow Foil,false,,Joc Pederson
 base,US125,Aqua Rainbow Foil,false,,Joc Pederson
@@ -5005,7 +5005,7 @@ base,US126,Holo Foil,false,,Hayden Senger
 base,US126,Pink Diamante Foil,false,,Hayden Senger
 base,US126,Sandglitter,false,,Hayden Senger
 base,US126,Silver Crackle Foil,false,,Hayden Senger
-base,US126,Topps Foil Pattern,false,,Hayden Senger
+base,US126,Topps Pattern Foil,false,,Hayden Senger
 base,US126,Gold Border,false,2025,Hayden Senger
 base,US126,Rainbow Foil,false,,Hayden Senger
 base,US126,Aqua Rainbow Foil,false,,Hayden Senger
@@ -5045,7 +5045,7 @@ base,US127,Holo Foil,false,,Mick Abel
 base,US127,Pink Diamante Foil,false,,Mick Abel
 base,US127,Sandglitter,false,,Mick Abel
 base,US127,Silver Crackle Foil,false,,Mick Abel
-base,US127,Topps Foil Pattern,false,,Mick Abel
+base,US127,Topps Pattern Foil,false,,Mick Abel
 base,US127,Gold Border,false,2025,Mick Abel
 base,US127,Rainbow Foil,false,,Mick Abel
 base,US127,Aqua Rainbow Foil,false,,Mick Abel
@@ -5085,7 +5085,7 @@ base,US128,Holo Foil,false,,Kevin Alcántara
 base,US128,Pink Diamante Foil,false,,Kevin Alcántara
 base,US128,Sandglitter,false,,Kevin Alcántara
 base,US128,Silver Crackle Foil,false,,Kevin Alcántara
-base,US128,Topps Foil Pattern,false,,Kevin Alcántara
+base,US128,Topps Pattern Foil,false,,Kevin Alcántara
 base,US128,Gold Border,false,2025,Kevin Alcántara
 base,US128,Rainbow Foil,false,,Kevin Alcántara
 base,US128,Aqua Rainbow Foil,false,,Kevin Alcántara
@@ -5125,7 +5125,7 @@ base,US129,Holo Foil,false,,Kristian Campbell
 base,US129,Pink Diamante Foil,false,,Kristian Campbell
 base,US129,Sandglitter,false,,Kristian Campbell
 base,US129,Silver Crackle Foil,false,,Kristian Campbell
-base,US129,Topps Foil Pattern,false,,Kristian Campbell
+base,US129,Topps Pattern Foil,false,,Kristian Campbell
 base,US129,Gold Border,false,2025,Kristian Campbell
 base,US129,Rainbow Foil,false,,Kristian Campbell
 base,US129,Aqua Rainbow Foil,false,,Kristian Campbell
@@ -5165,7 +5165,7 @@ base,US130,Holo Foil,false,,Ben Williamson
 base,US130,Pink Diamante Foil,false,,Ben Williamson
 base,US130,Sandglitter,false,,Ben Williamson
 base,US130,Silver Crackle Foil,false,,Ben Williamson
-base,US130,Topps Foil Pattern,false,,Ben Williamson
+base,US130,Topps Pattern Foil,false,,Ben Williamson
 base,US130,Gold Border,false,2025,Ben Williamson
 base,US130,Rainbow Foil,false,,Ben Williamson
 base,US130,Aqua Rainbow Foil,false,,Ben Williamson
@@ -5205,7 +5205,7 @@ base,US131,Holo Foil,false,,Cade Gibson
 base,US131,Pink Diamante Foil,false,,Cade Gibson
 base,US131,Sandglitter,false,,Cade Gibson
 base,US131,Silver Crackle Foil,false,,Cade Gibson
-base,US131,Topps Foil Pattern,false,,Cade Gibson
+base,US131,Topps Pattern Foil,false,,Cade Gibson
 base,US131,Gold Border,false,2025,Cade Gibson
 base,US131,Rainbow Foil,false,,Cade Gibson
 base,US131,Aqua Rainbow Foil,false,,Cade Gibson
@@ -5245,7 +5245,7 @@ base,US132,Holo Foil,false,,Anthony Banda
 base,US132,Pink Diamante Foil,false,,Anthony Banda
 base,US132,Sandglitter,false,,Anthony Banda
 base,US132,Silver Crackle Foil,false,,Anthony Banda
-base,US132,Topps Foil Pattern,false,,Anthony Banda
+base,US132,Topps Pattern Foil,false,,Anthony Banda
 base,US132,Gold Border,false,2025,Anthony Banda
 base,US132,Rainbow Foil,false,,Anthony Banda
 base,US132,Aqua Rainbow Foil,false,,Anthony Banda
@@ -5285,7 +5285,7 @@ base,US133,Holo Foil,false,,Blake Treinen
 base,US133,Pink Diamante Foil,false,,Blake Treinen
 base,US133,Sandglitter,false,,Blake Treinen
 base,US133,Silver Crackle Foil,false,,Blake Treinen
-base,US133,Topps Foil Pattern,false,,Blake Treinen
+base,US133,Topps Pattern Foil,false,,Blake Treinen
 base,US133,Gold Border,false,2025,Blake Treinen
 base,US133,Rainbow Foil,false,,Blake Treinen
 base,US133,Aqua Rainbow Foil,false,,Blake Treinen
@@ -5325,7 +5325,7 @@ base,US134,Holo Foil,false,,Noah Murdock
 base,US134,Pink Diamante Foil,false,,Noah Murdock
 base,US134,Sandglitter,false,,Noah Murdock
 base,US134,Silver Crackle Foil,false,,Noah Murdock
-base,US134,Topps Foil Pattern,false,,Noah Murdock
+base,US134,Topps Pattern Foil,false,,Noah Murdock
 base,US134,Gold Border,false,2025,Noah Murdock
 base,US134,Rainbow Foil,false,,Noah Murdock
 base,US134,Aqua Rainbow Foil,false,,Noah Murdock
@@ -5365,7 +5365,7 @@ base,US135,Holo Foil,false,,Landen Roupp
 base,US135,Pink Diamante Foil,false,,Landen Roupp
 base,US135,Sandglitter,false,,Landen Roupp
 base,US135,Silver Crackle Foil,false,,Landen Roupp
-base,US135,Topps Foil Pattern,false,,Landen Roupp
+base,US135,Topps Pattern Foil,false,,Landen Roupp
 base,US135,Gold Border,false,2025,Landen Roupp
 base,US135,Rainbow Foil,false,,Landen Roupp
 base,US135,Aqua Rainbow Foil,false,,Landen Roupp
@@ -5405,7 +5405,7 @@ base,US136,Holo Foil,false,,Kyle Hendricks
 base,US136,Pink Diamante Foil,false,,Kyle Hendricks
 base,US136,Sandglitter,false,,Kyle Hendricks
 base,US136,Silver Crackle Foil,false,,Kyle Hendricks
-base,US136,Topps Foil Pattern,false,,Kyle Hendricks
+base,US136,Topps Pattern Foil,false,,Kyle Hendricks
 base,US136,Gold Border,false,2025,Kyle Hendricks
 base,US136,Rainbow Foil,false,,Kyle Hendricks
 base,US136,Aqua Rainbow Foil,false,,Kyle Hendricks
@@ -5445,7 +5445,7 @@ base,US137,Holo Foil,false,,Logan Henderson
 base,US137,Pink Diamante Foil,false,,Logan Henderson
 base,US137,Sandglitter,false,,Logan Henderson
 base,US137,Silver Crackle Foil,false,,Logan Henderson
-base,US137,Topps Foil Pattern,false,,Logan Henderson
+base,US137,Topps Pattern Foil,false,,Logan Henderson
 base,US137,Gold Border,false,2025,Logan Henderson
 base,US137,Rainbow Foil,false,,Logan Henderson
 base,US137,Aqua Rainbow Foil,false,,Logan Henderson
@@ -5485,7 +5485,7 @@ base,US138,Holo Foil,false,,Mason Fluharty
 base,US138,Pink Diamante Foil,false,,Mason Fluharty
 base,US138,Sandglitter,false,,Mason Fluharty
 base,US138,Silver Crackle Foil,false,,Mason Fluharty
-base,US138,Topps Foil Pattern,false,,Mason Fluharty
+base,US138,Topps Pattern Foil,false,,Mason Fluharty
 base,US138,Gold Border,false,2025,Mason Fluharty
 base,US138,Rainbow Foil,false,,Mason Fluharty
 base,US138,Aqua Rainbow Foil,false,,Mason Fluharty
@@ -5525,7 +5525,7 @@ base,US139,Holo Foil,false,,Jon Berti
 base,US139,Pink Diamante Foil,false,,Jon Berti
 base,US139,Sandglitter,false,,Jon Berti
 base,US139,Silver Crackle Foil,false,,Jon Berti
-base,US139,Topps Foil Pattern,false,,Jon Berti
+base,US139,Topps Pattern Foil,false,,Jon Berti
 base,US139,Gold Border,false,2025,Jon Berti
 base,US139,Rainbow Foil,false,,Jon Berti
 base,US139,Aqua Rainbow Foil,false,,Jon Berti
@@ -5565,7 +5565,7 @@ base,US140,Holo Foil,false,,Cade Horton
 base,US140,Pink Diamante Foil,false,,Cade Horton
 base,US140,Sandglitter,false,,Cade Horton
 base,US140,Silver Crackle Foil,false,,Cade Horton
-base,US140,Topps Foil Pattern,false,,Cade Horton
+base,US140,Topps Pattern Foil,false,,Cade Horton
 base,US140,Gold Border,false,2025,Cade Horton
 base,US140,Rainbow Foil,false,,Cade Horton
 base,US140,Aqua Rainbow Foil,false,,Cade Horton
@@ -5605,7 +5605,7 @@ base,US141,Holo Foil,false,,Iván Herrera
 base,US141,Pink Diamante Foil,false,,Iván Herrera
 base,US141,Sandglitter,false,,Iván Herrera
 base,US141,Silver Crackle Foil,false,,Iván Herrera
-base,US141,Topps Foil Pattern,false,,Iván Herrera
+base,US141,Topps Pattern Foil,false,,Iván Herrera
 base,US141,Gold Border,false,2025,Iván Herrera
 base,US141,Rainbow Foil,false,,Iván Herrera
 base,US141,Aqua Rainbow Foil,false,,Iván Herrera
@@ -5645,7 +5645,7 @@ base,US142,Holo Foil,false,,Johnathan Rodríguez
 base,US142,Pink Diamante Foil,false,,Johnathan Rodríguez
 base,US142,Sandglitter,false,,Johnathan Rodríguez
 base,US142,Silver Crackle Foil,false,,Johnathan Rodríguez
-base,US142,Topps Foil Pattern,false,,Johnathan Rodríguez
+base,US142,Topps Pattern Foil,false,,Johnathan Rodríguez
 base,US142,Gold Border,false,2025,Johnathan Rodríguez
 base,US142,Rainbow Foil,false,,Johnathan Rodríguez
 base,US142,Aqua Rainbow Foil,false,,Johnathan Rodríguez
@@ -5685,7 +5685,7 @@ base,US143,Holo Foil,false,,CJ Alexander
 base,US143,Pink Diamante Foil,false,,CJ Alexander
 base,US143,Sandglitter,false,,CJ Alexander
 base,US143,Silver Crackle Foil,false,,CJ Alexander
-base,US143,Topps Foil Pattern,false,,CJ Alexander
+base,US143,Topps Pattern Foil,false,,CJ Alexander
 base,US143,Gold Border,false,2025,CJ Alexander
 base,US143,Rainbow Foil,false,,CJ Alexander
 base,US143,Aqua Rainbow Foil,false,,CJ Alexander
@@ -5725,7 +5725,7 @@ base,US144,Holo Foil,false,,Jonathan Bermúdez
 base,US144,Pink Diamante Foil,false,,Jonathan Bermúdez
 base,US144,Sandglitter,false,,Jonathan Bermúdez
 base,US144,Silver Crackle Foil,false,,Jonathan Bermúdez
-base,US144,Topps Foil Pattern,false,,Jonathan Bermúdez
+base,US144,Topps Pattern Foil,false,,Jonathan Bermúdez
 base,US144,Gold Border,false,2025,Jonathan Bermúdez
 base,US144,Rainbow Foil,false,,Jonathan Bermúdez
 base,US144,Aqua Rainbow Foil,false,,Jonathan Bermúdez
@@ -5765,7 +5765,7 @@ base,US145,Holo Foil,false,,Edgar Quero
 base,US145,Pink Diamante Foil,false,,Edgar Quero
 base,US145,Sandglitter,false,,Edgar Quero
 base,US145,Silver Crackle Foil,false,,Edgar Quero
-base,US145,Topps Foil Pattern,false,,Edgar Quero
+base,US145,Topps Pattern Foil,false,,Edgar Quero
 base,US145,Gold Border,false,2025,Edgar Quero
 base,US145,Rainbow Foil,false,,Edgar Quero
 base,US145,Aqua Rainbow Foil,false,,Edgar Quero
@@ -5805,7 +5805,7 @@ base,US146,Holo Foil,false,,Kade Strowd
 base,US146,Pink Diamante Foil,false,,Kade Strowd
 base,US146,Sandglitter,false,,Kade Strowd
 base,US146,Silver Crackle Foil,false,,Kade Strowd
-base,US146,Topps Foil Pattern,false,,Kade Strowd
+base,US146,Topps Pattern Foil,false,,Kade Strowd
 base,US146,Gold Border,false,2025,Kade Strowd
 base,US146,Rainbow Foil,false,,Kade Strowd
 base,US146,Aqua Rainbow Foil,false,,Kade Strowd
@@ -5845,7 +5845,7 @@ base,US147,Holo Foil,false,,Tirso Ornelas
 base,US147,Pink Diamante Foil,false,,Tirso Ornelas
 base,US147,Sandglitter,false,,Tirso Ornelas
 base,US147,Silver Crackle Foil,false,,Tirso Ornelas
-base,US147,Topps Foil Pattern,false,,Tirso Ornelas
+base,US147,Topps Pattern Foil,false,,Tirso Ornelas
 base,US147,Gold Border,false,2025,Tirso Ornelas
 base,US147,Rainbow Foil,false,,Tirso Ornelas
 base,US147,Aqua Rainbow Foil,false,,Tirso Ornelas
@@ -5885,7 +5885,7 @@ base,US148,Holo Foil,false,,Carlos Santana
 base,US148,Pink Diamante Foil,false,,Carlos Santana
 base,US148,Sandglitter,false,,Carlos Santana
 base,US148,Silver Crackle Foil,false,,Carlos Santana
-base,US148,Topps Foil Pattern,false,,Carlos Santana
+base,US148,Topps Pattern Foil,false,,Carlos Santana
 base,US148,Gold Border,false,2025,Carlos Santana
 base,US148,Rainbow Foil,false,,Carlos Santana
 base,US148,Aqua Rainbow Foil,false,,Carlos Santana
@@ -5925,7 +5925,7 @@ base,US149,Holo Foil,false,,Victor Caratini
 base,US149,Pink Diamante Foil,false,,Victor Caratini
 base,US149,Sandglitter,false,,Victor Caratini
 base,US149,Silver Crackle Foil,false,,Victor Caratini
-base,US149,Topps Foil Pattern,false,,Victor Caratini
+base,US149,Topps Pattern Foil,false,,Victor Caratini
 base,US149,Gold Border,false,2025,Victor Caratini
 base,US149,Rainbow Foil,false,,Victor Caratini
 base,US149,Aqua Rainbow Foil,false,,Victor Caratini
@@ -5965,7 +5965,7 @@ base,US150,Holo Foil,false,,Santiago Espinal
 base,US150,Pink Diamante Foil,false,,Santiago Espinal
 base,US150,Sandglitter,false,,Santiago Espinal
 base,US150,Silver Crackle Foil,false,,Santiago Espinal
-base,US150,Topps Foil Pattern,false,,Santiago Espinal
+base,US150,Topps Pattern Foil,false,,Santiago Espinal
 base,US150,Gold Border,false,2025,Santiago Espinal
 base,US150,Rainbow Foil,false,,Santiago Espinal
 base,US150,Aqua Rainbow Foil,false,,Santiago Espinal
@@ -6005,7 +6005,7 @@ base,US151,Holo Foil,false,,Chase Dollander
 base,US151,Pink Diamante Foil,false,,Chase Dollander
 base,US151,Sandglitter,false,,Chase Dollander
 base,US151,Silver Crackle Foil,false,,Chase Dollander
-base,US151,Topps Foil Pattern,false,,Chase Dollander
+base,US151,Topps Pattern Foil,false,,Chase Dollander
 base,US151,Gold Border,false,2025,Chase Dollander
 base,US151,Rainbow Foil,false,,Chase Dollander
 base,US151,Aqua Rainbow Foil,false,,Chase Dollander
@@ -6045,7 +6045,7 @@ base,US152,Holo Foil,false,,Tyler Mahle
 base,US152,Pink Diamante Foil,false,,Tyler Mahle
 base,US152,Sandglitter,false,,Tyler Mahle
 base,US152,Silver Crackle Foil,false,,Tyler Mahle
-base,US152,Topps Foil Pattern,false,,Tyler Mahle
+base,US152,Topps Pattern Foil,false,,Tyler Mahle
 base,US152,Gold Border,false,2025,Tyler Mahle
 base,US152,Rainbow Foil,false,,Tyler Mahle
 base,US152,Aqua Rainbow Foil,false,,Tyler Mahle
@@ -6085,7 +6085,7 @@ base,US153,Holo Foil,false,,Luken Baker
 base,US153,Pink Diamante Foil,false,,Luken Baker
 base,US153,Sandglitter,false,,Luken Baker
 base,US153,Silver Crackle Foil,false,,Luken Baker
-base,US153,Topps Foil Pattern,false,,Luken Baker
+base,US153,Topps Pattern Foil,false,,Luken Baker
 base,US153,Gold Border,false,2025,Luken Baker
 base,US153,Rainbow Foil,false,,Luken Baker
 base,US153,Aqua Rainbow Foil,false,,Luken Baker
@@ -6125,7 +6125,7 @@ base,US154,Holo Foil,false,,Antonio Senzatela
 base,US154,Pink Diamante Foil,false,,Antonio Senzatela
 base,US154,Sandglitter,false,,Antonio Senzatela
 base,US154,Silver Crackle Foil,false,,Antonio Senzatela
-base,US154,Topps Foil Pattern,false,,Antonio Senzatela
+base,US154,Topps Pattern Foil,false,,Antonio Senzatela
 base,US154,Gold Border,false,2025,Antonio Senzatela
 base,US154,Rainbow Foil,false,,Antonio Senzatela
 base,US154,Aqua Rainbow Foil,false,,Antonio Senzatela
@@ -6165,7 +6165,7 @@ base,US155,Holo Foil,false,,Brett Baty
 base,US155,Pink Diamante Foil,false,,Brett Baty
 base,US155,Sandglitter,false,,Brett Baty
 base,US155,Silver Crackle Foil,false,,Brett Baty
-base,US155,Topps Foil Pattern,false,,Brett Baty
+base,US155,Topps Pattern Foil,false,,Brett Baty
 base,US155,Gold Border,false,2025,Brett Baty
 base,US155,Rainbow Foil,false,,Brett Baty
 base,US155,Aqua Rainbow Foil,false,,Brett Baty
@@ -6205,7 +6205,7 @@ base,US156,Holo Foil,false,,Carson Kelly
 base,US156,Pink Diamante Foil,false,,Carson Kelly
 base,US156,Sandglitter,false,,Carson Kelly
 base,US156,Silver Crackle Foil,false,,Carson Kelly
-base,US156,Topps Foil Pattern,false,,Carson Kelly
+base,US156,Topps Pattern Foil,false,,Carson Kelly
 base,US156,Gold Border,false,2025,Carson Kelly
 base,US156,Rainbow Foil,false,,Carson Kelly
 base,US156,Aqua Rainbow Foil,false,,Carson Kelly
@@ -6245,7 +6245,7 @@ base,US157,Holo Foil,false,,Colton Gordon
 base,US157,Pink Diamante Foil,false,,Colton Gordon
 base,US157,Sandglitter,false,,Colton Gordon
 base,US157,Silver Crackle Foil,false,,Colton Gordon
-base,US157,Topps Foil Pattern,false,,Colton Gordon
+base,US157,Topps Pattern Foil,false,,Colton Gordon
 base,US157,Gold Border,false,2025,Colton Gordon
 base,US157,Rainbow Foil,false,,Colton Gordon
 base,US157,Aqua Rainbow Foil,false,,Colton Gordon
@@ -6285,7 +6285,7 @@ base,US158,Holo Foil,false,,Lake Bachar
 base,US158,Pink Diamante Foil,false,,Lake Bachar
 base,US158,Sandglitter,false,,Lake Bachar
 base,US158,Silver Crackle Foil,false,,Lake Bachar
-base,US158,Topps Foil Pattern,false,,Lake Bachar
+base,US158,Topps Pattern Foil,false,,Lake Bachar
 base,US158,Gold Border,false,2025,Lake Bachar
 base,US158,Rainbow Foil,false,,Lake Bachar
 base,US158,Aqua Rainbow Foil,false,,Lake Bachar
@@ -6325,7 +6325,7 @@ base,US159,Holo Foil,false,,Fraser Ellard
 base,US159,Pink Diamante Foil,false,,Fraser Ellard
 base,US159,Sandglitter,false,,Fraser Ellard
 base,US159,Silver Crackle Foil,false,,Fraser Ellard
-base,US159,Topps Foil Pattern,false,,Fraser Ellard
+base,US159,Topps Pattern Foil,false,,Fraser Ellard
 base,US159,Gold Border,false,2025,Fraser Ellard
 base,US159,Rainbow Foil,false,,Fraser Ellard
 base,US159,Aqua Rainbow Foil,false,,Fraser Ellard
@@ -6365,7 +6365,7 @@ base,US160,Holo Foil,false,,Wilmer Flores
 base,US160,Pink Diamante Foil,false,,Wilmer Flores
 base,US160,Sandglitter,false,,Wilmer Flores
 base,US160,Silver Crackle Foil,false,,Wilmer Flores
-base,US160,Topps Foil Pattern,false,,Wilmer Flores
+base,US160,Topps Pattern Foil,false,,Wilmer Flores
 base,US160,Gold Border,false,2025,Wilmer Flores
 base,US160,Rainbow Foil,false,,Wilmer Flores
 base,US160,Aqua Rainbow Foil,false,,Wilmer Flores
@@ -6405,7 +6405,7 @@ base,US161,Holo Foil,false,,Armando Alvarez
 base,US161,Pink Diamante Foil,false,,Armando Alvarez
 base,US161,Sandglitter,false,,Armando Alvarez
 base,US161,Silver Crackle Foil,false,,Armando Alvarez
-base,US161,Topps Foil Pattern,false,,Armando Alvarez
+base,US161,Topps Pattern Foil,false,,Armando Alvarez
 base,US161,Gold Border,false,2025,Armando Alvarez
 base,US161,Rainbow Foil,false,,Armando Alvarez
 base,US161,Aqua Rainbow Foil,false,,Armando Alvarez
@@ -6445,7 +6445,7 @@ base,US162,Holo Foil,false,,Bailey Horn
 base,US162,Pink Diamante Foil,false,,Bailey Horn
 base,US162,Sandglitter,false,,Bailey Horn
 base,US162,Silver Crackle Foil,false,,Bailey Horn
-base,US162,Topps Foil Pattern,false,,Bailey Horn
+base,US162,Topps Pattern Foil,false,,Bailey Horn
 base,US162,Gold Border,false,2025,Bailey Horn
 base,US162,Rainbow Foil,false,,Bailey Horn
 base,US162,Aqua Rainbow Foil,false,,Bailey Horn
@@ -6485,7 +6485,7 @@ base,US163,Holo Foil,false,,Fernando Cruz
 base,US163,Pink Diamante Foil,false,,Fernando Cruz
 base,US163,Sandglitter,false,,Fernando Cruz
 base,US163,Silver Crackle Foil,false,,Fernando Cruz
-base,US163,Topps Foil Pattern,false,,Fernando Cruz
+base,US163,Topps Pattern Foil,false,,Fernando Cruz
 base,US163,Gold Border,false,2025,Fernando Cruz
 base,US163,Rainbow Foil,false,,Fernando Cruz
 base,US163,Aqua Rainbow Foil,false,,Fernando Cruz
@@ -6525,7 +6525,7 @@ base,US164,Holo Foil,false,,Pete Crow-Armstrong
 base,US164,Pink Diamante Foil,false,,Pete Crow-Armstrong
 base,US164,Sandglitter,false,,Pete Crow-Armstrong
 base,US164,Silver Crackle Foil,false,,Pete Crow-Armstrong
-base,US164,Topps Foil Pattern,false,,Pete Crow-Armstrong
+base,US164,Topps Pattern Foil,false,,Pete Crow-Armstrong
 base,US164,Gold Border,false,2025,Pete Crow-Armstrong
 base,US164,Rainbow Foil,false,,Pete Crow-Armstrong
 base,US164,Aqua Rainbow Foil,false,,Pete Crow-Armstrong
@@ -6565,7 +6565,7 @@ base,US165,Holo Foil,false,,Jack Leiter
 base,US165,Pink Diamante Foil,false,,Jack Leiter
 base,US165,Sandglitter,false,,Jack Leiter
 base,US165,Silver Crackle Foil,false,,Jack Leiter
-base,US165,Topps Foil Pattern,false,,Jack Leiter
+base,US165,Topps Pattern Foil,false,,Jack Leiter
 base,US165,Gold Border,false,2025,Jack Leiter
 base,US165,Rainbow Foil,false,,Jack Leiter
 base,US165,Aqua Rainbow Foil,false,,Jack Leiter
@@ -6605,7 +6605,7 @@ base,US166,Holo Foil,false,,Miguel Rojas
 base,US166,Pink Diamante Foil,false,,Miguel Rojas
 base,US166,Sandglitter,false,,Miguel Rojas
 base,US166,Silver Crackle Foil,false,,Miguel Rojas
-base,US166,Topps Foil Pattern,false,,Miguel Rojas
+base,US166,Topps Pattern Foil,false,,Miguel Rojas
 base,US166,Gold Border,false,2025,Miguel Rojas
 base,US166,Rainbow Foil,false,,Miguel Rojas
 base,US166,Aqua Rainbow Foil,false,,Miguel Rojas
@@ -6645,7 +6645,7 @@ base,US167,Holo Foil,false,,Chase Lee
 base,US167,Pink Diamante Foil,false,,Chase Lee
 base,US167,Sandglitter,false,,Chase Lee
 base,US167,Silver Crackle Foil,false,,Chase Lee
-base,US167,Topps Foil Pattern,false,,Chase Lee
+base,US167,Topps Pattern Foil,false,,Chase Lee
 base,US167,Gold Border,false,2025,Chase Lee
 base,US167,Rainbow Foil,false,,Chase Lee
 base,US167,Aqua Rainbow Foil,false,,Chase Lee
@@ -6685,7 +6685,7 @@ base,US168,Holo Foil,false,,Eric Yang
 base,US168,Pink Diamante Foil,false,,Eric Yang
 base,US168,Sandglitter,false,,Eric Yang
 base,US168,Silver Crackle Foil,false,,Eric Yang
-base,US168,Topps Foil Pattern,false,,Eric Yang
+base,US168,Topps Pattern Foil,false,,Eric Yang
 base,US168,Gold Border,false,2025,Eric Yang
 base,US168,Rainbow Foil,false,,Eric Yang
 base,US168,Aqua Rainbow Foil,false,,Eric Yang
@@ -6725,7 +6725,7 @@ base,US169,Holo Foil,false,,Oliver Dunn
 base,US169,Pink Diamante Foil,false,,Oliver Dunn
 base,US169,Sandglitter,false,,Oliver Dunn
 base,US169,Silver Crackle Foil,false,,Oliver Dunn
-base,US169,Topps Foil Pattern,false,,Oliver Dunn
+base,US169,Topps Pattern Foil,false,,Oliver Dunn
 base,US169,Gold Border,false,2025,Oliver Dunn
 base,US169,Rainbow Foil,false,,Oliver Dunn
 base,US169,Aqua Rainbow Foil,false,,Oliver Dunn
@@ -6765,7 +6765,7 @@ base,US170,Holo Foil,false,,Caleb Durbin
 base,US170,Pink Diamante Foil,false,,Caleb Durbin
 base,US170,Sandglitter,false,,Caleb Durbin
 base,US170,Silver Crackle Foil,false,,Caleb Durbin
-base,US170,Topps Foil Pattern,false,,Caleb Durbin
+base,US170,Topps Pattern Foil,false,,Caleb Durbin
 base,US170,Gold Border,false,2025,Caleb Durbin
 base,US170,Rainbow Foil,false,,Caleb Durbin
 base,US170,Aqua Rainbow Foil,false,,Caleb Durbin
@@ -6805,7 +6805,7 @@ base,US171,Holo Foil,false,,Ramón Laureano
 base,US171,Pink Diamante Foil,false,,Ramón Laureano
 base,US171,Sandglitter,false,,Ramón Laureano
 base,US171,Silver Crackle Foil,false,,Ramón Laureano
-base,US171,Topps Foil Pattern,false,,Ramón Laureano
+base,US171,Topps Pattern Foil,false,,Ramón Laureano
 base,US171,Gold Border,false,2025,Ramón Laureano
 base,US171,Rainbow Foil,false,,Ramón Laureano
 base,US171,Aqua Rainbow Foil,false,,Ramón Laureano
@@ -6845,7 +6845,7 @@ base,US172,Holo Foil,false,,Daylen Lile
 base,US172,Pink Diamante Foil,false,,Daylen Lile
 base,US172,Sandglitter,false,,Daylen Lile
 base,US172,Silver Crackle Foil,false,,Daylen Lile
-base,US172,Topps Foil Pattern,false,,Daylen Lile
+base,US172,Topps Pattern Foil,false,,Daylen Lile
 base,US172,Gold Border,false,2025,Daylen Lile
 base,US172,Rainbow Foil,false,,Daylen Lile
 base,US172,Aqua Rainbow Foil,false,,Daylen Lile
@@ -6885,7 +6885,7 @@ base,US173,Holo Foil,false,,Mark Leiter Jr.
 base,US173,Pink Diamante Foil,false,,Mark Leiter Jr.
 base,US173,Sandglitter,false,,Mark Leiter Jr.
 base,US173,Silver Crackle Foil,false,,Mark Leiter Jr.
-base,US173,Topps Foil Pattern,false,,Mark Leiter Jr.
+base,US173,Topps Pattern Foil,false,,Mark Leiter Jr.
 base,US173,Gold Border,false,2025,Mark Leiter Jr.
 base,US173,Rainbow Foil,false,,Mark Leiter Jr.
 base,US173,Aqua Rainbow Foil,false,,Mark Leiter Jr.
@@ -6925,7 +6925,7 @@ base,US174,Holo Foil,false,,Christian Koss
 base,US174,Pink Diamante Foil,false,,Christian Koss
 base,US174,Sandglitter,false,,Christian Koss
 base,US174,Silver Crackle Foil,false,,Christian Koss
-base,US174,Topps Foil Pattern,false,,Christian Koss
+base,US174,Topps Pattern Foil,false,,Christian Koss
 base,US174,Gold Border,false,2025,Christian Koss
 base,US174,Rainbow Foil,false,,Christian Koss
 base,US174,Aqua Rainbow Foil,false,,Christian Koss
@@ -6965,7 +6965,7 @@ base,US175,Holo Foil,false,,Jonathan India
 base,US175,Pink Diamante Foil,false,,Jonathan India
 base,US175,Sandglitter,false,,Jonathan India
 base,US175,Silver Crackle Foil,false,,Jonathan India
-base,US175,Topps Foil Pattern,false,,Jonathan India
+base,US175,Topps Pattern Foil,false,,Jonathan India
 base,US175,Gold Border,false,2025,Jonathan India
 base,US175,Rainbow Foil,false,,Jonathan India
 base,US175,Aqua Rainbow Foil,false,,Jonathan India
@@ -7005,7 +7005,7 @@ base,US176,Holo Foil,false,,Evan Sisk
 base,US176,Pink Diamante Foil,false,,Evan Sisk
 base,US176,Sandglitter,false,,Evan Sisk
 base,US176,Silver Crackle Foil,false,,Evan Sisk
-base,US176,Topps Foil Pattern,false,,Evan Sisk
+base,US176,Topps Pattern Foil,false,,Evan Sisk
 base,US176,Gold Border,false,2025,Evan Sisk
 base,US176,Rainbow Foil,false,,Evan Sisk
 base,US176,Aqua Rainbow Foil,false,,Evan Sisk
@@ -7045,7 +7045,7 @@ base,US177,Holo Foil,false,,AJ Blubaugh
 base,US177,Pink Diamante Foil,false,,AJ Blubaugh
 base,US177,Sandglitter,false,,AJ Blubaugh
 base,US177,Silver Crackle Foil,false,,AJ Blubaugh
-base,US177,Topps Foil Pattern,false,,AJ Blubaugh
+base,US177,Topps Pattern Foil,false,,AJ Blubaugh
 base,US177,Gold Border,false,2025,AJ Blubaugh
 base,US177,Rainbow Foil,false,,AJ Blubaugh
 base,US177,Aqua Rainbow Foil,false,,AJ Blubaugh
@@ -7085,7 +7085,7 @@ base,US178,Holo Foil,false,,Devin Williams
 base,US178,Pink Diamante Foil,false,,Devin Williams
 base,US178,Sandglitter,false,,Devin Williams
 base,US178,Silver Crackle Foil,false,,Devin Williams
-base,US178,Topps Foil Pattern,false,,Devin Williams
+base,US178,Topps Pattern Foil,false,,Devin Williams
 base,US178,Gold Border,false,2025,Devin Williams
 base,US178,Rainbow Foil,false,,Devin Williams
 base,US178,Aqua Rainbow Foil,false,,Devin Williams
@@ -7125,7 +7125,7 @@ base,US179,Holo Foil,false,,Ryan Walker
 base,US179,Pink Diamante Foil,false,,Ryan Walker
 base,US179,Sandglitter,false,,Ryan Walker
 base,US179,Silver Crackle Foil,false,,Ryan Walker
-base,US179,Topps Foil Pattern,false,,Ryan Walker
+base,US179,Topps Pattern Foil,false,,Ryan Walker
 base,US179,Gold Border,false,2025,Ryan Walker
 base,US179,Rainbow Foil,false,,Ryan Walker
 base,US179,Aqua Rainbow Foil,false,,Ryan Walker
@@ -7165,7 +7165,7 @@ base,US180,Holo Foil,false,,Jacob Wilson
 base,US180,Pink Diamante Foil,false,,Jacob Wilson
 base,US180,Sandglitter,false,,Jacob Wilson
 base,US180,Silver Crackle Foil,false,,Jacob Wilson
-base,US180,Topps Foil Pattern,false,,Jacob Wilson
+base,US180,Topps Pattern Foil,false,,Jacob Wilson
 base,US180,Gold Border,false,2025,Jacob Wilson
 base,US180,Rainbow Foil,false,,Jacob Wilson
 base,US180,Aqua Rainbow Foil,false,,Jacob Wilson
@@ -7205,7 +7205,7 @@ base,US181,Holo Foil,false,,Dylan Carlson
 base,US181,Pink Diamante Foil,false,,Dylan Carlson
 base,US181,Sandglitter,false,,Dylan Carlson
 base,US181,Silver Crackle Foil,false,,Dylan Carlson
-base,US181,Topps Foil Pattern,false,,Dylan Carlson
+base,US181,Topps Pattern Foil,false,,Dylan Carlson
 base,US181,Gold Border,false,2025,Dylan Carlson
 base,US181,Rainbow Foil,false,,Dylan Carlson
 base,US181,Aqua Rainbow Foil,false,,Dylan Carlson
@@ -7245,7 +7245,7 @@ base,US182,Holo Foil,false,,Jose Iglesias
 base,US182,Pink Diamante Foil,false,,Jose Iglesias
 base,US182,Sandglitter,false,,Jose Iglesias
 base,US182,Silver Crackle Foil,false,,Jose Iglesias
-base,US182,Topps Foil Pattern,false,,Jose Iglesias
+base,US182,Topps Pattern Foil,false,,Jose Iglesias
 base,US182,Gold Border,false,2025,Jose Iglesias
 base,US182,Rainbow Foil,false,,Jose Iglesias
 base,US182,Aqua Rainbow Foil,false,,Jose Iglesias
@@ -7285,7 +7285,7 @@ base,US183,Holo Foil,false,,Bryan King
 base,US183,Pink Diamante Foil,false,,Bryan King
 base,US183,Sandglitter,false,,Bryan King
 base,US183,Silver Crackle Foil,false,,Bryan King
-base,US183,Topps Foil Pattern,false,,Bryan King
+base,US183,Topps Pattern Foil,false,,Bryan King
 base,US183,Gold Border,false,2025,Bryan King
 base,US183,Rainbow Foil,false,,Bryan King
 base,US183,Aqua Rainbow Foil,false,,Bryan King
@@ -7325,7 +7325,7 @@ base,US184,Holo Foil,false,,Bryce Harper
 base,US184,Pink Diamante Foil,false,,Bryce Harper
 base,US184,Sandglitter,false,,Bryce Harper
 base,US184,Silver Crackle Foil,false,,Bryce Harper
-base,US184,Topps Foil Pattern,false,,Bryce Harper
+base,US184,Topps Pattern Foil,false,,Bryce Harper
 base,US184,Gold Border,false,2025,Bryce Harper
 base,US184,Rainbow Foil,false,,Bryce Harper
 base,US184,Aqua Rainbow Foil,false,,Bryce Harper
@@ -7365,7 +7365,7 @@ base,US185,Holo Foil,false,,Matthew Liberatore
 base,US185,Pink Diamante Foil,false,,Matthew Liberatore
 base,US185,Sandglitter,false,,Matthew Liberatore
 base,US185,Silver Crackle Foil,false,,Matthew Liberatore
-base,US185,Topps Foil Pattern,false,,Matthew Liberatore
+base,US185,Topps Pattern Foil,false,,Matthew Liberatore
 base,US185,Gold Border,false,2025,Matthew Liberatore
 base,US185,Rainbow Foil,false,,Matthew Liberatore
 base,US185,Aqua Rainbow Foil,false,,Matthew Liberatore
@@ -7405,7 +7405,7 @@ base,US186,Holo Foil,false,,Cole Henry
 base,US186,Pink Diamante Foil,false,,Cole Henry
 base,US186,Sandglitter,false,,Cole Henry
 base,US186,Silver Crackle Foil,false,,Cole Henry
-base,US186,Topps Foil Pattern,false,,Cole Henry
+base,US186,Topps Pattern Foil,false,,Cole Henry
 base,US186,Gold Border,false,2025,Cole Henry
 base,US186,Rainbow Foil,false,,Cole Henry
 base,US186,Aqua Rainbow Foil,false,,Cole Henry
@@ -7445,7 +7445,7 @@ base,US187,Holo Foil,false,,Caden Dana
 base,US187,Pink Diamante Foil,false,,Caden Dana
 base,US187,Sandglitter,false,,Caden Dana
 base,US187,Silver Crackle Foil,false,,Caden Dana
-base,US187,Topps Foil Pattern,false,,Caden Dana
+base,US187,Topps Pattern Foil,false,,Caden Dana
 base,US187,Gold Border,false,2025,Caden Dana
 base,US187,Rainbow Foil,false,,Caden Dana
 base,US187,Aqua Rainbow Foil,false,,Caden Dana
@@ -7485,7 +7485,7 @@ base,US188,Holo Foil,false,,Graham Pauley
 base,US188,Pink Diamante Foil,false,,Graham Pauley
 base,US188,Sandglitter,false,,Graham Pauley
 base,US188,Silver Crackle Foil,false,,Graham Pauley
-base,US188,Topps Foil Pattern,false,,Graham Pauley
+base,US188,Topps Pattern Foil,false,,Graham Pauley
 base,US188,Gold Border,false,2025,Graham Pauley
 base,US188,Rainbow Foil,false,,Graham Pauley
 base,US188,Aqua Rainbow Foil,false,,Graham Pauley
@@ -7525,7 +7525,7 @@ base,US189,Holo Foil,false,,Eli White
 base,US189,Pink Diamante Foil,false,,Eli White
 base,US189,Sandglitter,false,,Eli White
 base,US189,Silver Crackle Foil,false,,Eli White
-base,US189,Topps Foil Pattern,false,,Eli White
+base,US189,Topps Pattern Foil,false,,Eli White
 base,US189,Gold Border,false,2025,Eli White
 base,US189,Rainbow Foil,false,,Eli White
 base,US189,Aqua Rainbow Foil,false,,Eli White
@@ -7565,7 +7565,7 @@ base,US190,Holo Foil,false,,Matt Gorski
 base,US190,Pink Diamante Foil,false,,Matt Gorski
 base,US190,Sandglitter,false,,Matt Gorski
 base,US190,Silver Crackle Foil,false,,Matt Gorski
-base,US190,Topps Foil Pattern,false,,Matt Gorski
+base,US190,Topps Pattern Foil,false,,Matt Gorski
 base,US190,Gold Border,false,2025,Matt Gorski
 base,US190,Rainbow Foil,false,,Matt Gorski
 base,US190,Aqua Rainbow Foil,false,,Matt Gorski
@@ -7605,7 +7605,7 @@ base,US191,Holo Foil,false,,Cal Quantrill
 base,US191,Pink Diamante Foil,false,,Cal Quantrill
 base,US191,Sandglitter,false,,Cal Quantrill
 base,US191,Silver Crackle Foil,false,,Cal Quantrill
-base,US191,Topps Foil Pattern,false,,Cal Quantrill
+base,US191,Topps Pattern Foil,false,,Cal Quantrill
 base,US191,Gold Border,false,2025,Cal Quantrill
 base,US191,Rainbow Foil,false,,Cal Quantrill
 base,US191,Aqua Rainbow Foil,false,,Cal Quantrill
@@ -7645,7 +7645,7 @@ base,US192,Holo Foil,false,,John Rave
 base,US192,Pink Diamante Foil,false,,John Rave
 base,US192,Sandglitter,false,,John Rave
 base,US192,Silver Crackle Foil,false,,John Rave
-base,US192,Topps Foil Pattern,false,,John Rave
+base,US192,Topps Pattern Foil,false,,John Rave
 base,US192,Gold Border,false,2025,John Rave
 base,US192,Rainbow Foil,false,,John Rave
 base,US192,Aqua Rainbow Foil,false,,John Rave
@@ -7685,7 +7685,7 @@ base,US193,Holo Foil,false,,Jackson Jobe
 base,US193,Pink Diamante Foil,false,,Jackson Jobe
 base,US193,Sandglitter,false,,Jackson Jobe
 base,US193,Silver Crackle Foil,false,,Jackson Jobe
-base,US193,Topps Foil Pattern,false,,Jackson Jobe
+base,US193,Topps Pattern Foil,false,,Jackson Jobe
 base,US193,Gold Border,false,2025,Jackson Jobe
 base,US193,Rainbow Foil,false,,Jackson Jobe
 base,US193,Aqua Rainbow Foil,false,,Jackson Jobe
@@ -7725,7 +7725,7 @@ base,US194,Holo Foil,false,,Max Lazar
 base,US194,Pink Diamante Foil,false,,Max Lazar
 base,US194,Sandglitter,false,,Max Lazar
 base,US194,Silver Crackle Foil,false,,Max Lazar
-base,US194,Topps Foil Pattern,false,,Max Lazar
+base,US194,Topps Pattern Foil,false,,Max Lazar
 base,US194,Gold Border,false,2025,Max Lazar
 base,US194,Rainbow Foil,false,,Max Lazar
 base,US194,Aqua Rainbow Foil,false,,Max Lazar
@@ -7765,7 +7765,7 @@ base,US195,Holo Foil,false,,Isaac Paredes
 base,US195,Pink Diamante Foil,false,,Isaac Paredes
 base,US195,Sandglitter,false,,Isaac Paredes
 base,US195,Silver Crackle Foil,false,,Isaac Paredes
-base,US195,Topps Foil Pattern,false,,Isaac Paredes
+base,US195,Topps Pattern Foil,false,,Isaac Paredes
 base,US195,Gold Border,false,2025,Isaac Paredes
 base,US195,Rainbow Foil,false,,Isaac Paredes
 base,US195,Aqua Rainbow Foil,false,,Isaac Paredes
@@ -7805,7 +7805,7 @@ base,US196,Holo Foil,false,,Rhylan Thomas
 base,US196,Pink Diamante Foil,false,,Rhylan Thomas
 base,US196,Sandglitter,false,,Rhylan Thomas
 base,US196,Silver Crackle Foil,false,,Rhylan Thomas
-base,US196,Topps Foil Pattern,false,,Rhylan Thomas
+base,US196,Topps Pattern Foil,false,,Rhylan Thomas
 base,US196,Gold Border,false,2025,Rhylan Thomas
 base,US196,Rainbow Foil,false,,Rhylan Thomas
 base,US196,Aqua Rainbow Foil,false,,Rhylan Thomas
@@ -7845,7 +7845,7 @@ base,US197,Holo Foil,false,,Nick Kurtz
 base,US197,Pink Diamante Foil,false,,Nick Kurtz
 base,US197,Sandglitter,false,,Nick Kurtz
 base,US197,Silver Crackle Foil,false,,Nick Kurtz
-base,US197,Topps Foil Pattern,false,,Nick Kurtz
+base,US197,Topps Pattern Foil,false,,Nick Kurtz
 base,US197,Gold Border,false,2025,Nick Kurtz
 base,US197,Rainbow Foil,false,,Nick Kurtz
 base,US197,Aqua Rainbow Foil,false,,Nick Kurtz
@@ -7885,7 +7885,7 @@ base,US198,Holo Foil,false,,Bryan Sammons
 base,US198,Pink Diamante Foil,false,,Bryan Sammons
 base,US198,Sandglitter,false,,Bryan Sammons
 base,US198,Silver Crackle Foil,false,,Bryan Sammons
-base,US198,Topps Foil Pattern,false,,Bryan Sammons
+base,US198,Topps Pattern Foil,false,,Bryan Sammons
 base,US198,Gold Border,false,2025,Bryan Sammons
 base,US198,Rainbow Foil,false,,Bryan Sammons
 base,US198,Aqua Rainbow Foil,false,,Bryan Sammons
@@ -7925,7 +7925,7 @@ base,US199,Holo Foil,false,,Roki Sasaki
 base,US199,Pink Diamante Foil,false,,Roki Sasaki
 base,US199,Sandglitter,false,,Roki Sasaki
 base,US199,Silver Crackle Foil,false,,Roki Sasaki
-base,US199,Topps Foil Pattern,false,,Roki Sasaki
+base,US199,Topps Pattern Foil,false,,Roki Sasaki
 base,US199,Gold Border,false,2025,Roki Sasaki
 base,US199,Rainbow Foil,false,,Roki Sasaki
 base,US199,Aqua Rainbow Foil,false,,Roki Sasaki
@@ -7965,7 +7965,7 @@ base,US200,Holo Foil,false,,Matt Shaw
 base,US200,Pink Diamante Foil,false,,Matt Shaw
 base,US200,Sandglitter,false,,Matt Shaw
 base,US200,Silver Crackle Foil,false,,Matt Shaw
-base,US200,Topps Foil Pattern,false,,Matt Shaw
+base,US200,Topps Pattern Foil,false,,Matt Shaw
 base,US200,Gold Border,false,2025,Matt Shaw
 base,US200,Rainbow Foil,false,,Matt Shaw
 base,US200,Aqua Rainbow Foil,false,,Matt Shaw
@@ -8005,7 +8005,7 @@ base,US201,Holo Foil,false,,Nick Kurtz
 base,US201,Pink Diamante Foil,false,,Nick Kurtz
 base,US201,Sandglitter,false,,Nick Kurtz
 base,US201,Silver Crackle Foil,false,,Nick Kurtz
-base,US201,Topps Foil Pattern,false,,Nick Kurtz
+base,US201,Topps Pattern Foil,false,,Nick Kurtz
 base,US201,Gold Border,false,2025,Nick Kurtz
 base,US201,Rainbow Foil,false,,Nick Kurtz
 base,US201,Aqua Rainbow Foil,false,,Nick Kurtz
@@ -8045,7 +8045,7 @@ base,US202,Holo Foil,false,,Ryan Loutos
 base,US202,Pink Diamante Foil,false,,Ryan Loutos
 base,US202,Sandglitter,false,,Ryan Loutos
 base,US202,Silver Crackle Foil,false,,Ryan Loutos
-base,US202,Topps Foil Pattern,false,,Ryan Loutos
+base,US202,Topps Pattern Foil,false,,Ryan Loutos
 base,US202,Gold Border,false,2025,Ryan Loutos
 base,US202,Rainbow Foil,false,,Ryan Loutos
 base,US202,Aqua Rainbow Foil,false,,Ryan Loutos
@@ -8085,7 +8085,7 @@ base,US203,Holo Foil,false,,Orlando Ribalta
 base,US203,Pink Diamante Foil,false,,Orlando Ribalta
 base,US203,Sandglitter,false,,Orlando Ribalta
 base,US203,Silver Crackle Foil,false,,Orlando Ribalta
-base,US203,Topps Foil Pattern,false,,Orlando Ribalta
+base,US203,Topps Pattern Foil,false,,Orlando Ribalta
 base,US203,Gold Border,false,2025,Orlando Ribalta
 base,US203,Rainbow Foil,false,,Orlando Ribalta
 base,US203,Aqua Rainbow Foil,false,,Orlando Ribalta
@@ -8125,7 +8125,7 @@ base,US204,Holo Foil,false,,Alexander Canario
 base,US204,Pink Diamante Foil,false,,Alexander Canario
 base,US204,Sandglitter,false,,Alexander Canario
 base,US204,Silver Crackle Foil,false,,Alexander Canario
-base,US204,Topps Foil Pattern,false,,Alexander Canario
+base,US204,Topps Pattern Foil,false,,Alexander Canario
 base,US204,Gold Border,false,2025,Alexander Canario
 base,US204,Rainbow Foil,false,,Alexander Canario
 base,US204,Aqua Rainbow Foil,false,,Alexander Canario
@@ -8165,7 +8165,7 @@ base,US205,Holo Foil,false,,Blaine Crim
 base,US205,Pink Diamante Foil,false,,Blaine Crim
 base,US205,Sandglitter,false,,Blaine Crim
 base,US205,Silver Crackle Foil,false,,Blaine Crim
-base,US205,Topps Foil Pattern,false,,Blaine Crim
+base,US205,Topps Pattern Foil,false,,Blaine Crim
 base,US205,Gold Border,false,2025,Blaine Crim
 base,US205,Rainbow Foil,false,,Blaine Crim
 base,US205,Aqua Rainbow Foil,false,,Blaine Crim
@@ -8205,7 +8205,7 @@ base,US206,Holo Foil,false,,Gabriel Arias
 base,US206,Pink Diamante Foil,false,,Gabriel Arias
 base,US206,Sandglitter,false,,Gabriel Arias
 base,US206,Silver Crackle Foil,false,,Gabriel Arias
-base,US206,Topps Foil Pattern,false,,Gabriel Arias
+base,US206,Topps Pattern Foil,false,,Gabriel Arias
 base,US206,Gold Border,false,2025,Gabriel Arias
 base,US206,Rainbow Foil,false,,Gabriel Arias
 base,US206,Aqua Rainbow Foil,false,,Gabriel Arias
@@ -8245,7 +8245,7 @@ base,US207,Holo Foil,false,,Kyle Higashioka
 base,US207,Pink Diamante Foil,false,,Kyle Higashioka
 base,US207,Sandglitter,false,,Kyle Higashioka
 base,US207,Silver Crackle Foil,false,,Kyle Higashioka
-base,US207,Topps Foil Pattern,false,,Kyle Higashioka
+base,US207,Topps Pattern Foil,false,,Kyle Higashioka
 base,US207,Gold Border,false,2025,Kyle Higashioka
 base,US207,Rainbow Foil,false,,Kyle Higashioka
 base,US207,Aqua Rainbow Foil,false,,Kyle Higashioka
@@ -8285,7 +8285,7 @@ base,US208,Holo Foil,false,,Kody Clemens
 base,US208,Pink Diamante Foil,false,,Kody Clemens
 base,US208,Sandglitter,false,,Kody Clemens
 base,US208,Silver Crackle Foil,false,,Kody Clemens
-base,US208,Topps Foil Pattern,false,,Kody Clemens
+base,US208,Topps Pattern Foil,false,,Kody Clemens
 base,US208,Gold Border,false,2025,Kody Clemens
 base,US208,Rainbow Foil,false,,Kody Clemens
 base,US208,Aqua Rainbow Foil,false,,Kody Clemens
@@ -8325,7 +8325,7 @@ base,US209,Holo Foil,false,,MJ Melendez
 base,US209,Pink Diamante Foil,false,,MJ Melendez
 base,US209,Sandglitter,false,,MJ Melendez
 base,US209,Silver Crackle Foil,false,,MJ Melendez
-base,US209,Topps Foil Pattern,false,,MJ Melendez
+base,US209,Topps Pattern Foil,false,,MJ Melendez
 base,US209,Gold Border,false,2025,MJ Melendez
 base,US209,Rainbow Foil,false,,MJ Melendez
 base,US209,Aqua Rainbow Foil,false,,MJ Melendez
@@ -8365,7 +8365,7 @@ base,US210,Holo Foil,false,,Yaramil Hiraldo
 base,US210,Pink Diamante Foil,false,,Yaramil Hiraldo
 base,US210,Sandglitter,false,,Yaramil Hiraldo
 base,US210,Silver Crackle Foil,false,,Yaramil Hiraldo
-base,US210,Topps Foil Pattern,false,,Yaramil Hiraldo
+base,US210,Topps Pattern Foil,false,,Yaramil Hiraldo
 base,US210,Gold Border,false,2025,Yaramil Hiraldo
 base,US210,Rainbow Foil,false,,Yaramil Hiraldo
 base,US210,Aqua Rainbow Foil,false,,Yaramil Hiraldo
@@ -8405,7 +8405,7 @@ base,US211,Holo Foil,false,,Patrick Monteverde
 base,US211,Pink Diamante Foil,false,,Patrick Monteverde
 base,US211,Sandglitter,false,,Patrick Monteverde
 base,US211,Silver Crackle Foil,false,,Patrick Monteverde
-base,US211,Topps Foil Pattern,false,,Patrick Monteverde
+base,US211,Topps Pattern Foil,false,,Patrick Monteverde
 base,US211,Gold Border,false,2025,Patrick Monteverde
 base,US211,Rainbow Foil,false,,Patrick Monteverde
 base,US211,Aqua Rainbow Foil,false,,Patrick Monteverde
@@ -8445,7 +8445,7 @@ base,US212,Holo Foil,false,,Eric Orze
 base,US212,Pink Diamante Foil,false,,Eric Orze
 base,US212,Sandglitter,false,,Eric Orze
 base,US212,Silver Crackle Foil,false,,Eric Orze
-base,US212,Topps Foil Pattern,false,,Eric Orze
+base,US212,Topps Pattern Foil,false,,Eric Orze
 base,US212,Gold Border,false,2025,Eric Orze
 base,US212,Rainbow Foil,false,,Eric Orze
 base,US212,Aqua Rainbow Foil,false,,Eric Orze
@@ -8485,7 +8485,7 @@ base,US213,Holo Foil,false,,Logan Davidson
 base,US213,Pink Diamante Foil,false,,Logan Davidson
 base,US213,Sandglitter,false,,Logan Davidson
 base,US213,Silver Crackle Foil,false,,Logan Davidson
-base,US213,Topps Foil Pattern,false,,Logan Davidson
+base,US213,Topps Pattern Foil,false,,Logan Davidson
 base,US213,Gold Border,false,2025,Logan Davidson
 base,US213,Rainbow Foil,false,,Logan Davidson
 base,US213,Aqua Rainbow Foil,false,,Logan Davidson
@@ -8525,7 +8525,7 @@ base,US214,Holo Foil,false,,Cade Horton
 base,US214,Pink Diamante Foil,false,,Cade Horton
 base,US214,Sandglitter,false,,Cade Horton
 base,US214,Silver Crackle Foil,false,,Cade Horton
-base,US214,Topps Foil Pattern,false,,Cade Horton
+base,US214,Topps Pattern Foil,false,,Cade Horton
 base,US214,Gold Border,false,2025,Cade Horton
 base,US214,Rainbow Foil,false,,Cade Horton
 base,US214,Aqua Rainbow Foil,false,,Cade Horton
@@ -8565,7 +8565,7 @@ base,US215,Holo Foil,false,,Jack O'Loughlin
 base,US215,Pink Diamante Foil,false,,Jack O'Loughlin
 base,US215,Sandglitter,false,,Jack O'Loughlin
 base,US215,Silver Crackle Foil,false,,Jack O'Loughlin
-base,US215,Topps Foil Pattern,false,,Jack O'Loughlin
+base,US215,Topps Pattern Foil,false,,Jack O'Loughlin
 base,US215,Gold Border,false,2025,Jack O'Loughlin
 base,US215,Rainbow Foil,false,,Jack O'Loughlin
 base,US215,Aqua Rainbow Foil,false,,Jack O'Loughlin
@@ -8605,7 +8605,7 @@ base,US216,Holo Foil,false,,Nathan Wiles
 base,US216,Pink Diamante Foil,false,,Nathan Wiles
 base,US216,Sandglitter,false,,Nathan Wiles
 base,US216,Silver Crackle Foil,false,,Nathan Wiles
-base,US216,Topps Foil Pattern,false,,Nathan Wiles
+base,US216,Topps Pattern Foil,false,,Nathan Wiles
 base,US216,Gold Border,false,2025,Nathan Wiles
 base,US216,Rainbow Foil,false,,Nathan Wiles
 base,US216,Aqua Rainbow Foil,false,,Nathan Wiles
@@ -8645,7 +8645,7 @@ base,US217,Holo Foil,false,,Fernando Tatis Jr.
 base,US217,Pink Diamante Foil,false,,Fernando Tatis Jr.
 base,US217,Sandglitter,false,,Fernando Tatis Jr.
 base,US217,Silver Crackle Foil,false,,Fernando Tatis Jr.
-base,US217,Topps Foil Pattern,false,,Fernando Tatis Jr.
+base,US217,Topps Pattern Foil,false,,Fernando Tatis Jr.
 base,US217,Gold Border,false,2025,Fernando Tatis Jr.
 base,US217,Rainbow Foil,false,,Fernando Tatis Jr.
 base,US217,Aqua Rainbow Foil,false,,Fernando Tatis Jr.
@@ -8685,7 +8685,7 @@ base,US218,Holo Foil,false,,James Wood
 base,US218,Pink Diamante Foil,false,,James Wood
 base,US218,Sandglitter,false,,James Wood
 base,US218,Silver Crackle Foil,false,,James Wood
-base,US218,Topps Foil Pattern,false,,James Wood
+base,US218,Topps Pattern Foil,false,,James Wood
 base,US218,Gold Border,false,2025,James Wood
 base,US218,Rainbow Foil,false,,James Wood
 base,US218,Aqua Rainbow Foil,false,,James Wood
@@ -8725,7 +8725,7 @@ base,US219,Holo Foil,false,,Mike Vasil
 base,US219,Pink Diamante Foil,false,,Mike Vasil
 base,US219,Sandglitter,false,,Mike Vasil
 base,US219,Silver Crackle Foil,false,,Mike Vasil
-base,US219,Topps Foil Pattern,false,,Mike Vasil
+base,US219,Topps Pattern Foil,false,,Mike Vasil
 base,US219,Gold Border,false,2025,Mike Vasil
 base,US219,Rainbow Foil,false,,Mike Vasil
 base,US219,Aqua Rainbow Foil,false,,Mike Vasil
@@ -8765,7 +8765,7 @@ base,US220,Holo Foil,false,,Victor MESA JR.
 base,US220,Pink Diamante Foil,false,,Victor MESA JR.
 base,US220,Sandglitter,false,,Victor MESA JR.
 base,US220,Silver Crackle Foil,false,,Victor MESA JR.
-base,US220,Topps Foil Pattern,false,,Victor MESA JR.
+base,US220,Topps Pattern Foil,false,,Victor MESA JR.
 base,US220,Gold Border,false,2025,Victor MESA JR.
 base,US220,Rainbow Foil,false,,Victor MESA JR.
 base,US220,Aqua Rainbow Foil,false,,Victor MESA JR.
@@ -8805,7 +8805,7 @@ base,US221,Holo Foil,false,,Jackson Merrill
 base,US221,Pink Diamante Foil,false,,Jackson Merrill
 base,US221,Sandglitter,false,,Jackson Merrill
 base,US221,Silver Crackle Foil,false,,Jackson Merrill
-base,US221,Topps Foil Pattern,false,,Jackson Merrill
+base,US221,Topps Pattern Foil,false,,Jackson Merrill
 base,US221,Gold Border,false,2025,Jackson Merrill
 base,US221,Rainbow Foil,false,,Jackson Merrill
 base,US221,Aqua Rainbow Foil,false,,Jackson Merrill
@@ -8845,7 +8845,7 @@ base,US222,Holo Foil,false,,Michael Lorenzen
 base,US222,Pink Diamante Foil,false,,Michael Lorenzen
 base,US222,Sandglitter,false,,Michael Lorenzen
 base,US222,Silver Crackle Foil,false,,Michael Lorenzen
-base,US222,Topps Foil Pattern,false,,Michael Lorenzen
+base,US222,Topps Pattern Foil,false,,Michael Lorenzen
 base,US222,Gold Border,false,2025,Michael Lorenzen
 base,US222,Rainbow Foil,false,,Michael Lorenzen
 base,US222,Aqua Rainbow Foil,false,,Michael Lorenzen
@@ -8885,7 +8885,7 @@ base,US223,Holo Foil,false,,Dylan Crews
 base,US223,Pink Diamante Foil,false,,Dylan Crews
 base,US223,Sandglitter,false,,Dylan Crews
 base,US223,Silver Crackle Foil,false,,Dylan Crews
-base,US223,Topps Foil Pattern,false,,Dylan Crews
+base,US223,Topps Pattern Foil,false,,Dylan Crews
 base,US223,Gold Border,false,2025,Dylan Crews
 base,US223,Rainbow Foil,false,,Dylan Crews
 base,US223,Aqua Rainbow Foil,false,,Dylan Crews
@@ -8925,7 +8925,7 @@ base,US224,Holo Foil,false,,Tim Elko
 base,US224,Pink Diamante Foil,false,,Tim Elko
 base,US224,Sandglitter,false,,Tim Elko
 base,US224,Silver Crackle Foil,false,,Tim Elko
-base,US224,Topps Foil Pattern,false,,Tim Elko
+base,US224,Topps Pattern Foil,false,,Tim Elko
 base,US224,Gold Border,false,2025,Tim Elko
 base,US224,Rainbow Foil,false,,Tim Elko
 base,US224,Aqua Rainbow Foil,false,,Tim Elko
@@ -8965,7 +8965,7 @@ base,US225,Holo Foil,false,,Gavin Sheets
 base,US225,Pink Diamante Foil,false,,Gavin Sheets
 base,US225,Sandglitter,false,,Gavin Sheets
 base,US225,Silver Crackle Foil,false,,Gavin Sheets
-base,US225,Topps Foil Pattern,false,,Gavin Sheets
+base,US225,Topps Pattern Foil,false,,Gavin Sheets
 base,US225,Gold Border,false,2025,Gavin Sheets
 base,US225,Rainbow Foil,false,,Gavin Sheets
 base,US225,Aqua Rainbow Foil,false,,Gavin Sheets
@@ -9005,7 +9005,7 @@ base,US226,Holo Foil,false,,Tayler Saucedo
 base,US226,Pink Diamante Foil,false,,Tayler Saucedo
 base,US226,Sandglitter,false,,Tayler Saucedo
 base,US226,Silver Crackle Foil,false,,Tayler Saucedo
-base,US226,Topps Foil Pattern,false,,Tayler Saucedo
+base,US226,Topps Pattern Foil,false,,Tayler Saucedo
 base,US226,Gold Border,false,2025,Tayler Saucedo
 base,US226,Rainbow Foil,false,,Tayler Saucedo
 base,US226,Aqua Rainbow Foil,false,,Tayler Saucedo
@@ -9045,7 +9045,7 @@ base,US227,Holo Foil,false,,Marc Church
 base,US227,Pink Diamante Foil,false,,Marc Church
 base,US227,Sandglitter,false,,Marc Church
 base,US227,Silver Crackle Foil,false,,Marc Church
-base,US227,Topps Foil Pattern,false,,Marc Church
+base,US227,Topps Pattern Foil,false,,Marc Church
 base,US227,Gold Border,false,2025,Marc Church
 base,US227,Rainbow Foil,false,,Marc Church
 base,US227,Aqua Rainbow Foil,false,,Marc Church
@@ -9085,7 +9085,7 @@ base,US228,Holo Foil,false,,Dane Myers
 base,US228,Pink Diamante Foil,false,,Dane Myers
 base,US228,Sandglitter,false,,Dane Myers
 base,US228,Silver Crackle Foil,false,,Dane Myers
-base,US228,Topps Foil Pattern,false,,Dane Myers
+base,US228,Topps Pattern Foil,false,,Dane Myers
 base,US228,Gold Border,false,2025,Dane Myers
 base,US228,Rainbow Foil,false,,Dane Myers
 base,US228,Aqua Rainbow Foil,false,,Dane Myers
@@ -9125,7 +9125,7 @@ base,US229,Holo Foil,false,,Marcell Ozuna
 base,US229,Pink Diamante Foil,false,,Marcell Ozuna
 base,US229,Sandglitter,false,,Marcell Ozuna
 base,US229,Silver Crackle Foil,false,,Marcell Ozuna
-base,US229,Topps Foil Pattern,false,,Marcell Ozuna
+base,US229,Topps Pattern Foil,false,,Marcell Ozuna
 base,US229,Gold Border,false,2025,Marcell Ozuna
 base,US229,Rainbow Foil,false,,Marcell Ozuna
 base,US229,Aqua Rainbow Foil,false,,Marcell Ozuna
@@ -9165,7 +9165,7 @@ base,US230,Holo Foil,false,,Nathaniel Lowe
 base,US230,Pink Diamante Foil,false,,Nathaniel Lowe
 base,US230,Sandglitter,false,,Nathaniel Lowe
 base,US230,Silver Crackle Foil,false,,Nathaniel Lowe
-base,US230,Topps Foil Pattern,false,,Nathaniel Lowe
+base,US230,Topps Pattern Foil,false,,Nathaniel Lowe
 base,US230,Gold Border,false,2025,Nathaniel Lowe
 base,US230,Rainbow Foil,false,,Nathaniel Lowe
 base,US230,Aqua Rainbow Foil,false,,Nathaniel Lowe
@@ -9205,7 +9205,7 @@ base,US231,Holo Foil,false,,Hunter Bigge
 base,US231,Pink Diamante Foil,false,,Hunter Bigge
 base,US231,Sandglitter,false,,Hunter Bigge
 base,US231,Silver Crackle Foil,false,,Hunter Bigge
-base,US231,Topps Foil Pattern,false,,Hunter Bigge
+base,US231,Topps Pattern Foil,false,,Hunter Bigge
 base,US231,Gold Border,false,2025,Hunter Bigge
 base,US231,Rainbow Foil,false,,Hunter Bigge
 base,US231,Aqua Rainbow Foil,false,,Hunter Bigge
@@ -9245,7 +9245,7 @@ base,US232,Holo Foil,false,,Juan Morillo
 base,US232,Pink Diamante Foil,false,,Juan Morillo
 base,US232,Sandglitter,false,,Juan Morillo
 base,US232,Silver Crackle Foil,false,,Juan Morillo
-base,US232,Topps Foil Pattern,false,,Juan Morillo
+base,US232,Topps Pattern Foil,false,,Juan Morillo
 base,US232,Gold Border,false,2025,Juan Morillo
 base,US232,Rainbow Foil,false,,Juan Morillo
 base,US232,Aqua Rainbow Foil,false,,Juan Morillo
@@ -9285,7 +9285,7 @@ base,US233,Holo Foil,false,,Christian Yelich
 base,US233,Pink Diamante Foil,false,,Christian Yelich
 base,US233,Sandglitter,false,,Christian Yelich
 base,US233,Silver Crackle Foil,false,,Christian Yelich
-base,US233,Topps Foil Pattern,false,,Christian Yelich
+base,US233,Topps Pattern Foil,false,,Christian Yelich
 base,US233,Gold Border,false,2025,Christian Yelich
 base,US233,Rainbow Foil,false,,Christian Yelich
 base,US233,Aqua Rainbow Foil,false,,Christian Yelich
@@ -9325,7 +9325,7 @@ base,US234,Holo Foil,false,,Bryan De La Cruz
 base,US234,Pink Diamante Foil,false,,Bryan De La Cruz
 base,US234,Sandglitter,false,,Bryan De La Cruz
 base,US234,Silver Crackle Foil,false,,Bryan De La Cruz
-base,US234,Topps Foil Pattern,false,,Bryan De La Cruz
+base,US234,Topps Pattern Foil,false,,Bryan De La Cruz
 base,US234,Gold Border,false,2025,Bryan De La Cruz
 base,US234,Rainbow Foil,false,,Bryan De La Cruz
 base,US234,Aqua Rainbow Foil,false,,Bryan De La Cruz
@@ -9365,7 +9365,7 @@ base,US235,Holo Foil,false,,Elly De La Cruz
 base,US235,Pink Diamante Foil,false,,Elly De La Cruz
 base,US235,Sandglitter,false,,Elly De La Cruz
 base,US235,Silver Crackle Foil,false,,Elly De La Cruz
-base,US235,Topps Foil Pattern,false,,Elly De La Cruz
+base,US235,Topps Pattern Foil,false,,Elly De La Cruz
 base,US235,Gold Border,false,2025,Elly De La Cruz
 base,US235,Rainbow Foil,false,,Elly De La Cruz
 base,US235,Aqua Rainbow Foil,false,,Elly De La Cruz
@@ -9405,7 +9405,7 @@ base,US236,Holo Foil,false,,Moisés Ballesteros
 base,US236,Pink Diamante Foil,false,,Moisés Ballesteros
 base,US236,Sandglitter,false,,Moisés Ballesteros
 base,US236,Silver Crackle Foil,false,,Moisés Ballesteros
-base,US236,Topps Foil Pattern,false,,Moisés Ballesteros
+base,US236,Topps Pattern Foil,false,,Moisés Ballesteros
 base,US236,Gold Border,false,2025,Moisés Ballesteros
 base,US236,Rainbow Foil,false,,Moisés Ballesteros
 base,US236,Aqua Rainbow Foil,false,,Moisés Ballesteros
@@ -9445,7 +9445,7 @@ base,US237,Holo Foil,false,,Carlos Estévez
 base,US237,Pink Diamante Foil,false,,Carlos Estévez
 base,US237,Sandglitter,false,,Carlos Estévez
 base,US237,Silver Crackle Foil,false,,Carlos Estévez
-base,US237,Topps Foil Pattern,false,,Carlos Estévez
+base,US237,Topps Pattern Foil,false,,Carlos Estévez
 base,US237,Gold Border,false,2025,Carlos Estévez
 base,US237,Rainbow Foil,false,,Carlos Estévez
 base,US237,Aqua Rainbow Foil,false,,Carlos Estévez
@@ -9485,7 +9485,7 @@ base,US238,Holo Foil,false,,Zak Kent
 base,US238,Pink Diamante Foil,false,,Zak Kent
 base,US238,Sandglitter,false,,Zak Kent
 base,US238,Silver Crackle Foil,false,,Zak Kent
-base,US238,Topps Foil Pattern,false,,Zak Kent
+base,US238,Topps Pattern Foil,false,,Zak Kent
 base,US238,Gold Border,false,2025,Zak Kent
 base,US238,Rainbow Foil,false,,Zak Kent
 base,US238,Aqua Rainbow Foil,false,,Zak Kent
@@ -9525,7 +9525,7 @@ base,US239,Holo Foil,false,,Alex Vesia
 base,US239,Pink Diamante Foil,false,,Alex Vesia
 base,US239,Sandglitter,false,,Alex Vesia
 base,US239,Silver Crackle Foil,false,,Alex Vesia
-base,US239,Topps Foil Pattern,false,,Alex Vesia
+base,US239,Topps Pattern Foil,false,,Alex Vesia
 base,US239,Gold Border,false,2025,Alex Vesia
 base,US239,Rainbow Foil,false,,Alex Vesia
 base,US239,Aqua Rainbow Foil,false,,Alex Vesia
@@ -9565,7 +9565,7 @@ base,US240,Holo Foil,false,,Randy Rodríguez
 base,US240,Pink Diamante Foil,false,,Randy Rodríguez
 base,US240,Sandglitter,false,,Randy Rodríguez
 base,US240,Silver Crackle Foil,false,,Randy Rodríguez
-base,US240,Topps Foil Pattern,false,,Randy Rodríguez
+base,US240,Topps Pattern Foil,false,,Randy Rodríguez
 base,US240,Gold Border,false,2025,Randy Rodríguez
 base,US240,Rainbow Foil,false,,Randy Rodríguez
 base,US240,Aqua Rainbow Foil,false,,Randy Rodríguez
@@ -9605,7 +9605,7 @@ base,US241,Holo Foil,false,,Marcelo Mayer
 base,US241,Pink Diamante Foil,false,,Marcelo Mayer
 base,US241,Sandglitter,false,,Marcelo Mayer
 base,US241,Silver Crackle Foil,false,,Marcelo Mayer
-base,US241,Topps Foil Pattern,false,,Marcelo Mayer
+base,US241,Topps Pattern Foil,false,,Marcelo Mayer
 base,US241,Gold Border,false,2025,Marcelo Mayer
 base,US241,Rainbow Foil,false,,Marcelo Mayer
 base,US241,Aqua Rainbow Foil,false,,Marcelo Mayer
@@ -9645,7 +9645,7 @@ base,US242,Holo Foil,false,,Charlie Morton
 base,US242,Pink Diamante Foil,false,,Charlie Morton
 base,US242,Sandglitter,false,,Charlie Morton
 base,US242,Silver Crackle Foil,false,,Charlie Morton
-base,US242,Topps Foil Pattern,false,,Charlie Morton
+base,US242,Topps Pattern Foil,false,,Charlie Morton
 base,US242,Gold Border,false,2025,Charlie Morton
 base,US242,Rainbow Foil,false,,Charlie Morton
 base,US242,Aqua Rainbow Foil,false,,Charlie Morton
@@ -9685,7 +9685,7 @@ base,US243,Holo Foil,false,,Brooks Lee
 base,US243,Pink Diamante Foil,false,,Brooks Lee
 base,US243,Sandglitter,false,,Brooks Lee
 base,US243,Silver Crackle Foil,false,,Brooks Lee
-base,US243,Topps Foil Pattern,false,,Brooks Lee
+base,US243,Topps Pattern Foil,false,,Brooks Lee
 base,US243,Gold Border,false,2025,Brooks Lee
 base,US243,Rainbow Foil,false,,Brooks Lee
 base,US243,Aqua Rainbow Foil,false,,Brooks Lee
@@ -9725,7 +9725,7 @@ base,US244,Holo Foil,false,,Julio Rodríguez
 base,US244,Pink Diamante Foil,false,,Julio Rodríguez
 base,US244,Sandglitter,false,,Julio Rodríguez
 base,US244,Silver Crackle Foil,false,,Julio Rodríguez
-base,US244,Topps Foil Pattern,false,,Julio Rodríguez
+base,US244,Topps Pattern Foil,false,,Julio Rodríguez
 base,US244,Gold Border,false,2025,Julio Rodríguez
 base,US244,Rainbow Foil,false,,Julio Rodríguez
 base,US244,Aqua Rainbow Foil,false,,Julio Rodríguez
@@ -9765,7 +9765,7 @@ base,US245,Holo Foil,false,,Clay Holmes
 base,US245,Pink Diamante Foil,false,,Clay Holmes
 base,US245,Sandglitter,false,,Clay Holmes
 base,US245,Silver Crackle Foil,false,,Clay Holmes
-base,US245,Topps Foil Pattern,false,,Clay Holmes
+base,US245,Topps Pattern Foil,false,,Clay Holmes
 base,US245,Gold Border,false,2025,Clay Holmes
 base,US245,Rainbow Foil,false,,Clay Holmes
 base,US245,Aqua Rainbow Foil,false,,Clay Holmes
@@ -9805,7 +9805,7 @@ base,US246,Holo Foil,false,,Mickey Moniak
 base,US246,Pink Diamante Foil,false,,Mickey Moniak
 base,US246,Sandglitter,false,,Mickey Moniak
 base,US246,Silver Crackle Foil,false,,Mickey Moniak
-base,US246,Topps Foil Pattern,false,,Mickey Moniak
+base,US246,Topps Pattern Foil,false,,Mickey Moniak
 base,US246,Gold Border,false,2025,Mickey Moniak
 base,US246,Rainbow Foil,false,,Mickey Moniak
 base,US246,Aqua Rainbow Foil,false,,Mickey Moniak
@@ -9845,7 +9845,7 @@ base,US247,Holo Foil,false,,Tyler Owens
 base,US247,Pink Diamante Foil,false,,Tyler Owens
 base,US247,Sandglitter,false,,Tyler Owens
 base,US247,Silver Crackle Foil,false,,Tyler Owens
-base,US247,Topps Foil Pattern,false,,Tyler Owens
+base,US247,Topps Pattern Foil,false,,Tyler Owens
 base,US247,Gold Border,false,2025,Tyler Owens
 base,US247,Rainbow Foil,false,,Tyler Owens
 base,US247,Aqua Rainbow Foil,false,,Tyler Owens
@@ -9885,7 +9885,7 @@ base,US248,Holo Foil,false,,Justin Steele
 base,US248,Pink Diamante Foil,false,,Justin Steele
 base,US248,Sandglitter,false,,Justin Steele
 base,US248,Silver Crackle Foil,false,,Justin Steele
-base,US248,Topps Foil Pattern,false,,Justin Steele
+base,US248,Topps Pattern Foil,false,,Justin Steele
 base,US248,Gold Border,false,2025,Justin Steele
 base,US248,Rainbow Foil,false,,Justin Steele
 base,US248,Aqua Rainbow Foil,false,,Justin Steele
@@ -9925,7 +9925,7 @@ base,US249,Holo Foil,false,,Gerson Garabito
 base,US249,Pink Diamante Foil,false,,Gerson Garabito
 base,US249,Sandglitter,false,,Gerson Garabito
 base,US249,Silver Crackle Foil,false,,Gerson Garabito
-base,US249,Topps Foil Pattern,false,,Gerson Garabito
+base,US249,Topps Pattern Foil,false,,Gerson Garabito
 base,US249,Gold Border,false,2025,Gerson Garabito
 base,US249,Rainbow Foil,false,,Gerson Garabito
 base,US249,Aqua Rainbow Foil,false,,Gerson Garabito
@@ -9965,7 +9965,7 @@ base,US250,Holo Foil,false,,Max Muncy
 base,US250,Pink Diamante Foil,false,,Max Muncy
 base,US250,Sandglitter,false,,Max Muncy
 base,US250,Silver Crackle Foil,false,,Max Muncy
-base,US250,Topps Foil Pattern,false,,Max Muncy
+base,US250,Topps Pattern Foil,false,,Max Muncy
 base,US250,Gold Border,false,2025,Max Muncy
 base,US250,Rainbow Foil,false,,Max Muncy
 base,US250,Aqua Rainbow Foil,false,,Max Muncy
@@ -10005,7 +10005,7 @@ base,US251,Holo Foil,false,,Alan Roden
 base,US251,Pink Diamante Foil,false,,Alan Roden
 base,US251,Sandglitter,false,,Alan Roden
 base,US251,Silver Crackle Foil,false,,Alan Roden
-base,US251,Topps Foil Pattern,false,,Alan Roden
+base,US251,Topps Pattern Foil,false,,Alan Roden
 base,US251,Gold Border,false,2025,Alan Roden
 base,US251,Rainbow Foil,false,,Alan Roden
 base,US251,Aqua Rainbow Foil,false,,Alan Roden
@@ -10045,7 +10045,7 @@ base,US252,Holo Foil,false,,Justin Sterner
 base,US252,Pink Diamante Foil,false,,Justin Sterner
 base,US252,Sandglitter,false,,Justin Sterner
 base,US252,Silver Crackle Foil,false,,Justin Sterner
-base,US252,Topps Foil Pattern,false,,Justin Sterner
+base,US252,Topps Pattern Foil,false,,Justin Sterner
 base,US252,Gold Border,false,2025,Justin Sterner
 base,US252,Rainbow Foil,false,,Justin Sterner
 base,US252,Aqua Rainbow Foil,false,,Justin Sterner
@@ -10085,7 +10085,7 @@ base,US253,Holo Foil,false,,Caleb Freeman
 base,US253,Pink Diamante Foil,false,,Caleb Freeman
 base,US253,Sandglitter,false,,Caleb Freeman
 base,US253,Silver Crackle Foil,false,,Caleb Freeman
-base,US253,Topps Foil Pattern,false,,Caleb Freeman
+base,US253,Topps Pattern Foil,false,,Caleb Freeman
 base,US253,Gold Border,false,2025,Caleb Freeman
 base,US253,Rainbow Foil,false,,Caleb Freeman
 base,US253,Aqua Rainbow Foil,false,,Caleb Freeman
@@ -10125,7 +10125,7 @@ base,US254,Holo Foil,false,,Gunnar Hoglund
 base,US254,Pink Diamante Foil,false,,Gunnar Hoglund
 base,US254,Sandglitter,false,,Gunnar Hoglund
 base,US254,Silver Crackle Foil,false,,Gunnar Hoglund
-base,US254,Topps Foil Pattern,false,,Gunnar Hoglund
+base,US254,Topps Pattern Foil,false,,Gunnar Hoglund
 base,US254,Gold Border,false,2025,Gunnar Hoglund
 base,US254,Rainbow Foil,false,,Gunnar Hoglund
 base,US254,Aqua Rainbow Foil,false,,Gunnar Hoglund
@@ -10165,7 +10165,7 @@ base,US255,Holo Foil,false,,Will Wilson
 base,US255,Pink Diamante Foil,false,,Will Wilson
 base,US255,Sandglitter,false,,Will Wilson
 base,US255,Silver Crackle Foil,false,,Will Wilson
-base,US255,Topps Foil Pattern,false,,Will Wilson
+base,US255,Topps Pattern Foil,false,,Will Wilson
 base,US255,Gold Border,false,2025,Will Wilson
 base,US255,Rainbow Foil,false,,Will Wilson
 base,US255,Aqua Rainbow Foil,false,,Will Wilson
@@ -10205,7 +10205,7 @@ base,US256,Holo Foil,false,,Dalton Rushing
 base,US256,Pink Diamante Foil,false,,Dalton Rushing
 base,US256,Sandglitter,false,,Dalton Rushing
 base,US256,Silver Crackle Foil,false,,Dalton Rushing
-base,US256,Topps Foil Pattern,false,,Dalton Rushing
+base,US256,Topps Pattern Foil,false,,Dalton Rushing
 base,US256,Gold Border,false,2025,Dalton Rushing
 base,US256,Rainbow Foil,false,,Dalton Rushing
 base,US256,Aqua Rainbow Foil,false,,Dalton Rushing
@@ -10245,7 +10245,7 @@ base,US257,Holo Foil,false,,Hunter Dobbins
 base,US257,Pink Diamante Foil,false,,Hunter Dobbins
 base,US257,Sandglitter,false,,Hunter Dobbins
 base,US257,Silver Crackle Foil,false,,Hunter Dobbins
-base,US257,Topps Foil Pattern,false,,Hunter Dobbins
+base,US257,Topps Pattern Foil,false,,Hunter Dobbins
 base,US257,Gold Border,false,2025,Hunter Dobbins
 base,US257,Rainbow Foil,false,,Hunter Dobbins
 base,US257,Aqua Rainbow Foil,false,,Hunter Dobbins
@@ -10285,7 +10285,7 @@ base,US258,Holo Foil,false,,Jorbit Vivas
 base,US258,Pink Diamante Foil,false,,Jorbit Vivas
 base,US258,Sandglitter,false,,Jorbit Vivas
 base,US258,Silver Crackle Foil,false,,Jorbit Vivas
-base,US258,Topps Foil Pattern,false,,Jorbit Vivas
+base,US258,Topps Pattern Foil,false,,Jorbit Vivas
 base,US258,Gold Border,false,2025,Jorbit Vivas
 base,US258,Rainbow Foil,false,,Jorbit Vivas
 base,US258,Aqua Rainbow Foil,false,,Jorbit Vivas
@@ -10325,7 +10325,7 @@ base,US259,Holo Foil,false,,Chase Dollander
 base,US259,Pink Diamante Foil,false,,Chase Dollander
 base,US259,Sandglitter,false,,Chase Dollander
 base,US259,Silver Crackle Foil,false,,Chase Dollander
-base,US259,Topps Foil Pattern,false,,Chase Dollander
+base,US259,Topps Pattern Foil,false,,Chase Dollander
 base,US259,Gold Border,false,2025,Chase Dollander
 base,US259,Rainbow Foil,false,,Chase Dollander
 base,US259,Aqua Rainbow Foil,false,,Chase Dollander
@@ -10365,7 +10365,7 @@ base,US260,Holo Foil,false,,Francisco Lindor
 base,US260,Pink Diamante Foil,false,,Francisco Lindor
 base,US260,Sandglitter,false,,Francisco Lindor
 base,US260,Silver Crackle Foil,false,,Francisco Lindor
-base,US260,Topps Foil Pattern,false,,Francisco Lindor
+base,US260,Topps Pattern Foil,false,,Francisco Lindor
 base,US260,Gold Border,false,2025,Francisco Lindor
 base,US260,Rainbow Foil,false,,Francisco Lindor
 base,US260,Aqua Rainbow Foil,false,,Francisco Lindor
@@ -10405,7 +10405,7 @@ base,US261,Holo Foil,false,,Craig Yoho
 base,US261,Pink Diamante Foil,false,,Craig Yoho
 base,US261,Sandglitter,false,,Craig Yoho
 base,US261,Silver Crackle Foil,false,,Craig Yoho
-base,US261,Topps Foil Pattern,false,,Craig Yoho
+base,US261,Topps Pattern Foil,false,,Craig Yoho
 base,US261,Gold Border,false,2025,Craig Yoho
 base,US261,Rainbow Foil,false,,Craig Yoho
 base,US261,Aqua Rainbow Foil,false,,Craig Yoho
@@ -10445,7 +10445,7 @@ base,US262,Holo Foil,false,,Moisés Ballesteros
 base,US262,Pink Diamante Foil,false,,Moisés Ballesteros
 base,US262,Sandglitter,false,,Moisés Ballesteros
 base,US262,Silver Crackle Foil,false,,Moisés Ballesteros
-base,US262,Topps Foil Pattern,false,,Moisés Ballesteros
+base,US262,Topps Pattern Foil,false,,Moisés Ballesteros
 base,US262,Gold Border,false,2025,Moisés Ballesteros
 base,US262,Rainbow Foil,false,,Moisés Ballesteros
 base,US262,Aqua Rainbow Foil,false,,Moisés Ballesteros
@@ -10485,7 +10485,7 @@ base,US263,Holo Foil,false,,Jeremiah Estrada
 base,US263,Pink Diamante Foil,false,,Jeremiah Estrada
 base,US263,Sandglitter,false,,Jeremiah Estrada
 base,US263,Silver Crackle Foil,false,,Jeremiah Estrada
-base,US263,Topps Foil Pattern,false,,Jeremiah Estrada
+base,US263,Topps Pattern Foil,false,,Jeremiah Estrada
 base,US263,Gold Border,false,2025,Jeremiah Estrada
 base,US263,Rainbow Foil,false,,Jeremiah Estrada
 base,US263,Aqua Rainbow Foil,false,,Jeremiah Estrada
@@ -10525,7 +10525,7 @@ base,US264,Holo Foil,false,,Kumar Rocker
 base,US264,Pink Diamante Foil,false,,Kumar Rocker
 base,US264,Sandglitter,false,,Kumar Rocker
 base,US264,Silver Crackle Foil,false,,Kumar Rocker
-base,US264,Topps Foil Pattern,false,,Kumar Rocker
+base,US264,Topps Pattern Foil,false,,Kumar Rocker
 base,US264,Gold Border,false,2025,Kumar Rocker
 base,US264,Rainbow Foil,false,,Kumar Rocker
 base,US264,Aqua Rainbow Foil,false,,Kumar Rocker
@@ -10565,7 +10565,7 @@ base,US265,Holo Foil,false,,Sauryn Lao
 base,US265,Pink Diamante Foil,false,,Sauryn Lao
 base,US265,Sandglitter,false,,Sauryn Lao
 base,US265,Silver Crackle Foil,false,,Sauryn Lao
-base,US265,Topps Foil Pattern,false,,Sauryn Lao
+base,US265,Topps Pattern Foil,false,,Sauryn Lao
 base,US265,Gold Border,false,2025,Sauryn Lao
 base,US265,Rainbow Foil,false,,Sauryn Lao
 base,US265,Aqua Rainbow Foil,false,,Sauryn Lao
@@ -10605,7 +10605,7 @@ base,US266,Holo Foil,false,,Tommy Pham
 base,US266,Pink Diamante Foil,false,,Tommy Pham
 base,US266,Sandglitter,false,,Tommy Pham
 base,US266,Silver Crackle Foil,false,,Tommy Pham
-base,US266,Topps Foil Pattern,false,,Tommy Pham
+base,US266,Topps Pattern Foil,false,,Tommy Pham
 base,US266,Gold Border,false,2025,Tommy Pham
 base,US266,Rainbow Foil,false,,Tommy Pham
 base,US266,Aqua Rainbow Foil,false,,Tommy Pham
@@ -10645,7 +10645,7 @@ base,US267,Holo Foil,false,,Adrian Del Castillo
 base,US267,Pink Diamante Foil,false,,Adrian Del Castillo
 base,US267,Sandglitter,false,,Adrian Del Castillo
 base,US267,Silver Crackle Foil,false,,Adrian Del Castillo
-base,US267,Topps Foil Pattern,false,,Adrian Del Castillo
+base,US267,Topps Pattern Foil,false,,Adrian Del Castillo
 base,US267,Gold Border,false,2025,Adrian Del Castillo
 base,US267,Rainbow Foil,false,,Adrian Del Castillo
 base,US267,Aqua Rainbow Foil,false,,Adrian Del Castillo
@@ -10685,7 +10685,7 @@ base,US268,Holo Foil,false,,Ty France
 base,US268,Pink Diamante Foil,false,,Ty France
 base,US268,Sandglitter,false,,Ty France
 base,US268,Silver Crackle Foil,false,,Ty France
-base,US268,Topps Foil Pattern,false,,Ty France
+base,US268,Topps Pattern Foil,false,,Ty France
 base,US268,Gold Border,false,2025,Ty France
 base,US268,Rainbow Foil,false,,Ty France
 base,US268,Aqua Rainbow Foil,false,,Ty France
@@ -10725,7 +10725,7 @@ base,US269,Holo Foil,false,,Shohei Ohtani
 base,US269,Pink Diamante Foil,false,,Shohei Ohtani
 base,US269,Sandglitter,false,,Shohei Ohtani
 base,US269,Silver Crackle Foil,false,,Shohei Ohtani
-base,US269,Topps Foil Pattern,false,,Shohei Ohtani
+base,US269,Topps Pattern Foil,false,,Shohei Ohtani
 base,US269,Gold Border,false,2025,Shohei Ohtani
 base,US269,Rainbow Foil,false,,Shohei Ohtani
 base,US269,Aqua Rainbow Foil,false,,Shohei Ohtani
@@ -10765,7 +10765,7 @@ base,US270,Holo Foil,false,,Mick Abel
 base,US270,Pink Diamante Foil,false,,Mick Abel
 base,US270,Sandglitter,false,,Mick Abel
 base,US270,Silver Crackle Foil,false,,Mick Abel
-base,US270,Topps Foil Pattern,false,,Mick Abel
+base,US270,Topps Pattern Foil,false,,Mick Abel
 base,US270,Gold Border,false,2025,Mick Abel
 base,US270,Rainbow Foil,false,,Mick Abel
 base,US270,Aqua Rainbow Foil,false,,Mick Abel
@@ -10805,7 +10805,7 @@ base,US271,Holo Foil,false,,Tylor Megill
 base,US271,Pink Diamante Foil,false,,Tylor Megill
 base,US271,Sandglitter,false,,Tylor Megill
 base,US271,Silver Crackle Foil,false,,Tylor Megill
-base,US271,Topps Foil Pattern,false,,Tylor Megill
+base,US271,Topps Pattern Foil,false,,Tylor Megill
 base,US271,Gold Border,false,2025,Tylor Megill
 base,US271,Rainbow Foil,false,,Tylor Megill
 base,US271,Aqua Rainbow Foil,false,,Tylor Megill
@@ -10845,7 +10845,7 @@ base,US272,Holo Foil,false,,Jose Herrera
 base,US272,Pink Diamante Foil,false,,Jose Herrera
 base,US272,Sandglitter,false,,Jose Herrera
 base,US272,Silver Crackle Foil,false,,Jose Herrera
-base,US272,Topps Foil Pattern,false,,Jose Herrera
+base,US272,Topps Pattern Foil,false,,Jose Herrera
 base,US272,Gold Border,false,2025,Jose Herrera
 base,US272,Rainbow Foil,false,,Jose Herrera
 base,US272,Aqua Rainbow Foil,false,,Jose Herrera
@@ -10885,7 +10885,7 @@ base,US273,Holo Foil,false,,Thomas Harrington
 base,US273,Pink Diamante Foil,false,,Thomas Harrington
 base,US273,Sandglitter,false,,Thomas Harrington
 base,US273,Silver Crackle Foil,false,,Thomas Harrington
-base,US273,Topps Foil Pattern,false,,Thomas Harrington
+base,US273,Topps Pattern Foil,false,,Thomas Harrington
 base,US273,Gold Border,false,2025,Thomas Harrington
 base,US273,Rainbow Foil,false,,Thomas Harrington
 base,US273,Aqua Rainbow Foil,false,,Thomas Harrington
@@ -10925,7 +10925,7 @@ base,US274,Holo Foil,false,,Maverick Handley
 base,US274,Pink Diamante Foil,false,,Maverick Handley
 base,US274,Sandglitter,false,,Maverick Handley
 base,US274,Silver Crackle Foil,false,,Maverick Handley
-base,US274,Topps Foil Pattern,false,,Maverick Handley
+base,US274,Topps Pattern Foil,false,,Maverick Handley
 base,US274,Gold Border,false,2025,Maverick Handley
 base,US274,Rainbow Foil,false,,Maverick Handley
 base,US274,Aqua Rainbow Foil,false,,Maverick Handley
@@ -10965,7 +10965,7 @@ base,US275,Holo Foil,false,,Chase Petty
 base,US275,Pink Diamante Foil,false,,Chase Petty
 base,US275,Sandglitter,false,,Chase Petty
 base,US275,Silver Crackle Foil,false,,Chase Petty
-base,US275,Topps Foil Pattern,false,,Chase Petty
+base,US275,Topps Pattern Foil,false,,Chase Petty
 base,US275,Gold Border,false,2025,Chase Petty
 base,US275,Rainbow Foil,false,,Chase Petty
 base,US275,Aqua Rainbow Foil,false,,Chase Petty
@@ -11005,7 +11005,7 @@ base,US276,Holo Foil,false,,Marcelo Mayer
 base,US276,Pink Diamante Foil,false,,Marcelo Mayer
 base,US276,Sandglitter,false,,Marcelo Mayer
 base,US276,Silver Crackle Foil,false,,Marcelo Mayer
-base,US276,Topps Foil Pattern,false,,Marcelo Mayer
+base,US276,Topps Pattern Foil,false,,Marcelo Mayer
 base,US276,Gold Border,false,2025,Marcelo Mayer
 base,US276,Rainbow Foil,false,,Marcelo Mayer
 base,US276,Aqua Rainbow Foil,false,,Marcelo Mayer
@@ -11045,7 +11045,7 @@ base,US277,Holo Foil,false,,Chandler Simpson
 base,US277,Pink Diamante Foil,false,,Chandler Simpson
 base,US277,Sandglitter,false,,Chandler Simpson
 base,US277,Silver Crackle Foil,false,,Chandler Simpson
-base,US277,Topps Foil Pattern,false,,Chandler Simpson
+base,US277,Topps Pattern Foil,false,,Chandler Simpson
 base,US277,Gold Border,false,2025,Chandler Simpson
 base,US277,Rainbow Foil,false,,Chandler Simpson
 base,US277,Aqua Rainbow Foil,false,,Chandler Simpson
@@ -11085,7 +11085,7 @@ base,US278,Holo Foil,false,,Shane Smith
 base,US278,Pink Diamante Foil,false,,Shane Smith
 base,US278,Sandglitter,false,,Shane Smith
 base,US278,Silver Crackle Foil,false,,Shane Smith
-base,US278,Topps Foil Pattern,false,,Shane Smith
+base,US278,Topps Pattern Foil,false,,Shane Smith
 base,US278,Gold Border,false,2025,Shane Smith
 base,US278,Rainbow Foil,false,,Shane Smith
 base,US278,Aqua Rainbow Foil,false,,Shane Smith
@@ -11125,7 +11125,7 @@ base,US279,Holo Foil,false,,Carson McCusker
 base,US279,Pink Diamante Foil,false,,Carson McCusker
 base,US279,Sandglitter,false,,Carson McCusker
 base,US279,Silver Crackle Foil,false,,Carson McCusker
-base,US279,Topps Foil Pattern,false,,Carson McCusker
+base,US279,Topps Pattern Foil,false,,Carson McCusker
 base,US279,Gold Border,false,2025,Carson McCusker
 base,US279,Rainbow Foil,false,,Carson McCusker
 base,US279,Aqua Rainbow Foil,false,,Carson McCusker
@@ -11165,7 +11165,7 @@ base,US280,Holo Foil,false,,Evan Kravetz
 base,US280,Pink Diamante Foil,false,,Evan Kravetz
 base,US280,Sandglitter,false,,Evan Kravetz
 base,US280,Silver Crackle Foil,false,,Evan Kravetz
-base,US280,Topps Foil Pattern,false,,Evan Kravetz
+base,US280,Topps Pattern Foil,false,,Evan Kravetz
 base,US280,Gold Border,false,2025,Evan Kravetz
 base,US280,Rainbow Foil,false,,Evan Kravetz
 base,US280,Aqua Rainbow Foil,false,,Evan Kravetz
@@ -11205,7 +11205,7 @@ base,US281,Holo Foil,false,,Donovan Solano
 base,US281,Pink Diamante Foil,false,,Donovan Solano
 base,US281,Sandglitter,false,,Donovan Solano
 base,US281,Silver Crackle Foil,false,,Donovan Solano
-base,US281,Topps Foil Pattern,false,,Donovan Solano
+base,US281,Topps Pattern Foil,false,,Donovan Solano
 base,US281,Gold Border,false,2025,Donovan Solano
 base,US281,Rainbow Foil,false,,Donovan Solano
 base,US281,Aqua Rainbow Foil,false,,Donovan Solano
@@ -11245,7 +11245,7 @@ base,US282,Holo Foil,false,,Coby Mayo
 base,US282,Pink Diamante Foil,false,,Coby Mayo
 base,US282,Sandglitter,false,,Coby Mayo
 base,US282,Silver Crackle Foil,false,,Coby Mayo
-base,US282,Topps Foil Pattern,false,,Coby Mayo
+base,US282,Topps Pattern Foil,false,,Coby Mayo
 base,US282,Gold Border,false,2025,Coby Mayo
 base,US282,Rainbow Foil,false,,Coby Mayo
 base,US282,Aqua Rainbow Foil,false,,Coby Mayo
@@ -11285,7 +11285,7 @@ base,US283,Holo Foil,false,,Jeffrey Springs
 base,US283,Pink Diamante Foil,false,,Jeffrey Springs
 base,US283,Sandglitter,false,,Jeffrey Springs
 base,US283,Silver Crackle Foil,false,,Jeffrey Springs
-base,US283,Topps Foil Pattern,false,,Jeffrey Springs
+base,US283,Topps Pattern Foil,false,,Jeffrey Springs
 base,US283,Gold Border,false,2025,Jeffrey Springs
 base,US283,Rainbow Foil,false,,Jeffrey Springs
 base,US283,Aqua Rainbow Foil,false,,Jeffrey Springs
@@ -11325,7 +11325,7 @@ base,US284,Holo Foil,false,,Erik Sabrowski
 base,US284,Pink Diamante Foil,false,,Erik Sabrowski
 base,US284,Sandglitter,false,,Erik Sabrowski
 base,US284,Silver Crackle Foil,false,,Erik Sabrowski
-base,US284,Topps Foil Pattern,false,,Erik Sabrowski
+base,US284,Topps Pattern Foil,false,,Erik Sabrowski
 base,US284,Gold Border,false,2025,Erik Sabrowski
 base,US284,Rainbow Foil,false,,Erik Sabrowski
 base,US284,Aqua Rainbow Foil,false,,Erik Sabrowski
@@ -11365,7 +11365,7 @@ base,US285,Holo Foil,false,,Juan Mejia
 base,US285,Pink Diamante Foil,false,,Juan Mejia
 base,US285,Sandglitter,false,,Juan Mejia
 base,US285,Silver Crackle Foil,false,,Juan Mejia
-base,US285,Topps Foil Pattern,false,,Juan Mejia
+base,US285,Topps Pattern Foil,false,,Juan Mejia
 base,US285,Gold Border,false,2025,Juan Mejia
 base,US285,Rainbow Foil,false,,Juan Mejia
 base,US285,Aqua Rainbow Foil,false,,Juan Mejia
@@ -11405,7 +11405,7 @@ base,US286,Holo Foil,false,,Zac Veen
 base,US286,Pink Diamante Foil,false,,Zac Veen
 base,US286,Sandglitter,false,,Zac Veen
 base,US286,Silver Crackle Foil,false,,Zac Veen
-base,US286,Topps Foil Pattern,false,,Zac Veen
+base,US286,Topps Pattern Foil,false,,Zac Veen
 base,US286,Gold Border,false,2025,Zac Veen
 base,US286,Rainbow Foil,false,,Zac Veen
 base,US286,Aqua Rainbow Foil,false,,Zac Veen
@@ -11445,7 +11445,7 @@ base,US287,Holo Foil,false,,Tim Tawa
 base,US287,Pink Diamante Foil,false,,Tim Tawa
 base,US287,Sandglitter,false,,Tim Tawa
 base,US287,Silver Crackle Foil,false,,Tim Tawa
-base,US287,Topps Foil Pattern,false,,Tim Tawa
+base,US287,Topps Pattern Foil,false,,Tim Tawa
 base,US287,Gold Border,false,2025,Tim Tawa
 base,US287,Rainbow Foil,false,,Tim Tawa
 base,US287,Aqua Rainbow Foil,false,,Tim Tawa
@@ -11485,7 +11485,7 @@ base,US288,Holo Foil,false,,Logan Allen
 base,US288,Pink Diamante Foil,false,,Logan Allen
 base,US288,Sandglitter,false,,Logan Allen
 base,US288,Silver Crackle Foil,false,,Logan Allen
-base,US288,Topps Foil Pattern,false,,Logan Allen
+base,US288,Topps Pattern Foil,false,,Logan Allen
 base,US288,Gold Border,false,2025,Logan Allen
 base,US288,Rainbow Foil,false,,Logan Allen
 base,US288,Aqua Rainbow Foil,false,,Logan Allen
@@ -11525,7 +11525,7 @@ base,US289,Holo Foil,false,,Rafael Marchán
 base,US289,Pink Diamante Foil,false,,Rafael Marchán
 base,US289,Sandglitter,false,,Rafael Marchán
 base,US289,Silver Crackle Foil,false,,Rafael Marchán
-base,US289,Topps Foil Pattern,false,,Rafael Marchán
+base,US289,Topps Pattern Foil,false,,Rafael Marchán
 base,US289,Gold Border,false,2025,Rafael Marchán
 base,US289,Rainbow Foil,false,,Rafael Marchán
 base,US289,Aqua Rainbow Foil,false,,Rafael Marchán
@@ -11565,7 +11565,7 @@ base,US290,Holo Foil,false,,Francisco Lindor
 base,US290,Pink Diamante Foil,false,,Francisco Lindor
 base,US290,Sandglitter,false,,Francisco Lindor
 base,US290,Silver Crackle Foil,false,,Francisco Lindor
-base,US290,Topps Foil Pattern,false,,Francisco Lindor
+base,US290,Topps Pattern Foil,false,,Francisco Lindor
 base,US290,Gold Border,false,2025,Francisco Lindor
 base,US290,Rainbow Foil,false,,Francisco Lindor
 base,US290,Aqua Rainbow Foil,false,,Francisco Lindor
@@ -11605,7 +11605,7 @@ base,US291,Holo Foil,false,,Mickey Gasper
 base,US291,Pink Diamante Foil,false,,Mickey Gasper
 base,US291,Sandglitter,false,,Mickey Gasper
 base,US291,Silver Crackle Foil,false,,Mickey Gasper
-base,US291,Topps Foil Pattern,false,,Mickey Gasper
+base,US291,Topps Pattern Foil,false,,Mickey Gasper
 base,US291,Gold Border,false,2025,Mickey Gasper
 base,US291,Rainbow Foil,false,,Mickey Gasper
 base,US291,Aqua Rainbow Foil,false,,Mickey Gasper
@@ -11645,7 +11645,7 @@ base,US292,Holo Foil,false,,Ryan Gusto
 base,US292,Pink Diamante Foil,false,,Ryan Gusto
 base,US292,Sandglitter,false,,Ryan Gusto
 base,US292,Silver Crackle Foil,false,,Ryan Gusto
-base,US292,Topps Foil Pattern,false,,Ryan Gusto
+base,US292,Topps Pattern Foil,false,,Ryan Gusto
 base,US292,Gold Border,false,2025,Ryan Gusto
 base,US292,Rainbow Foil,false,,Ryan Gusto
 base,US292,Aqua Rainbow Foil,false,,Ryan Gusto
@@ -11685,7 +11685,7 @@ base,US293,Holo Foil,false,,Matt Svanson
 base,US293,Pink Diamante Foil,false,,Matt Svanson
 base,US293,Sandglitter,false,,Matt Svanson
 base,US293,Silver Crackle Foil,false,,Matt Svanson
-base,US293,Topps Foil Pattern,false,,Matt Svanson
+base,US293,Topps Pattern Foil,false,,Matt Svanson
 base,US293,Gold Border,false,2025,Matt Svanson
 base,US293,Rainbow Foil,false,,Matt Svanson
 base,US293,Aqua Rainbow Foil,false,,Matt Svanson
@@ -11725,7 +11725,7 @@ base,US294,Holo Foil,false,,Davis Martin
 base,US294,Pink Diamante Foil,false,,Davis Martin
 base,US294,Sandglitter,false,,Davis Martin
 base,US294,Silver Crackle Foil,false,,Davis Martin
-base,US294,Topps Foil Pattern,false,,Davis Martin
+base,US294,Topps Pattern Foil,false,,Davis Martin
 base,US294,Gold Border,false,2025,Davis Martin
 base,US294,Rainbow Foil,false,,Davis Martin
 base,US294,Aqua Rainbow Foil,false,,Davis Martin
@@ -11765,7 +11765,7 @@ base,US295,Holo Foil,false,,Ryan Bergert
 base,US295,Pink Diamante Foil,false,,Ryan Bergert
 base,US295,Sandglitter,false,,Ryan Bergert
 base,US295,Silver Crackle Foil,false,,Ryan Bergert
-base,US295,Topps Foil Pattern,false,,Ryan Bergert
+base,US295,Topps Pattern Foil,false,,Ryan Bergert
 base,US295,Gold Border,false,2025,Ryan Bergert
 base,US295,Rainbow Foil,false,,Ryan Bergert
 base,US295,Aqua Rainbow Foil,false,,Ryan Bergert
@@ -11805,7 +11805,7 @@ base,US296,Holo Foil,false,,Parker Dunshee
 base,US296,Pink Diamante Foil,false,,Parker Dunshee
 base,US296,Sandglitter,false,,Parker Dunshee
 base,US296,Silver Crackle Foil,false,,Parker Dunshee
-base,US296,Topps Foil Pattern,false,,Parker Dunshee
+base,US296,Topps Pattern Foil,false,,Parker Dunshee
 base,US296,Gold Border,false,2025,Parker Dunshee
 base,US296,Rainbow Foil,false,,Parker Dunshee
 base,US296,Aqua Rainbow Foil,false,,Parker Dunshee
@@ -11845,7 +11845,7 @@ base,US297,Holo Foil,false,,Luis Torrens
 base,US297,Pink Diamante Foil,false,,Luis Torrens
 base,US297,Sandglitter,false,,Luis Torrens
 base,US297,Silver Crackle Foil,false,,Luis Torrens
-base,US297,Topps Foil Pattern,false,,Luis Torrens
+base,US297,Topps Pattern Foil,false,,Luis Torrens
 base,US297,Gold Border,false,2025,Luis Torrens
 base,US297,Rainbow Foil,false,,Luis Torrens
 base,US297,Aqua Rainbow Foil,false,,Luis Torrens
@@ -11885,7 +11885,7 @@ base,US298,Holo Foil,false,,Cam Smith
 base,US298,Pink Diamante Foil,false,,Cam Smith
 base,US298,Sandglitter,false,,Cam Smith
 base,US298,Silver Crackle Foil,false,,Cam Smith
-base,US298,Topps Foil Pattern,false,,Cam Smith
+base,US298,Topps Pattern Foil,false,,Cam Smith
 base,US298,Gold Border,false,2025,Cam Smith
 base,US298,Rainbow Foil,false,,Cam Smith
 base,US298,Aqua Rainbow Foil,false,,Cam Smith
@@ -11925,7 +11925,7 @@ base,US299,Holo Foil,false,,Andrew Heaney
 base,US299,Pink Diamante Foil,false,,Andrew Heaney
 base,US299,Sandglitter,false,,Andrew Heaney
 base,US299,Silver Crackle Foil,false,,Andrew Heaney
-base,US299,Topps Foil Pattern,false,,Andrew Heaney
+base,US299,Topps Pattern Foil,false,,Andrew Heaney
 base,US299,Gold Border,false,2025,Andrew Heaney
 base,US299,Rainbow Foil,false,,Andrew Heaney
 base,US299,Aqua Rainbow Foil,false,,Andrew Heaney
@@ -11965,7 +11965,7 @@ base,US300,Holo Foil,false,,Rafael Devers
 base,US300,Pink Diamante Foil,false,,Rafael Devers
 base,US300,Sandglitter,false,,Rafael Devers
 base,US300,Silver Crackle Foil,false,,Rafael Devers
-base,US300,Topps Foil Pattern,false,,Rafael Devers
+base,US300,Topps Pattern Foil,false,,Rafael Devers
 base,US300,Gold Border,false,2025,Rafael Devers
 base,US300,Rainbow Foil,false,,Rafael Devers
 base,US300,Aqua Rainbow Foil,false,,Rafael Devers
@@ -12005,7 +12005,7 @@ base,US301,Holo Foil,false,,Kyle Hart
 base,US301,Pink Diamante Foil,false,,Kyle Hart
 base,US301,Sandglitter,false,,Kyle Hart
 base,US301,Silver Crackle Foil,false,,Kyle Hart
-base,US301,Topps Foil Pattern,false,,Kyle Hart
+base,US301,Topps Pattern Foil,false,,Kyle Hart
 base,US301,Gold Border,false,2025,Kyle Hart
 base,US301,Rainbow Foil,false,,Kyle Hart
 base,US301,Aqua Rainbow Foil,false,,Kyle Hart
@@ -12045,7 +12045,7 @@ base,US302,Holo Foil,false,,Logan Evans
 base,US302,Pink Diamante Foil,false,,Logan Evans
 base,US302,Sandglitter,false,,Logan Evans
 base,US302,Silver Crackle Foil,false,,Logan Evans
-base,US302,Topps Foil Pattern,false,,Logan Evans
+base,US302,Topps Pattern Foil,false,,Logan Evans
 base,US302,Gold Border,false,2025,Logan Evans
 base,US302,Rainbow Foil,false,,Logan Evans
 base,US302,Aqua Rainbow Foil,false,,Logan Evans
@@ -12085,7 +12085,7 @@ base,US303,Holo Foil,false,,Tyler Freeman
 base,US303,Pink Diamante Foil,false,,Tyler Freeman
 base,US303,Sandglitter,false,,Tyler Freeman
 base,US303,Silver Crackle Foil,false,,Tyler Freeman
-base,US303,Topps Foil Pattern,false,,Tyler Freeman
+base,US303,Topps Pattern Foil,false,,Tyler Freeman
 base,US303,Gold Border,false,2025,Tyler Freeman
 base,US303,Rainbow Foil,false,,Tyler Freeman
 base,US303,Aqua Rainbow Foil,false,,Tyler Freeman
@@ -12125,7 +12125,7 @@ base,US304,Holo Foil,false,,Daniel Robert
 base,US304,Pink Diamante Foil,false,,Daniel Robert
 base,US304,Sandglitter,false,,Daniel Robert
 base,US304,Silver Crackle Foil,false,,Daniel Robert
-base,US304,Topps Foil Pattern,false,,Daniel Robert
+base,US304,Topps Pattern Foil,false,,Daniel Robert
 base,US304,Gold Border,false,2025,Daniel Robert
 base,US304,Rainbow Foil,false,,Daniel Robert
 base,US304,Aqua Rainbow Foil,false,,Daniel Robert
@@ -12165,7 +12165,7 @@ base,US305,Holo Foil,false,,Derek Hill
 base,US305,Pink Diamante Foil,false,,Derek Hill
 base,US305,Sandglitter,false,,Derek Hill
 base,US305,Silver Crackle Foil,false,,Derek Hill
-base,US305,Topps Foil Pattern,false,,Derek Hill
+base,US305,Topps Pattern Foil,false,,Derek Hill
 base,US305,Gold Border,false,2025,Derek Hill
 base,US305,Rainbow Foil,false,,Derek Hill
 base,US305,Aqua Rainbow Foil,false,,Derek Hill
@@ -12205,7 +12205,7 @@ base,US306,Holo Foil,false,,Jake Mangum
 base,US306,Pink Diamante Foil,false,,Jake Mangum
 base,US306,Sandglitter,false,,Jake Mangum
 base,US306,Silver Crackle Foil,false,,Jake Mangum
-base,US306,Topps Foil Pattern,false,,Jake Mangum
+base,US306,Topps Pattern Foil,false,,Jake Mangum
 base,US306,Gold Border,false,2025,Jake Mangum
 base,US306,Rainbow Foil,false,,Jake Mangum
 base,US306,Aqua Rainbow Foil,false,,Jake Mangum
@@ -12245,7 +12245,7 @@ base,US307,Holo Foil,false,,Chad Patrick
 base,US307,Pink Diamante Foil,false,,Chad Patrick
 base,US307,Sandglitter,false,,Chad Patrick
 base,US307,Silver Crackle Foil,false,,Chad Patrick
-base,US307,Topps Foil Pattern,false,,Chad Patrick
+base,US307,Topps Pattern Foil,false,,Chad Patrick
 base,US307,Gold Border,false,2025,Chad Patrick
 base,US307,Rainbow Foil,false,,Chad Patrick
 base,US307,Aqua Rainbow Foil,false,,Chad Patrick
@@ -12285,7 +12285,7 @@ base,US308,Holo Foil,false,,Ryan Fitzgerald
 base,US308,Pink Diamante Foil,false,,Ryan Fitzgerald
 base,US308,Sandglitter,false,,Ryan Fitzgerald
 base,US308,Silver Crackle Foil,false,,Ryan Fitzgerald
-base,US308,Topps Foil Pattern,false,,Ryan Fitzgerald
+base,US308,Topps Pattern Foil,false,,Ryan Fitzgerald
 base,US308,Gold Border,false,2025,Ryan Fitzgerald
 base,US308,Rainbow Foil,false,,Ryan Fitzgerald
 base,US308,Aqua Rainbow Foil,false,,Ryan Fitzgerald
@@ -12325,7 +12325,7 @@ base,US309,Holo Foil,false,,Dansby Swanson
 base,US309,Pink Diamante Foil,false,,Dansby Swanson
 base,US309,Sandglitter,false,,Dansby Swanson
 base,US309,Silver Crackle Foil,false,,Dansby Swanson
-base,US309,Topps Foil Pattern,false,,Dansby Swanson
+base,US309,Topps Pattern Foil,false,,Dansby Swanson
 base,US309,Gold Border,false,2025,Dansby Swanson
 base,US309,Rainbow Foil,false,,Dansby Swanson
 base,US309,Aqua Rainbow Foil,false,,Dansby Swanson
@@ -12365,7 +12365,7 @@ base,US310,Holo Foil,false,,Eric Wagaman
 base,US310,Pink Diamante Foil,false,,Eric Wagaman
 base,US310,Sandglitter,false,,Eric Wagaman
 base,US310,Silver Crackle Foil,false,,Eric Wagaman
-base,US310,Topps Foil Pattern,false,,Eric Wagaman
+base,US310,Topps Pattern Foil,false,,Eric Wagaman
 base,US310,Gold Border,false,2025,Eric Wagaman
 base,US310,Rainbow Foil,false,,Eric Wagaman
 base,US310,Aqua Rainbow Foil,false,,Eric Wagaman
@@ -12405,7 +12405,7 @@ base,US311,Holo Foil,false,,Kevin Pillar
 base,US311,Pink Diamante Foil,false,,Kevin Pillar
 base,US311,Sandglitter,false,,Kevin Pillar
 base,US311,Silver Crackle Foil,false,,Kevin Pillar
-base,US311,Topps Foil Pattern,false,,Kevin Pillar
+base,US311,Topps Pattern Foil,false,,Kevin Pillar
 base,US311,Gold Border,false,2025,Kevin Pillar
 base,US311,Rainbow Foil,false,,Kevin Pillar
 base,US311,Aqua Rainbow Foil,false,,Kevin Pillar
@@ -12445,7 +12445,7 @@ base,US312,Holo Foil,false,,Hyeseong Kim
 base,US312,Pink Diamante Foil,false,,Hyeseong Kim
 base,US312,Sandglitter,false,,Hyeseong Kim
 base,US312,Silver Crackle Foil,false,,Hyeseong Kim
-base,US312,Topps Foil Pattern,false,,Hyeseong Kim
+base,US312,Topps Pattern Foil,false,,Hyeseong Kim
 base,US312,Gold Border,false,2025,Hyeseong Kim
 base,US312,Rainbow Foil,false,,Hyeseong Kim
 base,US312,Aqua Rainbow Foil,false,,Hyeseong Kim
@@ -12485,7 +12485,7 @@ base,US313,Holo Foil,false,,Miles Mastrobuoni
 base,US313,Pink Diamante Foil,false,,Miles Mastrobuoni
 base,US313,Sandglitter,false,,Miles Mastrobuoni
 base,US313,Silver Crackle Foil,false,,Miles Mastrobuoni
-base,US313,Topps Foil Pattern,false,,Miles Mastrobuoni
+base,US313,Topps Pattern Foil,false,,Miles Mastrobuoni
 base,US313,Gold Border,false,2025,Miles Mastrobuoni
 base,US313,Rainbow Foil,false,,Miles Mastrobuoni
 base,US313,Aqua Rainbow Foil,false,,Miles Mastrobuoni
@@ -12525,7 +12525,7 @@ base,US314,Holo Foil,false,,Matthew Lugo
 base,US314,Pink Diamante Foil,false,,Matthew Lugo
 base,US314,Sandglitter,false,,Matthew Lugo
 base,US314,Silver Crackle Foil,false,,Matthew Lugo
-base,US314,Topps Foil Pattern,false,,Matthew Lugo
+base,US314,Topps Pattern Foil,false,,Matthew Lugo
 base,US314,Gold Border,false,2025,Matthew Lugo
 base,US314,Rainbow Foil,false,,Matthew Lugo
 base,US314,Aqua Rainbow Foil,false,,Matthew Lugo
@@ -12565,7 +12565,7 @@ base,US315,Holo Foil,false,,Tyler Callihan
 base,US315,Pink Diamante Foil,false,,Tyler Callihan
 base,US315,Sandglitter,false,,Tyler Callihan
 base,US315,Silver Crackle Foil,false,,Tyler Callihan
-base,US315,Topps Foil Pattern,false,,Tyler Callihan
+base,US315,Topps Pattern Foil,false,,Tyler Callihan
 base,US315,Gold Border,false,2025,Tyler Callihan
 base,US315,Rainbow Foil,false,,Tyler Callihan
 base,US315,Aqua Rainbow Foil,false,,Tyler Callihan
@@ -12605,7 +12605,7 @@ base,US316,Holo Foil,false,,Drew Rasmussen
 base,US316,Pink Diamante Foil,false,,Drew Rasmussen
 base,US316,Sandglitter,false,,Drew Rasmussen
 base,US316,Silver Crackle Foil,false,,Drew Rasmussen
-base,US316,Topps Foil Pattern,false,,Drew Rasmussen
+base,US316,Topps Pattern Foil,false,,Drew Rasmussen
 base,US316,Gold Border,false,2025,Drew Rasmussen
 base,US316,Rainbow Foil,false,,Drew Rasmussen
 base,US316,Aqua Rainbow Foil,false,,Drew Rasmussen
@@ -12645,7 +12645,7 @@ base,US317,Holo Foil,false,,Ryan Miller
 base,US317,Pink Diamante Foil,false,,Ryan Miller
 base,US317,Sandglitter,false,,Ryan Miller
 base,US317,Silver Crackle Foil,false,,Ryan Miller
-base,US317,Topps Foil Pattern,false,,Ryan Miller
+base,US317,Topps Pattern Foil,false,,Ryan Miller
 base,US317,Gold Border,false,2025,Ryan Miller
 base,US317,Rainbow Foil,false,,Ryan Miller
 base,US317,Aqua Rainbow Foil,false,,Ryan Miller
@@ -12685,7 +12685,7 @@ base,US318,Holo Foil,false,,Rhett Lowder
 base,US318,Pink Diamante Foil,false,,Rhett Lowder
 base,US318,Sandglitter,false,,Rhett Lowder
 base,US318,Silver Crackle Foil,false,,Rhett Lowder
-base,US318,Topps Foil Pattern,false,,Rhett Lowder
+base,US318,Topps Pattern Foil,false,,Rhett Lowder
 base,US318,Gold Border,false,2025,Rhett Lowder
 base,US318,Rainbow Foil,false,,Rhett Lowder
 base,US318,Aqua Rainbow Foil,false,,Rhett Lowder
@@ -12725,7 +12725,7 @@ base,US319,Holo Foil,false,,Michael Darrell-Hicks
 base,US319,Pink Diamante Foil,false,,Michael Darrell-Hicks
 base,US319,Sandglitter,false,,Michael Darrell-Hicks
 base,US319,Silver Crackle Foil,false,,Michael Darrell-Hicks
-base,US319,Topps Foil Pattern,false,,Michael Darrell-Hicks
+base,US319,Topps Pattern Foil,false,,Michael Darrell-Hicks
 base,US319,Gold Border,false,2025,Michael Darrell-Hicks
 base,US319,Rainbow Foil,false,,Michael Darrell-Hicks
 base,US319,Aqua Rainbow Foil,false,,Michael Darrell-Hicks
@@ -12765,7 +12765,7 @@ base,US320,Holo Foil,false,,Austin Kitchen
 base,US320,Pink Diamante Foil,false,,Austin Kitchen
 base,US320,Sandglitter,false,,Austin Kitchen
 base,US320,Silver Crackle Foil,false,,Austin Kitchen
-base,US320,Topps Foil Pattern,false,,Austin Kitchen
+base,US320,Topps Pattern Foil,false,,Austin Kitchen
 base,US320,Gold Border,false,2025,Austin Kitchen
 base,US320,Rainbow Foil,false,,Austin Kitchen
 base,US320,Aqua Rainbow Foil,false,,Austin Kitchen
@@ -12805,7 +12805,7 @@ base,US321,Holo Foil,false,,Carson Palmquist
 base,US321,Pink Diamante Foil,false,,Carson Palmquist
 base,US321,Sandglitter,false,,Carson Palmquist
 base,US321,Silver Crackle Foil,false,,Carson Palmquist
-base,US321,Topps Foil Pattern,false,,Carson Palmquist
+base,US321,Topps Pattern Foil,false,,Carson Palmquist
 base,US321,Gold Border,false,2025,Carson Palmquist
 base,US321,Rainbow Foil,false,,Carson Palmquist
 base,US321,Aqua Rainbow Foil,false,,Carson Palmquist
@@ -12845,7 +12845,7 @@ base,US322,Holo Foil,false,,Amed Rosario
 base,US322,Pink Diamante Foil,false,,Amed Rosario
 base,US322,Sandglitter,false,,Amed Rosario
 base,US322,Silver Crackle Foil,false,,Amed Rosario
-base,US322,Topps Foil Pattern,false,,Amed Rosario
+base,US322,Topps Pattern Foil,false,,Amed Rosario
 base,US322,Gold Border,false,2025,Amed Rosario
 base,US322,Rainbow Foil,false,,Amed Rosario
 base,US322,Aqua Rainbow Foil,false,,Amed Rosario
@@ -12885,7 +12885,7 @@ base,US323,Holo Foil,false,,Luis Contreras
 base,US323,Pink Diamante Foil,false,,Luis Contreras
 base,US323,Sandglitter,false,,Luis Contreras
 base,US323,Silver Crackle Foil,false,,Luis Contreras
-base,US323,Topps Foil Pattern,false,,Luis Contreras
+base,US323,Topps Pattern Foil,false,,Luis Contreras
 base,US323,Gold Border,false,2025,Luis Contreras
 base,US323,Rainbow Foil,false,,Luis Contreras
 base,US323,Aqua Rainbow Foil,false,,Luis Contreras
@@ -12925,7 +12925,7 @@ base,US324,Holo Foil,false,,Ryan Zeferjahn
 base,US324,Pink Diamante Foil,false,,Ryan Zeferjahn
 base,US324,Sandglitter,false,,Ryan Zeferjahn
 base,US324,Silver Crackle Foil,false,,Ryan Zeferjahn
-base,US324,Topps Foil Pattern,false,,Ryan Zeferjahn
+base,US324,Topps Pattern Foil,false,,Ryan Zeferjahn
 base,US324,Gold Border,false,2025,Ryan Zeferjahn
 base,US324,Rainbow Foil,false,,Ryan Zeferjahn
 base,US324,Aqua Rainbow Foil,false,,Ryan Zeferjahn
@@ -12965,7 +12965,7 @@ base,US325,Holo Foil,false,,Edgar Quero
 base,US325,Pink Diamante Foil,false,,Edgar Quero
 base,US325,Sandglitter,false,,Edgar Quero
 base,US325,Silver Crackle Foil,false,,Edgar Quero
-base,US325,Topps Foil Pattern,false,,Edgar Quero
+base,US325,Topps Pattern Foil,false,,Edgar Quero
 base,US325,Gold Border,false,2025,Edgar Quero
 base,US325,Rainbow Foil,false,,Edgar Quero
 base,US325,Aqua Rainbow Foil,false,,Edgar Quero
@@ -13005,7 +13005,7 @@ base,US326,Holo Foil,false,,James Meeker
 base,US326,Pink Diamante Foil,false,,James Meeker
 base,US326,Sandglitter,false,,James Meeker
 base,US326,Silver Crackle Foil,false,,James Meeker
-base,US326,Topps Foil Pattern,false,,James Meeker
+base,US326,Topps Pattern Foil,false,,James Meeker
 base,US326,Gold Border,false,2025,James Meeker
 base,US326,Rainbow Foil,false,,James Meeker
 base,US326,Aqua Rainbow Foil,false,,James Meeker
@@ -13045,7 +13045,7 @@ base,US327,Holo Foil,false,,Spencer Schwellenbach
 base,US327,Pink Diamante Foil,false,,Spencer Schwellenbach
 base,US327,Sandglitter,false,,Spencer Schwellenbach
 base,US327,Silver Crackle Foil,false,,Spencer Schwellenbach
-base,US327,Topps Foil Pattern,false,,Spencer Schwellenbach
+base,US327,Topps Pattern Foil,false,,Spencer Schwellenbach
 base,US327,Gold Border,false,2025,Spencer Schwellenbach
 base,US327,Rainbow Foil,false,,Spencer Schwellenbach
 base,US327,Aqua Rainbow Foil,false,,Spencer Schwellenbach
@@ -13085,7 +13085,7 @@ base,US328,Holo Foil,false,,Camilo Doval
 base,US328,Pink Diamante Foil,false,,Camilo Doval
 base,US328,Sandglitter,false,,Camilo Doval
 base,US328,Silver Crackle Foil,false,,Camilo Doval
-base,US328,Topps Foil Pattern,false,,Camilo Doval
+base,US328,Topps Pattern Foil,false,,Camilo Doval
 base,US328,Gold Border,false,2025,Camilo Doval
 base,US328,Rainbow Foil,false,,Camilo Doval
 base,US328,Aqua Rainbow Foil,false,,Camilo Doval
@@ -13125,7 +13125,7 @@ base,US329,Holo Foil,false,,Robert Garcia
 base,US329,Pink Diamante Foil,false,,Robert Garcia
 base,US329,Sandglitter,false,,Robert Garcia
 base,US329,Silver Crackle Foil,false,,Robert Garcia
-base,US329,Topps Foil Pattern,false,,Robert Garcia
+base,US329,Topps Pattern Foil,false,,Robert Garcia
 base,US329,Gold Border,false,2025,Robert Garcia
 base,US329,Rainbow Foil,false,,Robert Garcia
 base,US329,Aqua Rainbow Foil,false,,Robert Garcia
@@ -13165,7 +13165,7 @@ base,US330,Holo Foil,false,,Austin Wynns
 base,US330,Pink Diamante Foil,false,,Austin Wynns
 base,US330,Sandglitter,false,,Austin Wynns
 base,US330,Silver Crackle Foil,false,,Austin Wynns
-base,US330,Topps Foil Pattern,false,,Austin Wynns
+base,US330,Topps Pattern Foil,false,,Austin Wynns
 base,US330,Gold Border,false,2025,Austin Wynns
 base,US330,Rainbow Foil,false,,Austin Wynns
 base,US330,Aqua Rainbow Foil,false,,Austin Wynns
@@ -13205,7 +13205,7 @@ base,US331,Holo Foil,false,,Elly De La Cruz
 base,US331,Pink Diamante Foil,false,,Elly De La Cruz
 base,US331,Sandglitter,false,,Elly De La Cruz
 base,US331,Silver Crackle Foil,false,,Elly De La Cruz
-base,US331,Topps Foil Pattern,false,,Elly De La Cruz
+base,US331,Topps Pattern Foil,false,,Elly De La Cruz
 base,US331,Gold Border,false,2025,Elly De La Cruz
 base,US331,Rainbow Foil,false,,Elly De La Cruz
 base,US331,Aqua Rainbow Foil,false,,Elly De La Cruz
@@ -13245,7 +13245,7 @@ base,US332,Holo Foil,false,,Agustín Ramírez
 base,US332,Pink Diamante Foil,false,,Agustín Ramírez
 base,US332,Sandglitter,false,,Agustín Ramírez
 base,US332,Silver Crackle Foil,false,,Agustín Ramírez
-base,US332,Topps Foil Pattern,false,,Agustín Ramírez
+base,US332,Topps Pattern Foil,false,,Agustín Ramírez
 base,US332,Gold Border,false,2025,Agustín Ramírez
 base,US332,Rainbow Foil,false,,Agustín Ramírez
 base,US332,Aqua Rainbow Foil,false,,Agustín Ramírez
@@ -13285,7 +13285,7 @@ base,US333,Holo Foil,false,,Brady Feigl
 base,US333,Pink Diamante Foil,false,,Brady Feigl
 base,US333,Sandglitter,false,,Brady Feigl
 base,US333,Silver Crackle Foil,false,,Brady Feigl
-base,US333,Topps Foil Pattern,false,,Brady Feigl
+base,US333,Topps Pattern Foil,false,,Brady Feigl
 base,US333,Gold Border,false,2025,Brady Feigl
 base,US333,Rainbow Foil,false,,Brady Feigl
 base,US333,Aqua Rainbow Foil,false,,Brady Feigl
@@ -13325,7 +13325,7 @@ base,US334,Holo Foil,false,,Luis Urías
 base,US334,Pink Diamante Foil,false,,Luis Urías
 base,US334,Sandglitter,false,,Luis Urías
 base,US334,Silver Crackle Foil,false,,Luis Urías
-base,US334,Topps Foil Pattern,false,,Luis Urías
+base,US334,Topps Pattern Foil,false,,Luis Urías
 base,US334,Gold Border,false,2025,Luis Urías
 base,US334,Rainbow Foil,false,,Luis Urías
 base,US334,Aqua Rainbow Foil,false,,Luis Urías
@@ -13365,7 +13365,7 @@ base,US335,Holo Foil,false,,Colin Rea
 base,US335,Pink Diamante Foil,false,,Colin Rea
 base,US335,Sandglitter,false,,Colin Rea
 base,US335,Silver Crackle Foil,false,,Colin Rea
-base,US335,Topps Foil Pattern,false,,Colin Rea
+base,US335,Topps Pattern Foil,false,,Colin Rea
 base,US335,Gold Border,false,2025,Colin Rea
 base,US335,Rainbow Foil,false,,Colin Rea
 base,US335,Aqua Rainbow Foil,false,,Colin Rea
@@ -13405,7 +13405,7 @@ base,US336,Holo Foil,false,,Luisangel Acuña
 base,US336,Pink Diamante Foil,false,,Luisangel Acuña
 base,US336,Sandglitter,false,,Luisangel Acuña
 base,US336,Silver Crackle Foil,false,,Luisangel Acuña
-base,US336,Topps Foil Pattern,false,,Luisangel Acuña
+base,US336,Topps Pattern Foil,false,,Luisangel Acuña
 base,US336,Gold Border,false,2025,Luisangel Acuña
 base,US336,Rainbow Foil,false,,Luisangel Acuña
 base,US336,Aqua Rainbow Foil,false,,Luisangel Acuña
@@ -13445,7 +13445,7 @@ base,US337,Holo Foil,false,,Chase Meidroth
 base,US337,Pink Diamante Foil,false,,Chase Meidroth
 base,US337,Sandglitter,false,,Chase Meidroth
 base,US337,Silver Crackle Foil,false,,Chase Meidroth
-base,US337,Topps Foil Pattern,false,,Chase Meidroth
+base,US337,Topps Pattern Foil,false,,Chase Meidroth
 base,US337,Gold Border,false,2025,Chase Meidroth
 base,US337,Rainbow Foil,false,,Chase Meidroth
 base,US337,Aqua Rainbow Foil,false,,Chase Meidroth
@@ -13485,7 +13485,7 @@ base,US338,Holo Foil,false,,José Fermin
 base,US338,Pink Diamante Foil,false,,José Fermin
 base,US338,Sandglitter,false,,José Fermin
 base,US338,Silver Crackle Foil,false,,José Fermin
-base,US338,Topps Foil Pattern,false,,José Fermin
+base,US338,Topps Pattern Foil,false,,José Fermin
 base,US338,Gold Border,false,2025,José Fermin
 base,US338,Rainbow Foil,false,,José Fermin
 base,US338,Aqua Rainbow Foil,false,,José Fermin
@@ -13525,7 +13525,7 @@ base,US339,Holo Foil,false,,Thairo Estrada
 base,US339,Pink Diamante Foil,false,,Thairo Estrada
 base,US339,Sandglitter,false,,Thairo Estrada
 base,US339,Silver Crackle Foil,false,,Thairo Estrada
-base,US339,Topps Foil Pattern,false,,Thairo Estrada
+base,US339,Topps Pattern Foil,false,,Thairo Estrada
 base,US339,Gold Border,false,2025,Thairo Estrada
 base,US339,Rainbow Foil,false,,Thairo Estrada
 base,US339,Aqua Rainbow Foil,false,,Thairo Estrada
@@ -13565,7 +13565,7 @@ base,US340,Holo Foil,false,,Myles Straw
 base,US340,Pink Diamante Foil,false,,Myles Straw
 base,US340,Sandglitter,false,,Myles Straw
 base,US340,Silver Crackle Foil,false,,Myles Straw
-base,US340,Topps Foil Pattern,false,,Myles Straw
+base,US340,Topps Pattern Foil,false,,Myles Straw
 base,US340,Gold Border,false,2025,Myles Straw
 base,US340,Rainbow Foil,false,,Myles Straw
 base,US340,Aqua Rainbow Foil,false,,Myles Straw
@@ -13605,7 +13605,7 @@ base,US341,Holo Foil,false,,Nolan Jones
 base,US341,Pink Diamante Foil,false,,Nolan Jones
 base,US341,Sandglitter,false,,Nolan Jones
 base,US341,Silver Crackle Foil,false,,Nolan Jones
-base,US341,Topps Foil Pattern,false,,Nolan Jones
+base,US341,Topps Pattern Foil,false,,Nolan Jones
 base,US341,Gold Border,false,2025,Nolan Jones
 base,US341,Rainbow Foil,false,,Nolan Jones
 base,US341,Aqua Rainbow Foil,false,,Nolan Jones
@@ -13645,7 +13645,7 @@ base,US342,Holo Foil,false,,Luke Keaschall
 base,US342,Pink Diamante Foil,false,,Luke Keaschall
 base,US342,Sandglitter,false,,Luke Keaschall
 base,US342,Silver Crackle Foil,false,,Luke Keaschall
-base,US342,Topps Foil Pattern,false,,Luke Keaschall
+base,US342,Topps Pattern Foil,false,,Luke Keaschall
 base,US342,Gold Border,false,2025,Luke Keaschall
 base,US342,Rainbow Foil,false,,Luke Keaschall
 base,US342,Aqua Rainbow Foil,false,,Luke Keaschall
@@ -13685,7 +13685,7 @@ base,US343,Holo Foil,false,,Jorge Soler
 base,US343,Pink Diamante Foil,false,,Jorge Soler
 base,US343,Sandglitter,false,,Jorge Soler
 base,US343,Silver Crackle Foil,false,,Jorge Soler
-base,US343,Topps Foil Pattern,false,,Jorge Soler
+base,US343,Topps Pattern Foil,false,,Jorge Soler
 base,US343,Gold Border,false,2025,Jorge Soler
 base,US343,Rainbow Foil,false,,Jorge Soler
 base,US343,Aqua Rainbow Foil,false,,Jorge Soler
@@ -13725,7 +13725,7 @@ base,US344,Holo Foil,false,,Brady Singer
 base,US344,Pink Diamante Foil,false,,Brady Singer
 base,US344,Sandglitter,false,,Brady Singer
 base,US344,Silver Crackle Foil,false,,Brady Singer
-base,US344,Topps Foil Pattern,false,,Brady Singer
+base,US344,Topps Pattern Foil,false,,Brady Singer
 base,US344,Gold Border,false,2025,Brady Singer
 base,US344,Rainbow Foil,false,,Brady Singer
 base,US344,Aqua Rainbow Foil,false,,Brady Singer
@@ -13765,7 +13765,7 @@ base,US345,Holo Foil,false,,Matt Shaw
 base,US345,Pink Diamante Foil,false,,Matt Shaw
 base,US345,Sandglitter,false,,Matt Shaw
 base,US345,Silver Crackle Foil,false,,Matt Shaw
-base,US345,Topps Foil Pattern,false,,Matt Shaw
+base,US345,Topps Pattern Foil,false,,Matt Shaw
 base,US345,Gold Border,false,2025,Matt Shaw
 base,US345,Rainbow Foil,false,,Matt Shaw
 base,US345,Aqua Rainbow Foil,false,,Matt Shaw
@@ -13805,7 +13805,7 @@ base,US346,Holo Foil,false,,JoJo Romero
 base,US346,Pink Diamante Foil,false,,JoJo Romero
 base,US346,Sandglitter,false,,JoJo Romero
 base,US346,Silver Crackle Foil,false,,JoJo Romero
-base,US346,Topps Foil Pattern,false,,JoJo Romero
+base,US346,Topps Pattern Foil,false,,JoJo Romero
 base,US346,Gold Border,false,2025,JoJo Romero
 base,US346,Rainbow Foil,false,,JoJo Romero
 base,US346,Aqua Rainbow Foil,false,,JoJo Romero
@@ -13845,7 +13845,7 @@ base,US347,Holo Foil,false,,Michael Soroka
 base,US347,Pink Diamante Foil,false,,Michael Soroka
 base,US347,Sandglitter,false,,Michael Soroka
 base,US347,Silver Crackle Foil,false,,Michael Soroka
-base,US347,Topps Foil Pattern,false,,Michael Soroka
+base,US347,Topps Pattern Foil,false,,Michael Soroka
 base,US347,Gold Border,false,2025,Michael Soroka
 base,US347,Rainbow Foil,false,,Michael Soroka
 base,US347,Aqua Rainbow Foil,false,,Michael Soroka
@@ -13885,7 +13885,7 @@ base,US348,Holo Foil,false,,David Morgan
 base,US348,Pink Diamante Foil,false,,David Morgan
 base,US348,Sandglitter,false,,David Morgan
 base,US348,Silver Crackle Foil,false,,David Morgan
-base,US348,Topps Foil Pattern,false,,David Morgan
+base,US348,Topps Pattern Foil,false,,David Morgan
 base,US348,Gold Border,false,2025,David Morgan
 base,US348,Rainbow Foil,false,,David Morgan
 base,US348,Aqua Rainbow Foil,false,,David Morgan
@@ -13925,7 +13925,7 @@ base,US349,Holo Foil,false,,Chandler Simpson
 base,US349,Pink Diamante Foil,false,,Chandler Simpson
 base,US349,Sandglitter,false,,Chandler Simpson
 base,US349,Silver Crackle Foil,false,,Chandler Simpson
-base,US349,Topps Foil Pattern,false,,Chandler Simpson
+base,US349,Topps Pattern Foil,false,,Chandler Simpson
 base,US349,Gold Border,false,2025,Chandler Simpson
 base,US349,Rainbow Foil,false,,Chandler Simpson
 base,US349,Aqua Rainbow Foil,false,,Chandler Simpson
@@ -13965,7 +13965,7 @@ base,US350,Holo Foil,false,,Paxton Schultz
 base,US350,Pink Diamante Foil,false,,Paxton Schultz
 base,US350,Sandglitter,false,,Paxton Schultz
 base,US350,Silver Crackle Foil,false,,Paxton Schultz
-base,US350,Topps Foil Pattern,false,,Paxton Schultz
+base,US350,Topps Pattern Foil,false,,Paxton Schultz
 base,US350,Gold Border,false,2025,Paxton Schultz
 base,US350,Rainbow Foil,false,,Paxton Schultz
 base,US350,Aqua Rainbow Foil,false,,Paxton Schultz

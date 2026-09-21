@@ -1,6 +1,6 @@
 category,cardNumber,parallel,isAuto,printRun,player
 base,351,,false,,Taijuan Walker
-base,351,Topps Foil Pattern,false,,Taijuan Walker
+base,351,Topps Pattern Foil,false,,Taijuan Walker
 base,351,Silver Crackle Foilboard,false,,Taijuan Walker
 base,351,Diamante Foil,false,,Taijuan Walker
 base,351,Holo Foil,false,,Taijuan Walker
@@ -40,7 +40,7 @@ base,351,Platinum Holo Foil,false,1,Taijuan Walker
 base,351,First Card,false,1,Taijuan Walker
 base,351,Printing Plates,false,1,Taijuan Walker
 base,352,,false,,Chicago White Sox
-base,352,Topps Foil Pattern,false,,Chicago White Sox
+base,352,Topps Pattern Foil,false,,Chicago White Sox
 base,352,Silver Crackle Foilboard,false,,Chicago White Sox
 base,352,Diamante Foil,false,,Chicago White Sox
 base,352,Holo Foil,false,,Chicago White Sox
@@ -80,7 +80,7 @@ base,352,Platinum Holo Foil,false,1,Chicago White Sox
 base,352,First Card,false,1,Chicago White Sox
 base,352,Printing Plates,false,1,Chicago White Sox
 base,353,,false,,Austin Barnes
-base,353,Topps Foil Pattern,false,,Austin Barnes
+base,353,Topps Pattern Foil,false,,Austin Barnes
 base,353,Silver Crackle Foilboard,false,,Austin Barnes
 base,353,Diamante Foil,false,,Austin Barnes
 base,353,Holo Foil,false,,Austin Barnes
@@ -120,7 +120,7 @@ base,353,Platinum Holo Foil,false,1,Austin Barnes
 base,353,First Card,false,1,Austin Barnes
 base,353,Printing Plates,false,1,Austin Barnes
 base,354,,false,,Sean Manaea
-base,354,Topps Foil Pattern,false,,Sean Manaea
+base,354,Topps Pattern Foil,false,,Sean Manaea
 base,354,Silver Crackle Foilboard,false,,Sean Manaea
 base,354,Diamante Foil,false,,Sean Manaea
 base,354,Holo Foil,false,,Sean Manaea
@@ -160,7 +160,7 @@ base,354,Platinum Holo Foil,false,1,Sean Manaea
 base,354,First Card,false,1,Sean Manaea
 base,354,Printing Plates,false,1,Sean Manaea
 base,355,,false,,Nick Madrigal
-base,355,Topps Foil Pattern,false,,Nick Madrigal
+base,355,Topps Pattern Foil,false,,Nick Madrigal
 base,355,Silver Crackle Foilboard,false,,Nick Madrigal
 base,355,Diamante Foil,false,,Nick Madrigal
 base,355,Holo Foil,false,,Nick Madrigal
@@ -200,7 +200,7 @@ base,355,Platinum Holo Foil,false,1,Nick Madrigal
 base,355,First Card,false,1,Nick Madrigal
 base,355,Printing Plates,false,1,Nick Madrigal
 base,356,,false,,Harrison Bader
-base,356,Topps Foil Pattern,false,,Harrison Bader
+base,356,Topps Pattern Foil,false,,Harrison Bader
 base,356,Silver Crackle Foilboard,false,,Harrison Bader
 base,356,Diamante Foil,false,,Harrison Bader
 base,356,Holo Foil,false,,Harrison Bader
@@ -240,7 +240,7 @@ base,356,Platinum Holo Foil,false,1,Harrison Bader
 base,356,First Card,false,1,Harrison Bader
 base,356,Printing Plates,false,1,Harrison Bader
 base,357,,false,,Trevor McDonald
-base,357,Topps Foil Pattern,false,,Trevor McDonald
+base,357,Topps Pattern Foil,false,,Trevor McDonald
 base,357,Silver Crackle Foilboard,false,,Trevor McDonald
 base,357,Diamante Foil,false,,Trevor McDonald
 base,357,Holo Foil,false,,Trevor McDonald
@@ -280,7 +280,7 @@ base,357,Platinum Holo Foil,false,1,Trevor McDonald
 base,357,First Card,false,1,Trevor McDonald
 base,357,Printing Plates,false,1,Trevor McDonald
 base,358,,false,,Bryce Miller
-base,358,Topps Foil Pattern,false,,Bryce Miller
+base,358,Topps Pattern Foil,false,,Bryce Miller
 base,358,Silver Crackle Foilboard,false,,Bryce Miller
 base,358,Diamante Foil,false,,Bryce Miller
 base,358,Holo Foil,false,,Bryce Miller
@@ -320,7 +320,7 @@ base,358,Platinum Holo Foil,false,1,Bryce Miller
 base,358,First Card,false,1,Bryce Miller
 base,358,Printing Plates,false,1,Bryce Miller
 base,359,,false,,Brandon Eisert
-base,359,Topps Foil Pattern,false,,Brandon Eisert
+base,359,Topps Pattern Foil,false,,Brandon Eisert
 base,359,Silver Crackle Foilboard,false,,Brandon Eisert
 base,359,Diamante Foil,false,,Brandon Eisert
 base,359,Holo Foil,false,,Brandon Eisert
@@ -360,7 +360,7 @@ base,359,Platinum Holo Foil,false,1,Brandon Eisert
 base,359,First Card,false,1,Brandon Eisert
 base,359,Printing Plates,false,1,Brandon Eisert
 base,360,,false,,Ryan McMahon
-base,360,Topps Foil Pattern,false,,Ryan McMahon
+base,360,Topps Pattern Foil,false,,Ryan McMahon
 base,360,Silver Crackle Foilboard,false,,Ryan McMahon
 base,360,Diamante Foil,false,,Ryan McMahon
 base,360,Holo Foil,false,,Ryan McMahon
@@ -400,7 +400,7 @@ base,360,Platinum Holo Foil,false,1,Ryan McMahon
 base,360,First Card,false,1,Ryan McMahon
 base,360,Printing Plates,false,1,Ryan McMahon
 base,361,,false,,Jorge Polanco
-base,361,Topps Foil Pattern,false,,Jorge Polanco
+base,361,Topps Pattern Foil,false,,Jorge Polanco
 base,361,Silver Crackle Foilboard,false,,Jorge Polanco
 base,361,Diamante Foil,false,,Jorge Polanco
 base,361,Holo Foil,false,,Jorge Polanco
@@ -440,7 +440,7 @@ base,361,Platinum Holo Foil,false,1,Jorge Polanco
 base,361,First Card,false,1,Jorge Polanco
 base,361,Printing Plates,false,1,Jorge Polanco
 base,362,,false,,Seth Johnson
-base,362,Topps Foil Pattern,false,,Seth Johnson
+base,362,Topps Pattern Foil,false,,Seth Johnson
 base,362,Silver Crackle Foilboard,false,,Seth Johnson
 base,362,Diamante Foil,false,,Seth Johnson
 base,362,Holo Foil,false,,Seth Johnson
@@ -480,7 +480,7 @@ base,362,Platinum Holo Foil,false,1,Seth Johnson
 base,362,First Card,false,1,Seth Johnson
 base,362,Printing Plates,false,1,Seth Johnson
 base,363,,false,,Alex Cobb
-base,363,Topps Foil Pattern,false,,Alex Cobb
+base,363,Topps Pattern Foil,false,,Alex Cobb
 base,363,Silver Crackle Foilboard,false,,Alex Cobb
 base,363,Diamante Foil,false,,Alex Cobb
 base,363,Holo Foil,false,,Alex Cobb
@@ -520,7 +520,7 @@ base,363,Platinum Holo Foil,false,1,Alex Cobb
 base,363,First Card,false,1,Alex Cobb
 base,363,Printing Plates,false,1,Alex Cobb
 base,364,,false,,Ozzie Albies
-base,364,Topps Foil Pattern,false,,Ozzie Albies
+base,364,Topps Pattern Foil,false,,Ozzie Albies
 base,364,Silver Crackle Foilboard,false,,Ozzie Albies
 base,364,Diamante Foil,false,,Ozzie Albies
 base,364,Holo Foil,false,,Ozzie Albies
@@ -560,7 +560,7 @@ base,364,Platinum Holo Foil,false,1,Ozzie Albies
 base,364,First Card,false,1,Ozzie Albies
 base,364,Printing Plates,false,1,Ozzie Albies
 base,365,,false,,Bobby Witt Jr.
-base,365,Topps Foil Pattern,false,,Bobby Witt Jr.
+base,365,Topps Pattern Foil,false,,Bobby Witt Jr.
 base,365,Silver Crackle Foilboard,false,,Bobby Witt Jr.
 base,365,Diamante Foil,false,,Bobby Witt Jr.
 base,365,Holo Foil,false,,Bobby Witt Jr.
@@ -600,7 +600,7 @@ base,365,Platinum Holo Foil,false,1,Bobby Witt Jr.
 base,365,First Card,false,1,Bobby Witt Jr.
 base,365,Printing Plates,false,1,Bobby Witt Jr.
 base,366,,false,,Josh Bell
-base,366,Topps Foil Pattern,false,,Josh Bell
+base,366,Topps Pattern Foil,false,,Josh Bell
 base,366,Silver Crackle Foilboard,false,,Josh Bell
 base,366,Diamante Foil,false,,Josh Bell
 base,366,Holo Foil,false,,Josh Bell
@@ -640,7 +640,7 @@ base,366,Platinum Holo Foil,false,1,Josh Bell
 base,366,First Card,false,1,Josh Bell
 base,366,Printing Plates,false,1,Josh Bell
 base,367,,false,,Wilyer Abreu
-base,367,Topps Foil Pattern,false,,Wilyer Abreu
+base,367,Topps Pattern Foil,false,,Wilyer Abreu
 base,367,Silver Crackle Foilboard,false,,Wilyer Abreu
 base,367,Diamante Foil,false,,Wilyer Abreu
 base,367,Holo Foil,false,,Wilyer Abreu
@@ -680,7 +680,7 @@ base,367,Platinum Holo Foil,false,1,Wilyer Abreu
 base,367,First Card,false,1,Wilyer Abreu
 base,367,Printing Plates,false,1,Wilyer Abreu
 base,368,,false,,Simeon Woods Richardson
-base,368,Topps Foil Pattern,false,,Simeon Woods Richardson
+base,368,Topps Pattern Foil,false,,Simeon Woods Richardson
 base,368,Silver Crackle Foilboard,false,,Simeon Woods Richardson
 base,368,Diamante Foil,false,,Simeon Woods Richardson
 base,368,Holo Foil,false,,Simeon Woods Richardson
@@ -720,7 +720,7 @@ base,368,Platinum Holo Foil,false,1,Simeon Woods Richardson
 base,368,First Card,false,1,Simeon Woods Richardson
 base,368,Printing Plates,false,1,Simeon Woods Richardson
 base,369,,false,,Mason Montgomery
-base,369,Topps Foil Pattern,false,,Mason Montgomery
+base,369,Topps Pattern Foil,false,,Mason Montgomery
 base,369,Silver Crackle Foilboard,false,,Mason Montgomery
 base,369,Diamante Foil,false,,Mason Montgomery
 base,369,Holo Foil,false,,Mason Montgomery
@@ -760,7 +760,7 @@ base,369,Platinum Holo Foil,false,1,Mason Montgomery
 base,369,First Card,false,1,Mason Montgomery
 base,369,Printing Plates,false,1,Mason Montgomery
 base,370,,false,,Angel Chivilli
-base,370,Topps Foil Pattern,false,,Angel Chivilli
+base,370,Topps Pattern Foil,false,,Angel Chivilli
 base,370,Silver Crackle Foilboard,false,,Angel Chivilli
 base,370,Diamante Foil,false,,Angel Chivilli
 base,370,Holo Foil,false,,Angel Chivilli
@@ -800,7 +800,7 @@ base,370,Platinum Holo Foil,false,1,Angel Chivilli
 base,370,First Card,false,1,Angel Chivilli
 base,370,Printing Plates,false,1,Angel Chivilli
 base,371,,false,,Edward Cabrera
-base,371,Topps Foil Pattern,false,,Edward Cabrera
+base,371,Topps Pattern Foil,false,,Edward Cabrera
 base,371,Silver Crackle Foilboard,false,,Edward Cabrera
 base,371,Diamante Foil,false,,Edward Cabrera
 base,371,Holo Foil,false,,Edward Cabrera
@@ -840,7 +840,7 @@ base,371,Platinum Holo Foil,false,1,Edward Cabrera
 base,371,First Card,false,1,Edward Cabrera
 base,371,Printing Plates,false,1,Edward Cabrera
 base,372,,false,,Yosver Zulueta
-base,372,Topps Foil Pattern,false,,Yosver Zulueta
+base,372,Topps Pattern Foil,false,,Yosver Zulueta
 base,372,Silver Crackle Foilboard,false,,Yosver Zulueta
 base,372,Diamante Foil,false,,Yosver Zulueta
 base,372,Holo Foil,false,,Yosver Zulueta
@@ -880,7 +880,7 @@ base,372,Platinum Holo Foil,false,1,Yosver Zulueta
 base,372,First Card,false,1,Yosver Zulueta
 base,372,Printing Plates,false,1,Yosver Zulueta
 base,373,,false,,Jose Siri
-base,373,Topps Foil Pattern,false,,Jose Siri
+base,373,Topps Pattern Foil,false,,Jose Siri
 base,373,Silver Crackle Foilboard,false,,Jose Siri
 base,373,Diamante Foil,false,,Jose Siri
 base,373,Holo Foil,false,,Jose Siri
@@ -920,7 +920,7 @@ base,373,Platinum Holo Foil,false,1,Jose Siri
 base,373,First Card,false,1,Jose Siri
 base,373,Printing Plates,false,1,Jose Siri
 base,374,,false,,Dustin Harris
-base,374,Topps Foil Pattern,false,,Dustin Harris
+base,374,Topps Pattern Foil,false,,Dustin Harris
 base,374,Silver Crackle Foilboard,false,,Dustin Harris
 base,374,Diamante Foil,false,,Dustin Harris
 base,374,Holo Foil,false,,Dustin Harris
@@ -960,7 +960,7 @@ base,374,Platinum Holo Foil,false,1,Dustin Harris
 base,374,First Card,false,1,Dustin Harris
 base,374,Printing Plates,false,1,Dustin Harris
 base,375,,false,,Kenley Jansen
-base,375,Topps Foil Pattern,false,,Kenley Jansen
+base,375,Topps Pattern Foil,false,,Kenley Jansen
 base,375,Silver Crackle Foilboard,false,,Kenley Jansen
 base,375,Diamante Foil,false,,Kenley Jansen
 base,375,Holo Foil,false,,Kenley Jansen
@@ -1000,7 +1000,7 @@ base,375,Platinum Holo Foil,false,1,Kenley Jansen
 base,375,First Card,false,1,Kenley Jansen
 base,375,Printing Plates,false,1,Kenley Jansen
 base,376,,false,,Jackson Chourio
-base,376,Topps Foil Pattern,false,,Jackson Chourio
+base,376,Topps Pattern Foil,false,,Jackson Chourio
 base,376,Silver Crackle Foilboard,false,,Jackson Chourio
 base,376,Diamante Foil,false,,Jackson Chourio
 base,376,Holo Foil,false,,Jackson Chourio
@@ -1040,7 +1040,7 @@ base,376,Platinum Holo Foil,false,1,Jackson Chourio
 base,376,First Card,false,1,Jackson Chourio
 base,376,Printing Plates,false,1,Jackson Chourio
 base,377,,false,,Lucas Erceg
-base,377,Topps Foil Pattern,false,,Lucas Erceg
+base,377,Topps Pattern Foil,false,,Lucas Erceg
 base,377,Silver Crackle Foilboard,false,,Lucas Erceg
 base,377,Diamante Foil,false,,Lucas Erceg
 base,377,Holo Foil,false,,Lucas Erceg
@@ -1080,7 +1080,7 @@ base,377,Platinum Holo Foil,false,1,Lucas Erceg
 base,377,First Card,false,1,Lucas Erceg
 base,377,Printing Plates,false,1,Lucas Erceg
 base,378,,false,,Max Muncy
-base,378,Topps Foil Pattern,false,,Max Muncy
+base,378,Topps Pattern Foil,false,,Max Muncy
 base,378,Silver Crackle Foilboard,false,,Max Muncy
 base,378,Diamante Foil,false,,Max Muncy
 base,378,Holo Foil,false,,Max Muncy
@@ -1120,7 +1120,7 @@ base,378,Platinum Holo Foil,false,1,Max Muncy
 base,378,First Card,false,1,Max Muncy
 base,378,Printing Plates,false,1,Max Muncy
 base,379,,false,,Shane Bieber
-base,379,Topps Foil Pattern,false,,Shane Bieber
+base,379,Topps Pattern Foil,false,,Shane Bieber
 base,379,Silver Crackle Foilboard,false,,Shane Bieber
 base,379,Diamante Foil,false,,Shane Bieber
 base,379,Holo Foil,false,,Shane Bieber
@@ -1160,7 +1160,7 @@ base,379,Platinum Holo Foil,false,1,Shane Bieber
 base,379,First Card,false,1,Shane Bieber
 base,379,Printing Plates,false,1,Shane Bieber
 base,380,,false,,Ramón Urías
-base,380,Topps Foil Pattern,false,,Ramón Urías
+base,380,Topps Pattern Foil,false,,Ramón Urías
 base,380,Silver Crackle Foilboard,false,,Ramón Urías
 base,380,Diamante Foil,false,,Ramón Urías
 base,380,Holo Foil,false,,Ramón Urías
@@ -1200,7 +1200,7 @@ base,380,Platinum Holo Foil,false,1,Ramón Urías
 base,380,First Card,false,1,Ramón Urías
 base,380,Printing Plates,false,1,Ramón Urías
 base,381,,false,,David Bednar
-base,381,Topps Foil Pattern,false,,David Bednar
+base,381,Topps Pattern Foil,false,,David Bednar
 base,381,Silver Crackle Foilboard,false,,David Bednar
 base,381,Diamante Foil,false,,David Bednar
 base,381,Holo Foil,false,,David Bednar
@@ -1240,7 +1240,7 @@ base,381,Platinum Holo Foil,false,1,David Bednar
 base,381,First Card,false,1,David Bednar
 base,381,Printing Plates,false,1,David Bednar
 base,382,,false,,Merrill Kelly
-base,382,Topps Foil Pattern,false,,Merrill Kelly
+base,382,Topps Pattern Foil,false,,Merrill Kelly
 base,382,Silver Crackle Foilboard,false,,Merrill Kelly
 base,382,Diamante Foil,false,,Merrill Kelly
 base,382,Holo Foil,false,,Merrill Kelly
@@ -1280,7 +1280,7 @@ base,382,Platinum Holo Foil,false,1,Merrill Kelly
 base,382,First Card,false,1,Merrill Kelly
 base,382,Printing Plates,false,1,Merrill Kelly
 base,383,,false,,Marcus Semien
-base,383,Topps Foil Pattern,false,,Marcus Semien
+base,383,Topps Pattern Foil,false,,Marcus Semien
 base,383,Silver Crackle Foilboard,false,,Marcus Semien
 base,383,Diamante Foil,false,,Marcus Semien
 base,383,Holo Foil,false,,Marcus Semien
@@ -1320,7 +1320,7 @@ base,383,Platinum Holo Foil,false,1,Marcus Semien
 base,383,First Card,false,1,Marcus Semien
 base,383,Printing Plates,false,1,Marcus Semien
 base,384,,false,,Ben Casparius
-base,384,Topps Foil Pattern,false,,Ben Casparius
+base,384,Topps Pattern Foil,false,,Ben Casparius
 base,384,Silver Crackle Foilboard,false,,Ben Casparius
 base,384,Diamante Foil,false,,Ben Casparius
 base,384,Holo Foil,false,,Ben Casparius
@@ -1360,7 +1360,7 @@ base,384,Platinum Holo Foil,false,1,Ben Casparius
 base,384,First Card,false,1,Ben Casparius
 base,384,Printing Plates,false,1,Ben Casparius
 base,385,,false,,Joe Musgrove
-base,385,Topps Foil Pattern,false,,Joe Musgrove
+base,385,Topps Pattern Foil,false,,Joe Musgrove
 base,385,Silver Crackle Foilboard,false,,Joe Musgrove
 base,385,Diamante Foil,false,,Joe Musgrove
 base,385,Holo Foil,false,,Joe Musgrove
@@ -1400,7 +1400,7 @@ base,385,Platinum Holo Foil,false,1,Joe Musgrove
 base,385,First Card,false,1,Joe Musgrove
 base,385,Printing Plates,false,1,Joe Musgrove
 base,386,,false,,Jose Iglesias
-base,386,Topps Foil Pattern,false,,Jose Iglesias
+base,386,Topps Pattern Foil,false,,Jose Iglesias
 base,386,Silver Crackle Foilboard,false,,Jose Iglesias
 base,386,Diamante Foil,false,,Jose Iglesias
 base,386,Holo Foil,false,,Jose Iglesias
@@ -1440,7 +1440,7 @@ base,386,Platinum Holo Foil,false,1,Jose Iglesias
 base,386,First Card,false,1,Jose Iglesias
 base,386,Printing Plates,false,1,Jose Iglesias
 base,387,,false,,Gustavo Campero
-base,387,Topps Foil Pattern,false,,Gustavo Campero
+base,387,Topps Pattern Foil,false,,Gustavo Campero
 base,387,Silver Crackle Foilboard,false,,Gustavo Campero
 base,387,Diamante Foil,false,,Gustavo Campero
 base,387,Holo Foil,false,,Gustavo Campero
@@ -1480,7 +1480,7 @@ base,387,Platinum Holo Foil,false,1,Gustavo Campero
 base,387,First Card,false,1,Gustavo Campero
 base,387,Printing Plates,false,1,Gustavo Campero
 base,388,,false,,Andy Pages
-base,388,Topps Foil Pattern,false,,Andy Pages
+base,388,Topps Pattern Foil,false,,Andy Pages
 base,388,Silver Crackle Foilboard,false,,Andy Pages
 base,388,Diamante Foil,false,,Andy Pages
 base,388,Holo Foil,false,,Andy Pages
@@ -1520,7 +1520,7 @@ base,388,Platinum Holo Foil,false,1,Andy Pages
 base,388,First Card,false,1,Andy Pages
 base,388,Printing Plates,false,1,Andy Pages
 base,389,,false,,Xander Bogaerts
-base,389,Topps Foil Pattern,false,,Xander Bogaerts
+base,389,Topps Pattern Foil,false,,Xander Bogaerts
 base,389,Silver Crackle Foilboard,false,,Xander Bogaerts
 base,389,Diamante Foil,false,,Xander Bogaerts
 base,389,Holo Foil,false,,Xander Bogaerts
@@ -1560,7 +1560,7 @@ base,389,Platinum Holo Foil,false,1,Xander Bogaerts
 base,389,First Card,false,1,Xander Bogaerts
 base,389,Printing Plates,false,1,Xander Bogaerts
 base,390,,false,,Vidal Bruján
-base,390,Topps Foil Pattern,false,,Vidal Bruján
+base,390,Topps Pattern Foil,false,,Vidal Bruján
 base,390,Silver Crackle Foilboard,false,,Vidal Bruján
 base,390,Diamante Foil,false,,Vidal Bruján
 base,390,Holo Foil,false,,Vidal Bruján
@@ -1600,7 +1600,7 @@ base,390,Platinum Holo Foil,false,1,Vidal Bruján
 base,390,First Card,false,1,Vidal Bruján
 base,390,Printing Plates,false,1,Vidal Bruján
 base,391,,false,,Chas McCormick
-base,391,Topps Foil Pattern,false,,Chas McCormick
+base,391,Topps Pattern Foil,false,,Chas McCormick
 base,391,Silver Crackle Foilboard,false,,Chas McCormick
 base,391,Diamante Foil,false,,Chas McCormick
 base,391,Holo Foil,false,,Chas McCormick
@@ -1640,7 +1640,7 @@ base,391,Platinum Holo Foil,false,1,Chas McCormick
 base,391,First Card,false,1,Chas McCormick
 base,391,Printing Plates,false,1,Chas McCormick
 base,392,,false,,Alex Verdugo
-base,392,Topps Foil Pattern,false,,Alex Verdugo
+base,392,Topps Pattern Foil,false,,Alex Verdugo
 base,392,Silver Crackle Foilboard,false,,Alex Verdugo
 base,392,Diamante Foil,false,,Alex Verdugo
 base,392,Holo Foil,false,,Alex Verdugo
@@ -1680,7 +1680,7 @@ base,392,Platinum Holo Foil,false,1,Alex Verdugo
 base,392,First Card,false,1,Alex Verdugo
 base,392,Printing Plates,false,1,Alex Verdugo
 base,393,,false,,Luis Arraez
-base,393,Topps Foil Pattern,false,,Luis Arraez
+base,393,Topps Pattern Foil,false,,Luis Arraez
 base,393,Silver Crackle Foilboard,false,,Luis Arraez
 base,393,Diamante Foil,false,,Luis Arraez
 base,393,Holo Foil,false,,Luis Arraez
@@ -1720,7 +1720,7 @@ base,393,Platinum Holo Foil,false,1,Luis Arraez
 base,393,First Card,false,1,Luis Arraez
 base,393,Printing Plates,false,1,Luis Arraez
 base,394,,false,,Corbin Burnes
-base,394,Topps Foil Pattern,false,,Corbin Burnes
+base,394,Topps Pattern Foil,false,,Corbin Burnes
 base,394,Silver Crackle Foilboard,false,,Corbin Burnes
 base,394,Diamante Foil,false,,Corbin Burnes
 base,394,Holo Foil,false,,Corbin Burnes
@@ -1760,7 +1760,7 @@ base,394,Platinum Holo Foil,false,1,Corbin Burnes
 base,394,First Card,false,1,Corbin Burnes
 base,394,Printing Plates,false,1,Corbin Burnes
 base,395,,false,,Clarke Schmidt
-base,395,Topps Foil Pattern,false,,Clarke Schmidt
+base,395,Topps Pattern Foil,false,,Clarke Schmidt
 base,395,Silver Crackle Foilboard,false,,Clarke Schmidt
 base,395,Diamante Foil,false,,Clarke Schmidt
 base,395,Holo Foil,false,,Clarke Schmidt
@@ -1800,7 +1800,7 @@ base,395,Platinum Holo Foil,false,1,Clarke Schmidt
 base,395,First Card,false,1,Clarke Schmidt
 base,395,Printing Plates,false,1,Clarke Schmidt
 base,396,,false,,Milwaukee Brewers
-base,396,Topps Foil Pattern,false,,Milwaukee Brewers
+base,396,Topps Pattern Foil,false,,Milwaukee Brewers
 base,396,Silver Crackle Foilboard,false,,Milwaukee Brewers
 base,396,Diamante Foil,false,,Milwaukee Brewers
 base,396,Holo Foil,false,,Milwaukee Brewers
@@ -1840,7 +1840,7 @@ base,396,Platinum Holo Foil,false,1,Milwaukee Brewers
 base,396,First Card,false,1,Milwaukee Brewers
 base,396,Printing Plates,false,1,Milwaukee Brewers
 base,397,,false,,Kirby Yates
-base,397,Topps Foil Pattern,false,,Kirby Yates
+base,397,Topps Pattern Foil,false,,Kirby Yates
 base,397,Silver Crackle Foilboard,false,,Kirby Yates
 base,397,Diamante Foil,false,,Kirby Yates
 base,397,Holo Foil,false,,Kirby Yates
@@ -1880,7 +1880,7 @@ base,397,Platinum Holo Foil,false,1,Kirby Yates
 base,397,First Card,false,1,Kirby Yates
 base,397,Printing Plates,false,1,Kirby Yates
 base,398,,false,,Joey Loperfido
-base,398,Topps Foil Pattern,false,,Joey Loperfido
+base,398,Topps Pattern Foil,false,,Joey Loperfido
 base,398,Silver Crackle Foilboard,false,,Joey Loperfido
 base,398,Diamante Foil,false,,Joey Loperfido
 base,398,Holo Foil,false,,Joey Loperfido
@@ -1920,7 +1920,7 @@ base,398,Platinum Holo Foil,false,1,Joey Loperfido
 base,398,First Card,false,1,Joey Loperfido
 base,398,Printing Plates,false,1,Joey Loperfido
 base,399,,false,,Kyle Stowers
-base,399,Topps Foil Pattern,false,,Kyle Stowers
+base,399,Topps Pattern Foil,false,,Kyle Stowers
 base,399,Silver Crackle Foilboard,false,,Kyle Stowers
 base,399,Diamante Foil,false,,Kyle Stowers
 base,399,Holo Foil,false,,Kyle Stowers
@@ -1960,7 +1960,7 @@ base,399,Platinum Holo Foil,false,1,Kyle Stowers
 base,399,First Card,false,1,Kyle Stowers
 base,399,Printing Plates,false,1,Kyle Stowers
 base,400,,false,,Shohei Ohtani
-base,400,Topps Foil Pattern,false,,Shohei Ohtani
+base,400,Topps Pattern Foil,false,,Shohei Ohtani
 base,400,Silver Crackle Foilboard,false,,Shohei Ohtani
 base,400,Diamante Foil,false,,Shohei Ohtani
 base,400,Holo Foil,false,,Shohei Ohtani
@@ -2000,7 +2000,7 @@ base,400,Platinum Holo Foil,false,1,Shohei Ohtani
 base,400,First Card,false,1,Shohei Ohtani
 base,400,Printing Plates,false,1,Shohei Ohtani
 base,401,,false,,David Fry
-base,401,Topps Foil Pattern,false,,David Fry
+base,401,Topps Pattern Foil,false,,David Fry
 base,401,Silver Crackle Foilboard,false,,David Fry
 base,401,Diamante Foil,false,,David Fry
 base,401,Holo Foil,false,,David Fry
@@ -2040,7 +2040,7 @@ base,401,Platinum Holo Foil,false,1,David Fry
 base,401,First Card,false,1,David Fry
 base,401,Printing Plates,false,1,David Fry
 base,402,,false,,Yandy Díaz
-base,402,Topps Foil Pattern,false,,Yandy Díaz
+base,402,Topps Pattern Foil,false,,Yandy Díaz
 base,402,Silver Crackle Foilboard,false,,Yandy Díaz
 base,402,Diamante Foil,false,,Yandy Díaz
 base,402,Holo Foil,false,,Yandy Díaz
@@ -2080,7 +2080,7 @@ base,402,Platinum Holo Foil,false,1,Yandy Díaz
 base,402,First Card,false,1,Yandy Díaz
 base,402,Printing Plates,false,1,Yandy Díaz
 base,403,,false,,Nolan Jones
-base,403,Topps Foil Pattern,false,,Nolan Jones
+base,403,Topps Pattern Foil,false,,Nolan Jones
 base,403,Silver Crackle Foilboard,false,,Nolan Jones
 base,403,Diamante Foil,false,,Nolan Jones
 base,403,Holo Foil,false,,Nolan Jones
@@ -2120,7 +2120,7 @@ base,403,Platinum Holo Foil,false,1,Nolan Jones
 base,403,First Card,false,1,Nolan Jones
 base,403,Printing Plates,false,1,Nolan Jones
 base,404,,false,,Logan Driscoll
-base,404,Topps Foil Pattern,false,,Logan Driscoll
+base,404,Topps Pattern Foil,false,,Logan Driscoll
 base,404,Silver Crackle Foilboard,false,,Logan Driscoll
 base,404,Diamante Foil,false,,Logan Driscoll
 base,404,Holo Foil,false,,Logan Driscoll
@@ -2160,7 +2160,7 @@ base,404,Platinum Holo Foil,false,1,Logan Driscoll
 base,404,First Card,false,1,Logan Driscoll
 base,404,Printing Plates,false,1,Logan Driscoll
 base,405,,false,,Kris Bryant
-base,405,Topps Foil Pattern,false,,Kris Bryant
+base,405,Topps Pattern Foil,false,,Kris Bryant
 base,405,Silver Crackle Foilboard,false,,Kris Bryant
 base,405,Diamante Foil,false,,Kris Bryant
 base,405,Holo Foil,false,,Kris Bryant
@@ -2200,7 +2200,7 @@ base,405,Platinum Holo Foil,false,1,Kris Bryant
 base,405,First Card,false,1,Kris Bryant
 base,405,Printing Plates,false,1,Kris Bryant
 base,406,,false,,Miguel Amaya
-base,406,Topps Foil Pattern,false,,Miguel Amaya
+base,406,Topps Pattern Foil,false,,Miguel Amaya
 base,406,Silver Crackle Foilboard,false,,Miguel Amaya
 base,406,Diamante Foil,false,,Miguel Amaya
 base,406,Holo Foil,false,,Miguel Amaya
@@ -2240,7 +2240,7 @@ base,406,Platinum Holo Foil,false,1,Miguel Amaya
 base,406,First Card,false,1,Miguel Amaya
 base,406,Printing Plates,false,1,Miguel Amaya
 base,407,,false,,Kyle Freeland
-base,407,Topps Foil Pattern,false,,Kyle Freeland
+base,407,Topps Pattern Foil,false,,Kyle Freeland
 base,407,Silver Crackle Foilboard,false,,Kyle Freeland
 base,407,Diamante Foil,false,,Kyle Freeland
 base,407,Holo Foil,false,,Kyle Freeland
@@ -2280,7 +2280,7 @@ base,407,Platinum Holo Foil,false,1,Kyle Freeland
 base,407,First Card,false,1,Kyle Freeland
 base,407,Printing Plates,false,1,Kyle Freeland
 base,408,,false,,Kumar Rocker
-base,408,Topps Foil Pattern,false,,Kumar Rocker
+base,408,Topps Pattern Foil,false,,Kumar Rocker
 base,408,Silver Crackle Foilboard,false,,Kumar Rocker
 base,408,Diamante Foil,false,,Kumar Rocker
 base,408,Holo Foil,false,,Kumar Rocker
@@ -2320,7 +2320,7 @@ base,408,Platinum Holo Foil,false,1,Kumar Rocker
 base,408,First Card,false,1,Kumar Rocker
 base,408,Printing Plates,false,1,Kumar Rocker
 base,409,,false,,Gunnar Henderson
-base,409,Topps Foil Pattern,false,,Gunnar Henderson
+base,409,Topps Pattern Foil,false,,Gunnar Henderson
 base,409,Silver Crackle Foilboard,false,,Gunnar Henderson
 base,409,Diamante Foil,false,,Gunnar Henderson
 base,409,Holo Foil,false,,Gunnar Henderson
@@ -2360,7 +2360,7 @@ base,409,Platinum Holo Foil,false,1,Gunnar Henderson
 base,409,First Card,false,1,Gunnar Henderson
 base,409,Printing Plates,false,1,Gunnar Henderson
 base,410,,false,,Jason Foley
-base,410,Topps Foil Pattern,false,,Jason Foley
+base,410,Topps Pattern Foil,false,,Jason Foley
 base,410,Silver Crackle Foilboard,false,,Jason Foley
 base,410,Diamante Foil,false,,Jason Foley
 base,410,Holo Foil,false,,Jason Foley
@@ -2400,7 +2400,7 @@ base,410,Platinum Holo Foil,false,1,Jason Foley
 base,410,First Card,false,1,Jason Foley
 base,410,Printing Plates,false,1,Jason Foley
 base,411,,false,,Zach Brzykcy
-base,411,Topps Foil Pattern,false,,Zach Brzykcy
+base,411,Topps Pattern Foil,false,,Zach Brzykcy
 base,411,Silver Crackle Foilboard,false,,Zach Brzykcy
 base,411,Diamante Foil,false,,Zach Brzykcy
 base,411,Holo Foil,false,,Zach Brzykcy
@@ -2440,7 +2440,7 @@ base,411,Platinum Holo Foil,false,1,Zach Brzykcy
 base,411,First Card,false,1,Zach Brzykcy
 base,411,Printing Plates,false,1,Zach Brzykcy
 base,412,,false,,Josh Rojas
-base,412,Topps Foil Pattern,false,,Josh Rojas
+base,412,Topps Pattern Foil,false,,Josh Rojas
 base,412,Silver Crackle Foilboard,false,,Josh Rojas
 base,412,Diamante Foil,false,,Josh Rojas
 base,412,Holo Foil,false,,Josh Rojas
@@ -2480,7 +2480,7 @@ base,412,Platinum Holo Foil,false,1,Josh Rojas
 base,412,First Card,false,1,Josh Rojas
 base,412,Printing Plates,false,1,Josh Rojas
 base,413,,false,,Jacob Young
-base,413,Topps Foil Pattern,false,,Jacob Young
+base,413,Topps Pattern Foil,false,,Jacob Young
 base,413,Silver Crackle Foilboard,false,,Jacob Young
 base,413,Diamante Foil,false,,Jacob Young
 base,413,Holo Foil,false,,Jacob Young
@@ -2520,7 +2520,7 @@ base,413,Platinum Holo Foil,false,1,Jacob Young
 base,413,First Card,false,1,Jacob Young
 base,413,Printing Plates,false,1,Jacob Young
 base,414,,false,,Grant Holmes
-base,414,Topps Foil Pattern,false,,Grant Holmes
+base,414,Topps Pattern Foil,false,,Grant Holmes
 base,414,Silver Crackle Foilboard,false,,Grant Holmes
 base,414,Diamante Foil,false,,Grant Holmes
 base,414,Holo Foil,false,,Grant Holmes
@@ -2560,7 +2560,7 @@ base,414,Platinum Holo Foil,false,1,Grant Holmes
 base,414,First Card,false,1,Grant Holmes
 base,414,Printing Plates,false,1,Grant Holmes
 base,415,,false,,Carlos Rodón
-base,415,Topps Foil Pattern,false,,Carlos Rodón
+base,415,Topps Pattern Foil,false,,Carlos Rodón
 base,415,Silver Crackle Foilboard,false,,Carlos Rodón
 base,415,Diamante Foil,false,,Carlos Rodón
 base,415,Holo Foil,false,,Carlos Rodón
@@ -2600,7 +2600,7 @@ base,415,Platinum Holo Foil,false,1,Carlos Rodón
 base,415,First Card,false,1,Carlos Rodón
 base,415,Printing Plates,false,1,Carlos Rodón
 base,416,,false,,Brendan Donovan
-base,416,Topps Foil Pattern,false,,Brendan Donovan
+base,416,Topps Pattern Foil,false,,Brendan Donovan
 base,416,Silver Crackle Foilboard,false,,Brendan Donovan
 base,416,Diamante Foil,false,,Brendan Donovan
 base,416,Holo Foil,false,,Brendan Donovan
@@ -2640,7 +2640,7 @@ base,416,Platinum Holo Foil,false,1,Brendan Donovan
 base,416,First Card,false,1,Brendan Donovan
 base,416,Printing Plates,false,1,Brendan Donovan
 base,417,,false,,Tomoyuki Sugano
-base,417,Topps Foil Pattern,false,,Tomoyuki Sugano
+base,417,Topps Pattern Foil,false,,Tomoyuki Sugano
 base,417,Silver Crackle Foilboard,false,,Tomoyuki Sugano
 base,417,Diamante Foil,false,,Tomoyuki Sugano
 base,417,Holo Foil,false,,Tomoyuki Sugano
@@ -2680,7 +2680,7 @@ base,417,Platinum Holo Foil,false,1,Tomoyuki Sugano
 base,417,First Card,false,1,Tomoyuki Sugano
 base,417,Printing Plates,false,1,Tomoyuki Sugano
 base,418,,false,,Michael Helman
-base,418,Topps Foil Pattern,false,,Michael Helman
+base,418,Topps Pattern Foil,false,,Michael Helman
 base,418,Silver Crackle Foilboard,false,,Michael Helman
 base,418,Diamante Foil,false,,Michael Helman
 base,418,Holo Foil,false,,Michael Helman
@@ -2720,7 +2720,7 @@ base,418,Platinum Holo Foil,false,1,Michael Helman
 base,418,First Card,false,1,Michael Helman
 base,418,Printing Plates,false,1,Michael Helman
 base,419,,false,,Garrett Crochet
-base,419,Topps Foil Pattern,false,,Garrett Crochet
+base,419,Topps Pattern Foil,false,,Garrett Crochet
 base,419,Silver Crackle Foilboard,false,,Garrett Crochet
 base,419,Diamante Foil,false,,Garrett Crochet
 base,419,Holo Foil,false,,Garrett Crochet
@@ -2760,7 +2760,7 @@ base,419,Platinum Holo Foil,false,1,Garrett Crochet
 base,419,First Card,false,1,Garrett Crochet
 base,419,Printing Plates,false,1,Garrett Crochet
 base,420,,false,,Nathan Lukes
-base,420,Topps Foil Pattern,false,,Nathan Lukes
+base,420,Topps Pattern Foil,false,,Nathan Lukes
 base,420,Silver Crackle Foilboard,false,,Nathan Lukes
 base,420,Diamante Foil,false,,Nathan Lukes
 base,420,Holo Foil,false,,Nathan Lukes
@@ -2800,7 +2800,7 @@ base,420,Platinum Holo Foil,false,1,Nathan Lukes
 base,420,First Card,false,1,Nathan Lukes
 base,420,Printing Plates,false,1,Nathan Lukes
 base,421,,false,,Michael Wacha
-base,421,Topps Foil Pattern,false,,Michael Wacha
+base,421,Topps Pattern Foil,false,,Michael Wacha
 base,421,Silver Crackle Foilboard,false,,Michael Wacha
 base,421,Diamante Foil,false,,Michael Wacha
 base,421,Holo Foil,false,,Michael Wacha
@@ -2840,7 +2840,7 @@ base,421,Platinum Holo Foil,false,1,Michael Wacha
 base,421,First Card,false,1,Michael Wacha
 base,421,Printing Plates,false,1,Michael Wacha
 base,422,,false,,Caden Dana
-base,422,Topps Foil Pattern,false,,Caden Dana
+base,422,Topps Pattern Foil,false,,Caden Dana
 base,422,Silver Crackle Foilboard,false,,Caden Dana
 base,422,Diamante Foil,false,,Caden Dana
 base,422,Holo Foil,false,,Caden Dana
@@ -2880,7 +2880,7 @@ base,422,Platinum Holo Foil,false,1,Caden Dana
 base,422,First Card,false,1,Caden Dana
 base,422,Printing Plates,false,1,Caden Dana
 base,423,,false,,Felix Bautista
-base,423,Topps Foil Pattern,false,,Felix Bautista
+base,423,Topps Pattern Foil,false,,Felix Bautista
 base,423,Silver Crackle Foilboard,false,,Felix Bautista
 base,423,Diamante Foil,false,,Felix Bautista
 base,423,Holo Foil,false,,Felix Bautista
@@ -2920,7 +2920,7 @@ base,423,Platinum Holo Foil,false,1,Felix Bautista
 base,423,First Card,false,1,Felix Bautista
 base,423,Printing Plates,false,1,Felix Bautista
 base,424,,false,,Jordan Romano
-base,424,Topps Foil Pattern,false,,Jordan Romano
+base,424,Topps Pattern Foil,false,,Jordan Romano
 base,424,Silver Crackle Foilboard,false,,Jordan Romano
 base,424,Diamante Foil,false,,Jordan Romano
 base,424,Holo Foil,false,,Jordan Romano
@@ -2960,7 +2960,7 @@ base,424,Platinum Holo Foil,false,1,Jordan Romano
 base,424,First Card,false,1,Jordan Romano
 base,424,Printing Plates,false,1,Jordan Romano
 base,425,,false,,Billy Cook
-base,425,Topps Foil Pattern,false,,Billy Cook
+base,425,Topps Pattern Foil,false,,Billy Cook
 base,425,Silver Crackle Foilboard,false,,Billy Cook
 base,425,Diamante Foil,false,,Billy Cook
 base,425,Holo Foil,false,,Billy Cook
@@ -3000,7 +3000,7 @@ base,425,Platinum Holo Foil,false,1,Billy Cook
 base,425,First Card,false,1,Billy Cook
 base,425,Printing Plates,false,1,Billy Cook
 base,426,,false,,Adam Kloffenstein
-base,426,Topps Foil Pattern,false,,Adam Kloffenstein
+base,426,Topps Pattern Foil,false,,Adam Kloffenstein
 base,426,Silver Crackle Foilboard,false,,Adam Kloffenstein
 base,426,Diamante Foil,false,,Adam Kloffenstein
 base,426,Holo Foil,false,,Adam Kloffenstein
@@ -3040,7 +3040,7 @@ base,426,Platinum Holo Foil,false,1,Adam Kloffenstein
 base,426,First Card,false,1,Adam Kloffenstein
 base,426,Printing Plates,false,1,Adam Kloffenstein
 base,427,,false,,Nick Castellanos
-base,427,Topps Foil Pattern,false,,Nick Castellanos
+base,427,Topps Pattern Foil,false,,Nick Castellanos
 base,427,Silver Crackle Foilboard,false,,Nick Castellanos
 base,427,Diamante Foil,false,,Nick Castellanos
 base,427,Holo Foil,false,,Nick Castellanos
@@ -3080,7 +3080,7 @@ base,427,Platinum Holo Foil,false,1,Nick Castellanos
 base,427,First Card,false,1,Nick Castellanos
 base,427,Printing Plates,false,1,Nick Castellanos
 base,428,,false,,Alek Thomas
-base,428,Topps Foil Pattern,false,,Alek Thomas
+base,428,Topps Pattern Foil,false,,Alek Thomas
 base,428,Silver Crackle Foilboard,false,,Alek Thomas
 base,428,Diamante Foil,false,,Alek Thomas
 base,428,Holo Foil,false,,Alek Thomas
@@ -3120,7 +3120,7 @@ base,428,Platinum Holo Foil,false,1,Alek Thomas
 base,428,First Card,false,1,Alek Thomas
 base,428,Printing Plates,false,1,Alek Thomas
 base,429,,false,,Whit Merrifield
-base,429,Topps Foil Pattern,false,,Whit Merrifield
+base,429,Topps Pattern Foil,false,,Whit Merrifield
 base,429,Silver Crackle Foilboard,false,,Whit Merrifield
 base,429,Diamante Foil,false,,Whit Merrifield
 base,429,Holo Foil,false,,Whit Merrifield
@@ -3160,7 +3160,7 @@ base,429,Platinum Holo Foil,false,1,Whit Merrifield
 base,429,First Card,false,1,Whit Merrifield
 base,429,Printing Plates,false,1,Whit Merrifield
 base,430,,false,,Will Wagner
-base,430,Topps Foil Pattern,false,,Will Wagner
+base,430,Topps Pattern Foil,false,,Will Wagner
 base,430,Silver Crackle Foilboard,false,,Will Wagner
 base,430,Diamante Foil,false,,Will Wagner
 base,430,Holo Foil,false,,Will Wagner
@@ -3200,7 +3200,7 @@ base,430,Platinum Holo Foil,false,1,Will Wagner
 base,430,First Card,false,1,Will Wagner
 base,430,Printing Plates,false,1,Will Wagner
 base,431,,false,,Sean Burke
-base,431,Topps Foil Pattern,false,,Sean Burke
+base,431,Topps Pattern Foil,false,,Sean Burke
 base,431,Silver Crackle Foilboard,false,,Sean Burke
 base,431,Diamante Foil,false,,Sean Burke
 base,431,Holo Foil,false,,Sean Burke
@@ -3240,7 +3240,7 @@ base,431,Platinum Holo Foil,false,1,Sean Burke
 base,431,First Card,false,1,Sean Burke
 base,431,Printing Plates,false,1,Sean Burke
 base,432,,false,,Brandon Nimmo
-base,432,Topps Foil Pattern,false,,Brandon Nimmo
+base,432,Topps Pattern Foil,false,,Brandon Nimmo
 base,432,Silver Crackle Foilboard,false,,Brandon Nimmo
 base,432,Diamante Foil,false,,Brandon Nimmo
 base,432,Holo Foil,false,,Brandon Nimmo
@@ -3280,7 +3280,7 @@ base,432,Platinum Holo Foil,false,1,Brandon Nimmo
 base,432,First Card,false,1,Brandon Nimmo
 base,432,Printing Plates,false,1,Brandon Nimmo
 base,433,,false,,William Contreras
-base,433,Topps Foil Pattern,false,,William Contreras
+base,433,Topps Pattern Foil,false,,William Contreras
 base,433,Silver Crackle Foilboard,false,,William Contreras
 base,433,Diamante Foil,false,,William Contreras
 base,433,Holo Foil,false,,William Contreras
@@ -3320,7 +3320,7 @@ base,433,Platinum Holo Foil,false,1,William Contreras
 base,433,First Card,false,1,William Contreras
 base,433,Printing Plates,false,1,William Contreras
 base,434,,false,,Alexis Díaz
-base,434,Topps Foil Pattern,false,,Alexis Díaz
+base,434,Topps Pattern Foil,false,,Alexis Díaz
 base,434,Silver Crackle Foilboard,false,,Alexis Díaz
 base,434,Diamante Foil,false,,Alexis Díaz
 base,434,Holo Foil,false,,Alexis Díaz
@@ -3360,7 +3360,7 @@ base,434,Platinum Holo Foil,false,1,Alexis Díaz
 base,434,First Card,false,1,Alexis Díaz
 base,434,Printing Plates,false,1,Alexis Díaz
 base,435,,false,,Reynaldo López
-base,435,Topps Foil Pattern,false,,Reynaldo López
+base,435,Topps Pattern Foil,false,,Reynaldo López
 base,435,Silver Crackle Foilboard,false,,Reynaldo López
 base,435,Diamante Foil,false,,Reynaldo López
 base,435,Holo Foil,false,,Reynaldo López
@@ -3400,7 +3400,7 @@ base,435,Platinum Holo Foil,false,1,Reynaldo López
 base,435,First Card,false,1,Reynaldo López
 base,435,Printing Plates,false,1,Reynaldo López
 base,436,,false,,Salvador Perez
-base,436,Topps Foil Pattern,false,,Salvador Perez
+base,436,Topps Pattern Foil,false,,Salvador Perez
 base,436,Silver Crackle Foilboard,false,,Salvador Perez
 base,436,Diamante Foil,false,,Salvador Perez
 base,436,Holo Foil,false,,Salvador Perez
@@ -3440,7 +3440,7 @@ base,436,Platinum Holo Foil,false,1,Salvador Perez
 base,436,First Card,false,1,Salvador Perez
 base,436,Printing Plates,false,1,Salvador Perez
 base,437,,false,,Luis Severino
-base,437,Topps Foil Pattern,false,,Luis Severino
+base,437,Topps Pattern Foil,false,,Luis Severino
 base,437,Silver Crackle Foilboard,false,,Luis Severino
 base,437,Diamante Foil,false,,Luis Severino
 base,437,Holo Foil,false,,Luis Severino
@@ -3480,7 +3480,7 @@ base,437,Platinum Holo Foil,false,1,Luis Severino
 base,437,First Card,false,1,Luis Severino
 base,437,Printing Plates,false,1,Luis Severino
 base,438,,false,,Samuel Aldegheri
-base,438,Topps Foil Pattern,false,,Samuel Aldegheri
+base,438,Topps Pattern Foil,false,,Samuel Aldegheri
 base,438,Silver Crackle Foilboard,false,,Samuel Aldegheri
 base,438,Diamante Foil,false,,Samuel Aldegheri
 base,438,Holo Foil,false,,Samuel Aldegheri
@@ -3520,7 +3520,7 @@ base,438,Platinum Holo Foil,false,1,Samuel Aldegheri
 base,438,First Card,false,1,Samuel Aldegheri
 base,438,Printing Plates,false,1,Samuel Aldegheri
 base,439,,false,,Jack Suwinski
-base,439,Topps Foil Pattern,false,,Jack Suwinski
+base,439,Topps Pattern Foil,false,,Jack Suwinski
 base,439,Silver Crackle Foilboard,false,,Jack Suwinski
 base,439,Diamante Foil,false,,Jack Suwinski
 base,439,Holo Foil,false,,Jack Suwinski
@@ -3560,7 +3560,7 @@ base,439,Platinum Holo Foil,false,1,Jack Suwinski
 base,439,First Card,false,1,Jack Suwinski
 base,439,Printing Plates,false,1,Jack Suwinski
 base,440,,false,,Brendan Rodgers
-base,440,Topps Foil Pattern,false,,Brendan Rodgers
+base,440,Topps Pattern Foil,false,,Brendan Rodgers
 base,440,Silver Crackle Foilboard,false,,Brendan Rodgers
 base,440,Diamante Foil,false,,Brendan Rodgers
 base,440,Holo Foil,false,,Brendan Rodgers
@@ -3600,7 +3600,7 @@ base,440,Platinum Holo Foil,false,1,Brendan Rodgers
 base,440,First Card,false,1,Brendan Rodgers
 base,440,Printing Plates,false,1,Brendan Rodgers
 base,441,,false,,Christian Walker
-base,441,Topps Foil Pattern,false,,Christian Walker
+base,441,Topps Pattern Foil,false,,Christian Walker
 base,441,Silver Crackle Foilboard,false,,Christian Walker
 base,441,Diamante Foil,false,,Christian Walker
 base,441,Holo Foil,false,,Christian Walker
@@ -3640,7 +3640,7 @@ base,441,Platinum Holo Foil,false,1,Christian Walker
 base,441,First Card,false,1,Christian Walker
 base,441,Printing Plates,false,1,Christian Walker
 base,442,,false,,Andy Ibáñez
-base,442,Topps Foil Pattern,false,,Andy Ibáñez
+base,442,Topps Pattern Foil,false,,Andy Ibáñez
 base,442,Silver Crackle Foilboard,false,,Andy Ibáñez
 base,442,Diamante Foil,false,,Andy Ibáñez
 base,442,Holo Foil,false,,Andy Ibáñez
@@ -3680,7 +3680,7 @@ base,442,Platinum Holo Foil,false,1,Andy Ibáñez
 base,442,First Card,false,1,Andy Ibáñez
 base,442,Printing Plates,false,1,Andy Ibáñez
 base,443,,false,,Brady Basso
-base,443,Topps Foil Pattern,false,,Brady Basso
+base,443,Topps Pattern Foil,false,,Brady Basso
 base,443,Silver Crackle Foilboard,false,,Brady Basso
 base,443,Diamante Foil,false,,Brady Basso
 base,443,Holo Foil,false,,Brady Basso
@@ -3720,7 +3720,7 @@ base,443,Platinum Holo Foil,false,1,Brady Basso
 base,443,First Card,false,1,Brady Basso
 base,443,Printing Plates,false,1,Brady Basso
 base,444,,false,,Ryan Feltner
-base,444,Topps Foil Pattern,false,,Ryan Feltner
+base,444,Topps Pattern Foil,false,,Ryan Feltner
 base,444,Silver Crackle Foilboard,false,,Ryan Feltner
 base,444,Diamante Foil,false,,Ryan Feltner
 base,444,Holo Foil,false,,Ryan Feltner
@@ -3760,7 +3760,7 @@ base,444,Platinum Holo Foil,false,1,Ryan Feltner
 base,444,First Card,false,1,Ryan Feltner
 base,444,Printing Plates,false,1,Ryan Feltner
 base,445,,false,,Joey Estes
-base,445,Topps Foil Pattern,false,,Joey Estes
+base,445,Topps Pattern Foil,false,,Joey Estes
 base,445,Silver Crackle Foilboard,false,,Joey Estes
 base,445,Diamante Foil,false,,Joey Estes
 base,445,Holo Foil,false,,Joey Estes
@@ -3800,7 +3800,7 @@ base,445,Platinum Holo Foil,false,1,Joey Estes
 base,445,First Card,false,1,Joey Estes
 base,445,Printing Plates,false,1,Joey Estes
 base,446,,false,,Bo Naylor
-base,446,Topps Foil Pattern,false,,Bo Naylor
+base,446,Topps Pattern Foil,false,,Bo Naylor
 base,446,Silver Crackle Foilboard,false,,Bo Naylor
 base,446,Diamante Foil,false,,Bo Naylor
 base,446,Holo Foil,false,,Bo Naylor
@@ -3840,7 +3840,7 @@ base,446,Platinum Holo Foil,false,1,Bo Naylor
 base,446,First Card,false,1,Bo Naylor
 base,446,Printing Plates,false,1,Bo Naylor
 base,447,,false,,Griffin Conine
-base,447,Topps Foil Pattern,false,,Griffin Conine
+base,447,Topps Pattern Foil,false,,Griffin Conine
 base,447,Silver Crackle Foilboard,false,,Griffin Conine
 base,447,Diamante Foil,false,,Griffin Conine
 base,447,Holo Foil,false,,Griffin Conine
@@ -3880,7 +3880,7 @@ base,447,Platinum Holo Foil,false,1,Griffin Conine
 base,447,First Card,false,1,Griffin Conine
 base,447,Printing Plates,false,1,Griffin Conine
 base,448,,false,,Zac Gallen
-base,448,Topps Foil Pattern,false,,Zac Gallen
+base,448,Topps Pattern Foil,false,,Zac Gallen
 base,448,Silver Crackle Foilboard,false,,Zac Gallen
 base,448,Diamante Foil,false,,Zac Gallen
 base,448,Holo Foil,false,,Zac Gallen
@@ -3920,7 +3920,7 @@ base,448,Platinum Holo Foil,false,1,Zac Gallen
 base,448,First Card,false,1,Zac Gallen
 base,448,Printing Plates,false,1,Zac Gallen
 base,449,,false,,Kyle Bradish
-base,449,Topps Foil Pattern,false,,Kyle Bradish
+base,449,Topps Pattern Foil,false,,Kyle Bradish
 base,449,Silver Crackle Foilboard,false,,Kyle Bradish
 base,449,Diamante Foil,false,,Kyle Bradish
 base,449,Holo Foil,false,,Kyle Bradish
@@ -3960,7 +3960,7 @@ base,449,Platinum Holo Foil,false,1,Kyle Bradish
 base,449,First Card,false,1,Kyle Bradish
 base,449,Printing Plates,false,1,Kyle Bradish
 base,450,,false,,Trea Turner
-base,450,Topps Foil Pattern,false,,Trea Turner
+base,450,Topps Pattern Foil,false,,Trea Turner
 base,450,Silver Crackle Foilboard,false,,Trea Turner
 base,450,Diamante Foil,false,,Trea Turner
 base,450,Holo Foil,false,,Trea Turner
@@ -4000,7 +4000,7 @@ base,450,Platinum Holo Foil,false,1,Trea Turner
 base,450,First Card,false,1,Trea Turner
 base,450,Printing Plates,false,1,Trea Turner
 base,451,,false,,Kyle Tucker
-base,451,Topps Foil Pattern,false,,Kyle Tucker
+base,451,Topps Pattern Foil,false,,Kyle Tucker
 base,451,Silver Crackle Foilboard,false,,Kyle Tucker
 base,451,Diamante Foil,false,,Kyle Tucker
 base,451,Holo Foil,false,,Kyle Tucker
@@ -4040,7 +4040,7 @@ base,451,Platinum Holo Foil,false,1,Kyle Tucker
 base,451,First Card,false,1,Kyle Tucker
 base,451,Printing Plates,false,1,Kyle Tucker
 base,452,,false,,Jordan Lawlar
-base,452,Topps Foil Pattern,false,,Jordan Lawlar
+base,452,Topps Pattern Foil,false,,Jordan Lawlar
 base,452,Silver Crackle Foilboard,false,,Jordan Lawlar
 base,452,Diamante Foil,false,,Jordan Lawlar
 base,452,Holo Foil,false,,Jordan Lawlar
@@ -4080,7 +4080,7 @@ base,452,Platinum Holo Foil,false,1,Jordan Lawlar
 base,452,First Card,false,1,Jordan Lawlar
 base,452,Printing Plates,false,1,Jordan Lawlar
 base,453,,false,,Esteury Ruiz
-base,453,Topps Foil Pattern,false,,Esteury Ruiz
+base,453,Topps Pattern Foil,false,,Esteury Ruiz
 base,453,Silver Crackle Foilboard,false,,Esteury Ruiz
 base,453,Diamante Foil,false,,Esteury Ruiz
 base,453,Holo Foil,false,,Esteury Ruiz
@@ -4120,7 +4120,7 @@ base,453,Platinum Holo Foil,false,1,Esteury Ruiz
 base,453,First Card,false,1,Esteury Ruiz
 base,453,Printing Plates,false,1,Esteury Ruiz
 base,454,,false,,Aaron Nola
-base,454,Topps Foil Pattern,false,,Aaron Nola
+base,454,Topps Pattern Foil,false,,Aaron Nola
 base,454,Silver Crackle Foilboard,false,,Aaron Nola
 base,454,Diamante Foil,false,,Aaron Nola
 base,454,Holo Foil,false,,Aaron Nola
@@ -4160,7 +4160,7 @@ base,454,Platinum Holo Foil,false,1,Aaron Nola
 base,454,First Card,false,1,Aaron Nola
 base,454,Printing Plates,false,1,Aaron Nola
 base,455,,false,,Wyatt Langford
-base,455,Topps Foil Pattern,false,,Wyatt Langford
+base,455,Topps Pattern Foil,false,,Wyatt Langford
 base,455,Silver Crackle Foilboard,false,,Wyatt Langford
 base,455,Diamante Foil,false,,Wyatt Langford
 base,455,Holo Foil,false,,Wyatt Langford
@@ -4200,7 +4200,7 @@ base,455,Platinum Holo Foil,false,1,Wyatt Langford
 base,455,First Card,false,1,Wyatt Langford
 base,455,Printing Plates,false,1,Wyatt Langford
 base,456,,false,,Randy Vásquez
-base,456,Topps Foil Pattern,false,,Randy Vásquez
+base,456,Topps Pattern Foil,false,,Randy Vásquez
 base,456,Silver Crackle Foilboard,false,,Randy Vásquez
 base,456,Diamante Foil,false,,Randy Vásquez
 base,456,Holo Foil,false,,Randy Vásquez
@@ -4240,7 +4240,7 @@ base,456,Platinum Holo Foil,false,1,Randy Vásquez
 base,456,First Card,false,1,Randy Vásquez
 base,456,Printing Plates,false,1,Randy Vásquez
 base,457,,false,,Seiya Suzuki
-base,457,Topps Foil Pattern,false,,Seiya Suzuki
+base,457,Topps Pattern Foil,false,,Seiya Suzuki
 base,457,Silver Crackle Foilboard,false,,Seiya Suzuki
 base,457,Diamante Foil,false,,Seiya Suzuki
 base,457,Holo Foil,false,,Seiya Suzuki
@@ -4280,7 +4280,7 @@ base,457,Platinum Holo Foil,false,1,Seiya Suzuki
 base,457,First Card,false,1,Seiya Suzuki
 base,457,Printing Plates,false,1,Seiya Suzuki
 base,458,,false,,Valente Bellozo
-base,458,Topps Foil Pattern,false,,Valente Bellozo
+base,458,Topps Pattern Foil,false,,Valente Bellozo
 base,458,Silver Crackle Foilboard,false,,Valente Bellozo
 base,458,Diamante Foil,false,,Valente Bellozo
 base,458,Holo Foil,false,,Valente Bellozo
@@ -4320,7 +4320,7 @@ base,458,Platinum Holo Foil,false,1,Valente Bellozo
 base,458,First Card,false,1,Valente Bellozo
 base,458,Printing Plates,false,1,Valente Bellozo
 base,459,,false,,Robbie Ray
-base,459,Topps Foil Pattern,false,,Robbie Ray
+base,459,Topps Pattern Foil,false,,Robbie Ray
 base,459,Silver Crackle Foilboard,false,,Robbie Ray
 base,459,Diamante Foil,false,,Robbie Ray
 base,459,Holo Foil,false,,Robbie Ray
@@ -4360,7 +4360,7 @@ base,459,Platinum Holo Foil,false,1,Robbie Ray
 base,459,First Card,false,1,Robbie Ray
 base,459,Printing Plates,false,1,Robbie Ray
 base,460,,false,,Gary Sánchez
-base,460,Topps Foil Pattern,false,,Gary Sánchez
+base,460,Topps Pattern Foil,false,,Gary Sánchez
 base,460,Silver Crackle Foilboard,false,,Gary Sánchez
 base,460,Diamante Foil,false,,Gary Sánchez
 base,460,Holo Foil,false,,Gary Sánchez
@@ -4400,7 +4400,7 @@ base,460,Platinum Holo Foil,false,1,Gary Sánchez
 base,460,First Card,false,1,Gary Sánchez
 base,460,Printing Plates,false,1,Gary Sánchez
 base,461,,false,,St. Louis Cardinals
-base,461,Topps Foil Pattern,false,,St. Louis Cardinals
+base,461,Topps Pattern Foil,false,,St. Louis Cardinals
 base,461,Silver Crackle Foilboard,false,,St. Louis Cardinals
 base,461,Diamante Foil,false,,St. Louis Cardinals
 base,461,Holo Foil,false,,St. Louis Cardinals
@@ -4440,7 +4440,7 @@ base,461,Platinum Holo Foil,false,1,St. Louis Cardinals
 base,461,First Card,false,1,St. Louis Cardinals
 base,461,Printing Plates,false,1,St. Louis Cardinals
 base,462,,false,,Jon Singleton
-base,462,Topps Foil Pattern,false,,Jon Singleton
+base,462,Topps Pattern Foil,false,,Jon Singleton
 base,462,Silver Crackle Foilboard,false,,Jon Singleton
 base,462,Diamante Foil,false,,Jon Singleton
 base,462,Holo Foil,false,,Jon Singleton
@@ -4480,7 +4480,7 @@ base,462,Platinum Holo Foil,false,1,Jon Singleton
 base,462,First Card,false,1,Jon Singleton
 base,462,Printing Plates,false,1,Jon Singleton
 base,463,,false,,Thomas Saggese
-base,463,Topps Foil Pattern,false,,Thomas Saggese
+base,463,Topps Pattern Foil,false,,Thomas Saggese
 base,463,Silver Crackle Foilboard,false,,Thomas Saggese
 base,463,Diamante Foil,false,,Thomas Saggese
 base,463,Holo Foil,false,,Thomas Saggese
@@ -4520,7 +4520,7 @@ base,463,Platinum Holo Foil,false,1,Thomas Saggese
 base,463,First Card,false,1,Thomas Saggese
 base,463,Printing Plates,false,1,Thomas Saggese
 base,464,,false,,Gavin Lux
-base,464,Topps Foil Pattern,false,,Gavin Lux
+base,464,Topps Pattern Foil,false,,Gavin Lux
 base,464,Silver Crackle Foilboard,false,,Gavin Lux
 base,464,Diamante Foil,false,,Gavin Lux
 base,464,Holo Foil,false,,Gavin Lux
@@ -4560,7 +4560,7 @@ base,464,Platinum Holo Foil,false,1,Gavin Lux
 base,464,First Card,false,1,Gavin Lux
 base,464,Printing Plates,false,1,Gavin Lux
 base,465,,false,,J.T. Ginn
-base,465,Topps Foil Pattern,false,,J.T. Ginn
+base,465,Topps Pattern Foil,false,,J.T. Ginn
 base,465,Silver Crackle Foilboard,false,,J.T. Ginn
 base,465,Diamante Foil,false,,J.T. Ginn
 base,465,Holo Foil,false,,J.T. Ginn
@@ -4600,7 +4600,7 @@ base,465,Platinum Holo Foil,false,1,J.T. Ginn
 base,465,First Card,false,1,J.T. Ginn
 base,465,Printing Plates,false,1,J.T. Ginn
 base,466,,false,,Arizona Diamondbacks
-base,466,Topps Foil Pattern,false,,Arizona Diamondbacks
+base,466,Topps Pattern Foil,false,,Arizona Diamondbacks
 base,466,Silver Crackle Foilboard,false,,Arizona Diamondbacks
 base,466,Diamante Foil,false,,Arizona Diamondbacks
 base,466,Holo Foil,false,,Arizona Diamondbacks
@@ -4640,7 +4640,7 @@ base,466,Platinum Holo Foil,false,1,Arizona Diamondbacks
 base,466,First Card,false,1,Arizona Diamondbacks
 base,466,Printing Plates,false,1,Arizona Diamondbacks
 base,467,,false,,Hunter Goodman
-base,467,Topps Foil Pattern,false,,Hunter Goodman
+base,467,Topps Pattern Foil,false,,Hunter Goodman
 base,467,Silver Crackle Foilboard,false,,Hunter Goodman
 base,467,Diamante Foil,false,,Hunter Goodman
 base,467,Holo Foil,false,,Hunter Goodman
@@ -4680,7 +4680,7 @@ base,467,Platinum Holo Foil,false,1,Hunter Goodman
 base,467,First Card,false,1,Hunter Goodman
 base,467,Printing Plates,false,1,Hunter Goodman
 base,468,,false,,George Kirby
-base,468,Topps Foil Pattern,false,,George Kirby
+base,468,Topps Pattern Foil,false,,George Kirby
 base,468,Silver Crackle Foilboard,false,,George Kirby
 base,468,Diamante Foil,false,,George Kirby
 base,468,Holo Foil,false,,George Kirby
@@ -4720,7 +4720,7 @@ base,468,Platinum Holo Foil,false,1,George Kirby
 base,468,First Card,false,1,George Kirby
 base,468,Printing Plates,false,1,George Kirby
 base,469,,false,,Johan Rojas
-base,469,Topps Foil Pattern,false,,Johan Rojas
+base,469,Topps Pattern Foil,false,,Johan Rojas
 base,469,Silver Crackle Foilboard,false,,Johan Rojas
 base,469,Diamante Foil,false,,Johan Rojas
 base,469,Holo Foil,false,,Johan Rojas
@@ -4760,7 +4760,7 @@ base,469,Platinum Holo Foil,false,1,Johan Rojas
 base,469,First Card,false,1,Johan Rojas
 base,469,Printing Plates,false,1,Johan Rojas
 base,470,,false,,Kyle Isbel
-base,470,Topps Foil Pattern,false,,Kyle Isbel
+base,470,Topps Pattern Foil,false,,Kyle Isbel
 base,470,Silver Crackle Foilboard,false,,Kyle Isbel
 base,470,Diamante Foil,false,,Kyle Isbel
 base,470,Holo Foil,false,,Kyle Isbel
@@ -4800,7 +4800,7 @@ base,470,Platinum Holo Foil,false,1,Kyle Isbel
 base,470,First Card,false,1,Kyle Isbel
 base,470,Printing Plates,false,1,Kyle Isbel
 base,471,,false,,Reid Detmers
-base,471,Topps Foil Pattern,false,,Reid Detmers
+base,471,Topps Pattern Foil,false,,Reid Detmers
 base,471,Silver Crackle Foilboard,false,,Reid Detmers
 base,471,Diamante Foil,false,,Reid Detmers
 base,471,Holo Foil,false,,Reid Detmers
@@ -4840,7 +4840,7 @@ base,471,Platinum Holo Foil,false,1,Reid Detmers
 base,471,First Card,false,1,Reid Detmers
 base,471,Printing Plates,false,1,Reid Detmers
 base,472,,false,,Willson Contreras
-base,472,Topps Foil Pattern,false,,Willson Contreras
+base,472,Topps Pattern Foil,false,,Willson Contreras
 base,472,Silver Crackle Foilboard,false,,Willson Contreras
 base,472,Diamante Foil,false,,Willson Contreras
 base,472,Holo Foil,false,,Willson Contreras
@@ -4880,7 +4880,7 @@ base,472,Platinum Holo Foil,false,1,Willson Contreras
 base,472,First Card,false,1,Willson Contreras
 base,472,Printing Plates,false,1,Willson Contreras
 base,473,,false,,Shota Imanaga
-base,473,Topps Foil Pattern,false,,Shota Imanaga
+base,473,Topps Pattern Foil,false,,Shota Imanaga
 base,473,Silver Crackle Foilboard,false,,Shota Imanaga
 base,473,Diamante Foil,false,,Shota Imanaga
 base,473,Holo Foil,false,,Shota Imanaga
@@ -4920,7 +4920,7 @@ base,473,Platinum Holo Foil,false,1,Shota Imanaga
 base,473,First Card,false,1,Shota Imanaga
 base,473,Printing Plates,false,1,Shota Imanaga
 base,474,,false,,Bo Bichette
-base,474,Topps Foil Pattern,false,,Bo Bichette
+base,474,Topps Pattern Foil,false,,Bo Bichette
 base,474,Silver Crackle Foilboard,false,,Bo Bichette
 base,474,Diamante Foil,false,,Bo Bichette
 base,474,Holo Foil,false,,Bo Bichette
@@ -4960,7 +4960,7 @@ base,474,Platinum Holo Foil,false,1,Bo Bichette
 base,474,First Card,false,1,Bo Bichette
 base,474,Printing Plates,false,1,Bo Bichette
 base,475,,false,,Randal Grichuk
-base,475,Topps Foil Pattern,false,,Randal Grichuk
+base,475,Topps Pattern Foil,false,,Randal Grichuk
 base,475,Silver Crackle Foilboard,false,,Randal Grichuk
 base,475,Diamante Foil,false,,Randal Grichuk
 base,475,Holo Foil,false,,Randal Grichuk
@@ -5000,7 +5000,7 @@ base,475,Platinum Holo Foil,false,1,Randal Grichuk
 base,475,First Card,false,1,Randal Grichuk
 base,475,Printing Plates,false,1,Randal Grichuk
 base,476,,false,,Michael Conforto
-base,476,Topps Foil Pattern,false,,Michael Conforto
+base,476,Topps Pattern Foil,false,,Michael Conforto
 base,476,Silver Crackle Foilboard,false,,Michael Conforto
 base,476,Diamante Foil,false,,Michael Conforto
 base,476,Holo Foil,false,,Michael Conforto
@@ -5040,7 +5040,7 @@ base,476,Platinum Holo Foil,false,1,Michael Conforto
 base,476,First Card,false,1,Michael Conforto
 base,476,Printing Plates,false,1,Michael Conforto
 base,477,,false,,Junior Caminero
-base,477,Topps Foil Pattern,false,,Junior Caminero
+base,477,Topps Pattern Foil,false,,Junior Caminero
 base,477,Silver Crackle Foilboard,false,,Junior Caminero
 base,477,Diamante Foil,false,,Junior Caminero
 base,477,Holo Foil,false,,Junior Caminero
@@ -5080,7 +5080,7 @@ base,477,Platinum Holo Foil,false,1,Junior Caminero
 base,477,First Card,false,1,Junior Caminero
 base,477,Printing Plates,false,1,Junior Caminero
 base,478,,false,,Jack Neely
-base,478,Topps Foil Pattern,false,,Jack Neely
+base,478,Topps Pattern Foil,false,,Jack Neely
 base,478,Silver Crackle Foilboard,false,,Jack Neely
 base,478,Diamante Foil,false,,Jack Neely
 base,478,Holo Foil,false,,Jack Neely
@@ -5120,7 +5120,7 @@ base,478,Platinum Holo Foil,false,1,Jack Neely
 base,478,First Card,false,1,Jack Neely
 base,478,Printing Plates,false,1,Jack Neely
 base,479,,false,,Mickey Moniak
-base,479,Topps Foil Pattern,false,,Mickey Moniak
+base,479,Topps Pattern Foil,false,,Mickey Moniak
 base,479,Silver Crackle Foilboard,false,,Mickey Moniak
 base,479,Diamante Foil,false,,Mickey Moniak
 base,479,Holo Foil,false,,Mickey Moniak
@@ -5160,7 +5160,7 @@ base,479,Platinum Holo Foil,false,1,Mickey Moniak
 base,479,First Card,false,1,Mickey Moniak
 base,479,Printing Plates,false,1,Mickey Moniak
 base,480,,false,,Joey Bart
-base,480,Topps Foil Pattern,false,,Joey Bart
+base,480,Topps Pattern Foil,false,,Joey Bart
 base,480,Silver Crackle Foilboard,false,,Joey Bart
 base,480,Diamante Foil,false,,Joey Bart
 base,480,Holo Foil,false,,Joey Bart
@@ -5200,7 +5200,7 @@ base,480,Platinum Holo Foil,false,1,Joey Bart
 base,480,First Card,false,1,Joey Bart
 base,480,Printing Plates,false,1,Joey Bart
 base,481,,false,,Michael Massey
-base,481,Topps Foil Pattern,false,,Michael Massey
+base,481,Topps Pattern Foil,false,,Michael Massey
 base,481,Silver Crackle Foilboard,false,,Michael Massey
 base,481,Diamante Foil,false,,Michael Massey
 base,481,Holo Foil,false,,Michael Massey
@@ -5240,7 +5240,7 @@ base,481,Platinum Holo Foil,false,1,Michael Massey
 base,481,First Card,false,1,Michael Massey
 base,481,Printing Plates,false,1,Michael Massey
 base,482,,false,,Garrett Whitlock
-base,482,Topps Foil Pattern,false,,Garrett Whitlock
+base,482,Topps Pattern Foil,false,,Garrett Whitlock
 base,482,Silver Crackle Foilboard,false,,Garrett Whitlock
 base,482,Diamante Foil,false,,Garrett Whitlock
 base,482,Holo Foil,false,,Garrett Whitlock
@@ -5280,7 +5280,7 @@ base,482,Platinum Holo Foil,false,1,Garrett Whitlock
 base,482,First Card,false,1,Garrett Whitlock
 base,482,Printing Plates,false,1,Garrett Whitlock
 base,483,,false,,Ty Madden
-base,483,Topps Foil Pattern,false,,Ty Madden
+base,483,Topps Pattern Foil,false,,Ty Madden
 base,483,Silver Crackle Foilboard,false,,Ty Madden
 base,483,Diamante Foil,false,,Ty Madden
 base,483,Holo Foil,false,,Ty Madden
@@ -5320,7 +5320,7 @@ base,483,Platinum Holo Foil,false,1,Ty Madden
 base,483,First Card,false,1,Ty Madden
 base,483,Printing Plates,false,1,Ty Madden
 base,484,,false,,Jorge Mateo
-base,484,Topps Foil Pattern,false,,Jorge Mateo
+base,484,Topps Pattern Foil,false,,Jorge Mateo
 base,484,Silver Crackle Foilboard,false,,Jorge Mateo
 base,484,Diamante Foil,false,,Jorge Mateo
 base,484,Holo Foil,false,,Jorge Mateo
@@ -5360,7 +5360,7 @@ base,484,Platinum Holo Foil,false,1,Jorge Mateo
 base,484,First Card,false,1,Jorge Mateo
 base,484,Printing Plates,false,1,Jorge Mateo
 base,485,,false,,Jordan Walker
-base,485,Topps Foil Pattern,false,,Jordan Walker
+base,485,Topps Pattern Foil,false,,Jordan Walker
 base,485,Silver Crackle Foilboard,false,,Jordan Walker
 base,485,Diamante Foil,false,,Jordan Walker
 base,485,Holo Foil,false,,Jordan Walker
@@ -5400,7 +5400,7 @@ base,485,Platinum Holo Foil,false,1,Jordan Walker
 base,485,First Card,false,1,Jordan Walker
 base,485,Printing Plates,false,1,Jordan Walker
 base,486,,false,,Colorado Rockies
-base,486,Topps Foil Pattern,false,,Colorado Rockies
+base,486,Topps Pattern Foil,false,,Colorado Rockies
 base,486,Silver Crackle Foilboard,false,,Colorado Rockies
 base,486,Diamante Foil,false,,Colorado Rockies
 base,486,Holo Foil,false,,Colorado Rockies
@@ -5440,7 +5440,7 @@ base,486,Platinum Holo Foil,false,1,Colorado Rockies
 base,486,First Card,false,1,Colorado Rockies
 base,486,Printing Plates,false,1,Colorado Rockies
 base,487,,false,,Eury Pérez
-base,487,Topps Foil Pattern,false,,Eury Pérez
+base,487,Topps Pattern Foil,false,,Eury Pérez
 base,487,Silver Crackle Foilboard,false,,Eury Pérez
 base,487,Diamante Foil,false,,Eury Pérez
 base,487,Holo Foil,false,,Eury Pérez
@@ -5480,7 +5480,7 @@ base,487,Platinum Holo Foil,false,1,Eury Pérez
 base,487,First Card,false,1,Eury Pérez
 base,487,Printing Plates,false,1,Eury Pérez
 base,488,,false,,Spencer Horwitz
-base,488,Topps Foil Pattern,false,,Spencer Horwitz
+base,488,Topps Pattern Foil,false,,Spencer Horwitz
 base,488,Silver Crackle Foilboard,false,,Spencer Horwitz
 base,488,Diamante Foil,false,,Spencer Horwitz
 base,488,Holo Foil,false,,Spencer Horwitz
@@ -5520,7 +5520,7 @@ base,488,Platinum Holo Foil,false,1,Spencer Horwitz
 base,488,First Card,false,1,Spencer Horwitz
 base,488,Printing Plates,false,1,Spencer Horwitz
 base,489,,false,,Edmundo Sosa
-base,489,Topps Foil Pattern,false,,Edmundo Sosa
+base,489,Topps Pattern Foil,false,,Edmundo Sosa
 base,489,Silver Crackle Foilboard,false,,Edmundo Sosa
 base,489,Diamante Foil,false,,Edmundo Sosa
 base,489,Holo Foil,false,,Edmundo Sosa
@@ -5560,7 +5560,7 @@ base,489,Platinum Holo Foil,false,1,Edmundo Sosa
 base,489,First Card,false,1,Edmundo Sosa
 base,489,Printing Plates,false,1,Edmundo Sosa
 base,490,,false,,Jackson Jobe
-base,490,Topps Foil Pattern,false,,Jackson Jobe
+base,490,Topps Pattern Foil,false,,Jackson Jobe
 base,490,Silver Crackle Foilboard,false,,Jackson Jobe
 base,490,Diamante Foil,false,,Jackson Jobe
 base,490,Holo Foil,false,,Jackson Jobe
@@ -5600,7 +5600,7 @@ base,490,Platinum Holo Foil,false,1,Jackson Jobe
 base,490,First Card,false,1,Jackson Jobe
 base,490,Printing Plates,false,1,Jackson Jobe
 base,491,,false,,Spencer Torkelson
-base,491,Topps Foil Pattern,false,,Spencer Torkelson
+base,491,Topps Pattern Foil,false,,Spencer Torkelson
 base,491,Silver Crackle Foilboard,false,,Spencer Torkelson
 base,491,Diamante Foil,false,,Spencer Torkelson
 base,491,Holo Foil,false,,Spencer Torkelson
@@ -5640,7 +5640,7 @@ base,491,Platinum Holo Foil,false,1,Spencer Torkelson
 base,491,First Card,false,1,Spencer Torkelson
 base,491,Printing Plates,false,1,Spencer Torkelson
 base,492,,false,,Shane McClanahan
-base,492,Topps Foil Pattern,false,,Shane McClanahan
+base,492,Topps Pattern Foil,false,,Shane McClanahan
 base,492,Silver Crackle Foilboard,false,,Shane McClanahan
 base,492,Diamante Foil,false,,Shane McClanahan
 base,492,Holo Foil,false,,Shane McClanahan
@@ -5680,7 +5680,7 @@ base,492,Platinum Holo Foil,false,1,Shane McClanahan
 base,492,First Card,false,1,Shane McClanahan
 base,492,Printing Plates,false,1,Shane McClanahan
 base,493,,false,,Walter Pennington
-base,493,Topps Foil Pattern,false,,Walter Pennington
+base,493,Topps Pattern Foil,false,,Walter Pennington
 base,493,Silver Crackle Foilboard,false,,Walter Pennington
 base,493,Diamante Foil,false,,Walter Pennington
 base,493,Holo Foil,false,,Walter Pennington
@@ -5720,7 +5720,7 @@ base,493,Platinum Holo Foil,false,1,Walter Pennington
 base,493,First Card,false,1,Walter Pennington
 base,493,Printing Plates,false,1,Walter Pennington
 base,494,,false,,Spencer Torkelson
-base,494,Topps Foil Pattern,false,,Spencer Torkelson
+base,494,Topps Pattern Foil,false,,Spencer Torkelson
 base,494,Silver Crackle Foilboard,false,,Spencer Torkelson
 base,494,Diamante Foil,false,,Spencer Torkelson
 base,494,Holo Foil,false,,Spencer Torkelson
@@ -5760,7 +5760,7 @@ base,494,Platinum Holo Foil,false,1,Spencer Torkelson
 base,494,First Card,false,1,Spencer Torkelson
 base,494,Printing Plates,false,1,Spencer Torkelson
 base,495,,false,,Casey Schmitt
-base,495,Topps Foil Pattern,false,,Casey Schmitt
+base,495,Topps Pattern Foil,false,,Casey Schmitt
 base,495,Silver Crackle Foilboard,false,,Casey Schmitt
 base,495,Diamante Foil,false,,Casey Schmitt
 base,495,Holo Foil,false,,Casey Schmitt
@@ -5800,7 +5800,7 @@ base,495,Platinum Holo Foil,false,1,Casey Schmitt
 base,495,First Card,false,1,Casey Schmitt
 base,495,Printing Plates,false,1,Casey Schmitt
 base,496,,false,,Dominic Fletcher
-base,496,Topps Foil Pattern,false,,Dominic Fletcher
+base,496,Topps Pattern Foil,false,,Dominic Fletcher
 base,496,Silver Crackle Foilboard,false,,Dominic Fletcher
 base,496,Diamante Foil,false,,Dominic Fletcher
 base,496,Holo Foil,false,,Dominic Fletcher
@@ -5840,7 +5840,7 @@ base,496,Platinum Holo Foil,false,1,Dominic Fletcher
 base,496,First Card,false,1,Dominic Fletcher
 base,496,Printing Plates,false,1,Dominic Fletcher
 base,497,,false,,Josh Lowe
-base,497,Topps Foil Pattern,false,,Josh Lowe
+base,497,Topps Pattern Foil,false,,Josh Lowe
 base,497,Silver Crackle Foilboard,false,,Josh Lowe
 base,497,Diamante Foil,false,,Josh Lowe
 base,497,Holo Foil,false,,Josh Lowe
@@ -5880,7 +5880,7 @@ base,497,Platinum Holo Foil,false,1,Josh Lowe
 base,497,First Card,false,1,Josh Lowe
 base,497,Printing Plates,false,1,Josh Lowe
 base,498,,false,,Weston Wilson
-base,498,Topps Foil Pattern,false,,Weston Wilson
+base,498,Topps Pattern Foil,false,,Weston Wilson
 base,498,Silver Crackle Foilboard,false,,Weston Wilson
 base,498,Diamante Foil,false,,Weston Wilson
 base,498,Holo Foil,false,,Weston Wilson
@@ -5920,7 +5920,7 @@ base,498,Platinum Holo Foil,false,1,Weston Wilson
 base,498,First Card,false,1,Weston Wilson
 base,498,Printing Plates,false,1,Weston Wilson
 base,499,,false,,Blaze Alexander
-base,499,Topps Foil Pattern,false,,Blaze Alexander
+base,499,Topps Pattern Foil,false,,Blaze Alexander
 base,499,Silver Crackle Foilboard,false,,Blaze Alexander
 base,499,Diamante Foil,false,,Blaze Alexander
 base,499,Holo Foil,false,,Blaze Alexander
@@ -5960,7 +5960,7 @@ base,499,Platinum Holo Foil,false,1,Blaze Alexander
 base,499,First Card,false,1,Blaze Alexander
 base,499,Printing Plates,false,1,Blaze Alexander
 base,500,,false,,Mookie Betts
-base,500,Topps Foil Pattern,false,,Mookie Betts
+base,500,Topps Pattern Foil,false,,Mookie Betts
 base,500,Silver Crackle Foilboard,false,,Mookie Betts
 base,500,Diamante Foil,false,,Mookie Betts
 base,500,Holo Foil,false,,Mookie Betts
@@ -6000,7 +6000,7 @@ base,500,Platinum Holo Foil,false,1,Mookie Betts
 base,500,First Card,false,1,Mookie Betts
 base,500,Printing Plates,false,1,Mookie Betts
 base,501,,false,,Elias Díaz
-base,501,Topps Foil Pattern,false,,Elias Díaz
+base,501,Topps Pattern Foil,false,,Elias Díaz
 base,501,Silver Crackle Foilboard,false,,Elias Díaz
 base,501,Diamante Foil,false,,Elias Díaz
 base,501,Holo Foil,false,,Elias Díaz
@@ -6040,7 +6040,7 @@ base,501,Platinum Holo Foil,false,1,Elias Díaz
 base,501,First Card,false,1,Elias Díaz
 base,501,Printing Plates,false,1,Elias Díaz
 base,502,,false,,Taylor Walls
-base,502,Topps Foil Pattern,false,,Taylor Walls
+base,502,Topps Pattern Foil,false,,Taylor Walls
 base,502,Silver Crackle Foilboard,false,,Taylor Walls
 base,502,Diamante Foil,false,,Taylor Walls
 base,502,Holo Foil,false,,Taylor Walls
@@ -6080,7 +6080,7 @@ base,502,Platinum Holo Foil,false,1,Taylor Walls
 base,502,First Card,false,1,Taylor Walls
 base,502,Printing Plates,false,1,Taylor Walls
 base,503,,false,,Edouard Julien
-base,503,Topps Foil Pattern,false,,Edouard Julien
+base,503,Topps Pattern Foil,false,,Edouard Julien
 base,503,Silver Crackle Foilboard,false,,Edouard Julien
 base,503,Diamante Foil,false,,Edouard Julien
 base,503,Holo Foil,false,,Edouard Julien
@@ -6120,7 +6120,7 @@ base,503,Platinum Holo Foil,false,1,Edouard Julien
 base,503,First Card,false,1,Edouard Julien
 base,503,Printing Plates,false,1,Edouard Julien
 base,504,,false,,Jack Flaherty
-base,504,Topps Foil Pattern,false,,Jack Flaherty
+base,504,Topps Pattern Foil,false,,Jack Flaherty
 base,504,Silver Crackle Foilboard,false,,Jack Flaherty
 base,504,Diamante Foil,false,,Jack Flaherty
 base,504,Holo Foil,false,,Jack Flaherty
@@ -6160,7 +6160,7 @@ base,504,Platinum Holo Foil,false,1,Jack Flaherty
 base,504,First Card,false,1,Jack Flaherty
 base,504,Printing Plates,false,1,Jack Flaherty
 base,505,,false,,Grayson Rodriguez
-base,505,Topps Foil Pattern,false,,Grayson Rodriguez
+base,505,Topps Pattern Foil,false,,Grayson Rodriguez
 base,505,Silver Crackle Foilboard,false,,Grayson Rodriguez
 base,505,Diamante Foil,false,,Grayson Rodriguez
 base,505,Holo Foil,false,,Grayson Rodriguez
@@ -6200,7 +6200,7 @@ base,505,Platinum Holo Foil,false,1,Grayson Rodriguez
 base,505,First Card,false,1,Grayson Rodriguez
 base,505,Printing Plates,false,1,Grayson Rodriguez
 base,506,,false,,Luke Weaver
-base,506,Topps Foil Pattern,false,,Luke Weaver
+base,506,Topps Pattern Foil,false,,Luke Weaver
 base,506,Silver Crackle Foilboard,false,,Luke Weaver
 base,506,Diamante Foil,false,,Luke Weaver
 base,506,Holo Foil,false,,Luke Weaver
@@ -6240,7 +6240,7 @@ base,506,Platinum Holo Foil,false,1,Luke Weaver
 base,506,First Card,false,1,Luke Weaver
 base,506,Printing Plates,false,1,Luke Weaver
 base,507,,false,,Washington Nationals
-base,507,Topps Foil Pattern,false,,Washington Nationals
+base,507,Topps Pattern Foil,false,,Washington Nationals
 base,507,Silver Crackle Foilboard,false,,Washington Nationals
 base,507,Diamante Foil,false,,Washington Nationals
 base,507,Holo Foil,false,,Washington Nationals
@@ -6280,7 +6280,7 @@ base,507,Platinum Holo Foil,false,1,Washington Nationals
 base,507,First Card,false,1,Washington Nationals
 base,507,Printing Plates,false,1,Washington Nationals
 base,508,,false,,Salvador Perez
-base,508,Topps Foil Pattern,false,,Salvador Perez
+base,508,Topps Pattern Foil,false,,Salvador Perez
 base,508,Silver Crackle Foilboard,false,,Salvador Perez
 base,508,Diamante Foil,false,,Salvador Perez
 base,508,Holo Foil,false,,Salvador Perez
@@ -6320,7 +6320,7 @@ base,508,Platinum Holo Foil,false,1,Salvador Perez
 base,508,First Card,false,1,Salvador Perez
 base,508,Printing Plates,false,1,Salvador Perez
 base,509,,false,,Cristian Javier
-base,509,Topps Foil Pattern,false,,Cristian Javier
+base,509,Topps Pattern Foil,false,,Cristian Javier
 base,509,Silver Crackle Foilboard,false,,Cristian Javier
 base,509,Diamante Foil,false,,Cristian Javier
 base,509,Holo Foil,false,,Cristian Javier
@@ -6360,7 +6360,7 @@ base,509,Platinum Holo Foil,false,1,Cristian Javier
 base,509,First Card,false,1,Cristian Javier
 base,509,Printing Plates,false,1,Cristian Javier
 base,510,,false,,Nolan Gorman
-base,510,Topps Foil Pattern,false,,Nolan Gorman
+base,510,Topps Pattern Foil,false,,Nolan Gorman
 base,510,Silver Crackle Foilboard,false,,Nolan Gorman
 base,510,Diamante Foil,false,,Nolan Gorman
 base,510,Holo Foil,false,,Nolan Gorman
@@ -6400,7 +6400,7 @@ base,510,Platinum Holo Foil,false,1,Nolan Gorman
 base,510,First Card,false,1,Nolan Gorman
 base,510,Printing Plates,false,1,Nolan Gorman
 base,511,,false,,Darren Baker
-base,511,Topps Foil Pattern,false,,Darren Baker
+base,511,Topps Pattern Foil,false,,Darren Baker
 base,511,Silver Crackle Foilboard,false,,Darren Baker
 base,511,Diamante Foil,false,,Darren Baker
 base,511,Holo Foil,false,,Darren Baker
@@ -6440,7 +6440,7 @@ base,511,Platinum Holo Foil,false,1,Darren Baker
 base,511,First Card,false,1,Darren Baker
 base,511,Printing Plates,false,1,Darren Baker
 base,512,,false,,Michael Harris II
-base,512,Topps Foil Pattern,false,,Michael Harris II
+base,512,Topps Pattern Foil,false,,Michael Harris II
 base,512,Silver Crackle Foilboard,false,,Michael Harris II
 base,512,Diamante Foil,false,,Michael Harris II
 base,512,Holo Foil,false,,Michael Harris II
@@ -6480,7 +6480,7 @@ base,512,Platinum Holo Foil,false,1,Michael Harris II
 base,512,First Card,false,1,Michael Harris II
 base,512,Printing Plates,false,1,Michael Harris II
 base,513,,false,,Edgardo Henriquez
-base,513,Topps Foil Pattern,false,,Edgardo Henriquez
+base,513,Topps Pattern Foil,false,,Edgardo Henriquez
 base,513,Silver Crackle Foilboard,false,,Edgardo Henriquez
 base,513,Diamante Foil,false,,Edgardo Henriquez
 base,513,Holo Foil,false,,Edgardo Henriquez
@@ -6520,7 +6520,7 @@ base,513,Platinum Holo Foil,false,1,Edgardo Henriquez
 base,513,First Card,false,1,Edgardo Henriquez
 base,513,Printing Plates,false,1,Edgardo Henriquez
 base,514,,false,,San Francisco Giants
-base,514,Topps Foil Pattern,false,,San Francisco Giants
+base,514,Topps Pattern Foil,false,,San Francisco Giants
 base,514,Silver Crackle Foilboard,false,,San Francisco Giants
 base,514,Diamante Foil,false,,San Francisco Giants
 base,514,Holo Foil,false,,San Francisco Giants
@@ -6560,7 +6560,7 @@ base,514,Platinum Holo Foil,false,1,San Francisco Giants
 base,514,First Card,false,1,San Francisco Giants
 base,514,Printing Plates,false,1,San Francisco Giants
 base,515,,false,,Kutter Crawford
-base,515,Topps Foil Pattern,false,,Kutter Crawford
+base,515,Topps Pattern Foil,false,,Kutter Crawford
 base,515,Silver Crackle Foilboard,false,,Kutter Crawford
 base,515,Diamante Foil,false,,Kutter Crawford
 base,515,Holo Foil,false,,Kutter Crawford
@@ -6600,7 +6600,7 @@ base,515,Platinum Holo Foil,false,1,Kutter Crawford
 base,515,First Card,false,1,Kutter Crawford
 base,515,Printing Plates,false,1,Kutter Crawford
 base,516,,false,,Jonny DeLuca
-base,516,Topps Foil Pattern,false,,Jonny DeLuca
+base,516,Topps Pattern Foil,false,,Jonny DeLuca
 base,516,Silver Crackle Foilboard,false,,Jonny DeLuca
 base,516,Diamante Foil,false,,Jonny DeLuca
 base,516,Holo Foil,false,,Jonny DeLuca
@@ -6640,7 +6640,7 @@ base,516,Platinum Holo Foil,false,1,Jonny DeLuca
 base,516,First Card,false,1,Jonny DeLuca
 base,516,Printing Plates,false,1,Jonny DeLuca
 base,517,,false,,Shota Imanaga
-base,517,Topps Foil Pattern,false,,Shota Imanaga
+base,517,Topps Pattern Foil,false,,Shota Imanaga
 base,517,Silver Crackle Foilboard,false,,Shota Imanaga
 base,517,Diamante Foil,false,,Shota Imanaga
 base,517,Holo Foil,false,,Shota Imanaga
@@ -6680,7 +6680,7 @@ base,517,Platinum Holo Foil,false,1,Shota Imanaga
 base,517,First Card,false,1,Shota Imanaga
 base,517,Printing Plates,false,1,Shota Imanaga
 base,518,,false,,Ronny Mauricio
-base,518,Topps Foil Pattern,false,,Ronny Mauricio
+base,518,Topps Pattern Foil,false,,Ronny Mauricio
 base,518,Silver Crackle Foilboard,false,,Ronny Mauricio
 base,518,Diamante Foil,false,,Ronny Mauricio
 base,518,Holo Foil,false,,Ronny Mauricio
@@ -6720,7 +6720,7 @@ base,518,Platinum Holo Foil,false,1,Ronny Mauricio
 base,518,First Card,false,1,Ronny Mauricio
 base,518,Printing Plates,false,1,Ronny Mauricio
 base,519,,false,,Kansas City Royals
-base,519,Topps Foil Pattern,false,,Kansas City Royals
+base,519,Topps Pattern Foil,false,,Kansas City Royals
 base,519,Silver Crackle Foilboard,false,,Kansas City Royals
 base,519,Diamante Foil,false,,Kansas City Royals
 base,519,Holo Foil,false,,Kansas City Royals
@@ -6760,7 +6760,7 @@ base,519,Platinum Holo Foil,false,1,Kansas City Royals
 base,519,First Card,false,1,Kansas City Royals
 base,519,Printing Plates,false,1,Kansas City Royals
 base,520,,false,,Jordan Hicks
-base,520,Topps Foil Pattern,false,,Jordan Hicks
+base,520,Topps Pattern Foil,false,,Jordan Hicks
 base,520,Silver Crackle Foilboard,false,,Jordan Hicks
 base,520,Diamante Foil,false,,Jordan Hicks
 base,520,Holo Foil,false,,Jordan Hicks
@@ -6800,7 +6800,7 @@ base,520,Platinum Holo Foil,false,1,Jordan Hicks
 base,520,First Card,false,1,Jordan Hicks
 base,520,Printing Plates,false,1,Jordan Hicks
 base,521,,false,,Willy Adames
-base,521,Topps Foil Pattern,false,,Willy Adames
+base,521,Topps Pattern Foil,false,,Willy Adames
 base,521,Silver Crackle Foilboard,false,,Willy Adames
 base,521,Diamante Foil,false,,Willy Adames
 base,521,Holo Foil,false,,Willy Adames
@@ -6840,7 +6840,7 @@ base,521,Platinum Holo Foil,false,1,Willy Adames
 base,521,First Card,false,1,Willy Adames
 base,521,Printing Plates,false,1,Willy Adames
 base,522,,false,,Spencer Arrighetti
-base,522,Topps Foil Pattern,false,,Spencer Arrighetti
+base,522,Topps Pattern Foil,false,,Spencer Arrighetti
 base,522,Silver Crackle Foilboard,false,,Spencer Arrighetti
 base,522,Diamante Foil,false,,Spencer Arrighetti
 base,522,Holo Foil,false,,Spencer Arrighetti
@@ -6880,7 +6880,7 @@ base,522,Platinum Holo Foil,false,1,Spencer Arrighetti
 base,522,First Card,false,1,Spencer Arrighetti
 base,522,Printing Plates,false,1,Spencer Arrighetti
 base,523,,false,,Nick Fortes
-base,523,Topps Foil Pattern,false,,Nick Fortes
+base,523,Topps Pattern Foil,false,,Nick Fortes
 base,523,Silver Crackle Foilboard,false,,Nick Fortes
 base,523,Diamante Foil,false,,Nick Fortes
 base,523,Holo Foil,false,,Nick Fortes
@@ -6920,7 +6920,7 @@ base,523,Platinum Holo Foil,false,1,Nick Fortes
 base,523,First Card,false,1,Nick Fortes
 base,523,Printing Plates,false,1,Nick Fortes
 base,524,,false,,Luisangel Acuña
-base,524,Topps Foil Pattern,false,,Luisangel Acuña
+base,524,Topps Pattern Foil,false,,Luisangel Acuña
 base,524,Silver Crackle Foilboard,false,,Luisangel Acuña
 base,524,Diamante Foil,false,,Luisangel Acuña
 base,524,Holo Foil,false,,Luisangel Acuña
@@ -6960,7 +6960,7 @@ base,524,Platinum Holo Foil,false,1,Luisangel Acuña
 base,524,First Card,false,1,Luisangel Acuña
 base,524,Printing Plates,false,1,Luisangel Acuña
 base,525,,false,,Tj Friedl
-base,525,Topps Foil Pattern,false,,Tj Friedl
+base,525,Topps Pattern Foil,false,,Tj Friedl
 base,525,Silver Crackle Foilboard,false,,Tj Friedl
 base,525,Diamante Foil,false,,Tj Friedl
 base,525,Holo Foil,false,,Tj Friedl
@@ -7000,7 +7000,7 @@ base,525,Platinum Holo Foil,false,1,Tj Friedl
 base,525,First Card,false,1,Tj Friedl
 base,525,Printing Plates,false,1,Tj Friedl
 base,526,,false,,Luis Peralta
-base,526,Topps Foil Pattern,false,,Luis Peralta
+base,526,Topps Pattern Foil,false,,Luis Peralta
 base,526,Silver Crackle Foilboard,false,,Luis Peralta
 base,526,Diamante Foil,false,,Luis Peralta
 base,526,Holo Foil,false,,Luis Peralta
@@ -7040,7 +7040,7 @@ base,526,Platinum Holo Foil,false,1,Luis Peralta
 base,526,First Card,false,1,Luis Peralta
 base,526,Printing Plates,false,1,Luis Peralta
 base,527,,false,,Heliot Ramos
-base,527,Topps Foil Pattern,false,,Heliot Ramos
+base,527,Topps Pattern Foil,false,,Heliot Ramos
 base,527,Silver Crackle Foilboard,false,,Heliot Ramos
 base,527,Diamante Foil,false,,Heliot Ramos
 base,527,Holo Foil,false,,Heliot Ramos
@@ -7080,7 +7080,7 @@ base,527,Platinum Holo Foil,false,1,Heliot Ramos
 base,527,First Card,false,1,Heliot Ramos
 base,527,Printing Plates,false,1,Heliot Ramos
 base,528,,false,,Oswaldo Cabrera
-base,528,Topps Foil Pattern,false,,Oswaldo Cabrera
+base,528,Topps Pattern Foil,false,,Oswaldo Cabrera
 base,528,Silver Crackle Foilboard,false,,Oswaldo Cabrera
 base,528,Diamante Foil,false,,Oswaldo Cabrera
 base,528,Holo Foil,false,,Oswaldo Cabrera
@@ -7120,7 +7120,7 @@ base,528,Platinum Holo Foil,false,1,Oswaldo Cabrera
 base,528,First Card,false,1,Oswaldo Cabrera
 base,528,Printing Plates,false,1,Oswaldo Cabrera
 base,529,,false,,Miguel Andujar
-base,529,Topps Foil Pattern,false,,Miguel Andujar
+base,529,Topps Pattern Foil,false,,Miguel Andujar
 base,529,Silver Crackle Foilboard,false,,Miguel Andujar
 base,529,Diamante Foil,false,,Miguel Andujar
 base,529,Holo Foil,false,,Miguel Andujar
@@ -7160,7 +7160,7 @@ base,529,Platinum Holo Foil,false,1,Miguel Andujar
 base,529,First Card,false,1,Miguel Andujar
 base,529,Printing Plates,false,1,Miguel Andujar
 base,530,,false,,Byron Buxton
-base,530,Topps Foil Pattern,false,,Byron Buxton
+base,530,Topps Pattern Foil,false,,Byron Buxton
 base,530,Silver Crackle Foilboard,false,,Byron Buxton
 base,530,Diamante Foil,false,,Byron Buxton
 base,530,Holo Foil,false,,Byron Buxton
@@ -7200,7 +7200,7 @@ base,530,Platinum Holo Foil,false,1,Byron Buxton
 base,530,First Card,false,1,Byron Buxton
 base,530,Printing Plates,false,1,Byron Buxton
 base,531,,false,,Landon Knack
-base,531,Topps Foil Pattern,false,,Landon Knack
+base,531,Topps Pattern Foil,false,,Landon Knack
 base,531,Silver Crackle Foilboard,false,,Landon Knack
 base,531,Diamante Foil,false,,Landon Knack
 base,531,Holo Foil,false,,Landon Knack
@@ -7240,7 +7240,7 @@ base,531,Platinum Holo Foil,false,1,Landon Knack
 base,531,First Card,false,1,Landon Knack
 base,531,Printing Plates,false,1,Landon Knack
 base,532,,false,,Ben Lively
-base,532,Topps Foil Pattern,false,,Ben Lively
+base,532,Topps Pattern Foil,false,,Ben Lively
 base,532,Silver Crackle Foilboard,false,,Ben Lively
 base,532,Diamante Foil,false,,Ben Lively
 base,532,Holo Foil,false,,Ben Lively
@@ -7280,7 +7280,7 @@ base,532,Platinum Holo Foil,false,1,Ben Lively
 base,532,First Card,false,1,Ben Lively
 base,532,Printing Plates,false,1,Ben Lively
 base,533,,false,,Tyler O'Neill
-base,533,Topps Foil Pattern,false,,Tyler O'Neill
+base,533,Topps Pattern Foil,false,,Tyler O'Neill
 base,533,Silver Crackle Foilboard,false,,Tyler O'Neill
 base,533,Diamante Foil,false,,Tyler O'Neill
 base,533,Holo Foil,false,,Tyler O'Neill
@@ -7320,7 +7320,7 @@ base,533,Platinum Holo Foil,false,1,Tyler O'Neill
 base,533,First Card,false,1,Tyler O'Neill
 base,533,Printing Plates,false,1,Tyler O'Neill
 base,534,,false,,Luke Raley
-base,534,Topps Foil Pattern,false,,Luke Raley
+base,534,Topps Pattern Foil,false,,Luke Raley
 base,534,Silver Crackle Foilboard,false,,Luke Raley
 base,534,Diamante Foil,false,,Luke Raley
 base,534,Holo Foil,false,,Luke Raley
@@ -7360,7 +7360,7 @@ base,534,Platinum Holo Foil,false,1,Luke Raley
 base,534,First Card,false,1,Luke Raley
 base,534,Printing Plates,false,1,Luke Raley
 base,535,,false,,Leo Jiménez
-base,535,Topps Foil Pattern,false,,Leo Jiménez
+base,535,Topps Pattern Foil,false,,Leo Jiménez
 base,535,Silver Crackle Foilboard,false,,Leo Jiménez
 base,535,Diamante Foil,false,,Leo Jiménez
 base,535,Holo Foil,false,,Leo Jiménez
@@ -7400,7 +7400,7 @@ base,535,Platinum Holo Foil,false,1,Leo Jiménez
 base,535,First Card,false,1,Leo Jiménez
 base,535,Printing Plates,false,1,Leo Jiménez
 base,536,,false,,MJ Melendez
-base,536,Topps Foil Pattern,false,,MJ Melendez
+base,536,Topps Pattern Foil,false,,MJ Melendez
 base,536,Silver Crackle Foilboard,false,,MJ Melendez
 base,536,Diamante Foil,false,,MJ Melendez
 base,536,Holo Foil,false,,MJ Melendez
@@ -7440,7 +7440,7 @@ base,536,Platinum Holo Foil,false,1,MJ Melendez
 base,536,First Card,false,1,MJ Melendez
 base,536,Printing Plates,false,1,MJ Melendez
 base,537,,false,,Spencer Bivens
-base,537,Topps Foil Pattern,false,,Spencer Bivens
+base,537,Topps Pattern Foil,false,,Spencer Bivens
 base,537,Silver Crackle Foilboard,false,,Spencer Bivens
 base,537,Diamante Foil,false,,Spencer Bivens
 base,537,Holo Foil,false,,Spencer Bivens
@@ -7480,7 +7480,7 @@ base,537,Platinum Holo Foil,false,1,Spencer Bivens
 base,537,First Card,false,1,Spencer Bivens
 base,537,Printing Plates,false,1,Spencer Bivens
 base,538,,false,,Tyler Nevin
-base,538,Topps Foil Pattern,false,,Tyler Nevin
+base,538,Topps Pattern Foil,false,,Tyler Nevin
 base,538,Silver Crackle Foilboard,false,,Tyler Nevin
 base,538,Diamante Foil,false,,Tyler Nevin
 base,538,Holo Foil,false,,Tyler Nevin
@@ -7520,7 +7520,7 @@ base,538,Platinum Holo Foil,false,1,Tyler Nevin
 base,538,First Card,false,1,Tyler Nevin
 base,538,Printing Plates,false,1,Tyler Nevin
 base,539,,false,,Ryan Weathers
-base,539,Topps Foil Pattern,false,,Ryan Weathers
+base,539,Topps Pattern Foil,false,,Ryan Weathers
 base,539,Silver Crackle Foilboard,false,,Ryan Weathers
 base,539,Diamante Foil,false,,Ryan Weathers
 base,539,Holo Foil,false,,Ryan Weathers
@@ -7560,7 +7560,7 @@ base,539,Platinum Holo Foil,false,1,Ryan Weathers
 base,539,First Card,false,1,Ryan Weathers
 base,539,Printing Plates,false,1,Ryan Weathers
 base,540,,false,,Brayan Bello
-base,540,Topps Foil Pattern,false,,Brayan Bello
+base,540,Topps Pattern Foil,false,,Brayan Bello
 base,540,Silver Crackle Foilboard,false,,Brayan Bello
 base,540,Diamante Foil,false,,Brayan Bello
 base,540,Holo Foil,false,,Brayan Bello
@@ -7600,7 +7600,7 @@ base,540,Platinum Holo Foil,false,1,Brayan Bello
 base,540,First Card,false,1,Brayan Bello
 base,540,Printing Plates,false,1,Brayan Bello
 base,541,,false,,Jared Jones
-base,541,Topps Foil Pattern,false,,Jared Jones
+base,541,Topps Pattern Foil,false,,Jared Jones
 base,541,Silver Crackle Foilboard,false,,Jared Jones
 base,541,Diamante Foil,false,,Jared Jones
 base,541,Holo Foil,false,,Jared Jones
@@ -7640,7 +7640,7 @@ base,541,Platinum Holo Foil,false,1,Jared Jones
 base,541,First Card,false,1,Jared Jones
 base,541,Printing Plates,false,1,Jared Jones
 base,542,,false,,Nick Gonzales
-base,542,Topps Foil Pattern,false,,Nick Gonzales
+base,542,Topps Pattern Foil,false,,Nick Gonzales
 base,542,Silver Crackle Foilboard,false,,Nick Gonzales
 base,542,Diamante Foil,false,,Nick Gonzales
 base,542,Holo Foil,false,,Nick Gonzales
@@ -7680,7 +7680,7 @@ base,542,Platinum Holo Foil,false,1,Nick Gonzales
 base,542,First Card,false,1,Nick Gonzales
 base,542,Printing Plates,false,1,Nick Gonzales
 base,543,,false,,Kerry Carpenter
-base,543,Topps Foil Pattern,false,,Kerry Carpenter
+base,543,Topps Pattern Foil,false,,Kerry Carpenter
 base,543,Silver Crackle Foilboard,false,,Kerry Carpenter
 base,543,Diamante Foil,false,,Kerry Carpenter
 base,543,Holo Foil,false,,Kerry Carpenter
@@ -7720,7 +7720,7 @@ base,543,Platinum Holo Foil,false,1,Kerry Carpenter
 base,543,First Card,false,1,Kerry Carpenter
 base,543,Printing Plates,false,1,Kerry Carpenter
 base,544,,false,,Framber Valdez
-base,544,Topps Foil Pattern,false,,Framber Valdez
+base,544,Topps Pattern Foil,false,,Framber Valdez
 base,544,Silver Crackle Foilboard,false,,Framber Valdez
 base,544,Diamante Foil,false,,Framber Valdez
 base,544,Holo Foil,false,,Framber Valdez
@@ -7760,7 +7760,7 @@ base,544,Platinum Holo Foil,false,1,Framber Valdez
 base,544,First Card,false,1,Framber Valdez
 base,544,Printing Plates,false,1,Framber Valdez
 base,545,,false,,Javier Báez
-base,545,Topps Foil Pattern,false,,Javier Báez
+base,545,Topps Pattern Foil,false,,Javier Báez
 base,545,Silver Crackle Foilboard,false,,Javier Báez
 base,545,Diamante Foil,false,,Javier Báez
 base,545,Holo Foil,false,,Javier Báez
@@ -7800,7 +7800,7 @@ base,545,Platinum Holo Foil,false,1,Javier Báez
 base,545,First Card,false,1,Javier Báez
 base,545,Printing Plates,false,1,Javier Báez
 base,546,,false,,Drew Waters
-base,546,Topps Foil Pattern,false,,Drew Waters
+base,546,Topps Pattern Foil,false,,Drew Waters
 base,546,Silver Crackle Foilboard,false,,Drew Waters
 base,546,Diamante Foil,false,,Drew Waters
 base,546,Holo Foil,false,,Drew Waters
@@ -7840,7 +7840,7 @@ base,546,Platinum Holo Foil,false,1,Drew Waters
 base,546,First Card,false,1,Drew Waters
 base,546,Printing Plates,false,1,Drew Waters
 base,547,,false,,Matt Wallner
-base,547,Topps Foil Pattern,false,,Matt Wallner
+base,547,Topps Pattern Foil,false,,Matt Wallner
 base,547,Silver Crackle Foilboard,false,,Matt Wallner
 base,547,Diamante Foil,false,,Matt Wallner
 base,547,Holo Foil,false,,Matt Wallner
@@ -7880,7 +7880,7 @@ base,547,Platinum Holo Foil,false,1,Matt Wallner
 base,547,First Card,false,1,Matt Wallner
 base,547,Printing Plates,false,1,Matt Wallner
 base,548,,false,,Porter Hodge
-base,548,Topps Foil Pattern,false,,Porter Hodge
+base,548,Topps Pattern Foil,false,,Porter Hodge
 base,548,Silver Crackle Foilboard,false,,Porter Hodge
 base,548,Diamante Foil,false,,Porter Hodge
 base,548,Holo Foil,false,,Porter Hodge
@@ -7920,7 +7920,7 @@ base,548,Platinum Holo Foil,false,1,Porter Hodge
 base,548,First Card,false,1,Porter Hodge
 base,548,Printing Plates,false,1,Porter Hodge
 base,549,,false,,J.D. Martinez
-base,549,Topps Foil Pattern,false,,J.D. Martinez
+base,549,Topps Pattern Foil,false,,J.D. Martinez
 base,549,Silver Crackle Foilboard,false,,J.D. Martinez
 base,549,Diamante Foil,false,,J.D. Martinez
 base,549,Holo Foil,false,,J.D. Martinez
@@ -7960,7 +7960,7 @@ base,549,Platinum Holo Foil,false,1,J.D. Martinez
 base,549,First Card,false,1,J.D. Martinez
 base,549,Printing Plates,false,1,J.D. Martinez
 base,550,,false,,Pete Alonso
-base,550,Topps Foil Pattern,false,,Pete Alonso
+base,550,Topps Pattern Foil,false,,Pete Alonso
 base,550,Silver Crackle Foilboard,false,,Pete Alonso
 base,550,Diamante Foil,false,,Pete Alonso
 base,550,Holo Foil,false,,Pete Alonso
@@ -8000,7 +8000,7 @@ base,550,Platinum Holo Foil,false,1,Pete Alonso
 base,550,First Card,false,1,Pete Alonso
 base,550,Printing Plates,false,1,Pete Alonso
 base,551,,false,,Victor Scott II
-base,551,Topps Foil Pattern,false,,Victor Scott II
+base,551,Topps Pattern Foil,false,,Victor Scott II
 base,551,Silver Crackle Foilboard,false,,Victor Scott II
 base,551,Diamante Foil,false,,Victor Scott II
 base,551,Holo Foil,false,,Victor Scott II
@@ -8040,7 +8040,7 @@ base,551,Platinum Holo Foil,false,1,Victor Scott II
 base,551,First Card,false,1,Victor Scott II
 base,551,Printing Plates,false,1,Victor Scott II
 base,552,,false,,José Tena
-base,552,Topps Foil Pattern,false,,José Tena
+base,552,Topps Pattern Foil,false,,José Tena
 base,552,Silver Crackle Foilboard,false,,José Tena
 base,552,Diamante Foil,false,,José Tena
 base,552,Holo Foil,false,,José Tena
@@ -8080,7 +8080,7 @@ base,552,Platinum Holo Foil,false,1,José Tena
 base,552,First Card,false,1,José Tena
 base,552,Printing Plates,false,1,José Tena
 base,553,,false,,New York Mets
-base,553,Topps Foil Pattern,false,,New York Mets
+base,553,Topps Pattern Foil,false,,New York Mets
 base,553,Silver Crackle Foilboard,false,,New York Mets
 base,553,Diamante Foil,false,,New York Mets
 base,553,Holo Foil,false,,New York Mets
@@ -8120,7 +8120,7 @@ base,553,Platinum Holo Foil,false,1,New York Mets
 base,553,First Card,false,1,New York Mets
 base,553,Printing Plates,false,1,New York Mets
 base,554,,false,,Gavin Williams
-base,554,Topps Foil Pattern,false,,Gavin Williams
+base,554,Topps Pattern Foil,false,,Gavin Williams
 base,554,Silver Crackle Foilboard,false,,Gavin Williams
 base,554,Diamante Foil,false,,Gavin Williams
 base,554,Holo Foil,false,,Gavin Williams
@@ -8160,7 +8160,7 @@ base,554,Platinum Holo Foil,false,1,Gavin Williams
 base,554,First Card,false,1,Gavin Williams
 base,554,Printing Plates,false,1,Gavin Williams
 base,555,,false,,Kyle McCann
-base,555,Topps Foil Pattern,false,,Kyle McCann
+base,555,Topps Pattern Foil,false,,Kyle McCann
 base,555,Silver Crackle Foilboard,false,,Kyle McCann
 base,555,Diamante Foil,false,,Kyle McCann
 base,555,Holo Foil,false,,Kyle McCann
@@ -8200,7 +8200,7 @@ base,555,Platinum Holo Foil,false,1,Kyle McCann
 base,555,First Card,false,1,Kyle McCann
 base,555,Printing Plates,false,1,Kyle McCann
 base,556,,false,,Jaden Hill
-base,556,Topps Foil Pattern,false,,Jaden Hill
+base,556,Topps Pattern Foil,false,,Jaden Hill
 base,556,Silver Crackle Foilboard,false,,Jaden Hill
 base,556,Diamante Foil,false,,Jaden Hill
 base,556,Holo Foil,false,,Jaden Hill
@@ -8240,7 +8240,7 @@ base,556,Platinum Holo Foil,false,1,Jaden Hill
 base,556,First Card,false,1,Jaden Hill
 base,556,Printing Plates,false,1,Jaden Hill
 base,557,,false,,Kyle Manzardo
-base,557,Topps Foil Pattern,false,,Kyle Manzardo
+base,557,Topps Pattern Foil,false,,Kyle Manzardo
 base,557,Silver Crackle Foilboard,false,,Kyle Manzardo
 base,557,Diamante Foil,false,,Kyle Manzardo
 base,557,Holo Foil,false,,Kyle Manzardo
@@ -8280,7 +8280,7 @@ base,557,Platinum Holo Foil,false,1,Kyle Manzardo
 base,557,First Card,false,1,Kyle Manzardo
 base,557,Printing Plates,false,1,Kyle Manzardo
 base,558,,false,,Roki Sasaki
-base,558,Topps Foil Pattern,false,,Roki Sasaki
+base,558,Topps Pattern Foil,false,,Roki Sasaki
 base,558,Silver Crackle Foilboard,false,,Roki Sasaki
 base,558,Diamante Foil,false,,Roki Sasaki
 base,558,Holo Foil,false,,Roki Sasaki
@@ -8320,7 +8320,7 @@ base,558,Platinum Holo Foil,false,1,Roki Sasaki
 base,558,First Card,false,1,Roki Sasaki
 base,558,Printing Plates,false,1,Roki Sasaki
 base,559,,false,,Isiah Kiner-Falefa
-base,559,Topps Foil Pattern,false,,Isiah Kiner-Falefa
+base,559,Topps Pattern Foil,false,,Isiah Kiner-Falefa
 base,559,Silver Crackle Foilboard,false,,Isiah Kiner-Falefa
 base,559,Diamante Foil,false,,Isiah Kiner-Falefa
 base,559,Holo Foil,false,,Isiah Kiner-Falefa
@@ -8360,7 +8360,7 @@ base,559,Platinum Holo Foil,false,1,Isiah Kiner-Falefa
 base,559,First Card,false,1,Isiah Kiner-Falefa
 base,559,Printing Plates,false,1,Isiah Kiner-Falefa
 base,560,,false,,Zach McKinstry
-base,560,Topps Foil Pattern,false,,Zach McKinstry
+base,560,Topps Pattern Foil,false,,Zach McKinstry
 base,560,Silver Crackle Foilboard,false,,Zach McKinstry
 base,560,Diamante Foil,false,,Zach McKinstry
 base,560,Holo Foil,false,,Zach McKinstry
@@ -8400,7 +8400,7 @@ base,560,Platinum Holo Foil,false,1,Zach McKinstry
 base,560,First Card,false,1,Zach McKinstry
 base,560,Printing Plates,false,1,Zach McKinstry
 base,561,,false,,Paul Goldschmidt
-base,561,Topps Foil Pattern,false,,Paul Goldschmidt
+base,561,Topps Pattern Foil,false,,Paul Goldschmidt
 base,561,Silver Crackle Foilboard,false,,Paul Goldschmidt
 base,561,Diamante Foil,false,,Paul Goldschmidt
 base,561,Holo Foil,false,,Paul Goldschmidt
@@ -8440,7 +8440,7 @@ base,561,Platinum Holo Foil,false,1,Paul Goldschmidt
 base,561,First Card,false,1,Paul Goldschmidt
 base,561,Printing Plates,false,1,Paul Goldschmidt
 base,562,,false,,Matthew Boyd
-base,562,Topps Foil Pattern,false,,Matthew Boyd
+base,562,Topps Pattern Foil,false,,Matthew Boyd
 base,562,Silver Crackle Foilboard,false,,Matthew Boyd
 base,562,Diamante Foil,false,,Matthew Boyd
 base,562,Holo Foil,false,,Matthew Boyd
@@ -8480,7 +8480,7 @@ base,562,Platinum Holo Foil,false,1,Matthew Boyd
 base,562,First Card,false,1,Matthew Boyd
 base,562,Printing Plates,false,1,Matthew Boyd
 base,563,,false,,Dean Kremer
-base,563,Topps Foil Pattern,false,,Dean Kremer
+base,563,Topps Pattern Foil,false,,Dean Kremer
 base,563,Silver Crackle Foilboard,false,,Dean Kremer
 base,563,Diamante Foil,false,,Dean Kremer
 base,563,Holo Foil,false,,Dean Kremer
@@ -8520,7 +8520,7 @@ base,563,Platinum Holo Foil,false,1,Dean Kremer
 base,563,First Card,false,1,Dean Kremer
 base,563,Printing Plates,false,1,Dean Kremer
 base,564,,false,,Endy Rodríguez
-base,564,Topps Foil Pattern,false,,Endy Rodríguez
+base,564,Topps Pattern Foil,false,,Endy Rodríguez
 base,564,Silver Crackle Foilboard,false,,Endy Rodríguez
 base,564,Diamante Foil,false,,Endy Rodríguez
 base,564,Holo Foil,false,,Endy Rodríguez
@@ -8560,7 +8560,7 @@ base,564,Platinum Holo Foil,false,1,Endy Rodríguez
 base,564,First Card,false,1,Endy Rodríguez
 base,564,Printing Plates,false,1,Endy Rodríguez
 base,565,,false,,Osvaldo Bido
-base,565,Topps Foil Pattern,false,,Osvaldo Bido
+base,565,Topps Pattern Foil,false,,Osvaldo Bido
 base,565,Silver Crackle Foilboard,false,,Osvaldo Bido
 base,565,Diamante Foil,false,,Osvaldo Bido
 base,565,Holo Foil,false,,Osvaldo Bido
@@ -8600,7 +8600,7 @@ base,565,Platinum Holo Foil,false,1,Osvaldo Bido
 base,565,First Card,false,1,Osvaldo Bido
 base,565,Printing Plates,false,1,Osvaldo Bido
 base,566,,false,,Julian Aguiar
-base,566,Topps Foil Pattern,false,,Julian Aguiar
+base,566,Topps Pattern Foil,false,,Julian Aguiar
 base,566,Silver Crackle Foilboard,false,,Julian Aguiar
 base,566,Diamante Foil,false,,Julian Aguiar
 base,566,Holo Foil,false,,Julian Aguiar
@@ -8640,7 +8640,7 @@ base,566,Platinum Holo Foil,false,1,Julian Aguiar
 base,566,First Card,false,1,Julian Aguiar
 base,566,Printing Plates,false,1,Julian Aguiar
 base,567,,false,,Pavin Smith
-base,567,Topps Foil Pattern,false,,Pavin Smith
+base,567,Topps Pattern Foil,false,,Pavin Smith
 base,567,Silver Crackle Foilboard,false,,Pavin Smith
 base,567,Diamante Foil,false,,Pavin Smith
 base,567,Holo Foil,false,,Pavin Smith
@@ -8680,7 +8680,7 @@ base,567,Platinum Holo Foil,false,1,Pavin Smith
 base,567,First Card,false,1,Pavin Smith
 base,567,Printing Plates,false,1,Pavin Smith
 base,568,,false,,Brandon Lockridge
-base,568,Topps Foil Pattern,false,,Brandon Lockridge
+base,568,Topps Pattern Foil,false,,Brandon Lockridge
 base,568,Silver Crackle Foilboard,false,,Brandon Lockridge
 base,568,Diamante Foil,false,,Brandon Lockridge
 base,568,Holo Foil,false,,Brandon Lockridge
@@ -8720,7 +8720,7 @@ base,568,Platinum Holo Foil,false,1,Brandon Lockridge
 base,568,First Card,false,1,Brandon Lockridge
 base,568,Printing Plates,false,1,Brandon Lockridge
 base,569,,false,,Kodai Senga
-base,569,Topps Foil Pattern,false,,Kodai Senga
+base,569,Topps Pattern Foil,false,,Kodai Senga
 base,569,Silver Crackle Foilboard,false,,Kodai Senga
 base,569,Diamante Foil,false,,Kodai Senga
 base,569,Holo Foil,false,,Kodai Senga
@@ -8760,7 +8760,7 @@ base,569,Platinum Holo Foil,false,1,Kodai Senga
 base,569,First Card,false,1,Kodai Senga
 base,569,Printing Plates,false,1,Kodai Senga
 base,570,,false,,Toronto Blue Jays
-base,570,Topps Foil Pattern,false,,Toronto Blue Jays
+base,570,Topps Pattern Foil,false,,Toronto Blue Jays
 base,570,Silver Crackle Foilboard,false,,Toronto Blue Jays
 base,570,Diamante Foil,false,,Toronto Blue Jays
 base,570,Holo Foil,false,,Toronto Blue Jays
@@ -8800,7 +8800,7 @@ base,570,Platinum Holo Foil,false,1,Toronto Blue Jays
 base,570,First Card,false,1,Toronto Blue Jays
 base,570,Printing Plates,false,1,Toronto Blue Jays
 base,571,,false,,Mason Miller
-base,571,Topps Foil Pattern,false,,Mason Miller
+base,571,Topps Pattern Foil,false,,Mason Miller
 base,571,Silver Crackle Foilboard,false,,Mason Miller
 base,571,Diamante Foil,false,,Mason Miller
 base,571,Holo Foil,false,,Mason Miller
@@ -8840,7 +8840,7 @@ base,571,Platinum Holo Foil,false,1,Mason Miller
 base,571,First Card,false,1,Mason Miller
 base,571,Printing Plates,false,1,Mason Miller
 base,572,,false,,Victor Robles
-base,572,Topps Foil Pattern,false,,Victor Robles
+base,572,Topps Pattern Foil,false,,Victor Robles
 base,572,Silver Crackle Foilboard,false,,Victor Robles
 base,572,Diamante Foil,false,,Victor Robles
 base,572,Holo Foil,false,,Victor Robles
@@ -8880,7 +8880,7 @@ base,572,Platinum Holo Foil,false,1,Victor Robles
 base,572,First Card,false,1,Victor Robles
 base,572,Printing Plates,false,1,Victor Robles
 base,573,,false,,Hyeseong Kim
-base,573,Topps Foil Pattern,false,,Hyeseong Kim
+base,573,Topps Pattern Foil,false,,Hyeseong Kim
 base,573,Silver Crackle Foilboard,false,,Hyeseong Kim
 base,573,Diamante Foil,false,,Hyeseong Kim
 base,573,Holo Foil,false,,Hyeseong Kim
@@ -8920,7 +8920,7 @@ base,573,Platinum Holo Foil,false,1,Hyeseong Kim
 base,573,First Card,false,1,Hyeseong Kim
 base,573,Printing Plates,false,1,Hyeseong Kim
 base,574,,false,,Daniel Schneemann
-base,574,Topps Foil Pattern,false,,Daniel Schneemann
+base,574,Topps Pattern Foil,false,,Daniel Schneemann
 base,574,Silver Crackle Foilboard,false,,Daniel Schneemann
 base,574,Diamante Foil,false,,Daniel Schneemann
 base,574,Holo Foil,false,,Daniel Schneemann
@@ -8960,7 +8960,7 @@ base,574,Platinum Holo Foil,false,1,Daniel Schneemann
 base,574,First Card,false,1,Daniel Schneemann
 base,574,Printing Plates,false,1,Daniel Schneemann
 base,575,,false,,Joe Kelly
-base,575,Topps Foil Pattern,false,,Joe Kelly
+base,575,Topps Pattern Foil,false,,Joe Kelly
 base,575,Silver Crackle Foilboard,false,,Joe Kelly
 base,575,Diamante Foil,false,,Joe Kelly
 base,575,Holo Foil,false,,Joe Kelly
@@ -9000,7 +9000,7 @@ base,575,Platinum Holo Foil,false,1,Joe Kelly
 base,575,First Card,false,1,Joe Kelly
 base,575,Printing Plates,false,1,Joe Kelly
 base,576,,false,,Parker Meadows
-base,576,Topps Foil Pattern,false,,Parker Meadows
+base,576,Topps Pattern Foil,false,,Parker Meadows
 base,576,Silver Crackle Foilboard,false,,Parker Meadows
 base,576,Diamante Foil,false,,Parker Meadows
 base,576,Holo Foil,false,,Parker Meadows
@@ -9040,7 +9040,7 @@ base,576,Platinum Holo Foil,false,1,Parker Meadows
 base,576,First Card,false,1,Parker Meadows
 base,576,Printing Plates,false,1,Parker Meadows
 base,577,,false,,Trevor Story
-base,577,Topps Foil Pattern,false,,Trevor Story
+base,577,Topps Pattern Foil,false,,Trevor Story
 base,577,Silver Crackle Foilboard,false,,Trevor Story
 base,577,Diamante Foil,false,,Trevor Story
 base,577,Holo Foil,false,,Trevor Story
@@ -9080,7 +9080,7 @@ base,577,Platinum Holo Foil,false,1,Trevor Story
 base,577,First Card,false,1,Trevor Story
 base,577,Printing Plates,false,1,Trevor Story
 base,578,,false,,Kevin Alcántara
-base,578,Topps Foil Pattern,false,,Kevin Alcántara
+base,578,Topps Pattern Foil,false,,Kevin Alcántara
 base,578,Silver Crackle Foilboard,false,,Kevin Alcántara
 base,578,Diamante Foil,false,,Kevin Alcántara
 base,578,Holo Foil,false,,Kevin Alcántara
@@ -9120,7 +9120,7 @@ base,578,Platinum Holo Foil,false,1,Kevin Alcántara
 base,578,First Card,false,1,Kevin Alcántara
 base,578,Printing Plates,false,1,Kevin Alcántara
 base,579,,false,,Spencer Strider
-base,579,Topps Foil Pattern,false,,Spencer Strider
+base,579,Topps Pattern Foil,false,,Spencer Strider
 base,579,Silver Crackle Foilboard,false,,Spencer Strider
 base,579,Diamante Foil,false,,Spencer Strider
 base,579,Holo Foil,false,,Spencer Strider
@@ -9160,7 +9160,7 @@ base,579,Platinum Holo Foil,false,1,Spencer Strider
 base,579,First Card,false,1,Spencer Strider
 base,579,Printing Plates,false,1,Spencer Strider
 base,580,,false,,Bryan Ramos
-base,580,Topps Foil Pattern,false,,Bryan Ramos
+base,580,Topps Pattern Foil,false,,Bryan Ramos
 base,580,Silver Crackle Foilboard,false,,Bryan Ramos
 base,580,Diamante Foil,false,,Bryan Ramos
 base,580,Holo Foil,false,,Bryan Ramos
@@ -9200,7 +9200,7 @@ base,580,Platinum Holo Foil,false,1,Bryan Ramos
 base,580,First Card,false,1,Bryan Ramos
 base,580,Printing Plates,false,1,Bryan Ramos
 base,581,,false,,Andruw Monasterio
-base,581,Topps Foil Pattern,false,,Andruw Monasterio
+base,581,Topps Pattern Foil,false,,Andruw Monasterio
 base,581,Silver Crackle Foilboard,false,,Andruw Monasterio
 base,581,Diamante Foil,false,,Andruw Monasterio
 base,581,Holo Foil,false,,Andruw Monasterio
@@ -9240,7 +9240,7 @@ base,581,Platinum Holo Foil,false,1,Andruw Monasterio
 base,581,First Card,false,1,Andruw Monasterio
 base,581,Printing Plates,false,1,Andruw Monasterio
 base,582,,false,,Michael Mercado
-base,582,Topps Foil Pattern,false,,Michael Mercado
+base,582,Topps Pattern Foil,false,,Michael Mercado
 base,582,Silver Crackle Foilboard,false,,Michael Mercado
 base,582,Diamante Foil,false,,Michael Mercado
 base,582,Holo Foil,false,,Michael Mercado
@@ -9280,7 +9280,7 @@ base,582,Platinum Holo Foil,false,1,Michael Mercado
 base,582,First Card,false,1,Michael Mercado
 base,582,Printing Plates,false,1,Michael Mercado
 base,583,,false,,Alex Bregman
-base,583,Topps Foil Pattern,false,,Alex Bregman
+base,583,Topps Pattern Foil,false,,Alex Bregman
 base,583,Silver Crackle Foilboard,false,,Alex Bregman
 base,583,Diamante Foil,false,,Alex Bregman
 base,583,Holo Foil,false,,Alex Bregman
@@ -9320,7 +9320,7 @@ base,583,Platinum Holo Foil,false,1,Alex Bregman
 base,583,First Card,false,1,Alex Bregman
 base,583,Printing Plates,false,1,Alex Bregman
 base,584,,false,,Carlos Correa
-base,584,Topps Foil Pattern,false,,Carlos Correa
+base,584,Topps Pattern Foil,false,,Carlos Correa
 base,584,Silver Crackle Foilboard,false,,Carlos Correa
 base,584,Diamante Foil,false,,Carlos Correa
 base,584,Holo Foil,false,,Carlos Correa
@@ -9360,7 +9360,7 @@ base,584,Platinum Holo Foil,false,1,Carlos Correa
 base,584,First Card,false,1,Carlos Correa
 base,584,Printing Plates,false,1,Carlos Correa
 base,585,,false,,Jonah Bride
-base,585,Topps Foil Pattern,false,,Jonah Bride
+base,585,Topps Pattern Foil,false,,Jonah Bride
 base,585,Silver Crackle Foilboard,false,,Jonah Bride
 base,585,Diamante Foil,false,,Jonah Bride
 base,585,Holo Foil,false,,Jonah Bride
@@ -9400,7 +9400,7 @@ base,585,Platinum Holo Foil,false,1,Jonah Bride
 base,585,First Card,false,1,Jonah Bride
 base,585,Printing Plates,false,1,Jonah Bride
 base,586,,false,,Anthony Santander
-base,586,Topps Foil Pattern,false,,Anthony Santander
+base,586,Topps Pattern Foil,false,,Anthony Santander
 base,586,Silver Crackle Foilboard,false,,Anthony Santander
 base,586,Diamante Foil,false,,Anthony Santander
 base,586,Holo Foil,false,,Anthony Santander
@@ -9440,7 +9440,7 @@ base,586,Platinum Holo Foil,false,1,Anthony Santander
 base,586,First Card,false,1,Anthony Santander
 base,586,Printing Plates,false,1,Anthony Santander
 base,587,,false,,Jarren Duran
-base,587,Topps Foil Pattern,false,,Jarren Duran
+base,587,Topps Pattern Foil,false,,Jarren Duran
 base,587,Silver Crackle Foilboard,false,,Jarren Duran
 base,587,Diamante Foil,false,,Jarren Duran
 base,587,Holo Foil,false,,Jarren Duran
@@ -9480,7 +9480,7 @@ base,587,Platinum Holo Foil,false,1,Jarren Duran
 base,587,First Card,false,1,Jarren Duran
 base,587,Printing Plates,false,1,Jarren Duran
 base,588,,false,,Jurickson Profar
-base,588,Topps Foil Pattern,false,,Jurickson Profar
+base,588,Topps Pattern Foil,false,,Jurickson Profar
 base,588,Silver Crackle Foilboard,false,,Jurickson Profar
 base,588,Diamante Foil,false,,Jurickson Profar
 base,588,Holo Foil,false,,Jurickson Profar
@@ -9520,7 +9520,7 @@ base,588,Platinum Holo Foil,false,1,Jurickson Profar
 base,588,First Card,false,1,Jurickson Profar
 base,588,Printing Plates,false,1,Jurickson Profar
 base,589,,false,,Ezequiel Duran
-base,589,Topps Foil Pattern,false,,Ezequiel Duran
+base,589,Topps Pattern Foil,false,,Ezequiel Duran
 base,589,Silver Crackle Foilboard,false,,Ezequiel Duran
 base,589,Diamante Foil,false,,Ezequiel Duran
 base,589,Holo Foil,false,,Ezequiel Duran
@@ -9560,7 +9560,7 @@ base,589,Platinum Holo Foil,false,1,Ezequiel Duran
 base,589,First Card,false,1,Ezequiel Duran
 base,589,Printing Plates,false,1,Ezequiel Duran
 base,590,,false,,Jasson Domínguez
-base,590,Topps Foil Pattern,false,,Jasson Domínguez
+base,590,Topps Pattern Foil,false,,Jasson Domínguez
 base,590,Silver Crackle Foilboard,false,,Jasson Domínguez
 base,590,Diamante Foil,false,,Jasson Domínguez
 base,590,Holo Foil,false,,Jasson Domínguez
@@ -9600,7 +9600,7 @@ base,590,Platinum Holo Foil,false,1,Jasson Domínguez
 base,590,First Card,false,1,Jasson Domínguez
 base,590,Printing Plates,false,1,Jasson Domínguez
 base,591,,false,,Austin Wells
-base,591,Topps Foil Pattern,false,,Austin Wells
+base,591,Topps Pattern Foil,false,,Austin Wells
 base,591,Silver Crackle Foilboard,false,,Austin Wells
 base,591,Diamante Foil,false,,Austin Wells
 base,591,Holo Foil,false,,Austin Wells
@@ -9640,7 +9640,7 @@ base,591,Platinum Holo Foil,false,1,Austin Wells
 base,591,First Card,false,1,Austin Wells
 base,591,Printing Plates,false,1,Austin Wells
 base,592,,false,,Yusei Kikuchi
-base,592,Topps Foil Pattern,false,,Yusei Kikuchi
+base,592,Topps Pattern Foil,false,,Yusei Kikuchi
 base,592,Silver Crackle Foilboard,false,,Yusei Kikuchi
 base,592,Diamante Foil,false,,Yusei Kikuchi
 base,592,Holo Foil,false,,Yusei Kikuchi
@@ -9680,7 +9680,7 @@ base,592,Platinum Holo Foil,false,1,Yusei Kikuchi
 base,592,First Card,false,1,Yusei Kikuchi
 base,592,Printing Plates,false,1,Yusei Kikuchi
 base,593,,false,,Texas Rangers
-base,593,Topps Foil Pattern,false,,Texas Rangers
+base,593,Topps Pattern Foil,false,,Texas Rangers
 base,593,Silver Crackle Foilboard,false,,Texas Rangers
 base,593,Diamante Foil,false,,Texas Rangers
 base,593,Holo Foil,false,,Texas Rangers
@@ -9720,7 +9720,7 @@ base,593,Platinum Holo Foil,false,1,Texas Rangers
 base,593,First Card,false,1,Texas Rangers
 base,593,Printing Plates,false,1,Texas Rangers
 base,594,,false,,Team Card - Athletics
-base,594,Topps Foil Pattern,false,,Team Card - Athletics
+base,594,Topps Pattern Foil,false,,Team Card - Athletics
 base,594,Silver Crackle Foilboard,false,,Team Card - Athletics
 base,594,Diamante Foil,false,,Team Card - Athletics
 base,594,Holo Foil,false,,Team Card - Athletics
@@ -9760,7 +9760,7 @@ base,594,Platinum Holo Foil,false,1,Team Card - Athletics
 base,594,First Card,false,1,Team Card - Athletics
 base,594,Printing Plates,false,1,Team Card - Athletics
 base,595,,false,,Austin Martin
-base,595,Topps Foil Pattern,false,,Austin Martin
+base,595,Topps Pattern Foil,false,,Austin Martin
 base,595,Silver Crackle Foilboard,false,,Austin Martin
 base,595,Diamante Foil,false,,Austin Martin
 base,595,Holo Foil,false,,Austin Martin
@@ -9800,7 +9800,7 @@ base,595,Platinum Holo Foil,false,1,Austin Martin
 base,595,First Card,false,1,Austin Martin
 base,595,Printing Plates,false,1,Austin Martin
 base,596,,false,,Tyler Fitzgerald
-base,596,Topps Foil Pattern,false,,Tyler Fitzgerald
+base,596,Topps Pattern Foil,false,,Tyler Fitzgerald
 base,596,Silver Crackle Foilboard,false,,Tyler Fitzgerald
 base,596,Diamante Foil,false,,Tyler Fitzgerald
 base,596,Holo Foil,false,,Tyler Fitzgerald
@@ -9840,7 +9840,7 @@ base,596,Platinum Holo Foil,false,1,Tyler Fitzgerald
 base,596,First Card,false,1,Tyler Fitzgerald
 base,596,Printing Plates,false,1,Tyler Fitzgerald
 base,597,,false,,Seth Halvorsen
-base,597,Topps Foil Pattern,false,,Seth Halvorsen
+base,597,Topps Pattern Foil,false,,Seth Halvorsen
 base,597,Silver Crackle Foilboard,false,,Seth Halvorsen
 base,597,Diamante Foil,false,,Seth Halvorsen
 base,597,Holo Foil,false,,Seth Halvorsen
@@ -9880,7 +9880,7 @@ base,597,Platinum Holo Foil,false,1,Seth Halvorsen
 base,597,First Card,false,1,Seth Halvorsen
 base,597,Printing Plates,false,1,Seth Halvorsen
 base,598,,false,,Hunter Renfroe
-base,598,Topps Foil Pattern,false,,Hunter Renfroe
+base,598,Topps Pattern Foil,false,,Hunter Renfroe
 base,598,Silver Crackle Foilboard,false,,Hunter Renfroe
 base,598,Diamante Foil,false,,Hunter Renfroe
 base,598,Holo Foil,false,,Hunter Renfroe
@@ -9920,7 +9920,7 @@ base,598,Platinum Holo Foil,false,1,Hunter Renfroe
 base,598,First Card,false,1,Hunter Renfroe
 base,598,Printing Plates,false,1,Hunter Renfroe
 base,599,,false,,Duke Ellis
-base,599,Topps Foil Pattern,false,,Duke Ellis
+base,599,Topps Pattern Foil,false,,Duke Ellis
 base,599,Silver Crackle Foilboard,false,,Duke Ellis
 base,599,Diamante Foil,false,,Duke Ellis
 base,599,Holo Foil,false,,Duke Ellis
@@ -9960,7 +9960,7 @@ base,599,Platinum Holo Foil,false,1,Duke Ellis
 base,599,First Card,false,1,Duke Ellis
 base,599,Printing Plates,false,1,Duke Ellis
 base,600,,false,,Fernando Tatis Jr.
-base,600,Topps Foil Pattern,false,,Fernando Tatis Jr.
+base,600,Topps Pattern Foil,false,,Fernando Tatis Jr.
 base,600,Silver Crackle Foilboard,false,,Fernando Tatis Jr.
 base,600,Diamante Foil,false,,Fernando Tatis Jr.
 base,600,Holo Foil,false,,Fernando Tatis Jr.
@@ -10000,7 +10000,7 @@ base,600,Platinum Holo Foil,false,1,Fernando Tatis Jr.
 base,600,First Card,false,1,Fernando Tatis Jr.
 base,600,Printing Plates,false,1,Fernando Tatis Jr.
 base,601,,false,,Stone Garrett
-base,601,Topps Foil Pattern,false,,Stone Garrett
+base,601,Topps Pattern Foil,false,,Stone Garrett
 base,601,Silver Crackle Foilboard,false,,Stone Garrett
 base,601,Diamante Foil,false,,Stone Garrett
 base,601,Holo Foil,false,,Stone Garrett
@@ -10040,7 +10040,7 @@ base,601,Platinum Holo Foil,false,1,Stone Garrett
 base,601,First Card,false,1,Stone Garrett
 base,601,Printing Plates,false,1,Stone Garrett
 base,602,,false,,Ben Joyce
-base,602,Topps Foil Pattern,false,,Ben Joyce
+base,602,Topps Pattern Foil,false,,Ben Joyce
 base,602,Silver Crackle Foilboard,false,,Ben Joyce
 base,602,Diamante Foil,false,,Ben Joyce
 base,602,Holo Foil,false,,Ben Joyce
@@ -10080,7 +10080,7 @@ base,602,Platinum Holo Foil,false,1,Ben Joyce
 base,602,First Card,false,1,Ben Joyce
 base,602,Printing Plates,false,1,Ben Joyce
 base,603,,false,,Cal Raleigh
-base,603,Topps Foil Pattern,false,,Cal Raleigh
+base,603,Topps Pattern Foil,false,,Cal Raleigh
 base,603,Silver Crackle Foilboard,false,,Cal Raleigh
 base,603,Diamante Foil,false,,Cal Raleigh
 base,603,Holo Foil,false,,Cal Raleigh
@@ -10120,7 +10120,7 @@ base,603,Platinum Holo Foil,false,1,Cal Raleigh
 base,603,First Card,false,1,Cal Raleigh
 base,603,Printing Plates,false,1,Cal Raleigh
 base,604,,false,,Nestor Cortes
-base,604,Topps Foil Pattern,false,,Nestor Cortes
+base,604,Topps Pattern Foil,false,,Nestor Cortes
 base,604,Silver Crackle Foilboard,false,,Nestor Cortes
 base,604,Diamante Foil,false,,Nestor Cortes
 base,604,Holo Foil,false,,Nestor Cortes
@@ -10160,7 +10160,7 @@ base,604,Platinum Holo Foil,false,1,Nestor Cortes
 base,604,First Card,false,1,Nestor Cortes
 base,604,Printing Plates,false,1,Nestor Cortes
 base,605,,false,,DaShawn Keirsey
-base,605,Topps Foil Pattern,false,,DaShawn Keirsey
+base,605,Topps Pattern Foil,false,,DaShawn Keirsey
 base,605,Silver Crackle Foilboard,false,,DaShawn Keirsey
 base,605,Diamante Foil,false,,DaShawn Keirsey
 base,605,Holo Foil,false,,DaShawn Keirsey
@@ -10200,7 +10200,7 @@ base,605,Platinum Holo Foil,false,1,DaShawn Keirsey
 base,605,First Card,false,1,DaShawn Keirsey
 base,605,Printing Plates,false,1,DaShawn Keirsey
 base,606,,false,,Tyler Anderson
-base,606,Topps Foil Pattern,false,,Tyler Anderson
+base,606,Topps Pattern Foil,false,,Tyler Anderson
 base,606,Silver Crackle Foilboard,false,,Tyler Anderson
 base,606,Diamante Foil,false,,Tyler Anderson
 base,606,Holo Foil,false,,Tyler Anderson
@@ -10240,7 +10240,7 @@ base,606,Platinum Holo Foil,false,1,Tyler Anderson
 base,606,First Card,false,1,Tyler Anderson
 base,606,Printing Plates,false,1,Tyler Anderson
 base,607,,false,,Alec Marsh
-base,607,Topps Foil Pattern,false,,Alec Marsh
+base,607,Topps Pattern Foil,false,,Alec Marsh
 base,607,Silver Crackle Foilboard,false,,Alec Marsh
 base,607,Diamante Foil,false,,Alec Marsh
 base,607,Holo Foil,false,,Alec Marsh
@@ -10280,7 +10280,7 @@ base,607,Platinum Holo Foil,false,1,Alec Marsh
 base,607,First Card,false,1,Alec Marsh
 base,607,Printing Plates,false,1,Alec Marsh
 base,608,,false,,Stuart Fairchild
-base,608,Topps Foil Pattern,false,,Stuart Fairchild
+base,608,Topps Pattern Foil,false,,Stuart Fairchild
 base,608,Silver Crackle Foilboard,false,,Stuart Fairchild
 base,608,Diamante Foil,false,,Stuart Fairchild
 base,608,Holo Foil,false,,Stuart Fairchild
@@ -10320,7 +10320,7 @@ base,608,Platinum Holo Foil,false,1,Stuart Fairchild
 base,608,First Card,false,1,Stuart Fairchild
 base,608,Printing Plates,false,1,Stuart Fairchild
 base,609,,false,,Max Fried
-base,609,Topps Foil Pattern,false,,Max Fried
+base,609,Topps Pattern Foil,false,,Max Fried
 base,609,Silver Crackle Foilboard,false,,Max Fried
 base,609,Diamante Foil,false,,Max Fried
 base,609,Holo Foil,false,,Max Fried
@@ -10360,7 +10360,7 @@ base,609,Platinum Holo Foil,false,1,Max Fried
 base,609,First Card,false,1,Max Fried
 base,609,Printing Plates,false,1,Max Fried
 base,610,,false,,Gordon Graceffo
-base,610,Topps Foil Pattern,false,,Gordon Graceffo
+base,610,Topps Pattern Foil,false,,Gordon Graceffo
 base,610,Silver Crackle Foilboard,false,,Gordon Graceffo
 base,610,Diamante Foil,false,,Gordon Graceffo
 base,610,Holo Foil,false,,Gordon Graceffo
@@ -10400,7 +10400,7 @@ base,610,Platinum Holo Foil,false,1,Gordon Graceffo
 base,610,First Card,false,1,Gordon Graceffo
 base,610,Printing Plates,false,1,Gordon Graceffo
 base,611,,false,,Michael Kopech
-base,611,Topps Foil Pattern,false,,Michael Kopech
+base,611,Topps Pattern Foil,false,,Michael Kopech
 base,611,Silver Crackle Foilboard,false,,Michael Kopech
 base,611,Diamante Foil,false,,Michael Kopech
 base,611,Holo Foil,false,,Michael Kopech
@@ -10440,7 +10440,7 @@ base,611,Platinum Holo Foil,false,1,Michael Kopech
 base,611,First Card,false,1,Michael Kopech
 base,611,Printing Plates,false,1,Michael Kopech
 base,612,,false,,Cleveland Guardians
-base,612,Topps Foil Pattern,false,,Cleveland Guardians
+base,612,Topps Pattern Foil,false,,Cleveland Guardians
 base,612,Silver Crackle Foilboard,false,,Cleveland Guardians
 base,612,Diamante Foil,false,,Cleveland Guardians
 base,612,Holo Foil,false,,Cleveland Guardians
@@ -10480,7 +10480,7 @@ base,612,Platinum Holo Foil,false,1,Cleveland Guardians
 base,612,First Card,false,1,Cleveland Guardians
 base,612,Printing Plates,false,1,Cleveland Guardians
 base,613,,false,,Austin Hays
-base,613,Topps Foil Pattern,false,,Austin Hays
+base,613,Topps Pattern Foil,false,,Austin Hays
 base,613,Silver Crackle Foilboard,false,,Austin Hays
 base,613,Diamante Foil,false,,Austin Hays
 base,613,Holo Foil,false,,Austin Hays
@@ -10520,7 +10520,7 @@ base,613,Platinum Holo Foil,false,1,Austin Hays
 base,613,First Card,false,1,Austin Hays
 base,613,Printing Plates,false,1,Austin Hays
 base,614,,false,,Lucas Giolito
-base,614,Topps Foil Pattern,false,,Lucas Giolito
+base,614,Topps Pattern Foil,false,,Lucas Giolito
 base,614,Silver Crackle Foilboard,false,,Lucas Giolito
 base,614,Diamante Foil,false,,Lucas Giolito
 base,614,Holo Foil,false,,Lucas Giolito
@@ -10560,7 +10560,7 @@ base,614,Platinum Holo Foil,false,1,Lucas Giolito
 base,614,First Card,false,1,Lucas Giolito
 base,614,Printing Plates,false,1,Lucas Giolito
 base,615,,false,,Mike Burrows
-base,615,Topps Foil Pattern,false,,Mike Burrows
+base,615,Topps Pattern Foil,false,,Mike Burrows
 base,615,Silver Crackle Foilboard,false,,Mike Burrows
 base,615,Diamante Foil,false,,Mike Burrows
 base,615,Holo Foil,false,,Mike Burrows
@@ -10600,7 +10600,7 @@ base,615,Platinum Holo Foil,false,1,Mike Burrows
 base,615,First Card,false,1,Mike Burrows
 base,615,Printing Plates,false,1,Mike Burrows
 base,616,,false,,Kiké Hernández
-base,616,Topps Foil Pattern,false,,Kiké Hernández
+base,616,Topps Pattern Foil,false,,Kiké Hernández
 base,616,Silver Crackle Foilboard,false,,Kiké Hernández
 base,616,Diamante Foil,false,,Kiké Hernández
 base,616,Holo Foil,false,,Kiké Hernández
@@ -10640,7 +10640,7 @@ base,616,Platinum Holo Foil,false,1,Kiké Hernández
 base,616,First Card,false,1,Kiké Hernández
 base,616,Printing Plates,false,1,Kiké Hernández
 base,617,,false,,Zack Gelof
-base,617,Topps Foil Pattern,false,,Zack Gelof
+base,617,Topps Pattern Foil,false,,Zack Gelof
 base,617,Silver Crackle Foilboard,false,,Zack Gelof
 base,617,Diamante Foil,false,,Zack Gelof
 base,617,Holo Foil,false,,Zack Gelof
@@ -10680,7 +10680,7 @@ base,617,Platinum Holo Foil,false,1,Zack Gelof
 base,617,First Card,false,1,Zack Gelof
 base,617,Printing Plates,false,1,Zack Gelof
 base,618,,false,,Jake Bauers
-base,618,Topps Foil Pattern,false,,Jake Bauers
+base,618,Topps Pattern Foil,false,,Jake Bauers
 base,618,Silver Crackle Foilboard,false,,Jake Bauers
 base,618,Diamante Foil,false,,Jake Bauers
 base,618,Holo Foil,false,,Jake Bauers
@@ -10720,7 +10720,7 @@ base,618,Platinum Holo Foil,false,1,Jake Bauers
 base,618,First Card,false,1,Jake Bauers
 base,618,Printing Plates,false,1,Jake Bauers
 base,619,,false,,Jeimer Candelario
-base,619,Topps Foil Pattern,false,,Jeimer Candelario
+base,619,Topps Pattern Foil,false,,Jeimer Candelario
 base,619,Silver Crackle Foilboard,false,,Jeimer Candelario
 base,619,Diamante Foil,false,,Jeimer Candelario
 base,619,Holo Foil,false,,Jeimer Candelario
@@ -10760,7 +10760,7 @@ base,619,Platinum Holo Foil,false,1,Jeimer Candelario
 base,619,First Card,false,1,Jeimer Candelario
 base,619,Printing Plates,false,1,Jeimer Candelario
 base,620,,false,,Brandon Woodruff
-base,620,Topps Foil Pattern,false,,Brandon Woodruff
+base,620,Topps Pattern Foil,false,,Brandon Woodruff
 base,620,Silver Crackle Foilboard,false,,Brandon Woodruff
 base,620,Diamante Foil,false,,Brandon Woodruff
 base,620,Holo Foil,false,,Brandon Woodruff
@@ -10800,7 +10800,7 @@ base,620,Platinum Holo Foil,false,1,Brandon Woodruff
 base,620,First Card,false,1,Brandon Woodruff
 base,620,Printing Plates,false,1,Brandon Woodruff
 base,621,,false,,Jake Meyers
-base,621,Topps Foil Pattern,false,,Jake Meyers
+base,621,Topps Pattern Foil,false,,Jake Meyers
 base,621,Silver Crackle Foilboard,false,,Jake Meyers
 base,621,Diamante Foil,false,,Jake Meyers
 base,621,Holo Foil,false,,Jake Meyers
@@ -10840,7 +10840,7 @@ base,621,Platinum Holo Foil,false,1,Jake Meyers
 base,621,First Card,false,1,Jake Meyers
 base,621,Printing Plates,false,1,Jake Meyers
 base,622,,false,,Steward Berroa
-base,622,Topps Foil Pattern,false,,Steward Berroa
+base,622,Topps Pattern Foil,false,,Steward Berroa
 base,622,Silver Crackle Foilboard,false,,Steward Berroa
 base,622,Diamante Foil,false,,Steward Berroa
 base,622,Holo Foil,false,,Steward Berroa
@@ -10880,7 +10880,7 @@ base,622,Platinum Holo Foil,false,1,Steward Berroa
 base,622,First Card,false,1,Steward Berroa
 base,622,Printing Plates,false,1,Steward Berroa
 base,623,,false,,Andre Pallante
-base,623,Topps Foil Pattern,false,,Andre Pallante
+base,623,Topps Pattern Foil,false,,Andre Pallante
 base,623,Silver Crackle Foilboard,false,,Andre Pallante
 base,623,Diamante Foil,false,,Andre Pallante
 base,623,Holo Foil,false,,Andre Pallante
@@ -10920,7 +10920,7 @@ base,623,Platinum Holo Foil,false,1,Andre Pallante
 base,623,First Card,false,1,Andre Pallante
 base,623,Printing Plates,false,1,Andre Pallante
 base,624,,false,,Eguy Rosario
-base,624,Topps Foil Pattern,false,,Eguy Rosario
+base,624,Topps Pattern Foil,false,,Eguy Rosario
 base,624,Silver Crackle Foilboard,false,,Eguy Rosario
 base,624,Diamante Foil,false,,Eguy Rosario
 base,624,Holo Foil,false,,Eguy Rosario
@@ -10960,7 +10960,7 @@ base,624,Platinum Holo Foil,false,1,Eguy Rosario
 base,624,First Card,false,1,Eguy Rosario
 base,624,Printing Plates,false,1,Eguy Rosario
 base,625,,false,,J.T. Realmuto
-base,625,Topps Foil Pattern,false,,J.T. Realmuto
+base,625,Topps Pattern Foil,false,,J.T. Realmuto
 base,625,Silver Crackle Foilboard,false,,J.T. Realmuto
 base,625,Diamante Foil,false,,J.T. Realmuto
 base,625,Holo Foil,false,,J.T. Realmuto
@@ -11000,7 +11000,7 @@ base,625,Platinum Holo Foil,false,1,J.T. Realmuto
 base,625,First Card,false,1,J.T. Realmuto
 base,625,Printing Plates,false,1,J.T. Realmuto
 base,626,,false,,Graham Ashcraft
-base,626,Topps Foil Pattern,false,,Graham Ashcraft
+base,626,Topps Pattern Foil,false,,Graham Ashcraft
 base,626,Silver Crackle Foilboard,false,,Graham Ashcraft
 base,626,Diamante Foil,false,,Graham Ashcraft
 base,626,Holo Foil,false,,Graham Ashcraft
@@ -11040,7 +11040,7 @@ base,626,Platinum Holo Foil,false,1,Graham Ashcraft
 base,626,First Card,false,1,Graham Ashcraft
 base,626,Printing Plates,false,1,Graham Ashcraft
 base,627,,false,,Sam Hilliard
-base,627,Topps Foil Pattern,false,,Sam Hilliard
+base,627,Topps Pattern Foil,false,,Sam Hilliard
 base,627,Silver Crackle Foilboard,false,,Sam Hilliard
 base,627,Diamante Foil,false,,Sam Hilliard
 base,627,Holo Foil,false,,Sam Hilliard
@@ -11080,7 +11080,7 @@ base,627,Platinum Holo Foil,false,1,Sam Hilliard
 base,627,First Card,false,1,Sam Hilliard
 base,627,Printing Plates,false,1,Sam Hilliard
 base,628,,false,,Noelvi Marte
-base,628,Topps Foil Pattern,false,,Noelvi Marte
+base,628,Topps Pattern Foil,false,,Noelvi Marte
 base,628,Silver Crackle Foilboard,false,,Noelvi Marte
 base,628,Diamante Foil,false,,Noelvi Marte
 base,628,Holo Foil,false,,Noelvi Marte
@@ -11120,7 +11120,7 @@ base,628,Platinum Holo Foil,false,1,Noelvi Marte
 base,628,First Card,false,1,Noelvi Marte
 base,628,Printing Plates,false,1,Noelvi Marte
 base,629,,false,,Jesse Winker
-base,629,Topps Foil Pattern,false,,Jesse Winker
+base,629,Topps Pattern Foil,false,,Jesse Winker
 base,629,Silver Crackle Foilboard,false,,Jesse Winker
 base,629,Diamante Foil,false,,Jesse Winker
 base,629,Holo Foil,false,,Jesse Winker
@@ -11160,7 +11160,7 @@ base,629,Platinum Holo Foil,false,1,Jesse Winker
 base,629,First Card,false,1,Jesse Winker
 base,629,Printing Plates,false,1,Jesse Winker
 base,630,,false,,Heston Kjerstad
-base,630,Topps Foil Pattern,false,,Heston Kjerstad
+base,630,Topps Pattern Foil,false,,Heston Kjerstad
 base,630,Silver Crackle Foilboard,false,,Heston Kjerstad
 base,630,Diamante Foil,false,,Heston Kjerstad
 base,630,Holo Foil,false,,Heston Kjerstad
@@ -11200,7 +11200,7 @@ base,630,Platinum Holo Foil,false,1,Heston Kjerstad
 base,630,First Card,false,1,Heston Kjerstad
 base,630,Printing Plates,false,1,Heston Kjerstad
 base,631,,false,,Mookie Betts
-base,631,Topps Foil Pattern,false,,Mookie Betts
+base,631,Topps Pattern Foil,false,,Mookie Betts
 base,631,Silver Crackle Foilboard,false,,Mookie Betts
 base,631,Diamante Foil,false,,Mookie Betts
 base,631,Holo Foil,false,,Mookie Betts
@@ -11240,7 +11240,7 @@ base,631,Platinum Holo Foil,false,1,Mookie Betts
 base,631,First Card,false,1,Mookie Betts
 base,631,Printing Plates,false,1,Mookie Betts
 base,632,,false,,Connor Gillispie
-base,632,Topps Foil Pattern,false,,Connor Gillispie
+base,632,Topps Pattern Foil,false,,Connor Gillispie
 base,632,Silver Crackle Foilboard,false,,Connor Gillispie
 base,632,Diamante Foil,false,,Connor Gillispie
 base,632,Holo Foil,false,,Connor Gillispie
@@ -11280,7 +11280,7 @@ base,632,Platinum Holo Foil,false,1,Connor Gillispie
 base,632,First Card,false,1,Connor Gillispie
 base,632,Printing Plates,false,1,Connor Gillispie
 base,633,,false,,Robert Suarez
-base,633,Topps Foil Pattern,false,,Robert Suarez
+base,633,Topps Pattern Foil,false,,Robert Suarez
 base,633,Silver Crackle Foilboard,false,,Robert Suarez
 base,633,Diamante Foil,false,,Robert Suarez
 base,633,Holo Foil,false,,Robert Suarez
@@ -11320,7 +11320,7 @@ base,633,Platinum Holo Foil,false,1,Robert Suarez
 base,633,First Card,false,1,Robert Suarez
 base,633,Printing Plates,false,1,Robert Suarez
 base,634,,false,,Grant Holman
-base,634,Topps Foil Pattern,false,,Grant Holman
+base,634,Topps Pattern Foil,false,,Grant Holman
 base,634,Silver Crackle Foilboard,false,,Grant Holman
 base,634,Diamante Foil,false,,Grant Holman
 base,634,Holo Foil,false,,Grant Holman
@@ -11360,7 +11360,7 @@ base,634,Platinum Holo Foil,false,1,Grant Holman
 base,634,First Card,false,1,Grant Holman
 base,634,Printing Plates,false,1,Grant Holman
 base,635,,false,,Bryce Teodosio
-base,635,Topps Foil Pattern,false,,Bryce Teodosio
+base,635,Topps Pattern Foil,false,,Bryce Teodosio
 base,635,Silver Crackle Foilboard,false,,Bryce Teodosio
 base,635,Diamante Foil,false,,Bryce Teodosio
 base,635,Holo Foil,false,,Bryce Teodosio
@@ -11400,7 +11400,7 @@ base,635,Platinum Holo Foil,false,1,Bryce Teodosio
 base,635,First Card,false,1,Bryce Teodosio
 base,635,Printing Plates,false,1,Bryce Teodosio
 base,636,,false,,Tobias Myers
-base,636,Topps Foil Pattern,false,,Tobias Myers
+base,636,Topps Pattern Foil,false,,Tobias Myers
 base,636,Silver Crackle Foilboard,false,,Tobias Myers
 base,636,Diamante Foil,false,,Tobias Myers
 base,636,Holo Foil,false,,Tobias Myers
@@ -11440,7 +11440,7 @@ base,636,Platinum Holo Foil,false,1,Tobias Myers
 base,636,First Card,false,1,Tobias Myers
 base,636,Printing Plates,false,1,Tobias Myers
 base,637,,false,,Andrew Walters
-base,637,Topps Foil Pattern,false,,Andrew Walters
+base,637,Topps Pattern Foil,false,,Andrew Walters
 base,637,Silver Crackle Foilboard,false,,Andrew Walters
 base,637,Diamante Foil,false,,Andrew Walters
 base,637,Holo Foil,false,,Andrew Walters
@@ -11480,7 +11480,7 @@ base,637,Platinum Holo Foil,false,1,Andrew Walters
 base,637,First Card,false,1,Andrew Walters
 base,637,Printing Plates,false,1,Andrew Walters
 base,638,,false,,Bryan Reynolds
-base,638,Topps Foil Pattern,false,,Bryan Reynolds
+base,638,Topps Pattern Foil,false,,Bryan Reynolds
 base,638,Silver Crackle Foilboard,false,,Bryan Reynolds
 base,638,Diamante Foil,false,,Bryan Reynolds
 base,638,Holo Foil,false,,Bryan Reynolds
@@ -11520,7 +11520,7 @@ base,638,Platinum Holo Foil,false,1,Bryan Reynolds
 base,638,First Card,false,1,Bryan Reynolds
 base,638,Printing Plates,false,1,Bryan Reynolds
 base,639,,false,,Elly De La Cruz
-base,639,Topps Foil Pattern,false,,Elly De La Cruz
+base,639,Topps Pattern Foil,false,,Elly De La Cruz
 base,639,Silver Crackle Foilboard,false,,Elly De La Cruz
 base,639,Diamante Foil,false,,Elly De La Cruz
 base,639,Holo Foil,false,,Elly De La Cruz
@@ -11560,7 +11560,7 @@ base,639,Platinum Holo Foil,false,1,Elly De La Cruz
 base,639,First Card,false,1,Elly De La Cruz
 base,639,Printing Plates,false,1,Elly De La Cruz
 base,640,,false,,Austin Gomber
-base,640,Topps Foil Pattern,false,,Austin Gomber
+base,640,Topps Pattern Foil,false,,Austin Gomber
 base,640,Silver Crackle Foilboard,false,,Austin Gomber
 base,640,Diamante Foil,false,,Austin Gomber
 base,640,Holo Foil,false,,Austin Gomber
@@ -11600,7 +11600,7 @@ base,640,Platinum Holo Foil,false,1,Austin Gomber
 base,640,First Card,false,1,Austin Gomber
 base,640,Printing Plates,false,1,Austin Gomber
 base,641,,false,,Alex Call
-base,641,Topps Foil Pattern,false,,Alex Call
+base,641,Topps Pattern Foil,false,,Alex Call
 base,641,Silver Crackle Foilboard,false,,Alex Call
 base,641,Diamante Foil,false,,Alex Call
 base,641,Holo Foil,false,,Alex Call
@@ -11640,7 +11640,7 @@ base,641,Platinum Holo Foil,false,1,Alex Call
 base,641,First Card,false,1,Alex Call
 base,641,Printing Plates,false,1,Alex Call
 base,642,,false,,Sean Murphy
-base,642,Topps Foil Pattern,false,,Sean Murphy
+base,642,Topps Pattern Foil,false,,Sean Murphy
 base,642,Silver Crackle Foilboard,false,,Sean Murphy
 base,642,Diamante Foil,false,,Sean Murphy
 base,642,Holo Foil,false,,Sean Murphy
@@ -11680,7 +11680,7 @@ base,642,Platinum Holo Foil,false,1,Sean Murphy
 base,642,First Card,false,1,Sean Murphy
 base,642,Printing Plates,false,1,Sean Murphy
 base,643,,false,,Garrett Mitchell
-base,643,Topps Foil Pattern,false,,Garrett Mitchell
+base,643,Topps Pattern Foil,false,,Garrett Mitchell
 base,643,Silver Crackle Foilboard,false,,Garrett Mitchell
 base,643,Diamante Foil,false,,Garrett Mitchell
 base,643,Holo Foil,false,,Garrett Mitchell
@@ -11720,7 +11720,7 @@ base,643,Platinum Holo Foil,false,1,Garrett Mitchell
 base,643,First Card,false,1,Garrett Mitchell
 base,643,Printing Plates,false,1,Garrett Mitchell
 base,644,,false,,Frankie Montas
-base,644,Topps Foil Pattern,false,,Frankie Montas
+base,644,Topps Pattern Foil,false,,Frankie Montas
 base,644,Silver Crackle Foilboard,false,,Frankie Montas
 base,644,Diamante Foil,false,,Frankie Montas
 base,644,Holo Foil,false,,Frankie Montas
@@ -11760,7 +11760,7 @@ base,644,Platinum Holo Foil,false,1,Frankie Montas
 base,644,First Card,false,1,Frankie Montas
 base,644,Printing Plates,false,1,Frankie Montas
 base,645,,false,,Triston McKenzie
-base,645,Topps Foil Pattern,false,,Triston McKenzie
+base,645,Topps Pattern Foil,false,,Triston McKenzie
 base,645,Silver Crackle Foilboard,false,,Triston McKenzie
 base,645,Diamante Foil,false,,Triston McKenzie
 base,645,Holo Foil,false,,Triston McKenzie
@@ -11800,7 +11800,7 @@ base,645,Platinum Holo Foil,false,1,Triston McKenzie
 base,645,First Card,false,1,Triston McKenzie
 base,645,Printing Plates,false,1,Triston McKenzie
 base,646,,false,,Wenceel Pérez
-base,646,Topps Foil Pattern,false,,Wenceel Pérez
+base,646,Topps Pattern Foil,false,,Wenceel Pérez
 base,646,Silver Crackle Foilboard,false,,Wenceel Pérez
 base,646,Diamante Foil,false,,Wenceel Pérez
 base,646,Holo Foil,false,,Wenceel Pérez
@@ -11840,7 +11840,7 @@ base,646,Platinum Holo Foil,false,1,Wenceel Pérez
 base,646,First Card,false,1,Wenceel Pérez
 base,646,Printing Plates,false,1,Wenceel Pérez
 base,647,,false,,Matt McLain
-base,647,Topps Foil Pattern,false,,Matt McLain
+base,647,Topps Pattern Foil,false,,Matt McLain
 base,647,Silver Crackle Foilboard,false,,Matt McLain
 base,647,Diamante Foil,false,,Matt McLain
 base,647,Holo Foil,false,,Matt McLain
@@ -11880,7 +11880,7 @@ base,647,Platinum Holo Foil,false,1,Matt McLain
 base,647,First Card,false,1,Matt McLain
 base,647,Printing Plates,false,1,Matt McLain
 base,648,,false,,Aaron Civale
-base,648,Topps Foil Pattern,false,,Aaron Civale
+base,648,Topps Pattern Foil,false,,Aaron Civale
 base,648,Silver Crackle Foilboard,false,,Aaron Civale
 base,648,Diamante Foil,false,,Aaron Civale
 base,648,Holo Foil,false,,Aaron Civale
@@ -11920,7 +11920,7 @@ base,648,Platinum Holo Foil,false,1,Aaron Civale
 base,648,First Card,false,1,Aaron Civale
 base,648,Printing Plates,false,1,Aaron Civale
 base,649,,false,,Javier Assad
-base,649,Topps Foil Pattern,false,,Javier Assad
+base,649,Topps Pattern Foil,false,,Javier Assad
 base,649,Silver Crackle Foilboard,false,,Javier Assad
 base,649,Diamante Foil,false,,Javier Assad
 base,649,Holo Foil,false,,Javier Assad
@@ -11960,7 +11960,7 @@ base,649,Platinum Holo Foil,false,1,Javier Assad
 base,649,First Card,false,1,Javier Assad
 base,649,Printing Plates,false,1,Javier Assad
 base,650,,false,,Adley Rutschman
-base,650,Topps Foil Pattern,false,,Adley Rutschman
+base,650,Topps Pattern Foil,false,,Adley Rutschman
 base,650,Silver Crackle Foilboard,false,,Adley Rutschman
 base,650,Diamante Foil,false,,Adley Rutschman
 base,650,Holo Foil,false,,Adley Rutschman
@@ -12000,7 +12000,7 @@ base,650,Platinum Holo Foil,false,1,Adley Rutschman
 base,650,First Card,false,1,Adley Rutschman
 base,650,Printing Plates,false,1,Adley Rutschman
 base,651,,false,,Sal Frelick
-base,651,Topps Foil Pattern,false,,Sal Frelick
+base,651,Topps Pattern Foil,false,,Sal Frelick
 base,651,Silver Crackle Foilboard,false,,Sal Frelick
 base,651,Diamante Foil,false,,Sal Frelick
 base,651,Holo Foil,false,,Sal Frelick
@@ -12040,7 +12040,7 @@ base,651,Platinum Holo Foil,false,1,Sal Frelick
 base,651,First Card,false,1,Sal Frelick
 base,651,Printing Plates,false,1,Sal Frelick
 base,652,,false,,Bobby Miller
-base,652,Topps Foil Pattern,false,,Bobby Miller
+base,652,Topps Pattern Foil,false,,Bobby Miller
 base,652,Silver Crackle Foilboard,false,,Bobby Miller
 base,652,Diamante Foil,false,,Bobby Miller
 base,652,Holo Foil,false,,Bobby Miller
@@ -12080,7 +12080,7 @@ base,652,Platinum Holo Foil,false,1,Bobby Miller
 base,652,First Card,false,1,Bobby Miller
 base,652,Printing Plates,false,1,Bobby Miller
 base,653,,false,,Javier Sanoja
-base,653,Topps Foil Pattern,false,,Javier Sanoja
+base,653,Topps Pattern Foil,false,,Javier Sanoja
 base,653,Silver Crackle Foilboard,false,,Javier Sanoja
 base,653,Diamante Foil,false,,Javier Sanoja
 base,653,Holo Foil,false,,Javier Sanoja
@@ -12120,7 +12120,7 @@ base,653,Platinum Holo Foil,false,1,Javier Sanoja
 base,653,First Card,false,1,Javier Sanoja
 base,653,Printing Plates,false,1,Javier Sanoja
 base,654,,false,,Adam Duvall
-base,654,Topps Foil Pattern,false,,Adam Duvall
+base,654,Topps Pattern Foil,false,,Adam Duvall
 base,654,Silver Crackle Foilboard,false,,Adam Duvall
 base,654,Diamante Foil,false,,Adam Duvall
 base,654,Holo Foil,false,,Adam Duvall
@@ -12160,7 +12160,7 @@ base,654,Platinum Holo Foil,false,1,Adam Duvall
 base,654,First Card,false,1,Adam Duvall
 base,654,Printing Plates,false,1,Adam Duvall
 base,655,,false,,Alexander Canario
-base,655,Topps Foil Pattern,false,,Alexander Canario
+base,655,Topps Pattern Foil,false,,Alexander Canario
 base,655,Silver Crackle Foilboard,false,,Alexander Canario
 base,655,Diamante Foil,false,,Alexander Canario
 base,655,Holo Foil,false,,Alexander Canario
@@ -12200,7 +12200,7 @@ base,655,Platinum Holo Foil,false,1,Alexander Canario
 base,655,First Card,false,1,Alexander Canario
 base,655,Printing Plates,false,1,Alexander Canario
 base,656,,false,,Jairo Iriarte
-base,656,Topps Foil Pattern,false,,Jairo Iriarte
+base,656,Topps Pattern Foil,false,,Jairo Iriarte
 base,656,Silver Crackle Foilboard,false,,Jairo Iriarte
 base,656,Diamante Foil,false,,Jairo Iriarte
 base,656,Holo Foil,false,,Jairo Iriarte
@@ -12240,7 +12240,7 @@ base,656,Platinum Holo Foil,false,1,Jairo Iriarte
 base,656,First Card,false,1,Jairo Iriarte
 base,656,Printing Plates,false,1,Jairo Iriarte
 base,657,,false,,Isaac Collins
-base,657,Topps Foil Pattern,false,,Isaac Collins
+base,657,Topps Pattern Foil,false,,Isaac Collins
 base,657,Silver Crackle Foilboard,false,,Isaac Collins
 base,657,Diamante Foil,false,,Isaac Collins
 base,657,Holo Foil,false,,Isaac Collins
@@ -12280,7 +12280,7 @@ base,657,Platinum Holo Foil,false,1,Isaac Collins
 base,657,First Card,false,1,Isaac Collins
 base,657,Printing Plates,false,1,Isaac Collins
 base,658,,false,,Gleyber Torres
-base,658,Topps Foil Pattern,false,,Gleyber Torres
+base,658,Topps Pattern Foil,false,,Gleyber Torres
 base,658,Silver Crackle Foilboard,false,,Gleyber Torres
 base,658,Diamante Foil,false,,Gleyber Torres
 base,658,Holo Foil,false,,Gleyber Torres
@@ -12320,7 +12320,7 @@ base,658,Platinum Holo Foil,false,1,Gleyber Torres
 base,658,First Card,false,1,Gleyber Torres
 base,658,Printing Plates,false,1,Gleyber Torres
 base,659,,false,,Nick Yorke
-base,659,Topps Foil Pattern,false,,Nick Yorke
+base,659,Topps Pattern Foil,false,,Nick Yorke
 base,659,Silver Crackle Foilboard,false,,Nick Yorke
 base,659,Diamante Foil,false,,Nick Yorke
 base,659,Holo Foil,false,,Nick Yorke
@@ -12360,7 +12360,7 @@ base,659,Platinum Holo Foil,false,1,Nick Yorke
 base,659,First Card,false,1,Nick Yorke
 base,659,Printing Plates,false,1,Nick Yorke
 base,660,,false,,Jonathan Cannon
-base,660,Topps Foil Pattern,false,,Jonathan Cannon
+base,660,Topps Pattern Foil,false,,Jonathan Cannon
 base,660,Silver Crackle Foilboard,false,,Jonathan Cannon
 base,660,Diamante Foil,false,,Jonathan Cannon
 base,660,Holo Foil,false,,Jonathan Cannon
@@ -12400,7 +12400,7 @@ base,660,Platinum Holo Foil,false,1,Jonathan Cannon
 base,660,First Card,false,1,Jonathan Cannon
 base,660,Printing Plates,false,1,Jonathan Cannon
 base,661,,false,,Eduardo Rodriguez
-base,661,Topps Foil Pattern,false,,Eduardo Rodriguez
+base,661,Topps Pattern Foil,false,,Eduardo Rodriguez
 base,661,Silver Crackle Foilboard,false,,Eduardo Rodriguez
 base,661,Diamante Foil,false,,Eduardo Rodriguez
 base,661,Holo Foil,false,,Eduardo Rodriguez
@@ -12440,7 +12440,7 @@ base,661,Platinum Holo Foil,false,1,Eduardo Rodriguez
 base,661,First Card,false,1,Eduardo Rodriguez
 base,661,Printing Plates,false,1,Eduardo Rodriguez
 base,662,,false,,Pablo López
-base,662,Topps Foil Pattern,false,,Pablo López
+base,662,Topps Pattern Foil,false,,Pablo López
 base,662,Silver Crackle Foilboard,false,,Pablo López
 base,662,Diamante Foil,false,,Pablo López
 base,662,Holo Foil,false,,Pablo López
@@ -12480,7 +12480,7 @@ base,662,Platinum Holo Foil,false,1,Pablo López
 base,662,First Card,false,1,Pablo López
 base,662,Printing Plates,false,1,Pablo López
 base,663,,false,,Lenyn Sosa
-base,663,Topps Foil Pattern,false,,Lenyn Sosa
+base,663,Topps Pattern Foil,false,,Lenyn Sosa
 base,663,Silver Crackle Foilboard,false,,Lenyn Sosa
 base,663,Diamante Foil,false,,Lenyn Sosa
 base,663,Holo Foil,false,,Lenyn Sosa
@@ -12520,7 +12520,7 @@ base,663,Platinum Holo Foil,false,1,Lenyn Sosa
 base,663,First Card,false,1,Lenyn Sosa
 base,663,Printing Plates,false,1,Lenyn Sosa
 base,664,,false,,Jesús Luzardo
-base,664,Topps Foil Pattern,false,,Jesús Luzardo
+base,664,Topps Pattern Foil,false,,Jesús Luzardo
 base,664,Silver Crackle Foilboard,false,,Jesús Luzardo
 base,664,Diamante Foil,false,,Jesús Luzardo
 base,664,Holo Foil,false,,Jesús Luzardo
@@ -12560,7 +12560,7 @@ base,664,Platinum Holo Foil,false,1,Jesús Luzardo
 base,664,First Card,false,1,Jesús Luzardo
 base,664,Printing Plates,false,1,Jesús Luzardo
 base,665,,false,,Keider Montero
-base,665,Topps Foil Pattern,false,,Keider Montero
+base,665,Topps Pattern Foil,false,,Keider Montero
 base,665,Silver Crackle Foilboard,false,,Keider Montero
 base,665,Diamante Foil,false,,Keider Montero
 base,665,Holo Foil,false,,Keider Montero
@@ -12600,7 +12600,7 @@ base,665,Platinum Holo Foil,false,1,Keider Montero
 base,665,First Card,false,1,Keider Montero
 base,665,Printing Plates,false,1,Keider Montero
 base,666,,false,,Trent Grisham
-base,666,Topps Foil Pattern,false,,Trent Grisham
+base,666,Topps Pattern Foil,false,,Trent Grisham
 base,666,Silver Crackle Foilboard,false,,Trent Grisham
 base,666,Diamante Foil,false,,Trent Grisham
 base,666,Holo Foil,false,,Trent Grisham
@@ -12640,7 +12640,7 @@ base,666,Platinum Holo Foil,false,1,Trent Grisham
 base,666,First Card,false,1,Trent Grisham
 base,666,Printing Plates,false,1,Trent Grisham
 base,667,,false,,Austin Hedges
-base,667,Topps Foil Pattern,false,,Austin Hedges
+base,667,Topps Pattern Foil,false,,Austin Hedges
 base,667,Silver Crackle Foilboard,false,,Austin Hedges
 base,667,Diamante Foil,false,,Austin Hedges
 base,667,Holo Foil,false,,Austin Hedges
@@ -12680,7 +12680,7 @@ base,667,Platinum Holo Foil,false,1,Austin Hedges
 base,667,First Card,false,1,Austin Hedges
 base,667,Printing Plates,false,1,Austin Hedges
 base,668,,false,,Josh Smith
-base,668,Topps Foil Pattern,false,,Josh Smith
+base,668,Topps Pattern Foil,false,,Josh Smith
 base,668,Silver Crackle Foilboard,false,,Josh Smith
 base,668,Diamante Foil,false,,Josh Smith
 base,668,Holo Foil,false,,Josh Smith
@@ -12720,7 +12720,7 @@ base,668,Platinum Holo Foil,false,1,Josh Smith
 base,668,First Card,false,1,Josh Smith
 base,668,Printing Plates,false,1,Josh Smith
 base,669,,false,,José Soriano
-base,669,Topps Foil Pattern,false,,José Soriano
+base,669,Topps Pattern Foil,false,,José Soriano
 base,669,Silver Crackle Foilboard,false,,José Soriano
 base,669,Diamante Foil,false,,José Soriano
 base,669,Holo Foil,false,,José Soriano
@@ -12760,7 +12760,7 @@ base,669,Platinum Holo Foil,false,1,José Soriano
 base,669,First Card,false,1,José Soriano
 base,669,Printing Plates,false,1,José Soriano
 base,670,,false,,Richard Fitts
-base,670,Topps Foil Pattern,false,,Richard Fitts
+base,670,Topps Pattern Foil,false,,Richard Fitts
 base,670,Silver Crackle Foilboard,false,,Richard Fitts
 base,670,Diamante Foil,false,,Richard Fitts
 base,670,Holo Foil,false,,Richard Fitts
@@ -12800,7 +12800,7 @@ base,670,Platinum Holo Foil,false,1,Richard Fitts
 base,670,First Card,false,1,Richard Fitts
 base,670,Printing Plates,false,1,Richard Fitts
 base,671,,false,,Bailey Falter
-base,671,Topps Foil Pattern,false,,Bailey Falter
+base,671,Topps Pattern Foil,false,,Bailey Falter
 base,671,Silver Crackle Foilboard,false,,Bailey Falter
 base,671,Diamante Foil,false,,Bailey Falter
 base,671,Holo Foil,false,,Bailey Falter
@@ -12840,7 +12840,7 @@ base,671,Platinum Holo Foil,false,1,Bailey Falter
 base,671,First Card,false,1,Bailey Falter
 base,671,Printing Plates,false,1,Bailey Falter
 base,672,,false,,Matt Strahm
-base,672,Topps Foil Pattern,false,,Matt Strahm
+base,672,Topps Pattern Foil,false,,Matt Strahm
 base,672,Silver Crackle Foilboard,false,,Matt Strahm
 base,672,Diamante Foil,false,,Matt Strahm
 base,672,Holo Foil,false,,Matt Strahm
@@ -12880,7 +12880,7 @@ base,672,Platinum Holo Foil,false,1,Matt Strahm
 base,672,First Card,false,1,Matt Strahm
 base,672,Printing Plates,false,1,Matt Strahm
 base,673,,false,,Ben Brown
-base,673,Topps Foil Pattern,false,,Ben Brown
+base,673,Topps Pattern Foil,false,,Ben Brown
 base,673,Silver Crackle Foilboard,false,,Ben Brown
 base,673,Diamante Foil,false,,Ben Brown
 base,673,Holo Foil,false,,Ben Brown
@@ -12920,7 +12920,7 @@ base,673,Platinum Holo Foil,false,1,Ben Brown
 base,673,First Card,false,1,Ben Brown
 base,673,Printing Plates,false,1,Ben Brown
 base,674,,false,,AJ Smith-Shawver
-base,674,Topps Foil Pattern,false,,AJ Smith-Shawver
+base,674,Topps Pattern Foil,false,,AJ Smith-Shawver
 base,674,Silver Crackle Foilboard,false,,AJ Smith-Shawver
 base,674,Diamante Foil,false,,AJ Smith-Shawver
 base,674,Holo Foil,false,,AJ Smith-Shawver
@@ -12960,7 +12960,7 @@ base,674,Platinum Holo Foil,false,1,AJ Smith-Shawver
 base,674,First Card,false,1,AJ Smith-Shawver
 base,674,Printing Plates,false,1,AJ Smith-Shawver
 base,675,,false,,Jake Fraley
-base,675,Topps Foil Pattern,false,,Jake Fraley
+base,675,Topps Pattern Foil,false,,Jake Fraley
 base,675,Silver Crackle Foilboard,false,,Jake Fraley
 base,675,Diamante Foil,false,,Jake Fraley
 base,675,Holo Foil,false,,Jake Fraley
@@ -13000,7 +13000,7 @@ base,675,Platinum Holo Foil,false,1,Jake Fraley
 base,675,First Card,false,1,Jake Fraley
 base,675,Printing Plates,false,1,Jake Fraley
 base,676,,false,,Blake Snell
-base,676,Topps Foil Pattern,false,,Blake Snell
+base,676,Topps Pattern Foil,false,,Blake Snell
 base,676,Silver Crackle Foilboard,false,,Blake Snell
 base,676,Diamante Foil,false,,Blake Snell
 base,676,Holo Foil,false,,Blake Snell
@@ -13040,7 +13040,7 @@ base,676,Platinum Holo Foil,false,1,Blake Snell
 base,676,First Card,false,1,Blake Snell
 base,676,Printing Plates,false,1,Blake Snell
 base,677,,false,,Pittsburgh Pirates
-base,677,Topps Foil Pattern,false,,Pittsburgh Pirates
+base,677,Topps Pattern Foil,false,,Pittsburgh Pirates
 base,677,Silver Crackle Foilboard,false,,Pittsburgh Pirates
 base,677,Diamante Foil,false,,Pittsburgh Pirates
 base,677,Holo Foil,false,,Pittsburgh Pirates
@@ -13080,7 +13080,7 @@ base,677,Platinum Holo Foil,false,1,Pittsburgh Pirates
 base,677,First Card,false,1,Pittsburgh Pirates
 base,677,Printing Plates,false,1,Pittsburgh Pirates
 base,678,,false,,Jonathan Aranda
-base,678,Topps Foil Pattern,false,,Jonathan Aranda
+base,678,Topps Pattern Foil,false,,Jonathan Aranda
 base,678,Silver Crackle Foilboard,false,,Jonathan Aranda
 base,678,Diamante Foil,false,,Jonathan Aranda
 base,678,Holo Foil,false,,Jonathan Aranda
@@ -13120,7 +13120,7 @@ base,678,Platinum Holo Foil,false,1,Jonathan Aranda
 base,678,First Card,false,1,Jonathan Aranda
 base,678,Printing Plates,false,1,Jonathan Aranda
 base,679,,false,,Juan Yepez
-base,679,Topps Foil Pattern,false,,Juan Yepez
+base,679,Topps Pattern Foil,false,,Juan Yepez
 base,679,Silver Crackle Foilboard,false,,Juan Yepez
 base,679,Diamante Foil,false,,Juan Yepez
 base,679,Holo Foil,false,,Juan Yepez
@@ -13160,7 +13160,7 @@ base,679,Platinum Holo Foil,false,1,Juan Yepez
 base,679,First Card,false,1,Juan Yepez
 base,679,Printing Plates,false,1,Juan Yepez
 base,680,,false,,JP Sears
-base,680,Topps Foil Pattern,false,,JP Sears
+base,680,Topps Pattern Foil,false,,JP Sears
 base,680,Silver Crackle Foilboard,false,,JP Sears
 base,680,Diamante Foil,false,,JP Sears
 base,680,Holo Foil,false,,JP Sears
@@ -13200,7 +13200,7 @@ base,680,Platinum Holo Foil,false,1,JP Sears
 base,680,First Card,false,1,JP Sears
 base,680,Printing Plates,false,1,JP Sears
 base,681,,false,,Shane Baz
-base,681,Topps Foil Pattern,false,,Shane Baz
+base,681,Topps Pattern Foil,false,,Shane Baz
 base,681,Silver Crackle Foilboard,false,,Shane Baz
 base,681,Diamante Foil,false,,Shane Baz
 base,681,Holo Foil,false,,Shane Baz
@@ -13240,7 +13240,7 @@ base,681,Platinum Holo Foil,false,1,Shane Baz
 base,681,First Card,false,1,Shane Baz
 base,681,Printing Plates,false,1,Shane Baz
 base,682,,false,,Steven Kwan
-base,682,Topps Foil Pattern,false,,Steven Kwan
+base,682,Topps Pattern Foil,false,,Steven Kwan
 base,682,Silver Crackle Foilboard,false,,Steven Kwan
 base,682,Diamante Foil,false,,Steven Kwan
 base,682,Holo Foil,false,,Steven Kwan
@@ -13280,7 +13280,7 @@ base,682,Platinum Holo Foil,false,1,Steven Kwan
 base,682,First Card,false,1,Steven Kwan
 base,682,Printing Plates,false,1,Steven Kwan
 base,683,,false,,James Outman
-base,683,Topps Foil Pattern,false,,James Outman
+base,683,Topps Pattern Foil,false,,James Outman
 base,683,Silver Crackle Foilboard,false,,James Outman
 base,683,Diamante Foil,false,,James Outman
 base,683,Holo Foil,false,,James Outman
@@ -13320,7 +13320,7 @@ base,683,Platinum Holo Foil,false,1,James Outman
 base,683,First Card,false,1,James Outman
 base,683,Printing Plates,false,1,James Outman
 base,684,,false,,Mitchell Parker
-base,684,Topps Foil Pattern,false,,Mitchell Parker
+base,684,Topps Pattern Foil,false,,Mitchell Parker
 base,684,Silver Crackle Foilboard,false,,Mitchell Parker
 base,684,Diamante Foil,false,,Mitchell Parker
 base,684,Holo Foil,false,,Mitchell Parker
@@ -13360,7 +13360,7 @@ base,684,Platinum Holo Foil,false,1,Mitchell Parker
 base,684,First Card,false,1,Mitchell Parker
 base,684,Printing Plates,false,1,Mitchell Parker
 base,685,,false,,Bowden Francis
-base,685,Topps Foil Pattern,false,,Bowden Francis
+base,685,Topps Pattern Foil,false,,Bowden Francis
 base,685,Silver Crackle Foilboard,false,,Bowden Francis
 base,685,Diamante Foil,false,,Bowden Francis
 base,685,Holo Foil,false,,Bowden Francis
@@ -13400,7 +13400,7 @@ base,685,Platinum Holo Foil,false,1,Bowden Francis
 base,685,First Card,false,1,Bowden Francis
 base,685,Printing Plates,false,1,Bowden Francis
 base,686,,false,,Max Scherzer
-base,686,Topps Foil Pattern,false,,Max Scherzer
+base,686,Topps Pattern Foil,false,,Max Scherzer
 base,686,Silver Crackle Foilboard,false,,Max Scherzer
 base,686,Diamante Foil,false,,Max Scherzer
 base,686,Holo Foil,false,,Max Scherzer
@@ -13440,7 +13440,7 @@ base,686,Platinum Holo Foil,false,1,Max Scherzer
 base,686,First Card,false,1,Max Scherzer
 base,686,Printing Plates,false,1,Max Scherzer
 base,687,,false,,Jhoan Duran
-base,687,Topps Foil Pattern,false,,Jhoan Duran
+base,687,Topps Pattern Foil,false,,Jhoan Duran
 base,687,Silver Crackle Foilboard,false,,Jhoan Duran
 base,687,Diamante Foil,false,,Jhoan Duran
 base,687,Holo Foil,false,,Jhoan Duran
@@ -13480,7 +13480,7 @@ base,687,Platinum Holo Foil,false,1,Jhoan Duran
 base,687,First Card,false,1,Jhoan Duran
 base,687,Printing Plates,false,1,Jhoan Duran
 base,688,,false,,Minnesota Twins
-base,688,Topps Foil Pattern,false,,Minnesota Twins
+base,688,Topps Pattern Foil,false,,Minnesota Twins
 base,688,Silver Crackle Foilboard,false,,Minnesota Twins
 base,688,Diamante Foil,false,,Minnesota Twins
 base,688,Holo Foil,false,,Minnesota Twins
@@ -13520,7 +13520,7 @@ base,688,Platinum Holo Foil,false,1,Minnesota Twins
 base,688,First Card,false,1,Minnesota Twins
 base,688,Printing Plates,false,1,Minnesota Twins
 base,689,,false,,Alejandro Kirk
-base,689,Topps Foil Pattern,false,,Alejandro Kirk
+base,689,Topps Pattern Foil,false,,Alejandro Kirk
 base,689,Silver Crackle Foilboard,false,,Alejandro Kirk
 base,689,Diamante Foil,false,,Alejandro Kirk
 base,689,Holo Foil,false,,Alejandro Kirk
@@ -13560,7 +13560,7 @@ base,689,Platinum Holo Foil,false,1,Alejandro Kirk
 base,689,First Card,false,1,Alejandro Kirk
 base,689,Printing Plates,false,1,Alejandro Kirk
 base,690,,false,,Jake Eder
-base,690,Topps Foil Pattern,false,,Jake Eder
+base,690,Topps Pattern Foil,false,,Jake Eder
 base,690,Silver Crackle Foilboard,false,,Jake Eder
 base,690,Diamante Foil,false,,Jake Eder
 base,690,Holo Foil,false,,Jake Eder
@@ -13600,7 +13600,7 @@ base,690,Platinum Holo Foil,false,1,Jake Eder
 base,690,First Card,false,1,Jake Eder
 base,690,Printing Plates,false,1,Jake Eder
 base,691,,false,,Troy Taylor
-base,691,Topps Foil Pattern,false,,Troy Taylor
+base,691,Topps Pattern Foil,false,,Troy Taylor
 base,691,Silver Crackle Foilboard,false,,Troy Taylor
 base,691,Diamante Foil,false,,Troy Taylor
 base,691,Holo Foil,false,,Troy Taylor
@@ -13640,7 +13640,7 @@ base,691,Platinum Holo Foil,false,1,Troy Taylor
 base,691,First Card,false,1,Troy Taylor
 base,691,Printing Plates,false,1,Troy Taylor
 base,692,,false,,Nick Pivetta
-base,692,Topps Foil Pattern,false,,Nick Pivetta
+base,692,Topps Pattern Foil,false,,Nick Pivetta
 base,692,Silver Crackle Foilboard,false,,Nick Pivetta
 base,692,Diamante Foil,false,,Nick Pivetta
 base,692,Holo Foil,false,,Nick Pivetta
@@ -13680,7 +13680,7 @@ base,692,Platinum Holo Foil,false,1,Nick Pivetta
 base,692,First Card,false,1,Nick Pivetta
 base,692,Printing Plates,false,1,Nick Pivetta
 base,693,,false,,Hunter Brown
-base,693,Topps Foil Pattern,false,,Hunter Brown
+base,693,Topps Pattern Foil,false,,Hunter Brown
 base,693,Silver Crackle Foilboard,false,,Hunter Brown
 base,693,Diamante Foil,false,,Hunter Brown
 base,693,Holo Foil,false,,Hunter Brown
@@ -13720,7 +13720,7 @@ base,693,Platinum Holo Foil,false,1,Hunter Brown
 base,693,First Card,false,1,Hunter Brown
 base,693,Printing Plates,false,1,Hunter Brown
 base,694,,false,,Yariel Rodríguez
-base,694,Topps Foil Pattern,false,,Yariel Rodríguez
+base,694,Topps Pattern Foil,false,,Yariel Rodríguez
 base,694,Silver Crackle Foilboard,false,,Yariel Rodríguez
 base,694,Diamante Foil,false,,Yariel Rodríguez
 base,694,Holo Foil,false,,Yariel Rodríguez
@@ -13760,7 +13760,7 @@ base,694,Platinum Holo Foil,false,1,Yariel Rodríguez
 base,694,First Card,false,1,Yariel Rodríguez
 base,694,Printing Plates,false,1,Yariel Rodríguez
 base,695,,false,,Darell Hernaiz
-base,695,Topps Foil Pattern,false,,Darell Hernaiz
+base,695,Topps Pattern Foil,false,,Darell Hernaiz
 base,695,Silver Crackle Foilboard,false,,Darell Hernaiz
 base,695,Diamante Foil,false,,Darell Hernaiz
 base,695,Holo Foil,false,,Darell Hernaiz
@@ -13800,7 +13800,7 @@ base,695,Platinum Holo Foil,false,1,Darell Hernaiz
 base,695,First Card,false,1,Darell Hernaiz
 base,695,Printing Plates,false,1,Darell Hernaiz
 base,696,,false,,Nick Martinez
-base,696,Topps Foil Pattern,false,,Nick Martinez
+base,696,Topps Pattern Foil,false,,Nick Martinez
 base,696,Silver Crackle Foilboard,false,,Nick Martinez
 base,696,Diamante Foil,false,,Nick Martinez
 base,696,Holo Foil,false,,Nick Martinez
@@ -13840,7 +13840,7 @@ base,696,Platinum Holo Foil,false,1,Nick Martinez
 base,696,First Card,false,1,Nick Martinez
 base,696,Printing Plates,false,1,Nick Martinez
 base,697,,false,,DJ LeMahieu
-base,697,Topps Foil Pattern,false,,DJ LeMahieu
+base,697,Topps Pattern Foil,false,,DJ LeMahieu
 base,697,Silver Crackle Foilboard,false,,DJ LeMahieu
 base,697,Diamante Foil,false,,DJ LeMahieu
 base,697,Holo Foil,false,,DJ LeMahieu
@@ -13880,7 +13880,7 @@ base,697,Platinum Holo Foil,false,1,DJ LeMahieu
 base,697,First Card,false,1,DJ LeMahieu
 base,697,Printing Plates,false,1,DJ LeMahieu
 base,698,,false,,Zach Penrod
-base,698,Topps Foil Pattern,false,,Zach Penrod
+base,698,Topps Pattern Foil,false,,Zach Penrod
 base,698,Silver Crackle Foilboard,false,,Zach Penrod
 base,698,Diamante Foil,false,,Zach Penrod
 base,698,Holo Foil,false,,Zach Penrod
@@ -13920,7 +13920,7 @@ base,698,Platinum Holo Foil,false,1,Zach Penrod
 base,698,First Card,false,1,Zach Penrod
 base,698,Printing Plates,false,1,Zach Penrod
 base,699,,false,,Hayden Birdsong
-base,699,Topps Foil Pattern,false,,Hayden Birdsong
+base,699,Topps Pattern Foil,false,,Hayden Birdsong
 base,699,Silver Crackle Foilboard,false,,Hayden Birdsong
 base,699,Diamante Foil,false,,Hayden Birdsong
 base,699,Holo Foil,false,,Hayden Birdsong
@@ -13960,7 +13960,7 @@ base,699,Platinum Holo Foil,false,1,Hayden Birdsong
 base,699,First Card,false,1,Hayden Birdsong
 base,699,Printing Plates,false,1,Hayden Birdsong
 base,700,,false,,Juan Soto
-base,700,Topps Foil Pattern,false,,Juan Soto
+base,700,Topps Pattern Foil,false,,Juan Soto
 base,700,Silver Crackle Foilboard,false,,Juan Soto
 base,700,Diamante Foil,false,,Juan Soto
 base,700,Holo Foil,false,,Juan Soto

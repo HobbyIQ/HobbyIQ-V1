@@ -42,6 +42,7 @@
     { "parallel": "Platinum", "printRun": 1 },
     { "parallel": "Printing Plates", "printRun": 1 }
   ],
+  "rungsMintedCount": 25,
   "notMinted": {
     "holidayValueBlasterParallels": {
       "names": ["Hot Dogs", "Statue of Liberty", "Beach Umbrella /50", "Sun /10", "Fireworks /5", "Waves 1/1"],
@@ -59,7 +60,8 @@
       "reason": "Named insert/autograph/relic sets (2023 First Pitch/Play Ball, 40/70, Platinum Performers, Stars of MLB, 1989 Topps Baseball, Heavy Lumber, Sketch, etc.) are out of scope for this base-ladder package."
     }
   },
-  "selectCardsOnlyAudit": "The source states ONE base-adjacent rung IS select-cards-only for this product ('Clear', Hobby-only /10, restricted to 100 named cards) -- deliberately NOT minted here per the notMinted note above, since no card-by-card roster for it was available in this run. All 24 rungs actually minted are confirmed unrestricted (apply to the full 350-card base run); distribution-only notes (Hobby/Retail/Hanger/Jumbo/Fanatics exclusive) are NOT roster restrictions per R40 and are recorded as notes.",
+  "spellingAudit": "Cross-checked every rung name in this ladder against backend/data/checklist-parallel-names.json's topps-family entries (normalized, word-order/plural/punctuation-insensitive) and every other staged Topps CSV in the repo. Only near-matches found (`Mother's Day Hot Pink` / `Father's Day Powder Blue` vs the census's curly-apostrophe spellings for this exact cell) are apostrophe-only and confirmed to slug identically via computeHobbyIqCardId -- no action needed. No word-order or spelling collision found for any rung in this package.",
+  "selectCardsOnlyAudit": "The source states ONE base-adjacent rung IS select-cards-only for this product ('Clear', Hobby-only /10, restricted to 100 named cards) -- deliberately NOT minted here per the notMinted note above, since no card-by-card roster for it was available in this run. All 25 rungs actually minted are confirmed unrestricted (apply to the full 350-card base run); distribution-only notes (Hobby/Retail/Hanger/Jumbo/Fanatics exclusive) are NOT roster restrictions per R40 and are recorded as notes.",
   "cardNumberRangeVerified": "351-700, no gaps found in the source's own numbered checklist.",
   "provenance": {
     "cardsFrom": "checklistinsider.com xlsx workbook (tabular-inferred layout via backend/scripts/scrape-checklistinsider.cjs), base-numeric rows #351-700 only; workbook carries no card-level print runs for this product (all null) -- print runs come from the page's own stated ladder.",
