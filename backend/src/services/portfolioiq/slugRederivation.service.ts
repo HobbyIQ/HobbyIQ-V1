@@ -42,6 +42,7 @@ import {
   parseListingIdentity,
   inferSetKeyFromTitle,
   inferSportFromTitle,
+  isCardNumberAutoSubset,
 } from "./parseTitleIdentity.service.js";
 import { spellForEra } from "../catalog/productSetKeys.js";
 
@@ -343,7 +344,16 @@ export function rederiveRow(row: RederiveRow): RederiveResult {
     };
   }
 
-  const isAuto = parsed.isAuto || (row.isAuto ?? false);
+  // CF-SCOPED-AUTO-PREFIX-AT-THE-WRITE-DOOR (Drew, 2026-09-21). `parsed` was
+  // produced by the unscoped parseListingIdentity call above (this module is
+  // a derivation-stamp input, so the initial parse cannot see sport/year/
+  // setKey until the guard has passed) -- by here nextGuard.sport/cardYear/
+  // setKeyNorm are the FINAL resolved identity this rederivation will write,
+  // so this is where a product-year-scoped prefix can be seen. Additive
+  // only: can only turn isAuto false->true, same rule as the ingest path.
+  const isAuto = parsed.isAuto
+    || (row.isAuto ?? false)
+    || isCardNumberAutoSubset(cardNumber, { sport: nextGuard.sport, year: cardYear, setKey: setKeyNorm });
   const parallel = parsed.parallel || row.parallel || "Base";
 
   return {

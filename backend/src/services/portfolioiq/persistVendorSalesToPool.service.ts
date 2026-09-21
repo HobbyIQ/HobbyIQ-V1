@@ -21,6 +21,7 @@ import {
   parseListingIdentity,
   inferSetKeyFromTitle,
   inferSportFromTitle,
+  isCardNumberAutoSubset,
 } from "./parseTitleIdentity.service.js";
 import { resolveVertical } from "./resolveVertical.service.js";
 import { cardNumberInClause, computeHobbyIqCardId, slugify, normalizeSetKey as canonicalNormalizeSetKey } from "./hobbyIqCardId.service.js";
@@ -889,6 +890,11 @@ export interface VendorPersistResult {
   /** R29: the checklist AGREED with the parser. Counted separately so the
    *  two numbers can be read against each other in a dry run. */
   productConfirmedByChecklist?: number;
+  /** CF-SCOPED-AUTO-PREFIX-AT-THE-WRITE-DOOR (2026-09-21): isAuto flipped
+   *  false->true by the (sport, year, setKey)-scoped auto-prefix table,
+   *  re-checked once sport/year/setKey are final (after R29 + insert-set
+   *  re-key), never the initial unscoped parseListingIdentity call. */
+  isAutoScopedPrefixApplied?: number;
   /** D22: a qualifier whose move is a ruling (bowman ↔ bowman-chrome, Topps Chrome Update) — counted, not made. */
   productQualifierRefused?: number;
   /** CF-ONE-SALE-ONE-ADDRESS: this sale id is already resident under a
@@ -1787,6 +1793,26 @@ export async function persistVendorSalesToPool(
           }
         }
       }
+    }
+
+    // CF-SCOPED-AUTO-PREFIX-AT-THE-WRITE-DOOR (Drew, 2026-09-21). The initial
+    // parseListingIdentity call above (line ~1165) ran with NO scope, because
+    // sport/year/setKey were not resolved yet -- so a product-year-scoped
+    // prefix (2025 Topps Chrome Update's CRDA-/CHRU-/CLA-, etc.) could not be
+    // seen at that call. By here every reader that can move `setKey` (R29
+    // checklist product resolution, the R66/R67/R70 insert-set re-key) has
+    // already run, so this is the FINAL sport/year/setKey this sale will
+    // write under -- the one place a re-check is both correct and cheap (one
+    // in-memory Map lookup, no I/O). ADDITIVE ONLY: re-running the scoped
+    // half of isCardNumberAutoSubset can only turn isAuto from false to true,
+    // never the reverse, so a vendor's explicit isAuto=false (applied above
+    // at line ~1573) is honoured unless the scoped table says otherwise for
+    // THIS exact product-year -- which is exactly the case (a known-unsigned-
+    // mint source wrote isAuto=false for an always-auto insert) this rule
+    // exists to correct.
+    if (!parsed.isAuto && isCardNumberAutoSubset(parsed.cardNumber, { sport, year: cardYear, setKey })) {
+      parsed.isAuto = true;
+      result.isAutoScopedPrefixApplied = (result.isAutoScopedPrefixApplied ?? 0) + 1;
     }
 
     let slug: string;

@@ -1000,7 +1000,9 @@ export function parseListingIdentity(
  *  Keys are `${sport}|${year}|${setKey}` with setKey as normalizeSetKey /
  *  computeHobbyIqCardId spell it (topps Series 1/2 fold into "topps";
  *  Chrome Update folds into "topps-chrome-update-series"; Bowman Mega Box
- *  folds into "bowman-chrome-mega-box"). */
+ *  folds into "bowman-chrome-mega-box" for 2025-and-earlier, but from 2026
+ *  a BARE "Bowman Mega Box" title -- no "chrome" -- resolves to the
+ *  DISTINCT `bowman-mega` key instead, R75). */
 const SCOPED_AUTO_PREFIX: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   // 2025 Topps Chrome Update Series -- Autographs, Rookie Debut Autographs,
   // Chromeography, Chrome Legends Autographs. Source: checklistcenter /
@@ -1013,9 +1015,23 @@ const SCOPED_AUTO_PREFIX: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   // checklistcenter / beckett-scraped product-page autograph sections,
   // confirmed 2026-09-21.
   ["baseball|2025|topps", new Set(["BSA2-", "CCA2-", "WCDA-", "FPA-", "90AU-", "90CAS-"])],
-  // 2026 Bowman Chrome Mega Box -- Chrome Mega Autographs, Rookie Mega
-  // Autographs. Source: checklistcenter / beckett-checklist product-page
-  // autograph sections, confirmed 2026-09-21.
+  // 2026 Bowman Mega Box -- Bowman Mega Autographs, Rookie Mega Autographs.
+  // CF-R75-BOWMAN-MEGA-BOX-SPLIT (hobbyIqCardId.service.ts ~2678): from 2026
+  // a title reading "Bowman Mega Box" WITHOUT "chrome" resolves to the
+  // distinct `bowman-mega` key, not `bowman-chrome-mega-box` -- confirmed
+  // against real sold_comps rows (e.g. "2026 Bowman Mega Box Baseball
+  // #BMA-KW Base" -> hiq:baseball:2026:bowman-mega:bma-kw:...), where
+  // `bowman-mega` carries the overwhelming majority of 2026 BMA-/RMA- rows
+  // (1,777 / 242) and the identical defective-source split (no-auto only
+  // from checklistinsider-2026-08-27; auto from checklistinsider-2026-09-21
+  // / beckett-s3-2026-09-19). Source: checklistcenter / beckett-checklist
+  // product-page autograph sections, confirmed 2026-09-21.
+  ["baseball|2026|bowman-mega", new Set(["BMA-", "RMA-"])],
+  // 2026 Bowman CHROME Mega Box -- a DIFFERENT product sharing the same
+  // BMA-/RMA- numbering convention (different roster at the same numbers,
+  // per R75). Verified separately: 119 (BMA-) / 30 (RMA-) strict :auto rows
+  // from beckett-scraped-2026-08-13 / ingest-auto-seed, ZERO no-auto rows
+  // from any source under this exact setKey+year. Kept as its own entry.
   ["baseball|2026|bowman-chrome-mega-box", new Set(["BMA-", "RMA-"])],
   // 2026 Topps Chrome Black -- Ivory Autographs. Source: checklistinsider
   // 2026-09-21 / checklistcenter product-page autograph section.
@@ -4077,7 +4093,22 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // with its own productSetKeys ladder entry (family + parent bowman-chrome),
   // its own Mojo/Chrome parallel ladder and its own price curve. Moved ABOVE
   // Chrome, where a longest-match rule belongs.
-  if (/bowman\s+(?:chrome\s+)?mega\s*box/i.test(t)) return "Bowman Chrome Mega Box";
+  //
+  // CF-R75-THE-BARE-SPELLING-MUST-SURVIVE (2026-09-21). R75
+  // (hobbyIqCardId.service.ts's isBowmanMegaBoxTextWithoutChrome, ~2678) reads
+  // the RAW setName text to tell 2026's two distinct Bowman Mega Box releases
+  // apart -- but this rule always RETURNED "Bowman Chrome Mega Box" even for
+  // a title that never said "chrome" at all, so by the time R75's check ran,
+  // the word it looks for was already there and every bare "2026 Bowman Mega
+  // Box" title silently resolved to the CHROME product's key. Caught building
+  // the CF-SCOPED-AUTO-PREFIX table (2026-09-21) when a real "2026 Bowman
+  // Mega Box #RMA-JC" title kept minting bowman-chrome-mega-box instead of
+  // bowman-mega. Return exactly what the title said; normalizeSetKey's
+  // year-agnostic fold (`/bowman-(?:chrome-)?mega(?:-box)?/`) still collapses
+  // both spellings to one key pre-2026, so this is additive-only for years
+  // before BOWMAN_MEGA_BOX_SPLIT_FROM_YEAR.
+  if (/bowman\s+chrome\s+mega\s*box/i.test(t)) return "Bowman Chrome Mega Box";
+  if (/bowman\s+mega\s*box/i.test(t)) return "Bowman Mega Box";
   if (/bowman\s+chrome/.test(t)) return "Bowman Chrome";
   // CF-CHROME-IMPLIED (Drew, 2026-07-29). Some parallels are Chrome-
   // exclusive (they don't exist on Bowman Paper): Speckle, Shimmer,
