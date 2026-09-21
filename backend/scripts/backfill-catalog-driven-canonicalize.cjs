@@ -44,7 +44,7 @@ const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budge
 // pool by this same "fix" script. The one normalizeSetKey the TS ingest path
 // already uses is imported here instead, so this lane can never again diverge
 // from the ruled vocabulary it exists to apply.
-const { normalizeSetKey } = require(path.join(__dirname, "..", "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+const { normalizeSetKey, resolveSetKeyForSlug } = require(path.join(__dirname, "..", "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 const { isProductSetKey } = require(path.join(__dirname, "..", "dist/services/catalog/productSetKeys.js"));
 // `isProductSetKey` alone is not the whole "recognized" universe: `topps-206`
 // (defect 1) is a RULED key carried only in setkey-reconciliation.json's
@@ -136,10 +136,50 @@ const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VE
 //       had already been correctly resolved to a specialization had that
 //       correct slug read back as unrecognized and rewritten down to its
 //       flagship ancestor by this same "fix" script.
-function normalizeSetToCanonical(setText) {
+//
+// CF-A-BARE-NORMALIZESETKEY-IS-YEAR-BLIND (2026-09-21, follow-on to the fix
+// above). `normalizeSetKey(setName)` alone SKIPS every year/era-dependent
+// ruling the engine applies -- those live one call site up, in
+// `resolveSetKeyForSlug(sport, setName, year)`, which runs normalizeSetKey
+// FIRST and then corrects the result against the year in hand. The follow-on
+// fix above traded the old hand-rolled mirror for a bare normalizeSetKey
+// call and, in doing so, reintroduced the exact "mirror diverges from the
+// engine" defect class one level up: it silently skips
+//   - the 2026 Bowman Mega Box split (BOWMAN_MEGA_BOX_SPLIT_FROM_YEAR,
+//     R75) -- `bowman-chrome-mega-box` in every year, even where the 2026
+//     checklist says the bare-text release is `bowman-mega`;
+//   - the Donruss/Panini-Donruss 2009 acquisition boundary
+//     (PANINI_DONRUSS_FROM_YEAR, spellForEra) -- a bare "Donruss" pre-2009
+//     card would read as `panini-donruss`, an anachronism;
+//   - the Fleer-Tiffany-is-glossy-before-1996 and Skybox-Metal-Universe-
+//     revival era misnomers, and the one-year-only 2006 Fleer "Greats of
+//     the Game" maker rule (all spellForEra, all reached the same way).
+// `resolveSetKeyForSlug` is the ONE place all of these are already applied
+// together (it is what computeHobbyIqCardId itself calls), so this function
+// is reused rather than re-implementing any one of these rulings here --
+// exactly the "no new hand-rolled mirror" lesson the first fix was supposed
+// to have already paid down.
+//
+// year/sport are OPTIONAL. Without a usable year, `resolveSetKeyForSlug`
+// itself already refuses every era correction above (each one explicitly
+// checks `typeof year !== "number" || !Number.isFinite(year) || year <= 0`
+// and returns the bare key unchanged when it fails) -- so calling it with
+// year absent is IDENTICAL to the plain normalizeSetKey call this function
+// made before this change, never worse. `sport` only ever matters for the
+// TCG-vertical branches and the soccer-only Prizm-FIFA rule
+// (spellForSport); this script's catalog loader never reads a sport field
+// off card_catalog rows (they are not sport-scoped there), so that call site
+// passes no sport and gets the sport-agnostic (== baseball-shaped) answer --
+// correct for this lane's only exercised scope. The sold_comps two-witness
+// call site DOES carry `row.sport` and passes it, so a future non-baseball
+// sport reaching this lane is not silently mis-corrected either.
+function normalizeSetToCanonical(setText, year, sport) {
   const s = String(setText || "").trim();
   if (!s) return null;
-  const canonical = normalizeSetKey(s);
+  const y = Number(year);
+  const canonical = Number.isFinite(y) && y > 0
+    ? resolveSetKeyForSlug(String(sport || ""), s, y)
+    : normalizeSetKey(s);
   return isRecognizedSetKey(canonical) ? canonical : null;
 }
 
@@ -197,9 +237,17 @@ async function loadCatalogMap(cc) {
   }
   const canonMap = new Map();
   for (const [k, setStrings] of rawByKey) {
+    // `k` is `"<year>::<cardNumber>"` (built above from the SAME regex-
+    // extracted year, `ym[0]`) -- reused here rather than re-matching each
+    // set string, and it is exactly the year each of those strings itself
+    // named, so threading it through is not a guess. No sport field is
+    // tracked for card_catalog rows in this loader (see the CF-A-BARE-
+    // NORMALIZESETKEY-IS-YEAR-BLIND comment on normalizeSetToCanonical),
+    // so none is passed here.
+    const yearForKey = Number(k.split("::")[0]);
     const canonicals = new Set();
     for (const s of setStrings) {
-      const c = normalizeSetToCanonical(s);
+      const c = normalizeSetToCanonical(s, yearForKey);
       if (c) canonicals.add(c);
     }
     if (canonicals.size === 0) continue;
@@ -295,7 +343,12 @@ async function main() {
       // product). Require the sold_comps row's own setName to ALSO
       // normalize to the same canonical — two independent signals must
       // agree. If setName is empty or disagrees, SKIP.
-      const rowSetCanon = normalizeSetToCanonical(row.setName || "");
+      //
+      // year/sport threaded (2026-09-21, CF-A-BARE-NORMALIZESETKEY-IS-YEAR-
+      // BLIND): `row.cardYear` is already read into `yr` above to build the
+      // catalog lookup key, and `row.sport` is on every sold_comps document
+      // -- both are real evidence this row already carries, not a guess.
+      const rowSetCanon = normalizeSetToCanonical(row.setName || "", row.cardYear, row.sport);
       let canonical;
       if (entry.canonical) {
         if (rowSetCanon === entry.canonical) {
