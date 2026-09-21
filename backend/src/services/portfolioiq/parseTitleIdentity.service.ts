@@ -870,7 +870,17 @@ export function parseListingIdentity(
   // trust the card number. This rescues terse marketplace titles that
   // omit "auto" but list a #CPA-XXX card number (very common when
   // sellers use CH's slab-derived title).
-  const isAuto = extractIsAuto(t) || isCardNumberAutoSubset(cardNumber);
+  //
+  // Scope (sport/year/setKey) is passed through when the caller has it
+  // (CF-SCOPED-AUTO-PREFIX, 2026-09-21) so product-year-scoped prefixes like
+  // 2025 Topps Chrome Update's CRDA-/CHRU-/CLA- resolve without widening the
+  // global list; callers that omit these opts see identical behavior to
+  // before this change.
+  const isAuto = extractIsAuto(t) || isCardNumberAutoSubset(cardNumber, {
+    sport: opts?.vertical ?? null,
+    year: opts?.year ?? null,
+    setKey: opts?.setKey ?? null,
+  });
   const grade = extractGradeFromTitle(t);
   // CF-A-VARIATION-IS-A-CARD (D22). The variation family is read by the one
   // vocabulary; a named variation is the finish ("Image Variation", "Golden
@@ -959,6 +969,81 @@ export function parseListingIdentity(
   };
 }
 
+/** CF-SCOPED-AUTO-PREFIX (Drew, 2026-09-21). A (sport, year, setKey) -> set
+ *  of card-number prefixes that are auto-only for THAT product-year ONLY --
+ *  never global, unlike the curated list below.
+ *
+ *  WHY SCOPED, NOT ADDED TO THE GLOBAL LIST. The 2025-26 Topps/Bowman
+ *  autograph-insert prefixes below (AC-, CRDA-, CHRU-, CLA-, BSA2-, CCA2-,
+ *  WCDA-, FPA-, 90AU-, 90CAS-, BMA-, RMA-, IVA-) are auto-only ONLY for the
+ *  exact product-year listed. The SAME letters recur as a DIFFERENT,
+ *  genuinely-mixed or non-auto product in other years/sets -- e.g. `AC-` in
+ *  2018-2024 `topps-diamond-icons` or `bowman-npb`, `CLA-` in the base
+ *  `topps-chrome` flagship parallel ladder (not the Chrome Legends insert),
+ *  `BMA-`/`RMA-` in `topps-gypsy-queen` and `bowman-university-best`. A bare
+ *  global prefix add was measured (2026-09-21 blast radius, ~6,000 sold_comps
+ *  + ~3,000 catalog rows across baseball/football/basketball/hockey) to
+ *  false-positive 40-98% of the time depending on prefix -- see PR body for
+ *  the full table. Scoping to the verified product-year is what makes the
+ *  fix safe.
+ *
+ *  PROVENANCE. Each entry was confirmed ALWAYS-AUTO by two independent
+ *  source-page reads today (2026-09-21) plus a catalog cross-check: every
+ *  `:no-auto` row sharing the prefix traces to one of the defective sources
+ *  (checklistinsider-2026-08-27/-29/-30, bccp, catalog-explode-actuals-
+ *  2026-08-12 -- CF-CHECKLISTINSIDER-MINTS-AUTOS-UNSIGNED), while every
+ *  `:auto` row for the identical cardNumber traces to checklistcenter-*,
+ *  beckett-*, baseballcardpedia-*, or today's checklistinsider-2026-09-21
+ *  re-scrape. See PR body for the (year, setKey, prefix, source, count)
+ *  repair-scope table -- those ~32k catalog rows are NOT touched here.
+ *
+ *  Keys are `${sport}|${year}|${setKey}` with setKey as normalizeSetKey /
+ *  computeHobbyIqCardId spell it (topps Series 1/2 fold into "topps";
+ *  Chrome Update folds into "topps-chrome-update-series"; Bowman Mega Box
+ *  folds into "bowman-chrome-mega-box"). */
+const SCOPED_AUTO_PREFIX: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  // 2025 Topps Chrome Update Series -- Autographs, Rookie Debut Autographs,
+  // Chromeography, Chrome Legends Autographs. Source: checklistcenter /
+  // baseballcardpedia product-page autograph sections, confirmed 2026-09-21.
+  ["baseball|2025|topps-chrome-update-series", new Set(["AC-", "CRDA-", "CHRU-", "CLA-"])],
+  // 2025 Topps Series 1/2 (+ Update, folded into "topps") -- Baseball Stars
+  // Autographs S2, City Connect Swatch Collection Autograph Relics S2, World
+  // Champion Dual Autographs, First Pitch/Finest Personality Autographs,
+  // 1990 Topps Autographs, 1990 Chrome All-Stars Autographs. Source:
+  // checklistcenter / beckett-scraped product-page autograph sections,
+  // confirmed 2026-09-21.
+  ["baseball|2025|topps", new Set(["BSA2-", "CCA2-", "WCDA-", "FPA-", "90AU-", "90CAS-"])],
+  // 2026 Bowman Chrome Mega Box -- Chrome Mega Autographs, Rookie Mega
+  // Autographs. Source: checklistcenter / beckett-checklist product-page
+  // autograph sections, confirmed 2026-09-21.
+  ["baseball|2026|bowman-chrome-mega-box", new Set(["BMA-", "RMA-"])],
+  // 2026 Topps Chrome Black -- Ivory Autographs. Source: checklistinsider
+  // 2026-09-21 / checklistcenter product-page autograph section.
+  ["baseball|2026|topps-chrome-black", new Set(["IVA-"])],
+]);
+
+/** Look up whether `cardNumber` starts with one of the auto-only prefixes
+ *  scoped to this exact (sport, year, setKey). Returns false on any miss --
+ *  unknown scope, unscoped call, or a scope not in the table -- so this can
+ *  only ever ADD a positive on top of the global rule, never remove one. */
+function isScopedAutoPrefix(
+  cardNumber: string | null,
+  scope?: { sport?: string | null; year?: number | null; setKey?: string | null } | null,
+): boolean {
+  if (!cardNumber || !scope) return false;
+  const sport = String(scope.sport ?? "").toLowerCase().trim();
+  const year = scope.year;
+  const setKey = String(scope.setKey ?? "").toLowerCase().trim();
+  if (!sport || !year || !setKey) return false;
+  const prefixes = SCOPED_AUTO_PREFIX.get(`${sport}|${year}|${setKey}`);
+  if (!prefixes) return false;
+  const cn = String(cardNumber).toUpperCase().replace(/^#/, "");
+  for (const p of prefixes) {
+    if (cn.startsWith(p)) return true;
+  }
+  return false;
+}
+
 /** True when the cardNumber prefix belongs to a known BASEBALL autograph
  *  subset. Domain-curated list from Drew (2026-07-30) — where an
  *  empirically-low auto ratio contradicts the list, that's a signal
@@ -1037,8 +1122,20 @@ export function parseListingIdentity(
  *  function may over-tag when applied cross-sport. Consider adding a
  *  sport param when we expand to other sports.
  *
+ *  SCOPE (optional 2nd param, CF-SCOPED-AUTO-PREFIX, 2026-09-21). The global
+ *  list above is unconditional -- these letters mean "auto" in EVERY
+ *  product-year. Some prefixes are auto-only for exactly one product-year
+ *  and something else elsewhere (see SCOPED_AUTO_PREFIX above this function);
+ *  passing `{ sport, year, setKey }` checks that table too, ADDITIVELY. A
+ *  caller that omits `scope`, or one whose (sport, year, setKey) is not in
+ *  the table, gets EXACTLY today's global-only behavior -- this parameter
+ *  can only turn a `false` into a `true`, never the reverse.
+ *
  *  Silent-safe on null/empty. */
-export function isCardNumberAutoSubset(cardNumber: string | null): boolean {
+export function isCardNumberAutoSubset(
+  cardNumber: string | null,
+  scope?: { sport?: string | null; year?: number | null; setKey?: string | null } | null,
+): boolean {
   if (!cardNumber) return false;
   const cn = String(cardNumber).toUpperCase().replace(/^#/, "");
   const AUTO_PREFIX = /^(CPATWH|CPALD|APDCA|54FAV|FFDA|CUSA|SCCA|CCAR|RODA|ROTA|TTAR|DPPA|BSPA|BCPA|BCRA|TCRA|B96A|BGA|MRA|UAC|BSA|FSA|CPA|CDA|CRA|BPA|CBA|CCA|USA|DAS|NTS|SSM|DCA|CAA|GQA|AGA|ROA|FAR|FFA|BOA|T1A|SCA|PPA|ODA|IAP|UAR|C\d{2}A|BA|PA|RA|FA|TA|AA|AP)(-|$)/;
@@ -1055,6 +1152,10 @@ export function isCardNumberAutoSubset(cardNumber: string | null): boolean {
     const m = /^(CPATWH|CPALD|APDCA|54FAV|FFDA|CUSA|SCCA|CCAR|RODA|ROTA|TTAR|DPPA|BSPA|BCPA|BCRA|TCRA|B96A|BGA|MRA|UAC|BSA|FSA|CPA|CDA|CRA|BPA|CBA|CCA|USA|DAS|NTS|SSM|DCA|CAA|GQA|AGA|ROA|FAR|FFA|BOA|T1A|SCA|PPA|ODA|IAP|UAR|C\d{2}A)([A-Z]{1,4})$/.exec(cn);
     if (m) return true;
   }
+  // ADDITIVE ONLY: the scoped table can only add a positive the global rule
+  // missed; it is consulted last and never overrides a global `false`
+  // into anything but `true`.
+  if (isScopedAutoPrefix(cardNumber, scope)) return true;
   return false;
 }
 
@@ -1220,7 +1321,10 @@ export function inferIsAuto(input: InferIsAutoInput): boolean {
   // Basketball Panini era has NO prefix vocabulary — skip prefix rule
   // for basketball unless the sport hint is unset (safer default).
   if (sport !== "basketball") {
-    if (isCardNumberAutoSubset(input.cardNumber ?? null)) return true;
+    // Scope threaded through (CF-SCOPED-AUTO-PREFIX, 2026-09-21): additive
+    // only, so a caller that already has year/setKey gets the product-year
+    // scoped prefixes too, and one that doesn't sees unchanged behavior.
+    if (isCardNumberAutoSubset(input.cardNumber ?? null, { sport: input.sport, year: input.year, setKey: input.setKey })) return true;
   }
   if (sport === "football" && isFootballCardNumberAutoSubset(input.cardNumber ?? null)) return true;
 
