@@ -1,0 +1,40 @@
+{
+  "source": "upperdeck-official-2026-09-20",
+  "sourceUrl": "https://upperdeck.com/checklist/2021-22-upper-deck-extended-series-checklist/",
+  "sourceHtmlSha256": "54b00875d11be59bb121e78d91506ae5c6cb54436d0c8db5b7e3d4b7c7dadd35",
+  "fetchedAt": "2026-09-20",
+  "sport": "hockey",
+  "year": 2021,
+  "setName": "2021-22 Upper Deck Extended Series Hockey",
+  "productKey": "2021-22-upper-deck-extended-series-hockey",
+  "setKey": "upper-deck-extended-series",
+  "rowCount": 3394,
+  "parallelColumnAuthoritative": true,
+  "readyToIngest": false,
+  "readyToIngestNote": "Documentation only -- ingest-checklist-csv-to-catalog.cjs and ingest-scraped-checklist.cjs do not read this field; the real gate is that this directory sits under backend/data/checklists/scraped/ where a human/workflow chooses which directories to point DIR at.",
+  "gapThisFills": "2026-09-20 census target: hockey|2021|upper-deck (11,876 unbacked sold_comps sales). 2021-22 had Series 1 and Series 2 already staged (acq-2026-09-14-cardboardconnection/2021-22-upper-deck-series-1-hockey.manifest.json and .../series-2-...) but Extended Series was the one product in the 2021-22 UD family with no staged checklist anywhere in the repo (checked backend/data/checklists for every upper-deck*2021-22*hockey* / *extended*2021-22*hockey* file first -- none existed before this package). setKey upper-deck-extended-series was already registered in productSetKeys.ts (D39, refines: 'upper-deck') -- no new registration needed for the file-level key. upperdeck.com's own checklist page returned HTTP 200 with the full <table class=\"csv-table\"> (3,394 rows, server-rendered, verified with curl / no JS execution) on the first request -- used directly, matching the pattern already proven for both 2024-25 sibling packages in this PR and the merged 2023-24 Extended Series package.",
+  "converterNote": "Same one-off HTML-table parser as the other two packages in this PR. This page's header order is 'Mem' (not 'Mem/Tech') before 'Serial #'d' before 'Odds' (not 'Stated Odds') -- a FOURTH distinct column-name/order variant across the four files fetched in this PR (S2 2024-25 / Ext 2024-25 / Ext 2021-22, plus the re-checked 2023-24 S2), all handled correctly because the parser reads <thead> names, never column position. Not committed as a script.",
+  "heldOut": null,
+  "keysNeeded": [],
+  "keysNeededNote": "No productSetKeys.ts registrations required. This is the most heavily nested product of the three in this PR -- Black Diamond 2005-06 Retro (own insert-within-insert structure: 1/2/3/4 Star tiers x base/Rookies x Ruby parallel x a low-population Emerald Autos parallel that only signs 2-5 of each tier's cards) and SPx 1999-2000 Retro / SPx Finite / HoloGrFx / Record Collections / UD3 / Triple Dimensions Reflections / 2021-22 Trilogy (Common/Uncommon/Rare Rookies, own numbering, this year's page did NOT print a shared 1-33 range across all three tiers the way the 2024-25 Extended sibling's Trilogy Rookie Premiere did -- Common covers #1-33, Uncommon a separate 7-card range, Rare its own range with its own Auto/Triple Auto parallels -- confirmed by measuring zero shared card numbers between the three tiers in THIS file, so they correctly stayed three separate categories rather than folding, unlike the 2024-25 sibling's Trilogy which shares one number range across all three tiers). Every one of these is a `category` value nested under this file's single setKey, same convention as the other two packages. No cross-insert card-number collision at a shared category prefix (checked every group pair for full-disagreement overlaps -- the two hits, Triple Dimensions Reflections vs the three 2021-22 Trilogy Rookies tiers, are already different categories, so no id collision).",
+  "sectionsReport": [
+    { "category": "base-set", "cardRange": "501..700 (incl. 18 Photo Variations card-line subset, 12 two-player Checklist cards CL-marker-stripped)", "cards": 200, "parallels": ["Clear Cut", "Exclusives", "French", "High Gloss"] },
+    { "category": "base-set-young-guns", "cardRange": "701..750", "cards": 50, "parallels": ["Clear Cut", "Exclusives", "French", "High Gloss"] },
+    { "category": "insert-2006-07-upper-deck-retro / -young-guns", "cardRange": "own numbering", "cards": 100, "parallels": ["Gold Stockpile", "Exclusives", "High Gloss", "Printing Plates"] },
+    { "category": "insert-black-diamond-2005-06-retro-{1,2,3,4}-star[-rookies]", "cardRange": "BD-1..BD-N per tier", "cards": "7/7/7/6/6/6/3/3", "parallels": ["Ruby", "Emerald Autos (low-population, own isAuto=true rows, printRun=10)"] },
+    { "category": "insert-dazzlers-blue", "cards": 50, "parallels": ["Green", "Orange", "Pink"] },
+    { "category": "insert-hologrfx-nhl / insert-hologrfx-rookies", "cards": 40, "parallels": ["Gold", "Printing Plates"] },
+    { "category": "insert-nhl-specialists", "cards": 20, "parallels": [] },
+    { "category": "insert-record-collections", "cards": 20, "parallels": ["Gold", "Platinum"] },
+    { "category": "insert-spx-1999-2000-retro / -rookies", "cards": 50, "parallels": ["Radiance"] },
+    { "category": "insert-spx-finite", "cards": 50, "parallels": ["Radiance", "Spectrum"] },
+    { "category": "insert-triple-dimensions-reflections", "cards": 40, "parallels": ["Ruby", "Amethyst", "Emerald", "Gold"] },
+    { "category": "insert-ud3 / insert-ud3-rookies", "cards": 50, "parallels": ["Gold"] },
+    { "category": "insert-2021-22-trilogy-common-rookies", "cardRange": "own numbering, 33 cards", "cards": 33, "parallels": [], "note": "own range, no shared numbers with Uncommon/Rare tiers this year" },
+    { "category": "insert-2021-22-trilogy-uncommon-rookies", "cards": 33, "parallels": [] },
+    { "category": "insert-2021-22-trilogy-rare-rookies", "cards": 34, "parallels": ["Auto (29 of 34)", "Auto Triple (1 of 34)"] }
+  ],
+  "rcSuffixStripped": {
+    "note": "Rookie is its own column. TWO other trailing markers found and stripped, never concatenated: ' AS1' / ' AS2' (All-Star Team 1/Team 2 -- this year's page bakes the marker directly onto the Description cell for base-set #667-678 rather than a separate Set Name section, unlike the 2024-25 Extended sibling's own distinct 'Base Set - All-Star' group; confirmed by direct inspection, 12 rows) and ' CL' (Checklist card, same handling as both sibling packages)."
+  }
+}
