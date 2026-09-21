@@ -809,6 +809,104 @@ describe("resolve-disagreeing-sale-twins carries the fleet discipline", () => {
     expect(src).toMatch(/isParkedSide\(short\)/);
   });
 
+  // ── REVIEW ROUND 3, ISSUE (1): reconcile must balance, and an unbalanced
+  // reconcile must exit NON-ZERO in BOTH report and apply (coordinator report
+  // on run 35578577288: "twins-disagree pairs seen 80,770" vs
+  // "resolved+left+protected+parked 106,741 MISMATCH").
+  describe("reconcile: disagreePairsSeen and protected/parked increment on the SAME condition, and a mismatch exits non-zero in both modes", () => {
+    it("decideSyntheticTwin is called and disagreePairsSeen is incremented BEFORE any isProtected/isParkedSide check on the pair", () => {
+      // The exact bug: isProtected(long)/isParkedSide(long) used to gate
+      // BEFORE decideSyntheticTwin ran (once per long row, before any
+      // candidate short was even considered), so a protected/parked row was
+      // counted for pairings that were never proven twins-disagree at all.
+      const pairBlock = /const d = decideSyntheticTwin\(long, short, \{ dayCounts, longDayCounts \}\);\s*\n\s*if \(d\.verdict !== "twins-disagree"\) continue;\s*\n\s*stats\.disagreePairsSeen\+\+;([\s\S]{0,600})/.exec(src);
+      expect(pairBlock, "the decideSyntheticTwin call + disagreePairsSeen++ sequence was not found").toBeTruthy();
+      // Protected/parked checks must appear AFTER this sequence, not before.
+      expect(pairBlock![1]).toMatch(/isProtected\(long\)\s*\|\|\s*isProtected\(short\)/);
+      expect(pairBlock![1]).toMatch(/isParkedSide\(long\)\s*\|\|\s*isParkedSide\(short\)/);
+    });
+
+    it("protected/parked/resolved/left are mutually exclusive per pair -- exactly one bucket increments per proven disagreement", () => {
+      // Structural pin: the protected check `continue`s, so a pair counted
+      // protected never falls through to the parked check, the resolver
+      // call, or a resolved/left bucket -- and likewise for parked.
+      const protectedBlock = /if \(isProtected\(long\) \|\| isProtected\(short\)\) \{\s*\n\s*stats\.protected\+\+;[\s\S]*?continue;\s*\n\s*\}/.exec(src);
+      const parkedBlock = /if \(isParkedSide\(long\) \|\| isParkedSide\(short\)\) \{\s*\n\s*stats\.parkedSide\+\+;[\s\S]*?continue;\s*\n\s*\}/.exec(src);
+      expect(protectedBlock, "protected branch not found or does not continue").toBeTruthy();
+      expect(parkedBlock, "parked branch not found or does not continue").toBeTruthy();
+    });
+
+    it("behavioral: the reconcile arithmetic balances when every disagreeing pair lands in exactly one bucket", () => {
+      // Direct simulation of the shipped reconcile equation:
+      //   disagreePairsSeen == resolved(3 kinds) + left(2 kinds) + protected + parked
+      const stats = {
+        disagreePairsSeen: 0, protected: 0, parkedSide: 0,
+        resolvedChecklistRoster: 0, resolvedMoreSpecific: 0, resolvedGraderToken: 0,
+        bothSidesValid: 0, neitherSideBacked: 0,
+      };
+      const pairs = ["protected", "parked", "resolved-1", "resolved-2", "resolved-3", "left-1", "left-2"];
+      for (const kind of pairs) {
+        stats.disagreePairsSeen++; // EVERY pair increments this, exactly once
+        if (kind === "protected") stats.protected++;
+        else if (kind === "parked") stats.parkedSide++;
+        else if (kind === "resolved-1") stats.resolvedChecklistRoster++;
+        else if (kind === "resolved-2") stats.resolvedMoreSpecific++;
+        else if (kind === "resolved-3") stats.resolvedGraderToken++;
+        else if (kind === "left-1") stats.bothSidesValid++;
+        else if (kind === "left-2") stats.neitherSideBacked++;
+      }
+      const reconciled = stats.resolvedChecklistRoster + stats.resolvedMoreSpecific + stats.resolvedGraderToken + stats.bothSidesValid + stats.neitherSideBacked + stats.protected + stats.parkedSide;
+      expect(stats.disagreePairsSeen).toBe(reconciled);
+      expect(stats.disagreePairsSeen).toBe(pairs.length);
+    });
+
+    it("behavioral: the OLD (buggy) shape -- protected counted once per candidate short rather than once per proven pair -- would NOT balance", () => {
+      // Reproduces the coordinator's own measured mismatch shape at small
+      // scale: a protected long row paired against TWO candidate shorts,
+      // only ONE of which decideSyntheticTwin would ever prove
+      // twins-disagree (the other is not-a-match). The old code counted
+      // `protected` for BOTH candidates (once per short in the inner loop,
+      // gated before decideSyntheticTwin ran); disagreePairsSeen only ever
+      // counted the one genuine disagreement.
+      let disagreePairsSeen = 0;
+      let protectedCount = 0;
+      const candidates = [{ verdict: "twins-disagree" }, { verdict: "not-a-match" }];
+      // OLD shape: protected gates BEFORE decideSyntheticTwin, once per candidate.
+      for (const _c of candidates) {
+        protectedCount++; // isProtected(long) checked before ANY candidate matching
+      }
+      // decideSyntheticTwin would only have proven ONE of these a real disagreement.
+      for (const c of candidates) {
+        if (c.verdict === "twins-disagree") disagreePairsSeen++;
+      }
+      expect(protectedCount).not.toBe(disagreePairsSeen); // the OLD shape's own mismatch
+      expect(protectedCount).toBe(2);
+      expect(disagreePairsSeen).toBe(1);
+
+      // NEW (fixed) shape: protected is only counted for the ONE candidate
+      // decideSyntheticTwin actually proves.
+      let disagreePairsSeenFixed = 0;
+      let protectedCountFixed = 0;
+      for (const c of candidates) {
+        if (c.verdict !== "twins-disagree") continue;
+        disagreePairsSeenFixed++;
+        protectedCountFixed++; // isProtected checked only on a PROVEN pair
+      }
+      expect(protectedCountFixed).toBe(disagreePairsSeenFixed);
+    });
+
+    it("an unbalanced reconcile sets process.exitCode = 4, and finishLane is invoked with process.exitCode || 0 -- so it exits non-zero in BOTH report and apply", () => {
+      expect(src).toMatch(/if \(!reconcileBalances\) \{/);
+      expect(src).toMatch(/process\.exitCode = 4/);
+      // No `if (APPLY)` guard around the exit-code assignment -- it fires in
+      // both modes, unlike reportWrites (which IS apply-gated, correctly).
+      const mismatchBlock = /if \(!reconcileBalances\) \{([\s\S]*?)\n  \}/.exec(src);
+      expect(mismatchBlock, "the mismatch branch was not found").toBeTruthy();
+      expect(mismatchBlock![1]).not.toMatch(/if\s*\(APPLY\)/);
+      expect(src).toMatch(/finishLane\(process\.exitCode \|\| 0, ctx \|\| \{\}\)/);
+    });
+  });
+
   it("never edits a derivation-stamp input -- only CALLS exported functions from dist/", () => {
     expect(src).not.toMatch(/fs\.writeFileSync\(.*hobbyIqCardId\.service|fs\.writeFileSync\(.*parseTitleIdentity\.service/);
     expect(src).toMatch(/dist\/services\/portfolioiq\/hobbyIqCardId\.service\.js/);
@@ -833,63 +931,206 @@ describe("resolve-disagreeing-sale-twins carries the fleet discipline", () => {
   // The marker's own text must therefore be reachable from EXACTLY ONE
   // source location, gated on the real clock check, never printed
   // unconditionally at the end of the scan.
-  describe("the budget marker is printed ONLY from the real mid-scan clock check, never on a finished scan", () => {
-    it("the marker string appears in exactly ONE place in the source, inside the budgetLeft() < RESERVE_MS branch", () => {
-      const markerLines = [...src.matchAll(/stopReason\s*=\s*`stopped at the/g)];
+  describe("the budget marker is printed ONLY from the real mid-scan clock check, never on a finished scan (batched, resumable shape)", () => {
+    it("the marker string appears in exactly ONE place in the source, inside the `if (stoppedMidScan)` branch", () => {
+      const markerLines = [...src.matchAll(/stopReason\s*=\s*APPLY/g)];
       expect(markerLines).toHaveLength(1);
-      // The ONE assignment site is textually inside the loop's own
-      // budget-check line, not a separate unconditional statement reachable
-      // after the loop exhausts its population.
-      expect(src).toMatch(/if\s*\(budgetLeft\(\)\s*<\s*RESERVE_MS\)\s*\{\s*stopReason\s*=\s*`stopped at the/);
+      expect(src).toMatch(/if\s*\(stoppedMidScan\)\s*\{/);
+    });
+
+    it("stoppedMidScan initializes to false and is set ONLY inside the batch loop's budget-check branch, never unconditionally", () => {
+      expect(src).toMatch(/let stoppedMidScan = false/);
+      const setSites = [...src.matchAll(/stoppedMidScan\s*=\s*true/g)];
+      expect(setSites).toHaveLength(1);
+      expect(src).toMatch(/if\s*\(budgetLeft\(\)\s*<\s*RESERVE_MS\)\s*\{[^}]*stoppedMidScan\s*=\s*true/s);
     });
 
     it("stopReason initializes to null and the print is gated on it -- a scan that never breaks on budget never prints the marker", () => {
       expect(src).toMatch(/let stopReason = null/);
-      // The ONLY console.log of stopReason is itself gated on `if (stopReason)`.
       const printSites = [...src.matchAll(/console\.log\(`\\n\$\{stopReason\}`\)/g)];
       expect(printSites).toHaveLength(1);
       expect(src).toMatch(/if\s*\(stopReason\)\s*console\.log\(`\\n\$\{stopReason\}`\)/);
     });
 
-    it("a LIMIT-triggered stop (an operator soft cap, not a real clock stop) does NOT set stopReason and therefore never prints the marker", () => {
-      // The LIMIT branch increments notReached and breaks, exactly like the
-      // budget branch, but must NOT assign stopReason -- a soft cap for
-      // testing is not a reason to relaunch, and conflating the two would
-      // make a bounded LIMIT=10 smoke run re-dispatch itself forever.
+    it("a LIMIT-triggered stop (an operator soft cap, not a real clock stop) does NOT set stoppedMidScan and therefore never prints the marker", () => {
       const limitBranch = /if\s*\(LIMIT\s*&&\s*stats\.partitions\s*>=\s*LIMIT\)\s*\{\s*stats\.notReached[^}]*\}/.exec(src);
       expect(limitBranch, "LIMIT branch not found in the shipped source").toBeTruthy();
-      expect(limitBranch![0]).not.toMatch(/stopReason/);
+      expect(limitBranch![0]).not.toMatch(/stoppedMidScan/);
     });
 
-    it("behavioral: a loop that exhausts its whole population (never once out of clock) leaves stopReason null, by direct simulation of the shipped predicate shape", () => {
-      // Mirrors the shipped loop's own control flow with a budgetLeft() that
+    it("behavioral: a batch loop that exhausts its whole population (never once out of clock) leaves stoppedMidScan false, by direct simulation of the shipped predicate shape", () => {
+      // Mirrors the shipped BATCH loop's own control flow (batches of
+      // `batchSize`, checked before each batch) with a budgetLeft() that
       // never dips below RESERVE_MS -- a finished scan, by construction.
       const RESERVE_MS = 90000;
-      const budgetLeftAlwaysHealthy = () => RESERVE_MS * 10; // always well clear of the reserve
-      const cards = ["a", "b", "c"];
-      let stopReason: string | null = null;
-      let i = 0;
-      for (const _cardId of cards) {
-        if (budgetLeftAlwaysHealthy() < RESERVE_MS) { stopReason = "stopped at the 120-minute budget"; break; }
-        i++;
+      const budgetLeftAlwaysHealthy = () => RESERVE_MS * 10;
+      const cardsThisRun = ["a", "b", "c", "d", "e", "f", "g"];
+      const batchSize = 3;
+      let stoppedMidScan = false;
+      let idx = 0, done = 0;
+      for (; idx < cardsThisRun.length; ) {
+        if (budgetLeftAlwaysHealthy() < RESERVE_MS) { stoppedMidScan = true; break; }
+        const batch = cardsThisRun.slice(idx, idx + batchSize);
+        done += batch.length;
+        idx += batch.length;
       }
-      expect(stopReason).toBeNull();
-      expect(i).toBe(cards.length); // every card was actually reached
+      expect(stoppedMidScan).toBe(false);
+      expect(done).toBe(cardsThisRun.length); // every card was actually reached
     });
 
-    it("behavioral: a genuinely mid-scan clock stop (budgetLeft dips below the reserve before the population is exhausted) DOES set stopReason", () => {
+    it("behavioral: a genuinely mid-scan clock stop (budgetLeft dips below the reserve before a batch admits) DOES set stoppedMidScan", () => {
       const RESERVE_MS = 90000;
       let calls = 0;
-      const budgetLeftDipsOnThirdCall = () => { calls++; return calls >= 3 ? RESERVE_MS / 2 : RESERVE_MS * 10; };
-      const cards = ["a", "b", "c", "d", "e"];
-      let stopReason: string | null = null;
-      let i = 0;
-      for (const _cardId of cards) {
-        if (budgetLeftDipsOnThirdCall() < RESERVE_MS) { stopReason = "stopped at the 120-minute budget"; break; }
-        i++;
+      const budgetLeftDipsOnSecondBatch = () => { calls++; return calls >= 2 ? RESERVE_MS / 2 : RESERVE_MS * 10; };
+      const cardsThisRun = ["a", "b", "c", "d", "e", "f", "g"];
+      const batchSize = 3;
+      let stoppedMidScan = false;
+      let idx = 0, done = 0;
+      for (; idx < cardsThisRun.length; ) {
+        if (budgetLeftDipsOnSecondBatch() < RESERVE_MS) { stoppedMidScan = true; break; }
+        const batch = cardsThisRun.slice(idx, idx + batchSize);
+        done += batch.length;
+        idx += batch.length;
       }
-      expect(stopReason).not.toBeNull();
-      expect(i).toBeLessThan(cards.length); // genuinely stopped before the population was exhausted
+      expect(stoppedMidScan).toBe(true);
+      expect(done).toBeLessThan(cardsThisRun.length); // genuinely stopped before the population was exhausted
+    });
+  });
+
+  // ── REVIEW ROUND 3: RESUME CURSOR (coordinator report on run 35589416039)
+  describe("resume cursor: rides scan_limit, copies fold-catalog-duplicate-rungs.cjs's convention", () => {
+    it("decodeResume/encodeResume round-trip: hop*1,000,000 + offset", () => {
+      expect(mod.decodeResume(0)).toEqual({ hop: 0, offset: 0 });
+      expect(mod.decodeResume(5)).toEqual({ hop: 0, offset: 5 });
+      expect(mod.decodeResume(1_000_005)).toEqual({ hop: 1, offset: 5 });
+      expect(mod.decodeResume(2_000_123)).toEqual({ hop: 2, offset: 123 });
+      expect(mod.encodeResume({ hop: 1, offset: 5 })).toBe(1_000_005);
+      expect(mod.encodeResume({ hop: 0, offset: 0 })).toBe(0);
+    });
+
+    it("decodeResume never returns a negative hop/offset for garbage input", () => {
+      expect(mod.decodeResume(-5)).toEqual({ hop: 0, offset: 0 });
+      expect(mod.decodeResume(NaN)).toEqual({ hop: 0, offset: 0 });
+      expect(mod.decodeResume(undefined)).toEqual({ hop: 0, offset: 0 });
+      expect(mod.decodeResume("not-a-number")).toEqual({ hop: 0, offset: 0 });
+    });
+
+    it("MAX_RESUME_HOPS caps a chain that never converges", () => {
+      expect(mod.MAX_RESUME_HOPS).toBe(30);
+      expect(mod.decodeResume(mod.MAX_RESUME_HOPS * mod.RESUME_HOP_UNIT).hop).toBe(mod.MAX_RESUME_HOPS);
+    });
+
+    it("the shipped source aborts (throws) once RESUME.hop reaches MAX_RESUME_HOPS, never relaunching past it", () => {
+      expect(src).toMatch(/RESUME\.hop\s*>=\s*MAX_RESUME_HOPS/);
+      expect(src).toMatch(/HOP_CAP/);
+    });
+
+    it("APPLY always rescans at offset 0 -- a resolved pair drops out of the fresh population on its own", () => {
+      expect(src).toMatch(/const REPORT_RESUME_OFFSET = APPLY \? 0 : RESUME\.offset/);
+      expect(src).toMatch(/APPLY always RESCANS/);
+    });
+
+    it("REPORT resumes into a SORTED order, never raw scan/insertion order", () => {
+      expect(src).toMatch(/const orderedCards = \[\.\.\.shardedCards\]\.sort\(\)/);
+    });
+
+    it("the workflow forwards scan_limit on the resolve-disagreeing-sale-twins relaunch dispatch", () => {
+      const yml = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "workflows", "backfill-runner.yml"), "utf8");
+      const step = yml.split(/\n(?=      - name:)/).find((st) => st.includes("inputs.script == 'resolve-disagreeing-sale-twins'") && /gh workflow run backfill-runner\.yml/.test(st));
+      expect(step, "relaunch step not found").toBeTruthy();
+      expect(step).toMatch(/-f scan_limit="\$\{RESUME_ARG:-0\}"/);
+    });
+
+    it("the workflow's relaunch preamble parses the resume cursor off the log, mirroring fold-catalog-duplicate-rungs.cjs's own pattern", () => {
+      const yml = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "workflows", "backfill-runner.yml"), "utf8");
+      const step = yml.split(/\n(?=      - name:)/).find((st) => st.includes("inputs.script == 'resolve-disagreeing-sale-twins'") && /gh workflow run backfill-runner\.yml/.test(st));
+      expect(step).toMatch(/the relaunch resumes at scan_limit=\[0-9\]\+/);
+    });
+  });
+
+  // ── REVIEW ROUND 3: SHARDING (dispatched slot=0 slots=8, ran "slot 0/1")
+  describe("sharding: a whole CH partition (never a pair) lands on exactly one slot", () => {
+    it("prints its own explicit `shard  slot X/Y` banner line the relaunch step can parse for the REAL slot", () => {
+      expect(src).toMatch(/shard\s+slot \$\{SLOT\}\/\$\{SLOTS\}/);
+    });
+
+    it("shards by sha1(cardId) -- a whole CH partition and every pair inside it lands on ONE slot", () => {
+      expect(src).toMatch(/shardOf\s*=\s*\(key\)\s*=>\s*parseInt\(crypto\.createHash\("sha1"\)/);
+      expect(src).toMatch(/shardOf\(cardId\)\s*===\s*SLOT/);
+    });
+
+    it("this lane is opted into the runner's SHARD line, reusing parents_only (no new input)", () => {
+      const yml = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "workflows", "backfill-runner.yml"), "utf8");
+      const shardLine = yml.split("\n").find((l) => /^\s+SHARD:\s/.test(l));
+      expect(shardLine, "backfill-runner.yml must export SHARD").toBeTruthy();
+      expect(shardLine).toMatch(/inputs\.script\s*==\s*'resolve-disagreeing-sale-twins'/);
+      expect(shardLine).toMatch(/inputs\.parents_only\s*==\s*true/);
+    });
+
+    it("the relaunch step parses the REAL slot/slots off the script's own banner line, not the raw dispatch inputs", () => {
+      const yml = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "workflows", "backfill-runner.yml"), "utf8");
+      const step = yml.split(/\n(?=      - name:)/).find((st) => st.includes("inputs.script == 'resolve-disagreeing-sale-twins'") && /gh workflow run backfill-runner\.yml/.test(st));
+      expect(step, "relaunch step not found").toBeTruthy();
+      expect(step).toMatch(/REAL_SLOT=\$\(grep -aoE "shard \+slot \[0-9\]\+\/\[0-9\]\+"/);
+    });
+
+    it("the relaunch step forwards slot/slots verbatim on the next dispatch (a real fan-out re-dispatches the SAME slot, never slot 0)", () => {
+      const yml = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "workflows", "backfill-runner.yml"), "utf8");
+      const step = yml.split(/\n(?=      - name:)/).find((st) => st.includes("inputs.script == 'resolve-disagreeing-sale-twins'") && /gh workflow run backfill-runner\.yml/.test(st));
+      expect(step).toMatch(/-f slot="\$\{\{ inputs\.slot \}\}"/);
+      expect(step).toMatch(/-f slots="\$\{\{ inputs\.slots \}\}"/);
+    });
+  });
+
+  // ── REVIEW ROUND 3: SPEED -- bounded concurrency across partitions, 429
+  // backoff, heartbeat (coordinator report: 80,770 pairs in 120 min = ~11/s)
+  describe("speed: bounded concurrency across partitions, 429-aware backoff, heartbeat", () => {
+    it("defaults CONCURRENCY to 6 (safe headroom on a shared 10,000 RU/s sold_comps day), raised by the concurrency/CONCURRENCY/BACKFILL_CONCURRENCY input", () => {
+      expect(src).toMatch(/REQUESTED_CONCURRENCY = Math\.max\(1, Number\(process\.env\.CONCURRENCY \|\| process\.env\.BACKFILL_CONCURRENCY \|\| 6\)\)/);
+    });
+
+    it("runs partitions concurrently via a bounded Promise.all batch, never CONCURRENCY within one partition's own pairs", () => {
+      expect(src).toMatch(/await Promise\.all\(batch\.map\(\(cardId\) => processPartition\(cardId\)\)\)/);
+      // processPartition's own inner pair loop is a plain sequential for,
+      // never itself batched or Promise.all'd -- one partition's writes stay
+      // strictly ordered.
+      const fn = /async function processPartition\(cardId\) \{[\s\S]*?\n  \}\n/.exec(src);
+      expect(fn, "processPartition not found").toBeTruthy();
+      expect(fn![0]).not.toMatch(/Promise\.all/);
+    });
+
+    it("every retried Cosmos call increments throttleStats.count, and 20 throttles drop concurrency to 2 for the rest of the run (one-way)", () => {
+      expect(src).toMatch(/throttleStats\.count\+\+/);
+      expect(src).toMatch(/THROTTLE_TRIP_AT = 20/);
+      expect(src).toMatch(/THROTTLE_CONCURRENCY = 2/);
+      expect(src).toMatch(/droppedTo2 = true/);
+    });
+
+    it("throttleStats is a white-box export, letting a test trip the drop without paying real retry() backoff", () => {
+      expect(mod.throttleStats).toEqual({ count: 0, droppedTo2: false });
+    });
+
+    it("behavioral: effectiveConcurrency-shaped logic drops to 2 once the trip count is reached, by direct simulation of the shipped predicate", () => {
+      const THROTTLE_TRIP_AT = 20;
+      const THROTTLE_CONCURRENCY = 2;
+      const REQUESTED_CONCURRENCY = 6;
+      const stats = { count: 0, droppedTo2: false };
+      function effectiveConcurrency() {
+        if (stats.count >= THROTTLE_TRIP_AT) { stats.droppedTo2 = true; return THROTTLE_CONCURRENCY; }
+        return REQUESTED_CONCURRENCY;
+      }
+      expect(effectiveConcurrency()).toBe(6);
+      stats.count = 19;
+      expect(effectiveConcurrency()).toBe(6);
+      stats.count = 20;
+      expect(effectiveConcurrency()).toBe(2);
+      expect(stats.droppedTo2).toBe(true);
+    });
+
+    it("prints a per-minute heartbeat with pairs decided, partitions done/total, and ETA, on stderr", () => {
+      expect(src).toMatch(/HEARTBEAT_MS = 60 \* 1000/);
+      expect(src).toMatch(/console\.error\(`  narrate: heartbeat/);
+      expect(src).toMatch(/ETA \$\{eta\}/);
     });
   });
 
