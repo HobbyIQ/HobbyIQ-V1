@@ -890,6 +890,10 @@ async function main() {
     // separately from parseListingIdentity's OR'd `isAuto`, because that OR
     // is exactly what the D7 guard has to be able to see through.
     isCardNumberAutoSubset: pti.isCardNumberAutoSubset,
+    // CF-SCOPED-MARKET-LANGUAGE (2026-09-21): additive-only parallel rename,
+    // same shape as isCardNumberAutoSubset's scope -- see
+    // SCOPED_MARKET_LANGUAGE_ALIAS in parseTitleIdentity.service.ts.
+    scopedMarketLanguageAlias: pti.scopedMarketLanguageAlias,
     inferSetKeyFromTitle: pti.inferSetKeyFromTitle,
     // CF-THE-PARSER-IS-THE-EVIDENCE (this PR). The ruled soccer competition
     // table's own verdict on a title, exported from the ONE seam that holds

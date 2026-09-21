@@ -177,7 +177,17 @@ function deriveIdentity(row, deps) {
       })
     : null;
   if (adopted && deps.noteSpellingAdopted) deps.noteSpellingAdopted();
-  const parallel = adopted || parallelBeforeSpelling;
+  const parallelBeforeMarketLanguage = adopted || parallelBeforeSpelling;
+  // CF-SCOPED-MARKET-LANGUAGE (2026-09-21): additive only, same shape as
+  // autoByCardNumber's scope pass above -- sport/cardYear/setKey are already
+  // resolved by here, so a product-year-scoped alias ("Blue Sapphire" ->
+  // Base, ONLY on the verified no-Blue-rung Sapphire product-years) can be
+  // seen. A miss (dep not injected, or no table entry for this scope) leaves
+  // parallelBeforeMarketLanguage exactly as it was.
+  const marketLanguageAlias = deps.scopedMarketLanguageAlias
+    ? deps.scopedMarketLanguageAlias(parallelBeforeMarketLanguage, { sport: guard.sport, year: cardYear, setKey })
+    : null;
+  const parallel = marketLanguageAlias || parallelBeforeMarketLanguage;
   const printRun = parsed.printRun ?? row.printRun ?? null;
   const identity = { sport: guard.sport, cardYear, setKey, setNameRaw: setKeyRaw, cardNumber, parallel, isAuto, printRun, gradeCompany, gradeValue };
   const slug = deps.computeHobbyIqCardId({

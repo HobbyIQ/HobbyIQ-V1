@@ -1060,6 +1060,91 @@ function isScopedAutoPrefix(
   return false;
 }
 
+/** CF-SCOPED-MARKET-LANGUAGE (Drew, 2026-09-21). "Blue Sapphire is just a
+ *  Sapphire base term" -- Sapphire products are blue by design, so on a
+ *  product whose checklist states NO separate Blue rung, a sale calling
+ *  itself "Blue Sapphire" / "Sapphire Blue" / "Blue Sapphire Refractor" is
+ *  the BASE card, not a colour rung. Settled from the published checklists
+ *  (owner ruling), same (sport, year, setKey)-scoped shape as
+ *  SCOPED_AUTO_PREFIX above and for the identical reason: the SAME phrase is
+ *  a REAL, distinct, numbered rung on other product-years (2019
+ *  bowman-draft-sapphire's checklist states "Blue /99" as its own line
+ *  beside Gold/Red/Green/Orange/Black/Padparadscha -- explicitly EXCLUDED,
+ *  see the test pinning it stays distinct), so this can never be a bare
+ *  global alias.
+ *
+ *  A miss (unscoped call, or any product-year not listed) changes nothing --
+ *  same additive-only contract as isCardNumberAutoSubset's scope. This does
+ *  NOT touch card_catalog: the Beckett "Blue Sapphire /150" rows sitting on
+ *  bowman-chrome-sapphire 2024-2025 are checklist-grade evidence for a
+ *  genuine rung there and are a SEPARATE repair, not silenced by this alias
+ *  (a sale whose title states a print run still keeps it -- see
+ *  scopedMarketLanguageAlias's caller, which only overwrites the PARALLEL
+ *  NAME, never printRun).
+ *
+ *  Sources cited per entry; each is a published checklist page read
+ *  2026-09-21 that lists the product's full colour/print-run ladder with NO
+ *  Blue-named rung. */
+const SCOPED_MARKET_LANGUAGE_ALIAS: ReadonlyMap<string, "Base"> = new Map([
+  // checklistinsider.com/2024-bowman-draft-baseball-checklist (Sapphire
+  // Edition parallel section): Yellow /75, Gold /50, Orange /25, Black /10,
+  // Red /5, Padparadscha 1/1 -- no Blue.
+  ["baseball|2024|bowman-draft-sapphire", "Base"],
+  // checklistinsider.com/2025-bowman-draft-baseball-checklist (Sapphire
+  // Edition parallel section): Yellow /75, Gold /50, Orange /25, Black /10,
+  // Red /5, Padparadscha 1/1 -- no Blue. EXPLICITLY NOT 2019 (see below).
+  ["baseball|2025|bowman-draft-sapphire", "Base"],
+  // checklistinsider.com/2024-bowman-chrome-baseball-checklist (Sapphire
+  // Edition section) -- no Blue rung stated; base Sapphire IS the blue card.
+  ["baseball|2024|bowman-chrome-sapphire", "Base"],
+  ["baseball|2025|bowman-chrome-sapphire", "Base"],
+  ["baseball|2026|bowman-chrome-sapphire", "Base"],
+  // cardboardconnection.com 2019/2020 Topps Chrome Sapphire Edition parallel
+  // guides -- no Blue-named rung; checklistinsider.com/2025-topps-chrome-
+  // baseball-checklist Sapphire section, same.
+  ["baseball|2019|topps-chrome-sapphire", "Base"],
+  ["baseball|2020|topps-chrome-sapphire", "Base"],
+  ["baseball|2025|topps-chrome-sapphire", "Base"],
+  // checklistinsider.com/2024-topps-chrome-update-baseball-checklist and
+  // .../2025-topps-chrome-update-baseball-checklist (Sapphire section) --
+  // no Blue rung.
+  ["baseball|2024|topps-chrome-update-sapphire", "Base"],
+  ["baseball|2025|topps-chrome-update-sapphire", "Base"],
+  // EXPLICITLY NOT LISTED: baseball|2019|bowman-draft-sapphire.
+  // cardboardconnection.com's 2019 Bowman Draft Sapphire Edition guide states
+  // a real, distinct "Blue /99" rung beside Gold/Red/Green/Orange/Black/
+  // Padparadscha Sapphire -- confirmed against card_catalog (200
+  // baseballcardpedia-ladders-2026-09-02 rows, all cardYear 2019, all
+  // printRun 99). Aliasing this year would merge a genuine numbered rung's
+  // sales into the raw base pool. See the "2019 stays distinct" pin below.
+]);
+
+const SCOPED_MARKET_LANGUAGE_PHRASES: ReadonlySet<string> = new Set([
+  "blue sapphire", "sapphire blue", "blue sapphire refractor",
+]);
+
+/** The scoped market-language alias for a stated parallel, or null on any
+ *  miss (unscoped call, product-year not in the table, or a phrase this
+ *  table does not name) -- callers keep whatever `parallel` already was.
+ *  Compares on the FOLDED phrase only (case/whitespace-insensitive), never
+ *  drops or reads printRun -- that stays whatever the title/vendor stated. */
+export function scopedMarketLanguageAlias(
+  parallel: string | null,
+  scope?: { sport?: string | null; year?: number | null; setKey?: string | null } | null,
+): string | null {
+  if (!parallel || !scope) return null;
+  const sport = String(scope.sport ?? "").toLowerCase().trim();
+  const year = scope.year;
+  const setKey = String(scope.setKey ?? "").toLowerCase().trim();
+  if (!sport || !year || !setKey) return null;
+  const key = `${sport}|${year}|${setKey}`;
+  const target = SCOPED_MARKET_LANGUAGE_ALIAS.get(key);
+  if (!target) return null;
+  const folded = String(parallel).trim().toLowerCase().replace(/\s+/g, " ");
+  if (!SCOPED_MARKET_LANGUAGE_PHRASES.has(folded)) return null;
+  return target;
+}
+
 /** True when the cardNumber prefix belongs to a known BASEBALL autograph
  *  subset. Domain-curated list from Drew (2026-07-30) — where an
  *  empirically-low auto ratio contradicts the list, that's a signal
