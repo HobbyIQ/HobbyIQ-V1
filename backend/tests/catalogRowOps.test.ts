@@ -20,6 +20,7 @@ import {
   retireCatalogRow,
   isGradedChildOf,
   rebuildSearchFields,
+  nonePartitionKey,
 } from "../src/services/catalog/catalogRowOps.service.js";
 import { buildSearchTokens } from "../src/services/portfolioiq/searchIndexing.service.js";
 import { deriveBrand, deriveParentSetKey } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
@@ -1418,5 +1419,203 @@ describe("isGradedChildOf", () => {
     expect(isGradedChildOf({ id: `${parent}:num-50:psa-10` }, parent)).toBe(false);
     expect(isGradedChildOf({ id: `${parent}:num-50` }, parent)).toBe(false);   // not graded at all
     expect(isGradedChildOf({ id: "hiq:other:psa-10" }, parent)).toBe(false);
+  });
+});
+
+// ── CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES ──────────────
+//
+// Review finding on this PR (2026-09-20): `moveCatalogRow` and
+// `retireCatalogRow` both computed the old row's partition key as
+// `cardId ?? id` -- correct for a row that carries a `cardId`, and WRONG for
+// the KNOWN "None partition" population (scripts/lib/catalog-none-pk.cjs's
+// own header; retire-self-derived-identities.cjs measured every sampled
+// `user-verified:*` row carries no `cardId` at all). A delete at (id, id)
+// against such a row 404s -- it never lived there -- and the OLD code
+// reported that tolerant 404 as a successful retirement while the REAL row,
+// resident at Cosmos's own None partition key, survived untouched: a silent
+// orphan duplicate for every caller.
+//
+// This fake models the None partition as its OWN distinct address, separate
+// from "the document's own id" -- exactly the distinction the real SDK
+// makes and the bug collapsed. `item(id, id)` and `item(id, nonePk)` are
+// different addresses here, the same as they are against real Cosmos.
+describe("moveCatalogRow / retireCatalogRow: the None partition key", () => {
+  type NoneDoc = Record<string, any>;
+  const NONE_TOKEN = "__none-partition__";
+
+  /** A minimal fake distinguishing three address shapes: (id, id) -- the
+   *  document's own id as its partition key; (id, cardId) -- a real foreign
+   *  cardId; and (id, NONE) -- Cosmos's own None partition key, modelled as
+   *  its own address rather than folded onto (id, id) the way the shared
+   *  FakeContainer above does (which is exactly the collapse that hid this
+   *  bug: that fake's `keyOf` treats `pk === id` the same as "no pk given",
+   *  so it could never model a document whose SDK partition key differs from
+   *  its own id string). */
+  class NonePartitionFakeContainer {
+    readonly docs = new Map<string, NoneDoc>();
+    readonly log: string[] = [];
+    /** The address a CALLER's supplied `pk` argument resolves to. An object
+     *  (the None sentinel `{}`/`nonePartitionKey()`) is its own address,
+     *  distinct from the document's own id -- never folded onto (id, id) the
+     *  way the shared FakeContainer above does. */
+    private keyOf(id: string, pk: unknown): string {
+      if (pk && typeof pk === "object") return `${id}@${NONE_TOKEN}`;
+      if (pk === undefined || pk === null || pk === id) return id;
+      return `${id}@${String(pk)}`;
+    }
+    /** Seeds a document at the address REAL COSMOS would store it: `cardId`
+     *  when the document carries one, else the None partition key -- derived
+     *  from the document's own field, exactly as the real service's write
+     *  path does, never from a caller-supplied pk (that is the whole point:
+     *  a None-pk document lives at the None address REGARDLESS of what
+     *  address a later caller's buggy fallback happens to guess). */
+    seed(doc: NoneDoc) {
+      const address = doc.cardId ? String(doc.cardId) : { __none: true };
+      this.docs.set(this.keyOf(doc.id, address), structuredClone(doc));
+    }
+    item(id: string, pk?: unknown) {
+      const k = this.keyOf(id, pk);
+      return {
+        read: async () => {
+          this.log.push(`read ${id}@${JSON.stringify(pk) ?? "own"}`);
+          const d = this.docs.get(k);
+          if (!d) throw notFound();
+          return { resource: structuredClone(d) };
+        },
+        delete: async () => {
+          this.log.push(`delete ${id}@${JSON.stringify(pk) ?? "own"}`);
+          if (!this.docs.has(k)) throw notFound();
+          this.docs.delete(k);
+          return {};
+        },
+        patch: async (ops: Array<{ op: string; path: string; value: unknown }>) => {
+          const d = this.docs.get(k);
+          if (!d) throw notFound();
+          for (const o of ops) d[o.path.slice(1)] = o.value;
+          this.log.push(`patch ${id}@${JSON.stringify(pk) ?? "own"}`);
+          return { resource: structuredClone(d) };
+        },
+      };
+    }
+    readonly items = {
+      upsert: async (doc: NoneDoc) => {
+        this.docs.set(this.keyOf(doc.id, doc.cardId), structuredClone(doc));
+        this.log.push(`upsert ${doc.id}`);
+        return { resource: structuredClone(doc) };
+      },
+      query: (spec: { query: string; parameters?: Array<{ name: string; value: unknown }> }) => ({
+        fetchNext: async () => ({ resources: this.run(spec), continuationToken: undefined }),
+        fetchAll: async () => ({ resources: this.run(spec) }),
+      }),
+    };
+    private run(spec: { query: string; parameters?: Array<{ name: string; value: unknown }> }): NoneDoc[] {
+      const p = Object.fromEntries((spec.parameters ?? []).map((x) => [x.name, x.value]));
+      const all = [...this.docs.values()];
+      if (spec.query.includes("c.hobbyiqCardId = @s")) {
+        return all.filter((d) => d.hobbyiqCardId === p["@s"]).map((d) => ({ id: d.id, cardId: d.cardId }));
+      }
+      if (spec.query.includes("STARTSWITH(c.id, @p)") && spec.query.includes("IS_DEFINED(c.gradeTier)")) {
+        return all
+          .filter((d) => String(d.id).startsWith(String(p["@p"])) && d.gradeTier !== undefined)
+          .map((d) => ({ id: d.id, cardId: d.cardId, parentSlug: d.parentSlug }));
+      }
+      throw new Error(`fake: unsupported query ${spec.query}`);
+    }
+  }
+
+  const NONE_ROW_ID = "hiq:baseball:2024:topps:1:base:no-auto";
+  const NONE_TARGET = "hiq:baseball:2024:topps:1:base-2:no-auto";
+
+  function noneRow(over: NoneDoc = {}): NoneDoc {
+    // NO cardId field at all -- the shape retire-self-derived-identities.cjs
+    // measured for every sampled user-verified:* row.
+    return {
+      id: NONE_ROW_ID, hobbyiqCardId: NONE_ROW_ID,
+      sport: "baseball", year: 2024, cardYear: 2024,
+      setKey: "topps", setName: "Topps", cardNumber: "1", parallel: "Base",
+      parallelSlug: "base", isAuto: false, printRun: null,
+      playerName: "Aaron Judge", playerSlug: "aaron-judge",
+      source: "user-verified", confidence: 1, vendorIds: {},
+      _etag: "e1",
+      ...over,
+    };
+  }
+
+  it("a real (id, id) point read cannot see a None-pk row -- proves the fake models the real defect's shape", async () => {
+    const c = new NonePartitionFakeContainer();
+    c.seed(noneRow()); // seeded at the None address
+    await expect(c.item(NONE_ROW_ID, NONE_ROW_ID).read()).rejects.toMatchObject({ code: 404 });
+    await expect(c.item(NONE_ROW_ID, nonePartitionKey()).read()).resolves.toBeTruthy();
+  });
+
+  it("moveCatalogRow deletes a None-pk row at its REAL address, not (id, id)", async () => {
+    const cat = new NonePartitionFakeContainer();
+    cat.seed(noneRow());
+    const res = await moveCatalogRow(
+      cat as unknown as Container,
+      noneRow() as never,
+      NONE_TARGET,
+      {},
+      { reason: "fold onto canonical" },
+    );
+    expect(res.action).toBe("move");
+    expect(res.orphanedOldRow).toBeUndefined();
+    // The survivor exists at the new address...
+    expect(cat.docs.has(NONE_TARGET)).toBe(true);
+    // ...and the OLD None-pk row is actually gone, not merely absent from an
+    // address it never occupied.
+    expect(cat.docs.has(`${NONE_ROW_ID}@${NONE_TOKEN}`)).toBe(false);
+  });
+
+  it("BEFORE the fix's shape: deleting at (id, id) alone would silently orphan the None-pk row", async () => {
+    // Demonstrates the defect directly against the fake, independent of
+    // moveCatalogRow: a delete issued at the WRONG address 404s tolerantly
+    // while the real row survives.
+    const c = new NonePartitionFakeContainer();
+    c.seed(noneRow());
+    await expect(c.item(NONE_ROW_ID, NONE_ROW_ID).delete()).rejects.toMatchObject({ code: 404 });
+    // The row is still there, at its real address -- the "already gone"
+    // reading a tolerant caller would have taken is false.
+    expect(c.docs.has(`${NONE_ROW_ID}@${NONE_TOKEN}`)).toBe(true);
+  });
+
+  it("retireCatalogRow deletes a None-pk row at its REAL address too", async () => {
+    const cat = new NonePartitionFakeContainer();
+    cat.seed(noneRow());
+    const res = await retireCatalogRow(cat as unknown as Container, NONE_ROW_ID, undefined, "retire test");
+    expect(res.rowDeleted).toBe(true);
+    expect(res.orphaned).toBeUndefined();
+    expect(cat.docs.has(`${NONE_ROW_ID}@${NONE_TOKEN}`)).toBe(false);
+  });
+
+  it("a None-pk graded child is retired at ITS real address, not (id, id)", async () => {
+    const cat = new NonePartitionFakeContainer();
+    const child = { id: `${NONE_ROW_ID}:psa-10`, hobbyiqCardId: `${NONE_ROW_ID}:psa-10`, gradeTier: "psa-10", parentSlug: NONE_ROW_ID };
+    cat.seed(noneRow());
+    cat.seed(child); // the graded child also carries no cardId
+    const res = await moveCatalogRow(
+      cat as unknown as Container,
+      noneRow() as never,
+      NONE_TARGET,
+      {},
+      { reason: "fold onto canonical" },
+    );
+    expect(res.gradedChildrenRetired).toBe(1);
+    expect(res.orphanedGradedChildren).toBeUndefined();
+    expect(cat.docs.has(`${child.id}@${NONE_TOKEN}`)).toBe(false);
+  });
+
+  it("dryRun never deletes the None-pk row (still correctly addressed for the report)", async () => {
+    const cat = new NonePartitionFakeContainer();
+    cat.seed(noneRow());
+    const res = await moveCatalogRow(
+      cat as unknown as Container,
+      noneRow() as never,
+      NONE_TARGET,
+      {},
+      { reason: "fold onto canonical", dryRun: true },
+    );
+    expect(res.action).toBe("move");
+    expect(cat.docs.has(`${NONE_ROW_ID}@${NONE_TOKEN}`)).toBe(true); // untouched
   });
 });

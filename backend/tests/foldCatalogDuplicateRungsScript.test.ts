@@ -241,6 +241,50 @@ describe("fold-catalog-duplicate-rungs -- safety gates", () => {
     expect(refusalIdx).toBeGreaterThan(-1);
     expect(firstMoveCallIdx).toBeGreaterThan(-1);
   });
+
+  // CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES (review finding,
+  // 2026-09-20). A row with no `cardId` field lives at Cosmos's own None
+  // partition key. moveCatalogRow's own delete now resolves that correctly,
+  // but this LANE never becomes the first mover on that address shape: any
+  // None-pk row in a group refuses the WHOLE group unless it is already the
+  // survivor and needs no move at all.
+  it("isNonePkRow is imported from the shared lib, never re-implemented", () => {
+    expect(source).toContain('require(path.join(__dirname, "lib", "catalog-none-pk.cjs"))');
+    expect(source).toContain("isNonePkRow");
+    // Never a second predicate testing `!row.cardId` or similar by hand.
+    expect(source).not.toMatch(/function\s+isNonePkRow/);
+  });
+
+  it("a None-pk row that is NOT already the survivor refuses the whole group, before any move", () => {
+    expect(source).toContain("refusedNonePartitionKeyRow");
+    expect(source).toContain('"none-partition-key-row"');
+    const refusalIdx = source.indexOf("refusedNonePartitionKeyRow++");
+    const firstMoveCallIdx = source.indexOf("await moveCatalogRow(");
+    expect(refusalIdx).toBeGreaterThan(-1);
+    expect(firstMoveCallIdx).toBeGreaterThan(-1);
+    expect(refusalIdx).toBeLessThan(firstMoveCallIdx);
+  });
+
+  it("the None-pk gate's ONLY exception is a None-pk row already at the canonical id needing no move", () => {
+    // nonePkNeedsMoveOrDelete is true unless the None-pk row IS the survivor
+    // AND the survivor rule is stored-id-already-canonical (no re-key, no
+    // delete -- literally nothing happens to it).
+    expect(source).toContain('r.id !== survivor.id || survivorRule !== "stored-id-already-canonical"');
+  });
+
+  it("the None-partition-key refusal class is counted in the reconcile and reportWrites arithmetic", () => {
+    expect(source).toContain("refusedNonePartitionKeyRow");
+    const reconcileLine = source.split("\n").find((l) => l.includes("RECONCILE: candidates"));
+    expect(reconcileLine).toContain("none-partition-key");
+    expect(source).toMatch(/const refusedTotal = stats\.refusedDifferentPlayer \+ stats\.refusedUserVerifiedNotSurvivor \+ stats\.refusedCanonicalUnderivable \+ stats\.refusedNonePartitionKeyRow;/);
+  });
+
+  it("every row in a refused None-pk group is written to the plan file", () => {
+    const idx = source.indexOf('stats.refusedNonePartitionKeyRow++');
+    const block = source.slice(idx, idx + 500);
+    expect(block).toContain("for (const r of rows) emitPlanRow(");
+    expect(block).toContain('reason: "none-partition-key-row"');
+  });
 });
 
 // ── the loser's sales are re-pointed BEFORE its catalog row is deleted ──────

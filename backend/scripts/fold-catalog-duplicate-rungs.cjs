@@ -144,6 +144,16 @@ const { playerIdentityKey } = require(path.join(backend, "dist", "services", "ca
 const { computeHobbyIqCardId, normalizeParallel } = require(path.join(backend, "dist", "services", "portfolioiq", "hobbyIqCardId.service.js"));
 const { reportWrites } = require(path.join(backend, "dist", "services", "ops", "writeReconciliation.js"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+// CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES (review finding,
+// 2026-09-20). A row with no `cardId` field at all lives at Cosmos's own
+// None partition key -- `moveCatalogRow`'s own delete now resolves that
+// correctly (see catalogRowOps.service.ts's pkFor/deleteAndVerifyGone), but
+// this LANE still refuses to fold or re-key a None-pk row at all: the
+// population is exactly the user-verified/self-derived rows a census found
+// carrying no cardId, and this fold is not the place to be the first mover
+// on that address shape. isNonePkRow is the SAME predicate
+// patchCatalogRowFields's own pkFor branches on.
+const { isNonePkRow } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
@@ -379,6 +389,7 @@ async function main() {
     salesRepointed: 0, salesRelocated: 0, salesRelocateFailed: 0,
     gradedRetired: 0, holdingsRepointed: 0, holdingsWalked: 0, holdingDocsWalked: 0,
     refusedDifferentPlayer: 0, refusedUserVerifiedNotSurvivor: 0, refusedCanonicalUnderivable: 0,
+    refusedNonePartitionKeyRow: 0,
     failed: 0, notReached: 0,
   };
   const pairCounts = new Map(); // "loserSlug -> canonicalSlug" -> count
@@ -386,7 +397,7 @@ async function main() {
     const k = `${loser}\u0000${canon}`;
     pairCounts.set(k, (pairCounts.get(k) ?? 0) + 1);
   };
-  const refusals = { differentPlayer: [], userVerifiedNotSurvivor: [], canonicalUnderivable: [] };
+  const refusals = { differentPlayer: [], userVerifiedNotSurvivor: [], canonicalUnderivable: [], nonePartitionKeyRow: [] };
   const failures = [];
   let stopReason = null;
 
@@ -492,6 +503,30 @@ async function main() {
       continue;
     }
 
+    // ── SAFETY GATE: no None-partition-key row in this group is ever deleted
+    // or re-keyed by this lane ──────────────────────────────────────────────
+    // CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES (review
+    // finding, 2026-09-20). A row with no `cardId` field lives at Cosmos's
+    // own None partition key -- catalogRowOps.service.ts's moveCatalogRow now
+    // resolves that correctly for its OWN delete (pkFor/deleteAndVerifyGone),
+    // but this lane still refuses to be the first mover on that address
+    // shape: the population is exactly the user-verified/self-derived rows a
+    // census found carrying no cardId, and a fold across product-word
+    // respellings is not the operation that should also be the one moving a
+    // None-pk row for the first time. The ONLY exception is a None-pk row
+    // that is ALREADY the chosen survivor under rule 1 (its stored id already
+    // equals the canonical id) -- nothing about it needs to move OR be
+    // deleted in that case, so there is nothing this gate needs to protect.
+    const nonePkRows = rows.filter(isNonePkRow);
+    const nonePkNeedsMoveOrDelete = nonePkRows.some((r) => r.id !== survivor.id || survivorRule !== "stored-id-already-canonical");
+    if (nonePkRows.length && nonePkNeedsMoveOrDelete) {
+      stats.refusedNonePartitionKeyRow++;
+      const line = `  REFUSED none-partition-key-row  group=${key}  none-pk-ids=${nonePkRows.map((r) => r.id).join(", ")}  chosen-survivor=${survivor.id} (${survivorRule})`;
+      if (refusals.nonePartitionKeyRow.length < 40) refusals.nonePartitionKeyRow.push(line);
+      for (const r of rows) emitPlanRow({ action: "refused", reason: "none-partition-key-row", groupKey: key, id: r.id, source: r.source ?? null });
+      continue;
+    }
+
     const losers = rows.filter((r) => r.id !== survivor.id);
     if (!losers.length) { stats.groupsAlreadyOneId++; continue; }
 
@@ -585,6 +620,7 @@ async function main() {
   console.log(`    different-player                ${f(stats.refusedDifferentPlayer)}`);
   console.log(`    user-verified-not-survivor       ${f(stats.refusedUserVerifiedNotSurvivor)}`);
   console.log(`    canonical-underivable            ${f(stats.refusedCanonicalUnderivable)}`);
+  console.log(`    none-partition-key-row           ${f(stats.refusedNonePartitionKeyRow)}   <- a row with no cardId lives at Cosmos's own None partition; never deleted or re-keyed by this lane`);
   console.log(`  failed                      ${f(stats.failed)}`);
   console.log(`  not reached                 ${f(stats.notReached)}`);
 
@@ -609,23 +645,28 @@ async function main() {
     console.log(`\n  REFUSED: canonical id could not be derived (${f(stats.refusedCanonicalUnderivable)} total, showing up to 40):`);
     for (const l of refusals.canonicalUnderivable) console.log(l);
   }
+  if (refusals.nonePartitionKeyRow.length) {
+    console.log(`\n  REFUSED: a None-partition-key row in the group needs a move or delete this lane refuses to do (${f(stats.refusedNonePartitionKeyRow)} total, showing up to 40):`);
+    for (const l of refusals.nonePartitionKeyRow) console.log(l);
+  }
   if (failures.length) {
     console.log(`\n  FAILED -- every one, in full (${f(failures.length)}):`);
     for (const l of failures) console.log(l);
   }
 
+  const refusedTotal = stats.refusedDifferentPlayer + stats.refusedUserVerifiedNotSurvivor + stats.refusedCanonicalUnderivable + stats.refusedNonePartitionKeyRow;
   if (APPLY) {
     reportWrites({
       job: "fold-catalog-duplicate-rungs",
-      intended: stats.rowsRemoved + stats.refusedDifferentPlayer + stats.refusedUserVerifiedNotSurvivor + stats.refusedCanonicalUnderivable + stats.failed,
+      intended: stats.rowsRemoved + refusedTotal + stats.failed,
       written: stats.rowsRemoved,
-      skipped: stats.refusedDifferentPlayer + stats.refusedUserVerifiedNotSurvivor + stats.refusedCanonicalUnderivable,
+      skipped: refusedTotal,
       failed: stats.failed,
     });
   }
 
   console.log(`\n  RECONCILE: groups scanned ${f(stats.groupsScanned)} = single-row ${f(stats.groupsSingleRow)} + already-one-id ${f(stats.groupsAlreadyOneId)} + candidates ${f(stats.groupsCandidates)}`);
-  console.log(`  RECONCILE: candidates ${f(stats.groupsCandidates)} = folded ${f(stats.groupsFolded)} + refused(different-player/user-verified/canonical) ${f(stats.refusedDifferentPlayer + stats.refusedUserVerifiedNotSurvivor + stats.refusedCanonicalUnderivable)} + failed ${f(stats.failed)} + not-reached-mid-group 0`);
+  console.log(`  RECONCILE: candidates ${f(stats.groupsCandidates)} = folded ${f(stats.groupsFolded)} + refused(different-player/user-verified/canonical/none-partition-key) ${f(refusedTotal)} + failed ${f(stats.failed)} + not-reached-mid-group 0`);
 
   if (stopReason) console.log(`\n${stopReason}`);
   return { client: db.client };
