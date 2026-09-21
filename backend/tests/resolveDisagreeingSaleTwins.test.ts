@@ -75,9 +75,13 @@ const shortRow = (over: Record<string, unknown> = {}) => ({
 function parseHiqFake(hiqId: string) {
   const s = String(hiqId ?? "");
   if (!s.startsWith("hiq:")) return null;
-  const [, sport, yearStr, setKey, cardNumber, parallel, autoFlag] = s.split(":");
+  const [, sport, yearStr, setKey, cardNumber, parallel, autoFlag, printRunPart] = s.split(":");
   if (!sport || !yearStr || !setKey || !cardNumber) return null;
-  return { sport, year: Number(yearStr), setKey, cardNumber, parallel: parallel ?? "base", isAuto: autoFlag === "auto" };
+  const printRunMatch = /^num-(\d+)$/.exec(printRunPart ?? "");
+  return {
+    sport, year: Number(yearStr), setKey, cardNumber, parallel: parallel ?? "base", isAuto: autoFlag === "auto",
+    printRun: printRunMatch ? Number(printRunMatch[1]) : null,
+  };
 }
 
 // ── fake TS-authored deps: no dist/ build required for these pure-decision
@@ -241,6 +245,81 @@ describe("REVIEW FIX (1) HIGH: the named-card gate -- titleNamesMoreSpecificThan
     const row = { ...candidateRow, parallel: "Image Variation SSP" };
     const result = mod.titleNamesMoreSpecificThanCandidate(deps, { title: "... Image Variation SSP ...", playerName: "Cal Raleigh" }, parsed, row);
     expect(result.moreSpecific).toBe(false);
+  });
+
+  // ── DELTA REVIEW OF #2381: catalogPrefixFor used to DROP printRun even
+  // though parseHobbyIqCardId returns it, so the print-run check fired on
+  // EVERY title stating "/N" even when the candidate's OWN slug already
+  // carried the identical `:num-N` segment. Six real pairs the bug wrongly
+  // left, pinned verbatim as regression tests. Each one carries an EXACT
+  // candidateParsed.printRun (never dropped by a fake catalogPrefixFor here --
+  // these tests call titleNamesMoreSpecificThanCandidate directly with the
+  // parsed shape catalogPrefixFor now actually returns).
+  describe("DELTA REVIEW: print-run comparison is EXACT, never a bare presence/absence flag", () => {
+    it("REGRESSION: Angel Cepeda black-refractor:auto:num-10 vs title \"/10\" -- SAME rung, not more specific", () => {
+      const deps = fakeDeps({ extractPrintRunFromTitle: () => 10 });
+      const parsed = { sport: "baseball", year: 2025, setKey: "some-product", cardNumber: "cepeda-1", parallel: "black-refractor", isAuto: true, printRun: 10 };
+      const row = { parallel: "Black Refractor", playerName: "Angel Cepeda", cardNumber: "cepeda-1" };
+      const result = mod.titleNamesMoreSpecificThanCandidate(deps, { title: "Angel Cepeda ... Black Refractor Auto /10", playerName: "Angel Cepeda" }, parsed, row);
+      expect(result.moreSpecific).toBe(false);
+    });
+
+    it("REGRESSION: PPDAR-ARO /15 -- candidate already carries num-15", () => {
+      const deps = fakeDeps({ extractPrintRunFromTitle: () => 15 });
+      const parsed = { sport: "baseball", year: 2025, setKey: "some-product", cardNumber: "ppdar-aro", parallel: "base", isAuto: true, printRun: 15 };
+      const result = mod.titleNamesMoreSpecificThanCandidate(deps, { title: "#PPDAR-ARO /15", playerName: "x" }, parsed, { parallel: "Base" });
+      expect(result.moreSpecific).toBe(false);
+    });
+
+    it("REGRESSION: CPA-WT /150 -- candidate already carries num-150", () => {
+      const deps = fakeDeps({ extractPrintRunFromTitle: () => 150 });
+      const parsed = { sport: "baseball", year: 2025, setKey: "some-product", cardNumber: "cpa-wt", parallel: "base", isAuto: true, printRun: 150 };
+      const result = mod.titleNamesMoreSpecificThanCandidate(deps, { title: "#CPA-WT /150", playerName: "x" }, parsed, { parallel: "Base" });
+      expect(result.moreSpecific).toBe(false);
+    });
+
+    it("REGRESSION: PPAR-AB /75 -- candidate already carries num-75", () => {
+      const deps = fakeDeps({ extractPrintRunFromTitle: () => 75 });
+      const parsed = { sport: "baseball", year: 2025, setKey: "some-product", cardNumber: "ppar-ab", parallel: "base", isAuto: true, printRun: 75 };
+      const result = mod.titleNamesMoreSpecificThanCandidate(deps, { title: "#PPAR-AB /75", playerName: "x" }, parsed, { parallel: "Base" });
+      expect(result.moreSpecific).toBe(false);
+    });
+
+    it("REGRESSION: AC-MM Green /99 -- candidate already carries num-99", () => {
+      const deps = fakeDeps({ extractPrintRunFromTitle: () => 99 });
+      const parsed = { sport: "baseball", year: 2025, setKey: "some-product", cardNumber: "ac-mm", parallel: "green", isAuto: false, printRun: 99 };
+      const result = mod.titleNamesMoreSpecificThanCandidate(deps, { title: "#AC-MM Green /99", playerName: "x" }, parsed, { parallel: "Green" });
+      expect(result.moreSpecific).toBe(false);
+    });
+
+    it("REGRESSION: BCP-243 /50 -- candidate already carries num-50", () => {
+      const deps = fakeDeps({ extractPrintRunFromTitle: () => 50 });
+      const parsed = { sport: "baseball", year: 2025, setKey: "some-product", cardNumber: "bcp-243", parallel: "base", isAuto: false, printRun: 50 };
+      const result = mod.titleNamesMoreSpecificThanCandidate(deps, { title: "#BCP-243 /50", playerName: "x" }, parsed, { parallel: "Base" });
+      expect(result.moreSpecific).toBe(false);
+    });
+
+    it("title /N and candidate num-M (M != N) CONTRADICTS -- that side fails, distinct from under-specified", () => {
+      const deps = fakeDeps({ extractPrintRunFromTitle: () => 10 });
+      const parsed = { sport: "baseball", year: 2025, setKey: "some-product", cardNumber: "cepeda-1", parallel: "black-refractor", isAuto: true, printRun: 25 };
+      const result = mod.titleNamesMoreSpecificThanCandidate(deps, { title: "... /10 ...", playerName: "x" }, parsed, { parallel: "Black Refractor" });
+      expect(result.moreSpecific).toBe(true);
+      expect(result.evidence).toMatch(/DIFFERENT print run/);
+    });
+
+    it("title /N and candidate carries NO num- at all -- still more specific (the original, un-regressed shape)", () => {
+      const deps = fakeDeps({ extractPrintRunFromTitle: () => 10 });
+      const parsed = { sport: "baseball", year: 2025, setKey: "some-product", cardNumber: "cepeda-1", parallel: "black-refractor", isAuto: true, printRun: null };
+      const result = mod.titleNamesMoreSpecificThanCandidate(deps, { title: "... /10 ...", playerName: "x" }, parsed, { parallel: "Black Refractor" });
+      expect(result.moreSpecific).toBe(true);
+      expect(result.evidence).toMatch(/does not carry/);
+    });
+
+    it("catalogPrefixFor itself now carries printRun through from parseHobbyIqCardId, never dropping it", () => {
+      mod.__setSweepDepsForTest({ parseHobbyIqCardId: parseHiqFake });
+      const parsed = mod.catalogPrefixFor("hiq:baseball:2025:some-product:cepeda-1:black-refractor:auto:num-10");
+      expect(parsed.printRun).toBe(10);
+    });
   });
 });
 

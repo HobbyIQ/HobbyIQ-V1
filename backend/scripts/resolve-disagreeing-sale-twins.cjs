@@ -276,7 +276,7 @@ function playerMatchesRow(playerIdentityKeyFn, salePlayer, rowPlayer) {
 function catalogPrefixFor(hiqId) {
   const parsed = SWEEP_DEPS.parseHobbyIqCardId(String(hiqId ?? ""));
   if (!parsed) return null;
-  return { sport: parsed.sport, year: parsed.year, setKey: parsed.setKey, cardNumber: parsed.cardNumber, parallel: parsed.parallel, isAuto: parsed.isAuto };
+  return { sport: parsed.sport, year: parsed.year, setKey: parsed.setKey, cardNumber: parsed.cardNumber, parallel: parsed.parallel, isAuto: parsed.isAuto, printRun: parsed.printRun ?? null };
 }
 
 /**
@@ -362,9 +362,33 @@ function titleNamesMoreSpecificThanCandidate(deps, sale, candidateParsed, candid
     }
   }
 
+  // PRINT RUN (coordinator delta review of #2381: catalogPrefixFor used to
+  // DROP `printRun` even though parseHobbyIqCardId returns it, so this check
+  // fired on EVERY title stating "/N" -- even when the candidate's OWN slug
+  // already carries the identical `:num-N` segment. Real pairs wrongly left
+  // by that bug: Angel Cepeda black-refractor:auto:num-10 vs title "/10",
+  // PPDAR-ARO /15, CPA-WT /150, PPAR-AB /75, AC-MM Green /99, BCP-243 /50 --
+  // every one a CORRECT resolution the missing field turned into a false
+  // "more specific" gate. The comparison is now EXACT:
+  //   title states no /N at all           -> no print-run opinion (silence)
+  //   title /N, candidate carries num-N    -> the SAME rung; not more specific
+  //   title /N, candidate carries num-M
+  //     (M != N)                           -> the candidate's OWN print run
+  //                                          CONTRADICTS the title; that side
+  //                                          fails just as surely as if it
+  //                                          named a different parallel
+  //   title /N, candidate carries no num-  -> the title states a numbered
+  //                                          rung the candidate's slug does
+  //                                          not reflect at all; more specific
   const titlePrintRun = deps.extractPrintRunFromTitle(title);
-  if (titlePrintRun && !candidateParsed.printRun) {
-    return { moreSpecific: true, evidence: `title states a print run (/${titlePrintRun}) the candidate identity does not carry` };
+  if (titlePrintRun) {
+    if (candidateParsed.printRun && Number(candidateParsed.printRun) === Number(titlePrintRun)) {
+      // Exact match -- the candidate already IS this print run; silence.
+    } else if (candidateParsed.printRun) {
+      return { moreSpecific: true, evidence: `title states print run /${titlePrintRun}, candidate identity carries a DIFFERENT print run (/${candidateParsed.printRun}) -- contradicts, not merely under-specified` };
+    } else {
+      return { moreSpecific: true, evidence: `title states a print run (/${titlePrintRun}) the candidate identity does not carry` };
+    }
   }
 
   return { moreSpecific: false };
