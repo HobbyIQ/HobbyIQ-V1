@@ -48,6 +48,17 @@
  * Real failing title: "2025 Bowman Draft #BDC-128 Jake Munroe Chrome Sky
  * Blue Refractor Sapphire". Fixed with a qualifier guard, refusing rather
  * than guessing, same shape as the file's other compound-colour checks.
+ *
+ * COMPANION FIX ROUND 4: round 3's guard only matched a qualifier
+ * separated from "blue" by `\s+`, and only checked BEFORE "blue" -- so
+ * "Sky-Blue Sapphire" (hyphen), "SkyBlue Sapphire" (concatenated) and
+ * "Blue Sky Sapphire" (reversed) still matched the bare-colour rule and
+ * aliased to Base. `blueIsQualified()` (defined beside PATTERN_COLOUR)
+ * checks BOTH directions with ANY separator (space, hyphen, or none), and
+ * adds the following-word family ("Blue Wave", "Blue Ice", "Blue Shimmer",
+ * "Blue Lava", "Blue Speckle", "Blue Refractor" -- this file's own
+ * PATTERN_COLOUR family words, which name a different card than bare Blue
+ * when paired with a colour) alongside the preceding-qualifier list.
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -294,5 +305,84 @@ describe("COMPANION FIX (review round 3): a QUALIFIED blue is never read as bare
     const parsed = parseListingIdentity(title, undefined, { vertical: "baseball", year: 2025, setKey: "bowman-draft-sapphire" });
     expect(parsed.parallel).toBe("Blue Sapphire");
     expect(scopedMarketLanguageAlias(parsed.parallel, { sport: "baseball", year: 2025, setKey: "bowman-draft-sapphire" })).toBe("Base");
+  });
+});
+
+describe("COMPANION FIX ROUND 4: any separator, either direction, never lets a qualified blue alias to Base", () => {
+  const scope = { vertical: "baseball", year: 2025, setKey: "bowman-draft-sapphire" };
+  const aliasScope = { sport: "baseball", year: 2025, setKey: "bowman-draft-sapphire" };
+
+  // The load-bearing property throughout: the alias must never see the
+  // exact phrase "Blue Sapphire" for a title where "blue" is qualified by
+  // an adjacent word, REGARDLESS of separator or direction -- and even if
+  // the parser happens to answer something else (a separate, unrelated
+  // colour-coverage gap, not asserted against here), the alias itself must
+  // never turn that answer into "Base".
+  it.each([
+    ["hyphen, qualifier before", "2025 Bowman Draft Sapphire Baseball #BDC-12 Sky-Blue Sapphire"],
+    ["concatenated, qualifier before", "2025 Bowman Draft Sapphire Baseball #BDC-12 SkyBlue Sapphire"],
+    ["reversed order", "2025 Bowman Draft Sapphire Baseball #BDC-12 Blue Sky Sapphire"],
+    ["double space", "2025 Bowman Draft Sapphire Baseball #BDC-12 Light  Blue Sapphire"],
+    ["hyphen, Aqua", "2025 Bowman Draft Sapphire Baseball #BDC-12 Aqua-Blue Sapphire"],
+    ["family word after: Wave", "2025 Bowman Draft Sapphire Baseball #BDC-12 Blue Wave Sapphire"],
+    ["family word after: Ice", "2025 Bowman Draft Sapphire Baseball #BDC-12 Blue Ice Sapphire"],
+    ["family word after: Shimmer", "2025 Bowman Draft Sapphire Baseball #BDC-12 Blue Shimmer Sapphire"],
+    ["family word after: Refractor, real failing shape", "2025 Bowman Draft #BDC-128 Jake Munroe Chrome Sky Blue Refractor Sapphire"],
+  ])("%s: never parses to bare 'Blue Sapphire', never aliases to Base", (_label, title) => {
+    const parsed = parseListingIdentity(title, undefined, scope);
+    expect(parsed.parallel, title).not.toBe("Blue Sapphire");
+    expect(scopedMarketLanguageAlias(parsed.parallel, aliasScope), title).toBeNull();
+  });
+
+  it("PINNED: the real failing title end-to-end via rederiveRow never lands on :base:", () => {
+    const r = rederiveRow({
+      sport: null,
+      cardYear: 2025,
+      setName: "Bowman Draft Sapphire",
+      cardNumber: "BDC-128",
+      parallel: "Blue Sapphire",
+      isAuto: false,
+      title: "2025 Bowman Draft Baseball #BDC-128 Jake Munroe Chrome Sky-Blue Refractor Sapphire",
+    });
+    expect(r.action).toBe("rederived");
+    expect(r.parallel).not.toBe("Blue Sapphire");
+    expect(r.parallel).not.toBe("Base");
+    expect(r.hobbyiqCardId).not.toMatch(/:base:/);
+  });
+
+  // POSITIVE CONTROLS: the widened guard must not become over-eager and
+  // start refusing genuine, unqualified "Blue Sapphire" sales.
+  it("POSITIVE: plain 'Blue Sapphire' still aliases to Base", () => {
+    const parsed = parseListingIdentity("2025 Bowman Draft Sapphire Baseball #BDC-12 Blue Sapphire", undefined, scope);
+    expect(parsed.parallel).toBe("Blue Sapphire");
+    expect(scopedMarketLanguageAlias(parsed.parallel, aliasScope)).toBe("Base");
+  });
+
+  it("POSITIVE: 'Sapphire Blue' (reversed word order, no qualifier) still aliases to Base", () => {
+    const parsed = parseListingIdentity("2025 Bowman Draft Sapphire Baseball #BDC-12 Sapphire Blue", undefined, scope);
+    expect(parsed.parallel).toBe("Blue Sapphire");
+    expect(scopedMarketLanguageAlias(parsed.parallel, aliasScope)).toBe("Base");
+  });
+
+  it("POSITIVE: a stated print run and Auto survive the alias unchanged", () => {
+    const title = "2025 Bowman Draft Sapphire Baseball #BDC-12 /199 Blue Sapphire Auto";
+    const parsed = parseListingIdentity(title, undefined, scope);
+    expect(parsed.parallel).toBe("Blue Sapphire");
+    expect(parsed.printRun).toBe(199);
+    expect(parsed.isAuto).toBe(true);
+    expect(scopedMarketLanguageAlias(parsed.parallel, aliasScope)).toBe("Base");
+
+    const r = rederiveRow({
+      sport: null,
+      cardYear: 2025,
+      setName: "Bowman Draft Sapphire",
+      cardNumber: "BDC-12",
+      parallel: parsed.parallel,
+      isAuto: parsed.isAuto,
+      title,
+    });
+    expect(r.action).toBe("rederived");
+    expect(r.parallel).toBe("Base");
+    expect(r.hobbyiqCardId).toMatch(/:base:auto:num-199$/);
   });
 });

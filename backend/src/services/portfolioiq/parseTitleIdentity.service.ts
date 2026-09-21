@@ -771,6 +771,38 @@ const AUTO_NEGATIVE_RE =
  *  guarded at the write. */
 const PATTERN_COLOUR = String.raw`(orange|red|green|gold|blue|purple|yellow|aqua|pink|black|white|fuchsia|silver|bronze|teal|sepia)`;
 
+/** CF-A-QUALIFIED-COLOUR-IS-NOT-THE-BARE-COLOUR, round 4 (2026-09-21).
+ *  "Blue" alone means bare Blue -- but "blue" ADJACENT to a qualifying word
+ *  on EITHER side names a DIFFERENT card ("Sky Blue", "Royal Blue", "Blue
+ *  Wave Refractor", "Blue Ice"), never plain "Blue" and never "Blue
+ *  Sapphire". Round 3's guard only checked a qualifier immediately BEFORE
+ *  "blue", separated by `\s+` -- so "Sky-Blue" (hyphen), "SkyBlue"
+ *  (concatenated) and "Blue Sky" (reversed) still matched the bare-colour
+ *  rule. `SEP` accepts a run of whitespace/hyphens OR nothing at all
+ *  (concatenated spellings); the word lists are the qualifiers this file's
+ *  OWN vocabulary already treats as compounds distinct from bare Blue (the
+ *  "sky blue"/"royal blue" list at line ~2236, PATTERN_COLOUR's own family
+ *  words -- Wave, Ice/Cracked Ice, Shimmer, Lava, Speckle, Refractor,
+ *  Sapphire -- that combine with a colour to name a DIFFERENT card than the
+ *  bare colour). Checked from BOTH directions: a qualifier can precede
+ *  ("Sky Blue") or follow ("Blue Sky" is not real vocabulary here, but
+ *  "Blue Wave", "Blue Ice", "Blue Shimmer", "Blue Lava", "Blue Speckle",
+ *  "Blue Refractor" all are, and "Blue Sapphire" itself must be excluded
+ *  from the FOLLOWING list -- it is the one compound this guard exists to
+ *  let through when nothing else qualifies it). */
+const BLUE_SEP = String.raw`[\s-]*`;
+const BLUE_PRECEDING_QUALIFIERS = String.raw`sky|light|aqua|navy|royal|ice|baby|teal|dark`;
+const BLUE_FOLLOWING_QUALIFIERS = String.raw`sky|wave|ice|shimmer|lava|speckle|refractor|prism|foil|geometric|border|fractor`;
+/** True when "blue" in `T` is qualified on either side by a word that names
+ *  a DIFFERENT compound colour/finish than bare "Blue" -- i.e. this "blue"
+ *  is not evidence of the bare colour (or bare "Blue Sapphire") at all.
+ *  Silent-safe: a title with no "blue" at all reads false, same as today. */
+function blueIsQualified(T: string): boolean {
+  const before = new RegExp(String.raw`\b(?:${BLUE_PRECEDING_QUALIFIERS})${BLUE_SEP}blue\b`, "i");
+  const after = new RegExp(String.raw`\bblue${BLUE_SEP}(?:${BLUE_FOLLOWING_QUALIFIERS})\b`, "i");
+  return before.test(T) || after.test(T);
+}
+
 /** Nouns that mean "a card", for the count-adjacency tests below. */
 const LOT_CARD_NOUN = String.raw`(?:cards?|commons?|rookies|rc'?s|singles?|slabs?|autos?|refractors?|parallels?|inserts?|prospects?)`;
 /** Nouns that mean "packaging", which a count in front of does NOT make a lot. */
@@ -1826,16 +1858,18 @@ function extractParallel(
   if (/orange\s+sapphire/i.test(T)) return "Orange Sapphire";
   if (/yellow\s+sapphire/i.test(T)) return "Yellow Sapphire";
   if (/green\s+sapphire/i.test(T)) return "Green Sapphire";
-  // CF-A-QUALIFIED-COLOUR-IS-NOT-THE-BARE-COLOUR (review round 3,
+  // CF-A-QUALIFIED-COLOUR-IS-NOT-THE-BARE-COLOUR (review round 3+4,
   // 2026-09-21). Unlike the other colours above, "Blue" has real compound
-  // forms in the wild ("Sky Blue", "Royal Blue", "Navy Blue", ...) that are
-  // NOT the same card as bare "Blue Sapphire" -- this adjacency match would
-  // otherwise fire on "Sky Blue Sapphire" too (the qualifier sits BEFORE
-  // "blue", which `blue\s+sapphire` never inspects). Negative lookbehind
-  // refuses when one of those qualifiers immediately precedes "blue"; see
-  // the fuller guard + real failing title a few lines below in the
-  // sapphire-product block, which this mirrors.
-  if (/(?<!(?:sky|light|aqua|navy|royal|ice|baby|teal|dark)\s)blue\s+sapphire/i.test(T)) return "Blue Sapphire";
+  // forms in the wild ("Sky Blue", "Royal Blue", "Navy Blue", "Blue Wave",
+  // "Blue Ice", ...) that are NOT the same card as bare "Blue Sapphire" --
+  // this adjacency match would otherwise fire on "Sky Blue Sapphire" too
+  // (round 3 only guarded a qualifier separated by `\s+`, so "Sky-Blue
+  // Sapphire" and "SkyBlue Sapphire" still matched). `blueIsQualified`
+  // checks both directions with any separator (space, hyphen, none) --
+  // see its definition above for the full reasoning and the real failing
+  // title a few lines below in the sapphire-product block, which this
+  // mirrors.
+  if (!blueIsQualified(T) && new RegExp(String.raw`blue${BLUE_SEP}sapphire`, "i").test(T)) return "Blue Sapphire";
   // Patterned refractors (color + adjacent pattern word). Direct regex
   // literals — string-concatenated regexes were dropping the \s+ escape
   // when constructed via new RegExp().
@@ -1959,27 +1993,32 @@ function extractParallel(
   // Real observed: "2026 Bowman Chrome Sapphire Owen Carey Green /99"
   // means Green Sapphire /99 (not Green Refractor /99).
   //
-  // CF-A-QUALIFIED-COLOUR-IS-NOT-THE-BARE-COLOUR (review round 3, 2026-09-21).
-  // `\bblue\b` alone matches "blue" ANYWHERE in the title -- it is not even
-  // adjacent to "sapphire" -- so a genuinely different compound colour
-  // ("Sky Blue", "Light Blue", "Aqua Blue", "Navy Blue", "Royal Blue", "Ice
-  // Blue", "Baby Blue", "Teal Blue", "Dark Blue") silently folded down to
-  // bare "Blue Sapphire", which downstream then reads as newly-scoped
-  // SCOPED_MARKET_LANGUAGE_ALIAS's alias target and gets rewritten to Base.
-  // Real failing title: "2025 Bowman Draft #BDC-128 Jake Munroe Chrome Sky
-  // Blue Refractor Sapphire" -- a compound colour this file has no named
-  // rung for, which must NOT collapse to "Blue Sapphire" (and must
-  // therefore never reach the alias at all). Same guard shape as the
-  // "sky blue" / "royal blue" compound-colour checks elsewhere in this
-  // function (line ~2205) -- checked BEFORE the bare colour, refusing
-  // rather than guessing a compound this file does not otherwise name.
-  const BLUE_QUALIFIER_RE = /\b(sky|light|aqua|navy|royal|ice|baby|teal|dark)\s+blue\b/i;
+  // CF-A-QUALIFIED-COLOUR-IS-NOT-THE-BARE-COLOUR (review round 3+4,
+  // 2026-09-21). `\bblue\b` alone matches "blue" ANYWHERE in the title --
+  // it is not even adjacent to "sapphire" -- so a genuinely different
+  // compound colour ("Sky Blue", "Light Blue", "Aqua Blue", "Navy Blue",
+  // "Royal Blue", "Ice Blue", "Baby Blue", "Teal Blue", "Dark Blue", "Blue
+  // Wave", "Blue Ice", ...) silently folded down to bare "Blue Sapphire",
+  // which downstream then reads as newly-scoped SCOPED_MARKET_LANGUAGE_
+  // ALIAS's alias target and gets rewritten to Base. Real failing title:
+  // "2025 Bowman Draft #BDC-128 Jake Munroe Chrome Sky Blue Refractor
+  // Sapphire" -- a compound colour this file has no named rung for, which
+  // must NOT collapse to "Blue Sapphire" (and must therefore never reach
+  // the alias at all). Round 3's guard required `\s+` between the
+  // qualifier and "blue" and only checked BEFORE -- so "Sky-Blue Sapphire"
+  // (hyphen), "SkyBlue Sapphire" (concatenated) and "Blue Sky Sapphire"
+  // (reversed) all still matched the bare rule. `blueIsQualified` (defined
+  // above, beside PATTERN_COLOUR) checks both directions with any
+  // separator. Same guard shape as the "sky blue" / "royal blue"
+  // compound-colour checks elsewhere in this function (line ~2205) --
+  // checked BEFORE the bare colour, refusing rather than guessing a
+  // compound this file does not otherwise name.
   if (/sapphire/i.test(T)) {
     if (/\bred\b/i.test(T)) return "Red Sapphire";
     if (/\borange\b/i.test(T)) return "Orange Sapphire";
     if (/\byellow\b/i.test(T)) return "Yellow Sapphire";
     if (/\bgreen\b/i.test(T)) return "Green Sapphire";
-    if (BLUE_QUALIFIER_RE.test(T)) {
+    if (blueIsQualified(T)) {
       // A named compound this file does not otherwise resolve -- refuse
       // rather than guess. Falls through to whatever a later, more general
       // rule (or the Base fallback) answers; never "Blue Sapphire".
