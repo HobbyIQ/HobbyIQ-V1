@@ -1,0 +1,55 @@
+{
+  "source": "upperdeck-official-2026-09-20",
+  "sourceUrl": "https://upperdeck.com/checklist/2024-25-upper-deck-extended-series-checklist/",
+  "sourceHtmlSha256": "c3f38788e1516993e4a4cd2b391e971dbc23f7fead9b72b1f319baccc4e45c55",
+  "fetchedAt": "2026-09-20",
+  "sport": "hockey",
+  "year": 2024,
+  "setName": "2024-25 Upper Deck Extended Series Hockey",
+  "productKey": "2024-25-upper-deck-extended-series-hockey",
+  "setKey": "upper-deck-extended-series",
+  "rowCount": 3737,
+  "parallelColumnAuthoritative": true,
+  "readyToIngest": false,
+  "readyToIngestNote": "Documentation only -- ingest-checklist-csv-to-catalog.cjs and ingest-scraped-checklist.cjs do not read this field; the real gate is that this directory sits under backend/data/checklists/scraped/ where a human/workflow chooses which directories to point DIR at.",
+  "gapThisFills": "2026-09-20 census target: hockey|2024|upper-deck is the WORST-backed sport-year cell (74,487 unbacked sold_comps sales). 2024-25 Extended Series had NO staged checklist anywhere in the repo before this package (checked backend/data/checklists for every upper-deck*2024-25*hockey* / *extended*2024-25*hockey* file first -- none existed). setKey upper-deck-extended-series was already registered in productSetKeys.ts (D39, 2026-08-31 ruling, refines: 'upper-deck') before this package existed -- no new registration needed for the file-level key. cardboardconnection.com has no page under the guessed slug for this year (2024-25-upper-deck-extended-series-hockey-cards, 404). Beckett's S3 origin was not tried this pass -- upperdeck.com's own page (source #3 in the acquisition order, but proven reliable and already the source of record for this exact product's 2023-24 sibling after Beckett was measured and rejected there for the odds-line-before-'Parallels:' layout defect) returned HTTP 200 with the full <table class=\"csv-table\"> (3,893 rows, server-rendered, verified with curl / no JS execution) on the first request, so it was used directly rather than re-litigating a source that already failed for the immediately-preceding year's same product.",
+  "converterNote": "Same one-off HTML-table parser as the 2024-25 Series 2 sibling package in this PR (reads <thead> column names -- this page's header order is 'Mem/Tech' before 'Serial #'d' before 'SPs', a THIRD distinct column order across the three files in this PR, confirming the by-name mapping is required, not by-position; groups by Set Name; exact-map-equality fold plus the same bounded subset-fold rule, delta<=3, 0 disagreements required). Not committed as a script.",
+  "heldOut": {
+    "clusters": ["Acetate Young Guns", "2023-24 Update - Acetate Young Guns"],
+    "rows": 156,
+    "reason": "Both are genuine printed insert cards (confirmed against upperdeck.com's own table, not a parser artifact), but neither is a clean fold and neither is safe to stage under its own unregistered category. 'Acetate Young Guns' (127 rows, cardNumbers 201-249 / 451-499 / 701-729) PARTIALLY overlaps base-set-young-guns's own numbers at 701-729 with the SAME 29 players (ground-truthed against the real planStagedDirectory: staging it as its own category made the run REFUSE with an id collision against base-set-young-guns at the plain address, because the shared 29 numbers carry a blank parallel on both sides) while the REMAINING 98 of its 127 rows (201-249, 451-499) have no base counterpart at all -- so it is not a clean subset-of-base fold either (ruled out: most of the rows would be silently dropped). '2023-24 Update - Acetate Young Guns' (29 rows, cardNumbers 701-729) is a full roster of LAST year's rookies reprinted at THIS year's Young Guns numbers -- 0 of 29 players agree with base-set-young-guns at those same numbers (measured directly), so it is unambiguously its own insert, not a parallel of anything staged here. Per the task's own instruction ('insert sets needing unregistered keys: hold via manifest with roster-overlap evidence'), held for a separate additions-only productSetKeys.ts PR (candidate keys: upper-deck-extended-series-acetate-young-guns, family/parent upper-deck-extended-series; upper-deck-extended-series-2023-24-update-acetate-young-guns, same family) rather than guessed into either shape.",
+    "rosterOverlapEvidence": "Acetate Young Guns #701-729 vs Base Set - Young Guns #701-729: 29/29 cardNumbers agree on player (e.g. #701 both read Will Smith) -- genuine same-player insert card at borrowed numbers, own roster elsewhere (201-249, 451-499) not covered by any base section. 2023-24 Update - Acetate Young Guns #701-729 vs Base Set - Young Guns #701-729: 0/29 agree (e.g. #701 reads Logan Cooley vs Will Smith) -- fully disjoint roster, unambiguously its own insert."
+  },
+  "keysNeeded": [
+    { "setKey": "upper-deck-extended-series-acetate-young-guns", "rows": 127, "registered": false, "note": "See heldOut above." },
+    { "setKey": "upper-deck-extended-series-2023-24-update-acetate-young-guns", "rows": 29, "registered": false, "note": "See heldOut above." }
+  ],
+  "keysNeededNote": "No OTHER productSetKeys.ts registrations required -- planStagedDirectory PASSES (0 unregistered, 0 collisions) on the staged CSV, which excludes the two held-out clusters above. All remaining insert sets (Beehive, Encore, Oracles [+ SPs sub-rung, the source's own 'Oracles Rare Parallel - SP&quot;s' typo folds cleanly by cardNumber->player agreement, output parallel is the clean 'Rare', the typo never surfaces], Outburst Retro - Young Guns, Playmakers, Pros and Prospects, Rookie Reflections, Silver Skates, Triple Dimensions Reflections, UD Canvas [+ Young Guns/Legends/All-Star subsets], UD3, 2005-06 Buyback Autographs - Young Guns [singleton, own card]) are `category` values nested under this file's single setKey, verified clean (0 collisions) against the real planStagedDirectory, not inferred. Trilogy Rookie Premiere (Common/Uncommon/Rare -- 3 rarity rungs of ONE insert, own numbering T-1..T-33, confirmed by exact cardNumber->player agreement across all three) is staged as ONE category (insert-trilogy-rookie-premiere-rare, the shortest name/lowest print run of the three) with Common and Uncommon riding as that category's own `parallel` value (their full display name, same shape as the Population Count convention above) -- each tier carries its OWN stated print run (Common /999, Uncommon /499, Rare /99), all captured in the printRun column. Confirmed clean (0 collisions) against the real planner.",
+  "cardLineSubsetsFoldedAsBaseParallels": "All-Star Skills Photo Variations, Snow Spray Auto Variations, Special Game Photo Variations (+ its All-Star variant), and Swagnificent Photo Variations are photo-variation printings of specific base numbers (every row's (cardNumber, player) pair is claimed by a base-family category at a blank parallel) -- staged as `parallel` values on the matching base-set/base-set-all-star category (matching the 2023-24 Series 2 sibling's own 'Oversized' handling), not their own categories, after confirming via the real planner that staging them separately produces an id collision.",
+  "sourceOddity": "The source's own 'Oracles Rare Parallel - SP's' Set Name carries a literal '&quot;' entity (renders as Oracles Rare Parallel - SP\"s, i.e. a typo'd stray double-quote around the plural) where the base group is spelled 'Oracles - SPs' -- the two fold cleanly by cardNumber->player agreement (O-41..O-60) regardless of the typo, and the output's `parallel` value is the clean 'Rare' (derived from the tail after the shared 'Oracles ... SPs' stem, not the raw typo'd string), so the typo never surfaces in staged data.",
+  "sectionsReport": [
+    { "category": "base-set", "cardRange": "501..700", "cards": 157, "parallels": ["Deluxe", "Exclusives", "High Gloss", "Outburst", "Outburst Red", "Outburst Gold", "Clear Cut", "Printing Plates", "Snow Spray Auto (card-line subset, 12 cards, isAuto=true)", "Swagnificent (card-line subset, 15 cards)"] },
+    { "category": "base-set-all-star", "cardRange": "656..698", "cards": 43, "parallels": ["same 8 as base-set", "All-Star Skills (card-line subset, 15 cards)", "Special Game (card-line subset, 4 cards)"] },
+    { "category": "base-set-young-guns", "cardRange": "701..730", "cards": 30, "parallels": ["same 8 as base-set"] },
+    { "category": "base-set-1st-round-rookies", "cardRange": "731..750", "cards": 20, "parallels": ["same 8 as base-set"] },
+    { "category": "n/a -- HELD OUT", "cards": 156, "note": "Acetate Young Guns (127) + 2023-24 Update - Acetate Young Guns (29), see heldOut above" },
+    { "category": "insert-2005-06-buyback-autographs-young-guns", "cardRange": "443", "cards": 1, "parallels": [] },
+    { "category": "insert-beehive", "cardRange": "BH-1..BH-30", "cards": 30, "parallels": ["Gold"] },
+    { "category": "insert-day-with-the-cup", "cardRange": "DC-13..DC-22", "cards": 10, "parallels": [] },
+    { "category": "insert-dazzlers-blue", "cardRange": "DZ-101..DZ-150", "cards": 50, "parallels": ["Green", "Pink", "Printing Plates"] },
+    { "category": "insert-encore", "cardRange": "E-1..E-30", "cards": 30, "parallels": ["Gold"] },
+    { "category": "insert-oracles / insert-oracles-sps", "cardRange": "O-1..O-60", "cards": 60, "parallels": ["Rare"] },
+    { "category": "insert-outburst-retro-young-guns", "cardRange": "OR-11..OR-15", "cards": 5, "parallels": ["Red", "Gold"] },
+    { "category": "insert-playmakers", "cardRange": "PM-1..PM-15", "cards": 15, "parallels": [] },
+    { "category": "insert-pros-and-prospects", "cardRange": "PP-1..PP-40", "cards": 40, "parallels": ["Gold"] },
+    { "category": "insert-rookie-reflections", "cardRange": "RR-1..RR-30", "cards": 30, "parallels": ["Gold"] },
+    { "category": "insert-silver-skates", "cardRange": "SS-1..SS-40", "cards": 40, "parallels": ["Gold"] },
+    { "category": "insert-trilogy-rookie-premiere-rare", "cardRange": "T-1..T-33", "cards": 33, "parallels": ["Trilogy Rookie Premiere Common (/999)", "Trilogy Rookie Premiere Uncommon (/499)"], "note": "ONE category (Rare is the anchor, own printRun /99), Common/Uncommon ride as its parallel value, 99 rows total, exact cardNumber->player agreement across all three tiers" },
+    { "category": "insert-triple-dimensions-reflections", "cardRange": "TDR-1..TDR-20", "cards": 20, "parallels": ["Ruby", "Amethyst", "Emerald", "Gold", "Sapphire"] },
+    { "category": "insert-ud-canvas / -young-guns / -legends / -all-star", "cardRange": "C256..C405", "cards": 150, "parallels": ["Black", "Printing Plates"] },
+    { "category": "insert-ud3", "cardRange": "UD3-1..UD3-30", "cards": 30, "parallels": ["Gold"] }
+  ],
+  "rcSuffixStripped": {
+    "note": "Same as the 2024-25 Series 2 sibling: Rookie is its own column, never appended. ' CL' (Checklist card) marker found and stripped the same way, kept the joined two-player field (e.g. #699/#700/#730 are two-player Checklist cards)."
+  }
+}
