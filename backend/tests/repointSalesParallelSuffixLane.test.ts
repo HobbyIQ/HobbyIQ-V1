@@ -275,6 +275,34 @@ describe("repoint-sales-parallel-suffix -- scope refusals", () => {
   });
 });
 
+describe("repoint-sales-parallel-suffix -- loud line for an unmapped setKey (never a silent zero)", () => {
+  it("prints an immediate ::warning:: naming the cell and setKey when SET_KEYS names a setKey absent from the table", () => {
+    const r = drive({ SCOPE: `${SPORT}:${YEAR}`, SET_KEYS: "panini-select" }, { catalog: [], sales: [] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/::warning::SKIPPING basketball:2024 panini-select -- no suffix word/);
+    // The catalog is never even queried for this setKey -- scanned stays 0,
+    // and that zero is now explained right next to it, not just in the
+    // end-of-run summary.
+    expect(r.out).toMatch(/catalog rows scanned\s+0/);
+  });
+
+  it("still runs the requested cells that DO have a table entry alongside an unmapped one, warning only for the unmapped setKey", () => {
+    const sale = {
+      id: "s1", cardId: `${PREFIX}50:silver:no-auto`, hobbyiqCardId: `${PREFIX}50:silver:no-auto`,
+      title: "plain #50", sport: SPORT, price: 5, parallel: "Silver", isAuto: false,
+      gradeCompany: null, gradeValue: null, soldAt: "2024-01-01", playerName: "Test Player",
+    };
+    const r = drive(
+      { SCOPE: `${SPORT}:${YEAR}`, SET_KEYS: `${SET_KEY},panini-select`, BACKFILL_APPLY: "true" },
+      { catalog: [CATALOG_ROW()], sales: [sale] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/::warning::SKIPPING basketball:2024 panini-select -- no suffix word/);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.led.salesUpserts).toContain("s1");
+  });
+});
+
 describe("repoint-sales-parallel-suffix -- suffix candidate table (unit)", () => {
   const lane = require(LANE);
 
@@ -288,6 +316,27 @@ describe("repoint-sales-parallel-suffix -- suffix candidate table (unit)", () =>
     expect(lane.suffixWordFor("topps-finest")).toBe("refractor");
     expect(lane.suffixWordFor("panini-select")).toBeNull();
     expect(lane.suffixWordFor("topps")).toBeNull();
+  });
+
+  it("derives 'refractor' for bowmans-best and bowman-draft (2026-09-21 verification against card_catalog)", () => {
+    expect(lane.suffixWordFor("bowmans-best")).toBe("refractor");
+    expect(lane.suffixWordFor("bowman-draft")).toBe("refractor");
+  });
+
+  it("does NOT reach bowman-draft's own sibling products -- exact:true keeps 'bowman-draft' from matching them as a startsWith prefix", () => {
+    // These are DIFFERENT registered products (productSetKeys.ts) with their
+    // own, unverified suffix vocabulary -- bowman-draft-sapphire's bare
+    // colours suffix with "-sapphire", not "-refractor" (measured
+    // 2026-09-21: red -> red-sapphire on the checklist). A plain startsWith
+    // entry for "bowman-draft" would otherwise silently reach these and
+    // offer the WRONG word.
+    expect(lane.suffixWordFor("bowman-draft-sapphire")).toBeNull();
+    expect(lane.suffixWordFor("bowman-draft-mega-box")).toBeNull();
+    expect(lane.suffixWordFor("bowman-draft-chrome")).toBeNull();
+  });
+
+  it("does NOT reach bowmans-best's own sibling products the same way", () => {
+    expect(lane.suffixWordFor("bowmans-best-preview")).toBeNull();
   });
 
   it("builds BOTH directions from the same candidate set: 'silver' offers 'silver-prizm' (plus plural forms)", () => {
@@ -596,6 +645,67 @@ describe("REVIEW FIX -- catalog-duplicate-rung is counted SEPARATELY from two-ca
     // spelling twin -- pinned as the ordinary two-candidates ambiguity.
     expect(r.out).toMatch(/REFUSED: catalog-duplicate-rung \(spelling twin, same rung\)\s+0/);
     expect(r.out).toMatch(/REFUSED: two candidates strict at once\s+1/);
+  });
+});
+
+describe("repoint-sales-parallel-suffix -- bowmans-best / bowman-draft (new table entries, 2026-09-21)", () => {
+  const BB_SET_KEY = "bowmans-best";
+  const BB_PREFIX = `hiq:${SPORT}:${YEAR}:${BB_SET_KEY}:`;
+  const BB_ROW = (over: Record<string, unknown> = {}) => ({
+    id: `${BB_PREFIX}17:purple-refractor:no-auto`, cardId: `${BB_PREFIX}17:purple-refractor:no-auto`,
+    sport: SPORT, year: YEAR, cardYear: YEAR,
+    setKey: BB_SET_KEY, cardNumber: "17", parallelSlug: "Purple Refractor", isAuto: false, printRun: 250,
+    playerName: "Test Player", source: "checklistinsider-2026-08-27",
+    gradeTier: undefined,
+    ...over,
+  });
+
+  it("relocates a bare 'purple' bowmans-best sale onto the checklist's 'purple-refractor' row", () => {
+    const shortId = `${BB_PREFIX}17:purple:no-auto:num-250`;
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title: "2024 Bowman's Best #17 Purple", sport: SPORT, price: 5, parallel: "Purple", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2024-01-01", playerName: "Test Player" };
+    const r = drive(
+      { SCOPE: `${SPORT}:${YEAR}`, SET_KEYS: BB_SET_KEY, BACKFILL_APPLY: "true" },
+      { catalog: [BB_ROW()], sales: [sale] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.out).toMatch(/purple -> purple-refractor/);
+  });
+
+  it("REFUSES bowmans-best gold/gold-refractor as both-slugs-are-real-rungs -- the guard protects the newly-added family word exactly as it does the pre-existing entries", () => {
+    // Measured 2026-09-21: bowmans-best carries BOTH "gold" and
+    // "gold-refractor" as distinct real checklist rows on other numbers in
+    // the SAME product -- the guard must refuse a sale at either spelling
+    // product-wide rather than guess, same doctrine as every other entry.
+    const rowThisNumber = CATALOG_ROW({ id: `${BB_PREFIX}5:gold:no-auto`, cardId: `${BB_PREFIX}5:gold:no-auto`, setKey: BB_SET_KEY, cardNumber: "5", parallelSlug: "Gold" });
+    const rowOtherNumberA = CATALOG_ROW({ id: `${BB_PREFIX}9:gold:no-auto`, cardId: `${BB_PREFIX}9:gold:no-auto`, setKey: BB_SET_KEY, cardNumber: "9", parallelSlug: "Gold" });
+    const rowOtherNumberB = CATALOG_ROW({ id: `${BB_PREFIX}9:gold-refractor:no-auto`, cardId: `${BB_PREFIX}9:gold-refractor:no-auto`, setKey: BB_SET_KEY, cardNumber: "9", parallelSlug: "Gold Refractor" });
+    const shortId = `${BB_PREFIX}5:gold-refractor:no-auto`;
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title: "plain #5", sport: SPORT, price: 5, parallel: "Gold Refractor", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2024-01-01", playerName: "Test Player" };
+    const r = drive(
+      { SCOPE: `${SPORT}:${YEAR}`, SET_KEYS: BB_SET_KEY, BACKFILL_APPLY: "true" },
+      { catalog: [rowThisNumber, rowOtherNumberA, rowOtherNumberB], sales: [sale] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/both-slugs-are-real-rungs/);
+  });
+
+  it("relocates a bare 'red' bowman-draft sale onto the checklist's 'red-refractor' row", () => {
+    const BD_SET_KEY = "bowman-draft";
+    const BD_PREFIX = `hiq:${SPORT}:${YEAR}:${BD_SET_KEY}:`;
+    const catalogRow = CATALOG_ROW({ id: `${BD_PREFIX}23:red-refractor:no-auto:num-5`, cardId: `${BD_PREFIX}23:red-refractor:no-auto:num-5`, setKey: BD_SET_KEY, cardNumber: "23", parallelSlug: "Red Refractor", printRun: 5 });
+    const shortId = `${BD_PREFIX}23:red:no-auto:num-5`;
+    const sale = { id: "s1", cardId: shortId, hobbyiqCardId: shortId, title: "2024 Bowman Draft #23 Red", sport: SPORT, price: 5, parallel: "Red", isAuto: false, gradeCompany: null, gradeValue: null, soldAt: "2024-01-01", playerName: "Test Player" };
+    const r = drive(
+      { SCOPE: `${SPORT}:${YEAR}`, SET_KEYS: BD_SET_KEY, BACKFILL_APPLY: "true" },
+      { catalog: [catalogRow], sales: [sale] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.out).toMatch(/red -> red-refractor/);
   });
 });
 
