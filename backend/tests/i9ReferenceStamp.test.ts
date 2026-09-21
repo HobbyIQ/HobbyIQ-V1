@@ -152,12 +152,20 @@ describe("the shipped reference carries its stamp", () => {
   it("records the stamp and the commit the census was measured under", () => {
     expect(TABLE.measuredUnder).toBeTruthy();
     expect(TABLE.measuredUnder.stamp).toMatch(/^d[0-9a-f]{12}\+/);
-    // b3311817 — main at the 2026-09-20 32-slot PLAIN census dispatch (#2348
-    // "strict checklist-source list" + #2323 "R75 year-aware Bowman Mega Box
-    // routing", both HELD-for-census and merged back to back). The deriver did
-    // not move on main during the census window, so one commit names the tree
-    // every artifact was measured under.
-    expect(TABLE.measuredUnder.commit).toBe("b3311817431cd389509e74e957d9f784ba38e0ec");
+    // 9c862660 — main at the 2026-09-21 32-slot census dispatch (PR #2377,
+    // "three identity fixes: duplicate-rung word order, Prizm Black, Topps
+    // flagship alias", stamp-moving). Slots 0-9/11-31 were walked with
+    // SOURCES=backing (the catalog backing-count batch); slot 10's own
+    // backing-armed chain thrashed the catalog preload cache (12k+ evictions,
+    // 28.7M+ RU, ~107k rows per 2-hour budget) and was cancelled, then
+    // re-dispatched as a plain census (no SOURCES) under the SAME commit —
+    // confirmed the classification counts/shares this table reads are
+    // identical either way (SOURCES only gates the additive `backing` block,
+    // never the classify loop), so mixing the two artifact shapes for one
+    // slot table is sound. The deriver did not move on main during the
+    // census window, so one commit names the tree every artifact was
+    // measured under.
+    expect(TABLE.measuredUnder.commit).toBe("9c8626609c25375b8203b3c9f7dbb7de12ac1cb3");
     // pricingContract.ts exists now, so the stamp carries its version.
     expect(TABLE.measuredUnder.contract).toBe("2026-09-06.a");
     // The 32-slot reference stays 32 slots (#1888 stands), every slot finished.
@@ -168,18 +176,20 @@ describe("the shipped reference carries its stamp", () => {
 
   it("says WHAT FRACTION of the corpus it saw, and which slots are partial", () => {
     // A REFERENCE BUILT FROM BUDGET-STOPPED WALKS IS STILL A REFERENCE, BUT IT
-    // MUST SAY SO. In the 2026-09-20 census every one of the 32 slots finished
-    // its walk in a single run (no relaunch chain fired on any slot; each log's
-    // own `finishLane: exiting code 0` line is the real one, not the relaunch
-    // step's echoed grep pattern text), so no slot is partial. Coverage reads
-    // 125% because `sold_comps` grew ~19 days past the 2026-09-01 shard-table
-    // measurement (organic ingest, confirmed uniform 10-58% per-slot growth,
-    // not a defect) — the shard table still gates on SLOTS=32, not on absolute
-    // row count. Recording `classified` alone would have presented a
-    // half-walked slot and a finished one as equally authoritative, which is
-    // why the fields exist.
+    // MUST SAY SO. In the 2026-09-21 census every one of the 32 slots' FINAL
+    // artifact finished its walk in a single run (slots 12 and 14 each hit
+    // the 120-minute budget once and self-relaunched — forwarding
+    // SOURCES=backing correctly per #2360 — and their relaunch finished
+    // clean; slot 10's backing-armed chain was cancelled by the owner after
+    // cache-thrashing and re-run as a plain census, also finishing clean in
+    // one run), so no FINAL artifact is partial. Coverage reads 128% because
+    // `sold_comps` grew past the shard-table measurement (organic ingest) —
+    // the shard table still gates on SLOTS=32, not on absolute row count.
+    // Recording `classified` alone would have presented a half-walked slot
+    // and a finished one as equally authoritative, which is why the fields
+    // exist.
     expect(TABLE.coverage.classified).toBe(TABLE.classifiedTotal);
-    expect(TABLE.coverage.coverage).toBeCloseTo(1.25, 2);
+    expect(TABLE.coverage.coverage).toBeCloseTo(1.28, 2);
     expect(TABLE.coverage.partialSlots).toEqual([]);
     expect(TABLE.coverage.completedSlots).toHaveLength(32);
     // Every slot carries its own coverage, so a reader never has to guess.
