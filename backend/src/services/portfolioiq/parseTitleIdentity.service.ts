@@ -1074,40 +1074,54 @@ function isScopedAutoPrefix(
  *  global alias.
  *
  *  A miss (unscoped call, or any product-year not listed) changes nothing --
- *  same additive-only contract as isCardNumberAutoSubset's scope. This does
- *  NOT touch card_catalog: the Beckett "Blue Sapphire /150" rows sitting on
- *  bowman-chrome-sapphire 2024-2025 are checklist-grade evidence for a
- *  genuine rung there and are a SEPARATE repair, not silenced by this alias
- *  (a sale whose title states a print run still keeps it -- see
- *  scopedMarketLanguageAlias's caller, which only overwrites the PARALLEL
- *  NAME, never printRun).
+ *  same additive-only contract as isCardNumberAutoSubset's scope.
+ *
+ *  CF-BECKETT-PROVES-A-DISTINCT-RUNG (review round 3, 2026-09-21). EVERY
+ *  bowman-chrome-sapphire product-year was DROPPED from this table (was in
+ *  2024/2025/2026 through round 2). The 66/66 (2024) and 65/65 (2025)
+ *  "Blue Sapphire" catalog rows for this product are ALL checklist-grade
+ *  (beckett-checklist / beckett-checklist-graded), all printRun 150 -- and
+ *  the SAME card number carries a SEPARATE "Base" row: e.g.
+ *  bowman-chrome-sapphire 2024 SSA-JP has both `ssa-jp:base:auto` (PSA
+ *  10/8, BGS 10) AND `ssa-jp:blue-sapphire:auto:num-150` -- two distinct
+ *  priced cards, not one card under two labels. Round 2's dismissal of
+ *  these rows as "mislabeled base autos" was wrong. 2026 has zero catalog
+ *  rows either way (no evidence), dropped along with its siblings since the
+ *  product's OTHER two years both prove a real rung. This does NOT touch
+ *  card_catalog -- those Beckett rows stand as the checklist-grade evidence
+ *  they are; only the missing table entries (never added) are the fix.
  *
  *  Sources cited per entry; each is a published checklist page read
  *  2026-09-21 that lists the product's full colour/print-run ladder with NO
- *  Blue-named rung. */
+ *  Blue-named rung -- re-verified round 3 against card_catalog restricted to
+ *  checklist-grade sources ONLY (beckett-*, checklistcenter-*,
+ *  baseballcardpedia-*, checklistinsider-*): zero checklist-grade "Blue
+ *  Sapphire" rows exist for any of the four entries below at any listed
+ *  year (every catalog row under these product-years is ingest-auto-seed /
+ *  sales-attested / catalog-explode-actuals -- derived from sales, not the
+ *  checklist, i.e. circular) -- none dropped. */
 const SCOPED_MARKET_LANGUAGE_ALIAS: ReadonlyMap<string, "Base"> = new Map([
   // checklistinsider.com/2024-bowman-draft-baseball-checklist (Sapphire
   // Edition parallel section): Yellow /75, Gold /50, Orange /25, Black /10,
-  // Red /5, Padparadscha 1/1 -- no Blue.
+  // Red /5, Padparadscha 1/1 -- no Blue. Re-verified round 3: zero
+  // checklist-grade "Blue Sapphire" catalog rows for this product-year.
   ["baseball|2024|bowman-draft-sapphire", "Base"],
   // checklistinsider.com/2025-bowman-draft-baseball-checklist (Sapphire
   // Edition parallel section): Yellow /75, Gold /50, Orange /25, Black /10,
   // Red /5, Padparadscha 1/1 -- no Blue. EXPLICITLY NOT 2019 (see below).
+  // Re-verified round 3: zero checklist-grade rows for this product-year.
   ["baseball|2025|bowman-draft-sapphire", "Base"],
-  // checklistinsider.com/2024-bowman-chrome-baseball-checklist (Sapphire
-  // Edition section) -- no Blue rung stated; base Sapphire IS the blue card.
-  ["baseball|2024|bowman-chrome-sapphire", "Base"],
-  ["baseball|2025|bowman-chrome-sapphire", "Base"],
-  ["baseball|2026|bowman-chrome-sapphire", "Base"],
   // cardboardconnection.com 2019/2020 Topps Chrome Sapphire Edition parallel
   // guides -- no Blue-named rung; checklistinsider.com/2025-topps-chrome-
-  // baseball-checklist Sapphire section, same.
+  // baseball-checklist Sapphire section, same. Re-verified round 3: zero
+  // checklist-grade "Blue Sapphire" rows at any of these three years.
   ["baseball|2019|topps-chrome-sapphire", "Base"],
   ["baseball|2020|topps-chrome-sapphire", "Base"],
   ["baseball|2025|topps-chrome-sapphire", "Base"],
   // checklistinsider.com/2024-topps-chrome-update-baseball-checklist and
   // .../2025-topps-chrome-update-baseball-checklist (Sapphire section) --
-  // no Blue rung.
+  // no Blue rung. Re-verified round 3: zero checklist-grade rows at either
+  // year.
   ["baseball|2024|topps-chrome-update-sapphire", "Base"],
   ["baseball|2025|topps-chrome-update-sapphire", "Base"],
   // EXPLICITLY NOT LISTED: baseball|2019|bowman-draft-sapphire.
@@ -1117,6 +1131,11 @@ const SCOPED_MARKET_LANGUAGE_ALIAS: ReadonlyMap<string, "Base"> = new Map([
   // baseballcardpedia-ladders-2026-09-02 rows, all cardYear 2019, all
   // printRun 99). Aliasing this year would merge a genuine numbered rung's
   // sales into the raw base pool. See the "2019 stays distinct" pin below.
+  //
+  // EXPLICITLY NOT LISTED: baseball|2024/2025/2026|bowman-chrome-sapphire.
+  // See CF-BECKETT-PROVES-A-DISTINCT-RUNG above -- checklist-grade evidence
+  // proves Blue Sapphire is its own numbered rung on this product, in every
+  // year with data. See the "stays distinct" pin below.
 ]);
 
 const SCOPED_MARKET_LANGUAGE_PHRASES: ReadonlySet<string> = new Set([
@@ -1807,7 +1826,16 @@ function extractParallel(
   if (/orange\s+sapphire/i.test(T)) return "Orange Sapphire";
   if (/yellow\s+sapphire/i.test(T)) return "Yellow Sapphire";
   if (/green\s+sapphire/i.test(T)) return "Green Sapphire";
-  if (/blue\s+sapphire/i.test(T)) return "Blue Sapphire";
+  // CF-A-QUALIFIED-COLOUR-IS-NOT-THE-BARE-COLOUR (review round 3,
+  // 2026-09-21). Unlike the other colours above, "Blue" has real compound
+  // forms in the wild ("Sky Blue", "Royal Blue", "Navy Blue", ...) that are
+  // NOT the same card as bare "Blue Sapphire" -- this adjacency match would
+  // otherwise fire on "Sky Blue Sapphire" too (the qualifier sits BEFORE
+  // "blue", which `blue\s+sapphire` never inspects). Negative lookbehind
+  // refuses when one of those qualifiers immediately precedes "blue"; see
+  // the fuller guard + real failing title a few lines below in the
+  // sapphire-product block, which this mirrors.
+  if (/(?<!(?:sky|light|aqua|navy|royal|ice|baby|teal|dark)\s)blue\s+sapphire/i.test(T)) return "Blue Sapphire";
   // Patterned refractors (color + adjacent pattern word). Direct regex
   // literals — string-concatenated regexes were dropping the \s+ escape
   // when constructed via new RegExp().
@@ -1930,12 +1958,34 @@ function extractParallel(
   // Sapphire product context + standalone color → "Color Sapphire".
   // Real observed: "2026 Bowman Chrome Sapphire Owen Carey Green /99"
   // means Green Sapphire /99 (not Green Refractor /99).
+  //
+  // CF-A-QUALIFIED-COLOUR-IS-NOT-THE-BARE-COLOUR (review round 3, 2026-09-21).
+  // `\bblue\b` alone matches "blue" ANYWHERE in the title -- it is not even
+  // adjacent to "sapphire" -- so a genuinely different compound colour
+  // ("Sky Blue", "Light Blue", "Aqua Blue", "Navy Blue", "Royal Blue", "Ice
+  // Blue", "Baby Blue", "Teal Blue", "Dark Blue") silently folded down to
+  // bare "Blue Sapphire", which downstream then reads as newly-scoped
+  // SCOPED_MARKET_LANGUAGE_ALIAS's alias target and gets rewritten to Base.
+  // Real failing title: "2025 Bowman Draft #BDC-128 Jake Munroe Chrome Sky
+  // Blue Refractor Sapphire" -- a compound colour this file has no named
+  // rung for, which must NOT collapse to "Blue Sapphire" (and must
+  // therefore never reach the alias at all). Same guard shape as the
+  // "sky blue" / "royal blue" compound-colour checks elsewhere in this
+  // function (line ~2205) -- checked BEFORE the bare colour, refusing
+  // rather than guessing a compound this file does not otherwise name.
+  const BLUE_QUALIFIER_RE = /\b(sky|light|aqua|navy|royal|ice|baby|teal|dark)\s+blue\b/i;
   if (/sapphire/i.test(T)) {
     if (/\bred\b/i.test(T)) return "Red Sapphire";
     if (/\borange\b/i.test(T)) return "Orange Sapphire";
     if (/\byellow\b/i.test(T)) return "Yellow Sapphire";
     if (/\bgreen\b/i.test(T)) return "Green Sapphire";
-    if (/\bblue\b/i.test(T)) return "Blue Sapphire";
+    if (BLUE_QUALIFIER_RE.test(T)) {
+      // A named compound this file does not otherwise resolve -- refuse
+      // rather than guess. Falls through to whatever a later, more general
+      // rule (or the Base fallback) answers; never "Blue Sapphire".
+    } else if (/\bblue\b/i.test(T)) {
+      return "Blue Sapphire";
+    }
     if (/\bgold\b/i.test(T)) return "Gold Refractor";       // Gold in Sapphire product = Gold Refractor still
   }
   // Named non-refractor parallels

@@ -6,7 +6,6 @@
  * the BASE card, settled from the published checklists per product-year:
  *
  *   baseball bowman-draft-sapphire        2024, 2025
- *   baseball bowman-chrome-sapphire       2024, 2025, 2026
  *   baseball topps-chrome-sapphire        2019, 2020, 2025
  *   baseball topps-chrome-update-sapphire 2024, 2025
  *
@@ -25,8 +24,30 @@
  * raw base pool -- exactly the "one card, one row, one pool" violation in
  * the wrong direction. See the pin below.
  *
+ * EXPLICITLY EXCLUDED (review round 3, 2026-09-21): ALL of
+ * bowman-chrome-sapphire 2024/2025/2026, DROPPED after round 2. The 66/66
+ * (2024) and 65/65-with-printRun (2025) "Blue Sapphire" catalog rows for
+ * this product are ALL checklist-grade (beckett-checklist /
+ * beckett-checklist-graded), all printRun 150, and the same card number
+ * carries a SEPARATE "Base" row (e.g. SSA-JP has both `ssa-jp:base:auto`
+ * and `ssa-jp:blue-sapphire:auto:num-150`) -- two distinct priced cards.
+ * Round 2 wrongly dismissed these as mislabeled base autos. 2026 has zero
+ * catalog rows either way and is dropped along with its siblings since the
+ * SAME product's other two years both prove a real rung.
+ *
  * A stated print run is NEVER dropped by this alias -- it renames the
  * PARALLEL text only; computeHobbyIqCardId's `:num-N` slot is independent.
+ *
+ * COMPANION FIX (review round 3): extractParallel's Sapphire-block bare
+ * `\bblue\b` check (and the earlier adjacent `blue\s+sapphire` regex) used
+ * to fire on ANY title containing the word "blue", including a compound
+ * colour ("Sky Blue", "Royal Blue", "Navy Blue", "Aqua Blue", "Ice Blue",
+ * "Baby Blue", "Teal Blue", "Dark Blue", "Light Blue") that is a DIFFERENT
+ * card from bare "Blue Sapphire" -- so a genuinely different colour folded
+ * down to "Blue Sapphire" and then got aliased to Base by this very PR.
+ * Real failing title: "2025 Bowman Draft #BDC-128 Jake Munroe Chrome Sky
+ * Blue Refractor Sapphire". Fixed with a qualifier guard, refusing rather
+ * than guessing, same shape as the file's other compound-colour checks.
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -45,9 +66,6 @@ describe("scopedMarketLanguageAlias — additive, (sport, year, setKey)-scoped",
     const scopes: Array<{ sport: string; year: number; setKey: string }> = [
       { sport: "baseball", year: 2024, setKey: "bowman-draft-sapphire" },
       { sport: "baseball", year: 2025, setKey: "bowman-draft-sapphire" },
-      { sport: "baseball", year: 2024, setKey: "bowman-chrome-sapphire" },
-      { sport: "baseball", year: 2025, setKey: "bowman-chrome-sapphire" },
-      { sport: "baseball", year: 2026, setKey: "bowman-chrome-sapphire" },
       { sport: "baseball", year: 2019, setKey: "topps-chrome-sapphire" },
       { sport: "baseball", year: 2020, setKey: "topps-chrome-sapphire" },
       { sport: "baseball", year: 2025, setKey: "topps-chrome-sapphire" },
@@ -68,6 +86,15 @@ describe("scopedMarketLanguageAlias — additive, (sport, year, setKey)-scoped",
     expect(scopedMarketLanguageAlias("Blue Sapphire", scope)).toBeNull();
     expect(scopedMarketLanguageAlias("Sapphire Blue", scope)).toBeNull();
     expect(scopedMarketLanguageAlias("Blue Sapphire Refractor", scope)).toBeNull();
+  });
+
+  it("PINNED (review round 3): bowman-chrome-sapphire is EXPLICITLY excluded in every year -- Beckett proves a distinct rung", () => {
+    for (const year of [2024, 2025, 2026]) {
+      const scope = { sport: "baseball", year, setKey: "bowman-chrome-sapphire" };
+      expect(scopedMarketLanguageAlias("Blue Sapphire", scope), JSON.stringify(scope)).toBeNull();
+      expect(scopedMarketLanguageAlias("Sapphire Blue", scope), JSON.stringify(scope)).toBeNull();
+      expect(scopedMarketLanguageAlias("Blue Sapphire Refractor", scope), JSON.stringify(scope)).toBeNull();
+    }
   });
 
   it("PINNED: an unlisted year on a listed product changes nothing", () => {
@@ -128,15 +155,31 @@ describe("END-TO-END: real titles through parseListingIdentity + the write door 
     const r = rederiveRow({
       sport: null,
       cardYear: 2025,
-      setName: "Bowman Chrome Sapphire",
-      cardNumber: "BCP-1",
+      setName: "Topps Chrome Update Sapphire",
+      cardNumber: "USC178",
       parallel: "Blue Sapphire",
       isAuto: false,
-      title: "2025 Bowman Chrome Sapphire Baseball #BCP-1 Blue Sapphire /150",
+      title: "2025 Topps Chrome Update Sapphire Baseball #USC178 Blue Sapphire /199",
     });
     expect(r.action).toBe("rederived");
     expect(r.parallel).toBe("Base");
-    expect(r.hobbyiqCardId).toMatch(/:base:no-auto:num-150$/);
+    expect(r.hobbyiqCardId).toMatch(/:base:no-auto:num-199$/);
+  });
+
+  it("PINNED (review round 3): bowman-chrome-sapphire Blue Sapphire stays its OWN rung end-to-end, not base", () => {
+    const r = rederiveRow({
+      sport: null,
+      cardYear: 2024,
+      setName: "Bowman Chrome Sapphire",
+      cardNumber: "SSA-JP",
+      parallel: "Blue Sapphire",
+      isAuto: true,
+      title: "2024 Bowman Chrome Sapphire Baseball #SSA-JP Blue Sapphire Auto /150",
+    });
+    expect(r.action).toBe("rederived");
+    expect(r.parallel).toBe("Blue Sapphire");
+    expect(r.hobbyiqCardId).not.toMatch(/:base:/);
+    expect(r.hobbyiqCardId).toMatch(/:blue-sapphire:.*:num-150$/);
   });
 
   it("PINNED end-to-end: 2019 Bowman Draft Sapphire Blue Sapphire stays its OWN rung, not base", () => {
@@ -187,5 +230,69 @@ describe("END-TO-END: real titles through parseListingIdentity + the write door 
     });
     expect(r.action).toBe("rederived");
     expect(r.parallel).not.toBe("Base");
+  });
+});
+
+describe("COMPANION FIX (review round 3): a QUALIFIED blue is never read as bare 'Blue Sapphire'", () => {
+  it("the real failing title never parses to Blue Sapphire, and is never aliased to Base", () => {
+    const title = "2025 Bowman Draft #BDC-128 Jake Munroe Chrome Sky Blue Refractor Sapphire";
+    const parsed = parseListingIdentity(title, undefined, { vertical: "baseball", year: 2025, setKey: "bowman-draft-sapphire" });
+    expect(parsed.parallel).not.toBe("Blue Sapphire");
+    expect(parsed.parallel).not.toBe("Base");
+  });
+
+  it("PINNED end-to-end: the real failing title through rederiveRow never lands on :base:", () => {
+    const r = rederiveRow({
+      sport: null,
+      cardYear: 2025,
+      setName: "Bowman Draft Sapphire",
+      cardNumber: "BDC-128",
+      parallel: "Blue Sapphire", // the stored field before this fix's own upstream repair
+      isAuto: false,
+      title: "2025 Bowman Draft Baseball #BDC-128 Jake Munroe Chrome Sky Blue Refractor Sapphire",
+    });
+    expect(r.action).toBe("rederived");
+    // The title is the evidence and wins over the stored field's stale "Blue
+    // Sapphire" -- it must read as the compound colour, never Base.
+    expect(r.parallel).not.toBe("Blue Sapphire");
+    expect(r.parallel).not.toBe("Base");
+    expect(r.hobbyiqCardId).not.toMatch(/:base:/);
+  });
+
+  it.each([
+    ["Sky Blue", "2025 Bowman Draft Sapphire Baseball #BDC-12 Sky Blue Sapphire"],
+    ["Light Blue", "2025 Bowman Draft Sapphire Baseball #BDC-12 Light Blue Sapphire"],
+    ["Aqua Blue", "2025 Bowman Draft Sapphire Baseball #BDC-12 Aqua Blue Sapphire"],
+    ["Navy Blue", "2025 Bowman Draft Sapphire Baseball #BDC-12 Navy Blue Sapphire"],
+    ["Royal Blue", "2025 Bowman Draft Sapphire Baseball #BDC-12 Royal Blue Sapphire"],
+    ["Ice Blue", "2025 Bowman Draft Sapphire Baseball #BDC-12 Ice Blue Sapphire"],
+    ["Baby Blue", "2025 Bowman Draft Sapphire Baseball #BDC-12 Baby Blue Sapphire"],
+    ["Teal Blue", "2025 Bowman Draft Sapphire Baseball #BDC-12 Teal Blue Sapphire"],
+    ["Dark Blue", "2025 Bowman Draft Sapphire Baseball #BDC-12 Dark Blue Sapphire"],
+  ])("%s Sapphire never reads as bare 'Blue Sapphire', so the alias can never fire on it", (_label, title) => {
+    // The load-bearing property: the qualified colour must never fold down to
+    // the exact phrase "Blue Sapphire" (that is what would let the alias
+    // rewrite it to Base). Some of these qualifiers (aqua/baby/teal/dark)
+    // are not colours the Sapphire block recognises AT ALL -- pre-existing,
+    // unrelated to this fix -- and fall through to the generic "Base"
+    // fallback on their own; that is a separate colour-coverage gap, not
+    // the compound-blue-collapse defect this fix targets, so it is not
+    // asserted against here. What IS asserted: the OUTPUT is never the
+    // exact string this table's alias matches, so scopedMarketLanguageAlias
+    // itself never has anything to act on for these titles.
+    const scope = { vertical: "baseball", year: 2025, setKey: "bowman-draft-sapphire" };
+    const parsed = parseListingIdentity(title, undefined, scope);
+    expect(parsed.parallel, title).not.toBe("Blue Sapphire");
+    expect(
+      scopedMarketLanguageAlias(parsed.parallel, { sport: "baseball", year: 2025, setKey: "bowman-draft-sapphire" }),
+      title,
+    ).toBeNull();
+  });
+
+  it("plain 'Blue Sapphire' (no qualifier) still parses and still aliases -- the guard is narrow", () => {
+    const title = "2025 Bowman Draft Sapphire Baseball #BDC-12 Blue Sapphire";
+    const parsed = parseListingIdentity(title, undefined, { vertical: "baseball", year: 2025, setKey: "bowman-draft-sapphire" });
+    expect(parsed.parallel).toBe("Blue Sapphire");
+    expect(scopedMarketLanguageAlias(parsed.parallel, { sport: "baseball", year: 2025, setKey: "bowman-draft-sapphire" })).toBe("Base");
   });
 });
