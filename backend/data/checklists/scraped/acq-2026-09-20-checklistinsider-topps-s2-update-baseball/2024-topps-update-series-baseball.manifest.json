@@ -1,0 +1,60 @@
+{
+  "scrapedAt": "2026-09-20T20:00:00.000Z",
+  "sourceUrl": "https://www.checklistinsider.com/2024-topps-update-series-baseball",
+  "sourcePageSha256": "ad791d437a433509f44507c2e6a211837ee418cc7a6b3fbf5ee638ea8472685b",
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2024/09/2024-Topps-Update-Series-Baseball-Checklist-Downloads-Excel-Spreadsheet-new.xlsx",
+  "xlsxSha256": "109795f1d08e1c97ae84851c217fabf3d2bf219b098285813640e8202d2df794",
+  "source": "checklistinsider-2026-09-20",
+  "sport": "baseball",
+  "year": 2024,
+  "setName": "2024 Topps Update Series Baseball",
+  "productKey": "2024-topps-update-series-baseball",
+  "setKey": "topps-update-series",
+  "rowCount": 8750,
+  "baseCards": 350,
+  "cardNumberRange": "US1-US350",
+  "parallelColumnAuthoritative": true,
+  "mintedBy": "R40 (Drew, 2026-09-20): one row per (base card x STATED rung); Update Series is its own product `topps-update-series` per Drew's 2026-09-20 ruling.",
+  "rungsMinted": [
+    { "parallel": "Yellow", "printRun": null, "note": "Hanger EA/SE" },
+    { "parallel": "Aqua", "printRun": null, "note": "Fanatics Box" },
+    { "parallel": "Gold Foil", "printRun": null, "note": "Jumbo" },
+    { "parallel": "Silver Crackle Foilboard", "printRun": null, "note": "Super Box" },
+    { "parallel": "Rainbow Foil", "printRun": null },
+    { "parallel": "Yellow Foil", "printRun": null, "note": "Hanger" },
+    { "parallel": "Royal Blue", "printRun": null },
+    { "parallel": "Gold", "printRun": 2024 },
+    { "parallel": "Blue HoloFoil", "printRun": null },
+    { "parallel": "Purple HoloFoil", "printRun": null },
+    { "parallel": "Green Foilboard", "printRun": 499 },
+    { "parallel": "Orange Foilboard", "printRun": 299 },
+    { "parallel": "Red Foilboard", "printRun": 199 },
+    { "parallel": "Vintage Stock", "printRun": 99 },
+    { "parallel": "Independence Day", "printRun": 76 },
+    { "parallel": "Black", "printRun": 74 },
+    { "parallel": "Father's Day Powder Blue", "printRun": 50 },
+    { "parallel": "Mother's Day Hot Pink", "printRun": 50 },
+    { "parallel": "Yellow Crackle", "printRun": null, "note": "Hanger EA/SE" },
+    { "parallel": "Memorial Day Camo", "printRun": 25 },
+    { "parallel": "Clear Variation", "printRun": 10, "note": "1:416 Hobby" },
+    { "parallel": "First Card", "printRun": 1 },
+    { "parallel": "Platinum", "printRun": 1 },
+    { "parallel": "Printing Plates", "printRun": 1 }
+  ],
+  "notMinted": {
+    "holidayValueBlasterParallels": {
+      "names": ["Jack O'Lantern", "Ghost", "Mummy", "Black Cat", "Witches Hat", "Bats"],
+      "reason": "Value Blaster-exclusive Halloween theme cards over the BASE card; distinct sub-line, not staged this package. The source explicitly flags these as 'Holiday Versions (Value Blaster only)'."
+    },
+    "insertSets": {
+      "reason": "Named insert/autograph/relic sets (All Class, Autumn Tales, Let Him Cook, Mystical, Stratospheric Stars, 1989 Topps Baseball, First Pitch, Topps Black Gold, Heavy Lumber, etc.) are out of scope for this base-ladder package."
+    }
+  },
+  "selectCardsOnlyAudit": "Verified against the source page's own prose: no 'select cards only' language appears for any base-ladder rung on this page (unlike the Update Series' own Golden Mirror Autographs insert, which is odds-restricted but not part of this base rung set). All 24 rungs above apply to the full 350-card base run; distribution-only notes (Hanger/Jumbo/Retail/Super Box/Fanatics exclusive) are NOT roster restrictions per R40 and are recorded as notes.",
+  "cardNumberRangeVerified": "US1-US350, no gaps found in the source's own workbook.",
+  "provenance": {
+    "cardsFrom": "checklistinsider.com xlsx workbook (tabular-inferred layout via backend/scripts/scrape-checklistinsider.cjs), US-prefixed base rows US1-US350; workbook carries no card-level print runs for this product (all null) -- print runs come from the page's own stated ladder.",
+    "rungsFrom": "the source page's own stated ladder under '2024 Topps Update Series Baseball Base Parallels List & Odds', verbatim (the scraper's own extractLadders() undercounts this page to 8 items because the ladder's <ul> is nested one level deeper than the heading-adjacency regex expects; the full 24-item ladder was extracted by manual HTML inspection of the same nested <ul>, cited to sourcePageSha256 above -- a real bug in scrape-checklistinsider.cjs's extractLadders(), not fixed in this PR, worth a follow-up)",
+    "printRunsFrom": "the source's stated print run only; blank where the source states none"
+  }
+}
