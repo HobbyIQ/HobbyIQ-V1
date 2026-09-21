@@ -1,5 +1,7 @@
 {
   "scrapedAt": "2026-09-21T13:00:00.000Z",
+  "revisedAt": "2026-09-21T15:00:00.000Z",
+  "revisionNote": "Package directory split (was acq-2026-09-21-checklistinsider-bowman-2026-ladders/, shared with the sibling Reptilian-ladder CSV; now its own directory, one CSV per package, per review instruction). CSV content unchanged from the original submission -- this file's own ladder (BP- Border/Pattern) was not flagged by review.",
   "sourceUrl": "https://www.checklistinsider.com/2026-bowman-baseball",
   "sourcePageSha256": "0f78eb2dd06aa2f42cad2b624cb77203977cbbbd89372de0bae851751c1b5640",
   "source": "checklistinsider-2026-09-21",
@@ -9,7 +11,7 @@
   "productKey": "2026-bowman-baseball",
   "setKey": "bowman",
   "rowCount": 2161,
-  "mintedBy": "Bowman-family baseball checklist-gap acquisition (2026-09-21). Diagnosis of a ~300-sale sample of 2026 bowman unbacked sold_comps rows found 38/300 (13%) unbacked, no wrong-key defect. The largest single pattern was BP-102 (5 sales, Eric Hartman) plus assorted single BP- sales naming Border/Pattern colour rungs (Yellow Border, Purple Ray Wave, Blue Shimmer, Orange Shimmer, etc.). Cross-checking card_catalog found the 21-rung Border/Pattern ladder (Sky Blue Border /499 down to Platinum Border 1/1, from this same source page's 'Paper Prospects Checklist' section) is present for only 25 of the 150 distinct BP- numbers already staged in card_catalog; the other 125 have zero Border ladder rows at all. This package fills the missing 125 numbers with the full 20-rung ladder (Platinum Border and the Printing Plates 1/1 rung excluded per notMinted below), using print runs cross-checked against the 25 numbers that already carry the ladder in card_catalog (identical across every existing row) and confirmed again against the source page. Kept only (cardNumber, parallel) pairs not already present (339 of the theoretical 2,500 rows were already covered and skipped).",
+  "mintedBy": "Bowman-family baseball checklist-gap acquisition (2026-09-21). Diagnosis of a ~300-sale sample of 2026 bowman unbacked sold_comps rows found 38/300 (13%) unbacked, no wrong-key defect. The largest single pattern was BP-102 (5 sales, Eric Hartman) plus assorted single BP- sales naming Border/Pattern colour rungs (Yellow Border, Purple Ray Wave, Blue Shimmer, Orange Shimmer, etc.). Cross-checking card_catalog found the 20-rung Border/Pattern ladder (Sky Blue Border /499 down to Platinum Border 1/1, from this same source page's 'Paper Prospects Checklist' section) is present for only 25 of the 150 distinct BP- numbers already staged in card_catalog; the other 125 have zero Border ladder rows at all. This package fills the missing 125 numbers with the full 20-rung ladder, using print runs cross-checked against the 25 numbers that already carry the ladder in card_catalog (identical across every existing row) and confirmed again against the source page. Kept only (cardNumber, parallel) pairs not already present (339 of the theoretical 2,500 rows were already covered and skipped).",
   "rungsMinted": [
     { "parallel": "Sky Blue Border", "printRun": 499 },
     { "parallel": "Neon Green Border", "printRun": 399 },
@@ -35,13 +37,13 @@
   "cardNumbersFilled": 125,
   "notMinted": {
     "printingPlates": {
-      "reason": "The source page lists 'Printing Plates 1/1' as part of this ladder, but card_catalog's existing rows for it (where present) carry a bare parallel name 'Printing Plates' with no Border/Pattern qualifier and are shared across multiple categories in this product (base numeric cards, BP- prospects, and others) -- inconsistent enough with the rest of this ladder's naming that it was left out of this package rather than guessed at. Not a card-count loss: Printing Plates rows are 1/1 (four colour plates per card in the standard Topps convention) and were not named in the diagnosis sample's unbacked-sales gap."
+      "reason": "The source page lists 'Printing Plates 1/1' as part of this ladder, but card_catalog's existing rows for it (where present) carry a bare parallel name 'Printing Plates' with no Border/Pattern qualifier and are shared across multiple categories in this product -- inconsistent enough with the rest of this ladder's naming that it was left out of this package rather than guessed at."
     },
     "chromeRefractorLabel": {
-      "reason": "See the sibling manifest in this same package directory (2026-bowman-chrome-baseball-reptilian-ladder.manifest.json) for the BP-102 'Chrome Refractor' sale-label finding -- a likely matcher-default label, not a real printed rung, held out of both files in this package."
+      "reason": "See the sibling package acq-2026-09-21-checklistinsider-bowman-chrome-reptilian-ladder-2026/'s manifest for the BP-102 'Chrome Refractor' sale-label finding -- a likely matcher-default label, not a real printed rung, held out of both packages."
     }
   },
-  "spellingAudit": "Parallel names verbatim from the source page's 'Paper Prospects Checklist' section, using card_catalog's OWN existing spelling for each rung (cross-checked field-by-field against the 25 BP- numbers that already carry this ladder: Sky Blue Border, Neon Green Border, Fuchsia Border, Purple Border, Purple Pattern, Pink Border, Blue Border, Blue Pattern, Green Border, Green Border Pattern, Yellow Border, Yellow Pattern, Gold Border, Gold Border Pattern, Orange Border, Orange Border Pattern, Black Border, Black Border Pattern, Red Border, Platinum Border -- all 20 names and print runs matched exactly, no alignment needed).",
+  "spellingAudit": "Parallel names verbatim from the source page's 'Paper Prospects Checklist' section, using card_catalog's OWN existing spelling for each rung (cross-checked field-by-field against the 25 BP- numbers that already carry this ladder: all 20 names and print runs matched exactly, no alignment needed).",
   "selectCardsOnlyAudit": "No 'select cards only' / roster-restriction language on the source page for the Paper Prospects Checklist ladder; distribution notes (Hobby/Jumbo/Breaker/Blaster pack odds) are NOT roster restrictions per R40 doctrine and are not roster-scoping this ladder.",
   "provenance": {
     "cardsFrom": "the 150-card BP- roster already staged in backend/data/checklists/2026-bowman-oneshot/2026-bowman-baseball.csv (PR #2318, merged to main 2026-09-19, not yet applied to Cosmos) cross-checked against card_catalog's own existing playerName field for all 150 BP- numbers (both agree)",

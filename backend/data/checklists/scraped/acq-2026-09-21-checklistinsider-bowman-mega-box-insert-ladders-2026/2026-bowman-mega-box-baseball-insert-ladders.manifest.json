@@ -1,0 +1,93 @@
+{
+  "scrapedAt": "2026-09-21T15:00:00.000Z",
+  "sourceUrl": "https://www.checklistinsider.com/2026-bowman-mega-box-baseball",
+  "sourcePageSha256": "c41d983fafc05220449876da8ac6e16bc3a1a8a96dddb90c5bf0e2e411801c54",
+  "source": "checklistinsider-2026-09-21",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Bowman Mega Box Baseball insert subsets (Bowman Prospects Mega Autographs, Bowman Rookies Mega Autographs, Bowman Sterling Chrome Mojo, Electric Sluggers Chrome Mojo)",
+  "productKey": "2026-bowman-mega-box-baseball",
+  "setKey": "bowman-mega",
+  "rowCount": 857,
+  "mintedBy": "Split out of the sibling base-ladder package (acq-2026-09-21-checklistinsider-bowman-mega-box-mojo-ladder-2026/) after independent review found the original single file wrongly absorbed these four insert subsets' cards into the base-card Mojo ladder with every BMA-/RMA- autograph row incorrectly carrying isAuto=false. Each subset here has its own stated roster and its own stated parallel ladder (confirmed on the source page, distinct print-run bands from the base ladder), and is filed under its own category so it never collides with the base BCP-/numeric cards.",
+  "subsets": {
+    "BMA- (Bowman Prospects Mega Autographs Chrome Mojo Checklist)": {
+      "rosterSize": 60,
+      "isAuto": true,
+      "category": "insert-bowman-prospects-mega-autographs",
+      "ladder": [
+        { "parallel": "Purple Mojo Refractor", "printRun": 199 },
+        { "parallel": "Blue Mojo Refractor", "printRun": 150 },
+        { "parallel": "Aqua Mojo Refractor", "printRun": 125 },
+        { "parallel": "Green Mojo Refractor", "printRun": 99 },
+        { "parallel": "Gold Mojo Refractor", "printRun": 50 },
+        { "parallel": "Orange Mojo Refractor", "printRun": 25 },
+        { "parallel": "Black & White Mojo Refractor", "printRun": 15 },
+        { "parallel": "Black Mojo Refractor", "printRun": 10 },
+        { "parallel": "Red Mojo Refractor", "printRun": 5 },
+        { "parallel": "Rose Gold Mojo Refractor", "printRun": 1 }
+      ]
+    },
+    "RMA- (Bowman Rookies Mega Autographs Chrome Mojo Checklist)": {
+      "rosterSize": 10,
+      "isAuto": true,
+      "category": "insert-bowman-rookies-mega-autographs",
+      "ladder": [
+        { "parallel": "Gold Mojo Refractor", "printRun": 50 },
+        { "parallel": "Orange Mojo Refractor", "printRun": 25 },
+        { "parallel": "Black & White Mojo Refractor", "printRun": 15 },
+        { "parallel": "Black Mojo Refractor", "printRun": 10 },
+        { "parallel": "Red Mojo Refractor", "printRun": 5 },
+        { "parallel": "Rose Gold Mojo Refractor", "printRun": 1 }
+      ]
+    },
+    "BST- (Bowman Sterling Chrome Mojo Checklist)": {
+      "rosterSize": 15,
+      "isAuto": false,
+      "category": "insert-bowman-sterling-chrome-mojo",
+      "ladder": [
+        { "parallel": "Purple Mojo Refractor", "printRun": 250 },
+        { "parallel": "Pink Mojo Refractor", "printRun": 199 },
+        { "parallel": "Blue Mojo Refractor", "printRun": 150 },
+        { "parallel": "Green Mojo Refractor", "printRun": 99 },
+        { "parallel": "Gold Mojo Refractor", "printRun": 50 },
+        { "parallel": "Orange Mojo Refractor", "printRun": 25 },
+        { "parallel": "Black Mojo Refractor", "printRun": 10 },
+        { "parallel": "Red Mojo Refractor", "printRun": 5 },
+        { "parallel": "Rose Gold Mojo Refractor", "printRun": 1 }
+      ]
+    },
+    "ES- (Electric Sluggers Chrome Mojo Checklist)": {
+      "rosterSize": 25,
+      "isAuto": false,
+      "category": "insert-electric-sluggers-chrome-mojo",
+      "ladder": [
+        { "parallel": "Burgundy Mojo Refractor", "printRun": 275 },
+        { "parallel": "Purple Mojo Refractor", "printRun": 250 },
+        { "parallel": "Pink Mojo Refractor", "printRun": 199 },
+        { "parallel": "Blue Mojo Refractor", "printRun": 150 },
+        { "parallel": "Green Mojo Refractor", "printRun": 99 },
+        { "parallel": "Gold Mojo Refractor", "printRun": 50 },
+        { "parallel": "Orange Mojo Refractor", "printRun": 25 },
+        { "parallel": "Black Mojo Refractor", "printRun": 10 },
+        { "parallel": "Red Mojo Refractor", "printRun": 5 },
+        { "parallel": "Rose Gold Mojo Refractor", "printRun": 1 }
+      ]
+    }
+  },
+  "registeredKeyNote": "No new productSetKeys.ts registration needed -- BST- rows already exist in card_catalog under setKey=bowman-mega (confirmed: 46 existing BST- rows found there, source checklistinsider-2026-08-27/beckett-s3-2026-09-19), so all four subsets here are filed under the same already-registered bowman-mega key via their own `category` value, matching the existing convention for this product's insert subsets.",
+  "notMinted": {
+    "cpaCraMfPrefixes": {
+      "names": ["CPA- (Prospects Image Variation Autographs, 7 cards)", "CRA- (Rookie Image Variation Autographs, 6 cards)", "MF- (Mega Futures Chrome Mojo, 25 cards)"],
+      "reason": "The source page states NO 'Parallels:' ladder for any of these three sections -- confirmed by direct HTML inspection immediately around each heading; MF- lists only its 25-card roster and pack odds with zero parallel names anywhere; CPA-/CRA- ('Image Variation Autographs') likewise list only rosters. Not staged anywhere in this PR per no-synthetic-parallels doctrine."
+    }
+  },
+  "spellingAudit": "Parallel names taken verbatim from each subset's own stated ladder on the source page. Cross-checked against card_catalog's existing bowman-mega spellings for the same colour words (identical -- Purple/Blue/Aqua/Green/Gold/Orange/Black & White/Black/Red/Rose Gold/Burgundy/Pink Mojo Refractor all already present under this setKey).",
+  "selectCardsOnlyAudit": "No 'select cards only' language on any of the four subset sections; each ladder applies to its full named roster.",
+  "provenance": {
+    "cardsFrom": "checklistinsider.com xlsx workbook rosters, restricted to the BMA-/RMA-/BST-/ES- prefixes (60/10/15/25 = 110 distinct card numbers, cross-verified against the HTML page's own card-by-card lists for each section -- no duplicates found within these four prefixes, unlike the base 100-card roster)",
+    "rungsFrom": "each subset's own stated parallel ladder on the source page, verbatim, with print runs",
+    "isAutoFrom": "each section's own heading -- 'Bowman Prospects Mega Autographs' and 'Bowman Rookies Mega Autographs' are stated autograph inserts (isAuto=true); 'Bowman Sterling Chrome Mojo' and 'Electric Sluggers Chrome Mojo' carry no 'Autograph' designation on the page and are standard insert cards (isAuto=false)",
+    "dedup": "existing card_catalog rows for setKey=bowman-mega, sport=baseball, cardYear=2026, cardNumber prefix in (BMA-,RMA-,BST-,ES-) were checked and any (cardNumber, parallel) pair already present was excluded -- 188 of the 1,045 theoretical rows were already covered."
+  }
+}
