@@ -3277,13 +3277,33 @@ jobs:
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-checklist-numbered-twins -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}"
 
-      - name: Self-relaunch the catalog-duplicate-rungs fold until the slot is clean
+      - name: Self-relaunch the catalog-duplicate-rungs fold until the scope is clean
         # Stops at its own RUN_MINUTES budget and PRINTS its summary; a run
         # killed by the 150-minute step ceiling prints nothing. CF-RELAUNCH-
         # ONLY-ON-BUDGET (#1361): relaunch iff the marker printed, never on a
-        # count. A re-run after a budget stop is idempotent by construction:
-        # a group this run folds no longer has >= 2 distinct stored ids, so
-        # it drops out of the next run's own candidate set.
+        # count.
+        #
+        # RESUME, NOT RESCAN (review finding, 2026-09-20; run 35576430500
+        # looped without ever finishing). The script's own `stopped at the
+        # .*budget` line now names the resume cursor to carry forward
+        # (`scan_limit=<encoded hop+offset>`), parsed here and forwarded on
+        # the SAME `scan_limit` input every other script already reads --
+        # no new workflow_dispatch input. A relaunch with no marker (a run
+        # that finished its whole scan) never reaches this preamble's grep at
+        # all, so RESUME_ARG stays empty and the dispatch line below simply
+        # is not run (relaunch-on-marker's own gate: no marker means no
+        # dispatch).
+        #
+        # THE REAL SLOT/SLOTS, NOT THE RAW INPUTS. `inputs.slots` is the
+        # workflow's inherited default ("16") whenever a dispatch never named
+        # one explicitly; this lane's own `runnerShardScope` requires an
+        # explicit opt-in before treating that as a real 16-way fan-out, so
+        # an unsharded run's own banner prints `shard slot 0/1` while
+        # `inputs.slots` still says 16 -- the exact mismatch the review named
+        # ("slot 0/16" in the notice while the run was slot 0/1). Parsed from
+        # the script's own `shard slot X/Y` banner line so the notice always
+        # names what the run ACTUALLY did, falling back to the raw inputs
+        # only if that line is somehow absent.
         if: ${{ !cancelled() && inputs.script == 'fold-catalog-duplicate-rungs' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -3294,12 +3314,19 @@ jobs:
           preamble: |
             N=$(grep -aoE "^  rows removed +[0-9,]+|^  would-fold rows \(catalog rows removed\) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
             echo "removed=${N:-0}"
+            REAL_SLOT=$(grep -aoE "shard +slot [0-9]+/[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+/[0-9]+" | cut -d/ -f1 || true)
+            REAL_SLOTS=$(grep -aoE "shard +slot [0-9]+/[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+/[0-9]+" | cut -d/ -f2 || true)
+            REAL_SLOT="${REAL_SLOT:-${{ inputs.slot }}}"
+            REAL_SLOTS="${REAL_SLOTS:-${{ inputs.slots }}}"
+            echo "realSlot=$REAL_SLOT realSlots=$REAL_SLOTS"
+            RESUME_ARG=$(grep -aoE "the relaunch resumes at scan_limit=[0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$" || true)
+            echo "resumeArg=${RESUME_ARG:-0}"
           budget-notice: |
-            echo "::notice::budget hit (removed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} scope=${{ inputs.scope }} titles=${{ inputs.titles }} to continue"
+            echo "::notice::budget hit (removed=${N:-0}) — re-dispatching slot ${REAL_SLOT}/${REAL_SLOTS} scope=${{ inputs.scope }} titles=${{ inputs.titles }} RESUMING at scan_limit=${RESUME_ARG:-0} (not a rescan from zero) to continue"
           finished-notice: |
-            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (removed=${N:-0}) — done, no re-dispatch."
+            echo "::notice::slot ${REAL_SLOT}/${REAL_SLOTS} finished within budget (removed=${N:-0}) — done, no re-dispatch."
           dispatch: |
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-catalog-duplicate-rungs -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=fold-catalog-duplicate-rungs -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}" -f scan_limit="${RESUME_ARG:-0}"
 
       - name: Self-relaunch the CPA product rule until the slot is decided
         if: ${{ !cancelled() && inputs.script == 'apply-cpa-product-rule' }}

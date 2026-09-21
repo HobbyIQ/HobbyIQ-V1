@@ -592,7 +592,7 @@ describe("fold-catalog-duplicate-rungs -- workflow wiring (backfill-runner.yml)"
     expect(workflow).toMatch(/inputs\.script == 'fold-catalog-duplicate-rungs'/);
   });
 
-  it("self-relaunches on the budget marker, forwarding scope/titles/slot/slots/apply/concurrency", () => {
+  it("self-relaunches on the budget marker, forwarding scope/titles/slot/slots/apply/concurrency/scan_limit", () => {
     const idx = workflow.indexOf("Self-relaunch the catalog-duplicate-rungs fold");
     expect(idx).toBeGreaterThan(-1);
     const nextStep = workflow.indexOf("\n      - name: ", idx + 1);
@@ -604,6 +604,38 @@ describe("fold-catalog-duplicate-rungs -- workflow wiring (backfill-runner.yml)"
     expect(block).toContain('-f slots="${{ inputs.slots }}"');
     expect(block).toContain('-f apply="${{ inputs.apply }}"');
     expect(block).toContain('-f concurrency="${{ inputs.concurrency }}"');
+    // RESUME, NOT RESCAN (2026-09-20 follow-up): the relaunch forwards the
+    // resume cursor parsed off the script's own "stopped at the .*budget"
+    // line, on the EXISTING scan_limit input -- never a new one.
+    expect(block).toContain('-f scan_limit="${RESUME_ARG:-0}"');
+  });
+
+  it("parses the REAL slot/slots off the script's own banner, not the raw dispatch inputs", () => {
+    // Review finding (2026-09-20): inputs.slots carries the workflow's
+    // inherited default ("16") whenever a dispatch never named one
+    // explicitly, but this lane's own runnerShardScope requires an opt-in
+    // before treating that as a real fan-out -- so an unsharded run prints
+    // `shard slot 0/1` while inputs.slots still says 16. The notice must
+    // name what the run ACTUALLY did.
+    const idx = workflow.indexOf("Self-relaunch the catalog-duplicate-rungs fold");
+    const nextStep = workflow.indexOf("\n      - name: ", idx + 1);
+    const block = workflow.slice(idx, nextStep > -1 ? nextStep : idx + 2200);
+    expect(block).toContain('grep -aoE "shard +slot [0-9]+/[0-9]+" /tmp/backfill.log');
+    expect(block).toContain("REAL_SLOT=");
+    expect(block).toContain("REAL_SLOTS=");
+    // The notices use the PARSED values, never inputs.slot/inputs.slots
+    // directly.
+    expect(block).toContain("slot ${REAL_SLOT}/${REAL_SLOTS}");
+    expect(block).not.toMatch(/re-dispatching slot \$\{\{ inputs\.slot \}\}\/\$\{\{ inputs\.slots \}\}/);
+  });
+
+  it("the resume cursor is parsed from the script's own budget-stop line, never guessed", () => {
+    const idx = workflow.indexOf("Self-relaunch the catalog-duplicate-rungs fold");
+    const nextStep = workflow.indexOf("\n      - name: ", idx + 1);
+    const block = workflow.slice(idx, nextStep > -1 ? nextStep : idx + 2200);
+    expect(block).toContain('grep -aoE "the relaunch resumes at scan_limit=[0-9]+" /tmp/backfill.log');
+    expect(block).toContain("RESUME_ARG=");
+    expect(block).toContain("RESUMING at scan_limit=");
   });
 
   it("the script's own budget-stop line is a LITERAL, findable by a static scan of this file", () => {
@@ -628,5 +660,97 @@ describe("fold-catalog-duplicate-rungs -- workflow wiring (backfill-runner.yml)"
 
   it("this lane's script does not touch any I9 stamp input", () => {
     expect(source).not.toMatch(/i9|I9Reference|derivationStamp/i);
+  });
+});
+
+// ── Follow-up review findings, 2026-09-20 ────────────────────────────────
+// The football/2024 panini-mosaic pilot REPORT (51,286 rows, 3,197 groups)
+// took 120 minutes and looped on relaunch. See
+// foldCatalogDuplicateRungsSpeedAndRelaunch.test.ts for the end-to-end
+// behavioral coverage (no marker on completion, resume honoured, per-group
+// order preserved under concurrency, measured speedup); these are the
+// structural/source-text pins for the same fix.
+describe("fold-catalog-duplicate-rungs -- concurrency (source pins)", () => {
+  it("runs groups with bounded concurrency, honouring CONCURRENCY/BACKFILL_CONCURRENCY, default 16", () => {
+    expect(source).toContain("process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 16");
+    expect(source).toContain("orderedGroups.slice(i, i + CONCURRENCY)");
+    expect(source).toContain("Promise.all(batch.map(([key, rows]) => processGroup(key, rows)))");
+  });
+
+  it("processGroup is a single extracted function -- one body for both REPORT and APPLY, no gate duplicated or skipped", () => {
+    expect(source).toContain("async function processGroup(key, rows)");
+    // Every original gate still lives inside it.
+    for (const gate of ["refusedDifferentPlayer", "refusedCanonicalUnderivable", "refusedUserVerifiedNotSurvivor", "refusedNonePartitionKeyRow"]) {
+      const idx = source.indexOf("async function processGroup(key, rows)");
+      const endIdx = source.indexOf("\n  // ── RESUME", idx);
+      expect(endIdx).toBeGreaterThan(idx);
+      expect(source.slice(idx, endIdx)).toContain(gate);
+    }
+  });
+
+  it("the budget check runs BEFORE each batch, never after, and a batch already admitted is allowed to finish", () => {
+    const idx = source.indexOf("for (let i = 0; i < orderedGroups.length; i += CONCURRENCY)");
+    expect(idx).toBeGreaterThan(-1);
+    const clockIdx = source.indexOf("CLOCK.outOfClock()", idx);
+    const batchIdx = source.indexOf("await Promise.all(batch.map", idx);
+    expect(clockIdx).toBeGreaterThan(idx);
+    expect(clockIdx).toBeLessThan(batchIdx);
+  });
+});
+
+describe("fold-catalog-duplicate-rungs -- resume cursor (source pins)", () => {
+  it("rides the existing scan_limit input -- never a new workflow_dispatch input", () => {
+    expect(source).toContain("process.env.SCAN_LIMIT");
+    expect(source).toContain("RESUME_HOP_UNIT = 1_000_000");
+    expect(source).toContain("function decodeResume(raw)");
+    expect(source).toContain("const encodeResume = ({ hop, offset }) =>");
+  });
+
+  it("a resume offset SLICES the deterministic group order rather than re-querying with a filter", () => {
+    expect(source).toContain("orderedGroups = orderedGroups.slice(RESUME.offset)");
+  });
+
+  it("a LIMIT stop and a genuine budget stop are DIFFERENT things -- only the budget stop sets stoppedMidScan", () => {
+    const limitLineIdx = source.indexOf("if (LIMIT && groupsDone >= LIMIT)");
+    const clockBlockIdx = source.indexOf("if (CLOCK.outOfClock()) {", limitLineIdx);
+    expect(limitLineIdx).toBeGreaterThan(-1);
+    expect(clockBlockIdx).toBeGreaterThan(limitLineIdx);
+    // The LIMIT line itself never sets stoppedMidScan.
+    const limitLine = source.slice(limitLineIdx, source.indexOf("\n", limitLineIdx));
+    expect(limitLine).not.toContain("stoppedMidScan");
+    // The CLOCK block does.
+    const clockBlock = source.slice(clockBlockIdx, clockBlockIdx + 200);
+    expect(clockBlock).toContain("stoppedMidScan = true");
+  });
+
+  it("a completed scan (the for loop exhausts orderedGroups) never sets stopReason", () => {
+    expect(source).toContain("if (stoppedMidScan) {");
+    // stopReason starts null (its declaration) and is REASSIGNED exactly
+    // once, inside the stoppedMidScan guard -- never anywhere the ordinary
+    // exhaustion path of the outer `for` loop can reach.
+    const assignments = [...source.matchAll(/stopReason\s*=/g)];
+    expect(assignments.length).toBe(2); // `let stopReason = null;` + the one real assignment
+    expect(source).toContain("let stopReason = null;");
+    const onlyRealAssignmentIdx = source.indexOf("stopReason = `stopped at the");
+    expect(onlyRealAssignmentIdx).toBeGreaterThan(-1);
+    const guardIdx = source.indexOf("if (stoppedMidScan) {");
+    expect(onlyRealAssignmentIdx).toBeGreaterThan(guardIdx);
+  });
+});
+
+describe("fold-catalog-duplicate-rungs -- heartbeat (source pins)", () => {
+  it("prints groups done/total and an ETA at most once per minute", () => {
+    expect(source).toContain("HEARTBEAT_MS = 60 * 1000");
+    expect(source).toContain("function maybeHeartbeat()");
+    expect(source).toMatch(/heartbeat groups \$\{f\(groupsDone\)\}\/\$\{f\(orderedGroups\.length\)\}/);
+    expect(source).toContain("ETA");
+  });
+});
+
+describe("fold-catalog-duplicate-rungs -- runLane is container-injectable for tests", () => {
+  it("main() is a thin wrapper around runLane, which is exported", () => {
+    expect(source).toContain("async function runLane({ cat, pool, portfolio })");
+    expect(source).toContain("const result = await runLane({ cat, pool, portfolio });");
+    expect(source).toContain("runLane,\n};");
   });
 });

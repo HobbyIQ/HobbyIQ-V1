@@ -92,9 +92,24 @@
  *      the inherited defaults ('', 'refractor', 'all') are all REFUSED;
  *      TITLES=REQUIRED comma list of setKeys (e.g. panini-prizm) narrowing a
  *      SCOPE cell -- also refused when empty; SLOT/SLOTS (opt-in via
- *      SHARD=true for slot 0, sha1(identityKey) % SLOTS); CONCURRENCY unused
- *      (single-threaded per group, matching the sibling fold lane);
- *      RUN_MINUTES=120; LIMIT=0; PLAN_OUT (fixed dir, wired by the runner).
+ *      SHARD=true for slot 0, sha1(identityKey) % SLOTS); CONCURRENCY=16
+ *      (bounded parallelism ACROSS groups -- one group's own writes stay
+ *      strictly ordered; see processGroup's header); RUN_MINUTES=120;
+ *      LIMIT=0; SCAN_LIMIT (the resume cursor: hop*1,000,000 + offset into
+ *      the deterministic group order, same convention as
+ *      route-backing-gaps.cjs's own RESUME -- rides the existing `scan_limit`
+ *      dispatch input, no new one); PLAN_OUT (fixed dir, wired by the runner).
+ *
+ * SPEED (review finding, 2026-09-20). The football/2024 panini-mosaic pilot
+ * REPORT measured 3,197 groups in 120 minutes (~2.2s/group) though pass 1
+ * cost only 4,850 RU -- the time was moveCatalogRow's own per-loser
+ * CROSS-PARTITION queries (the sales `hobbyiqCardId` lookup and the graded-
+ * children `STARTSWITH` scan), which the CF-REPORT-MUST-PREDICT-APPLY
+ * contract runs under REPORT too (a real count, never a structural zero),
+ * awaited ONE GROUP AT A TIME. Groups are independent by construction of
+ * `groupKeyOf` (disjoint stored ids), so pass 2 now runs CONCURRENCY groups
+ * at once -- no gate weakened, no write-order changed WITHIN a group, only
+ * the wait between groups is overlapped.
  */
 "use strict";
 const path = require("path");
@@ -301,7 +316,20 @@ async function main() {
 
   const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
   const cat = db.container("card_catalog"), pool = db.container("sold_comps"), portfolio = db.container("portfolio");
+  const result = await runLane({ cat, pool, portfolio });
+  return { client: db.client, ...result };
+}
 
+/**
+ * The whole lane, parameterized on its three containers -- extracted from
+ * `main()` so a test can hand it fakes instead of a real CosmosClient
+ * (review finding, 2026-09-20: "measured before/after on your fake"). `main`
+ * above is now the thin wrapper that builds the real client and calls this;
+ * nothing about the lane's own logic, gates, or write order changed by this
+ * extraction -- it is the SAME body, only its container arguments moved from
+ * closed-over module state to explicit parameters.
+ */
+async function runLane({ cat, pool, portfolio }) {
   console.log(`fold-catalog-duplicate-rungs  ${APPLY ? "APPLY" : "REPORT ONLY -- nothing is written"}`);
   console.log(`  scope        cells=${SCOPE_CELLS.join(",")}  titles(setKeys)=${RAW_TITLES.join(",")}`);
   console.log(`  shard        slot ${SLOT}/${SLOTS}  on hash(groupKey) -- a whole group lands on ONE slot`);
@@ -421,27 +449,30 @@ async function main() {
     catch (e) { console.log(`\n::warning::PLAN_OUT write failed: ${e?.message}`); }
   }
 
-  let gi = 0;
-  const orderedGroups = [...groups.entries()];
-  for (const [key, rows] of orderedGroups) {
-    if (LIMIT && gi >= LIMIT) { stats.notReached += orderedGroups.length - gi; break; }
-    if (CLOCK.outOfClock()) {
-      // Spelled as a LITERAL here (never CLOCK.stoppedAtBudget()'s return
-      // value alone) so a static scan of THIS FILE's own text finds the
-      // phrase -- everyWriteJobReconciles.test.ts's markerPrinters() and the
-      // relaunch action's own `grep -aqE "stopped at the .*budget"` both read
-      // the script's source/log directly, never runner-budget.cjs's.
-      stopReason = `stopped at the ${RUN_MINUTES}-minute budget — the relaunch continues from here`;
-      stats.notReached += orderedGroups.length - gi;
-      break;
-    }
-    gi++;
+  /**
+   * Decide and (under APPLY) write ONE group. Pure per-group logic, unchanged
+   * from before this fix except for extraction into its own function -- every
+   * gate, every counter, every plan row is byte-identical to what ran inline.
+   * REPORT and APPLY run the SAME body; only `dryRun`/`apply` flags inside
+   * moveCatalogRow/relocateSoldComp/the holdings patch decide whether a call
+   * actually writes. No gate is skipped under REPORT: this is the
+   * REPORT-MUST-PREDICT-APPLY contract, unchanged from the original PR.
+   *
+   * ORDER WITHIN ONE GROUP IS UNCHANGED AND SERIAL: survivor re-key (if any)
+   * -> per loser, in order: sales re-point -> moveCatalogRow fold (which
+   * itself re-points patchable sales, retires graded children, deletes the
+   * loser LAST) -> holdings re-point. Concurrency is applied ACROSS groups
+   * (the caller's batches), never WITHIN one -- a group is the unit of
+   * atomicity, and two losers of the SAME survivor writing to it concurrently
+   * would race moveCatalogRow's own read-incumbent-then-upsert step.
+   */
+  async function processGroup(key, rows) {
     stats.groupsScanned++;
 
-    if (rows.length < 2) { stats.groupsSingleRow++; continue; }
+    if (rows.length < 2) { stats.groupsSingleRow++; return; }
 
     const storedIds = new Set(rows.map((r) => String(r.id)));
-    if (storedIds.size < 2) { stats.groupsAlreadyOneId++; continue; } // already one address, nothing to fold
+    if (storedIds.size < 2) { stats.groupsAlreadyOneId++; return; } // already one address, nothing to fold
 
     stats.groupsCandidates++;
 
@@ -452,7 +483,7 @@ async function main() {
       const line = `  REFUSED different-player  group=${key}  players=${names.join(" | ")}  ids=${[...storedIds].join(", ")}`;
       if (refusals.differentPlayer.length < 40) refusals.differentPlayer.push(line);
       for (const r of rows) emitPlanRow({ action: "refused", reason: "different-player", groupKey: key, id: r.id, source: r.source ?? null });
-      continue;
+      return;
     }
 
     // ── canonical id for this group, from the REAL deriver ────────────────
@@ -471,7 +502,7 @@ async function main() {
       const line = `  REFUSED canonical-underivable  group=${key}  template=${template.id}  error=${String(e?.message ?? e)}`;
       if (refusals.canonicalUnderivable.length < 40) refusals.canonicalUnderivable.push(line);
       for (const r of rows) emitPlanRow({ action: "refused", reason: "canonical-underivable", groupKey: key, id: r.id, source: r.source ?? null });
-      continue;
+      return;
     }
 
     // ── SURVIVOR RULE ──────────────────────────────────────────────────────
@@ -500,7 +531,7 @@ async function main() {
       const line = `  REFUSED user-verified-not-survivor  group=${key}  verified=${verifiedRows.map((r) => r.id).join(", ")}  chosen-survivor=${survivor.id}`;
       if (refusals.userVerifiedNotSurvivor.length < 40) refusals.userVerifiedNotSurvivor.push(line);
       for (const r of rows) emitPlanRow({ action: "refused", reason: "user-verified-not-survivor", groupKey: key, id: r.id, source: r.source ?? null });
-      continue;
+      return;
     }
 
     // ── SAFETY GATE: no None-partition-key row in this group is ever deleted
@@ -524,15 +555,14 @@ async function main() {
       const line = `  REFUSED none-partition-key-row  group=${key}  none-pk-ids=${nonePkRows.map((r) => r.id).join(", ")}  chosen-survivor=${survivor.id} (${survivorRule})`;
       if (refusals.nonePartitionKeyRow.length < 40) refusals.nonePartitionKeyRow.push(line);
       for (const r of rows) emitPlanRow({ action: "refused", reason: "none-partition-key-row", groupKey: key, id: r.id, source: r.source ?? null });
-      continue;
+      return;
     }
 
     const losers = rows.filter((r) => r.id !== survivor.id);
-    if (!losers.length) { stats.groupsAlreadyOneId++; continue; }
+    if (!losers.length) { stats.groupsAlreadyOneId++; return; }
 
     try {
       // ── step 0: re-key the survivor onto the canonical id first, if needed
-      let survivorAtCanonical = survivor;
       if (survivorRule === "rekey-highest-authority") {
         const moveRes = await moveCatalogRow(
           cat, survivor, canonicalId, {},
@@ -548,20 +578,22 @@ async function main() {
           const line = `  REFUSED at re-key (moveCatalogRow refused)  group=${key}  survivor=${survivor.id} -> ${canonicalId}  ${moveRes.decision}`;
           if (refusals.differentPlayer.length < 40) refusals.differentPlayer.push(line);
           for (const r of rows) emitPlanRow({ action: "refused", reason: "different-player-at-rekey", groupKey: key, id: r.id, source: r.source ?? null });
-          continue;
+          return;
         }
         stats.survivorsRekeyed++;
         stats.salesRepointed += moveRes.salesRepointed ?? 0;
         stats.gradedRetired += moveRes.gradedChildrenRetired ?? 0;
         await repointHoldings(portfolio, holdingsIndex, survivor.id, canonicalId, stats, APPLY);
-        survivorAtCanonical = { ...survivor, id: canonicalId, cardId: canonicalId };
         emitPlanRow({ action: "resolve-survivor-rekey", reason: survivorRule, groupKey: key, id: survivor.id, canonicalId, source: survivor.source ?? null });
       } else {
         stats.survivorsAlreadyCanonical++;
         emitPlanRow({ action: "survivor-already-canonical", reason: survivorRule, groupKey: key, id: survivor.id, canonicalId, source: survivor.source ?? null });
       }
 
-      // ── step 1..N: fold every loser onto the (now-canonical) survivor ────
+      // ── step 1..N: fold every loser onto the (now-canonical) survivor,
+      // STRICTLY SERIAL within this one group -- see the function's own
+      // header. Different GROUPS run concurrently (the caller's batches);
+      // different LOSERS of one group never do.
       let foldedHere = 0;
       for (const loser of losers) {
         // Sales whose PARTITION KEY is the loser's own slug cannot be
@@ -597,6 +629,110 @@ async function main() {
       for (const r of rows) emitPlanRow({ action: "failed", reason: "exception", groupKey: key, id: r.id, source: r.source ?? null, error: String(e?.message ?? e) });
     }
   }
+
+  // ── RESUME (review finding, 2026-09-20): a REPORT that hits its own clock
+  // budget must not rescan from zero on relaunch -- pass 1 above is
+  // deterministic (same query, same insertion order) for an unchanged corpus,
+  // so a resume offset into `orderedGroups` is a real, reusable cursor. Rides
+  // the EXISTING `scan_limit` dispatch input (SCAN_LIMIT env, already
+  // forwarded to every script unconditionally) rather than a new one --
+  // route-backing-gaps.cjs's own RESUME/encodeResume/decodeResume convention,
+  // reused byte-for-byte (hop*1,000,000 + offset; the corpus size for any one
+  // cell/setKey scope cannot plausibly reach a million groups).
+  const RESUME_HOP_UNIT = 1_000_000;
+  function decodeResume(raw) {
+    const v = Math.max(0, Math.floor(Number(raw || 0)) || 0);
+    return { hop: Math.floor(v / RESUME_HOP_UNIT), offset: v % RESUME_HOP_UNIT };
+  }
+  const encodeResume = ({ hop, offset }) => hop * RESUME_HOP_UNIT + offset;
+  const RESUME = decodeResume(process.env.SCAN_LIMIT);
+
+  let orderedGroups = [...groups.entries()];
+  const totalGroupsThisSlot = orderedGroups.length;
+  if (RESUME.offset > 0) {
+    orderedGroups = orderedGroups.slice(RESUME.offset);
+    console.log(`  RESUMED       skipping the first ${f(RESUME.offset)} group(s) an earlier relaunch of this same slot already decided (hop ${RESUME.hop}) -> ${f(orderedGroups.length)} left`);
+  }
+
+  // ── CONCURRENCY: bounded, ACROSS groups only ────────────────────────────
+  // A group is the unit of atomicity (its own gates, its own survivor, its
+  // own ordered write sequence); different groups touch DISJOINT stored ids
+  // by construction of groupKeyOf, so running several concurrently is safe --
+  // the slow part measured on the football/2024 panini-mosaic pilot
+  // (51,286 rows, 3,197 groups, 120 minutes, ~2.2s/group) was
+  // moveCatalogRow's own per-loser CROSS-PARTITION queries (the sales
+  // hobbyiqCardId lookup and the graded-children STARTSWITH scan), issued
+  // and awaited ONE AT A TIME. Running that same I/O for independent groups
+  // concurrently is the fix; nothing about a single group's own internal
+  // order changes (see processGroup's header).
+  const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 16));
+  console.log(`  concurrency   ${CONCURRENCY} group(s) at once (across groups only -- one group's own writes stay strictly ordered)`);
+
+  // ── HEARTBEAT: groups done / total + ETA, once per minute ───────────────
+  let groupsDone = 0;
+  let lastHeartbeatAt = Date.now();
+  const HEARTBEAT_MS = 60 * 1000;
+  function maybeHeartbeat() {
+    const now = Date.now();
+    if (now - lastHeartbeatAt < HEARTBEAT_MS) return;
+    lastHeartbeatAt = now;
+    const elapsedS = (now - STARTED) / 1000;
+    const rate = groupsDone / Math.max(elapsedS, 1);
+    const remaining = orderedGroups.length - groupsDone;
+    const etaS = rate > 0 ? Math.round(remaining / rate) : null;
+    const eta = etaS === null ? "unknown" : etaS < 60 ? `${etaS}s` : `${Math.round(etaS / 60)}m`;
+    console.error(`  narrate: heartbeat groups ${f(groupsDone)}/${f(orderedGroups.length)} this run (${f(totalGroupsThisSlot)} total this slot)  rate ${rate.toFixed(1)}/s  ETA ${eta}`);
+  }
+
+  // `stoppedMidScan` is set ONLY by the CLOCK branch below -- a LIMIT stop is
+  // an operator-requested slice (a dry-run sizing a probe), not a budget
+  // exhaustion, and never printed the relaunch marker in the original
+  // single-group loop either (its own `if (LIMIT...) break;` carried no
+  // `stopReason`). Conflating the two would make a LIMIT=100 debug dispatch
+  // trigger a real re-dispatch of the whole remaining scope.
+  let stoppedMidScan = false;
+  outer:
+  for (let i = 0; i < orderedGroups.length; i += CONCURRENCY) {
+    if (LIMIT && groupsDone >= LIMIT) { stats.notReached += orderedGroups.length - i; break outer; }
+    // Checked BEFORE each batch starts, never after: a batch admitted past
+    // budget still runs to completion (bounded by CONCURRENCY groups' worth
+    // of I/O, not one), but no NEW batch is admitted once the clock is out --
+    // the same "checked before the unit, never at the loop top alone" rule
+    // runner-budget.cjs's own header states, applied to a BATCH of units
+    // rather than one.
+    if (CLOCK.outOfClock()) {
+      stats.notReached += orderedGroups.length - i;
+      stoppedMidScan = true;
+      break outer;
+    }
+    const batch = orderedGroups.slice(i, i + CONCURRENCY);
+    await Promise.all(batch.map(([key, rows]) => processGroup(key, rows)));
+    groupsDone += batch.length;
+    maybeHeartbeat();
+  }
+
+  // A REPORT (or APPLY) THAT FINISHED ITS SCAN NEVER PRINTS THE BUDGET
+  // MARKER (review finding, 2026-09-20). The marker -- and ONLY the marker --
+  // is what the relaunch composite's `grep -aqE "stopped at the .*budget"`
+  // gates on (CF-RELAUNCH-ONLY-ON-BUDGET, #1361): run 35576430500 looped
+  // because a report whose per-group cost left it right at the edge of its
+  // own RUN_MINUTES printed the marker AFTER having already decided every
+  // group, and the relaunch dutifully re-dispatched a run that had nothing
+  // left to do. `stoppedMidScan` is set ONLY inside the loop above, so a
+  // scan that runs to completion (the `for` exhausts `orderedGroups` without
+  // ever hitting a `break outer`) leaves it `false` and `stopReason` stays
+  // `null` -- exactly the same guarantee the original single-group loop had,
+  // now stated for a batch rather than one group.
+  if (stoppedMidScan) {
+    // Spelled as a LITERAL here (never CLOCK.stoppedAtBudget()'s return
+    // value alone) so a static scan of THIS FILE's own text finds the
+    // phrase -- everyWriteJobReconciles.test.ts's markerPrinters() and the
+    // relaunch action's own `grep -aqE "stopped at the .*budget"` both read
+    // the script's source/log directly, never runner-budget.cjs's.
+    const nextResume = encodeResume({ hop: RESUME.hop + 1, offset: RESUME.offset + groupsDone });
+    stopReason = `stopped at the ${RUN_MINUTES}-minute budget — the relaunch resumes at scan_limit=${nextResume} (hop ${RESUME.hop + 1}, offset ${f(RESUME.offset + groupsDone)} of ${f(totalGroupsThisSlot)} this slot)`;
+  }
+  console.log(`\n  groups this run  decided ${f(groupsDone)} of ${f(orderedGroups.length)} in scope this run (resume offset ${f(RESUME.offset)}, ${f(totalGroupsThisSlot)} total this slot)`);
 
   // ── report ────────────────────────────────────────────────────────────────
   console.log(`\n${APPLY ? "APPLIED" : "REPORT ONLY -- nothing written"}`);
@@ -669,7 +805,7 @@ async function main() {
   console.log(`  RECONCILE: candidates ${f(stats.groupsCandidates)} = folded ${f(stats.groupsFolded)} + refused(different-player/user-verified/canonical/none-partition-key) ${f(refusedTotal)} + failed ${f(stats.failed)} + not-reached-mid-group 0`);
 
   if (stopReason) console.log(`\n${stopReason}`);
-  return { client: db.client };
+  return { stats, stopReason, groupsDone, totalGroupsThisSlot };
 }
 
 /** Sales whose PARTITION KEY is the loser's slug. Mirrors
@@ -759,7 +895,7 @@ async function repointHoldings(portfolio, holdingsIndex, oldId, newId, stats, ap
 
 module.exports = {
   groupKeyOf, canonicalParallelOf, canonicalIdOf, samePlayerAcross, playerKeySetOf,
-  numSegmentOf, subSegmentOf, isUserVerified,
+  numSegmentOf, subSegmentOf, isUserVerified, runLane,
 };
 
 // Only run the lane when this file is executed directly (`node
