@@ -27,6 +27,20 @@
  *     spelling per rung (e.g. "Gold Sapphire Refractor", not the source
  *     page's bare "Gold Sapphire") rather than adding a second spelling.
  *
+ * Re-review (2026-09-21, same day) found that MAJORITY fix itself was wrong:
+ * every 2025 Bowman Draft Sapphire SALE (1,359 of them, measured directly
+ * against sold_comps under the hiq:baseball:2025:bowman-draft: prefix) uses
+ * the BARE slug form (yellow-sapphire, gold-sapphire, ...) and NONE use
+ * '-sapphire-refractor' -- that slug shape belongs to the different product
+ * bowman-chrome-sapphire. The source page also states every rung bare. The
+ * Draft Sapphire ladder was re-rebuilt a second time to use the bare form
+ * throughout, matching both the source and the sale side; the catalog's
+ * pre-existing '...Refractor'-suffixed bowman-draft rows are a fork the
+ * ingest matcher should fold toward bare, flagged in the manifest, not
+ * touched by this package. A stated "Blue Sapphire" rung was also checked
+ * for (69 blue-sapphire sales exist) and confirmed absent from the source
+ * page entirely -- not minted, left as a reported gap.
+ *
  * All setKeys (bowman-mega, bowman-draft, bowman, bowman-chrome) were
  * already registered in productSetKeys.ts before this PR -- no
  * registrations made here.
@@ -122,7 +136,7 @@ describe("2026 Bowman Mega Box Baseball insert subsets (BMA-/RMA-/BST-/ES-) — 
   });
 });
 
-describe("2025 Bowman Draft Sapphire Baseball ladder — PASS, catalog-majority spellings", () => {
+describe("2025 Bowman Draft Sapphire Baseball ladder — PASS, bare spelling matching source + sale slugs", () => {
   it("planStagedDirectory reports zero collisions, zero unregistered, expected row count", () => {
     const { entry } = planPackage("acq-2026-09-21-checklistinsider-bowman-draft-sapphire-ladder-2025");
     expect(entry.product).not.toBeNull();
@@ -131,19 +145,29 @@ describe("2025 Bowman Draft Sapphire Baseball ladder — PASS, catalog-majority 
     expect(entry.product.setKey).toBe("bowman-draft");
     expect(entry.plan.unregistered).toEqual([]);
     expect(entry.plan.collisions).toEqual([]);
-    expect(entry.plan.rows).toBe(1388);
+    expect(entry.plan.rows).toBe(1410);
   });
 
-  it("has no exact-duplicate rows and uses the catalog-majority '...Refractor' spelling for Yellow/Gold/Orange/Black Sapphire", () => {
+  it("has no exact-duplicate rows and uses the BARE spelling (no '...Refractor' suffix) for every Sapphire rung, matching the sale-side slugs", () => {
     const { dir, file } = planPackage("acq-2026-09-21-checklistinsider-bowman-draft-sapphire-ladder-2025");
     expectNoExactDuplicateRows(dir, file);
     const csv = readFileSync(join(dir, file), "utf8");
-    expect(csv.includes(",Yellow Sapphire Refractor,")).toBe(true);
-    expect(csv.includes(",Gold Sapphire Refractor,")).toBe(true);
-    expect(csv.includes(",Orange Sapphire Refractor,")).toBe(true);
-    expect(csv.includes(",Black Sapphire Refractor,")).toBe(true);
-    // bare 'Yellow Sapphire,' (no Refractor suffix) must NOT appear as a second spelling
-    expect(/,Yellow Sapphire,/.test(csv)).toBe(false);
+    expect(csv.includes(",Yellow Sapphire,")).toBe(true);
+    expect(csv.includes(",Gold Sapphire,")).toBe(true);
+    expect(csv.includes(",Orange Sapphire,")).toBe(true);
+    expect(csv.includes(",Black Sapphire,")).toBe(true);
+    expect(csv.includes(",Red Sapphire,")).toBe(true);
+    expect(csv.includes(",Green Sapphire,")).toBe(true);
+    // no '...Sapphire Refractor' spelling anywhere -- that slug shape belongs
+    // to the different product bowman-chrome-sapphire, and zero live sales
+    // under the bowman-draft prefix use it.
+    expect(/Sapphire Refractor/.test(csv)).toBe(false);
+  });
+
+  it("does not mint a Blue Sapphire rung — the source page states none, despite 69 blue-sapphire sales existing", () => {
+    const { dir, file } = planPackage("acq-2026-09-21-checklistinsider-bowman-draft-sapphire-ladder-2025");
+    const csv = readFileSync(join(dir, file), "utf8");
+    expect(/Blue Sapphire/i.test(csv)).toBe(false);
   });
 });
 

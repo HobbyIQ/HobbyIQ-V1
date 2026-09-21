@@ -1,7 +1,8 @@
 {
   "scrapedAt": "2026-09-21T13:00:00.000Z",
   "revisedAt": "2026-09-21T15:00:00.000Z",
-  "revisionNote": "REVISED after independent review found card_catalog already carries TWO spellings for several of these rungs under bowman-draft/bowman-draft-sapphire (e.g. 'Gold Sapphire Refractor' [majority, 15 rows] AND bare 'Gold Sapphire' [minority, 6 rows] for the same BDC- roster) -- the original version of this file used the source page's own bare spelling ('Yellow Sapphire', 'Gold Sapphire', etc.) uniformly, which would have added a SECOND spelling of rungs the catalog already had under a different, majority spelling. Rebuilt to use whichever spelling is the catalog's OWN MAJORITY for each colour (measured across the combined bowman-draft + bowman-draft-sapphire rows), per rungSpellingAudit below.",
+  "revisedAt2": "2026-09-21T17:00:00.000Z",
+  "revisionNote2": "RE-REVISED after re-review corrected the first revision's own instruction. The first revision aligned Yellow/Gold/Orange/Black Sapphire to card_catalog's MAJORITY spelling ('X Sapphire Refractor'), reasoning that catalog majority should win a source-vs-catalog spelling split. That reasoning did not check the SALE side. Measured directly against sold_comps: every 2025 Bowman Draft Sapphire sale's hobbyiqCardId uses the BARE form (yellow-sapphire 502, gold-sapphire 334, orange-sapphire 238, red-sapphire 128, black-sapphire 57, green-sapphire 30, blue-sapphire 69 -- sampled from 1,359 total sapphire sales under the hiq:baseball:2025:bowman-draft: prefix) and ZERO sales anywhere use a '-sapphire-refractor' slug -- that slug shape belongs to the DIFFERENT product bowman-chrome-sapphire, confirmed separately (its catalog rows are addressed under hiq:baseball:2025:bowman-chrome-sapphire:, 8,538 rows by id-prefix, entirely distinct from bowman-draft's 1,359 sapphire sales). The source page (checklistinsider.com/2025-bowman-draft-sapphire-baseball) also states every rung bare ('Yellow Sapphire /75', 'Gold Sapphire /50', etc. -- no '...Refractor' suffix anywhere on the page). Source and sale slugs AGREE on bare; only a minority slice of card_catalog's own pre-existing bowman-draft rows use the '...Refractor' suffix (15 of 21 Gold-rung rows, for example) -- that catalog-side split is now understood to be a PRE-EXISTING SPELLING FORK the ingest matcher should fold toward the bare form (the form sales actually resolve to), not a majority this package should follow. Re-rebuilt to use the bare form for every rung, matching both the source page and the sale-side slugs exactly. The catalog's '...Refractor'-suffixed bowman-draft rows are flagged below for a fold-lane repair, NOT touched by this package.",
   "sourceUrl": "https://www.checklistinsider.com/2025-bowman-draft-sapphire-baseball",
   "sourcePageSha256": "429db60dfddec878fc27cb6b20ca5941cfa2c3bd440562e6a26347b7fc780c1b",
   "xlsxUrl": "https://xcdn.checklistinsider.com/public/2026/02/2025-Bowman-Draft-Sapphire-Baseball-Checklist-Downloads-Excel-spreadsheet.xlsx",
@@ -11,48 +12,47 @@
   "setName": "2025 Bowman Draft Sapphire Baseball",
   "productKey": "2025-bowman-draft-sapphire-baseball",
   "setKey": "bowman-draft",
-  "rowCount": 1388,
+  "rowCount": 1410,
   "baseCards": 263,
-  "mintedBy": "Bowman-family baseball checklist-gap acquisition (2026-09-21, revised same day after review). Diagnosis of a ~300-sale sample of 2025 bowman-draft unbacked sold_comps rows found 67/300 (22%) unbacked; 19 of those were a wrong-key matcher defect (2025 Bowman Draft CHROME sales minting under setKey=bowman-chrome, out of scope for a checklist CSV) and the remaining 48 were genuine ladder gaps on the Sapphire subset. This package expands the FULL rosters (200 BDC-, 18 SS-, 30 CPA-, 15 SSA-, all read from the source's own xlsx workbook) against their own stated ladders, using the CATALOG'S OWN MAJORITY spelling per rung (see rungSpellingAudit), and keeps only (cardNumber, parallel) pairs not already present in card_catalog under setKey=bowman-draft OR bowman-draft-sapphire (both checked; 109 of the theoretical 1,497 rows were already covered and skipped).",
+  "mintedBy": "Bowman-family baseball checklist-gap acquisition (2026-09-21, re-revised after re-review). Diagnosis of a ~300-sale sample of 2025 bowman-draft unbacked sold_comps rows found 67/300 (22%) unbacked; 19 of those were a wrong-key matcher defect (2025 Bowman Draft CHROME sales minting under setKey=bowman-chrome, out of scope for a checklist CSV) and the remaining 48 were genuine ladder gaps on the Sapphire subset. This package expands the FULL rosters (200 BDC-, 18 SS-, 30 CPA-, 15 SSA-, all read from the source's own xlsx workbook) against their own stated ladders, using the BARE spelling that both the source page and the sale-side hobbyiqCardId slugs use, and keeps only (cardNumber, parallel) pairs not already present in card_catalog under setKey=bowman-draft OR bowman-draft-sapphire (both checked; 87 of the theoretical 1,497 rows were already covered and skipped).",
   "rungSpellingAudit": {
-    "method": "Read every existing card_catalog row for sport=baseball, cardYear=2025, setKey IN (bowman-draft, bowman-draft-sapphire) whose parallel field contains a Sapphire/Padparadscha/SuperFractor colour word, grouped spelling variants that denote the SAME rung, and counted rows per spelling.",
-    "perRungCounts": {
-      "Yellow Sapphire": { "Yellow Sapphire Refractor": 25, "Yellow Sapphire": 1, "usedSpelling": "Yellow Sapphire Refractor" },
-      "Gold Sapphire": { "Gold Sapphire Refractor": 15, "Gold Sapphire": 6, "usedSpelling": "Gold Sapphire Refractor" },
-      "Orange Sapphire": { "Orange Sapphire Refractor": 22, "Orange Sapphire": 13, "Orange Sapphire Refractors": 2, "usedSpelling": "Orange Sapphire Refractor" },
-      "Black Sapphire": { "Black Sapphire Refractor": 8, "Black Sapphire": 7, "usedSpelling": "Black Sapphire Refractor" },
-      "Red Sapphire": { "Red Sapphire Refractor": 8, "Red Sapphire": 10, "Red Sapphire Refractors": 6, "usedSpelling": "Red Sapphire" },
-      "Green Sapphire": { "Green Sapphire Refractor": 8, "Green Sapphire": 9, "usedSpelling": "Green Sapphire" },
-      "Padparadscha": { "Padparadscha": 67, "Padparadscha Refractor": 12, "Padparadscha Sapphire": 5, "usedSpelling": "Padparadscha" },
-      "SuperFractor": { "SuperFractor": 51, "Superfractor": 16, "Chrome SuperFractor": 20, "Image Variations SuperFractor": 3, "usedSpelling": "SuperFractor" }
+    "method": "Re-measured after re-review pointed at the wrong signal (catalog-side row-count majority instead of the sale-side hobbyiqCardId slug, which is what a checklist row actually needs to match to back a sale). Confirmed directly against sold_comps: STARTSWITH(c.hobbyiqCardId, 'hiq:baseball:2025:bowman-draft:') AND CONTAINS(LOWER(c.hobbyiqCardId), 'sapphire') returns 1,359 rows, every one using a bare '-sapphire' slug segment (yellow-sapphire, gold-sapphire, orange-sapphire, red-sapphire, black-sapphire, green-sapphire, blue-sapphire) and ZERO using '-sapphire-refractor'. The source page independently states every rung bare, with no '...Refractor' suffix anywhere on the page for any Sapphire colour.",
+    "saleSideSlugCounts": {
+      "yellow-sapphire": 502, "gold-sapphire": 334, "orange-sapphire": 238, "red-sapphire": 128,
+      "black-sapphire": 57, "green-sapphire": 30, "blue-sapphire": 69,
+      "sapphireRefractorSlugCount": 0
     },
-    "note": "The source page (checklistinsider.com) itself states the bare form for all of these ('Yellow Sapphire', 'Gold Sapphire', 'Padparadscha Sapphire', 'SuperFractor', etc. -- no '...Refractor' suffix anywhere on the page). Four of the eight rungs above (Red, Green, Padparadscha, SuperFractor) happen to match the source's own spelling; the other four (Yellow, Gold, Orange, Black) were changed FROM the source's bare spelling TO the catalog's majority '...Refractor' form, per the never-add-a-second-spelling rule. This is a deliberate divergence from source-verbatim text, recorded here so the source's own wording is not lost."
+    "conclusion": "Source page and sale-side slugs AGREE on the bare form for every rung this package mints (Yellow/Gold/Orange/Black/Red/Green Sapphire, Padparadscha, SuperFractor). This package uses the bare form throughout -- NOT the catalog's own '...Refractor'-suffixed minority/majority rows (see catalogSpellingForkFlaggedNotTouched below), which is a pre-existing fork the matcher should be folded toward bare, not something this package should extend by minting a second spelling."
+  },
+  "blueSapphireCheck": {
+    "question": "Sale-side data shows 69 blue-sapphire sales under the bowman-draft prefix (and a further ~10 seen in a smaller earlier sample). Is 'Blue Sapphire' a stated BDC- rung on the source page?",
+    "answer": "NO. Checked exhaustively: the page's 'Base Draft Sapphire Checklist' parallels list states exactly six rungs -- Yellow Sapphire /75, Gold Sapphire /50, Orange Sapphire /25, Black Sapphire /10, Red Sapphire /5, Padparadscha Sapphire 1/1 -- no Blue, no Green. A case-insensitive search of the ENTIRE page for the string 'Blue Sapphire' returns zero matches. The only 'blue' text on the page is (a) marketing prose describing the whole 2025 Bowman Draft Sapphire product as featuring 'blue versions of the base set' (a general colour-scheme description, not a named parallel), and (b) unrelated 'Toronto Blue Jays' team names. NOT minted here -- the 69 blue-sapphire sales are a genuine checklist gap this source cannot close; left out and reported, not fabricated."
   },
   "ladders": {
     "BDC- (Base Draft Sapphire Checklist, 200 cards)": [
-      { "parallel": "Yellow Sapphire Refractor", "printRun": 75, "sourceText": "Yellow Sapphire /75" },
-      { "parallel": "Gold Sapphire Refractor", "printRun": 50, "sourceText": "Gold Sapphire /50" },
-      { "parallel": "Orange Sapphire Refractor", "printRun": 25, "sourceText": "Orange Sapphire /25" },
-      { "parallel": "Black Sapphire Refractor", "printRun": 10, "sourceText": "Black Sapphire /10" },
+      { "parallel": "Yellow Sapphire", "printRun": 75, "sourceText": "Yellow Sapphire /75" },
+      { "parallel": "Gold Sapphire", "printRun": 50, "sourceText": "Gold Sapphire /50" },
+      { "parallel": "Orange Sapphire", "printRun": 25, "sourceText": "Orange Sapphire /25" },
+      { "parallel": "Black Sapphire", "printRun": 10, "sourceText": "Black Sapphire /10" },
       { "parallel": "Red Sapphire", "printRun": 5, "sourceText": "Red Sapphire /5" },
       { "parallel": "Padparadscha", "printRun": 1, "sourceText": "Padparadscha Sapphire 1/1" }
     ],
     "CPA- (Sapphire Chrome Prospect Autographs Checklist, 30 cards, auto)": [
       { "parallel": "Green Sapphire", "printRun": 99, "sourceText": "Green Sapphire /99" },
-      { "parallel": "Gold Sapphire Refractor", "printRun": 50, "sourceText": "Gold Sapphire /50" },
-      { "parallel": "Orange Sapphire Refractor", "printRun": 25, "sourceText": "Orange Sapphire /25" },
-      { "parallel": "Black Sapphire Refractor", "printRun": 10, "sourceText": "Black Sapphire /10" },
+      { "parallel": "Gold Sapphire", "printRun": 50, "sourceText": "Gold Sapphire /50" },
+      { "parallel": "Orange Sapphire", "printRun": 25, "sourceText": "Orange Sapphire /25" },
+      { "parallel": "Black Sapphire", "printRun": 10, "sourceText": "Black Sapphire /10" },
       { "parallel": "Red Sapphire", "printRun": 5, "sourceText": "Red Sapphire /5" },
       { "parallel": "Padparadscha", "printRun": 1, "sourceText": "Padparadscha Sapphire 1/" }
     ],
     "SSA- (Sapphire Selections Autographs Checklist, 15 cards, auto)": [
-      { "parallel": "Orange Sapphire Refractor", "printRun": 25, "sourceText": "Orange Sapphire /25" },
+      { "parallel": "Orange Sapphire", "printRun": 25, "sourceText": "Orange Sapphire /25" },
       { "parallel": "Red Sapphire", "printRun": 5, "sourceText": "Red Sapphire /5" },
       { "parallel": "SuperFractor", "printRun": 1, "sourceText": "SuperFractor 1/1" }
     ],
     "SS- (Sapphire Selections Checklist, 18 cards)": [
-      { "parallel": "Gold Sapphire Refractor", "printRun": 50, "sourceText": "Gold Sapphire /50" },
-      { "parallel": "Orange Sapphire Refractor", "printRun": 25, "sourceText": "Orange Sapphire /25" },
+      { "parallel": "Gold Sapphire", "printRun": 50, "sourceText": "Gold Sapphire /50" },
+      { "parallel": "Orange Sapphire", "printRun": 25, "sourceText": "Orange Sapphire /25" },
       { "parallel": "Red Sapphire", "printRun": 5, "sourceText": "Red Sapphire /5" },
       { "parallel": "SuperFractor", "printRun": 1, "sourceText": "SuperFractor 1/1" }
     ]
@@ -63,10 +63,24 @@
     "insert-sapphire-chrome-prospect-autographs": "CPA- rows",
     "insert-sapphire-selections-autographs": "SSA- rows"
   },
-  "settledSetKey": "bowman-draft -- the sale-side hobbyiqCardId for these Sapphire sales mints under setKey=bowman-draft, not the sibling bowman-draft-sapphire (confirmed against a live sale sample: hiq:baseball:2025:bowman-draft:cpa-sha:green:auto, hiq:baseball:2025:bowman-draft:ss-5:base:no-auto). This CSV is filed under setKey=bowman-draft so its rows land at the SAME id prefix the sales already use; the sibling bowman-draft-sapphire key already carries a separate, overlapping set of rows from an earlier source and was checked (not written to) purely for dedup and spelling-majority measurement.",
+  "settledSetKey": "bowman-draft -- the sale-side hobbyiqCardId for these Sapphire sales mints under setKey=bowman-draft, not the sibling bowman-draft-sapphire (confirmed against a live sale sample: hiq:baseball:2025:bowman-draft:cpa-sha:green:auto, hiq:baseball:2025:bowman-draft:ss-5:base:no-auto, and the 1,359-row sale-side audit above). This CSV is filed under setKey=bowman-draft so its rows land at the SAME id prefix the sales already use.",
+  "catalogSpellingForkFlaggedNotTouched": {
+    "description": "card_catalog's OWN pre-existing bowman-draft/bowman-draft-sapphire rows carry a real, pre-existing spelling fork per rung -- e.g. 'Gold Sapphire Refractor' (15 rows) vs bare 'Gold Sapphire' (6 rows) for the SAME BDC- roster; similar forks exist for Yellow/Orange/Black/Red/Green/Padparadscha/SuperFractor (exact counts below). Since the sale side and the source page both agree on the bare form, the '...Refractor'-suffixed rows are the ones that do NOT match how sales resolve -- flagged here for the fold lane to migrate toward bare, not fixed by this package (this package only adds NEW rows, never rewrites existing ones).",
+    "perRungCatalogCounts": {
+      "Yellow Sapphire": { "bare": 1, "refractorSuffixed": 25 },
+      "Gold Sapphire": { "bare": 6, "refractorSuffixed": 15 },
+      "Orange Sapphire": { "bare": 13, "refractorSuffixed": 22, "refractorSuffixedPlural": 2 },
+      "Black Sapphire": { "bare": 7, "refractorSuffixed": 8 },
+      "Red Sapphire": { "bare": 10, "refractorSuffixed": 8, "refractorSuffixedPlural": 6 },
+      "Green Sapphire": { "bare": 9, "refractorSuffixed": 8 },
+      "Padparadscha": { "bare": 67, "refractorSuffixed": 12, "sapphireSuffixed": 5 },
+      "SuperFractor": { "bare": 51, "lowercaseVariant": 16, "chromePrefixed": 20, "imageVariationsPrefixed": 3 }
+    }
+  },
   "provenance": {
     "cardsFrom": "checklistinsider.com xlsx workbook (tabular-inferred layout via backend/scripts/scrape-checklistinsider.cjs), 263 total rows across all four subsets, verified against the HTML page's own numbered card-by-card lists for BDC-1..200",
-    "rungsFrom": "the source page's own four stated ladders, verbatim print runs; parallel NAMES aligned to card_catalog's own majority spelling per rungSpellingAudit above where the two diverge",
-    "dedup": "existing card_catalog rows for setKey IN (bowman-draft, bowman-draft-sapphire), sport=baseball, cardYear=2025 were read via a bounded query pass (3,944 + 817 = 4,761 existing rows) and any (cardNumber, parallel) pair already present in either key (under the ALIGNED spelling) was excluded from this CSV."
+    "rungsFrom": "the source page's own four stated ladders, verbatim (parallel names AND print runs, no alignment applied)",
+    "spellingVerifiedAgainst": "sold_comps hobbyiqCardId slugs for 1,359 sapphire sales under the hiq:baseball:2025:bowman-draft: prefix -- 100% bare-form slugs, 0 '-sapphire-refractor' slugs",
+    "dedup": "existing card_catalog rows for setKey IN (bowman-draft, bowman-draft-sapphire), sport=baseball, cardYear=2025 were read via a bounded query pass (3,944 + 817 = 4,761 existing rows) and any (cardNumber, parallel) pair already present under the BARE spelling was excluded from this CSV."
   }
 }
