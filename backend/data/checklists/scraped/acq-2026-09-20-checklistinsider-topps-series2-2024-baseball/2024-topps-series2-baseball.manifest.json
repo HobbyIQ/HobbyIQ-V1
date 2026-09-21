@@ -1,0 +1,71 @@
+{
+  "scrapedAt": "2026-09-20T20:00:00.000Z",
+  "sourceUrl": "https://www.checklistinsider.com/2024-topps-series-2-baseball",
+  "sourcePageSha256": "ffbedd7da209e06beaa9b6e5093223e8c01e4155c44e5f76d227665014014510",
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2024/06/2024-Topps-Series-2-Baseball-Checklist-Downloads-Excel-Spreadsheet.xlsx",
+  "xlsxSha256": "861010bc14ea87aedd95708f252af85b864e5570c1ba68a1dfea1512715e3868",
+  "source": "checklistinsider-2026-09-20",
+  "sport": "baseball",
+  "year": 2024,
+  "setName": "2024 Topps Series 2 Baseball",
+  "productKey": "2024-topps-series2-baseball",
+  "setKey": "topps",
+  "rowCount": 9100,
+  "baseCards": 350,
+  "cardNumberRange": "351-700",
+  "parallelColumnAuthoritative": true,
+  "mintedBy": "R40 (Drew, 2026-09-20): one row per (base card x STATED rung); flagship Topps Series 1 + Series 2 base share the bare `topps` setKey per Drew's 2026-09-20 ruling.",
+  "rungsMinted": [
+    { "parallel": "Yellow", "printRun": null, "note": "Hanger exclusive, 2 per box" },
+    { "parallel": "Aqua", "printRun": null, "note": "Fanatics Box exclusive" },
+    { "parallel": "Gold Foil", "printRun": null, "note": "HTA Jumbo exclusive" },
+    { "parallel": "Silver Crackle Foilboard", "printRun": null, "note": "Super Box exclusive" },
+    { "parallel": "Rainbow Foil", "printRun": null },
+    { "parallel": "Yellow Foil", "printRun": null, "note": "Hanger exclusive" },
+    { "parallel": "Royal Blue", "printRun": null, "note": "Retail exclusive" },
+    { "parallel": "Yellow Crackle Foilboard", "printRun": null, "note": "Hanger exclusive" },
+    { "parallel": "Gold", "printRun": 2024 },
+    { "parallel": "Blue Foilboard", "printRun": 999 },
+    { "parallel": "Purple Foilboard", "printRun": 799 },
+    { "parallel": "Green Crackle Foilboard", "printRun": 499 },
+    { "parallel": "Aqua Crackle Foilboard", "printRun": 399 },
+    { "parallel": "Orange Crackle Foilboard", "printRun": 299 },
+    { "parallel": "Red Crackle Foilboard", "printRun": 199 },
+    { "parallel": "Vintage Stock", "printRun": 99 },
+    { "parallel": "Independence Day", "printRun": 76 },
+    { "parallel": "Black", "printRun": 73, "note": "Hobby/Jumbo exclusive" },
+    { "parallel": "Mother's Day Hot Pink", "printRun": 50 },
+    { "parallel": "Father's Day Powder Blue", "printRun": 50 },
+    { "parallel": "Yellow Crackle", "printRun": 50, "note": "Hanger exclusive" },
+    { "parallel": "Memorial Day Camo", "printRun": 25 },
+    { "parallel": "First Card", "printRun": 1 },
+    { "parallel": "Platinum", "printRun": 1 },
+    { "parallel": "Printing Plates", "printRun": 1 }
+  ],
+  "rungsMintedCount": 25,
+  "notMinted": {
+    "holidayValueBlasterParallels": {
+      "names": ["Hot Dogs", "Statue of Liberty", "Beach Umbrella /50", "Sun /10", "Fireworks /5", "Waves 1/1"],
+      "reason": "Value Blaster-exclusive summer Holiday theme cards over the BASE card; distinct sub-line, not staged this package."
+    },
+    "namedBaseVariations": {
+      "names": ["Golden Mirror", "Team Color Border", "True Photo Variations", "Clear (Hobby /10, 100-card select roster)"],
+      "reason": "Distinct card identities per doctrine (project_image_variations_are_named_cards). `Clear` is EXPLICITLY select-cards-only on this source (100 named cards, Hobby only, capped at /10) and rostering it correctly needs the named list this page's summary does not provide card-by-card -- held out per R40 rather than guessed as a blanket 350-card rung."
+    },
+    "rookieShortPrints": {
+      "names": ["Jackson Holliday", "Jackson Chourio", "Jackson Merrill", "Wyatt Langford (base SSPs)"],
+      "reason": "Source states these are NOT in the standard numbered base checklist/odds -- base short prints outside the #351-700 run. Not addressable by cardNumber in this package; would need their own row if/when their actual base numbers are confirmed."
+    },
+    "insertSets": {
+      "reason": "Named insert/autograph/relic sets (2023 First Pitch/Play Ball, 40/70, Platinum Performers, Stars of MLB, 1989 Topps Baseball, Heavy Lumber, Sketch, etc.) are out of scope for this base-ladder package."
+    }
+  },
+  "spellingAudit": "Cross-checked every rung name in this ladder against backend/data/checklist-parallel-names.json's topps-family entries (normalized, word-order/plural/punctuation-insensitive) and every other staged Topps CSV in the repo. Only near-matches found (`Mother's Day Hot Pink` / `Father's Day Powder Blue` vs the census's curly-apostrophe spellings for this exact cell) are apostrophe-only and confirmed to slug identically via computeHobbyIqCardId -- no action needed. No word-order or spelling collision found for any rung in this package.",
+  "selectCardsOnlyAudit": "The source states ONE base-adjacent rung IS select-cards-only for this product ('Clear', Hobby-only /10, restricted to 100 named cards) -- deliberately NOT minted here per the notMinted note above, since no card-by-card roster for it was available in this run. All 25 rungs actually minted are confirmed unrestricted (apply to the full 350-card base run); distribution-only notes (Hobby/Retail/Hanger/Jumbo/Fanatics exclusive) are NOT roster restrictions per R40 and are recorded as notes.",
+  "cardNumberRangeVerified": "351-700, no gaps found in the source's own numbered checklist.",
+  "provenance": {
+    "cardsFrom": "checklistinsider.com xlsx workbook (tabular-inferred layout via backend/scripts/scrape-checklistinsider.cjs), base-numeric rows #351-700 only; workbook carries no card-level print runs for this product (all null) -- print runs come from the page's own stated ladder.",
+    "rungsFrom": "the source page's own stated ladder under '2024 Topps Series 2 Baseball Base Parallels List', verbatim; no rung is inferred and none is taken from a sale",
+    "printRunsFrom": "the source's stated print run only; blank where the source states none"
+  }
+}
