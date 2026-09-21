@@ -213,6 +213,53 @@ const SET_KEYS = RAW_SET_KEYS.filter((k) => !WILDCARDS.has(k));
  * resolveChecklistNumberedIngestId already hooks into for the numbered-twin
  * half of this problem) -- never a blanket vocabulary-based suffix rule,
  * which is the exact shape Drew's 2026-08-30 ruling retired.
+ *
+ * `bowmans-best` and `bowman-draft` (READ-ONLY VERIFICATION, 2026-09-21,
+ * card_catalog, sport=baseball, years 2023-2025, STRICT checklist rows only
+ * -- both setKeys are registered products in productSetKeys.ts:666,678,
+ * distinct from their own chrome/sapphire/mega-box children which mint
+ * DIFFERENT setKeys and are correctly NOT added here). Both products are
+ * chrome-stock Bowman lines and their own checklist spells refractor
+ * parallels with the trailing "-refractor" word exactly like bowman-chrome
+ * above (`red-refractor`, `gold-refractor`, `orange-refractor`,
+ * `black-refractor`, `blue-refractor`, `green-refractor`,
+ * `purple-refractor`, `yellow-refractor`, plus family-word compounds this
+ * lane never touches such as `gold-lava-refractor`, `blue-x-fractor`,
+ * `mini-diamond-refractor` -- confirmed no DIFFERENT family word such as
+ * X-Fractor, Wave, Lava, or Mini-Diamond is ever bare-colour-mapped onto
+ * "refractor" by this lane: suffixCandidatesOf only ever appends/strips
+ * the ONE word this table names per setKey, never a family word it did not
+ * ask for).
+ *
+ * BOTH setKeys ALSO carry extensive genuine both-slugs-are-real-rungs
+ * pairs -- the bare colour AND "<colour>-refractor" both exist as DISTINCT
+ * strict checklist rows on the SAME card number for the SAME product
+ * (measured: bowmans-best carries base-vs-refractor row pairs for red,
+ * orange, gold, blue, green, purple, black, teal, wave, lava, mini-diamond,
+ * gold-lava, aqua-lava, gold-mini-diamond, green-mini-diamond,
+ * top-prospects, veterans-rookies -- 17 pairs measured 2026-09-21;
+ * bowman-draft shows the same shape for red, orange, gold, green, blue,
+ * black, purple, sky-blue among others). This is EXPECTED and SAFE: this
+ * lane's own both-slugs-are-real-rungs guard (pairIsBothRealRungs, above)
+ * refuses every one of those pairs product-wide rather than guessing, so
+ * adding these two prefixes only unlocks the cells where a sale's own
+ * spelling has EXACTLY ONE strict candidate and leaves every genuinely
+ * ambiguous pair refused, same as every other entry in this table.
+ *
+ * `exact: true` on these two entries ONLY (verification scope, 2026-09-21).
+ * `bowman-draft` is a `startsWith` prefix of sibling PRODUCTS this PR never
+ * verified and which are NOT "refractor" family: `bowman-draft-sapphire`
+ * spells its bare colours' suffixed form with "-sapphire" (`red` ->
+ * `red-sapphire`, checklist-backed, measured 2026-09-21), and
+ * `bowman-draft-mega-box` / `bowman-draft-chrome` are distinct registered
+ * products (productSetKeys.ts) with their own unverified vocabulary. A plain
+ * `startsWith` entry for `bowman-draft` would silently reach those setKeys
+ * too and offer the WRONG word ("refractor" where the catalog says
+ * "sapphire") whenever one of them is later requested via SET_KEYS -- the
+ * exact defect this table exists to prevent. `exact: true` restricts the
+ * match to the literal setKey string only, same discipline the
+ * both-slugs-are-real-rungs guard already applies per-pair: never assume a
+ * sibling shares the parent's vocabulary without measuring it too.
  */
 const SUFFIX_WORD_BY_SETKEY_PREFIX = [
   { prefix: "panini-prizm", word: "prizm" },
@@ -222,16 +269,22 @@ const SUFFIX_WORD_BY_SETKEY_PREFIX = [
   { prefix: "topps-chrome", word: "refractor" },
   { prefix: "bowman-chrome", word: "refractor" },
   { prefix: "topps-finest", word: "refractor" },
+  { prefix: "bowmans-best", word: "refractor", exact: true },
+  { prefix: "bowman-draft", word: "refractor", exact: true },
 ];
 
 /** The suffix word for a setKey, or null when this lane has no entry for it
  *  (out of scope, never guessed). Longest-prefix-first so a more specific
- *  entry (were one ever added) cannot be shadowed by a shorter one. */
+ *  entry (were one ever added) cannot be shadowed by a shorter one.
+ *  `exact: true` entries only match the setKey verbatim -- never a sibling
+ *  product that merely starts with the same text (see the module comment
+ *  above the table for why `bowman-draft`/`bowmans-best` need this). */
 function suffixWordFor(setKey) {
   const k = lower(setKey);
   let best = null;
-  for (const { prefix, word } of SUFFIX_WORD_BY_SETKEY_PREFIX) {
-    if (k.startsWith(prefix) && (!best || prefix.length > best.prefix.length)) best = { prefix, word };
+  for (const entry of SUFFIX_WORD_BY_SETKEY_PREFIX) {
+    const matches = entry.exact ? k === entry.prefix : k.startsWith(entry.prefix);
+    if (matches && (!best || entry.prefix.length > best.prefix.length)) best = entry;
   }
   return best ? best.word : null;
 }
@@ -717,6 +770,14 @@ async function main() {
       const word = setKeyWord.get(setKey);
       if (!word) {
         s.refusedNoSuffixWord++;
+        // LOUD, AT THE POINT OF SKIP (not just the end-of-run summary): a
+        // requested cell whose setKey has no table entry used to report
+        // "catalog rows scanned 0" with no explanation anywhere near it --
+        // indistinguishable from a genuinely empty cell. This prints
+        // immediately, once per (cell, setKey), so a dispatch that names an
+        // unmapped setKey is caught by anyone watching the log, not only by
+        // someone who scrolls to the final banner.
+        console.log(`\n::warning::SKIPPING ${cell} ${setKey} -- no suffix word in SUFFIX_WORD_BY_SETKEY_PREFIX for this setKey (never guessed; add an entry after verifying against card_catalog).`);
         if (!noSuffixWord.includes(setKey)) noSuffixWord.push(setKey);
         continue;
       }
