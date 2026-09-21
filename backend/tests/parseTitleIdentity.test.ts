@@ -465,7 +465,13 @@ describe("parseListingIdentity — parallel extraction", () => {
     expect(inferSetKeyFromTitle("2024 Bowman Chrome Sapphire Speckle Refractor Eric Hartman")).toBe("Bowman Chrome Sapphire");
   });
   it("Chrome-implied edition guard: 'Bowman Mega Box' + wave refractor stays Mega Box", () => {
-    expect(inferSetKeyFromTitle("2024 Bowman Mega Box Mojo Refractor Aaron Judge")).toBe("Bowman Chrome Mega Box");
+    // CF-R75-THE-BARE-SPELLING-MUST-SURVIVE (2026-09-21): this title never
+    // said "chrome", so inferSetKeyFromTitle now honestly returns the bare
+    // spelling -- the point of this test (an edition token must not collapse
+    // to plain "Bowman Chrome") still holds; computeHobbyIqCardId's
+    // year-agnostic fold still resolves both spellings to the same
+    // pre-2026 product (see hobbyIqCardIdMegaBoxYearSplit-style coverage).
+    expect(inferSetKeyFromTitle("2024 Bowman Mega Box Mojo Refractor Aaron Judge")).toBe("Bowman Mega Box");
   });
   it("Chrome-implied via BSPA cardNumber: 'Bowman' + speckle + BSPA-* → Bowman Chrome Sapphire", () => {
     expect(inferSetKeyFromTitle("2024 Bowman Speckle Refractor #BSPA-EH", "BSPA-EH")).toBe("Bowman Chrome Sapphire");

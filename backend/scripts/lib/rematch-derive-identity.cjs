@@ -105,7 +105,14 @@ function deriveIdentity(row, deps) {
   // the title word alone -- a cut signature mounted with a base card reads
   // "PSA AUTHENTIC AUTO" and is still a base card. Carry the cardNumber
   // verdict out separately so the classifier can tell the two apart.
-  const autoByCardNumber = deps.isCardNumberAutoSubset ? !!deps.isCardNumberAutoSubset(cardNumber) : false;
+  // Scope threaded through (CF-SCOPED-AUTO-PREFIX, 2026-09-21): additive
+  // only -- sport/cardYear/setKey are already resolved above this line, so
+  // passing them lets product-year-scoped prefixes (2025 Topps Chrome Update
+  // CRDA-/CHRU-/CLA-, etc.) resolve here exactly as they do on the service
+  // path, without changing behavior for any other product-year.
+  const autoByCardNumber = deps.isCardNumberAutoSubset
+    ? !!deps.isCardNumberAutoSubset(cardNumber, { sport, year: cardYear, setKey })
+    : false;
   // CF-A-STATED-PARALLEL-IS-NEVER-EVICTED-TO-BASE (post-wave audit,
   // 2026-09-15).
   //
@@ -170,7 +177,17 @@ function deriveIdentity(row, deps) {
       })
     : null;
   if (adopted && deps.noteSpellingAdopted) deps.noteSpellingAdopted();
-  const parallel = adopted || parallelBeforeSpelling;
+  const parallelBeforeMarketLanguage = adopted || parallelBeforeSpelling;
+  // CF-SCOPED-MARKET-LANGUAGE (2026-09-21): additive only, same shape as
+  // autoByCardNumber's scope pass above -- sport/cardYear/setKey are already
+  // resolved by here, so a product-year-scoped alias ("Blue Sapphire" ->
+  // Base, ONLY on the verified no-Blue-rung Sapphire product-years) can be
+  // seen. A miss (dep not injected, or no table entry for this scope) leaves
+  // parallelBeforeMarketLanguage exactly as it was.
+  const marketLanguageAlias = deps.scopedMarketLanguageAlias
+    ? deps.scopedMarketLanguageAlias(parallelBeforeMarketLanguage, { sport: guard.sport, year: cardYear, setKey })
+    : null;
+  const parallel = marketLanguageAlias || parallelBeforeMarketLanguage;
   const printRun = parsed.printRun ?? row.printRun ?? null;
   const identity = { sport: guard.sport, cardYear, setKey, setNameRaw: setKeyRaw, cardNumber, parallel, isAuto, printRun, gradeCompany, gradeValue };
   const slug = deps.computeHobbyIqCardId({

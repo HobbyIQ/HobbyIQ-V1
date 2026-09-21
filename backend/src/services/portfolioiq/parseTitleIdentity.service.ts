@@ -771,6 +771,38 @@ const AUTO_NEGATIVE_RE =
  *  guarded at the write. */
 const PATTERN_COLOUR = String.raw`(orange|red|green|gold|blue|purple|yellow|aqua|pink|black|white|fuchsia|silver|bronze|teal|sepia)`;
 
+/** CF-A-QUALIFIED-COLOUR-IS-NOT-THE-BARE-COLOUR, round 4 (2026-09-21).
+ *  "Blue" alone means bare Blue -- but "blue" ADJACENT to a qualifying word
+ *  on EITHER side names a DIFFERENT card ("Sky Blue", "Royal Blue", "Blue
+ *  Wave Refractor", "Blue Ice"), never plain "Blue" and never "Blue
+ *  Sapphire". Round 3's guard only checked a qualifier immediately BEFORE
+ *  "blue", separated by `\s+` -- so "Sky-Blue" (hyphen), "SkyBlue"
+ *  (concatenated) and "Blue Sky" (reversed) still matched the bare-colour
+ *  rule. `SEP` accepts a run of whitespace/hyphens OR nothing at all
+ *  (concatenated spellings); the word lists are the qualifiers this file's
+ *  OWN vocabulary already treats as compounds distinct from bare Blue (the
+ *  "sky blue"/"royal blue" list at line ~2236, PATTERN_COLOUR's own family
+ *  words -- Wave, Ice/Cracked Ice, Shimmer, Lava, Speckle, Refractor,
+ *  Sapphire -- that combine with a colour to name a DIFFERENT card than the
+ *  bare colour). Checked from BOTH directions: a qualifier can precede
+ *  ("Sky Blue") or follow ("Blue Sky" is not real vocabulary here, but
+ *  "Blue Wave", "Blue Ice", "Blue Shimmer", "Blue Lava", "Blue Speckle",
+ *  "Blue Refractor" all are, and "Blue Sapphire" itself must be excluded
+ *  from the FOLLOWING list -- it is the one compound this guard exists to
+ *  let through when nothing else qualifies it). */
+const BLUE_SEP = String.raw`[\s-]*`;
+const BLUE_PRECEDING_QUALIFIERS = String.raw`sky|light|aqua|navy|royal|ice|baby|teal|dark`;
+const BLUE_FOLLOWING_QUALIFIERS = String.raw`sky|wave|ice|shimmer|lava|speckle|refractor|prism|foil|geometric|border|fractor`;
+/** True when "blue" in `T` is qualified on either side by a word that names
+ *  a DIFFERENT compound colour/finish than bare "Blue" -- i.e. this "blue"
+ *  is not evidence of the bare colour (or bare "Blue Sapphire") at all.
+ *  Silent-safe: a title with no "blue" at all reads false, same as today. */
+function blueIsQualified(T: string): boolean {
+  const before = new RegExp(String.raw`\b(?:${BLUE_PRECEDING_QUALIFIERS})${BLUE_SEP}blue\b`, "i");
+  const after = new RegExp(String.raw`\bblue${BLUE_SEP}(?:${BLUE_FOLLOWING_QUALIFIERS})\b`, "i");
+  return before.test(T) || after.test(T);
+}
+
 /** Nouns that mean "a card", for the count-adjacency tests below. */
 const LOT_CARD_NOUN = String.raw`(?:cards?|commons?|rookies|rc'?s|singles?|slabs?|autos?|refractors?|parallels?|inserts?|prospects?)`;
 /** Nouns that mean "packaging", which a count in front of does NOT make a lot. */
@@ -870,7 +902,17 @@ export function parseListingIdentity(
   // trust the card number. This rescues terse marketplace titles that
   // omit "auto" but list a #CPA-XXX card number (very common when
   // sellers use CH's slab-derived title).
-  const isAuto = extractIsAuto(t) || isCardNumberAutoSubset(cardNumber);
+  //
+  // Scope (sport/year/setKey) is passed through when the caller has it
+  // (CF-SCOPED-AUTO-PREFIX, 2026-09-21) so product-year-scoped prefixes like
+  // 2025 Topps Chrome Update's CRDA-/CHRU-/CLA- resolve without widening the
+  // global list; callers that omit these opts see identical behavior to
+  // before this change.
+  const isAuto = extractIsAuto(t) || isCardNumberAutoSubset(cardNumber, {
+    sport: opts?.vertical ?? null,
+    year: opts?.year ?? null,
+    setKey: opts?.setKey ?? null,
+  });
   const grade = extractGradeFromTitle(t);
   // CF-A-VARIATION-IS-A-CARD (D22). The variation family is read by the one
   // vocabulary; a named variation is the finish ("Image Variation", "Golden
@@ -959,6 +1001,201 @@ export function parseListingIdentity(
   };
 }
 
+/** CF-SCOPED-AUTO-PREFIX (Drew, 2026-09-21). A (sport, year, setKey) -> set
+ *  of card-number prefixes that are auto-only for THAT product-year ONLY --
+ *  never global, unlike the curated list below.
+ *
+ *  WHY SCOPED, NOT ADDED TO THE GLOBAL LIST. The 2025-26 Topps/Bowman
+ *  autograph-insert prefixes below (AC-, CRDA-, CHRU-, CLA-, BSA2-, CCA2-,
+ *  WCDA-, FPA-, 90AU-, 90CAS-, BMA-, RMA-, IVA-) are auto-only ONLY for the
+ *  exact product-year listed. The SAME letters recur as a DIFFERENT,
+ *  genuinely-mixed or non-auto product in other years/sets -- e.g. `AC-` in
+ *  2018-2024 `topps-diamond-icons` or `bowman-npb`, `CLA-` in the base
+ *  `topps-chrome` flagship parallel ladder (not the Chrome Legends insert),
+ *  `BMA-`/`RMA-` in `topps-gypsy-queen` and `bowman-university-best`. A bare
+ *  global prefix add was measured (2026-09-21 blast radius, ~6,000 sold_comps
+ *  + ~3,000 catalog rows across baseball/football/basketball/hockey) to
+ *  false-positive 40-98% of the time depending on prefix -- see PR body for
+ *  the full table. Scoping to the verified product-year is what makes the
+ *  fix safe.
+ *
+ *  PROVENANCE. Each entry was confirmed ALWAYS-AUTO by two independent
+ *  source-page reads today (2026-09-21) plus a catalog cross-check: every
+ *  `:no-auto` row sharing the prefix traces to one of the defective sources
+ *  (checklistinsider-2026-08-27/-29/-30, bccp, catalog-explode-actuals-
+ *  2026-08-12 -- CF-CHECKLISTINSIDER-MINTS-AUTOS-UNSIGNED), while every
+ *  `:auto` row for the identical cardNumber traces to checklistcenter-*,
+ *  beckett-*, baseballcardpedia-*, or today's checklistinsider-2026-09-21
+ *  re-scrape. See PR body for the (year, setKey, prefix, source, count)
+ *  repair-scope table -- those ~32k catalog rows are NOT touched here.
+ *
+ *  Keys are `${sport}|${year}|${setKey}` with setKey as normalizeSetKey /
+ *  computeHobbyIqCardId spell it (topps Series 1/2 fold into "topps";
+ *  Chrome Update folds into "topps-chrome-update-series"; Bowman Mega Box
+ *  folds into "bowman-chrome-mega-box" for 2025-and-earlier, but from 2026
+ *  a BARE "Bowman Mega Box" title -- no "chrome" -- resolves to the
+ *  DISTINCT `bowman-mega` key instead, R75). */
+const SCOPED_AUTO_PREFIX: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  // 2025 Topps Chrome Update Series -- Autographs, Rookie Debut Autographs,
+  // Chromeography, Chrome Legends Autographs. Source: checklistcenter /
+  // baseballcardpedia product-page autograph sections, confirmed 2026-09-21.
+  ["baseball|2025|topps-chrome-update-series", new Set(["AC-", "CRDA-", "CHRU-", "CLA-"])],
+  // 2025 Topps Series 1/2 (+ Update, folded into "topps") -- Baseball Stars
+  // Autographs S2, City Connect Swatch Collection Autograph Relics S2, World
+  // Champion Dual Autographs, First Pitch/Finest Personality Autographs,
+  // 1990 Topps Autographs, 1990 Chrome All-Stars Autographs. Source:
+  // checklistcenter / beckett-scraped product-page autograph sections,
+  // confirmed 2026-09-21.
+  ["baseball|2025|topps", new Set(["BSA2-", "CCA2-", "WCDA-", "FPA-", "90AU-", "90CAS-"])],
+  // 2026 Bowman Mega Box -- Bowman Mega Autographs, Rookie Mega Autographs.
+  // CF-R75-BOWMAN-MEGA-BOX-SPLIT (hobbyIqCardId.service.ts ~2678): from 2026
+  // a title reading "Bowman Mega Box" WITHOUT "chrome" resolves to the
+  // distinct `bowman-mega` key, not `bowman-chrome-mega-box` -- confirmed
+  // against real sold_comps rows (e.g. "2026 Bowman Mega Box Baseball
+  // #BMA-KW Base" -> hiq:baseball:2026:bowman-mega:bma-kw:...), where
+  // `bowman-mega` carries the overwhelming majority of 2026 BMA-/RMA- rows
+  // (1,777 / 242) and the identical defective-source split (no-auto only
+  // from checklistinsider-2026-08-27; auto from checklistinsider-2026-09-21
+  // / beckett-s3-2026-09-19). Source: checklistcenter / beckett-checklist
+  // product-page autograph sections, confirmed 2026-09-21.
+  ["baseball|2026|bowman-mega", new Set(["BMA-", "RMA-"])],
+  // 2026 Bowman CHROME Mega Box -- a DIFFERENT product sharing the same
+  // BMA-/RMA- numbering convention (different roster at the same numbers,
+  // per R75). Verified separately: 119 (BMA-) / 30 (RMA-) strict :auto rows
+  // from beckett-scraped-2026-08-13 / ingest-auto-seed, ZERO no-auto rows
+  // from any source under this exact setKey+year. Kept as its own entry.
+  ["baseball|2026|bowman-chrome-mega-box", new Set(["BMA-", "RMA-"])],
+  // 2026 Topps Chrome Black -- Ivory Autographs. Source: checklistinsider
+  // 2026-09-21 / checklistcenter product-page autograph section.
+  ["baseball|2026|topps-chrome-black", new Set(["IVA-"])],
+]);
+
+/** Look up whether `cardNumber` starts with one of the auto-only prefixes
+ *  scoped to this exact (sport, year, setKey). Returns false on any miss --
+ *  unknown scope, unscoped call, or a scope not in the table -- so this can
+ *  only ever ADD a positive on top of the global rule, never remove one. */
+function isScopedAutoPrefix(
+  cardNumber: string | null,
+  scope?: { sport?: string | null; year?: number | null; setKey?: string | null } | null,
+): boolean {
+  if (!cardNumber || !scope) return false;
+  const sport = String(scope.sport ?? "").toLowerCase().trim();
+  const year = scope.year;
+  const setKey = String(scope.setKey ?? "").toLowerCase().trim();
+  if (!sport || !year || !setKey) return false;
+  const prefixes = SCOPED_AUTO_PREFIX.get(`${sport}|${year}|${setKey}`);
+  if (!prefixes) return false;
+  const cn = String(cardNumber).toUpperCase().replace(/^#/, "");
+  for (const p of prefixes) {
+    if (cn.startsWith(p)) return true;
+  }
+  return false;
+}
+
+/** CF-SCOPED-MARKET-LANGUAGE (Drew, 2026-09-21). "Blue Sapphire is just a
+ *  Sapphire base term" -- Sapphire products are blue by design, so on a
+ *  product whose checklist states NO separate Blue rung, a sale calling
+ *  itself "Blue Sapphire" / "Sapphire Blue" / "Blue Sapphire Refractor" is
+ *  the BASE card, not a colour rung. Settled from the published checklists
+ *  (owner ruling), same (sport, year, setKey)-scoped shape as
+ *  SCOPED_AUTO_PREFIX above and for the identical reason: the SAME phrase is
+ *  a REAL, distinct, numbered rung on other product-years (2019
+ *  bowman-draft-sapphire's checklist states "Blue /99" as its own line
+ *  beside Gold/Red/Green/Orange/Black/Padparadscha -- explicitly EXCLUDED,
+ *  see the test pinning it stays distinct), so this can never be a bare
+ *  global alias.
+ *
+ *  A miss (unscoped call, or any product-year not listed) changes nothing --
+ *  same additive-only contract as isCardNumberAutoSubset's scope.
+ *
+ *  CF-BECKETT-PROVES-A-DISTINCT-RUNG (review round 3, 2026-09-21). EVERY
+ *  bowman-chrome-sapphire product-year was DROPPED from this table (was in
+ *  2024/2025/2026 through round 2). The 66/66 (2024) and 65/65 (2025)
+ *  "Blue Sapphire" catalog rows for this product are ALL checklist-grade
+ *  (beckett-checklist / beckett-checklist-graded), all printRun 150 -- and
+ *  the SAME card number carries a SEPARATE "Base" row: e.g.
+ *  bowman-chrome-sapphire 2024 SSA-JP has both `ssa-jp:base:auto` (PSA
+ *  10/8, BGS 10) AND `ssa-jp:blue-sapphire:auto:num-150` -- two distinct
+ *  priced cards, not one card under two labels. Round 2's dismissal of
+ *  these rows as "mislabeled base autos" was wrong. 2026 has zero catalog
+ *  rows either way (no evidence), dropped along with its siblings since the
+ *  product's OTHER two years both prove a real rung. This does NOT touch
+ *  card_catalog -- those Beckett rows stand as the checklist-grade evidence
+ *  they are; only the missing table entries (never added) are the fix.
+ *
+ *  Sources cited per entry; each is a published checklist page read
+ *  2026-09-21 that lists the product's full colour/print-run ladder with NO
+ *  Blue-named rung -- re-verified round 3 against card_catalog restricted to
+ *  checklist-grade sources ONLY (beckett-*, checklistcenter-*,
+ *  baseballcardpedia-*, checklistinsider-*): zero checklist-grade "Blue
+ *  Sapphire" rows exist for any of the four entries below at any listed
+ *  year (every catalog row under these product-years is ingest-auto-seed /
+ *  sales-attested / catalog-explode-actuals -- derived from sales, not the
+ *  checklist, i.e. circular) -- none dropped. */
+const SCOPED_MARKET_LANGUAGE_ALIAS: ReadonlyMap<string, "Base"> = new Map([
+  // checklistinsider.com/2024-bowman-draft-baseball-checklist (Sapphire
+  // Edition parallel section): Yellow /75, Gold /50, Orange /25, Black /10,
+  // Red /5, Padparadscha 1/1 -- no Blue. Re-verified round 3: zero
+  // checklist-grade "Blue Sapphire" catalog rows for this product-year.
+  ["baseball|2024|bowman-draft-sapphire", "Base"],
+  // checklistinsider.com/2025-bowman-draft-baseball-checklist (Sapphire
+  // Edition parallel section): Yellow /75, Gold /50, Orange /25, Black /10,
+  // Red /5, Padparadscha 1/1 -- no Blue. EXPLICITLY NOT 2019 (see below).
+  // Re-verified round 3: zero checklist-grade rows for this product-year.
+  ["baseball|2025|bowman-draft-sapphire", "Base"],
+  // cardboardconnection.com 2019/2020 Topps Chrome Sapphire Edition parallel
+  // guides -- no Blue-named rung; checklistinsider.com/2025-topps-chrome-
+  // baseball-checklist Sapphire section, same. Re-verified round 3: zero
+  // checklist-grade "Blue Sapphire" rows at any of these three years.
+  ["baseball|2019|topps-chrome-sapphire", "Base"],
+  ["baseball|2020|topps-chrome-sapphire", "Base"],
+  ["baseball|2025|topps-chrome-sapphire", "Base"],
+  // checklistinsider.com/2024-topps-chrome-update-baseball-checklist and
+  // .../2025-topps-chrome-update-baseball-checklist (Sapphire section) --
+  // no Blue rung. Re-verified round 3: zero checklist-grade rows at either
+  // year.
+  ["baseball|2024|topps-chrome-update-sapphire", "Base"],
+  ["baseball|2025|topps-chrome-update-sapphire", "Base"],
+  // EXPLICITLY NOT LISTED: baseball|2019|bowman-draft-sapphire.
+  // cardboardconnection.com's 2019 Bowman Draft Sapphire Edition guide states
+  // a real, distinct "Blue /99" rung beside Gold/Red/Green/Orange/Black/
+  // Padparadscha Sapphire -- confirmed against card_catalog (200
+  // baseballcardpedia-ladders-2026-09-02 rows, all cardYear 2019, all
+  // printRun 99). Aliasing this year would merge a genuine numbered rung's
+  // sales into the raw base pool. See the "2019 stays distinct" pin below.
+  //
+  // EXPLICITLY NOT LISTED: baseball|2024/2025/2026|bowman-chrome-sapphire.
+  // See CF-BECKETT-PROVES-A-DISTINCT-RUNG above -- checklist-grade evidence
+  // proves Blue Sapphire is its own numbered rung on this product, in every
+  // year with data. See the "stays distinct" pin below.
+]);
+
+const SCOPED_MARKET_LANGUAGE_PHRASES: ReadonlySet<string> = new Set([
+  "blue sapphire", "sapphire blue", "blue sapphire refractor",
+]);
+
+/** The scoped market-language alias for a stated parallel, or null on any
+ *  miss (unscoped call, product-year not in the table, or a phrase this
+ *  table does not name) -- callers keep whatever `parallel` already was.
+ *  Compares on the FOLDED phrase only (case/whitespace-insensitive), never
+ *  drops or reads printRun -- that stays whatever the title/vendor stated. */
+export function scopedMarketLanguageAlias(
+  parallel: string | null,
+  scope?: { sport?: string | null; year?: number | null; setKey?: string | null } | null,
+): string | null {
+  if (!parallel || !scope) return null;
+  const sport = String(scope.sport ?? "").toLowerCase().trim();
+  const year = scope.year;
+  const setKey = String(scope.setKey ?? "").toLowerCase().trim();
+  if (!sport || !year || !setKey) return null;
+  const key = `${sport}|${year}|${setKey}`;
+  const target = SCOPED_MARKET_LANGUAGE_ALIAS.get(key);
+  if (!target) return null;
+  const folded = String(parallel).trim().toLowerCase().replace(/\s+/g, " ");
+  if (!SCOPED_MARKET_LANGUAGE_PHRASES.has(folded)) return null;
+  return target;
+}
+
 /** True when the cardNumber prefix belongs to a known BASEBALL autograph
  *  subset. Domain-curated list from Drew (2026-07-30) — where an
  *  empirically-low auto ratio contradicts the list, that's a signal
@@ -1037,8 +1274,20 @@ export function parseListingIdentity(
  *  function may over-tag when applied cross-sport. Consider adding a
  *  sport param when we expand to other sports.
  *
+ *  SCOPE (optional 2nd param, CF-SCOPED-AUTO-PREFIX, 2026-09-21). The global
+ *  list above is unconditional -- these letters mean "auto" in EVERY
+ *  product-year. Some prefixes are auto-only for exactly one product-year
+ *  and something else elsewhere (see SCOPED_AUTO_PREFIX above this function);
+ *  passing `{ sport, year, setKey }` checks that table too, ADDITIVELY. A
+ *  caller that omits `scope`, or one whose (sport, year, setKey) is not in
+ *  the table, gets EXACTLY today's global-only behavior -- this parameter
+ *  can only turn a `false` into a `true`, never the reverse.
+ *
  *  Silent-safe on null/empty. */
-export function isCardNumberAutoSubset(cardNumber: string | null): boolean {
+export function isCardNumberAutoSubset(
+  cardNumber: string | null,
+  scope?: { sport?: string | null; year?: number | null; setKey?: string | null } | null,
+): boolean {
   if (!cardNumber) return false;
   const cn = String(cardNumber).toUpperCase().replace(/^#/, "");
   const AUTO_PREFIX = /^(CPATWH|CPALD|APDCA|54FAV|FFDA|CUSA|SCCA|CCAR|RODA|ROTA|TTAR|DPPA|BSPA|BCPA|BCRA|TCRA|B96A|BGA|MRA|UAC|BSA|FSA|CPA|CDA|CRA|BPA|CBA|CCA|USA|DAS|NTS|SSM|DCA|CAA|GQA|AGA|ROA|FAR|FFA|BOA|T1A|SCA|PPA|ODA|IAP|UAR|C\d{2}A|BA|PA|RA|FA|TA|AA|AP)(-|$)/;
@@ -1055,6 +1304,10 @@ export function isCardNumberAutoSubset(cardNumber: string | null): boolean {
     const m = /^(CPATWH|CPALD|APDCA|54FAV|FFDA|CUSA|SCCA|CCAR|RODA|ROTA|TTAR|DPPA|BSPA|BCPA|BCRA|TCRA|B96A|BGA|MRA|UAC|BSA|FSA|CPA|CDA|CRA|BPA|CBA|CCA|USA|DAS|NTS|SSM|DCA|CAA|GQA|AGA|ROA|FAR|FFA|BOA|T1A|SCA|PPA|ODA|IAP|UAR|C\d{2}A)([A-Z]{1,4})$/.exec(cn);
     if (m) return true;
   }
+  // ADDITIVE ONLY: the scoped table can only add a positive the global rule
+  // missed; it is consulted last and never overrides a global `false`
+  // into anything but `true`.
+  if (isScopedAutoPrefix(cardNumber, scope)) return true;
   return false;
 }
 
@@ -1220,7 +1473,10 @@ export function inferIsAuto(input: InferIsAutoInput): boolean {
   // Basketball Panini era has NO prefix vocabulary — skip prefix rule
   // for basketball unless the sport hint is unset (safer default).
   if (sport !== "basketball") {
-    if (isCardNumberAutoSubset(input.cardNumber ?? null)) return true;
+    // Scope threaded through (CF-SCOPED-AUTO-PREFIX, 2026-09-21): additive
+    // only, so a caller that already has year/setKey gets the product-year
+    // scoped prefixes too, and one that doesn't sees unchanged behavior.
+    if (isCardNumberAutoSubset(input.cardNumber ?? null, { sport: input.sport, year: input.year, setKey: input.setKey })) return true;
   }
   if (sport === "football" && isFootballCardNumberAutoSubset(input.cardNumber ?? null)) return true;
 
@@ -1602,7 +1858,18 @@ function extractParallel(
   if (/orange\s+sapphire/i.test(T)) return "Orange Sapphire";
   if (/yellow\s+sapphire/i.test(T)) return "Yellow Sapphire";
   if (/green\s+sapphire/i.test(T)) return "Green Sapphire";
-  if (/blue\s+sapphire/i.test(T)) return "Blue Sapphire";
+  // CF-A-QUALIFIED-COLOUR-IS-NOT-THE-BARE-COLOUR (review round 3+4,
+  // 2026-09-21). Unlike the other colours above, "Blue" has real compound
+  // forms in the wild ("Sky Blue", "Royal Blue", "Navy Blue", "Blue Wave",
+  // "Blue Ice", ...) that are NOT the same card as bare "Blue Sapphire" --
+  // this adjacency match would otherwise fire on "Sky Blue Sapphire" too
+  // (round 3 only guarded a qualifier separated by `\s+`, so "Sky-Blue
+  // Sapphire" and "SkyBlue Sapphire" still matched). `blueIsQualified`
+  // checks both directions with any separator (space, hyphen, none) --
+  // see its definition above for the full reasoning and the real failing
+  // title a few lines below in the sapphire-product block, which this
+  // mirrors.
+  if (!blueIsQualified(T) && new RegExp(String.raw`blue${BLUE_SEP}sapphire`, "i").test(T)) return "Blue Sapphire";
   // Patterned refractors (color + adjacent pattern word). Direct regex
   // literals — string-concatenated regexes were dropping the \s+ escape
   // when constructed via new RegExp().
@@ -1725,12 +1992,39 @@ function extractParallel(
   // Sapphire product context + standalone color → "Color Sapphire".
   // Real observed: "2026 Bowman Chrome Sapphire Owen Carey Green /99"
   // means Green Sapphire /99 (not Green Refractor /99).
+  //
+  // CF-A-QUALIFIED-COLOUR-IS-NOT-THE-BARE-COLOUR (review round 3+4,
+  // 2026-09-21). `\bblue\b` alone matches "blue" ANYWHERE in the title --
+  // it is not even adjacent to "sapphire" -- so a genuinely different
+  // compound colour ("Sky Blue", "Light Blue", "Aqua Blue", "Navy Blue",
+  // "Royal Blue", "Ice Blue", "Baby Blue", "Teal Blue", "Dark Blue", "Blue
+  // Wave", "Blue Ice", ...) silently folded down to bare "Blue Sapphire",
+  // which downstream then reads as newly-scoped SCOPED_MARKET_LANGUAGE_
+  // ALIAS's alias target and gets rewritten to Base. Real failing title:
+  // "2025 Bowman Draft #BDC-128 Jake Munroe Chrome Sky Blue Refractor
+  // Sapphire" -- a compound colour this file has no named rung for, which
+  // must NOT collapse to "Blue Sapphire" (and must therefore never reach
+  // the alias at all). Round 3's guard required `\s+` between the
+  // qualifier and "blue" and only checked BEFORE -- so "Sky-Blue Sapphire"
+  // (hyphen), "SkyBlue Sapphire" (concatenated) and "Blue Sky Sapphire"
+  // (reversed) all still matched the bare rule. `blueIsQualified` (defined
+  // above, beside PATTERN_COLOUR) checks both directions with any
+  // separator. Same guard shape as the "sky blue" / "royal blue"
+  // compound-colour checks elsewhere in this function (line ~2205) --
+  // checked BEFORE the bare colour, refusing rather than guessing a
+  // compound this file does not otherwise name.
   if (/sapphire/i.test(T)) {
     if (/\bred\b/i.test(T)) return "Red Sapphire";
     if (/\borange\b/i.test(T)) return "Orange Sapphire";
     if (/\byellow\b/i.test(T)) return "Yellow Sapphire";
     if (/\bgreen\b/i.test(T)) return "Green Sapphire";
-    if (/\bblue\b/i.test(T)) return "Blue Sapphire";
+    if (blueIsQualified(T)) {
+      // A named compound this file does not otherwise resolve -- refuse
+      // rather than guess. Falls through to whatever a later, more general
+      // rule (or the Base fallback) answers; never "Blue Sapphire".
+    } else if (/\bblue\b/i.test(T)) {
+      return "Blue Sapphire";
+    }
     if (/\bgold\b/i.test(T)) return "Gold Refractor";       // Gold in Sapphire product = Gold Refractor still
   }
   // Named non-refractor parallels
@@ -3973,7 +4267,22 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // with its own productSetKeys ladder entry (family + parent bowman-chrome),
   // its own Mojo/Chrome parallel ladder and its own price curve. Moved ABOVE
   // Chrome, where a longest-match rule belongs.
-  if (/bowman\s+(?:chrome\s+)?mega\s*box/i.test(t)) return "Bowman Chrome Mega Box";
+  //
+  // CF-R75-THE-BARE-SPELLING-MUST-SURVIVE (2026-09-21). R75
+  // (hobbyIqCardId.service.ts's isBowmanMegaBoxTextWithoutChrome, ~2678) reads
+  // the RAW setName text to tell 2026's two distinct Bowman Mega Box releases
+  // apart -- but this rule always RETURNED "Bowman Chrome Mega Box" even for
+  // a title that never said "chrome" at all, so by the time R75's check ran,
+  // the word it looks for was already there and every bare "2026 Bowman Mega
+  // Box" title silently resolved to the CHROME product's key. Caught building
+  // the CF-SCOPED-AUTO-PREFIX table (2026-09-21) when a real "2026 Bowman
+  // Mega Box #RMA-JC" title kept minting bowman-chrome-mega-box instead of
+  // bowman-mega. Return exactly what the title said; normalizeSetKey's
+  // year-agnostic fold (`/bowman-(?:chrome-)?mega(?:-box)?/`) still collapses
+  // both spellings to one key pre-2026, so this is additive-only for years
+  // before BOWMAN_MEGA_BOX_SPLIT_FROM_YEAR.
+  if (/bowman\s+chrome\s+mega\s*box/i.test(t)) return "Bowman Chrome Mega Box";
+  if (/bowman\s+mega\s*box/i.test(t)) return "Bowman Mega Box";
   if (/bowman\s+chrome/.test(t)) return "Bowman Chrome";
   // CF-CHROME-IMPLIED (Drew, 2026-07-29). Some parallels are Chrome-
   // exclusive (they don't exist on Bowman Paper): Speckle, Shimmer,

@@ -42,6 +42,8 @@ import {
   parseListingIdentity,
   inferSetKeyFromTitle,
   inferSportFromTitle,
+  isCardNumberAutoSubset,
+  scopedMarketLanguageAlias,
 } from "./parseTitleIdentity.service.js";
 import { spellForEra } from "../catalog/productSetKeys.js";
 
@@ -343,8 +345,25 @@ export function rederiveRow(row: RederiveRow): RederiveResult {
     };
   }
 
-  const isAuto = parsed.isAuto || (row.isAuto ?? false);
-  const parallel = parsed.parallel || row.parallel || "Base";
+  // CF-SCOPED-AUTO-PREFIX-AT-THE-WRITE-DOOR (Drew, 2026-09-21). `parsed` was
+  // produced by the unscoped parseListingIdentity call above (this module is
+  // a derivation-stamp input, so the initial parse cannot see sport/year/
+  // setKey until the guard has passed) -- by here nextGuard.sport/cardYear/
+  // setKeyNorm are the FINAL resolved identity this rederivation will write,
+  // so this is where a product-year-scoped prefix can be seen. Additive
+  // only: can only turn isAuto false->true, same rule as the ingest path.
+  const isAuto = parsed.isAuto
+    || (row.isAuto ?? false)
+    || isCardNumberAutoSubset(cardNumber, { sport: nextGuard.sport, year: cardYear, setKey: setKeyNorm });
+  // CF-SCOPED-MARKET-LANGUAGE-AT-THE-WRITE-DOOR (Drew, 2026-09-21). Same
+  // seam as the scoped-auto-prefix check above: nextGuard.sport/cardYear/
+  // setKeyNorm are the FINAL resolved identity, so a product-year-scoped
+  // market-language alias ("Blue Sapphire" -> Base on a no-Blue-rung
+  // Sapphire product-year) can be seen here. Renames only; a stated
+  // printRun is untouched.
+  const parallelBeforeAlias = parsed.parallel || row.parallel || "Base";
+  const parallel = scopedMarketLanguageAlias(parallelBeforeAlias, { sport: nextGuard.sport, year: cardYear, setKey: setKeyNorm })
+    ?? parallelBeforeAlias;
 
   return {
     action: "rederived",

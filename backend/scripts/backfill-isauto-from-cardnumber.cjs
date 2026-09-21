@@ -185,13 +185,18 @@ async function main() {
   let skipped = 0;
 
   for (const r of rows) {
-    // Belt-and-braces: JS-side confirm the cardNumber really matches the rule.
-    if (!isCardNumberAutoSubset(r.cardNumber)) { skipped++; continue; }
     // CF-CROSS-PRODUCT-MIS-SLUG-FIX (Drew, 2026-07-30). Never default to
     // "bowman" — preserve existing slug's setKey, skip if the row has no
     // slug at all (fresh-write path shouldn't be reached from this script).
     const setKey = (r.hobbyiqCardId || "").split(":")[3] || null;
     if (!setKey) { skipped++; continue; }
+    // Belt-and-braces: JS-side confirm the cardNumber really matches the
+    // rule. Scope threaded through (CF-SCOPED-AUTO-PREFIX, 2026-09-21):
+    // additive only -- this script's own Cosmos-side STARTSWITH filter above
+    // still only selects the GLOBAL prefixes, so this scope pass is a no-op
+    // today (belt-and-braces for when/if that query is widened) and never
+    // narrows what the query already selected.
+    if (!isCardNumberAutoSubset(r.cardNumber, { sport: r.sport, year: r.cardYear, setKey })) { skipped++; continue; }
 
     // Recompute slug with isAuto=true.
     let newSlug;
