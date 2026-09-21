@@ -45,15 +45,40 @@ const id = (setKey: string, year = 2024, cardNumber = "100", sport = "baseball")
   computeHobbyIqCardId({ sport, year, setKey, cardNumber, parallel: "Base", isAuto: false, printRun: null });
 const seg = (slug: string) => slug.split(":")[3];
 
+// TOPPS FLAGSHIP IS ONE KEY (Drew, 2026-09-20 ruling, retracting D23's split
+// for baseball's Topps Series 1/2 specifically -- see the RULED_ALIASES entry
+// in setKeyReconciliation.ts for the full reasoning). "Topps Series 1" and
+// "Topps Series 2" now derive to the bare `topps` flagship, matching what the
+// R40 checklist-ingest packages already write. Every OTHER D23 product below
+// (Topps Update Series, Bowman Draft 1st Edition, Upper Deck Series 1/2,
+// Topps Heritage High Number, the Leaf products) is UNCHANGED — this ruling
+// is scoped to baseball's Topps "Series" designators alone.
+describe("Topps flagship 'Series 1'/'Series 2' fold to the bare flagship (2026-09-20 ruling)", () => {
+  it.each([
+    // [checklist / seller text, the one spelling -- now the flagship, not a
+    // series-specific key]
+    ["2024 Topps Series 1 Baseball", "topps"],
+    ["Topps Series One", "topps"],
+    ["topps-series-1", "topps"],
+    ["2024 Topps Series 2 Baseball", "topps"],
+    ["Topps Series Two", "topps"],
+  ])("%s -> %s, in the id and in normalizeSetKey", (text, want) => {
+    expect(normalizeSetKey(text)).toBe(want);
+    expect(seg(id(text))).toBe(want);
+  });
+
+  // "1st Edition" is still ANOTHER set (D23's own reasoning: "1st Edition is
+  // another set, not a refinement" applies regardless of which key Series 1
+  // itself resolves to) -- unaffected by this ruling.
+  it("Topps Series 1 1st Edition stays its own product, unaffected by the Series fold", () => {
+    expect(normalizeSetKey("2024 Topps Series 1 Baseball 1st Edition")).toBe("topps-series-1-1st-edition");
+    expect(seg(id("2024 Topps Series 1 Baseball 1st Edition"))).toBe("topps-series-1-1st-edition");
+  });
+});
+
 describe("the id carries the product as the checklist names it (ruling a)", () => {
   it.each([
     // [checklist / seller text, the one spelling]
-    ["2024 Topps Series 1 Baseball", "topps-series-1"],
-    ["Topps Series One", "topps-series-1"],
-    ["topps-series-1", "topps-series-1"],
-    ["2024 Topps Series 2 Baseball", "topps-series-2"],
-    ["Topps Series Two", "topps-series-2"],
-    ["2024 Topps Series 1 Baseball 1st Edition", "topps-series-1-1st-edition"],
     ["2025 Topps Update Series Baseball", "topps-update-series"],
     ["2011 Topps Update", "topps-update-series"],
     ["topps-update", "topps-update-series"],
@@ -210,8 +235,20 @@ describe("a key needs both halves at mint", () => {
     expect(entry("leaf-metal-baseball").setKey).toBe("leaf-metal");
     expect(entry("leaf-metal-baseball").id).toContain(":leaf-metal:");
     expect(entry("Topps Update").setKey).toBe("topps-update-series");
-    expect(entry("topps-series-1").setKey).toBe("topps-series-1");
     expect(entry("2025 Donruss Baseball").setKey).toBe("panini-donruss");
+  });
+
+  // 2026-09-20 ruling: even an AUTHORITATIVE checklist-ingest caller that
+  // passes the literal "topps-series-1"/"topps-series-2" spelling now lands
+  // on the flagship -- `authoritativeSetKey` only skips the sibling-
+  // checklist/chrome-prefix repairs, never the reconciliation alias, so an
+  // ingest path that still writes the old spelling gets the same fold a
+  // fresh derivation would. This matches the R40 checklist packages, which
+  // already write the bare "topps" setKey directly rather than relying on
+  // this fold.
+  it("an authoritative caller spelling the old Series keys still lands on the flagship", () => {
+    expect(entry("topps-series-1").setKey).toBe("topps");
+    expect(entry("topps-series-2").setKey).toBe("topps");
   });
 
   it("the vendor-text chrome repair moves both halves", () => {

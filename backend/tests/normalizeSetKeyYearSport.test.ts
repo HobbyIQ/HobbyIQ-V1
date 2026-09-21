@@ -73,9 +73,11 @@ describe("Topps Three is Topps 3 (Ruling 22)", () => {
     expect(normalizeSetKey("2024 Topps Baseball")).toBe(normalizeSetKey("Topps"));
   });
 
-  /** The sibling specializations must not have moved. */
+  /** The sibling specializations must not have moved. Topps Series 1/2 are
+   *  deliberately EXCLUDED from this list as of the 2026-09-20 ruling (they
+   *  now fold to the bare flagship on purpose -- idCarriesTheProduct.test.ts
+   *  pins that fold); Chrome and Update Series are unaffected by it. */
   it("does not disturb the other Topps products", () => {
-    expect(normalizeSetKey("2023 Topps Series 1")).toBe("topps-series-1");
     expect(normalizeSetKey("Topps Chrome")).toBe("topps-chrome");
     expect(normalizeSetKey("Topps Update Series")).toBe("topps-update-series");
   });

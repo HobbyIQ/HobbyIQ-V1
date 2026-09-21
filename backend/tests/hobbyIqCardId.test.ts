@@ -1394,7 +1394,12 @@ describe("normalizeSetKey — bcp same-numbered insert sets (R30, 2026-09-13)", 
     // far worse defect than the collision it fixed.
     expect(normalizeSetKey("topps")).toBe("topps");
     expect(normalizeSetKey("2015-topps")).toBe("topps");
-    expect(normalizeSetKey("topps-series-1")).toBe("topps-series-1");
+    // topps-series-1/2 are DELIBERATELY folded to the bare flagship as of the
+    // 2026-09-20 ruling (setKeyReconciliation.ts RULED_ALIASES) -- pinned in
+    // idCarriesTheProduct.test.ts, not here. topps-heritage-high-number is
+    // still the untouched example of a `/topps-heritage/`-adjacent rule that
+    // did not widen.
+    expect(normalizeSetKey("topps-heritage-high-number")).toBe("topps-heritage-high-number");
     expect(normalizeSetKey("topps-update-series")).toBe("topps-update-series");
     expect(normalizeSetKey("diamond-kings")).toBe("diamond-kings");
     expect(normalizeSetKey("panini-diamond-kings")).toBe("panini-diamond-kings");

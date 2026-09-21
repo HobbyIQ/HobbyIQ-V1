@@ -107,13 +107,29 @@ const HYPHEN_REASON = "the card number keeps the checklist's hyphen; bd152 is bd
 
 // -- pure -------------------------------------------------------------------
 
+// TOPPS FLAGSHIP IS ONE KEY (Drew, 2026-09-20 ruling). D23 ruled
+// topps-series-1/topps-series-2 as move TARGETS for this fleet -- collapsed
+// rows get MOVED onto them. The 2026-09-20 ruling reverses that direction for
+// these two keys specifically: the generator now folds them back onto the
+// bare `topps` flagship (setKeyReconciliation.ts RULED_ALIASES), so a row
+// already living at `topps` is CORRECT and a dispatch of this fleet must not
+// move it to `topps-series-1`/`topps-series-2` — that would fight the
+// derivation this same PR just changed. Excluded here, not from
+// productSetKeys.ts (which keeps both keys registered so a row still
+// carrying one from a PRIOR dispatch of this fleet, or from before this
+// ruling, still resolves through `spellForEra`/`productSetKeyForName`
+// lookups elsewhere).
+const TOPPS_SERIES_KEYS_RULED_INTO_FLAGSHIP = Object.freeze(new Set(["topps-series-1", "topps-series-2"]));
+
 /** The ruled products: every `spelled` entry of the table plus the Donruss
  *  pair (spelled by era, not by name). Each with the field spellings its rows
  *  may carry. */
 function ruledProducts(table) {
   const out = [];
   for (const p of table.PRODUCT_SET_KEYS) {
-    if (p.spelled) out.push({ setKey: p.setKey, spellings: [p.setKey, ...(p.names ?? [])], era: false });
+    if (p.spelled && !TOPPS_SERIES_KEYS_RULED_INTO_FLAGSHIP.has(p.setKey)) {
+      out.push({ setKey: p.setKey, spellings: [p.setKey, ...(p.names ?? [])], era: false });
+    }
   }
   out.push({ setKey: "donruss", spellings: ["donruss", "panini-donruss"], era: true });
   return out;

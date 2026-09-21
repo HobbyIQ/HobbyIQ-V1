@@ -34,7 +34,7 @@ const decide = (r: Row) => script.decideProductRow(r, deps);
 describe("the ruled products", () => {
   it("are every spelled entry of the table plus the Donruss pair", () => {
     const keys = ruled.map((p) => p.setKey);
-    for (const k of ["topps-series-1", "topps-series-2", "topps-update-series", "topps-updates-and-highlights", "topps-chrome-update-series",
+    for (const k of ["topps-update-series", "topps-updates-and-highlights", "topps-chrome-update-series",
       "bowman-draft-1st-edition", "upper-deck-series-1", "upper-deck-series-2", "topps-heritage-high-number", "leaf-vivid", "leaf-metal", "donruss"]) {
       expect(keys, k).toContain(k);
     }
@@ -44,14 +44,24 @@ describe("the ruled products", () => {
     expect(keys).not.toContain("bowman-chrome");
     expect(keys).not.toContain("topps");
     expect(keys).not.toContain("bowman-chrome-prospects");
+    // 2026-09-20 ruling: topps-series-1/2 are STILL `spelled` table entries
+    // (stored rows must keep resolving), but they are EXCLUDED from this
+    // fleet's move targets — the generator now folds them onto the bare
+    // flagship, so a dispatch of this fleet moving rows TO them would fight
+    // that fold. See TOPPS_SERIES_KEYS_RULED_INTO_FLAGSHIP in
+    // rename-setkey-to-product.cjs.
+    expect(keys).not.toContain("topps-series-1");
+    expect(keys).not.toContain("topps-series-2");
   });
 });
 
 describe("MODE=product: each family round-trips through decideProductRow", () => {
   it.each([
     // [id as minted (collapsed), field, setName, expected new id]
-    ["hiq:baseball:2024:topps:100:base:no-auto", "topps-series-1", "2024 Topps Series 1 Baseball", "hiq:baseball:2024:topps-series-1:100:base:no-auto"],
-    ["hiq:baseball:2024:topps:400:base:no-auto", "topps-series-2", "2024 Topps Series 2", "hiq:baseball:2024:topps-series-2:400:base:no-auto"],
+    // topps-series-1/topps-series-2 rows REMOVED 2026-09-20: this fleet no
+    // longer moves rows onto them (see "the ruled products" above); a row
+    // living at `hiq:...:topps:...` with those fields is now CORRECT and
+    // stays put — see the "canonical, not moved" test below.
     ["hiq:baseball:2025:topps-update:us135:base:no-auto", "topps-update-series", "2025 Topps Update Series", "hiq:baseball:2025:topps-update-series:us135:base:no-auto"],
     ["hiq:baseball:2025:topps-update:us135:base:no-auto", "topps-update", "Topps Update", "hiq:baseball:2025:topps-update-series:us135:base:no-auto"],
     ["hiq:baseball:2024:topps-chrome:usc88:base:no-auto", "topps-chrome-update-series", "Topps Chrome Update Series", "hiq:baseball:2024:topps-chrome-update-series:usc88:base:no-auto"],
@@ -92,9 +102,19 @@ describe("MODE=product: each family round-trips through decideProductRow", () =>
   });
 
   it("a row that agrees with itself is left alone; the print-run segment travels", () => {
-    expect(decide(row("hiq:baseball:2024:topps-series-1:100:gold:no-auto:num-2024", { setKey: "topps-series-1", setName: "2024 Topps Series 1", cardNumber: "100" })).action).toBe("canonical");
-    const d = decide(row("hiq:baseball:2024:topps:100:gold:no-auto:num-2024", { setKey: "topps-series-1", setName: "2024 Topps Series 1", cardNumber: "100" }));
-    expect(d.newId).toBe("hiq:baseball:2024:topps-series-1:100:gold:no-auto:num-2024");
+    expect(decide(row("hiq:baseball:2024:leaf-vivid:100:gold:no-auto:num-2024", { setKey: "leaf-vivid", setName: "2024 Leaf Vivid", cardNumber: "100" })).action).toBe("canonical");
+    const d = decide(row("hiq:baseball:2025:leaf:100:gold:no-auto:num-2024", { setKey: "leaf-vivid", setName: "2025 Leaf Vivid", cardNumber: "100" }));
+    expect(d.newId).toBe("hiq:baseball:2025:leaf-vivid:100:gold:no-auto:num-2024");
+  });
+
+  // 2026-09-20 ruling: topps-series-1/2 are no longer this fleet's move
+  // targets. A row already living at the bare `topps` id, even one whose
+  // stored setKey/setName field still says "Topps Series 1", is CORRECT
+  // under today's generator and must be REFUSED (no-ruled-product), not
+  // moved to topps-series-1 — moving it would fight the fold this PR made.
+  it("a Topps Series field on a bare-topps row is no longer a ruled move (2026-09-20)", () => {
+    const d = decide(row("hiq:baseball:2024:topps:100:base:no-auto", { setKey: "topps-series-1", setName: "2024 Topps Series 1 Baseball", cardNumber: "100" }));
+    expect(d).toMatchObject({ action: "refuse", why: "no-ruled-product" });
   });
 
   it("refuses what it cannot decide, and names why", () => {
@@ -128,9 +148,15 @@ describe("MODE=holdings: the target is derived the way the rows were, then confi
     expect(candidates).toContain("hiq:baseball:2011:topps-update-series:us-175:base:no-auto");
   });
 
-  it("a collapsed flagship id resolves through the holding's own name", () => {
+  // 2026-09-20 ruling: "Topps Series 1 Baseball" now RESOLVES to the bare
+  // `topps` flagship (resolveSetKeyForSlug -> the reconciliation alias), and
+  // `topps` is a family-only entry this fleet never renames onto (it is not
+  // in `isRuled`). A holding whose setName says "Topps Series 1" and whose
+  // id already lives at `topps` is therefore CORRECT today — there is
+  // nothing to resolve it TO, so this produces no candidates.
+  it("a Topps Series 1 setName on a bare-topps holding has no move target (2026-09-20)", () => {
     const h = { hobbyiqCardId: "hiq:baseball:2024:topps:100:base:no-auto", setName: "2024 Topps Series 1 Baseball", cardNumber: "100" };
-    expect(script.holdingTargetCandidates(h, deps).candidates[0]).toBe("hiq:baseball:2024:topps-series-1:100:base:no-auto");
+    expect(script.holdingTargetCandidates(h, deps).candidates).toEqual([]);
   });
 
   it("a graded id yields its parent's candidates and the tier to re-append", () => {
