@@ -1,40 +1,47 @@
 /**
- * 2026-09-22 acquisition wave: four checklistinsider.com sections that were
- * TRULY ABSENT from card_catalog under every registered sibling key
- * (verified read-only against prod Cosmos before staging -- no strict row,
- * no derived/-graded row, nothing under any sibling setKey either):
+ * 2026-09-22 acquisition wave: four checklistinsider.com sections, RE-STAGED
+ * after review found the first pass's "0 collisions" claim was FALSE.
  *
- *   - 2026 Topps Series 1 "1991 Topps Autographs" insert (91A-/91AU-, 185
- *     cards, isAuto=true) -- registers under `topps` (S1/S2 insert doctrine).
- *   - 2026 Topps Series 1 "1991 Topps Baseball" insert (T91-, 100 cards) --
- *     also `topps`. Its own Parallels sentence is where "Pink Foil",
- *     "Gold Foil" and the "Koi Fish" family actually live; those exact
- *     spellings were already present in card_catalog under `topps` before
- *     this PR, confirming they were sourced from THIS insert's own
- *     numbering on an earlier pass, not the 350-card base set (whose own
- *     Parallels sentence does not contain them).
- *   - 2026 Topps Chrome "Chrome Rookie Autographs" insert (RA-, 94 cards,
- *     isAuto=true) -- `topps-chrome`.
- *   - 2026 Bowman Chrome "Chrome Prospects" (BCP-151..250, 100 cards) --
- *     `bowman-chrome`, matching the 2025 precedent package
- *     (acq-2026-09-19-beckett-bowman-chrome-2025-bcp-base) which staged the
- *     equivalent BCP-153..252 range under the SAME setKey with no qualified
- *     sub-key. Includes "Lazer Refractor" (verbatim spelling, confirmed on
- *     the source page's own "Mega Exclusive Parallels" line and confirmed
- *     absent from card_catalog under either lazer-/laser- slug spelling
- *     before this PR) and the Reptilian sub-rungs already ingested the day
- *     before this pass, included here only because BCP-151..250 itself had
- *     zero rows and this range's own Parallels sentence names them.
+ * THE DEFECT (review-caught). The first pass's dedupe check compared a
+ * Cosmos CONTAINS filter against lowercase ids while the CSV's own
+ * cardNumber column was mixed-case (`T91-1`, `91A-ABB`, `RA-AA`, `BCP-151`)
+ * -- `CONTAINS` is case-sensitive, so every check silently found zero
+ * matches even though most rows already existed. A reviewer point-read the
+ * exact ids and found strict rows at all four sampled addresses. REDONE:
+ * point-read the EXACT id the ingester mints for every staged row
+ * (lowercased correctly), plus a cross-setKey check for the same
+ * (cardNumber, rung-slug, isAuto, printRun) under ANY 2026 setKey with a
+ * checklist-grade source. Only rows that survive BOTH checks are staged.
+ *
+ * WHAT SURVIVED (the only rungs genuinely absent everywhere):
+ *   - 2026 Topps Series 1 "1991 Topps Autographs" (91A-/91AU-, `topps`):
+ *     Blue/Green/Gold/Orange/Black/Red (185 cards x 6 = 1110 rows). Base and
+ *     FoilFractor already existed (Base under `topps` itself; FoilFractor
+ *     under the sibling key `topps-series-1`).
+ *   - 2026 Topps Series 1 "1991 Topps Baseball" (T91-, `topps`): the 7 plain
+ *     "*Foil" rungs -- Black/Blue/Gold/Green/Orange/Pink/Red Foil (100 x 7 =
+ *     700 rows). Base, the Crackle Foil family, Koi Fish family, The Real
+ *     One and FoilFractor already existed under `topps`.
+ *   - 2026 Topps Chrome "Chrome Rookie Autographs" (RA-, `topps-chrome`):
+ *     the 6 Retail Exclusive RayWave Refractors + Printing Plates (94 x 7 =
+ *     658 rows). This package's OWN first-pass ladder was also incomplete
+ *     (staged only 4 of 27 rungs) -- refetched and now carries the FULL
+ *     verbatim sentence (Refractor colour run, SuperFractor, Printing
+ *     Plates, 7 Breaker Geometric Refractors, 6 Retail RayWave Refractors).
+ *   - 2026 Bowman Chrome "Chrome Prospects" (BCP-151..250, `bowman-chrome`):
+ *     Black Wave (100 cards) + Lazer Refractor (99 of 100 -- BCP-151
+ *     already has it). 51 of 53 rungs already existed, including the full
+ *     Reptilian ladder ingested the day before this pass. The 477 rows
+ *     carrying a scraped "(eBay)" text artifact on 9 player names are also
+ *     fixed (stripped at extraction).
  *
  * None of the four needs a NEW registered key: `topps`, `topps-chrome` and
- * `bowman-chrome` are all pre-existing fixed points, and a direct Cosmos
- * CONTAINS check (year+cardNumber, unscoped by setKey) found zero existing
- * rows anywhere for all 479 staged cardNumbers across the four sections --
- * so this is pure insertion into already-registered products, not a
- * collision the ingester's guard needs to arbitrate. This test pins that
- * `planStagedDirectory` (offline, no Cosmos) agrees: every package PASSes
- * with 0 unregistered keys and 0 collisions, and staged row counts match
- * each section's own stated card count with zero exact-duplicate CSV lines.
+ * `bowman-chrome` are all pre-existing fixed points. This test pins that
+ * `planStagedDirectory` (offline, no Cosmos) agrees on the corrected
+ * packages: every package PASSes with 0 unregistered keys and 0 collisions,
+ * staged row counts match the genuinely-absent totals above, distinct
+ * cardNumbers still cover every card the section names, and there are zero
+ * exact-duplicate CSV lines.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
@@ -65,21 +72,25 @@ const PACKAGES = [
     dir: "acq-2026-09-22-2100-insider-topps-s1-91a",
     csv: "2026-topps-series-1-1991-topps-autographs.csv",
     expectedRosterCount: 185,
+    expectedRowCount: 1110, // 185 cards x 6 genuinely-absent rungs (Blue/Green/Gold/Orange/Black/Red)
   },
   {
     dir: "acq-2026-09-22-2100-insider-topps-s1-t91",
     csv: "2026-topps-series-1-1991-topps-baseball.csv",
     expectedRosterCount: 100,
+    expectedRowCount: 700, // 100 cards x 7 genuinely-absent rungs (the plain *Foil family)
   },
   {
     dir: "acq-2026-09-22-2100-insider-topps-chrome-ra",
     csv: "2026-topps-chrome-rookie-autographs.csv",
     expectedRosterCount: 94,
+    expectedRowCount: 658, // 94 cards x 7 genuinely-absent rungs (6 RayWave + Printing Plates)
   },
   {
     dir: "acq-2026-09-22-2100-insider-bowman-chrome-bcp",
     csv: "2026-bowman-chrome-prospects.csv",
     expectedRosterCount: 100,
+    expectedRowCount: 199, // 100 Black Wave + 99 Lazer Refractor (BCP-151 already has it)
   },
 ];
 
@@ -101,10 +112,19 @@ describe("2026-09-22 checklistinsider acquisition wave — planner PASS, no new 
         expect(unique.size, "every staged line must be unique").toBe(lines.length);
       });
 
-      it("distinct cardNumbers match the section's own stated card count", () => {
+      it("distinct cardNumbers cover the section's own stated card count", () => {
         const lines = rawLines(pkg.dir, pkg.csv);
         const cardNumbers = new Set(lines.map((l) => l.split(",")[1]));
-        expect(cardNumbers.size).toBe(pkg.expectedRosterCount);
+        // <= not === now: after dropping already-present rungs, a card can
+        // legitimately have fewer staged rows than another (e.g. BCP-151's
+        // Lazer Refractor already exists), but never MORE distinct
+        // cardNumbers than the section's own roster.
+        expect(cardNumbers.size).toBeLessThanOrEqual(pkg.expectedRosterCount);
+      });
+
+      it("staged row count matches the genuinely-absent total (point-read verified)", () => {
+        const lines = rawLines(pkg.dir, pkg.csv);
+        expect(lines.length).toBe(pkg.expectedRowCount);
       });
     });
   }

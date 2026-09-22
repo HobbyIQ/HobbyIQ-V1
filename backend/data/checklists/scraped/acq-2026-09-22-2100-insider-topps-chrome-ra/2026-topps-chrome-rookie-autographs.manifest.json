@@ -1,5 +1,6 @@
 {
   "scrapedAt": "2026-09-22T22:20:55.000Z",
+  "redoneAt": "2026-09-22T23:10:00.000Z",
   "sourceUrl": "https://checklistinsider.com/2026-topps-chrome-baseball",
   "fetchMethod": "curl -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36\" -L, HTTP 200",
   "source": "checklistinsider-2026-09-22",
@@ -9,19 +10,20 @@
   "setKey": "topps-chrome",
   "sectionName": "Chrome Rookie Autographs Checklist",
   "cardNumberPrefix": "RA-",
-  "rowCount": 94,
-  "isAuto": true,
-  "diagnoseContext": "STEP 1 topps-chrome/2026 TRULY ABSENT sample was dominated by RA- and CBA- prefixed cardNumbers (RA-BC, RA-CB, CBA-CAG, CBA-WB). RA- located at 'Chrome Rookie Autographs Checklist' (94 cards). CBA- NOT found anywhere on this page (grep for CB[A-Z]*- found only 'CB-', not 'CBA-') and not sourced this pass -- flagged unsourceable below, NOT staged.",
-  "verbatimParallelsSentence": "94 cards. Pack odds - 1:46 Hobby; 1:14 Jumbo; 1:2 Breaker; 1:780 Blaster; 1:208 Mega; 1:118 Fanatics. Parallels: Refractor /499 (1:191 Hobby; ...) | Teal Refractor /299 (...) | Yellow Refractor /275 (...) | Pink Refractor /250 (...)",
-  "parallelsStaged": ["Base", "Refractor", "Teal Refractor", "Yellow Refractor", "Pink Refractor"],
-  "printRuns": { "Refractor": 499, "Teal Refractor": 299, "Yellow Refractor": 275, "Pink Refractor": 250 },
+  "rowCountBefore": 2726,
+  "rowCountAfter": 658,
+  "reviewCorrection": "Two review findings on the first pass: (a) the staged Parallels sentence was truncated to 4 of 27 rungs (a Read call with too small a line limit stopped mid-ladder) -- re-read in full and now includes every rung: the full Refractor colour run (Refractor/Teal/Yellow/Pink/Aqua/Blue/Green/Purple/Gold/White/Orange/Black/Red), SuperFractor, Printing Plates, the 7 Breaker Exclusive Geometric Refractors, and the 6 Retail Exclusive RayWave Refractors. (b) the same case-sensitivity dedupe bug as the topps packages (see 91A manifest) hid real collisions. REDONE with exact-id point-reads + cross-setKey check on the FULL corrected 27-rung ladder: 20 of 27 rungs already existed under `topps-chrome` (source beckett-scraped-2026-08-26 for Base, checklistcenter-2026-08-29 for the rest).",
+  "genuinelyAbsentRungs": ["Green RayWave Refractor", "Purple RayWave Refractor", "Gold RayWave Refractor", "Orange RayWave Refractor", "Black RayWave Refractor", "Red RayWave Refractor", "Printing Plates"],
+  "verbatimParallelsSentence": "94 cards. Pack odds - 1:46 Hobby; 1:14 Jumbo; 1:2 Breaker; 1:780 Blaster; 1:208 Mega; 1:118 Fanatics. Parallels: Refractor /499 (...) | Teal Refractor /299 (...) | Yellow Refractor /275 (...) | Pink Refractor /250 (...) | Aqua Refractor /199 (...) | Blue Refractor /150 (...) | Green Refractor /99 (...) | Purple Refractor /75 (...) | Gold Refractor /50 (...) | White Refractor /30 (...) | Orange Refractor /25 (...) | Black Refractor /10 (...) | Red Refractor /5 (...) | SuperFractor 1/1 (...) | Printing Plates 1/1 (...) -- Breaker Exclusive Parallels: Green Geometric Refractor /99 (1:5 Breaker) | Purple Geometric Refractor /75 (1:6 Breaker) | Gold Geometric Refractor /50 (1:8 Breaker) | Orange Geometric Refractor /25 (1:16 Breaker) | Black Geometric Refractor /10 (1:40 Breaker) | Red Geometric Refractor /5 (1:79 Breaker) | Tie-Dye Geometric Refractor /2 (1:193 Breaker) -- Retail Exclusive Parallels: Green RayWave Refractor /99 (1:2,009 Blaster; 1:677 Mega; 1:576 Fanatics) | Purple RayWave Refractor /75 (...) | Gold RayWave Refractor /50 (...) | Orange RayWave Refractor /25 (...) | Black RayWave Refractor /10 (...) | Red RayWave Refractor /5 (1:37,716 Blaster; 1:12,402 Mega; 1:10,528 Fanatics)",
+  "printRuns": { "Green RayWave Refractor": 99, "Purple RayWave Refractor": 75, "Gold RayWave Refractor": 50, "Orange RayWave Refractor": 25, "Black RayWave Refractor": 10, "Red RayWave Refractor": 5, "Printing Plates": 1 },
+  "topppsHeritageNote": "A separate 'RA-' cardNumber prefix exists under setKey `topps-heritage` (e.g. hiq:baseball:2026:topps-heritage:ra-aj:base:no-auto, hiq:baseball:2026:topps-heritage:ra-nm:base:auto) -- a DIFFERENT product's own independent numbering, coincidental prefix collision, NO id collision (the setKey segment differs) and NOT the same insert as this package's Chrome Rookie Autographs.",
   "unsourceableItems": [
     {
       "prefix": "CBA-",
-      "reason": "Not found on checklistinsider.com/2026-topps-chrome-baseball (grep -c \"CBA\" == 0 against the full fetched page) or checklistinsider.com/2026-topps-series-1-baseball. cardboardconnection.com/2026-topps-chrome-baseball-cards returned HTTP 404 (URL guess unverified against the site's real slug). Sample sales carrying this cardNumber prefix (CBA-CAG, CBA-WB) remain TRULY ABSENT -- not staged, reason: could not verify the prefix's product/section/roster from either primary source in this pass."
+      "reason": "Not found on checklistinsider.com/2026-topps-chrome-baseball (grep -c \"CBA\" == 0 against the full fetched page) or checklistinsider.com/2026-topps-series-1-baseball. cardboardconnection.com/2026-topps-chrome-baseball-cards returned HTTP 404 (URL guess unverified against the site's real slug). Sample sales carrying this cardNumber prefix (CBA-CAG, CBA-WB) remain unsourced -- not staged."
     }
   ],
-  "ownerRuling": "Chrome inserts live under `topps-chrome`; RA- numbering does not collide with any other registered product's numbering at this cardId stem.",
+  "ownerRuling": "Chrome inserts live under `topps-chrome`.",
   "readyToIngest": false,
   "plannerVerdict": "NOT YET RUN -- planStagedDirectory must be run read-only against this directory before APPLY."
 }
