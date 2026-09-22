@@ -382,6 +382,9 @@ async function main() {
   const {
     gatherPlayerEvidence, gatherRivalRows, describePlayerEvidence,
   } = require(path.join(__dirname, "lib", "player-evidence.cjs"));
+  // CF-A-NAME-SHAPE-IS-NOT-A-DIFFERENT-PLAYER. Self-contained, no dist/
+  // dependency -- see scripts/lib/name-agreement.cjs for the ruling.
+  const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
 
   const db = new CosmosClient({
     connectionString: conn,
@@ -667,11 +670,26 @@ async function main() {
                   twin = null;
                 }
               }
+              // CF-A-NAME-SHAPE-IS-NOT-A-DIFFERENT-PLAYER (run 35638061024,
+              // 2026-09-21). This coarse compare used to be the ONLY gate
+              // deciding whether the pair is even a candidate contradiction --
+              // and it read "Shohei Ohtani" against "Shohei Ohtani / Marcell
+              // Ozuna / Kyle Schwarber LL NL HR" as different because the
+              // strings are literally different, opening a rival scan and a
+              // title tally for a pair that was never a real disagreement.
+              // `namesAgree` runs FIRST and narrows this gate exactly as it
+              // narrows arbitratePlayer's own gate downstream in
+              // catalogRowOps.service.ts (same rules, mirrored per
+              // scripts/lib/name-agreement.cjs's header) -- a pair it
+              // recognises pays neither the evidence-gathering cost here nor
+              // the arbitration in moveCatalogRow, and a pair it does not
+              // recognise is contended exactly as before.
               const contended = !!twin
                 && !!String(d.playerName ?? "").trim()
                 && !!String(twin.playerName ?? "").trim()
                 && String(d.playerName).trim().toLowerCase().replace(/[^a-z0-9]/g, "")
-                   !== String(twin.playerName).trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+                   !== String(twin.playerName).trim().toLowerCase().replace(/[^a-z0-9]/g, "")
+                && !namesAgree(d.playerName, twin.playerName);
               let evidence = null;
               if (contended) {
                 const rivals = await gatherRivalRows(cat, newSlug, { retry });
