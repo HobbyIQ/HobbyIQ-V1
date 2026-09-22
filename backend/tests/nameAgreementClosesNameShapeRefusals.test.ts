@@ -107,12 +107,48 @@ describe("namesAgree -- genuinely different players still refuse (not in the 127
   });
 });
 
+// CF-JR-AND-SR-ARE-DIFFERENT-PEOPLE (coordinator block, PR #2403, 2026-09-21).
+// The FIRST version of rule (c) stripped the generational suffix from BOTH
+// sides independently before comparing, so "Vladimir Guerrero Jr." and
+// "Vladimir Guerrero Sr." both reduced to "vladimirguerrero" and namesAgree
+// wrongly returned true. Jr. and Sr. name the SAME family's two DIFFERENT
+// people, both of whom are carded on their own: Guerrero, Griffey, Ripken,
+// Bonds, Fielder, Alomar, Tatis, Witt. The fix extracts each side's suffix
+// SEPARATELY and refuses whenever both sides carry one and the tokens
+// differ -- presence-vs-absence (one side bare) still agrees exactly as
+// before; suffix-vs-suffix must match to agree.
+const SUFFIX_VS_SUFFIX_PAIRS: ReadonlyArray<[string, string, boolean]> = [
+  // Real families, two different people apiece -- must REFUSE.
+  ["Vladimir Guerrero Jr.", "Vladimir Guerrero Sr.", false],
+  ["Ken Griffey Jr.", "Ken Griffey Sr.", false],
+  ["Cal Ripken Jr.", "Cal Ripken Sr.", false],
+  ["Barry Bonds Jr.", "Barry Bonds Sr.", false],
+  ["Prince Fielder Jr.", "Prince Fielder Sr.", false],
+  ["Sandy Alomar Jr.", "Sandy Alomar Sr.", false],
+  ["Fernando Tatis Jr.", "Fernando Tatis Sr.", false],
+  ["Bobby Witt Jr.", "Bobby Witt Sr.", false],
+  // Different tokens, not just Jr./Sr. -- II vs III, Jr. vs II.
+  ["Ken Griffey Jr.", "Ken Griffey II", false],
+  // Presence-vs-absence is UNCHANGED: one side bare still agrees.
+  ["Bobby Witt Jr.", "Bobby Witt", true],
+  ["Cal Ripken", "Cal Ripken Sr.", true],
+  // Same token on both sides (a comma-spelling difference only) still agrees.
+  ["Cal Ripken Jr.", "Cal Ripken, Jr.", true],
+];
+
+describe("namesAgree -- generational suffix is presence-vs-absence ONLY, never suffix-vs-suffix", () => {
+  it.each(SUFFIX_VS_SUFFIX_PAIRS)("\"%s\" vs \"%s\" -> agree=%s", (a, b, expected) => {
+    expect(namesAgree(a, b)).toBe(expected);
+  });
+});
+
 // ── mirror equality: the .cjs and the .ts must agree on every fixture,
 //    both directions, per the pokemonFinishFromTitle.ts mirror pattern ──
 
 describe("namesAgree -- the .ts mirror and scripts/lib/name-agreement.cjs agree on every fixture", () => {
   const ALL_PAIRS: ReadonlyArray<[string, string]> = [
     ...REAL_PAIRS.map(([a, b]): [string, string] => [a, b]),
+    ...SUFFIX_VS_SUFFIX_PAIRS.map(([a, b]): [string, string] => [a, b]),
     ["Aaron Judge", "Juan Soto"],
     ["Will Brennan", "Steven Kwan"],
     ["", "Aaron Judge"],
@@ -173,6 +209,24 @@ describe("mutation check -- rule (c), Jr./Sr./II/III equivalence", () => {
   it("II/III/IV/V presence is equivalent too, symmetric in either direction", () => {
     expect(namesAgree("Ken Griffey II", "Ken Griffey")).toBe(true);
     expect(namesAgree("Ken Griffey", "Ken Griffey II")).toBe(true);
+  });
+
+  it("DROP THE SUFFIX-EQUALITY CLAUSE -> red: Jr. would wrongly agree with Sr.", () => {
+    // The FIRST (buggy) version of this rule stripped the suffix from BOTH
+    // sides unconditionally, with no comparison of the two tokens -- exactly
+    // this function, restated, so the assertion states the regression
+    // precisely rather than describing it from a distance.
+    const buggyStripBoth = (x: string, y: string) => {
+      const strip = (s: string) => s.replace(/,?\s+(?:Jr|Sr|II|III|IV|V)\.?$/i, "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+      return strip(x) === strip(y);
+    };
+    expect(buggyStripBoth("Vladimir Guerrero Jr.", "Vladimir Guerrero Sr.")).toBe(true); // the regression
+    expect(namesAgree("Vladimir Guerrero Jr.", "Vladimir Guerrero Sr.")).toBe(false);    // the fix
+    expect(namesAgree("Ken Griffey Jr.", "Ken Griffey Sr.")).toBe(false);
+    expect(namesAgree("Cal Ripken Jr.", "Cal Ripken Sr.")).toBe(false);
+    // Presence-vs-absence must survive the fix unchanged.
+    expect(namesAgree("Bobby Witt Jr.", "Bobby Witt")).toBe(true);
+    expect(namesAgree("Cal Ripken", "Cal Ripken Sr.")).toBe(true);
   });
 });
 
@@ -357,6 +411,26 @@ describe("end to end -- namesAgree lets the real 35638061024 shapes reach the or
     const r = await move(w, from, to.id);
     expect(r.action).toBe("refused");
     expect(w.catalog.writes()).toEqual([]);
+  });
+
+  it("Jr. vs Sr. -- two DIFFERENT, both-carded people -- still REFUSED end to end", async () => {
+    const from = toppsRow(FROM_KEY, "70", "base", "Vladimir Guerrero Jr.");
+    const to = toppsRow(TO_KEY, "70", "base", "Vladimir Guerrero Sr.");
+    const w = world(from, to);
+    const r = await move(w, from, to.id);
+    expect(r.action).toBe("refused");
+    expect(r.refusal?.incomingPlayer).toBe("Vladimir Guerrero Jr.");
+    expect(r.refusal?.incumbentPlayer).toBe("Vladimir Guerrero Sr.");
+    expect(w.catalog.writes()).toEqual([]);
+  });
+
+  it("Jr. presence-vs-absence still folds through end to end (unchanged by the Jr./Sr. fix)", async () => {
+    const from = toppsRow(FROM_KEY, "71", "base", "Bobby Witt Jr.", { vendorIds: { cardhedge: "ch-9" } });
+    const to = toppsRow(TO_KEY, "71", "base", "Bobby Witt");
+    const w = world(from, to);
+    const r = await move(w, from, to.id);
+    expect(r.action).not.toBe("refused");
+    expect(r.playerArbitration).toBeUndefined();
   });
 
   it("a genuinely different player still refuses when neither side is corroborated", async () => {

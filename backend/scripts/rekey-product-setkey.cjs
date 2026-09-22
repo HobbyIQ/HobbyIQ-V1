@@ -684,6 +684,19 @@ async function main() {
               // recognises pays neither the evidence-gathering cost here nor
               // the arbitration in moveCatalogRow, and a pair it does not
               // recognise is contended exactly as before.
+              //
+              // THE INVARIANT namesAgree ITSELF CANNOT CHECK: `d` and `twin`
+              // are already known to be the SAME card number of the SAME
+              // product-year -- `d` is this scan's own candidate row and
+              // `twin` is the incumbent read at `newSlug`, the address `d`
+              // would move TO (same sport/year/TO-setKey/number/parallel/auto
+              // segments). `namesAgree`'s rule (a) -- "compare a multi-name
+              // card's first-listed name" -- is only safe because of that
+              // address match, and nameAgreement.cjs has no card-number or
+              // slug parameter of its own to verify it with. Do not call
+              // `namesAgree` on two playerName strings without first
+              // confirming they were read from the same identity cell, the
+              // way `twin` is guaranteed to be here.
               const contended = !!twin
                 && !!String(d.playerName ?? "").trim()
                 && !!String(twin.playerName ?? "").trim()

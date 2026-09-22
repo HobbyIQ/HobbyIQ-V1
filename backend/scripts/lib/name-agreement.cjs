@@ -57,11 +57,22 @@
  *     printed -- "Juan Soto" does not become "Juan" because "Soto" is not on
  *     the list.
  *
- * (c) Jr./Sr./II/III PRESENCE. A generational suffix present on one side and
- *     absent on the other is not a different person -- delegated to
- *     `playerIdentityKey.ts`'s own cleanPlayerName pass via the mirrored
- *     stripping below (this file has no dependency on `src/`, so the suffix
- *     list is restated, not imported -- see the header note on mirrors).
+ * (c) GENERATIONAL SUFFIX: PRESENCE-VS-ABSENCE ONLY, NEVER SUFFIX-VS-SUFFIX.
+ *     A generational suffix present on ONE side and absent on the other is
+ *     not a different person: "Bobby Witt Jr." and "Bobby Witt" (this run's
+ *     own shape) are the same rookie under two spellings. But Jr. and Sr. are
+ *     the SAME family's two DIFFERENT, distinct, simultaneously-carded people
+ *     -- Ken Griffey Jr. and Ken Griffey Sr., Cal Ripken Jr. and Cal Ripken
+ *     Sr., Vladimir Guerrero Jr. and Vladimir Guerrero Sr., and likewise
+ *     Bonds/Fielder/Alomar/Tatis/Witt, all of whom have their own cards. So
+ *     the suffix is extracted from EACH side separately (not blindly
+ *     stripped from both), and the two extracted tokens are compared:
+ *     BOTH BLANK, or ONE BLANK AND ONE PRESENT -> agree (rule fires as
+ *     before); BOTH PRESENT AND EQUAL (Jr. == Jr.) -> agree; BOTH PRESENT AND
+ *     DIFFERENT (Jr. vs Sr., II vs III, Jr. vs II) -> DISAGREE, and this rule
+ *     refuses the whole pair regardless of what the rest of the name does.
+ *     This is the one place in this file a match can turn a "would otherwise
+ *     agree" pair back into a refusal -- see `suffixesCompatible` below.
  *
  * (d) CASE / PUNCTUATION / DIACRITIC INSENSITIVE. "José" == "Jose". Applied
  *     LAST, after (b) has already removed the subset tag's own punctuation
@@ -123,25 +134,59 @@ const QUOTED_SUBSET_RE = new RegExp(
 );
 
 /** Generational suffixes: presence on one side only is not a different
- *  person. Mirrors the suffix set `cleanPlayerName` (cardCatalog.service.ts)
- *  strips, restated rather than imported -- this file has no dependency on
- *  `src/` (see the header). Matches with or without the owner's own comma
- *  ("Bobby Witt, Jr." and "Bobby Witt Jr." both strip). */
-const GENERATIONAL_SUFFIX = /,?\s+(?:Jr|Sr|II|III|IV|V)\.?$/i;
+ *  person, but Jr. vs Sr. (or any two DIFFERENT tokens here) is a different
+ *  person -- see rule (c) above. Mirrors the suffix set `cleanPlayerName`
+ *  (cardCatalog.service.ts) strips, restated rather than imported -- this
+ *  file has no dependency on `src/` (see the header). Matches with or
+ *  without the owner's own comma ("Bobby Witt, Jr." and "Bobby Witt Jr."
+ *  both extract "Jr"). CAPTURING, unlike the other markers, so the token
+ *  itself can be compared rather than merely discarded. */
+const GENERATIONAL_SUFFIX = /,?\s+(Jr|Sr|II|III|IV|V)\.?$/i;
 
 /**
- * Strip every rule-(b)/(c) trailing marker from one name, repeatedly (a name
- * can carry more than one, e.g. a subset tag AND a Jr.). Order: quoted subset
- * name, then league-leader suffix, then a bare RCup/FS marker, then a
- * generational suffix -- repeated until nothing more strips, so
- * "Nacho Alvarez Jr. RCup" (hypothetical stacking) would strip both.
+ * Pull the generational suffix token (if any) off the END of a name, once.
+ * Returns `{ base, suffix }` -- `suffix` is the normalised token ("jr", "sr",
+ * "ii", ...) or `null` when the name carries none. Runs BEFORE stripMarkers
+ * so the suffix is captured rather than discarded by a generic loop, and only
+ * once: nobody carries two generational suffixes.
+ */
+function extractGenerationalSuffix(name) {
+  const s = String(name ?? "").trim();
+  const m = s.match(GENERATIONAL_SUFFIX);
+  if (!m) return { base: s, suffix: null };
+  return { base: s.slice(0, m.index).trim(), suffix: m[1].toLowerCase() };
+}
+
+/**
+ * Rule (c)'s own verdict, independent of everything else in this file: do
+ * these two extracted suffix tokens permit an agreement? Both blank, or
+ * exactly one present, is PRESENCE-VS-ABSENCE -- not a disagreement, the
+ * shape this run actually has ("Bobby Witt Jr." vs "Bobby Witt"). Both
+ * present is SUFFIX-VS-SUFFIX -- father and son both have cards, so equal
+ * tokens agree (the same person's name, spelled with and without a trailing
+ * comma) and unequal tokens (Jr. vs Sr., II vs III, Jr. vs II) are a REAL
+ * disagreement that this rule alone must refuse, no matter what the base
+ * names or any other rule in this file decide.
+ */
+function suffixesCompatible(suffixA, suffixB) {
+  if (!suffixA || !suffixB) return true;
+  return suffixA === suffixB;
+}
+
+/**
+ * Strip every rule-(b) trailing marker from one name, repeatedly (a name can
+ * carry more than one, e.g. two subset tags). Order: quoted subset name, then
+ * league-leader suffix, then a bare RCup/FS marker -- repeated until nothing
+ * more strips. The generational suffix is NOT stripped here -- it is pulled
+ * off separately by `extractGenerationalSuffix` so its own token can be
+ * compared by `suffixesCompatible` instead of being discarded.
  */
 function stripMarkers(name) {
   let out = String(name ?? "").trim();
   let changed = true;
   while (changed) {
     changed = false;
-    for (const re of [QUOTED_SUBSET_RE, LEAGUE_LEADER_SUFFIX, ...TRAILING_SUBSET_MARKERS, GENERATIONAL_SUFFIX]) {
+    for (const re of [QUOTED_SUBSET_RE, LEAGUE_LEADER_SUFFIX, ...TRAILING_SUBSET_MARKERS]) {
       if (re.test(out)) {
         out = out.replace(re, "").trim();
         changed = true;
@@ -213,8 +258,17 @@ function namesAgree(nameA, nameB) {
   // (a both-multi-name pair falls through to the plain fold below, which will
   // only agree if the two lists are byte-for-byte the same after tag strip).
 
-  const strippedA = stripMarkers(leftName);
-  const strippedB = stripMarkers(rightName);
+  // Rule (c): extract each side's OWN generational suffix before rule (b)
+  // strips anything else, and refuse outright on a real suffix-vs-suffix
+  // disagreement -- this check overrides every other rule in this file,
+  // because Jr. and Sr. (or II and III) name two different, both-carded
+  // people no matter how the rest of the name reads.
+  const { base: baseA, suffix: suffixA } = extractGenerationalSuffix(leftName);
+  const { base: baseB, suffix: suffixB } = extractGenerationalSuffix(rightName);
+  if (!suffixesCompatible(suffixA, suffixB)) return false;
+
+  const strippedA = stripMarkers(baseA);
+  const strippedB = stripMarkers(baseB);
   return foldForCompare(strippedA) === foldForCompare(strippedB);
 }
 
@@ -225,6 +279,8 @@ module.exports = {
   stripMarkers,
   foldForCompare,
   firstListedName,
+  extractGenerationalSuffix,
+  suffixesCompatible,
   TRAILING_SUBSET_MARKERS,
   LEAGUE_LEADER_SUFFIX,
   QUOTED_SUBSET_NAMES,

@@ -47,15 +47,34 @@ const QUOTED_SUBSET_RE = new RegExp(
 );
 
 /** Generational suffixes: presence on one side only is not a different
- *  person. Mirrors the suffix set `cleanPlayerName` strips. */
-const GENERATIONAL_SUFFIX = /,?\s+(?:Jr|Sr|II|III|IV|V)\.?$/i;
+ *  person, but Jr. vs Sr. (or any two DIFFERENT tokens here) is a different,
+ *  both-carded person -- Griffey, Ripken, Guerrero, Bonds, Fielder, Alomar,
+ *  Tatis, Witt. Mirrors the suffix set `cleanPlayerName` strips. CAPTURING,
+ *  unlike the other markers, so the token can be compared, not just dropped. */
+const GENERATIONAL_SUFFIX = /,?\s+(Jr|Sr|II|III|IV|V)\.?$/i;
+
+/** Pull the generational suffix token off the END of a name, once. */
+function extractGenerationalSuffix(name: string): { base: string; suffix: string | null } {
+  const s = String(name ?? "").trim();
+  const m = s.match(GENERATIONAL_SUFFIX);
+  if (!m) return { base: s, suffix: null };
+  return { base: s.slice(0, m.index).trim(), suffix: m[1].toLowerCase() };
+}
+
+/** Both blank or exactly one present -> presence-vs-absence, compatible.
+ *  Both present -> must be the SAME token (Jr. == Jr.); Jr. vs Sr. or
+ *  II vs III is a real disagreement this rule alone refuses on. */
+function suffixesCompatible(suffixA: string | null, suffixB: string | null): boolean {
+  if (!suffixA || !suffixB) return true;
+  return suffixA === suffixB;
+}
 
 function stripMarkers(name: string): string {
   let out = String(name ?? "").trim();
   let changed = true;
   while (changed) {
     changed = false;
-    for (const re of [QUOTED_SUBSET_RE, LEAGUE_LEADER_SUFFIX, ...TRAILING_SUBSET_MARKERS, GENERATIONAL_SUFFIX]) {
+    for (const re of [QUOTED_SUBSET_RE, LEAGUE_LEADER_SUFFIX, ...TRAILING_SUBSET_MARKERS]) {
       if (re.test(out)) {
         out = out.replace(re, "").trim();
         changed = true;
@@ -98,14 +117,20 @@ export function namesAgree(nameA: unknown, nameB: unknown): boolean {
   if (firstA && !firstB) leftName = firstA;
   if (firstB && !firstA) rightName = firstB;
 
-  const strippedA = stripMarkers(leftName);
-  const strippedB = stripMarkers(rightName);
+  // Rule (c) overrides everything else: a real suffix-vs-suffix disagreement
+  // (Jr. vs Sr., II vs III) refuses the pair regardless of the base name.
+  const { base: baseA, suffix: suffixA } = extractGenerationalSuffix(leftName);
+  const { base: baseB, suffix: suffixB } = extractGenerationalSuffix(rightName);
+  if (!suffixesCompatible(suffixA, suffixB)) return false;
+
+  const strippedA = stripMarkers(baseA);
+  const strippedB = stripMarkers(baseB);
   return foldForCompare(strippedA) === foldForCompare(strippedB);
 }
 
 // Exported only for the mirror-equality test's introspection; callers outside
 // that test should use `namesAgree`.
 export const __internal = {
-  stripMarkers, foldForCompare, firstListedName,
+  stripMarkers, foldForCompare, firstListedName, extractGenerationalSuffix, suffixesCompatible,
   TRAILING_SUBSET_MARKERS, LEAGUE_LEADER_SUFFIX, QUOTED_SUBSET_NAMES, GENERATIONAL_SUFFIX,
 };
