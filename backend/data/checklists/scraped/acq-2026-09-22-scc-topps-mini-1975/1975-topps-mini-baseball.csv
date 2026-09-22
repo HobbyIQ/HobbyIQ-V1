@@ -1,0 +1,661 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,,false,,Hank Aaron HL
+base,2,,false,,Lou Brock HL
+base,3,,false,,Bob Gibson HL
+base,4,,false,,Al Kaline HL
+base,5,,false,,Nolan Ryan HL
+base,6,,false,,Mike Marshall HL
+base,7,,false,,Steve Busby/Dick Bosman/Nolan Ryan HL
+base,8,,false,,Rogelio Moret
+base,9,,false,,Frank Tepedino
+base,10,,false,,Willie Davis
+base,11,,false,,Bill Melton
+base,12,,false,,David Clyde
+base,13,,false,,Gene Locklear
+base,14,,false,,Milt Wilcox
+base,15,,false,,Jose Cardenal
+base,16,,false,,Frank Tanana
+base,17,,false,,Dave Concepcion
+base,18,,false,,Ralph Houk MG
+base,19,,false,,Jerry Koosman
+base,20,,false,,Thurman Munson
+base,21,,false,,Rollie Fingers
+base,22,,false,,Dave Cash
+base,23,,false,,Bill Russell
+base,24,,false,,Al Fitzmorris
+base,25,,false,,Lee May
+base,26,,false,,Dave McNally
+base,27,,false,,Ken Reitz
+base,28,,false,,Tom Murphy
+base,29,,false,,Dave Parker
+base,30,,false,,Bert Blyleven
+base,31,,false,,Dave Rader
+base,32,,false,,Reggie Cleveland
+base,33,,false,,Dusty Baker
+base,34,,false,,Steve Renko
+base,35,,false,,Ron Santo
+base,36,,false,,Joe Lovitto
+base,37,,false,,Dave Freisleben
+base,38,,false,,Buddy Bell
+base,39,,false,,Andre Thornton
+base,40,,false,,Bill Singer
+base,41,,false,,Cesar Geronimo
+base,42,,false,,Joe Coleman
+base,43,,false,,Cleon Jones
+base,44,,false,,Pat Dobson
+base,45,,false,,Joe Rudi
+base,46,,false,,Danny Ozark MG
+base,47,,false,,Tommy John
+base,48,,false,,Freddie Patek
+base,49,,false,,Larry Dierker
+base,50,,false,,Brooks Robinson
+base,51,,false,,Bob Forsch
+base,52,,false,,Darrell Porter
+base,53,,false,,Dave Giusti
+base,54,,false,,Eric Soderholm
+base,55,,false,,Bobby Bonds
+base,56,,false,,Rick Wise
+base,57,,false,,Dave Johnson
+base,58,,false,,Chuck Taylor
+base,59,,false,,Ken Henderson
+base,60,,false,,Fergie Jenkins
+base,61,,false,,Dave Winfield
+base,62,,false,,Fritz Peterson
+base,63,,false,,Steve Swisher
+base,64,,false,,Dave Chalk
+base,65,,false,,Don Gullett
+base,66,,false,,Willie Horton
+base,67,,false,,Tug McGraw
+base,68,,false,,Ron Blomberg
+base,69,,false,,Johnny Odom
+base,70,,false,,Mike Schmidt
+base,71,,false,,Charlie Hough
+base,72,,false,,Jack McKeon MG
+base,73,,false,,J.R. Richard
+base,74,,false,,Mark Belanger
+base,75,,false,,Ted Simmons
+base,76,,false,,Ed Sprague
+base,77,,false,,Richie Zisk
+base,78,,false,,Ray Corbin
+base,79,,false,,Gary Matthews
+base,80,,false,,Carlton Fisk
+base,81,,false,,Ron Reed
+base,82,,false,,Pat Kelly
+base,83,,false,,Jim Merritt
+base,84,,false,,Enzo Hernandez
+base,85,,false,,Bill Bonham
+base,86,,false,,Joe Lis
+base,87,,false,,George Foster
+base,88,,false,,Tom Egan
+base,89,,false,,Jim Ray
+base,90,,false,,Rusty Staub
+base,91,,false,,Dick Green
+base,92,,false,,Cecil Upshaw
+base,93,,false,,Davey Lopes
+base,94,,false,,Jim Lonborg
+base,95,,false,,John Mayberry
+base,96,,false,,Mike Cosgrove
+base,97,,false,,Earl Williams
+base,98,,false,,Rich Folkers
+base,99,,false,,Mike Hegan
+base,100,,false,,Willie Stargell
+base,101,,false,,Gene Mauch MG
+base,102,,false,,Joe Decker
+base,103,,false,,Rick Miller
+base,104,,false,,Bill Madlock
+base,105,,false,,Buzz Capra
+base,106,,false,,Mike Hargrove UER
+base,107,,false,,Jim Barr
+base,108,,false,,Tom Hall
+base,109,,false,,George Hendrick
+base,110,,false,,Wilbur Wood
+base,111,,false,,Wayne Garrett
+base,112,,false,,Larry Hardy
+base,113,,false,,Elliott Maddox
+base,114,,false,,Dick Lange
+base,115,,false,,Joe Ferguson
+base,116,,false,,Lerrin LaGrow
+base,117,,false,,Earl Weaver MG
+base,118,,false,,Mike Anderson
+base,119,,false,,Tommy Helms
+base,120,,false,,Steve Busby UER
+base,121,,false,,Bill North
+base,122,,false,,Al Hrabosky
+base,123,,false,,Johnny Briggs
+base,124,,false,,Jerry Reuss
+base,125,,false,,Ken Singleton
+base,126,,false,,Checklist 1-132
+base,127,,false,,Glenn Borgmann
+base,128,,false,,Bill Lee
+base,129,,false,,Rick Monday
+base,130,,false,,Phil Niekro
+base,131,,false,,Toby Harrah
+base,132,,false,,Randy Moffitt
+base,133,,false,,Dan Driessen
+base,134,,false,,Ron Hodges
+base,135,,false,,Charlie Spikes
+base,136,,false,,Jim Mason
+base,137,,false,,Terry Forster
+base,138,,false,,Del Unser
+base,139,,false,,Horacio Pina
+base,140,,false,,Steve Garvey
+base,141,,false,,Mickey Stanley
+base,142,,false,,Bob Reynolds
+base,143,,false,,Cliff Johnson
+base,144,,false,,Jim Wohlford
+base,145,,false,,Ken Holtzman
+base,146,,false,,John McNamara MG
+base,147,,false,,Pedro Garcia
+base,148,,false,,Jim Rooker
+base,149,,false,,Tim Foli
+base,150,,false,,Bob Gibson
+base,151,,false,,Steve Brye
+base,152,,false,,Mario Guerrero
+base,153,,false,,Rick Reuschel
+base,154,,false,,Mike Lum
+base,155,,false,,Jim Bibby
+base,156,,false,,Dave Kingman
+base,157,,false,,Pedro Borbon
+base,158,,false,,Jerry Grote
+base,159,,false,,Steve Arlin
+base,160,,false,,Graig Nettles
+base,161,,false,,Stan Bahnsen
+base,162,,false,,Willie Montanez
+base,163,,false,,Jim Brewer
+base,164,,false,,Mickey Rivers
+base,165,,false,,Doug Rader
+base,166,,false,,Woodie Fryman
+base,167,,false,,Rich Coggins
+base,168,,false,,Bill Greif
+base,169,,false,,Cookie Rojas
+base,170,,false,,Bert Campaneris
+base,171,,false,,Ed Kirkpatrick
+base,172,,false,,Darrell Johnson MG
+base,173,,false,,Steve Rogers
+base,174,,false,,Bake McBride
+base,175,,false,,Don Money
+base,176,,false,,Burt Hooton
+base,177,,false,,Vic Correll
+base,178,,false,,Cesar Tovar
+base,179,,false,,Tom Bradley
+base,180,,false,,Joe Morgan
+base,181,,false,,Fred Beene
+base,182,,false,,Don Hahn
+base,183,,false,,Mel Stottlemyre
+base,184,,false,,Jorge Orta
+base,185,,false,,Steve Carlton
+base,186,,false,,Willie Crawford
+base,187,,false,,Denny Doyle
+base,188,,false,,Tom Griffin
+base,189,,false,,Yogi Berra/Roy Campanella 1951 MVP's
+base,190,,false,,Bobby Shantz/Hank Sauer 1952 MVP's
+base,191,,false,,Al Rosen/Roy Campanella 1953 MVP's
+base,192,,false,,Yogi Berra/Willie Mays 1954 MVP's
+base,193,,false,,Yogi Berra/Roy Campanella 1955 MVP's
+base,194,,false,,Mickey Mantle/Don Newcombe 1956 MVP's
+base,195,,false,,Mickey Mantle/Hank Aaron 1957 MVP's
+base,196,,false,,Jackie Jensen/Ernie Banks 1958 MVP's
+base,197,,false,,Nellie Fox/Ernie Banks 1959 MVP's
+base,198,,false,,Roger Maris/Dick Groat 1960 MVP's
+base,199,,false,,Roger Maris/Frank Robinson 1961 MVP's
+base,200,,false,,Mickey Mantle/Maury Wills 1962 MVP's
+base,201,,false,,Elston Howard/Sandy Koufax 1963 MVP's
+base,202,,false,,Brooks Robinson/Ken Boyer 1964 MVP's
+base,203,,false,,Zoilo Versalles/Willie Mays 1965 MVP's
+base,204,,false,,Frank Robinson/Roberto Clemente 1966 MVP's
+base,205,,false,,Carl Yastrzemski/Orlando Cepeda 1967 MVP's
+base,206,,false,,Denny McLain/Bob Gibson 1968 MVP's
+base,207,,false,,Harmon Killebrew/Willie McCovey 1969 MVP's
+base,208,,false,,Boog Powell/Johnny Bench 1970 MVP's
+base,209,,false,,Vida Blue/Joe Torre 1971 MVP's
+base,210,,false,,Dick Allen/Johnny Bench 1972 MVP's
+base,211,,false,,Reggie Jackson/Pete Rose 1973 MVP's
+base,212,,false,,Jeff Burroughs/Steve Garvey 1974 MVP's
+base,213,,false,,Oscar Gamble
+base,214,,false,,Harry Parker
+base,215,,false,,Bobby Valentine
+base,216,,false,,Wes Westrum MG
+base,217,,false,,Lou Piniella
+base,218,,false,,Jerry Johnson
+base,219,,false,,Ed Herrmann
+base,220,,false,,Don Sutton
+base,221,,false,,Aurelio Rodriguez
+base,222,,false,,Dan Spillner
+base,223,,false,,Robin Yount
+base,224,,false,,Ramon Hernandez
+base,225,,false,,Bobby Grich
+base,226,,false,,Bill Campbell
+base,227,,false,,Bob Watson
+base,228,,false,,George Brett
+base,229,,false,,Barry Foote
+base,230,,false,,Jim Hunter
+base,231,,false,,Mike Tyson
+base,232,,false,,Diego Segui
+base,233,,false,,Billy Grabarkewitz
+base,234,,false,,Tom Grieve
+base,235,,false,,Jack Billingham
+base,236,,false,,Dick Williams MG
+base,237,,false,,Carl Morton
+base,238,,false,,Dave Duncan
+base,239,,false,,George Stone
+base,240,,false,,Garry Maddox
+base,241,,false,,Dick Tidrow
+base,242,,false,,Jay Johnstone
+base,243,,false,,Jim Kaat
+base,244,,false,,Bill Buckner
+base,245,,false,,Mickey Lolich
+base,246,,false,,Red Schoendienst MG
+base,247,,false,,Enos Cabell
+base,248,,false,,Randy Jones
+base,249,,false,,Danny Thompson
+base,250,,false,,Ken Brett
+base,251,,false,,Fran Healy
+base,252,,false,,Fred Scherman
+base,253,,false,,Jesus Alou
+base,254,,false,,Mike Torrez
+base,255,,false,,Dwight Evans
+base,256,,false,,Billy Champion
+base,257,,false,,Checklist 133-264
+base,258,,false,,Dave LaRoche
+base,259,,false,,Len Randle
+base,260,,false,,Johnny Bench
+base,261,,false,,Andy Hassler
+base,262,,false,,Rowland Office
+base,263,,false,,Jim Perry
+base,264,,false,,John Milner
+base,265,,false,,Ron Bryant
+base,266,,false,,Sandy Alomar Sr.
+base,267,,false,,Dick Ruthven
+base,268,,false,,Hal McRae
+base,269,,false,,Doug Rau
+base,270,,false,,Ron Fairly
+base,271,,false,,Jerry Moses
+base,272,,false,,Lynn McGlothen
+base,273,,false,,Steve Braun
+base,274,,false,,Vicente Romo
+base,275,,false,,Paul Blair
+base,276,,false,,Chuck Tanner MG
+base,277,,false,,Frank Taveras
+base,278,,false,,Paul Lindblad
+base,279,,false,,Milt May
+base,280,,false,,Carl Yastrzemski
+base,281,,false,,Jim Slaton
+base,282,,false,,Jerry Morales
+base,283,,false,,Steve Foucault
+base,284,,false,,Ken Griffey Sr.
+base,285,,false,,Ellie Rodriguez
+base,286,,false,,Mike Jorgensen
+base,287,,false,,Roric Harrison
+base,288,,false,,Bruce Ellingsen
+base,289,,false,,Ken Rudolph
+base,290,,false,,Jon Matlack
+base,291,,false,,Bill Sudakis
+base,292,,false,,Ron Schueler
+base,293,,false,,Dick Sharon
+base,294,,false,,Geoff Zahn
+base,295,,false,,Vada Pinson
+base,296,,false,,Alan Foster
+base,297,,false,,Craig Kusick
+base,298,,false,,Johnny Grubb
+base,299,,false,,Bucky Dent
+base,300,,false,,Reggie Jackson
+base,301,,false,,Dave Roberts
+base,302,,false,,Rick Burleson
+base,303,,false,,Grant Jackson
+base,304,,false,,Danny Murtaugh MG
+base,305,,false,,Jim Colborn
+base,306,,false,,Rod Carew/Ralph Garr Batting Leaders
+base,307,,false,,Dick Allen/Mike Schmidt Home Run Leaders
+base,308,,false,,Jeff Burroughs/Johnny Bench RBI Leaders
+base,309,,false,,Bill North/Lou Brock Stolen Base Leaders
+base,310,,false,,Jim Hunter/Fergie Jenkins/Andy Messersmith/Phil Niekro Victory Leaders
+base,311,,false,,Jim Hunter/Buzz Capra ERA Leaders
+base,312,,false,,Nolan Ryan/Steve Carlton Strikeout Leaders
+base,313,,false,,Terry Forster/Mike Marshall Firemen Leaders
+base,314,,false,,Buck Martinez
+base,315,,false,,Don Kessinger
+base,316,,false,,Jackie Brown
+base,317,,false,,Joe Lahoud
+base,318,,false,,Ernie McAnally
+base,319,,false,,Johnny Oates
+base,320,,false,,Pete Rose
+base,321,,false,,Rudy May
+base,322,,false,,Ed Goodson
+base,323,,false,,Fred Holdsworth
+base,324,,false,,Ed Kranepool
+base,325,,false,,Tony Oliva
+base,326,,false,,Wayne Twitchell
+base,327,,false,,Jerry Hairston
+base,328,,false,,Sonny Siebert
+base,329,,false,,Ted Kubiak
+base,330,,false,,Mike Marshall
+base,331,,false,,Frank Robinson MG
+base,332,,false,,Fred Kendall
+base,333,,false,,Dick Drago
+base,334,,false,,Greg Gross
+base,335,,false,,Jim Palmer
+base,336,,false,,Rennie Stennett
+base,337,,false,,Kevin Kobel
+base,338,,false,,Rick Stelmaszek
+base,339,,false,,Jim Fregosi
+base,340,,false,,Paul Splittorff
+base,341,,false,,Hal Breeden
+base,342,,false,,Leroy Stanton
+base,343,,false,,Danny Frisella
+base,344,,false,,Ben Oglivie
+base,345,,false,,Clay Carroll
+base,346,,false,,Bobby Darwin
+base,347,,false,,Mike Caldwell
+base,348,,false,,Tony Muser
+base,349,,false,,Ray Sadecki
+base,350,,false,,Bobby Murcer
+base,351,,false,,Bob Boone
+base,352,,false,,Darold Knowles
+base,353,,false,,Luis Melendez
+base,354,,false,,Dick Bosman
+base,355,,false,,Chris Cannizzaro
+base,356,,false,,Rico Petrocelli
+base,357,,false,,Ken Forsch UER
+base,358,,false,,Al Bumbry
+base,359,,false,,Paul Popovich
+base,360,,false,,George Scott
+base,361,,false,,Walt Alston MG
+base,362,,false,,Steve Hargan
+base,363,,false,,Carmen Fanzone
+base,364,,false,,Doug Bird
+base,365,,false,,Bob Bailey
+base,366,,false,,Ken Sanders
+base,367,,false,,Craig Robinson
+base,368,,false,,Vic Albury
+base,369,,false,,Merv Rettenmund
+base,370,,false,,Tom Seaver
+base,371,,false,,Gates Brown
+base,372,,false,,John D'Acquisto
+base,373,,false,,Bill Sharp
+base,374,,false,,Eddie Watt
+base,375,,false,,Roy White
+base,376,,false,,Steve Yeager
+base,377,,false,,Tom Hilgendorf
+base,378,,false,,Derrel Thomas
+base,379,,false,,Bernie Carbo
+base,380,,false,,Sal Bando
+base,381,,false,,John Curtis
+base,382,,false,,Don Baylor
+base,383,,false,,Jim York
+base,384,,false,,Del Crandall MG
+base,385,,false,,Dock Ellis
+base,386,,false,,Checklist 265-396 UER
+base,387,,false,,Jim Spencer
+base,388,,false,,Steve Stone
+base,389,,false,,Tony Solaita
+base,390,,false,,Ron Cey
+base,391,,false,,Don DeMola
+base,392,,false,,Bruce Bochte
+base,393,,false,,Gary Gentry
+base,394,,false,,Larvell Blanks
+base,395,,false,,Bud Harrelson
+base,396,,false,,Fred Norman
+base,397,,false,,Bill Freehan
+base,398,,false,,Elias Sosa
+base,399,,false,,Terry Harmon
+base,400,,false,,Dick Allen
+base,401,,false,,Mike Wallace
+base,402,,false,,Bob Tolan
+base,403,,false,,Tom Buskey
+base,404,,false,,Ted Sizemore
+base,405,,false,,John Montague
+base,406,,false,,Bob Gallagher
+base,407,,false,,Herb Washington
+base,408,,false,,Clyde Wright UER
+base,409,,false,,Bob Robertson
+base,410,,false,,Mike Cuellar UER
+base,411,,false,,George Mitterwald
+base,412,,false,,Bill Hands
+base,413,,false,,Marty Pattin
+base,414,,false,,Manny Mota
+base,415,,false,,John Hiller
+base,416,,false,,Larry Lintz
+base,417,,false,,Skip Lockwood
+base,418,,false,,Leo Foster
+base,419,,false,,Dave Goltz
+base,420,,false,,Larry Bowa
+base,421,,false,,Yogi Berra MG
+base,422,,false,,Brian Downing
+base,423,,false,,Clay Kirby
+base,424,,false,,John Lowenstein
+base,425,,false,,Tito Fuentes
+base,426,,false,,Doc Medich
+base,427,,false,,Cito Gaston
+base,428,,false,,Dave Hamilton
+base,429,,false,,Jim Dwyer
+base,430,,false,,Luis Tiant
+base,431,,false,,Rod Gilbreath
+base,432,,false,,Ken Berry
+base,433,,false,,Larry Demery
+base,434,,false,,Bob Locker
+base,435,,false,,Dave Nelson
+base,436,,false,,Ken Frailing
+base,437,,false,,Al Cowens
+base,438,,false,,Don Carrithers
+base,439,,false,,Ed Brinkman
+base,440,,false,,Andy Messersmith
+base,441,,false,,Bob Heise
+base,442,,false,,Maximino Leon
+base,443,,false,,Frank Quilici MG
+base,444,,false,,Gene Garber
+base,445,,false,,Felix Millan
+base,446,,false,,Bart Johnson
+base,447,,false,,Terry Crowley
+base,448,,false,,Frank Duffy
+base,449,,false,,Charlie Williams
+base,450,,false,,Willie McCovey
+base,451,,false,,Rick Dempsey
+base,452,,false,,Angel Mangual
+base,453,,false,,Claude Osteen
+base,454,,false,,Doug Griffin
+base,455,,false,,Don Wilson
+base,456,,false,,Bob Coluccio
+base,457,,false,,Mario Mendoza
+base,458,,false,,Ross Grimsley
+base,459,,false,,AL Champs
+base,460,,false,,NL Champs
+base,461,,false,,Reggie Jackson
+base,462,,false,,World Series Game 2
+base,463,,false,,World Series Game 3
+base,464,,false,,World Series Game 4
+base,465,,false,,World Series Game 5
+base,466,,false,,World Series Summary
+base,467,,false,,Ed Halicki
+base,468,,false,,Bobby Mitchell
+base,469,,false,,Tom Dettore
+base,470,,false,,Jeff Burroughs
+base,471,,false,,Bob Stinson
+base,472,,false,,Bruce Dal Canton
+base,473,,false,,Ken McMullen
+base,474,,false,,Luke Walker
+base,475,,false,,Darrell Evans
+base,476,,false,,Ed Figueroa
+base,477,,false,,Tom Hutton
+base,478,,false,,Tom Burgmeier
+base,479,,false,,Ken Boswell
+base,480,,false,,Carlos May
+base,481,,false,,Will McEnaney
+base,482,,false,,Tom McCraw
+base,483,,false,,Steve Ontiveros
+base,484,,false,,Glenn Beckert
+base,485,,false,,Sparky Lyle
+base,486,,false,,Ray Fosse
+base,487,,false,,Preston Gomez MG
+base,488,,false,,Bill Travers
+base,489,,false,,Cecil Cooper
+base,490,,false,,Reggie Smith
+base,491,,false,,Doyle Alexander
+base,492,,false,,Richie Hebner
+base,493,,false,,Don Stanhouse
+base,494,,false,,Pete LaCock
+base,495,,false,,Nelson Briles
+base,496,,false,,Pepe Frias
+base,497,,false,,Jim Nettles
+base,498,,false,,Al Downing
+base,499,,false,,Marty Perez
+base,500,,false,,Nolan Ryan
+base,501,,false,,Bill Robinson
+base,502,,false,,Pat Bourque
+base,503,,false,,Fred Stanley
+base,504,,false,,Buddy Bradford
+base,505,,false,,Chris Speier
+base,506,,false,,Leron Lee
+base,507,,false,,Tom Carroll
+base,508,,false,,Bob Hansen
+base,509,,false,,Dave Hilton
+base,510,,false,,Vida Blue
+base,511,,false,,Billy Martin MG
+base,512,,false,,Larry Milbourne
+base,513,,false,,Dick Pole
+base,514,,false,,Jose Cruz
+base,515,,false,,Manny Sanguillen
+base,516,,false,,Don Hood
+base,517,,false,,Checklist 397-528
+base,518,,false,,Leo Cardenas
+base,519,,false,,Jim Todd
+base,520,,false,,Amos Otis
+base,521,,false,,Dennis Blair
+base,522,,false,,Gary Sutherland
+base,523,,false,,Tom Paciorek
+base,524,,false,,John Doherty
+base,525,,false,,Tom House
+base,526,,false,,Larry Hisle
+base,527,,false,,Mac Scarce
+base,528,,false,,Eddie Leon
+base,529,,false,,Gary Thomasson
+base,530,,false,,Gaylord Perry
+base,531,,false,,Sparky Anderson
+base,532,,false,,Gorman Thomas
+base,533,,false,,Rudy Meoli
+base,534,,false,,Alex Johnson
+base,535,,false,,Gene Tenace
+base,536,,false,,Bob Moose
+base,537,,false,,Tommy Harper
+base,538,,false,,Duffy Dyer
+base,539,,false,,Jesse Jefferson
+base,540,,false,,Lou Brock
+base,541,,false,,Roger Metzger
+base,542,,false,,Pete Broberg
+base,543,,false,,Larry Biittner
+base,544,,false,,Steve Mingori
+base,545,,false,,Billy Williams
+base,546,,false,,John Knox
+base,547,,false,,Von Joshua
+base,548,,false,,Charlie Sands
+base,549,,false,,Bill Butler
+base,550,,false,,Ralph Garr
+base,551,,false,,Larry Christenson
+base,552,,false,,Jack Brohamer
+base,553,,false,,John Boccabella
+base,554,,false,,Rich Gossage
+base,555,,false,,Al Oliver
+base,556,,false,,Tim Johnson
+base,557,,false,,Larry Gura
+base,558,,false,,Dave Roberts
+base,559,,false,,Bob Montgomery
+base,560,,false,,Tony Perez
+base,561,,false,,Alvin Dark MG
+base,562,,false,,Gary Nolan
+base,563,,false,,Wilbur Howard
+base,564,,false,,Tommy Davis
+base,565,,false,,Joe Torre
+base,566,,false,,Ray Burris
+base,567,,false,,Jim Sundberg
+base,568,,false,,Dale Murray
+base,569,,false,,Frank White
+base,570,,false,,Jim Wynn
+base,571,,false,,Dave Lemanczyk
+base,572,,false,,Roger Nelson
+base,573,,false,,Orlando Pena
+base,574,,false,,Tony Taylor
+base,575,,false,,Gene Clines
+base,576,,false,,Phil Roof
+base,577,,false,,John Morris
+base,578,,false,,Dave Tomlin
+base,579,,false,,Skip Pitlock
+base,580,,false,,Frank Robinson
+base,581,,false,,Darrel Chaney
+base,582,,false,,Eduardo Rodriguez
+base,583,,false,,Andy Etchebarren
+base,584,,false,,Mike Garman
+base,585,,false,,Chris Chambliss
+base,586,,false,,Tim McCarver
+base,587,,false,,Chris Ward
+base,588,,false,,Rick Auerbach
+base,589,,false,,Clyde King MG
+base,590,,false,,Cesar Cedeno
+base,591,,false,,Glenn Abbott
+base,592,,false,,Balor Moore
+base,593,,false,,Gene Lamont
+base,594,,false,,Jim Fuller
+base,595,,false,,Joe Niekro
+base,596,,false,,Ollie Brown
+base,597,,false,,Winston Llenas
+base,598,,false,,Bruce Kison
+base,599,,false,,Nate Colbert
+base,600,,false,,Rod Carew
+base,601,,false,,Juan Beniquez
+base,602,,false,,John Vukovich
+base,603,,false,,Lew Krausse
+base,604,,false,,Oscar Zamora
+base,605,,false,,John Ellis
+base,606,,false,,Bruce Miller
+base,607,,false,,Jim Holt
+base,608,,false,,Gene Michael
+base,609,,false,,Ellie Hendricks
+base,610,,false,,Ron Hunt
+base,611,,false,,Bill Virdon MG
+base,612,,false,,Terry Hughes
+base,613,,false,,Bill Parsons
+base,614,,false,,Jack Kucek/Dyar Miller/Vern Ruhle/Paul Siebert Rookie Pitchers
+base,615,,false,,Pat Darcy/Dennis Leonard/Tom Underwood/Hank Webb Rookie Pitchers
+base,616,,false,,Dave Augustine/Pepe Mangual/Jim Rice/John Scott Rookie Outfielders
+base,617,,false,,Mike Cubbage/Doug DeCinces/Reggie Sanders/Manny Trillo Rookie Infielders
+base,618,,false,,Jamie Easterly/Tom Johnson/Scott McGregor/Rick Rhoden Rookie Pitchers
+base,619,,false,,Benny Ayala/Nyls Nyman/Tommy Smith/Jerry Turner Rookie Outfielders
+base,620,,false,,Gary Carter/Marc Hill/Dan Meyer/Leon Roberts Rookie Catchers Outfielders
+base,621,,false,,John Denny/Rawly Eastwick/Jim Kern/Juan Veintidos Rookie Pitchers
+base,622,,false,,Ed Armbrister/Fred Lynn/Tom Poquette/Terry Whitfield Rookie Outfielders
+base,623,,false,,Phil Garner/Keith Hernandez/Bob Sheldon/Tom Veryzer Rookie Infielders
+base,624,,false,,Doug Konieczny/Gary Lavelle/Jim Otten/Eddie Solomon Rookie Pitchers
+base,625,,false,,Boog Powell
+base,626,,false,,Larry Haney UER
+base,627,,false,,Tom Walker
+base,628,,false,,Ron LeFlore
+base,629,,false,,Joe Hoerner
+base,630,,false,,Greg Luzinski
+base,631,,false,,Lee Lacy
+base,632,,false,,Morris Nettles
+base,633,,false,,Paul Casanova
+base,634,,false,,Cy Acosta
+base,635,,false,,Chuck Dobson
+base,636,,false,,Charlie Moore
+base,637,,false,,Ted Martinez
+base,638,,false,,Jim Marshall MG
+base,639,,false,,Steve Kline
+base,640,,false,,Harmon Killebrew
+base,641,,false,,Jim Northrup
+base,642,,false,,Mike Phillips
+base,643,,false,,Brent Strom
+base,644,,false,,Bill Fahey
+base,645,,false,,Danny Cater
+base,646,,false,,Checklist 529-660
+base,647,,false,,Claudell Washington
+base,648,,false,,Dave Pagan
+base,649,,false,,Jack Heidemann
+base,650,,false,,Dave May
+base,651,,false,,John Morlan
+base,652,,false,,Lindy McDaniel
+base,653,,false,,Lee Richard UER
+base,654,,false,,Jerry Terrell
+base,655,,false,,Rico Carty
+base,656,,false,,Bill Plummer
+base,657,,false,,Bob Oliver
+base,658,,false,,Vic Harris
+base,659,,false,,Bob Apodaca
+base,660,,false,,Hank Aaron

@@ -3956,6 +3956,14 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // stock and is likewise a ruled key (setkey-reconciliation.json marks it
   // `distinct`, 453 checklist rows) with no parser rule.
   if (/bowman\s+tiffany/.test(t)) return "Bowman Tiffany";
+  // 1975 Topps Mini: same shape as Tiffany above -- a same-number parallel
+  // print run of the flagship checklist at a smaller format, ruled as its
+  // own product 2026-09-22 (acquisition builder, owner ruling) and carried
+  // in productSetKeys.ts / SAME_NUMBER_PARALLEL_SETS with parent `topps`.
+  // Anchored here, above the bare /topps/ catch-all, for the same reason
+  // Tiffany is: a title that says Mini and falls through prices a
+  // different-market card in the flagship pool.
+  if (/topps\s+mini/.test(t)) return "Topps Mini";
   if (/topps\s+heritage/.test(t)) return "Topps Heritage";
   if (/topps\s+heavy\s+lumber|heavy\s+lumber/.test(t)) return "Topps Heavy Lumber";
   // CF-TOPPS-PRODUCT-LINES (Drew, 2026-07-29). Complete Topps taxonomy so

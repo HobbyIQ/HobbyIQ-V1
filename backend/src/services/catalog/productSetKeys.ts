@@ -620,6 +620,13 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("topps-traded", { parent: "topps" }),
   P("topps-traded-tiffany", { parent: "topps-traded" }),
   P("topps-tiffany", { parent: "topps" }),
+  // Topps Mini, 1975: a smaller-format (2 1/4" x 3 1/8") parallel print run of
+  // the flagship 660-card checklist, card for card, on the SAME numbers as
+  // 1975 Topps base -- the Tiffany/Glossy shape (see SAME_NUMBER_PARALLEL_SETS
+  // below), not a distinct roster. A DIFFERENT card from its flagship sibling
+  // at the same number (own market, own scarcity), so it needs its own key
+  // rather than folding onto `topps`.
+  P("topps-mini", { parent: "topps" }),
   // D36, Drew 2026-08-30: "the product is topps-finest -- the product as Topps
   // names it, not `finest`". Spelled here so the rename fleet moves the
   // baseballcardpedia rows still keyed `finest` (58,442 measured 2026-08-30,
@@ -3453,6 +3460,11 @@ export const SAME_NUMBER_PARALLEL_SETS: ReadonlyArray<{ readonly setKey: string;
   { setKey: "fleer-update-tiffany", parent: "fleer-update" },
   { setKey: "fleer-update-glossy", parent: "fleer-update" },
   { setKey: "fleer-tradition-tiffany", parent: "fleer-tradition" },
+  // Topps Mini, 1975: same shape as Tiffany/Glossy above -- the flagship's
+  // 660-card checklist reprinted at smaller format, card for card, on the
+  // flagship's own numbers. The number cannot separate the two cards; the
+  // title ("Topps Mini") is the evidence.
+  { setKey: "topps-mini", parent: "topps" },
 ];
 
 /** True iff `setKey` reprints `parent`'s checklist on `parent`'s own card
