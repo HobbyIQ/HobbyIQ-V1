@@ -192,7 +192,7 @@ describe("CF-T206-BACK-BRAND-IS-NOT-THE-PLAYER", () => {
     // Brights", whose individual words happen to collide with OTHER
     // products' real parallel names and are stripped by the pre-existing,
     // unscoped corpus regardless of this fix). On any setKey other than
-    // "t206" this fix's own T206_BACK_BRAND_TOKENS strip must not run at
+    // "t206" this fix's own T206_BACK_BRAND_PHRASES strip must not run at
     // all, so both survive whole.
     expect(unnumberedCardSegment("Piedmont Smith", { year: 2020, setKey: "topps" }))
       .toBe("player-piedmont-smith");
@@ -211,5 +211,114 @@ describe("CF-T206-BACK-BRAND-IS-NOT-THE-PLAYER", () => {
     expect(t206("Piedmont Ty Cobb")).toBe(t206("Ty Cobb"));
     expect(t206("Ty Cobb Piedmont")).toBe(t206("Ty Cobb"));
     expect(t206("Ty Cobb")).toBe("hiq:baseball:1909:t206:player-ty-cobb:base:no-auto");
+  });
+
+  // CF-BACK-BRANDS-STRIP-AS-PHRASES-NOT-BARE-TOKENS (owner-approved
+  // 2026-09-22, fixing this PR's own defect before merge).
+  //
+  // THE DEFECT. The first cut put bare "red" in a per-TOKEN strip set (for
+  // "Red Cross"), but the checklist has #95 Ty Cobb GREEN Portrait and #96
+  // Ty Cobb RED Portrait as DISTINCT cards -- a per-token strip cannot tell
+  // "Red" the COLOUR from "Red" the first word of "Red Cross" the BRAND, so
+  // it deleted it either way, collapsing "Ty Cobb Red Portrait" onto the
+  // same id as "Ty Cobb Portrait". Fixed: every brand is now a whole-PHRASE
+  // regex (multi-word brands matched as complete phrases; surviving
+  // single-word brands matched as whole words), so a bare colour/common word
+  // that happens to share a syllable with a brand name is never touched.
+  it("FOUR distinct ids for Ty Cobb's four real checklist rows (#95-98), never collapsed by the colour word", () => {
+    // tests/fixtures/sportscardchecklist/1909-11-t206-baseball.trimmed.html:
+    //   #95 Ty Cobb Green Portrait   #96 Ty Cobb Red Portrait
+    //   #97 Ty Cobb Bat off Shoulder #98 Ty Cobb Bat on Shoulder
+    const redPortrait = unnumberedCardSegment("Ty Cobb Red Portrait", { year: 1909, setKey: "t206" });
+    const greenPortrait = unnumberedCardSegment("Ty Cobb Green Portrait", { year: 1909, setKey: "t206" });
+    const batOff = unnumberedCardSegment("Ty Cobb Bat Off Shoulder", { year: 1909, setKey: "t206" });
+    const batOn = unnumberedCardSegment("Ty Cobb Bat On Shoulder", { year: 1909, setKey: "t206" });
+    expect(redPortrait).toBe("player-ty-cobb-red-portrait");
+    expect(greenPortrait).toBe("player-ty-cobb-green-portrait");
+    expect(batOff).toBe("player-ty-cobb-bat-off-shoulder");
+    expect(batOn).toBe("player-ty-cobb-bat-on-shoulder");
+    expect(new Set([redPortrait, greenPortrait, batOff, batOn]).size).toBe(4);
+    // Also true with a leading noise word ahead of the name (the shape the
+    // real defect was found in).
+    expect(unnumberedCardSegment("T206 Ty Cobb Red Portrait", { year: 1909, setKey: "t206" }))
+      .toBe("player-t206-ty-cobb-red-portrait");
+  });
+
+  it("'Red Cross' the BRAND still strips as a phrase, even though 'Red' alone must not", () => {
+    expect(unnumberedCardSegment("Red Cross Harry Niles", { year: 1909, setKey: "t206" }))
+      .toBe("player-harry-niles");
+    // Non-adjacent "Red" ... "Cross" is not the phrase and must not strip
+    // either word.
+    expect(unnumberedCardSegment("Red Sox Cross", { year: 1909, setKey: "t206" }))
+      .toBe("player-red-sox-cross");
+  });
+
+  it("MUTATION CHECK: a bare-token strip (the original defect) would fail this exact case", () => {
+    // Proves the "Red Cross" phrase test above is actually exercising
+    // phrase-anchoring and not passing for an unrelated reason: a MUTANT
+    // that reverts to the original per-token strip (bare "red" removed
+    // wherever it appears) reproduces the collapse this PR fixes --
+    // "Ty Cobb Red Portrait" loses its colour and equals "Ty Cobb Portrait".
+    // The real function must disagree with the mutant on this exact pair.
+    const bareTokenMutant = (raw: string): string => {
+      const bare = new Set(["sweet", "caporal", "old", "mill", "polar", "bear",
+        "red", "cross", "american", "beauty", "broad", "leaf", "carolina",
+        "brights", "piedmont", "sovereign", "hindu", "cycle", "tolstoi",
+        "drum", "lenox", "uzit", "coupon"]);
+      return raw.split(/\s+/).filter((t) => !bare.has(t.toLowerCase())).join("-").toLowerCase();
+    };
+    const mutantRedPortrait = bareTokenMutant("Ty Cobb Red Portrait");
+    const mutantPlainPortrait = bareTokenMutant("Ty Cobb Portrait");
+    // The mutant (bare-token strip, the original defect) collapses both
+    // titles onto the SAME residue -- proving it is a real regression, not
+    // a strawman.
+    expect(mutantRedPortrait).toBe(mutantPlainPortrait);
+    // The actual fix must NOT collapse them.
+    expect(unnumberedCardSegment("Ty Cobb Red Portrait", { year: 1909, setKey: "t206" }))
+      .not.toBe(unnumberedCardSegment("Ty Cobb Portrait", { year: 1909, setKey: "t206" }));
+  });
+
+  it("COLLISION SWEEP: no word in the back-brand vocabulary is a checklist player/pose/colour/cap word once phrase-anchored", () => {
+    // Every distinct word across every #NNN row in the 550-row checklist
+    // fixture (player names, poses, colours, cap status: "batting",
+    // "portrait", "red", "green", "cap", "glove", "shoulder", "chest", every
+    // surname, ...), cross-checked against the back-brand vocabulary. Only
+    // "red" and "cross" overlap (from the "Red Cross" brand name), and both
+    // are proven here to survive as bare tokens -- they are removed ONLY as
+    // the exact adjacent two-word phrase.
+    const fs = require("node:fs") as typeof import("node:fs");
+    const path = require("node:path") as typeof import("node:path");
+    const html = fs.readFileSync(
+      path.join(__dirname, "fixtures", "sportscardchecklist", "1909-11-t206-baseball.trimmed.html"),
+      "utf-8",
+    );
+    const rowRe = /#(\d+)\s+([A-Za-z.,'\-/ ]+?)\s*<\/h5>/g;
+    const checklistWords = new Set<string>();
+    let m: RegExpExecArray | null;
+    while ((m = rowRe.exec(html))) {
+      for (const w of m[2].toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean)) {
+        checklistWords.add(w);
+      }
+    }
+    expect(checklistWords.size).toBeGreaterThan(500);
+
+    const brandWords = [
+      "sweet", "caporal", "old", "mill", "polar", "bear", "red", "cross",
+      "american", "beauty", "broad", "leaf", "carolina", "brights",
+      "el", "principe", "de", "gales", "epdg",
+      "piedmont", "sovereign", "hindu", "cycle", "tolstoi", "drum", "lenox", "uzit", "coupon",
+      "factory", "series",
+    ];
+    const overlap = brandWords.filter((w) => checklistWords.has(w));
+    // The known, adjudicated overlap -- everything else must be disjoint.
+    expect(overlap.sort()).toEqual(["cross", "red"]);
+
+    // Every overlapping word must survive as a BARE token next to a name --
+    // proving the fix strips by phrase, never by bare membership.
+    for (const w of overlap) {
+      const title = `Ty Cobb ${w[0].toUpperCase()}${w.slice(1)}`;
+      const seg = unnumberedCardSegment(title, { year: 1909, setKey: "t206" });
+      expect(seg, `"${title}" must keep "${w}"`).toContain(w);
+    }
   });
 });

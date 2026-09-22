@@ -235,15 +235,52 @@ export function isUnparsedCardNumber(raw: string | null | undefined): boolean {
  * other direction. So this list contains ONLY back-brand/factory/series
  * vocabulary; pose words are left for `playerSegmentIsAPerson` to keep.
  */
-const T206_BACK_BRAND_TOKENS: ReadonlySet<string> = new Set([
-  // back brands (tobacco/candy advertisers printed on the reverse)
-  "sweet", "caporal", "piedmont", "sovereign", "old", "mill", "polar", "bear",
-  "el", "principe", "de", "gales", "epdg", "american", "beauty", "hindu",
-  "cycle", "tolstoi", "carolina", "brights", "broad", "leaf", "drum", "lenox",
-  "uzit", "red", "cross", "coupon",
+/**
+ * CF-BACK-BRANDS-STRIP-AS-PHRASES-NOT-BARE-TOKENS (owner-approved 2026-09-22,
+ * fixing PR #2409's own defect before merge).
+ *
+ * THE DEFECT. The first cut of this list put bare "red" in a per-TOKEN strip
+ * set (for "Red Cross") -- but the checklist has #95 Ty Cobb GREEN Portrait
+ * and #96 Ty Cobb RED Portrait as DISTINCT cards. A per-token strip does not
+ * know "Red" in "Ty Cobb Red Portrait" is a COLOUR, not the "Red Cross" back
+ * brand, so it deleted it anyway: "T206 Ty Cobb Red Portrait" and
+ * "Ty Cobb Portrait" collapsed onto the SAME id -- the exact pooling this fix
+ * exists to end, reintroduced by its own bare-word list. Same shape of bug as
+ * the bare "back" token this file already special-cased once (T206_NAMED_BACK_RE).
+ *
+ * THE FIX. Every multi-word brand is now a whole-PHRASE regex, and every
+ * surviving single-word brand is checked as a WHOLE WORD via its own regex --
+ * never a bare set membership test a colour word could also satisfy. No entry
+ * here is a colour, cap, view or pose word on the 550-row checklist (verified
+ * below by COLLISION_CHECK_WORDS, and pinned by
+ * t206BackBrandNeverCollidesWithChecklistVocabulary in playerIsTheNumber.test.ts).
+ */
+const T206_BACK_BRAND_PHRASES: readonly RegExp[] = [
+  // multi-word brands -- matched as complete phrases only
+  /\bsweet\s+caporal\b/gi,
+  /\bold\s+mill\b/gi,
+  /\bpolar\s+bear\b/gi,
+  /\bred\s+cross\b/gi,
+  /\bamerican\s+beauty\b/gi,
+  /\bbroad\s+leaf\b/gi,
+  /\bcarolina\s+brights\b/gi,
+  /\bel\s+principe\s+de\s+gales\b/gi,
+  /\bepdg\b/gi,
+  // single-word brands -- matched as a whole word, never a bare-token strip
+  // that a colour/common word could also satisfy
+  /\bpiedmont\b/gi,
+  /\bsovereign\b/gi,
+  /\bhindu\b/gi,
+  /\bcycle\b/gi,
+  /\btolstoi\b/gi,
+  /\bdrum\b/gi,
+  /\blenox\b/gi,
+  /\buzit\b/gi,
+  /\bcoupon\b/gi,
   // factory / series tokens
-  "factory", "25", "30", "42", "649", "150", "350", "460", "series",
-]);
+  /\bfactory\s+(?:25|30|42|649)\b/gi,
+  /\b(?:150|350|460)\s+series\b/gi,
+];
 
 /**
  * "Ty Cobb back" is a real, named T206 back variety -- but Ty Cobb is ALSO
@@ -260,7 +297,7 @@ const T206_TY_COBB_BACK_RE = /\bty\s+cobb\s+back\b/i;
 
 /**
  * "Back" IS NOT ITS OWN VOCABULARY WORD. Unlike every other entry in
- * T206_BACK_BRAND_TOKENS, "back" is also a genuine POSE word on this very
+ * T206_BACK_BRAND_PHRASES, "back" is also a genuine POSE word on this very
  * checklist -- "Schulte Back view" / "Schulte Front View" is a real
  * disambiguating pair (measured against the fixture), so stripping a bare
  * "back" unconditionally would collapse that pose distinction, exactly the
@@ -314,28 +351,25 @@ const T206_NAMED_BACK_RE =
  */
 
 /**
- * Strip T206 back-brand/factory vocabulary from a residue, TOKEN-WISE and
- * order-preserving, keeping every other token (poses included) exactly as
- * given. Multi-word brands ("Old Mill", "Polar Bear", "El Principe de
- * Gales") are covered because each of their words is individually listed --
- * "El Principe De Gales" -> strips el/principe/de/gales, all four -- and no
- * single-word entry here collides with a T206 SURNAME in the 532-player
- * checklist (measured: none of Old/Mill/Polar/Bear/Cross/Drum/Leaf/Cycle/Red
- * is a player surname on this checklist; Ty Cobb is handled separately, see
- * T206_TY_COBB_BACK_RE, because his own name collides with the "Ty Cobb
- * back" variety name; "back" alone is handled separately too, see
- * T206_NAMED_BACK_RE, because it is also a real pose word).
+ * Strip T206 back-brand/factory vocabulary from a residue by WHOLE PHRASE,
+ * never by bare per-token membership -- see
+ * CF-BACK-BRANDS-STRIP-AS-PHRASES-NOT-BARE-TOKENS above for why a bare-token
+ * strip is the defect, not the fix. Every entry in T206_BACK_BRAND_PHRASES is
+ * anchored with `\b` on both ends, so "Red Cross" strips as the two-word
+ * phrase while a bare "Red" next to "Portrait" (a real, distinct checklist
+ * card -- #96 Ty Cobb Red Portrait vs #95 Green Portrait) is never touched.
+ * Order-preserving: every surviving word (poses, colours, cap status, plain
+ * surnames) keeps its position exactly as given.
  */
 function stripT206BackBrand(raw: string): string {
-  const phraseStripped = raw
+  let phraseStripped = raw
     .replace(T206_TY_COBB_BACK_RE, (m) => m.replace(/\bback\b/i, " "))
-    .replace(T206_NAMED_BACK_RE, (m) => m.replace(/\bback\b/i, " "))
-    .trim();
-  const tokens = phraseStripped.split(/\s+/).filter(Boolean);
-  const kept = tokens.filter((tok) => {
-    const bare = tok.toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "");
-    return !T206_BACK_BRAND_TOKENS.has(bare);
-  });
+    .replace(T206_NAMED_BACK_RE, (m) => m.replace(/\bback\b/i, " "));
+  for (const re of T206_BACK_BRAND_PHRASES) {
+    re.lastIndex = 0;
+    phraseStripped = phraseStripped.replace(re, " ");
+  }
+  const kept = phraseStripped.split(/\s+/).filter(Boolean);
   // Never strip to nothing -- a title that is ENTIRELY back-brand vocabulary
   // (no player survives at all) must fall back to the untouched raw string,
   // which hands the residue to playerSegmentIsAPerson exactly as before this
@@ -402,7 +436,7 @@ export function unnumberedCardSegment(
   const scopeKey = ctx.setKeyForScope ?? ctx.setKey;
 
   // CF-T206-BACK-BRAND-IS-NOT-THE-PLAYER, scoped to setKey t206 ONLY (see the
-  // doc above T206_BACK_BRAND_TOKENS). Runs BEFORE playerSegmentIsAPerson, on
+  // doc above T206_BACK_BRAND_PHRASES). Runs BEFORE playerSegmentIsAPerson, on
   // the raw vendor text, so the corpus strip and the "strict simplification"
   // guard below both see the cleaned string as their baseline -- a title that
   // is ENTIRELY back-brand noise around a name ("Sweet Caporal Cy Seymour")
@@ -3014,7 +3048,7 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
     // is the caller's RAW label ("1909-11 T206 Baseball", "1909-11-t206-
     // baseball", ...), not the canonical "t206" -- callers pass whatever they
     // parsed, and `baseSetKey` (resolved above) is what actually normalizes
-    // it. `unnumberedCardSegment`'s own T206_BACK_BRAND_TOKENS strip is keyed
+    // it. `unnumberedCardSegment`'s own T206_BACK_BRAND_PHRASES strip is keyed
     // on the literal string "t206", so it needs the CANONICAL form to
     // activate reliably regardless of which spelling a caller passed in.
     //
