@@ -52,6 +52,7 @@ import {
 import { buildSearchText, buildSearchTokens } from "../portfolioiq/searchIndexing.service.js";
 import { authorityRank } from "./catalogAuthority.service.js";
 import { canonicalCardName } from "./canonicalCardName.js";
+import { namesAgree } from "./nameAgreement.js";
 import { playerIdentityKey } from "./playerIdentityKey.js";
 import { productAncestry } from "./productSetKeys.js";
 import { corroborationOf, type CorroborationRow } from "./sourceCorroboration.js";
@@ -843,6 +844,16 @@ const playerKeyOf = playerIdentityKey;
  * Judge" is a seed artefact, not a rival numbering, and refusing it would strand
  * every such pair for a human to read one at a time. So the caller checks rank
  * first and only asks this question inside one authority class.
+ *
+ * A NAME-SHAPE DIFFERENCE IS NOT THIS CONFLICT EITHER (run 35638061024,
+ * 2026-09-21). Before the corroboration arms run at all, `namesAgree`
+ * (nameAgreement.ts) checks whether the two `playerName` strings disagree only
+ * because of a multi-player league-leader/insert card's own shape, a closed
+ * subset-tag vocabulary (RCup, FS, a handful of quoted insert names), or
+ * Jr./Sr. presence — see that file for the four rules and the diagnosed run
+ * that produced them. A pair `namesAgree` recognises is `not-a-conflict`, same
+ * as an equal `playerKeyOf`; a pair it does not recognise reaches the arms
+ * below exactly as before.
  */
 function arbitratePlayer(
   incoming: CatalogRowDoc,
@@ -859,6 +870,37 @@ function arbitratePlayer(
   // Both sides must name someone, and they must differ, for this to be the
   // conflict the rule is about. Everything else is the ordinary ladder.
   if (!keyIn || !keyInc || keyIn === keyInc) return { kind: "not-a-conflict" };
+
+  // CF-A-NAME-SHAPE-IS-NOT-A-DIFFERENT-PLAYER (run 35638061024, 2026-09-21).
+  // `playerIdentityKey` answers "is this ONE name's spelling the same" and is
+  // symmetric by design -- right for "Jonah Tong RC" == "Jonah Tong", wrong
+  // for a bare name against a multi-player league-leader card or a subset-
+  // tagged sibling, where the two sides are not two spellings of one name.
+  // `namesAgree` is the PAIR-level question this run's 127 refusals actually
+  // needed: first-listed name of a multi-name card, a closed subset-tag/
+  // league-leader vocabulary, generational-suffix presence-vs-absence (never
+  // suffix-vs-suffix -- Jr. vs Sr. still refuses inside namesAgree itself),
+  // and case/punctuation/diacritic folding -- see nameAgreement.ts for the
+  // rules in order. It only ever narrows this conflict gate; it never widens
+  // what `playerKeyOf` already agreed on, and a pair it does not recognise
+  // falls straight through to the corroboration arms below exactly as before.
+  //
+  // THE INVARIANT namesAgree ITSELF CANNOT CHECK: both `incoming` and
+  // `incumbent` name the SAME card number of the SAME product-year. That is
+  // enforced by THIS caller, not by nameAgreement.ts -- `chooseSurvivor` only
+  // ever calls `arbitratePlayer` on two rows already being evaluated as
+  // candidates for the SAME destination slug (same sport/year/setKey/number/
+  // parallel/auto segments; see `moveCatalogRow`'s address-collision check
+  // upstream of this function). Rule (a)'s "compare the first-listed name of
+  // a multi-name card" is safe ONLY because of that address match: a
+  // multi-name entry at this address is one printed card naming several
+  // players together (a league-leader trio), not an unrelated card that
+  // happens to share a name fragment. Calling `namesAgree` on two rows NOT
+  // already known to be the same address/card-number would not be caught by
+  // anything in nameAgreement.ts -- it has no card-number or slug parameter
+  // to check against -- so this invariant must never be relaxed at this call
+  // site without re-deriving whether rule (a) is still safe.
+  if (namesAgree(nameIn, nameInc)) return { kind: "not-a-conflict" };
 
   const rivals = evidence?.rivals ?? null;
 
