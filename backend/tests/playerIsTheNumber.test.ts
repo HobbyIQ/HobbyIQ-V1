@@ -113,3 +113,103 @@ describe("CF-PLAYER-IS-THE-NUMBER", () => {
     }
   });
 });
+
+// CF-T206-BACK-BRAND-IS-NOT-THE-PLAYER (owner-approved 2026-09-22).
+//
+// T206's vendor playerName field routinely carries the card's BACK BRAND
+// (the tobacco/candy advertiser printed on the reverse) mixed into the
+// player text. Measured live against sold_comps: "Sweet Caporal Ty Cobb",
+// "Piedmont Ty Cobb" and "Ty Cobb Piedmont" all named the SAME card and
+// minted three different player-<slug> addresses before this fix.
+describe("CF-T206-BACK-BRAND-IS-NOT-THE-PLAYER", () => {
+  it("strips a leading back-brand so the same player unifies to one address", () => {
+    expect(unnumberedCardSegment("Sweet Caporal Ty Cobb", { year: 1909, setKey: "t206" }))
+      .toBe(unnumberedCardSegment("Ty Cobb", { year: 1909, setKey: "t206" }));
+    expect(unnumberedCardSegment("Piedmont Ty Cobb", { year: 1909, setKey: "t206" }))
+      .toBe(unnumberedCardSegment("Ty Cobb", { year: 1909, setKey: "t206" }));
+  });
+
+  it("strips a trailing back-brand the same way", () => {
+    expect(unnumberedCardSegment("Ty Cobb Piedmont", { year: 1909, setKey: "t206" }))
+      .toBe("player-ty-cobb");
+  });
+
+  it("strips multi-word back brands (Old Mill, Polar Bear, El Principe de Gales)", () => {
+    expect(unnumberedCardSegment("Old Mill Frank Chance", { year: 1909, setKey: "t206" }))
+      .toBe("player-frank-chance");
+    expect(unnumberedCardSegment("Polar Bear Michael Mike Donlin", { year: 1909, setKey: "t206" }))
+      .toBe(unnumberedCardSegment("Michael Mike Donlin", { year: 1909, setKey: "t206" }));
+  });
+
+  it("strips factory/series tokens (Factory 25/30/42/649, N series)", () => {
+    expect(unnumberedCardSegment("Sweet Caporal Factory 30 Rube Waddell", { year: 1909, setKey: "t206" }))
+      .toBe("player-rube-waddell");
+    expect(unnumberedCardSegment("Piedmont 350 Series Ty Cobb", { year: 1909, setKey: "t206" }))
+      .toBe("player-ty-cobb");
+  });
+
+  it("real corrupted vendor strings (measured on prod tca-ebay t206 rows) unify onto one player address", () => {
+    const variants = ["Sweet Caporal Ty Cobb", "Piedmont Ty Cobb", "Ty Cobb Piedmont"];
+    const segments = variants.map((v) => unnumberedCardSegment(v, { year: 1909, setKey: "t206" }));
+    expect(new Set(segments).size).toBe(1);
+    expect(segments[0]).toBe("player-ty-cobb");
+  });
+
+  it("does NOT strip Ty Cobb's own name when no other back-brand noise is present", () => {
+    // Regression guard: "ty"/"cobb" collide with the named "Ty Cobb back"
+    // variety, but a bare "Ty Cobb" title must survive untouched.
+    expect(unnumberedCardSegment("Ty Cobb", { year: 1909, setKey: "t206" })).toBe("player-ty-cobb");
+  });
+
+  it("strips the named 'Ty Cobb back' variety phrase without eating his name", () => {
+    expect(unnumberedCardSegment("Ty Cobb Back", { year: 1909, setKey: "t206" })).toBe("player-ty-cobb");
+  });
+
+  it("keeps POSE words -- the checklist lists poses as separate cards", () => {
+    // 1909-11-t206-baseball.trimmed.html: "Cy Seymour Portrait" (#433),
+    // "Cy Seymour Batting" (#434), "Cy Seymour Pitching" (#435) are three
+    // distinct checklist rows. This fix's back-brand list must never touch
+    // a pose word.
+    const portrait = unnumberedCardSegment("Sweet Caporal Cy Seymour Portrait", { year: 1909, setKey: "t206" });
+    const batting = unnumberedCardSegment("Sweet Caporal Cy Seymour Batting", { year: 1909, setKey: "t206" });
+    expect(portrait).toContain("portrait");
+    expect(batting).toContain("batting");
+    expect(portrait).not.toBe(batting);
+  });
+
+  it("does NOT strip 'back' as a bare pose word off this set's scope", () => {
+    // "Schulte Back view" / "Schulte Front View" is a real checklist pose
+    // pair on t206 (not a back-brand). This fix's own back-brand list never
+    // lists a bare "back" token -- only "<named-brand> ... back" phrases.
+    expect(unnumberedCardSegment("Schulte Back View", { year: 1909, setKey: "t206" }))
+      .toContain("back");
+  });
+
+  it("is scoped to setKey t206 ONLY -- this fix's own strip never fires off it", () => {
+    // "Piedmont" and "Factory 25" are unambiguous T206 back-brand/factory
+    // vocabulary with no coincidental overlap in the generic
+    // checklist-parallel corpus (unlike "Old Mill"/"Red Cross"/"Carolina
+    // Brights", whose individual words happen to collide with OTHER
+    // products' real parallel names and are stripped by the pre-existing,
+    // unscoped corpus regardless of this fix). On any setKey other than
+    // "t206" this fix's own T206_BACK_BRAND_TOKENS strip must not run at
+    // all, so both survive whole.
+    expect(unnumberedCardSegment("Piedmont Smith", { year: 2020, setKey: "topps" }))
+      .toBe("player-piedmont-smith");
+    expect(unnumberedCardSegment("Factory 25 Smith", { year: 2020, setKey: "topps" }))
+      .toBe("player-factory-25-smith");
+  });
+
+  it("falls back to the untouched raw string when the residue is ENTIRELY back-brand vocabulary", () => {
+    // Absent beats wrong: never strip to nothing.
+    expect(unnumberedCardSegment("Sweet Caporal Piedmont", { year: 1909, setKey: "t206" }))
+      .not.toBeNull();
+  });
+
+  it("end to end through computeHobbyIqCardId: the three real vendor spellings collapse onto one slug", () => {
+    expect(t206("Sweet Caporal Ty Cobb")).toBe(t206("Ty Cobb"));
+    expect(t206("Piedmont Ty Cobb")).toBe(t206("Ty Cobb"));
+    expect(t206("Ty Cobb Piedmont")).toBe(t206("Ty Cobb"));
+    expect(t206("Ty Cobb")).toBe("hiq:baseball:1909:t206:player-ty-cobb:base:no-auto");
+  });
+});
