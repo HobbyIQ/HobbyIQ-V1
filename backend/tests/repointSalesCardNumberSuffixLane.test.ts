@@ -35,9 +35,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { reconcileWrites } from "../src/services/ops/writeReconciliation.js";
 
 const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const LANE = path.join(backend, "scripts", "repoint-sales-cardnumber-suffix.cjs");
+const LANE_SRC = fs.readFileSync(LANE, "utf8");
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "repoint-cardnumber-suffix-lane-"));
 afterAll(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* best effort */ } });
@@ -164,7 +166,11 @@ const realLoad = Module._load;
 Module._load = function (request) {
   const r = String(request);
   if (r === "@azure/cosmos") return stub;
-  if (r.includes("writeReconciliation")) return { reportWrites: () => {} };
+  // writeReconciliation is left to load the REAL compiled dist/ (not
+  // stubbed) -- the counters-mismatch defect (run 35625031826, exit 4 "OVER
+  // by 237") only shows up when the lane's reportWrites() call runs for
+  // real, so these end-to-end tests must exercise the actual reconciliation,
+  // not a no-op.
   return realLoad.apply(this, arguments);
 };
 `);
@@ -253,6 +259,69 @@ describe("repoint-sales-cardnumber-suffix -- isSuffixRestore / cardNumberSegment
   it("returns null for a malformed or short id", () => {
     expect(lane.cardNumberSegmentOf("not-a-slug")).toBeNull();
     expect(lane.cardNumberSegmentOf("hiq:baseball:2024:bowmans-best")).toBeNull();
+  });
+});
+
+// ── COORDINATOR FIX: this lane must repair ONLY the cardNumber segment. The
+// original PR re-derived parallel/isAuto from a fresh title re-parse via
+// `parsed.parallel ?? sale.parallel ?? "Base"` -- a title reading "Gold Auto
+// /50" (color word stated WITHOUT "Refractor") re-parses to the truthy
+// string parallel:"Base" (parseListingIdentity's own fallback, flagged by
+// `parallelIsUnconfirmed:true`), so `??` never falls through to the sale's
+// OWN stored "Gold Refractor" -- and if a plain Base row for that number
+// happens to exist on the checklist (unlike the 237 sampled cases, where it
+// did not), the sale would be APPLIED onto the WRONG card: a graded/numbered
+// parallel silently downgraded to Base. Fixed with the SAME doctrine
+// scripts/lib/rematch-derive-identity.cjs already uses (storedIdentity /
+// CF-THE-CHECKLIST-SPELLS-ITS-OWN-RUNGS): a rung the parser NAMES with
+// confidence still wins, but `parallelIsUnconfirmed` means the sale's own
+// stored parallel is better evidence than a manufactured Base. isAuto never
+// downgrades either direction (true beats false regardless of source) --
+// covers the bare "(AU)"/"AU" abbreviation this parser does not tokenize as
+// an auto marker.
+describe("repoint-sales-cardnumber-suffix -- resolveParallelAndAuto / isParallelOrAutoDowngrade (unit)", () => {
+  const lane = require(LANE);
+  const { parseListingIdentity } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
+
+  it("real shape: '#B25-CCA Gold Auto /50' (color word stated WITHOUT 'Refractor') keeps the sale's own 'Gold Refractor', never evicts to Base", () => {
+    const parsed = parseListingIdentity("2025 Bowman's Best of 2025 Cole Carrigg #B25-CCA Gold Auto /50 Colorado");
+    expect(parsed.parallel).toBe("Base"); // the parser's own fallback -- NOT a confident read
+    expect(parsed.parallelIsUnconfirmed).toBe(true);
+    const sale = { parallel: "Gold Refractor", isAuto: true };
+    const resolved = lane.resolveParallelAndAuto(parsed, sale);
+    expect(resolved.parallel).toBe("Gold Refractor");
+    expect(resolved.isAuto).toBe(true);
+    expect(lane.isParallelOrAutoDowngrade(resolved, sale)).toBe(false);
+  });
+
+  it("real shape: '#B25-JTH (AU)' (bare abbreviation, not tokenized as an auto marker) keeps the sale's own isAuto:true", () => {
+    const parsed = parseListingIdentity("2025 Bowman's Best - Jared Thomas Colorado Rockies #B25-JTH (AU)");
+    expect(parsed.isAuto).toBe(false); // the parser does not read "(AU)" as an auto marker
+    const sale = { parallel: "Base", isAuto: true };
+    const resolved = lane.resolveParallelAndAuto(parsed, sale);
+    expect(resolved.isAuto).toBe(true);
+    expect(lane.isParallelOrAutoDowngrade(resolved, sale)).toBe(false);
+  });
+
+  it("a title-NAMED rung still wins over the sale's own stored value -- this lane still realizes a genuine improvement", () => {
+    const resolved = lane.resolveParallelAndAuto({ parallel: "Gold Refractor", parallelIsUnconfirmed: false, isAuto: true }, { parallel: "Base", isAuto: false });
+    expect(resolved.parallel).toBe("Gold Refractor");
+    expect(resolved.isAuto).toBe(true);
+    expect(lane.isParallelOrAutoDowngrade(resolved, { parallel: "Base", isAuto: false })).toBe(false);
+  });
+
+  it("isParallelOrAutoDowngrade: true when a NAMED sale parallel would be evicted to Base", () => {
+    expect(lane.isParallelOrAutoDowngrade({ parallel: "Base", isAuto: true }, { parallel: "Gold Refractor", isAuto: true })).toBe(true);
+  });
+
+  it("isParallelOrAutoDowngrade: true when sale.isAuto:true would be evicted to false", () => {
+    expect(lane.isParallelOrAutoDowngrade({ parallel: "Gold Refractor", isAuto: false }, { parallel: "Gold Refractor", isAuto: true })).toBe(true);
+  });
+
+  it("isParallelOrAutoDowngrade: false when the candidate is the SAME or MORE specific than the sale (never fires on an improvement)", () => {
+    expect(lane.isParallelOrAutoDowngrade({ parallel: "Base", isAuto: false }, { parallel: "Base", isAuto: false })).toBe(false);
+    expect(lane.isParallelOrAutoDowngrade({ parallel: "Gold Refractor", isAuto: true }, { parallel: "Base", isAuto: false })).toBe(false);
+    expect(lane.isParallelOrAutoDowngrade({ parallel: "Gold Refractor", isAuto: true }, { parallel: "Gold Refractor", isAuto: true })).toBe(false);
   });
 });
 
@@ -557,6 +626,131 @@ describe("repoint-sales-cardnumber-suffix -- refuses out-of-scope shapes", () =>
   });
 });
 
+describe("repoint-sales-cardnumber-suffix -- end-to-end: never downgrades the sale's own parallel/isAuto (coordinator fix)", () => {
+  it("real shape: '#B24-CMO Gold Auto /50' with sale.parallel already 'Gold Refractor' relocates onto the GOLD-REFRACTOR checklist row, never the Base row -- even though a Base row ALSO exists at the same number (the exact shape that would have silently mis-filed a sale under the pre-fix code)", () => {
+    const collapsedId = `${PREFIX}b24:base:auto`;
+    const sale = {
+      id: "s1", cardId: collapsedId, hobbyiqCardId: collapsedId,
+      // Deliberately a "color word without 'Refractor'" title -- this is the
+      // shape that re-parses to parallel:"Base" (parallelIsUnconfirmed:true).
+      title: "2024 Bowman's Best Colson Montgomery #B24-CMO Gold Auto /50 White Sox",
+      sport: SPORT, cardYear: YEAR, price: 300, isAuto: true, parallel: "Gold Refractor",
+      playerName: "Colson Montgomery", soldAt: "2026-07-06T18:23:27.000Z", source: "cardsight",
+    };
+    const baseRow = CATALOG_ROW({ parallelSlug: "Base" }); // exists at b24-cmo:base:auto -- the WRONG destination if downgraded
+    const goldRow = CATALOG_ROW({
+      id: `${PREFIX}b24-cmo:gold-refractor:auto:num-50`, cardId: `${PREFIX}b24-cmo:gold-refractor:auto:num-50`,
+      parallelSlug: "Gold Refractor",
+    });
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [baseRow, goldRow] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.out).toMatch(/RELOCATED\s+1/);
+    expect(r.out).not.toMatch(/REFUSED: parallel-or-auto-downgrade\s+1/);
+  });
+
+  // `isParallelOrAutoDowngrade` is a BELT-AND-SUSPENDERS invariant check:
+  // `resolveParallelAndAuto` is built so its own output can never be weaker
+  // than the sale's stored value, so the guard should be structurally
+  // unreachable through the normal call site -- exactly the same doctrine
+  // as this file's own L397-399 cardNumber re-check ("belt and suspenders
+  // against a parallel/isAuto re-derivation quietly changing the target").
+  // To prove the GUARD itself (not just resolveParallelAndAuto's honesty) is
+  // what stands between a regression and a bad write, these two tests run a
+  // TEMP COPY of the committed lane with `resolveParallelAndAuto`'s body
+  // patched back to the EXACT pre-fix expression
+  // (`parsed.parallel ?? sale.parallel ?? "Base"`,
+  // `Boolean(parsed.isAuto ?? sale.isAuto)`) -- simulating a future
+  // regression that reintroduces the original bug -- while leaving the
+  // `isParallelOrAutoDowngrade` guard call itself untouched, and assert the
+  // guard refuses rather than writes onto the wrong (Base / no-auto) row.
+  // Written as a SIBLING of the committed lane (not into `tmp`) so its
+  // __dirname-relative requires (lib/runner-shard-scope.cjs etc.) resolve
+  // exactly as they do for the real file.
+  const REGRESSED_LANE = path.join(backend, "scripts", `.repoint-sales-cardnumber-suffix.REGRESSED.${process.pid}.cjs`);
+  afterAll(() => { try { fs.rmSync(REGRESSED_LANE, { force: true }); } catch { /* best effort */ } });
+  function regressedResolveSrc() {
+    const patched = LANE_SRC.replace(
+      /function resolveParallelAndAuto\(parsed, sale\) \{[\s\S]*?\n\}/,
+      `function resolveParallelAndAuto(parsed, sale) {
+  return { parallel: parsed.parallel ?? sale.parallel ?? "Base", isAuto: Boolean(parsed.isAuto ?? sale.isAuto) };
+}`,
+    );
+    expect(patched, "resolveParallelAndAuto patch point not found").not.toBe(LANE_SRC);
+    return patched;
+  }
+  function driveRegressed(env, opts) {
+    fs.writeFileSync(REGRESSED_LANE, regressedResolveSrc());
+    const { requirePath, ledger } = shim(opts);
+    let code = 0; let out = "";
+    try {
+      out = execFileSync(process.execPath, [REGRESSED_LANE], {
+        cwd: backend,
+        env: {
+          PATH: process.env.PATH ?? "",
+          SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\\Windows",
+          NODE_OPTIONS: `--require ${JSON.stringify(requirePath)}`,
+          COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
+          ...env,
+        },
+        encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 120_000,
+      });
+    } catch (e) {
+      code = e.status; out = String(e.stdout ?? "") + String(e.stderr ?? "");
+    }
+    const led = JSON.parse(fs.readFileSync(ledger, "utf8"));
+    return { code, out, led };
+  }
+
+  it("REGRESSION SIMULATION: with resolveParallelAndAuto patched back to the pre-fix expression, the downgrade GUARD (not resolveParallelAndAuto) is what refuses the Gold-Refractor-to-Base eviction rather than writing it", () => {
+    const collapsedId = `${PREFIX}b24:base:auto`;
+    const sale = {
+      id: "s1", cardId: collapsedId, hobbyiqCardId: collapsedId,
+      title: "2024 Bowman's Best Colson Montgomery #B24-CMO Gold Auto /50 White Sox",
+      sport: SPORT, cardYear: YEAR, price: 300, isAuto: true, parallel: "Gold Refractor",
+      playerName: "Colson Montgomery", soldAt: "2026-07-06T18:23:27.000Z", source: "cardsight",
+    };
+    // ONLY the Base row exists -- under the regressed resolveParallelAndAuto
+    // this is exactly the shape that would have silently relocated a Gold
+    // Refractor /50 sale onto a plain Base row (the PR #2402 finding).
+    const baseRow = CATALOG_ROW({ parallelSlug: "Base" });
+    const r = driveRegressed({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [baseRow] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: parallel-or-auto-downgrade\s+1/);
+  });
+
+  it("REGRESSION SIMULATION: with resolveParallelAndAuto patched back to the pre-fix expression, the guard refuses the isAuto:true-to-false eviction on a bare '(AU)' title", () => {
+    const collapsedId = `${PREFIX}b24:base:auto`;
+    const sale = {
+      id: "s1", cardId: collapsedId, hobbyiqCardId: collapsedId,
+      title: "2024 Bowman's Best Colson Montgomery #B24-CMO (AU) White Sox",
+      sport: SPORT, cardYear: YEAR, price: 300, isAuto: true, parallel: "Base",
+      playerName: "Colson Montgomery", soldAt: "2026-07-06T18:23:27.000Z", source: "cardsight",
+    };
+    const noAutoRow = CATALOG_ROW({
+      id: `${PREFIX}b24-cmo:base:no-auto`, cardId: `${PREFIX}b24-cmo:base:no-auto`,
+      isAuto: false,
+    });
+    const r = driveRegressed({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [noAutoRow] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: parallel-or-auto-downgrade\s+1/);
+  });
+
+  // MUTATION-CHECKED BY HAND (see PR body): removing the
+  // `isParallelOrAutoDowngrade` guard call from `processSale` (leaving
+  // `resolveParallelAndAuto`'s fix in place) is caught by exactly these two
+  // REGRESSION SIMULATION tests -- both fail (the sale relocates onto the
+  // wrong Base / no-auto row instead of refusing) while the other 41 tests
+  // stay green, confirming these two are what pin the guard call itself.
+  // Separately, reverting `resolveParallelAndAuto` to the pre-fix expression
+  // (leaving the guard call in place) is caught by the unit tests above plus
+  // the FIRST end-to-end test in this block ("relocates onto the
+  // GOLD-REFRACTOR ... never the Base row").
+});
+
 describe("repoint-sales-cardnumber-suffix -- reconcile", () => {
   it("reconciles: candidates == accounted-for", () => {
     const collapsedId = `${PREFIX}b24:base:auto`;
@@ -570,5 +764,165 @@ describe("repoint-sales-cardnumber-suffix -- reconcile", () => {
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/reconciled: candidates \d+ = accounted-for \d+/);
     expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+  });
+});
+
+// ── INCIDENT: REPORT runs 35624948034 / 35625031826 / 35625113831 (baseball
+// 2023/2024/2025 bowmans-best) each ended `finishLane: exiting code 4` on
+// "COUNTERS DO NOT ADD UP". The 2025 run's own numbers: candidates 4,618;
+// WOULD RELOCATE 4,381; refused not-a-suffix-restore 1 (pre-candidate, never
+// counted in `candidates`), pinned/flagged 53 (also pre-candidate), refused
+// destination-not-on-checklist 237, different-player 0, twin 0, stale 0;
+// failed 0; not reached 0. Its OWN "reconciled: candidates 4,618 =
+// accounted-for 4,618" line two lines above balanced -- but the shipped
+// reportWrites() call passed `intended: planned` (only the 4,381 candidates
+// that reached the write stage, i.e. relocated+collapsed+stale+failed here)
+// while `skipped: s.candidates - s.relocated - s.failed` (237) folded in
+// `refusedDestinationNotOnChecklist`, a class that never became `planned` in
+// the first place -- a denominator `intended` never owned. `written(4,381) +
+// skipped(237) = 4,618`, all measured against `intended=4,381`, over by
+// exactly 237. Same class of bug as PR #2400
+// (resolve-disagreeing-sale-twins.cjs): `intended` must be the FULL
+// population every outcome is drawn from -- fixed to `s.candidates`, with
+// every refusal class now landing in `refused` and only budget-truncation
+// (`notReached`) landing in `skipped`, guarded by `if (APPLY)` matching
+// repoint-sales-parallel-suffix.cjs's own convention.
+describe("reportWrites: intended must be the SAME population skipped/refused/written/failed are drawn from (REPORT runs 35624948034/35625031826/35625113831, exit 4 OVER by 237)", () => {
+  it("the shipped call passes s.candidates as intended, not the narrower `planned` (write-stage-reached) subset", () => {
+    const call = /reportWrites\(\{\s*job:\s*"repoint-sales-cardnumber-suffix",([\s\S]*?)\}\);/.exec(LANE_SRC);
+    expect(call, "the reportWrites call was not found").toBeTruthy();
+    expect(call![1]).toMatch(/intended:\s*s\.candidates/);
+    expect(call![1]).not.toMatch(/intended:\s*planned/);
+  });
+
+  it("every refusal class lands in `refused`; `skipped` covers only budget-truncated rows (notReached), never a refusal class", () => {
+    const call = /reportWrites\(\{\s*job:\s*"repoint-sales-cardnumber-suffix",([\s\S]*?)\}\);/.exec(LANE_SRC);
+    expect(call![1]).toMatch(/refused:\s*refusedTotal/);
+    expect(call![1]).toMatch(/skipped:\s*s\.notReached/);
+    expect(LANE_SRC).toMatch(/const refusedTotal = s\.refusedDestinationNotOnChecklist \+ s\.refusedDifferentPlayer\s*\n\s*\+ s\.refusedPossibleTwinAtDestination \+ s\.refusedParallelOrAutoDowngrade \+ s\.refusedEtagChanged;/);
+  });
+
+  it("the reportWrites() call itself is guarded by `if (APPLY)`, matching repoint-sales-parallel-suffix.cjs's own convention -- a REPORT run's correctness signal is its own 'reconciled: candidates = accounted-for' line, not an exit-4 gate meant for confirmed writes", () => {
+    expect(LANE_SRC).toMatch(/if \(APPLY\) \{\s*\n\s*reportWrites\(\{\s*\n\s*job: "repoint-sales-cardnumber-suffix",/);
+  });
+
+  it("behavioral: reproduces the 2025 run's OWN numbers (candidates 4,618 / would-relocate 4,381 / refused-not-suffix-restore 1 / pinned-or-flagged 53 / destination-not-on-checklist 237) -- the OLD call shape over-accounts by exactly 237, the FIXED shape balances to zero", () => {
+    const run2025 = {
+      candidates: 4618, relocated: 4381, collapsedOntoResident: 0,
+      refusedDestinationNotOnChecklist: 237, refusedDifferentPlayer: 0,
+      refusedPossibleTwinAtDestination: 0, refusedEtagChanged: 0,
+      failed: 0, notReached: 0,
+    };
+    // `planned` under the old code == every candidate that reached the
+    // write stage: relocated + collapsedOntoResident + refusedEtagChanged +
+    // failed (destination-not-on-checklist and different-player return
+    // BEFORE planned++, so they were never part of it).
+    const planned = run2025.relocated + run2025.collapsedOntoResident + run2025.refusedEtagChanged + run2025.failed;
+    expect(planned).toBe(4381);
+
+    // OLD (buggy) shape, byte-for-byte the pre-fix call.
+    const oldResult = reconcileWrites({
+      job: "t", intended: planned,
+      written: run2025.relocated,
+      skipped: run2025.candidates - run2025.relocated - run2025.failed,
+      failed: run2025.failed,
+    });
+    expect(oldResult.ok).toBe(false);
+    expect(oldResult.overAccounted).toBe(237); // the EXACT "OVER by 237" the run printed
+
+    // FIXED shape.
+    const refusedTotal = run2025.refusedDestinationNotOnChecklist + run2025.refusedDifferentPlayer
+      + run2025.refusedPossibleTwinAtDestination + run2025.refusedEtagChanged;
+    const fixedResult = reconcileWrites({
+      job: "t", intended: run2025.candidates,
+      written: run2025.relocated + run2025.collapsedOntoResident,
+      refused: refusedTotal,
+      skipped: run2025.notReached,
+      failed: run2025.failed,
+    });
+    expect(fixedResult.ok).toBe(true);
+    expect(fixedResult.overAccounted).toBe(0);
+    expect(fixedResult.unaccounted).toBe(0);
+  });
+
+  it("behavioral: also reproduces the 2023 and 2024 runs' shapes cleanly under the fix (any candidates/refusals/failed/notReached split reconciles to zero over-accounted)", () => {
+    // Representative shapes for the other two failing runs (35624948034,
+    // 35624948034 baseball/2023 and baseball/2024) -- exact per-run counts
+    // are not required to pin this, only that the FIXED call's arithmetic
+    // is invariant to which bucket absorbed the difference.
+    for (const run of [
+      { candidates: 1200, relocated: 1100, collapsedOntoResident: 5, refusedDestinationNotOnChecklist: 80, refusedDifferentPlayer: 3, refusedPossibleTwinAtDestination: 2, refusedEtagChanged: 0, failed: 0, notReached: 10 },
+      { candidates: 300, relocated: 250, collapsedOntoResident: 0, refusedDestinationNotOnChecklist: 40, refusedDifferentPlayer: 0, refusedPossibleTwinAtDestination: 0, refusedEtagChanged: 5, failed: 5, notReached: 0 },
+    ]) {
+      const refusedTotal = run.refusedDestinationNotOnChecklist + run.refusedDifferentPlayer
+        + run.refusedPossibleTwinAtDestination + run.refusedEtagChanged;
+      const result = reconcileWrites({
+        job: "t", intended: run.candidates,
+        written: run.relocated + run.collapsedOntoResident,
+        refused: refusedTotal,
+        skipped: run.notReached,
+        failed: run.failed,
+      });
+      expect(result.ok).toBe(true);
+      expect(result.overAccounted).toBe(0);
+    }
+  });
+
+  it("APPLY: a thrown write lands in `failed`, and the fixed reportWrites() call still balances", () => {
+    const collapsedId = `${PREFIX}b24:base:auto`;
+    const sale = {
+      id: "s1", cardId: collapsedId, hobbyiqCardId: collapsedId,
+      title: "2024 Bowman's Best Colson Montgomery Auto Autograph #B24-CMO White Sox",
+      sport: SPORT, cardYear: YEAR, price: 30, isAuto: true, playerName: "Colson Montgomery",
+      soldAt: "2026-06-28T20:48:59.000Z", source: "cardsight",
+    };
+    const { requirePath, ledger } = shim({ sales: [sale], catalog: [CATALOG_ROW()] });
+    // Wrap the shim so relocateSoldComp's own items.upsert() throws --
+    // relocateSoldComp upserts the KEEPER before it ever attempts the DROP's
+    // delete (scripts/lib/relocate-sold-comp.cjs L357-361: a failed upsert
+    // returns `{ ok: false, stage: "upsert" }` with NOTHING written), so this
+    // is the write-failure shape that actually lands zero upserts. The
+    // lane's own catch around relocateSoldComp (L390-409) then counts this
+    // as `s.failed`, and the fixed reportWrites() call must still balance
+    // (candidates 1 = written 0 + refused 0 + skipped 0 + failed 1) rather
+    // than exit on a counters mismatch.
+    const shimSrc = fs.readFileSync(requirePath, "utf8");
+    const throwingShimSrc = shimSrc.replace(
+      "upsert: async (doc) => {\n      const stored = structuredClone(doc);",
+      "upsert: async (doc) => {\n      throw new Error(\"simulated write failure\");\n      const stored = structuredClone(doc);",
+    );
+    expect(throwingShimSrc, "items.upsert() patch point not found in shim").not.toBe(shimSrc);
+    fs.writeFileSync(requirePath, throwingShimSrc);
+
+    let code = 0; let out = "";
+    try {
+      out = execFileSync(process.execPath, [LANE], {
+        cwd: backend,
+        env: {
+          PATH: process.env.PATH ?? "",
+          SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\\Windows",
+          NODE_OPTIONS: `--require ${JSON.stringify(requirePath)}`,
+          COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
+          ...DEFAULT_ENV, BACKFILL_APPLY: "true",
+        },
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 120_000,
+      });
+    } catch (e: any) {
+      code = e.status as number;
+      out = String(e.stdout ?? "") + String(e.stderr ?? "");
+    }
+    const led = JSON.parse(fs.readFileSync(ledger, "utf8"));
+    expect(led.salesUpserts.length).toBe(0);
+    expect(out).toMatch(/failed\s+1/);
+    // The thrown relocate lands in `s.failed`, which the fixed call passes
+    // straight through as `failed` -- candidates(1) == written(0) +
+    // refused(0) + skipped(0) + failed(1), so the run must NOT exit on a
+    // counters mismatch (any non-zero exit here is caused by the deliberate
+    // relocate throw itself being surfaced as ::error::, never COUNTERS DO
+    // NOT ADD UP).
+    expect(out).not.toMatch(/COUNTERS DO NOT ADD UP/);
+    expect(code).toBe(4); // s.failed > 0 -> the lane's own explicit failed-count gate (L… `if (s.failed) ... exitCode = 4`), NOT a reconcile mismatch
   });
 });
