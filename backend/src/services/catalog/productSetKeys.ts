@@ -178,6 +178,27 @@ const METAL_UNIVERSE_ERA_MISNOMERS: Readonly<Record<string, string>> = Object.fr
 });
 
 /**
+ * CF-TOPPS-MINI-IS-THREE-PRODUCTS (acquisition-builder fix, 2026-09-22).
+ *
+ * "Topps Mini" names a REAL Topps product in three separate eras: the 1975
+ * smaller-format parallel this PR registers, a 1987 3rd-series Mini set, and
+ * a 2013-2023 online-exclusive Topps Mini insert. Only the 1975 product is
+ * registered -- `topps-mini` has no catalog presence and no checklist for
+ * the other two eras -- so a title from 1987 or 2013-2023 that says "Topps
+ * Mini" must NOT land on the 1975 checklist's numbers ("2019 Topps Mini
+ * #100 Mike Trout" is not 1975 #100 Willie Stargell). Same shape as
+ * CF-THERE-IS-NO-FLEER-TIFFANY: the key is real in exactly one era, so the
+ * year decides. A year we do not have cannot decide, so an absent year
+ * leaves the key alone (topps-mini) rather than guessing -- unlike the
+ * Fleer/Metal-Universe tables above, there is no "the misnomer's true era"
+ * fallback to redirect to, because pre-2026-09-22 behaviour for every
+ * non-1975 year was the bare flagship `topps` catch-all, which this
+ * preserves by redirecting AWAY from topps-mini outside 1975 rather than
+ * TOWARD it.
+ */
+const TOPPS_MINI_REGISTERED_YEAR = 1975;
+
+/**
  * R51 AMENDED (Drew, 2026-09-18): THE 2006 "GREATS OF THE GAME" IS FLEER'S.
  *
  * The product prints NO MAKER. 4,796 of its 4,797 checklist-backed catalog
@@ -3327,6 +3348,14 @@ export function spellForEra(setKey: string, year: number | null | undefined, pol
   if (metalUniverseMisnomer !== undefined) {
     if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
     return year < METAL_UNIVERSE_REVIVAL_FROM_YEAR ? metalUniverseMisnomer : setKey;
+  }
+  // CF-TOPPS-MINI-IS-THREE-PRODUCTS: only 1975 is registered. Every other
+  // year (1987, 2013-2023, and an absent/unparseable year) falls back to the
+  // flagship `topps` -- exactly what a "Topps Mini" title resolved to before
+  // this key existed, so behaviour outside 1975 is unchanged by its addition.
+  if (setKey === "topps-mini") {
+    if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return "topps";
+    return year === TOPPS_MINI_REGISTERED_YEAR ? setKey : "topps";
   }
   // R51 AMENDED: the 2006 "Greats of the Game" is Fleer's, and ONLY 2006.
   // Same shape and same refusal as the two above — an absent or non-2006 year

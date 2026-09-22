@@ -3713,6 +3713,30 @@ const LADDER_SPECIALIZATION_PRODUCTS: readonly LadderSpecializationProduct[] = [
   // real work: "gold" is a colour word and "label" an ordinary noun, so an
   // unanchored rule would read a gold-labelled anything as this product.
   { family: "topps", states: /\bgold\s+label\b/, setKey: "topps-gold-label" },
+  // CF-TOPPS-MINI-IS-THREE-PRODUCTS (acquisition-builder fix, 2026-09-22).
+  // "Topps Mini" is a real Topps product in three separate eras -- 1975
+  // (this PR's registration), 1987, and 2013-2023 (online-exclusive) -- and
+  // only 1975 has a checklist behind it. Year-gated exactly like
+  // fleer-tiffany above, mirrored in spellForEra (productSetKeys.ts) so a
+  // vendor-fed setName that never reaches this title parser gets the same
+  // era boundary. Outside 1975 (including no stated year) this rule simply
+  // does not fire and the title falls through to bare `topps`, exactly the
+  // pre-registration behaviour -- there is no OTHER registered destination
+  // for a 1987 or 2013-2023 "Topps Mini" to redirect to.
+  //
+  // KNOWN MISS, LEFT OPEN (2026-09-22): this pattern requires "Topps" before
+  // "Mini". A title in the OTHER word order -- "1975 Topps #660 Mini
+  // condition", the brand and the product word separated by the card number
+  // and other text -- does not match and falls through to bare `topps`. Not
+  // widened to a bare `/\bmini\b/` test: "Mini" is one of the most overloaded
+  // words in a card listing (Mini Helmet, Mini Bobblehead, Mini Figure, a
+  // graded-slab case, "mini lot of 5"), and even scoped to 1975 there is no
+  // measured sample of real "Topps ... Mini" word-order sales in hand to
+  // separate a genuine miss from a false positive that would misfile an
+  // unrelated 1975 Topps flagship sale onto this product. Left unfixed
+  // rather than guessed at; a future pass should measure the actual
+  // word-order population before writing this rule.
+  { family: "topps", states: /\btopps\s+mini\b/, setKey: "topps-mini", minYear: 1975, maxYear: 1975 },
 ];
 
 /** The families this table can refine, for the O(1) reject that keeps an
@@ -3956,14 +3980,6 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // stock and is likewise a ruled key (setkey-reconciliation.json marks it
   // `distinct`, 453 checklist rows) with no parser rule.
   if (/bowman\s+tiffany/.test(t)) return "Bowman Tiffany";
-  // 1975 Topps Mini: same shape as Tiffany above -- a same-number parallel
-  // print run of the flagship checklist at a smaller format, ruled as its
-  // own product 2026-09-22 (acquisition builder, owner ruling) and carried
-  // in productSetKeys.ts / SAME_NUMBER_PARALLEL_SETS with parent `topps`.
-  // Anchored here, above the bare /topps/ catch-all, for the same reason
-  // Tiffany is: a title that says Mini and falls through prices a
-  // different-market card in the flagship pool.
-  if (/topps\s+mini/.test(t)) return "Topps Mini";
   if (/topps\s+heritage/.test(t)) return "Topps Heritage";
   if (/topps\s+heavy\s+lumber|heavy\s+lumber/.test(t)) return "Topps Heavy Lumber";
   // CF-TOPPS-PRODUCT-LINES (Drew, 2026-07-29). Complete Topps taxonomy so
