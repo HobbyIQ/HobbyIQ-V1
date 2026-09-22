@@ -1,0 +1,27 @@
+{
+  "scrapedAt": "2026-09-22T22:20:55.000Z",
+  "sourceUrl": "https://checklistinsider.com/2026-topps-chrome-baseball",
+  "fetchMethod": "curl -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36\" -L, HTTP 200",
+  "source": "checklistinsider-2026-09-22",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Topps Chrome",
+  "setKey": "topps-chrome",
+  "sectionName": "Chrome Rookie Autographs Checklist",
+  "cardNumberPrefix": "RA-",
+  "rowCount": 94,
+  "isAuto": true,
+  "diagnoseContext": "STEP 1 topps-chrome/2026 TRULY ABSENT sample was dominated by RA- and CBA- prefixed cardNumbers (RA-BC, RA-CB, CBA-CAG, CBA-WB). RA- located at 'Chrome Rookie Autographs Checklist' (94 cards). CBA- NOT found anywhere on this page (grep for CB[A-Z]*- found only 'CB-', not 'CBA-') and not sourced this pass -- flagged unsourceable below, NOT staged.",
+  "verbatimParallelsSentence": "94 cards. Pack odds - 1:46 Hobby; 1:14 Jumbo; 1:2 Breaker; 1:780 Blaster; 1:208 Mega; 1:118 Fanatics. Parallels: Refractor /499 (1:191 Hobby; ...) | Teal Refractor /299 (...) | Yellow Refractor /275 (...) | Pink Refractor /250 (...)",
+  "parallelsStaged": ["Base", "Refractor", "Teal Refractor", "Yellow Refractor", "Pink Refractor"],
+  "printRuns": { "Refractor": 499, "Teal Refractor": 299, "Yellow Refractor": 275, "Pink Refractor": 250 },
+  "unsourceableItems": [
+    {
+      "prefix": "CBA-",
+      "reason": "Not found on checklistinsider.com/2026-topps-chrome-baseball (grep -c \"CBA\" == 0 against the full fetched page) or checklistinsider.com/2026-topps-series-1-baseball. cardboardconnection.com/2026-topps-chrome-baseball-cards returned HTTP 404 (URL guess unverified against the site's real slug). Sample sales carrying this cardNumber prefix (CBA-CAG, CBA-WB) remain TRULY ABSENT -- not staged, reason: could not verify the prefix's product/section/roster from either primary source in this pass."
+    }
+  ],
+  "ownerRuling": "Chrome inserts live under `topps-chrome`; RA- numbering does not collide with any other registered product's numbering at this cardId stem.",
+  "readyToIngest": false,
+  "plannerVerdict": "NOT YET RUN -- planStagedDirectory must be run read-only against this directory before APPLY."
+}

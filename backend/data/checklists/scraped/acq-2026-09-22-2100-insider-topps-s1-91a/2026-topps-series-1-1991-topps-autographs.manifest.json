@@ -1,0 +1,21 @@
+{
+  "scrapedAt": "2026-09-22T22:20:55.000Z",
+  "sourceUrl": "https://checklistinsider.com/2026-topps-series-1-baseball",
+  "fetchMethod": "curl -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36\" -L, HTTP 200 (301 redirect to https://www.checklistinsider.com/...)",
+  "source": "checklistinsider-2026-09-22",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Topps Series 1",
+  "setKey": "topps",
+  "sectionName": "1991 Topps Autographs Checklist",
+  "cardNumberPrefixes": ["91A-", "91AU-"],
+  "rowCount": 185,
+  "isAuto": true,
+  "diagnoseContext": "STEP 1 (read-only Cosmos, 2026-09-22) sampled 200 unbacked topps/2026 sold_comps sales and found 48/200 cardNumbers with ZERO card_catalog row under `topps` OR any sibling key (topps-series-1, topps-series-2, topps-update-series, bowman, bowman-chrome-prospects, etc.) -- a sample of these included 91A-APA, 91A-CAR prefixed sales. Confirmed via direct Cosmos point-queries this pass: BCP-8/19/32/122/1/50/151 pattern check applied analogously to 91A-/T91- -- zero rows anywhere for the sampled numbers before this package.",
+  "verbatimParallelsSentence": "185 cards. Odds - 1:190 Hobby; 1:26 Jumbo; 1:1,662 Mega; 1:4,547 Value Blaster; 1:1,532 Super Box; 1:139 Hanger; 1:1,644 Tin. Parallels: Blue /150 (1:855 Hobby; ...) | Green /99 (...) | Gold /50 (...) | Orange /25 (...) | Black /10 (...) | Red /5 (...) | FoilFractor 1/1 (...)",
+  "parallelsStaged": ["Base", "Blue", "Green", "Gold", "Orange", "Black", "Red", "FoilFractor"],
+  "printRuns": { "Blue": 150, "Green": 99, "Gold": 50, "Orange": 25, "Black": 10, "Red": 5, "FoilFractor": 1 },
+  "ownerRuling": "S1/S2 base and inserts live under `topps` (no separate insert key minted -- registered product table names the flagship `topps` and this insert's numbering (91A-/91AU-) does not collide with any other registered product's numbering at the same cardId stem, so no qualified key is required per the ingester's collision guard).",
+  "readyToIngest": false,
+  "plannerVerdict": "NOT YET RUN -- planStagedDirectory must be run read-only against this directory before APPLY."
+}
