@@ -262,6 +262,69 @@ describe("repoint-sales-cardnumber-suffix -- isSuffixRestore / cardNumberSegment
   });
 });
 
+// ── COORDINATOR FIX: this lane must repair ONLY the cardNumber segment. The
+// original PR re-derived parallel/isAuto from a fresh title re-parse via
+// `parsed.parallel ?? sale.parallel ?? "Base"` -- a title reading "Gold Auto
+// /50" (color word stated WITHOUT "Refractor") re-parses to the truthy
+// string parallel:"Base" (parseListingIdentity's own fallback, flagged by
+// `parallelIsUnconfirmed:true`), so `??` never falls through to the sale's
+// OWN stored "Gold Refractor" -- and if a plain Base row for that number
+// happens to exist on the checklist (unlike the 237 sampled cases, where it
+// did not), the sale would be APPLIED onto the WRONG card: a graded/numbered
+// parallel silently downgraded to Base. Fixed with the SAME doctrine
+// scripts/lib/rematch-derive-identity.cjs already uses (storedIdentity /
+// CF-THE-CHECKLIST-SPELLS-ITS-OWN-RUNGS): a rung the parser NAMES with
+// confidence still wins, but `parallelIsUnconfirmed` means the sale's own
+// stored parallel is better evidence than a manufactured Base. isAuto never
+// downgrades either direction (true beats false regardless of source) --
+// covers the bare "(AU)"/"AU" abbreviation this parser does not tokenize as
+// an auto marker.
+describe("repoint-sales-cardnumber-suffix -- resolveParallelAndAuto / isParallelOrAutoDowngrade (unit)", () => {
+  const lane = require(LANE);
+  const { parseListingIdentity } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
+
+  it("real shape: '#B25-CCA Gold Auto /50' (color word stated WITHOUT 'Refractor') keeps the sale's own 'Gold Refractor', never evicts to Base", () => {
+    const parsed = parseListingIdentity("2025 Bowman's Best of 2025 Cole Carrigg #B25-CCA Gold Auto /50 Colorado");
+    expect(parsed.parallel).toBe("Base"); // the parser's own fallback -- NOT a confident read
+    expect(parsed.parallelIsUnconfirmed).toBe(true);
+    const sale = { parallel: "Gold Refractor", isAuto: true };
+    const resolved = lane.resolveParallelAndAuto(parsed, sale);
+    expect(resolved.parallel).toBe("Gold Refractor");
+    expect(resolved.isAuto).toBe(true);
+    expect(lane.isParallelOrAutoDowngrade(resolved, sale)).toBe(false);
+  });
+
+  it("real shape: '#B25-JTH (AU)' (bare abbreviation, not tokenized as an auto marker) keeps the sale's own isAuto:true", () => {
+    const parsed = parseListingIdentity("2025 Bowman's Best - Jared Thomas Colorado Rockies #B25-JTH (AU)");
+    expect(parsed.isAuto).toBe(false); // the parser does not read "(AU)" as an auto marker
+    const sale = { parallel: "Base", isAuto: true };
+    const resolved = lane.resolveParallelAndAuto(parsed, sale);
+    expect(resolved.isAuto).toBe(true);
+    expect(lane.isParallelOrAutoDowngrade(resolved, sale)).toBe(false);
+  });
+
+  it("a title-NAMED rung still wins over the sale's own stored value -- this lane still realizes a genuine improvement", () => {
+    const resolved = lane.resolveParallelAndAuto({ parallel: "Gold Refractor", parallelIsUnconfirmed: false, isAuto: true }, { parallel: "Base", isAuto: false });
+    expect(resolved.parallel).toBe("Gold Refractor");
+    expect(resolved.isAuto).toBe(true);
+    expect(lane.isParallelOrAutoDowngrade(resolved, { parallel: "Base", isAuto: false })).toBe(false);
+  });
+
+  it("isParallelOrAutoDowngrade: true when a NAMED sale parallel would be evicted to Base", () => {
+    expect(lane.isParallelOrAutoDowngrade({ parallel: "Base", isAuto: true }, { parallel: "Gold Refractor", isAuto: true })).toBe(true);
+  });
+
+  it("isParallelOrAutoDowngrade: true when sale.isAuto:true would be evicted to false", () => {
+    expect(lane.isParallelOrAutoDowngrade({ parallel: "Gold Refractor", isAuto: false }, { parallel: "Gold Refractor", isAuto: true })).toBe(true);
+  });
+
+  it("isParallelOrAutoDowngrade: false when the candidate is the SAME or MORE specific than the sale (never fires on an improvement)", () => {
+    expect(lane.isParallelOrAutoDowngrade({ parallel: "Base", isAuto: false }, { parallel: "Base", isAuto: false })).toBe(false);
+    expect(lane.isParallelOrAutoDowngrade({ parallel: "Gold Refractor", isAuto: true }, { parallel: "Base", isAuto: false })).toBe(false);
+    expect(lane.isParallelOrAutoDowngrade({ parallel: "Gold Refractor", isAuto: true }, { parallel: "Gold Refractor", isAuto: true })).toBe(false);
+  });
+});
+
 describe("repoint-sales-cardnumber-suffix -- APPLY relocates the reported b24 collapse shape", () => {
   it("relocates a sale stuck at the bare 'b24' address onto the suffix-restored, checklist-attested 'b24-cmo' address", () => {
     const collapsedId = `${PREFIX}b24:base:auto`;
@@ -563,6 +626,131 @@ describe("repoint-sales-cardnumber-suffix -- refuses out-of-scope shapes", () =>
   });
 });
 
+describe("repoint-sales-cardnumber-suffix -- end-to-end: never downgrades the sale's own parallel/isAuto (coordinator fix)", () => {
+  it("real shape: '#B24-CMO Gold Auto /50' with sale.parallel already 'Gold Refractor' relocates onto the GOLD-REFRACTOR checklist row, never the Base row -- even though a Base row ALSO exists at the same number (the exact shape that would have silently mis-filed a sale under the pre-fix code)", () => {
+    const collapsedId = `${PREFIX}b24:base:auto`;
+    const sale = {
+      id: "s1", cardId: collapsedId, hobbyiqCardId: collapsedId,
+      // Deliberately a "color word without 'Refractor'" title -- this is the
+      // shape that re-parses to parallel:"Base" (parallelIsUnconfirmed:true).
+      title: "2024 Bowman's Best Colson Montgomery #B24-CMO Gold Auto /50 White Sox",
+      sport: SPORT, cardYear: YEAR, price: 300, isAuto: true, parallel: "Gold Refractor",
+      playerName: "Colson Montgomery", soldAt: "2026-07-06T18:23:27.000Z", source: "cardsight",
+    };
+    const baseRow = CATALOG_ROW({ parallelSlug: "Base" }); // exists at b24-cmo:base:auto -- the WRONG destination if downgraded
+    const goldRow = CATALOG_ROW({
+      id: `${PREFIX}b24-cmo:gold-refractor:auto:num-50`, cardId: `${PREFIX}b24-cmo:gold-refractor:auto:num-50`,
+      parallelSlug: "Gold Refractor",
+    });
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [baseRow, goldRow] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.out).toMatch(/RELOCATED\s+1/);
+    expect(r.out).not.toMatch(/REFUSED: parallel-or-auto-downgrade\s+1/);
+  });
+
+  // `isParallelOrAutoDowngrade` is a BELT-AND-SUSPENDERS invariant check:
+  // `resolveParallelAndAuto` is built so its own output can never be weaker
+  // than the sale's stored value, so the guard should be structurally
+  // unreachable through the normal call site -- exactly the same doctrine
+  // as this file's own L397-399 cardNumber re-check ("belt and suspenders
+  // against a parallel/isAuto re-derivation quietly changing the target").
+  // To prove the GUARD itself (not just resolveParallelAndAuto's honesty) is
+  // what stands between a regression and a bad write, these two tests run a
+  // TEMP COPY of the committed lane with `resolveParallelAndAuto`'s body
+  // patched back to the EXACT pre-fix expression
+  // (`parsed.parallel ?? sale.parallel ?? "Base"`,
+  // `Boolean(parsed.isAuto ?? sale.isAuto)`) -- simulating a future
+  // regression that reintroduces the original bug -- while leaving the
+  // `isParallelOrAutoDowngrade` guard call itself untouched, and assert the
+  // guard refuses rather than writes onto the wrong (Base / no-auto) row.
+  // Written as a SIBLING of the committed lane (not into `tmp`) so its
+  // __dirname-relative requires (lib/runner-shard-scope.cjs etc.) resolve
+  // exactly as they do for the real file.
+  const REGRESSED_LANE = path.join(backend, "scripts", `.repoint-sales-cardnumber-suffix.REGRESSED.${process.pid}.cjs`);
+  afterAll(() => { try { fs.rmSync(REGRESSED_LANE, { force: true }); } catch { /* best effort */ } });
+  function regressedResolveSrc() {
+    const patched = LANE_SRC.replace(
+      /function resolveParallelAndAuto\(parsed, sale\) \{[\s\S]*?\n\}/,
+      `function resolveParallelAndAuto(parsed, sale) {
+  return { parallel: parsed.parallel ?? sale.parallel ?? "Base", isAuto: Boolean(parsed.isAuto ?? sale.isAuto) };
+}`,
+    );
+    expect(patched, "resolveParallelAndAuto patch point not found").not.toBe(LANE_SRC);
+    return patched;
+  }
+  function driveRegressed(env, opts) {
+    fs.writeFileSync(REGRESSED_LANE, regressedResolveSrc());
+    const { requirePath, ledger } = shim(opts);
+    let code = 0; let out = "";
+    try {
+      out = execFileSync(process.execPath, [REGRESSED_LANE], {
+        cwd: backend,
+        env: {
+          PATH: process.env.PATH ?? "",
+          SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\\Windows",
+          NODE_OPTIONS: `--require ${JSON.stringify(requirePath)}`,
+          COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
+          ...env,
+        },
+        encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 120_000,
+      });
+    } catch (e) {
+      code = e.status; out = String(e.stdout ?? "") + String(e.stderr ?? "");
+    }
+    const led = JSON.parse(fs.readFileSync(ledger, "utf8"));
+    return { code, out, led };
+  }
+
+  it("REGRESSION SIMULATION: with resolveParallelAndAuto patched back to the pre-fix expression, the downgrade GUARD (not resolveParallelAndAuto) is what refuses the Gold-Refractor-to-Base eviction rather than writing it", () => {
+    const collapsedId = `${PREFIX}b24:base:auto`;
+    const sale = {
+      id: "s1", cardId: collapsedId, hobbyiqCardId: collapsedId,
+      title: "2024 Bowman's Best Colson Montgomery #B24-CMO Gold Auto /50 White Sox",
+      sport: SPORT, cardYear: YEAR, price: 300, isAuto: true, parallel: "Gold Refractor",
+      playerName: "Colson Montgomery", soldAt: "2026-07-06T18:23:27.000Z", source: "cardsight",
+    };
+    // ONLY the Base row exists -- under the regressed resolveParallelAndAuto
+    // this is exactly the shape that would have silently relocated a Gold
+    // Refractor /50 sale onto a plain Base row (the PR #2402 finding).
+    const baseRow = CATALOG_ROW({ parallelSlug: "Base" });
+    const r = driveRegressed({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [baseRow] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: parallel-or-auto-downgrade\s+1/);
+  });
+
+  it("REGRESSION SIMULATION: with resolveParallelAndAuto patched back to the pre-fix expression, the guard refuses the isAuto:true-to-false eviction on a bare '(AU)' title", () => {
+    const collapsedId = `${PREFIX}b24:base:auto`;
+    const sale = {
+      id: "s1", cardId: collapsedId, hobbyiqCardId: collapsedId,
+      title: "2024 Bowman's Best Colson Montgomery #B24-CMO (AU) White Sox",
+      sport: SPORT, cardYear: YEAR, price: 300, isAuto: true, parallel: "Base",
+      playerName: "Colson Montgomery", soldAt: "2026-07-06T18:23:27.000Z", source: "cardsight",
+    };
+    const noAutoRow = CATALOG_ROW({
+      id: `${PREFIX}b24-cmo:base:no-auto`, cardId: `${PREFIX}b24-cmo:base:no-auto`,
+      isAuto: false,
+    });
+    const r = driveRegressed({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [noAutoRow] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: parallel-or-auto-downgrade\s+1/);
+  });
+
+  // MUTATION-CHECKED BY HAND (see PR body): removing the
+  // `isParallelOrAutoDowngrade` guard call from `processSale` (leaving
+  // `resolveParallelAndAuto`'s fix in place) is caught by exactly these two
+  // REGRESSION SIMULATION tests -- both fail (the sale relocates onto the
+  // wrong Base / no-auto row instead of refusing) while the other 41 tests
+  // stay green, confirming these two are what pin the guard call itself.
+  // Separately, reverting `resolveParallelAndAuto` to the pre-fix expression
+  // (leaving the guard call in place) is caught by the unit tests above plus
+  // the FIRST end-to-end test in this block ("relocates onto the
+  // GOLD-REFRACTOR ... never the Base row").
+});
+
 describe("repoint-sales-cardnumber-suffix -- reconcile", () => {
   it("reconciles: candidates == accounted-for", () => {
     const collapsedId = `${PREFIX}b24:base:auto`;
@@ -611,7 +799,7 @@ describe("reportWrites: intended must be the SAME population skipped/refused/wri
     const call = /reportWrites\(\{\s*job:\s*"repoint-sales-cardnumber-suffix",([\s\S]*?)\}\);/.exec(LANE_SRC);
     expect(call![1]).toMatch(/refused:\s*refusedTotal/);
     expect(call![1]).toMatch(/skipped:\s*s\.notReached/);
-    expect(LANE_SRC).toMatch(/const refusedTotal = s\.refusedDestinationNotOnChecklist \+ s\.refusedDifferentPlayer\s*\n\s*\+ s\.refusedPossibleTwinAtDestination \+ s\.refusedEtagChanged;/);
+    expect(LANE_SRC).toMatch(/const refusedTotal = s\.refusedDestinationNotOnChecklist \+ s\.refusedDifferentPlayer\s*\n\s*\+ s\.refusedPossibleTwinAtDestination \+ s\.refusedParallelOrAutoDowngrade \+ s\.refusedEtagChanged;/);
   });
 
   it("the reportWrites() call itself is guarded by `if (APPLY)`, matching repoint-sales-parallel-suffix.cjs's own convention -- a REPORT run's correctness signal is its own 'reconciled: candidates = accounted-for' line, not an exit-4 gate meant for confirmed writes", () => {

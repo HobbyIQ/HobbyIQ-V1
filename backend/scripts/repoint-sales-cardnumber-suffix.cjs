@@ -159,6 +159,62 @@ function isSuffixRestore(oldSeg, newSeg) {
   return newSeg.startsWith(`${oldSeg}-`);
 }
 
+// COORDINATOR FIX (post-#2402 review): this lane exists ONLY to repair the
+// cardNumber SEGMENT (b24 -> b24-cmo). It must never re-derive parallel or
+// isAuto from a fresh title re-parse -- the sale's own stored `parallel`/
+// `isAuto` are strictly better evidence than parseListingIdentity's answer
+// on THIS title, because an earlier writer already read them (from the
+// vendor tag, a longer title, or a source this parser never sees again).
+//
+// The bug this replaces: `parallel: parsed.parallel ?? sale.parallel ??
+// "Base"` treated a truthy "Base" string as confirmed evidence, so a title
+// reading "Gold Auto /50" (color word stated WITHOUT the word "Refractor")
+// re-parsed to `parallel: "Base"` (a real string, `??` never falls through)
+// even though `sale.parallel` already held "Gold Refractor" from an earlier,
+// better read. Every one of the 4,381 2025 WOULD-RELOCATE candidates whose
+// re-derived "Base" address happened to ALREADY EXIST on the checklist (a
+// numbered auto set that also carries a true no-parallel base rung) would
+// have been APPLIED onto the WRONG card -- a Gold Refractor /50 sale filed
+// as a Base sale. The 237 "destination-not-on-checklist" refusals were only
+// caught because Bowman's Best does not stock a plain Base numbered-auto
+// rung for THOSE particular numbers; a set that does would have silently
+// downgraded the sale with no refusal at all.
+//
+// THE RULE (mirrors rematch-derive-identity.cjs's own storedIdentity/
+// deriveIdentity doctrine, CF-THE-CHECKLIST-SPELLS-ITS-OWN-RUNGS): the
+// title is the evidence, so a NAMED rung the parser is CONFIDENT about
+// still wins -- but `parsed.parallelIsUnconfirmed` (parseListingIdentity's
+// own signal that its "Base" answer is a fallback, not a read) means the
+// sale's stored `parallel` is better evidence than a manufactured Base.
+// `isAuto` never downgrades either direction: true beats false regardless
+// of source (a title's bare "(AU)"/"AU" abbreviation that this parser does
+// not tokenize as an auto marker must never evict a sale that is already
+// known, from an earlier read, to be an autograph).
+function resolveParallelAndAuto(parsed, sale) {
+  const parsedNamedARung = parsed.parallel && !/^base$/i.test(String(parsed.parallel));
+  const parallel = parsedNamedARung
+    ? parsed.parallel
+    : parsed.parallelIsUnconfirmed
+      ? (sale.parallel || "Base")
+      : (parsed.parallel || sale.parallel || "Base");
+  const isAuto = Boolean(parsed.isAuto) || Boolean(sale.isAuto);
+  return { parallel, isAuto };
+}
+
+/** True when the CANDIDATE identity is LESS specific than the sale's own
+ *  STORED identity -- a named parallel evicted back to Base, or isAuto
+ *  evicted from true to false. Never fires the other direction (a
+ *  candidate that is MORE specific than the stored sale, e.g. a title that
+ *  states a parallel the sale never recorded, is exactly what this lane
+ *  exists to realize). */
+function isParallelOrAutoDowngrade(candidate, sale) {
+  const saleHadNamedParallel = sale.parallel && !/^base$/i.test(String(sale.parallel));
+  const candidateIsBase = !candidate.parallel || /^base$/i.test(String(candidate.parallel));
+  if (saleHadNamedParallel && candidateIsBase) return true;
+  if (sale.isAuto === true && candidate.isAuto !== true) return true;
+  return false;
+}
+
 function cardNumberSegmentOf(id) {
   const parts = String(id ?? "").split(":");
   if (parts.length < 7 || parts[0] !== "hiq") return null;
@@ -235,6 +291,7 @@ async function main() {
     refusedNotSuffixRestore: 0, refusedUnparsed: 0, refusedEtagChanged: 0,
     refusedDestinationNotOnChecklist: 0, refusedDifferentPlayer: 0,
     refusedPinnedOrFlagged: 0, refusedPossibleTwinAtDestination: 0,
+    refusedParallelOrAutoDowngrade: 0,
     failed: 0, notReached: 0,
   };
   let stoppedAtBudget = false;
@@ -242,6 +299,7 @@ async function main() {
   const refusals = {
     "destination-not-on-checklist": [], "different-player": [],
     "pinned-or-flagged": [], "possible-twin-at-destination": [],
+    "parallel-or-auto-downgrade": [],
   };
 
   // PLAN_OUT -- one NDJSON record per in-scope sale, same auditability
@@ -312,15 +370,22 @@ async function main() {
 
     const parts = currentId.split(":");
     const setKey = parts[3];
+    const resolved = resolveParallelAndAuto(parsed, sale);
+    if (isParallelOrAutoDowngrade(resolved, sale)) {
+      s.refusedParallelOrAutoDowngrade++;
+      refusals["parallel-or-auto-downgrade"].push(`  ${sale.id}@${currentId}: sale's own parallel="${sale.parallel ?? ""}" isAuto=${sale.isAuto === true} would be evicted to parallel="${resolved.parallel}" isAuto=${resolved.isAuto} by the title re-parse -- refused, never downgraded`);
+      emitPlanRow(sale, "refused", "parallel-or-auto-downgrade", { fromCardNumber: oldSeg });
+      return;
+    }
     let newId;
     try {
       newId = computeHobbyIqCardId({
         sport: sale.sport, year: sale.cardYear ?? sale.year,
         setKey,
         cardNumber: parsed.cardNumber,
-        parallel: parsed.parallel ?? sale.parallel ?? "Base",
-        isAuto: Boolean(parsed.isAuto ?? sale.isAuto),
-        printRun: parsed.printRun ?? null,
+        parallel: resolved.parallel,
+        isAuto: resolved.isAuto,
+        printRun: parsed.printRun ?? sale.printRun ?? null,
       });
     } catch {
       s.refusedUnparsed++;
@@ -388,7 +453,10 @@ async function main() {
     }
 
     try {
-      const keep = stripSystem({ ...sale, cardId: newId, hobbyiqCardId: newId, cardNumber: parsed.cardNumber });
+      const keep = stripSystem({
+        ...sale, cardId: newId, hobbyiqCardId: newId, cardNumber: parsed.cardNumber,
+        parallel: resolved.parallel, isAuto: resolved.isAuto,
+      });
       const result = await relocateSoldComp(pool, {
         keep, drop: [{ id: sale.id, cardId: sale.cardId }],
         verifyFields: ["cardId", "hobbyiqCardId", "cardNumber"],
@@ -455,6 +523,7 @@ async function main() {
   console.log(`  REFUSED: destination-not-on-checklist   ${f(s.refusedDestinationNotOnChecklist)}`);
   console.log(`  REFUSED: different-player               ${f(s.refusedDifferentPlayer)}`);
   console.log(`  REFUSED: possible-twin-at-destination   ${f(s.refusedPossibleTwinAtDestination)}`);
+  console.log(`  REFUSED: parallel-or-auto-downgrade     ${f(s.refusedParallelOrAutoDowngrade)}`);
   console.log(`  REFUSED: stale since the read            ${f(s.refusedEtagChanged)}`);
   console.log(`  failed                                  ${f(s.failed)}`);
   console.log(`  not reached (budget)                     ${f(s.notReached)}`);
@@ -468,7 +537,8 @@ async function main() {
   // not reached before the budget -- never silently dropped.
   const candidateOutcomes = s.relocated + s.collapsedOntoResident
     + s.refusedDestinationNotOnChecklist + s.refusedDifferentPlayer
-    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged
+    + s.refusedPossibleTwinAtDestination + s.refusedParallelOrAutoDowngrade
+    + s.refusedEtagChanged
     + s.failed + s.notReached;
   console.log(`\n  reconciled: candidates ${f(s.candidates)} = accounted-for ${f(candidateOutcomes)}`);
   if (candidateOutcomes !== s.candidates) {
@@ -498,7 +568,7 @@ async function main() {
   // reportWrites()'s exit-4 gate is reserved for APPLY, where "written"
   // means a confirmed Cosmos write, not a "would write" prediction.
   const refusedTotal = s.refusedDestinationNotOnChecklist + s.refusedDifferentPlayer
-    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged;
+    + s.refusedPossibleTwinAtDestination + s.refusedParallelOrAutoDowngrade + s.refusedEtagChanged;
   if (APPLY) {
     reportWrites({
       job: "repoint-sales-cardnumber-suffix",
@@ -513,7 +583,10 @@ async function main() {
   if (s.failed) { console.error(`::error::${f(s.failed)} sale(s) failed.`); process.exitCode = 4; }
 }
 
-module.exports = { isSuffixRestore, cardNumberSegmentOf, INHERITED_SCOPES, WILDCARDS, CELL_RE };
+module.exports = {
+  isSuffixRestore, cardNumberSegmentOf, INHERITED_SCOPES, WILDCARDS, CELL_RE,
+  resolveParallelAndAuto, isParallelOrAutoDowngrade,
+};
 
 if (require.main === module) {
   main()
