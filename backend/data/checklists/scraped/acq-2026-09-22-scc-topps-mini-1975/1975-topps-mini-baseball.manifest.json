@@ -1,0 +1,30 @@
+{
+  "scrapedAt": "2026-09-22T22:03:20.000Z",
+  "sourceUrl": "https://www.sportscardchecklist.com/set-11700/1975-topps-baseball-trading-card-checklist",
+  "sourcePageSha256": "e61b82078b01eee1d40a5866a75b7eeec57000e48e3b2fb7332cb0c580454b56",
+  "source": "sportscardchecklist-2026-09-22",
+  "sport": "baseball",
+  "year": 1975,
+  "setName": "1975 Topps Mini Baseball",
+  "productKey": "1975-topps-mini-baseball",
+  "setKey": "topps-mini",
+  "rowCount": 660,
+  "mintedBy": "Acquisition builder (2026-09-22), owner ruling: topps-mini IS its own product key. ~24,700 unbacked sold_comps sales carry hiq:baseball:1975:topps-mini:<1-660>:<base|white|blue>:no-auto -- numeric card numbers 1-660, the SAME numbering as flagship 1975 Topps base (confirmed via Cosmos read-only sample, 300 rows: 299/300 numeric cardNumber segment). card_catalog held ZERO rows for setKey=topps-mini/1975-topps-mini/mini under year=1975, and productSetKeys.ts carried no registration at all for a Mini key -- not a wrong-key situation, a genuinely unregistered product, escalated and resolved by owner ruling this same PR. 1975 Topps Mini is a 2 1/4 x 3 1/8-inch smaller-format parallel print run of the flagship 660-card checklist, card for card, on the flagship's own numbers -- the Topps Tiffany/Fleer Glossy shape (same-number parallel set, title is the evidence, not the number) -- confirmed by two independent sources (baseballcardpedia.com: '660 cards... sharing identical card numbers (1-660)... Topps issued a 2 1/4 X 3 1/8 parallel of their main Baseball set... regionally test marketed with Michigan and the Pacific Coast'; cardboardconnection.com via baseballcardpedia cross-check confirms the 1975 flagship checklist and the Mini-as-parallel description). This package stages the 660-card BASE roster only, verbatim from sportscardchecklist.com's own 1975 Topps checklist page (the flagship's own numbering/rosters, which Mini reprints card-for-card per both sources above) -- no rung/parallel column populated (see notMinted below for why 'White'/'Blue' are NOT staged as parallels).",
+  "rungsMinted": [
+    { "parallel": "(none -- base roster only)", "printRun": null }
+  ],
+  "cardNumbersFilled": 660,
+  "notMinted": {
+    "whiteAndBlueBacks": {
+      "reason": "The Cosmos sample of 300 unbacked hiq:baseball:1975:topps-mini: sales carried parallel='White' (7/300) and parallel='Blue' (4/300) alongside the dominant 'Base' (289/300). Checked both sourcing doctrines' sources for a stated Mini parallel/back-color ladder: baseballcardpedia.com's own 1975 Topps Mini page states explicitly 'No colored back variations (cream, gray, tan, or blue backs) are mentioned for the 1975 Topps Mini set' and 'It is unclear why Topps issued this product... suggesting this was a one-time experimental parallel issue' -- i.e. the source itself rules out a back-color parallel ladder. cardboardconnection's 1975 Topps flagship page (via baseballcardpedia cross-check) states standard 1975 Topps backs are 'printed in red and green on gray cardstock' and names only three parallels for the year: the Minis themselves, O-Pee-Chee (Canadian bilingual), and Team Checklist uncut sheets -- again no White/Blue Mini back rung. Per doctrine ('if sources describe backs rather than parallels, say so and stage base only'), 'White'/'Blue' in the sales-side parallel field are read as seller-written condition/edge descriptors (a common vintage-listing habit, e.g. 'white border showing') rather than a sourced parallel, and are NOT staged as rungs here. Left an open, reported gap rather than guessed."
+    }
+  },
+  "spellingAudit": "Card numbers and player names taken verbatim from sportscardchecklist.com's own 1975 Topps checklist page (source page fetched directly, robots.txt allows this path -- no '/?*' query string, no '.htm' suffix -- single GET, no crawl). All 660 numbers 1-660 present, zero gaps. Cross-checked against card_catalog's OWN existing year=1975/setKey=topps flagship rows at #223 (Robin Yount), #300 (Reggie Jackson), #620 (Gary Carter/Marc Hill/Dan Meyer/Leon Roberts) -- all three agree exactly with the scraped source.",
+  "dataQualityFinding": "IMPORTANT, OUT OF SCOPE FOR THIS PR: while cross-checking, card_catalog's EXISTING year=1975/setKey='topps' flagship catalog (8,340 rows, previously believed clean) was found to carry CROSS-SPORT CONTAMINATION at low card numbers -- e.g. its own #2 reads 'Sonny Jurgensen' (NFL, Washington), #7 'George Blanda' (NFL), #16 'Buck Buchanan' (NFL) -- where sportscardchecklist.com's verified 1975 Topps BASEBALL checklist states #2 'Lou Brock HL', #7 'Steve Busby/Dick Bosman/Nolan Ryan HL', #16 'Frank Tanana'. This package's own roster was NOT taken from the contaminated catalog for exactly this reason -- it is sourced fresh from sportscardchecklist.com and independently verified. The flagship 1975 Topps catalog contamination itself is NOT fixed by this PR (would require its own diagnosis of scope/blast-radius on an unrelated, already-populated product with existing sales pooled against it) and is flagged here for a follow-on repair.",
+  "selectCardsOnlyAudit": "No 'select cards only' / roster-restriction language found on the source page -- it presents the full 660-card flagship checklist, which Mini reprints in its entirety per both sourcing doctrines above.",
+  "provenance": {
+    "cardsFrom": "sportscardchecklist.com's own 1975 Topps (flagship) checklist page, direct HTTP GET (robots.txt permits this path), all 660 numbers extracted and deduped by card number",
+    "rungsFrom": "n/a -- base roster only staged; see notMinted.whiteAndBlueBacks",
+    "dedup": "card_catalog was queried read-only for year=1975 AND setKey IN ('topps-mini','1975-topps-mini','mini') -- 0 rows under any spelling before this package. Because topps-mini has zero prior catalog presence under any key, a rung-level cross-setKey collision at these (year, cardNumber) pairs is impossible for this product; planStagedDirectory's own id-collision check (against the STAGED file, per its own doctrine) additionally confirms 0 collisions."
+  }
+}
