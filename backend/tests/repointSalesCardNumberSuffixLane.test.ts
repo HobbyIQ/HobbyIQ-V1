@@ -767,6 +767,140 @@ describe("repoint-sales-cardnumber-suffix -- reconcile", () => {
   });
 });
 
+// ── FOLLOW-UP: APPLY run 35810708478 (baseball:2025 bowmans-best) ended
+// "failed 4" / exit 4 -- reconcile balanced (4,629 = 4,379 written + 246
+// refused + 4 failed) but the log printed NO per-sale line for the 4
+// failures: every REFUSED class prints examples via its own `refusals[...]`
+// list, `failed` never had an equivalent. Fixed: a `failures` array (mirrors
+// repoint-sales-parallel-suffix.cjs's own `failures`/FAILURES banner),
+// printed in full (never truncated to 20, since `failed` is expected to be
+// rare), one line per failure naming the sale id, from-id, to-id, and the
+// underlying error code/message -- plus a PLAN_OUT record
+// (action:"failed") carrying the same `error` field.
+describe("repoint-sales-cardnumber-suffix -- FAILED logging (follow-up: run 35810708478 printed no per-sale failure line)", () => {
+  it("a catalog-read failure prints a FAILED line naming the sale id, from-id, to-id, and the error, and is recorded in PLAN_OUT with action:failed", () => {
+    const collapsedId = `${PREFIX}b24:base:auto`;
+    const sale = {
+      id: "s1", cardId: collapsedId, hobbyiqCardId: collapsedId,
+      title: "2024 Bowman's Best Colson Montgomery Auto Autograph #B24-CMO White Sox",
+      sport: SPORT, cardYear: YEAR, price: 30, isAuto: true, playerName: "Colson Montgomery",
+      soldAt: "2026-06-28T20:48:59.000Z", source: "cardsight",
+    };
+    const { requirePath, ledger } = shim({ sales: [sale], catalog: [CATALOG_ROW()] });
+    const shimSrc = fs.readFileSync(requirePath, "utf8");
+    const throwingShimSrc = shimSrc.replace(
+      "const catalogContainer = {\n  item: (id, pk) => ({\n    read: async () => {\n      const d = state.catalog.get(id);\n      if (!d) throw notFound();\n      return { resource: structuredClone(d) };\n    },\n  }),\n};",
+      'const catalogContainer = {\n  item: (id, pk) => ({\n    read: async () => {\n      throw Object.assign(new Error("simulated Cosmos 503"), { code: 503 });\n    },\n  }),\n};',
+    );
+    expect(throwingShimSrc, "catalogContainer.item().read() patch point not found").not.toBe(shimSrc);
+    fs.writeFileSync(requirePath, throwingShimSrc);
+
+    const planDir = fs.mkdtempSync(path.join(tmp, "plan-"));
+    let code = 0; let out = "";
+    try {
+      out = execFileSync(process.execPath, [LANE], {
+        cwd: backend,
+        env: {
+          PATH: process.env.PATH ?? "",
+          SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\\Windows",
+          NODE_OPTIONS: `--require ${JSON.stringify(requirePath)}`,
+          COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
+          ...DEFAULT_ENV, BACKFILL_APPLY: "true", PLAN_OUT: planDir,
+        },
+        encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 120_000,
+      });
+    } catch (e: any) {
+      code = e.status as number;
+      out = String(e.stdout ?? "") + String(e.stderr ?? "");
+    }
+    expect(out).toMatch(/FAILURES \(1\), every one listed:/);
+    expect(out).toMatch(/FAILED catalog-read s1@hiq:baseball:2024:bowmans-best:b24:base:auto -> hiq:baseball:2024:bowmans-best:b24-cmo:base:auto: \[503\] simulated Cosmos 503/);
+    expect(out).toMatch(/nothing written, sale untouched at its old address/);
+
+    const planFile = path.join(planDir, "plan-slot-0.ndjson");
+    const planRows = fs.readFileSync(planFile, "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    const failedRow = planRows.find((r: any) => r.action === "failed");
+    expect(failedRow).toBeTruthy();
+    expect(failedRow.reason).toBe("catalog-read");
+    expect(failedRow.id).toBe("s1");
+    expect(failedRow.cardId).toBe(collapsedId);
+    expect(failedRow.target).toBe(`${PREFIX}b24-cmo:base:auto`);
+    expect(failedRow.error).toMatch(/\[503\] simulated Cosmos 503/);
+  });
+
+  it("a relocate verify-mismatch (duplicatesLeft) prints a DUPLICATE LEFT line -- the sale is resident at BOTH the old and new address, not a no-op failure", () => {
+    const collapsedId = `${PREFIX}b24:base:auto`;
+    const sale = {
+      id: "s1", cardId: collapsedId, hobbyiqCardId: collapsedId,
+      title: "2024 Bowman's Best Colson Montgomery Auto Autograph #B24-CMO White Sox",
+      sport: SPORT, cardYear: YEAR, price: 30, isAuto: true, playerName: "Colson Montgomery",
+      soldAt: "2026-06-28T20:48:59.000Z", source: "cardsight",
+    };
+    const { requirePath, ledger } = shim({ sales: [sale], catalog: [CATALOG_ROW()] });
+    // Force relocateSoldComp's own read-back (readBackKeptRow) to NEVER show
+    // the write: the point-read at the KEEPER's address always 404s (as if
+    // a lagging replica never catches up within the retry budget) and the
+    // query fallback returns nothing either. The upsert itself still
+    // succeeds -- so this reproduces relocate-sold-comp.cjs's own documented
+    // `stage:"verify"` mismatch: keeper written, old row's delete never
+    // attempted, sale now resident at BOTH addresses (`duplicatesLeft`).
+    const shimSrc = fs.readFileSync(requirePath, "utf8");
+    const patchedSrc = shimSrc
+      .replace(
+        `const salesContainer = {
+  item: (id, pk) => ({
+    read: async () => {
+      const d = state.sales.get(salesKey(id, pk));
+      if (!d) throw notFound();
+      return { resource: structuredClone(d) };
+    },`,
+        `const salesContainer = {
+  item: (id, pk) => ({
+    read: async () => {
+      // Always 404 for the NEW (keeper) address specifically -- simulates a
+      // read-back that never shows the write within the retry budget.
+      if (id === "s1" && pk === "hiq:baseball:2024:bowmans-best:b24-cmo:base:auto") throw notFound();
+      const d = state.sales.get(salesKey(id, pk));
+      if (!d) throw notFound();
+      return { resource: structuredClone(d) };
+    },`,
+      )
+      .replace(
+        'throw new Error("fake sold_comps: unsupported query " + q);',
+        `if (q.includes("c.id = @id AND c.cardId = @pk")) return { fetchAll: async () => ({ resources: [] }) };
+      throw new Error("fake sold_comps: unsupported query " + q);`,
+      );
+    expect(patchedSrc, "salesContainer read/query patch points not found").not.toBe(shimSrc);
+    fs.writeFileSync(requirePath, patchedSrc);
+
+    let code = 0; let out = "";
+    try {
+      out = execFileSync(process.execPath, [LANE], {
+        cwd: backend,
+        env: {
+          PATH: process.env.PATH ?? "",
+          SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\\Windows",
+          NODE_OPTIONS: `--require ${JSON.stringify(requirePath)}`,
+          COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
+          ...DEFAULT_ENV, BACKFILL_APPLY: "true",
+        },
+        encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 120_000,
+      });
+    } catch (e: any) {
+      code = e.status as number;
+      out = String(e.stdout ?? "") + String(e.stderr ?? "");
+    }
+    const led = JSON.parse(fs.readFileSync(ledger, "utf8"));
+    // The upsert DID happen -- this is the load-bearing proof that a
+    // duplicate is left in the pool, not that nothing was written.
+    expect(led.salesUpserts).toContain("s1");
+    expect(led.salesDeletes.length).toBe(0);
+    expect(out).toMatch(/FAILURES \(1\), every one listed:/);
+    expect(out).toMatch(/FAILED relocate s1@hiq:baseball:2024:bowmans-best:b24:base:auto -> hiq:baseball:2024:bowmans-best:b24-cmo:base:auto/);
+    expect(out).toMatch(/DUPLICATE LEFT -- keeper upserted\+verified at hiq:baseball:2024:bowmans-best:b24-cmo:base:auto, old row at hiq:baseball:2024:bowmans-best:b24:base:auto was NOT deleted; sale now resident at BOTH addresses/);
+  });
+});
+
 // ── INCIDENT: REPORT runs 35624948034 / 35625031826 / 35625113831 (baseball
 // 2023/2024/2025 bowmans-best) each ended `finishLane: exiting code 4` on
 // "COUNTERS DO NOT ADD UP". The 2025 run's own numbers: candidates 4,618;
