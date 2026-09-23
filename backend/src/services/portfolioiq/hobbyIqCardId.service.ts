@@ -884,6 +884,11 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/topps-traded-tiffany/, "topps-traded-tiffany"],
     [/topps-traded/, "topps-traded"],
     [/topps-tiffany/, "topps-tiffany"],
+    // 1975 Topps Mini: smaller-format parallel print run of the flagship
+    // checklist, same numbers card for card (see SAME_NUMBER_PARALLEL_SETS).
+    // Anchored above bare /topps/ or it collapses into flagship, pooling a
+    // different-market card onto the same address as its base sibling.
+    [/topps-mini/, "topps-mini"],
     // CF-CATALOG-UPDATE-TOTAL (Drew, 2026-08-04). Topps Update = successor
     // to Traded (2006+). Topps Total ran 2002-2005 (990-card jumbo set).
     [/topps-update-sapphire/, "topps-update-sapphire"],

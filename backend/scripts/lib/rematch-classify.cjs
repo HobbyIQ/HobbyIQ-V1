@@ -2877,6 +2877,12 @@ const SPECIALIZATION_PARENTS = Object.freeze({
   "topps-traded": "topps",
   "topps-traded-tiffany": "topps-traded",
   "topps-tiffany": "topps",
+  // -- 1975 Topps Mini (acquisition builder, 2026-09-22, owner ruling): a
+  //    smaller-format parallel print run of the flagship 660-card checklist,
+  //    card for card, on the flagship's own numbers -- the Tiffany/Glossy
+  //    shape. A productSetKeys.ts entry whose immediate parent is `topps`,
+  //    so it is mirrored, not excepted.
+  "topps-mini": "topps",
   // -- Bowman: `bowman-tiffany` is a normalizeSetKey fixed point and a ruled
   //    DISTINCT key (setkey-reconciliation.json: 453 catalog rows, 1989-1991,
   //    "product-family collapse -- `bowman` is an ancestor of
@@ -3330,6 +3336,11 @@ function ruledSiblingMove(from, to, title) {
 const SAME_NUMBER_PARALLEL_SETS = Object.freeze([
   Object.freeze({ setKey: "topps-tiffany", parent: "topps" }),
   Object.freeze({ setKey: "topps-traded-tiffany", parent: "topps-traded" }),
+  // 1975 Topps Mini: same shape as Tiffany/Glossy -- the flagship checklist
+  // reprinted at smaller format, card for card, on the flagship's own
+  // numbers. The number cannot separate the two cards; the title is the
+  // evidence.
+  Object.freeze({ setKey: "topps-mini", parent: "topps" }),
   Object.freeze({ setKey: "bowman-tiffany", parent: "bowman" }),
   // The Fleer coated reprints (#1748): the Tiffany/Glossy card carries the
   // paper card's number, so the number cannot tell them apart and only the

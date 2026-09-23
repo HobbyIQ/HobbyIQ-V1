@@ -46,6 +46,10 @@ const TIFFANY_MINT_CASES: ReadonlyArray<readonly [string, string]> = [
   ["1987 Topps Traded Greg Maddux #70T", "topps-traded"],
   ["1988 Topps Tiffany George Brett #400", "topps-tiffany"],
   ["1990 Bowman Tiffany Greg Maddux #27", "bowman-tiffany"],
+  // Acquisition builder, 2026-09-22 (owner ruling): 1975 Topps Mini is the
+  // same shape as Topps Tiffany -- a same-number parallel print run, title is
+  // the evidence.
+  ["1975 Topps Mini Robin Yount #223", "topps-mini"],
 ];
 
 /**
