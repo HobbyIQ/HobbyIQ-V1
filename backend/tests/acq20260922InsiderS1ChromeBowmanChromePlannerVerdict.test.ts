@@ -1,50 +1,65 @@
 /**
- * 2026-09-22 acquisition wave: four checklistinsider.com sections, RE-STAGED
- * after review found the first pass's "0 collisions" claim was FALSE.
+ * 2026-09-22 acquisition wave: THREE checklistinsider.com sections, after
+ * TWO rounds of review found the dedupe claims false.
  *
- * THE DEFECT (review-caught). The first pass's dedupe check compared a
- * Cosmos CONTAINS filter against lowercase ids while the CSV's own
- * cardNumber column was mixed-case (`T91-1`, `91A-ABB`, `RA-AA`, `BCP-151`)
- * -- `CONTAINS` is case-sensitive, so every check silently found zero
- * matches even though most rows already existed. A reviewer point-read the
- * exact ids and found strict rows at all four sampled addresses. REDONE:
- * point-read the EXACT id the ingester mints for every staged row
- * (lowercased correctly), plus a cross-setKey check for the same
- * (cardNumber, rung-slug, isAuto, printRun) under ANY 2026 setKey with a
- * checklist-grade source. Only rows that survive BOTH checks are staged.
+ * ROUND 1 DEFECT. The first dedupe check compared a case-sensitive Cosmos
+ * `CONTAINS` filter against LOWERCASE ids while the CSVs' own cardNumber
+ * column was mixed-case (`T91-1`, `91A-ABB`, `RA-AA`, `BCP-151`), so every
+ * check silently found zero matches even though many rows already existed.
+ * Fixed by lowercasing correctly and point-reading exact ids.
  *
- * WHAT SURVIVED (the only rungs genuinely absent everywhere):
+ * ROUND 2 DEFECT (the RA- package). A full point-read still found ALL
+ * 658/658 staged RA- (Chrome Rookie Autographs) rows already existed as
+ * checklist-grade rows. Root cause: the round-1 fix hand-rolled its OWN
+ * slugify reimplementation to build the id it point-read, instead of
+ * calling the real `computeHobbyIqCardId` (hobbyIqCardId.service.ts). That
+ * reimplementation was missing two of the deriver's own compound-variant
+ * rules: "RayWave" canonicalizes to "ray-wave" (hyphenated) and "Printing
+ * Plates" folds to the SINGULAR "printing-plate" via PLURAL_PARALLEL_HEAD
+ * -- so every point-read checked a slug the real ingester would never mint,
+ * always missed, and every row passed as a false "genuinely absent". The
+ * RA- PACKAGE IS REMOVED ENTIRELY as a result -- every one of its 658 rows
+ * was already catalogued (baseballcardpedia-ladders-2026-09-04 /
+ * checklistcenter-2026-08-29 / plain "checklist").
+ *
+ * THE FIX. Every remaining package's dedupe now imports and calls the REAL
+ * `computeHobbyIqCardId` from the compiled dist build directly -- the exact
+ * function and call shape (`authoritativeSetKey: true`, raw `parallel` text
+ * passed through, not pre-slugged) that `ingest-checklist-csv-to-catalog.cjs`
+ * itself uses -- so the id checked is guaranteed to be the id that would
+ * actually be minted, never a hand-rolled approximation.
+ *
+ * WHAT SURVIVED the corrected check (the only rungs genuinely absent
+ * anywhere, checklist-grade or derived):
  *   - 2026 Topps Series 1 "1991 Topps Autographs" (91A-/91AU-, `topps`):
- *     Blue/Green/Gold/Orange/Black/Red (185 cards x 6 = 1110 rows). Base and
- *     FoilFractor already existed (Base under `topps` itself; FoilFractor
- *     under the sibling key `topps-series-1`).
- *   - 2026 Topps Series 1 "1991 Topps Baseball" (T91-, `topps`): the 7 plain
- *     "*Foil" rungs -- Black/Blue/Gold/Green/Orange/Pink/Red Foil (100 x 7 =
- *     700 rows). Base, the Crackle Foil family, Koi Fish family, The Real
- *     One and FoilFractor already existed under `topps`.
- *   - 2026 Topps Chrome "Chrome Rookie Autographs" (RA-, `topps-chrome`):
- *     the 6 Retail Exclusive RayWave Refractors + Printing Plates (94 x 7 =
- *     658 rows). This package's OWN first-pass ladder was also incomplete
- *     (staged only 4 of 27 rungs) -- refetched and now carries the FULL
- *     verbatim sentence (Refractor colour run, SuperFractor, Printing
- *     Plates, 7 Breaker Geometric Refractors, 6 Retail RayWave Refractors).
+ *     Blue/Green/Gold/Orange/Black/Red (185 cards x 6 = 1110 rows). Of
+ *     these, 115 already exist at their exact id as DERIVED-ONLY rows
+ *     (source `ingest-auto-seed`) -- kept anyway, since a checklist row
+ *     supersedes a derived one; the manifest records the supersession.
+ *   - 2026 Topps Series 1 "1991 Topps Baseball" (T91-, `topps`): the 7
+ *     plain "*Foil" rungs -- Black/Blue/Gold/Green/Orange/Pink/Red Foil
+ *     (100 x 7 = 700 rows; 22 NAMED rungs total on the page, 23 counting
+ *     Base). 73 of the 700 exist only as derived-only rows -- kept for the
+ *     same supersession reason.
  *   - 2026 Bowman Chrome "Chrome Prospects" (BCP-151..250, `bowman-chrome`):
  *     Black Wave (100 cards) + Lazer Refractor (99 of 100 -- BCP-151
- *     already has it). 51 of 53 rungs already existed, including the full
- *     Reptilian ladder ingested the day before this pass. The 477 rows
- *     carrying a scraped "(eBay)" text artifact on 9 player names are also
- *     fixed (stripped at extraction).
+ *     already has it, checklist-grade). 0 of the 199 rows exist as ANY
+ *     kind of row -- fully clean.
  *
- * None of the four needs a NEW registered key: `topps`, `topps-chrome` and
- * `bowman-chrome` are all pre-existing fixed points. This test pins that
- * `planStagedDirectory` (offline, no Cosmos) agrees on the corrected
- * packages: every package PASSes with 0 unregistered keys and 0 collisions,
- * staged row counts match the genuinely-absent totals above, distinct
- * cardNumbers still cover every card the section names, and there are zero
- * exact-duplicate CSV lines.
+ * REMOVED: 2026 Topps Chrome "Chrome Rookie Autographs" (RA-,
+ * `topps-chrome`) -- 0/658 rows survive; every rung already exists as a
+ * checklist-grade row. No CSV or manifest for this section ships in this
+ * PR.
+ *
+ * None of the three surviving packages needs a NEW registered key: `topps`
+ * and `bowman-chrome` are pre-existing fixed points. This test pins that
+ * `planStagedDirectory` (offline, no Cosmos) agrees: every package PASSes
+ * with 0 unregistered keys and 0 collisions, staged row counts match the
+ * genuinely-absent totals above, distinct cardNumbers cover the section's
+ * roster, and there are zero exact-duplicate CSV lines.
  */
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 
@@ -79,12 +94,6 @@ const PACKAGES = [
     csv: "2026-topps-series-1-1991-topps-baseball.csv",
     expectedRosterCount: 100,
     expectedRowCount: 700, // 100 cards x 7 genuinely-absent rungs (the plain *Foil family)
-  },
-  {
-    dir: "acq-2026-09-22-2100-insider-topps-chrome-ra",
-    csv: "2026-topps-chrome-rookie-autographs.csv",
-    expectedRosterCount: 94,
-    expectedRowCount: 658, // 94 cards x 7 genuinely-absent rungs (6 RayWave + Printing Plates)
   },
   {
     dir: "acq-2026-09-22-2100-insider-bowman-chrome-bcp",
@@ -122,10 +131,15 @@ describe("2026-09-22 checklistinsider acquisition wave — planner PASS, no new 
         expect(cardNumbers.size).toBeLessThanOrEqual(pkg.expectedRosterCount);
       });
 
-      it("staged row count matches the genuinely-absent total (point-read verified)", () => {
+      it("staged row count matches the genuinely-absent total (point-read verified via the REAL computeHobbyIqCardId)", () => {
         const lines = rawLines(pkg.dir, pkg.csv);
         expect(lines.length).toBe(pkg.expectedRowCount);
       });
     });
   }
+
+  it("the RA- (Chrome Rookie Autographs) package was REMOVED -- 0/658 rows survived a point-read against the real minted id", () => {
+    const dir = join(SCRAPED_ROOT, "acq-2026-09-22-2100-insider-topps-chrome-ra");
+    expect(existsSync(dir), "the RA- package directory must not exist in this PR").toBe(false);
+  });
 });
