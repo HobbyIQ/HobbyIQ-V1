@@ -280,6 +280,27 @@ on:
           # hatch. The pilot dispatch is scope=baseball:2024
           # titles=bowmans-best.
           - repoint-sales-cardnumber-suffix
+          # OWNER RULING (Drew, 2026-09-22): "1989 Traded -> Tiffany: move
+          # only when title says Tiffany." A Topps/Topps Traded baseball
+          # sale, 1984-1991 (the years Tiffany actually shipped), moves onto
+          # its Tiffany sibling ONLY when the sale's own title matches
+          # /\bTiffany\b/i -- CF-A-TIFFANY-SALE-IS-A-TIFFANY-CARD
+          # (SAME_NUMBER_PARALLEL_SETS, productSetKeys.ts) already rules that
+          # Tiffany reprints its flagship card-for-card on the SAME numbers,
+          # so the card number carries no information and only the title
+          # can separate the two markets. Destination keys (topps-tiffany,
+          # topps-traded-tiffany) are resolved from the live normalizeSetKey,
+          # never guessed, and a move requires a STRICT checklist row at the
+          # exact destination id -- absent beats wrong, never minted from a
+          # sale. A sale (or the destination row) whose own player name
+          # contains "Tiffany" is guarded off, never read as the finish
+          # word. SCOPE is REQUIRED (`scope`, baseball:<year> cells,
+          # 1984-1991 only -- any other sport/year is refused, exit 2);
+          # `titles` is OPTIONAL here (topps and/or topps-traded; empty =
+          # both) since the lane's own scope is already a bounded, named
+          # write. The pilot dispatch is scope=baseball:1989
+          # titles=topps-traded.
+          - repoint-sales-tiffany-title-gated
           # CF-INGEST-KEEPS-STORED-IDENTITY repair (Drew, 2026-09-19, PR #2331
           # follow-up). The R66/R67/R70 ingest-time insert re-key only ever
           # fires for a FRESH sale being written today; a sale that landed in
@@ -2312,7 +2333,7 @@ jobs:
           # resolve-disagreeing-sale-twins (2026-09-20): one NDJSON record per
           # twins-disagree pair -- same fixed-path-guarded-on-script
           # convention, no new input.
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -3842,6 +3863,39 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (relocated=${R:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-cardnumber-suffix -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+
+      - name: Upload the repoint-sales-tiffany-title-gated log
+        if: ${{ always() && inputs.script == 'repoint-sales-tiffany-title-gated' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: repoint-sales-tiffany-title-gated-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/repoint-sales-tiffany-title-gated-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the tiffany title-gated repoint until the scope is clean
+        # Same discipline as the cardnumber-suffix sibling immediately above:
+        # stops at its own 110-minute budget and PRINTS its summary; idempotent
+        # by construction (a moved sale's own setKey segment no longer matches
+        # the topps/topps-traded candidate shape on a re-scan).
+        if: ${{ !cancelled() && inputs.script == 'repoint-sales-tiffany-title-gated' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: repoint-sales-tiffany-title-gated
+          preamble: |
+            R=$(grep -aoE "(MOVED|WOULD MOVE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "moved=${R:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (moved=${R:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${R:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-tiffany-title-gated -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
       # This lane's whole point is the stored insert sales the R66/R67/R70
       # ingest-time re-key can never reach (CF-INGEST-KEEPS-STORED-IDENTITY),
