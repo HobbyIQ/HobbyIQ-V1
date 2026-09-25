@@ -1,0 +1,24 @@
+{
+  "_README": "Rulings that DISAGREE with what every scraped source spells, applied LAST by the builder -- after the overlay, the insert-set split and the self-naming filter, all of which are entitled to run on the source's own words first. See loadOverrides()/applyOverride() in build-parallel-vocabulary.cjs for the mechanism and why the additive overlay (checklist-parallel-overlays.json) cannot do this: its merge rule lets the SOURCE win once one exists, which is backwards for a ruling that overrides an EXISTING source spelling.\n\nEach entry is scoped to an exact (sport, year, setKey). `drop` removes names case-insensitively even though a source stated them; `add` is the ruling's own spelling, appended only if not already present after the drop. Re-applying is idempotent.",
+  "schema": "hobbyiq/checklist-parallel-names-overrides/v1",
+  "overrides": [
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "topps-series-1",
+      "ruling": "Drew, 2026-09-25 -- the unnumbered non-auto Super Box exclusive rung is spelled \"Silver Crackle Foil\", matching the spelling PR #2427 folds the 2026 catalog onto. A corpus that adopts sales onto \"Foilboard\" (or a boilerplate-suffixed variant) would fight that fold in the 03:00Z nightly.",
+      "rulingDate": "2026-09-25",
+      "reason": "C:/tmp/ci/csv2/2026-topps-series-1-baseball.csv (not yet committed to the repo) spells this rung \"Silver Crackle Foil (Super Box exclusive)\" on every base row -- the cleaner does not strip the parenthetical (a channel/box exclusivity note is normally a REAL distinction) or the word \"exclusive\", so the source spelling would otherwise win. The 2025 sibling products spell the analogous rung \"Silver Crackle Foilboard\" (Series 1/2) or \"Silver Crackle Foil\" (Update Series) -- see PR body for the full breakdown; only 2026 is ruled here.",
+      "drop": [
+        "Silver Crackle Foil (Super Box exclusive)",
+        "Silver Crackle Foilboard",
+        "Silver Crackle Foilboard (Super Box exclusive)",
+        "Silver Crackleboard Foil Board",
+        "Crackleboard Foil"
+      ],
+      "add": [
+        "Silver Crackle Foil"
+      ]
+    }
+  ]
+}

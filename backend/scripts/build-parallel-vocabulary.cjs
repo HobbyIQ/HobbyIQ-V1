@@ -146,6 +146,72 @@ function loadOverlay(file) {
   return { byProduct, count, entries: (raw.overlays ?? []).length };
 }
 
+/**
+ * THE OVERRIDE FILE: A RULING THAT DISAGREES WITH WHAT EVERY SOURCE SAYS.
+ *
+ * CF-A-RULING-OUTRANKS-A-SCRAPE (2026-09-25, Drew's Silver Crackle ruling).
+ *
+ * The overlay above (`loadOverlay`) can only ADD a name no source carries,
+ * and its own merge rule makes the SOURCE win once one finally publishes the
+ * rung -- correct for "this ruling fills a hole", wrong for "this ruling
+ * disagrees with what every source spells". 2025/2026 Topps Series 1/2 CSVs
+ * (both C:/tmp/ci/csv2 and the committed 09-20 scrapes) spell the Super-Box-
+ * exclusive base rung "Silver Crackle Foil**board**"; the 2026 CSV glues an
+ * exclusivity parenthetical on top ("... (Super Box exclusive)"); Drew ruled
+ * (2026-09-25) that the card is "Silver Crackle Foil", full stop, to match
+ * the spelling PR #2427 folds the 2026 catalog onto -- and every one of
+ * those source spellings would otherwise win, because the source always
+ * wins over the additive overlay.
+ *
+ * So a SEPARATE, small, committed file carries entries the builder applies
+ * LAST, after everything else (the overlay, the split, the self-naming
+ * filter) -- a ruling is the final word, not a fallback for a gap. Each
+ * entry names an exact (sport, year, setKey), a `drop` list (exact names,
+ * case-insensitive, to remove even though a source stated them) and an `add`
+ * list (the name the ruling says is correct), plus its own `reason` and
+ * `rulingDate` so the file says why. This is NOT a scrape and never
+ * pretends to be one -- no `spellings`/`seen` provenance is invented; `add`
+ * entries carry only what the ruling itself asserts.
+ *
+ * SCOPED, NOT GLOBAL. Only the (sport, year, setKey) rows named apply --
+ * dropping "Silver Crackle Foilboard" here never touches a DIFFERENT
+ * product that happens to share the string, because the override is keyed
+ * exactly like every other product bucket in this file.
+ */
+function loadOverrides(file) {
+  if (!file || !fs.existsSync(file)) return { byProduct: new Map(), entries: 0 };
+  const raw = JSON.parse(fs.readFileSync(file, "utf8"));
+  const byProduct = new Map();
+  for (const e of raw.overrides ?? []) {
+    const pk = `${e.sport}|${e.year}|${e.setKey}`;
+    byProduct.set(pk, e);
+  }
+  return { byProduct, entries: (raw.overrides ?? []).length };
+}
+
+/**
+ * Apply one product's override to its finished `parallels[]` list. Drops are
+ * matched case-insensitively on the exact name (never a substring, same
+ * discipline as the self-naming filter above); adds are appended only when
+ * not already present post-drop, so re-running is idempotent.
+ */
+function applyOverride(parallels, override) {
+  if (!override) return parallels;
+  const dropKeys = new Set((override.drop ?? []).map((n) => key(n)));
+  const kept = parallels.filter((e) => !dropKeys.has(key(e.name)));
+  const keptKeys = new Set(kept.map((e) => key(e.name)));
+  for (const name of override.add ?? []) {
+    const k = key(name);
+    if (keptKeys.has(k)) continue;
+    keptKeys.add(k);
+    kept.push({
+      name, printRun: null, odds: null, seen: 1, spellings: [name],
+      override: { ruling: override.ruling, rulingDate: override.rulingDate, reason: override.reason },
+    });
+  }
+  return kept;
+}
+
 /** Root comparison key: case and punctuation are spelling, not identity. */
 const normForRoot = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
@@ -350,6 +416,14 @@ const arg = (n, d) => {
 const DIRS = arg("dirs", "C:/tmp/beckett-bulk,C:/tmp/ci/csv2").split(",").map((s) => s.trim()).filter(Boolean);
 const OUT = arg("out", "backend/data/checklist-parallel-names.json");
 const OVERLAY = arg("overlay", path.join(__dirname, "..", "data", "checklist-parallel-overlays.json"));
+const OVERRIDES = arg("overrides", path.join(__dirname, "..", "data", "checklist-parallel-names.overrides.json"));
+
+/** A directory outside this checked-out repo -- not reachable by a fresh
+ * clone, so a product whose vocabulary comes ONLY from these is invisible
+ * to anyone who has not also populated them locally. Tracked per product
+ * (see `sourceDirs` on each product below) so the file itself says which
+ * rungs a plain `git clone` cannot reproduce. */
+const isRepoDir = (d) => path.resolve(d).toLowerCase().includes(path.resolve(__dirname, "..", "data", "checklists").toLowerCase());
 
 const f = (n) => Number(n).toLocaleString();
 
@@ -463,6 +537,10 @@ function main() {
   // category exists and has siblings -- so this is the second, unfiltered
   // copy they read.
   const categoryRowsByProduct = new Map();   // pk -> Array<{category, parallel}>
+  // WHICH DIRECTORIES CONTRIBUTED EACH PRODUCT, split repo vs non-repo -- see
+  // `isRepoDir`'s header. A product whose set here is entirely non-repo dirs
+  // has a vocabulary nobody outside this machine can currently reproduce.
+  const sourceDirsByProduct = new Map();     // pk -> Set(dir)
   let files = 0, rows = 0, cleaned = 0, runsRecovered = 0, dropped = 0;
 
   for (const dir of DIRS) {
@@ -477,6 +555,8 @@ function main() {
       const bucket = vocab.get(pk);
       if (!categoryRowsByProduct.has(pk)) categoryRowsByProduct.set(pk, []);
       const categoryRows = categoryRowsByProduct.get(pk);
+      if (!sourceDirsByProduct.has(pk)) sourceDirsByProduct.set(pk, new Set());
+      sourceDirsByProduct.get(pk).add(dir);
 
       const lines = fs.readFileSync(p, "utf8").split("\n");
       for (let i = 1; i < lines.length; i++) {
@@ -686,6 +766,12 @@ function main() {
     return { parallels, sets: merged };
   }
 
+  // THE OVERRIDE IS LOADED HERE BUT APPLIED LAST (at out[pk] below) -- a
+  // ruling outranks the split, the overlay and the self-naming filter, all
+  // of which are entitled to run on the source's own words first.
+  const overrides = loadOverrides(OVERRIDES);
+  let overridesDropped = 0, overridesAdded = 0;
+
   // THE OVERLAY IS APPLIED BEFORE THE SPLIT, so an overlay rung is judged by
   // exactly the same rules as a scraped one -- including the insert-set test.
   const overlay = loadOverlay(OVERLAY);
@@ -863,21 +949,38 @@ function main() {
       ? split.parallels.filter((e) => !selfNamed.selfNames.has(e.name.toLowerCase()))
       : split.parallels;
 
+    const namedParallels = parallelsWithoutSelfNames
+      .sort((a, b) => b.seen - a.seen || a.name.localeCompare(b.name))
+      .map((e) => {
+        if (e.printRun !== null) withRun++;
+        return {
+          name: e.name, printRun: e.printRun, odds: e.odds ?? null,
+          seen: e.seen, spellings: e.spellings,
+          // Provenance rides on the row, so the file itself says which names
+          // a ruling admitted and which a scrape found.
+          ...(e.overlay ? { overlay: e.overlay } : {}),
+        };
+      });
+
+    // THE OVERRIDE IS THE LAST WORD -- see loadOverrides's header. Applied
+    // to the fully-assembled, sorted `parallels[]`, so a drop removes
+    // exactly what a human would read in the finished file and an add
+    // cannot be re-split into an insert set or re-caught by the self-naming
+    // filter (both already ran).
+    const override = overrides.byProduct.get(pk);
+    const finalParallels = applyOverride(namedParallels, override);
+    if (override) {
+      const droppedHere = (override.drop ?? []).filter((n) => namedParallels.some((e) => key(e.name) === key(n))).length;
+      const addedHere = finalParallels.filter((e) => e.override).length;
+      overridesDropped += droppedHere;
+      overridesAdded += addedHere;
+    }
+    for (const e of finalParallels) names++;
+
+    const dirsForProduct = [...(sourceDirsByProduct.get(pk) ?? [])];
     out[pk] = {
       sport, year: Number(year), setKey,
-      parallels: parallelsWithoutSelfNames
-        .sort((a, b) => b.seen - a.seen || a.name.localeCompare(b.name))
-        .map((e) => {
-          names++;
-          if (e.printRun !== null) withRun++;
-          return {
-            name: e.name, printRun: e.printRun, odds: e.odds ?? null,
-            seen: e.seen, spellings: e.spellings,
-            // Provenance rides on the row, so the file itself says which names
-            // a ruling admitted and which a scrape found.
-            ...(e.overlay ? { overlay: e.overlay } : {}),
-          };
-        }),
+      parallels: finalParallels,
       ...(mergedInsertSets.length ? { insertSets: mergedInsertSets } : {}),
       // The split refused itself for this product (see splitInsertSets): its
       // source labels the base ladder as inserts, so the names stay flat and
@@ -887,8 +990,26 @@ function main() {
       // today. Populated only by a future source without it, so a consumer can
       // see a SUSPICION rather than a silent flattening.
       ...(/* placeholder for a source without category */ false ? { suspectInsertRoots: [] } : {}),
+      // PROVENANCE (2026-09-25): which directories this product's vocabulary
+      // came from, and whether any of them are outside this repo -- see
+      // `isRepoDir`. A product with `reproducibleFromRepo: false` cannot be
+      // regenerated by a plain `git clone`; its rungs depend on a local
+      // scratch directory this file's history has always read from but never
+      // committed.
+      sourceDirs: dirsForProduct.sort(),
+      reproducibleFromRepo: dirsForProduct.every(isRepoDir),
     };
   }
+
+  // REPO-VS-NON-REPO PROVENANCE, CORPUS-WIDE. Counted here rather than left
+  // for a reader to re-derive from every product's `sourceDirs` -- see
+  // `isRepoDir`'s header. A product is "repo-only" when every directory it
+  // drew from is a plain `git clone` away; otherwise its vocabulary depends
+  // on a local scratch directory nothing in this repo reproduces.
+  const repoOnlyProducts = Object.values(out).filter((p) => p.reproducibleFromRepo).length;
+  const nonRepoProducts = products - repoOnlyProducts;
+  let namesFromNonRepoOnly = 0;
+  for (const p of Object.values(out)) if (!p.reproducibleFromRepo) namesFromNonRepoOnly += p.parallels.length;
 
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify({
@@ -896,6 +1017,11 @@ function main() {
     sources: DIRS,
     productCount: products,
     parallelNameCount: names,
+    // See the "REPO-VS-NON-REPO PROVENANCE" comment above main()'s end --
+    // this is the corpus-wide rollup; each product's own `sourceDirs` /
+    // `reproducibleFromRepo` is the per-product detail.
+    productsNotReproducibleFromRepo: nonRepoProducts,
+    namesFromProductsNotReproducibleFromRepo: namesFromNonRepoOnly,
     out: undefined,
   }, null, 1).replace(/\n \"out\": undefined\n/, "\n") .slice(0, -2) + ",\n \"products\": " + JSON.stringify(out, null, 1) + "\n}\n");
 
@@ -905,6 +1031,8 @@ function main() {
   console.log(`distinct parallel names  ${f(names)}`);
   console.log(`insert sets              ${f(insertSetCount)}  (${f(insertNameCount)} names moved out of parallels)`);
   console.log(`overlay                  ${f(overlayAdded)} added, ${f(overlayAlreadyPresent)} already in a source (source wins)`);
+  console.log(`overrides                ${f(overridesDropped)} dropped, ${f(overridesAdded)} added (ruling outranks the source)`);
+  console.log(`non-repo provenance      ${f(nonRepoProducts)} of ${f(products)} products (${f(namesFromNonRepoOnly)} names) depend on a dir outside this repo`);
   console.log(`  carrying a print run   ${f(withRun)}`);
   console.log(`names cleaned of source noise ${f(cleaned)}`);
   console.log(`  print runs recovered   ${f(runsRecovered)}`);

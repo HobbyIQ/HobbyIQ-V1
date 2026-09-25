@@ -220,3 +220,37 @@ describe("the banner counter is report-only", () => {
     expect(spellingAdoptedCount()).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// SILVER CRACKLE — 2026 TOPPS SERIES 1 (Drew's ruling, 2026-09-25)
+//
+// The 2026 source (C:/tmp/ci/csv2/2026-topps-series-1-baseball.csv, not
+// committed to the repo) spells this rung "Silver Crackle Foil (Super Box
+// exclusive)" on every base row -- the cleaner leaves the parenthetical and
+// the word "exclusive" alone (an exclusivity note is normally a REAL
+// distinction), so the source spelling would otherwise win over the ruling.
+// Drew ruled the card is "Silver Crackle Foil", to match the spelling PR
+// #2427 folds the 2026 catalog onto, via
+// backend/data/checklist-parallel-names.overrides.json (drop the source
+// spelling and any Foilboard-shaped variant, add the ruled name) -- see
+// build-parallel-vocabulary.cjs's loadOverrides()/applyOverride() for why
+// the overlay mechanism (checklist-parallel-overlays.json) cannot do this:
+// its merge rule lets the SOURCE win once one exists, backwards for a
+// ruling that overrides an EXISTING source spelling.
+//
+// 2025 Topps (Series 1/2 spell it "Silver Crackle Foilboard"; Update Series
+// spells it "Silver Crackle Foil") is DELIBERATELY UNCHANGED -- no ruling
+// yet for that year, and adopting a spelling there would be exactly the kind
+// of guess this module refuses to make.
+// ---------------------------------------------------------------------------
+describe("Silver Crackle Foil — 2026 Topps Series 1 override outranks the source", () => {
+  it("adopts the ruled spelling for 2026 topps-series-1, not the source's Foilboard/parenthetical variant", () => {
+    const got = checklistSpellingFor("Silver Crackle", { sport: "baseball", year: 2026, setKey: "topps-series-1" });
+    expect(got).toBe("Silver Crackle Foil");
+  });
+
+  it("leaves 2025 topps (Series 1/2, merged) exactly as its own checklist source spells it", () => {
+    const got = checklistSpellingFor("Silver Crackle", { sport: "baseball", year: 2025, setKey: "topps" });
+    expect(got).toBe("Silver Crackle Foilboard");
+  });
+});
