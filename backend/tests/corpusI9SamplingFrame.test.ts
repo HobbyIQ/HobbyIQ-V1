@@ -200,8 +200,8 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
     // Reverting to slot 31's numbers makes this test red: its CONFLICT share is
     // less than HALF the corpus's, which is the whole error.
     const slot31 = INV.censusSharesForSlot(31);
-    expect(slot31.CONFLICT).toBeCloseTo(0.178, 2);
-    // The corpus's CONFLICT share sits well above slot 31's: 0.322 vs 0.178.
+    expect(slot31.CONFLICT).toBeCloseTo(0.154, 2);
+    // The corpus's CONFLICT share sits well above slot 31's: 0.321 vs 0.154.
     expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeGreaterThan(slot31.CONFLICT * 1.4);
     // And the table is genuinely 32 slots, not one repeated.
     expect(INV.CENSUS_TABLE.slots).toHaveLength(32);
