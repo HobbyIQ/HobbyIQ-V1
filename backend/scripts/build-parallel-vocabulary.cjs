@@ -178,11 +178,41 @@ function loadOverlay(file) {
  * product that happens to share the string, because the override is keyed
  * exactly like every other product bucket in this file.
  */
+/**
+ * AN `add` WITH NO RULING IS A SYNTHETIC PARALLEL BY ANOTHER NAME.
+ *
+ * `feedback_no_synthetic_parallels_only_actuals` rules out inventing a rung
+ * with no provenance; the override file's whole justification (see
+ * `loadOverrides`'s header) is that a NAMED ruling outranks a source, not
+ * that this file is a second place to type a name. So any entry that adds a
+ * name must carry non-empty `ruling`, `rulingDate` AND `reason` -- the same
+ * three fields `applyOverride` already rides onto the emitted row's
+ * `override` provenance. An entry that only drops (no `add`) is exempt: it
+ * is refusing a bad spelling, not asserting a new one, though it is still
+ * good practice to explain the drop via `reason`.
+ *
+ * FAILS THE BUILD, not a warning -- an unreviewed `add` silently shipping a
+ * spelling is exactly the defect class this file exists to prevent from the
+ * OTHER direction (a source outranking a ruling); a bare string with no
+ * `ruling` is unreviewed by definition.
+ */
+function assertOverrideEntry(e) {
+  if (!(e.add ?? []).length) return;
+  const missing = ["ruling", "rulingDate", "reason"].filter((f) => !String(e[f] ?? "").trim());
+  if (missing.length) {
+    throw new Error(
+      `checklist-parallel-names.overrides.json: ${e.sport}|${e.year}|${e.setKey} adds a name but is missing ${missing.join(", ")} -- ` +
+      `every 'add' must carry a non-empty ruling, rulingDate and reason (see loadOverrides()'s header).`,
+    );
+  }
+}
+
 function loadOverrides(file) {
   if (!file || !fs.existsSync(file)) return { byProduct: new Map(), entries: 0 };
   const raw = JSON.parse(fs.readFileSync(file, "utf8"));
   const byProduct = new Map();
   for (const e of raw.overrides ?? []) {
+    assertOverrideEntry(e);
     const pk = `${e.sport}|${e.year}|${e.setKey}`;
     byProduct.set(pk, e);
   }
@@ -1040,6 +1070,6 @@ function main() {
   console.log(`\nwritten to ${OUT}`);
 }
 
-module.exports = { cleanName, splitCsv, bareSelfNamedInsertRoots, foldedPhrase };
+module.exports = { cleanName, splitCsv, bareSelfNamedInsertRoots, foldedPhrase, loadOverrides, applyOverride, assertOverrideEntry };
 
 if (require.main === module) main();

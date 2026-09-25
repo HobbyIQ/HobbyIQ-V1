@@ -1,7 +1,27 @@
 {
-  "_README": "Rulings that DISAGREE with what every scraped source spells, applied LAST by the builder -- after the overlay, the insert-set split and the self-naming filter, all of which are entitled to run on the source's own words first. See loadOverrides()/applyOverride() in build-parallel-vocabulary.cjs for the mechanism and why the additive overlay (checklist-parallel-overlays.json) cannot do this: its merge rule lets the SOURCE win once one exists, which is backwards for a ruling that overrides an EXISTING source spelling.\n\nEach entry is scoped to an exact (sport, year, setKey). `drop` removes names case-insensitively even though a source stated them; `add` is the ruling's own spelling, appended only if not already present after the drop. Re-applying is idempotent.",
+  "_README": "Rulings that DISAGREE with what every scraped source spells, applied LAST by the builder -- after the overlay, the insert-set split and the self-naming filter, all of which are entitled to run on the source's own words first. See loadOverrides()/applyOverride() in build-parallel-vocabulary.cjs for the mechanism and why the additive overlay (checklist-parallel-overlays.json) cannot do this: its merge rule lets the SOURCE win once one exists, which is backwards for a ruling that overrides an EXISTING source spelling.\n\nEach entry is scoped to an exact (sport, year, setKey). `drop` removes names case-insensitively even though a source stated them; `add` is the ruling's own spelling, appended only if not already present after the drop. Re-applying is idempotent. Every entry that adds a name MUST carry non-empty `ruling`, `rulingDate` and `reason` -- loadOverrides() fails the build otherwise (assertOverrideEntry).",
   "schema": "hobbyiq/checklist-parallel-names-overrides/v1",
   "overrides": [
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "topps",
+      "ruling": "Drew, 2026-09-25 -- the unnumbered non-auto Super Box exclusive rung is spelled \"Silver Crackle Foil\", matching the spelling PR #2427 folds the 2026 catalog onto. A corpus that adopts sales onto \"Foilboard\" (or a boilerplate-suffixed/parenthetical variant) would fight that fold in the 03:00Z nightly.",
+      "rulingDate": "2026-09-25",
+      "reason": "Extended to the whole 2026 Topps flagship family (topps, topps-series-1, topps-series-2, topps-update) on the 09-25 re-review, so a future scrape of any of these setKeys cannot silently reintroduce the Foilboard/parenthetical collision this ruling closes. Only baseball|2026|topps-series-1 has a scraped source today (C:/tmp/ci/csv2/2026-topps-series-1-baseball.csv, not committed to the repo, spelling \"Silver Crackle Foil (Super Box exclusive)\" on every base row); the other three setKeys carry no crackle rung yet -- this entry is a standing guard, not a correction of an existing row.",
+      "drop": [
+        "Silver Crackle Foil (Super Box exclusive)",
+        "Silver Crackle Foilboard",
+        "Silver Crackle Foilboard (Super Box exclusive)",
+        "Silver Crackleboard Foil Board",
+        "Silver Crackle Foil (Super Box Exclusive)",
+        "Crackleboard Foil Board",
+        "Crackleboard Foil"
+      ],
+      "add": [
+        "Silver Crackle Foil"
+      ]
+    },
     {
       "sport": "baseball",
       "year": 2026,
@@ -14,6 +34,48 @@
         "Silver Crackle Foilboard",
         "Silver Crackle Foilboard (Super Box exclusive)",
         "Silver Crackleboard Foil Board",
+        "Silver Crackle Foil (Super Box Exclusive)",
+        "Crackleboard Foil Board",
+        "Crackleboard Foil"
+      ],
+      "add": [
+        "Silver Crackle Foil"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "topps-series-2",
+      "ruling": "Drew, 2026-09-25 -- the unnumbered non-auto Super Box exclusive rung is spelled \"Silver Crackle Foil\", matching the spelling PR #2427 folds the 2026 catalog onto. A corpus that adopts sales onto \"Foilboard\" (or a boilerplate-suffixed/parenthetical variant) would fight that fold in the 03:00Z nightly.",
+      "rulingDate": "2026-09-25",
+      "reason": "Extended to the whole 2026 Topps flagship family on the 09-25 re-review as a standing guard -- no scraped source carries this setKey yet, so this is pre-emptive: if 2026 Topps Series 2 is scraped later with the 2025 Series 1/2 CSVs' 'Foilboard' spelling (or a parenthetical-suffixed variant), the ruling still wins.",
+      "drop": [
+        "Silver Crackle Foil (Super Box exclusive)",
+        "Silver Crackle Foilboard",
+        "Silver Crackle Foilboard (Super Box exclusive)",
+        "Silver Crackleboard Foil Board",
+        "Silver Crackle Foil (Super Box Exclusive)",
+        "Crackleboard Foil Board",
+        "Crackleboard Foil"
+      ],
+      "add": [
+        "Silver Crackle Foil"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "topps-update-series",
+      "ruling": "Drew, 2026-09-25 -- the unnumbered non-auto Super Box exclusive rung is spelled \"Silver Crackle Foil\", matching the spelling PR #2427 folds the 2026 catalog onto. A corpus that adopts sales onto \"Foilboard\" (or a boilerplate-suffixed/parenthetical variant) would fight that fold in the 03:00Z nightly.",
+      "rulingDate": "2026-09-25",
+      "reason": "Extended to the whole 2026 Topps flagship family on the 09-25 re-review as a standing guard -- no scraped source carries this setKey yet. The 2025 Update Series CSVs already spell the analogous rung 'Silver Crackle Foil' (no 'board'), so this guard is consistent with that source's own pattern, unlike Series 1/2.",
+      "drop": [
+        "Silver Crackle Foil (Super Box exclusive)",
+        "Silver Crackle Foilboard",
+        "Silver Crackle Foilboard (Super Box exclusive)",
+        "Silver Crackleboard Foil Board",
+        "Silver Crackle Foil (Super Box Exclusive)",
+        "Crackleboard Foil Board",
         "Crackleboard Foil"
       ],
       "add": [
