@@ -740,6 +740,49 @@ function stopAccounting({ stopReason, stats, expected, startedAt, carried = 0, p
   return lines.join("\n");
 }
 
+/**
+ * THE WHOLE-SHARD CHECK, SHARED WITH stopAccounting SO THE TWO CANNOT DRIFT
+ * (2026-09-25, census slots 9 and 10 run-observed 09-22).
+ *
+ * `stopAccounting`'s own "REACHED ITS WHOLE SHARD" line (above) and this
+ * function compute the identical `reach >= expected` test from the identical
+ * fields -- this is that test, factored out once, so nothing can restate it
+ * slightly differently and drift apart.
+ *
+ * A census link's budget clock can trip AFTER this link's cumulative reach
+ * already covers the whole shard measured at capture -- the shard table's
+ * count and the live count are not the same number, and a link that keeps
+ * classifying past 100% before its next per-page budget check is exactly the
+ * run this fixes. That is not an incomplete sweep; it is a budget clock that
+ * outlived the work. Relaunching it dispatches a hop that reads zero fresh
+ * candidates and stops at this same line again -- five hops of ~2h each,
+ * shard coverage already 138-143%, converging on nothing (run-observed on
+ * census slots 9 and 10, 09-22, five hops before this fix).
+ *
+ * Returns the ORIGINAL `stopReason` unchanged for every other case --
+ * including a genuinely incomplete shard (`reach < expected`), which MUST
+ * still carry the `stopped at the ... budget` phrase so relaunch-on-marker's
+ * outcome (a) keeps re-dispatching it. Only the whole-shard-at-budget-stop
+ * case is rewritten, and the replacement is deliberately budget-word-free:
+ * relaunch-on-marker's outcome test is `grep -aqE "stopped at the .*budget"`,
+ * UNANCHORED, with no exit-code check at all (see the composite action's own
+ * outcome (a) branch) -- so ANY surviving match of that phrase anywhere in
+ * the line still re-dispatches, no matter how the rest of the sentence reads.
+ * The precedent for overriding `stopReason` this way, rather than editing the
+ * protected relaunch-on-marker action or adding a workflow_dispatch input, is
+ * this file's own cursor-save-failure block (`CURSOR SAVE FAILED -- this pass
+ * halted its checkpoint, not its budget clock`) and PR #2400's counters-
+ * mismatch guard for resolve-disagreeing-sale-twins.
+ */
+function censusStopReasonAfterWholeShardCheck({ stopReason, stats, expected }) {
+  if (!stopReason) return stopReason;
+  const reach = stats.seen + stats.prefiltered + stats.otherSlot;
+  const wholeShardReached = expected > 0 && reach >= expected;
+  if (!wholeShardReached) return stopReason;
+  if (!/stopped at the .*budget/.test(stopReason)) return stopReason;
+  return "SHARD COMPLETE -- no relaunch (this slot reached its whole shard; the budget clock, not the sweep, is what stopped it)";
+}
+
 // ── A REFUSAL THE RUNNER'S LOG CAN SEE ───────────────────────────────────────
 //
 // CF-AN-EMPTY-LOG-IS-NOT-A-BUDGET-KILL (2026-09-07). The runner pipes this
@@ -4724,6 +4767,10 @@ async function main() {
   // ── census stops here. There is no write path in this mode. ───────────────
   if (MODE === "census") {
     console.log(`\nREAD ONLY -- the census writes nothing to the pool.`);
+    // A WHOLE-SHARD STOP MUST NOT RE-DISPATCH (2026-09-25, run-observed on
+    // census slots 9 and 10, 09-22 -- see censusStopReasonAfterWholeShardCheck's
+    // header comment for the full incident and why the override lives here).
+    stopReason = censusStopReasonAfterWholeShardCheck({ stopReason, stats, expected });
     if (stopReason) console.log(`\n${stopAccounting({ stopReason, stats, expected, startedAt: started, carried: carriedInRows, prefetch: prefetchSummary() })}`);
     return;
   }
@@ -5690,6 +5737,12 @@ module.exports = {
   // its exit-code contract, exported so both are pinned on the SHIPPED
   // functions/constants rather than a test's re-implementation of them.
   getOrCreateControlContainer, CENSUS_CURSOR_SAVE_FAILED_EXIT_CODE,
+  // 2026-09-25 (census slots 9/10, five-hop non-converging relaunch, 09-22):
+  // the whole-shard-at-budget-stop check that keeps a fully-swept census slot
+  // from re-dispatching, exported so a test pins the SHIPPED arithmetic
+  // rather than a re-implementation of `reach >= expected` that could drift
+  // from stopAccounting's own copy of the same test.
+  censusStopReasonAfterWholeShardCheck,
   // 2026-09-20 (the census self-relaunch backing-loss fix): the backing-
   // completeness assertion's exit code, exported so a test pins the SHIPPED
   // constant rather than a hardcoded 8 that could silently drift from it.
