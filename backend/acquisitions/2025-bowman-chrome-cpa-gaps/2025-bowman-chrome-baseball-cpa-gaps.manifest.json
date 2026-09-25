@@ -1,0 +1,18 @@
+{
+  "scrapedAt": "2026-09-25T22:00:00.000Z",
+  "sourceUrl": "https://checklistinsider.com/2025-bowman-chrome-baseball",
+  "fetchMethod": "curl -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)\" -L, HTTP 200",
+  "source": "checklistinsider-2026-09-25",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Bowman Chrome",
+  "setKey": "bowman-chrome",
+  "sectionName": "Chrome Prospect Autographs",
+  "cardNumberPrefix": "CPA-",
+  "rowCount": 196,
+  "verbatimParallelsSentenceExcerpt": "HTA Choice - /150 - 1:6 packs (Breaker exclusive); ... Peanuts Refractor - /5 (Variety Pack exclusive); ... Sunflower Seeds Refractor - /5 (Variety Pack exclusive)",
+  "genuinelyAbsentRungs": ["HTA Choice", "Sunflower Seeds Refractor", "Peanuts Refractor"],
+  "printRuns": { "HTA Choice": 150, "Sunflower Seeds Refractor": 5, "Peanuts Refractor": 5 },
+  "exclusionNotes": "22 of 108 CPA- codes excluded from the Sunflower Seeds Refractor rows because a checklist-grade row already exists under sibling setKey bowman-chrome-draft (source checklistcenter-2026-08-29) at the identical (year, cardNumber, parallel, isAuto, printRun) tuple. Reptilian Red Refractor was investigated and found fully present (108/108, checklist-grade) at its real /5 print run -- not staged. BCP- Prospects base (100 cards, BCP-153..252) already 100/100 checklist-grade present -- not staged.",
+  "readyToIngest": true
+}
