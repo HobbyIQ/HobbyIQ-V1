@@ -109,6 +109,14 @@ const INSERT_SET = require(path.join(__dirname, "lib", "insert-set-key.cjs"));
 // CF-A-SIBLING-KEY-IS-STILL-THE-SAME-RUNG (Drew 2026-09-25): the rung-level
 // sibling check the planner cannot run itself, since it has no Cosmos access.
 const SIBLING_RUNG_TWIN = require(path.join(__dirname, "lib", "sibling-rung-twin.cjs"));
+// CF-A-BURST-IS-NOT-A-BATCH (review finding, 2026-09-25 PR #2422). The
+// per-row loop below fans out CONCURRENCY (default 48) rows at once; without
+// its own cap, the sibling-twin query -- a SEPARATE cross-partition query,
+// unlike the single-partition exact-id point read -- would ride along on all
+// 48 at once. Capped at 6, independent of CONCURRENCY, and scoped to wrap
+// ONLY that one query call site.
+const TWIN_QUERY_LIMIT = Math.max(1, Number(process.env.TWIN_QUERY_LIMIT || 6));
+const twinQuerySemaphore = SIBLING_RUNG_TWIN.createSemaphore(TWIN_QUERY_LIMIT);
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
 const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "ingest-checklist-csv-to-catalog" });
@@ -519,6 +527,15 @@ async function main() {
   // produced the lava/draft-sapphire/RA- duplicate pools.
   let rungTwinUnderSiblingKey = 0;
   const rungTwinExamples = [];
+  // CF-WAIVED-IS-NOT-INVISIBLE (review finding, 2026-09-25 PR #2422). When a
+  // manifest's `allowSiblingRungTwins` suppresses the skip above, the row is
+  // WRITTEN (already inside `written`) -- but a twin that would otherwise
+  // have been refused must still be VISIBLE, or the waiver is a silent
+  // bypass rather than a stated, reviewable decision. Purely informational:
+  // never added to the reconciliation, because these rows are already
+  // counted once, inside `written`.
+  let rungTwinsWaived = 0;
+  let waivedReason = null;
   let stopReason = null;
 
   // CF-THE-CLASH-IS-A-FACT-ABOUT-THE-PRODUCT-NOT-THE-FILE (2026-09-13).
@@ -841,31 +858,42 @@ async function main() {
             alreadyPresentChecklist++;
             return;
           }
-          // (b) RUNG-LEVEL SIBLING CHECK. No exact-id match (or the manifest
-          // allows writing over one), but the SAME rung -- same sport+year+
-          // cardNumber, same parallel slug + isAuto + printRun -- already
-          // exists at checklist authority under a DIFFERENT setKey. This is
-          // the shape that produced the lava/draft-sapphire/RA- duplicate
-          // pools: `bowman` vs `bowman-chrome`, `topps` vs `topps-series-1`.
-          // Bypassable ONLY by the manifest's explicit, reasoned field --
-          // never an env flag -- checked here rather than skipped above so a
-          // manifest that allows twins still gets the exact-id checklist skip
-          // waived too (both guards answer the same policy question).
-          if (!product.allowSiblingRungTwins) {
-            const twins = await SIBLING_RUNG_TWIN.findSiblingRungTwins(catalogContainer(), r, {
-              sport: product.sport, year: product.year, setKey: rowSetKey,
-              parallelSlugOf: (p) => slugify(p || "Base"),
-              catalogAuthorityOf,
-            });
-            if (twins.length) {
+          // (b) RUNG-LEVEL SIBLING CHECK. Same sport+year+cardNumber, same
+          // parallel slug + isAuto + printRun, same player (namesAgree) --
+          // already exists at checklist authority under a DIFFERENT setKey.
+          // This is the shape that produced the lava/draft-sapphire/RA-
+          // duplicate pools: `bowman` vs `bowman-chrome`, `topps` vs
+          // `topps-series-1`.
+          //
+          // The query runs REGARDLESS of the manifest waiver -- CF-WAIVED-
+          // IS-NOT-INVISIBLE, below -- so a waived twin is still counted and
+          // named, never silently absent from the banner. Only the SKIP
+          // itself is conditional on the waiver.
+          //
+          // CF-A-BURST-IS-NOT-A-BATCH: capped at TWIN_QUERY_LIMIT concurrent
+          // queries, independent of this loop's own CONCURRENCY fan-out.
+          const twins = await twinQuerySemaphore.run(() => SIBLING_RUNG_TWIN.findSiblingRungTwins(catalogContainer(), r, {
+            sport: product.sport, year: product.year, setKey: rowSetKey,
+            parallelSlugOf: (p) => slugify(p || "Base"),
+            catalogAuthorityOf,
+          }));
+          if (twins.length) {
+            const t = twins[0];
+            const example = `${String(r.cardNumber).toUpperCase()}|${r.parallel || "base"} -> sibling key "${t.setKey}" `
+              + `(${t.playerName || "?"}, source=${t.source})`;
+            if (product.allowSiblingRungTwins) {
+              // CF-WAIVED-IS-NOT-INVISIBLE (review finding, 2026-09-25 PR
+              // #2422). The manifest's stated reason waives the skip -- the
+              // row is written below, already counted once inside `written`
+              // -- but the waiver itself must be visible in the banner, with
+              // a count and the reason, or it is a silent bypass rather than
+              // a reviewable decision.
+              rungTwinsWaived++;
+              waivedReason = product.allowSiblingRungTwins.reason;
+              if (rungTwinExamples.length < 20) rungTwinExamples.push(`WAIVED: ${example}`);
+            } else {
               rungTwinUnderSiblingKey++;
-              if (rungTwinExamples.length < 20) {
-                const t = twins[0];
-                rungTwinExamples.push(
-                  `${String(r.cardNumber).toUpperCase()}|${r.parallel || "base"} -> sibling key "${t.setKey}" `
-                  + `(${t.playerName || "?"}, source=${t.source})`,
-                );
-              }
+              if (rungTwinExamples.length < 20) rungTwinExamples.push(example);
               return;
             }
           }
@@ -1205,6 +1233,13 @@ async function main() {
   console.log(`  rows skipped           ${f(skippedRow)}   <- no card number, no player, or unslugable`);
   console.log(`  already present (checklist) ${f(alreadyPresentChecklist)}   <- exact id already held by a checklist-grade row; upsert SKIPPED, never overwrite a checklist row with another checklist row`);
   console.log(`  rung twin under sibling key ${f(rungTwinUnderSiblingKey)}   <- same sport+year+cardNumber+parallel+isAuto+printRun already checklist-attested under a DIFFERENT setKey; SKIPPED, not a duplicate row`);
+  if (rungTwinsWaived) {
+    // CF-WAIVED-IS-NOT-INVISIBLE. Informational only -- these rows are
+    // WRITTEN (already inside `written` above) and are never added to the
+    // reconciliation; this line exists so the waiver itself is reviewable,
+    // never a silent bypass.
+    console.log(`  rung twins WAIVED (reason: ${waivedReason}) ${f(rungTwinsWaived)}   <- manifest.allowSiblingRungTwins suppressed the skip; these rows WERE written`);
+  }
   for (const line of rungTwinExamples) console.log(`      ${line}`);
   console.log(`  subset clashes RESOLVED   ${f(subsetDisambiguated)}   <- same (cardNumber, rung) under a DIFFERENT subset; both cards re-minted with a :sub- segment (${f(subsetIncumbentMoved)} incumbents MOVED off the plain id, vacating it; ${f(subsetSalesRepointed)} sales re-pointed)`);
   if (subsetVacateFailed) {

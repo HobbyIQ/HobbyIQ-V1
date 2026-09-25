@@ -275,7 +275,7 @@ describe("the manifest can explicitly waive the guard -- never an env flag", () 
     allowSiblingRungTwinsReason: "test fixture: reprint set deliberately mirrors its parent's numbering",
   });
 
-  it("writes the row even though a checklist-grade sibling twin exists, because the manifest states a reason", () => {
+  it("writes the row even though a checklist-grade sibling twin exists, because the manifest states a reason -- AND the waiver is still visible in the banner", () => {
     const { path: shim, writtenFile } = shimOf({
       bySibling: [{
         id: "hiq:baseball:2020:bowman-chrome:1:silver-prizm:no-auto",
@@ -287,6 +287,12 @@ describe("the manifest can explicitly waive the guard -- never an env flag", () 
     expect(status).toBe(0);
     expect(stdout).toContain("rung twin under sibling key 0");
     expect(stdout).toContain("catalog rows written   1");
+    // CF-WAIVED-IS-NOT-INVISIBLE: the waiver is informational, counted
+    // separately from written (never added to the reconciliation), and
+    // names the manifest's own stated reason.
+    expect(stdout).toMatch(/rung twins WAIVED \(reason: test fixture: reprint set deliberately mirrors its parent's numbering\) 1/);
+    expect(stdout).toMatch(/WAIVED: 1\|Silver Prizm -> sibling key "bowman-chrome"/);
+    expect(stdout).toMatch(/csv rows read 1 = written 1 \+ failed 0 \+ skipped 0 \+ refused 0 \+ source duplicates 0 \+ present\/checklist 0 \+ rung twin 0\s+\(balances\)/);
     expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(1);
   });
 
@@ -356,10 +362,15 @@ describe("mutation checks: both skip branches actually gate the write", () => {
 
   it("removing the sibling-rung-twin guard writes the row instead of skipping it", () => {
     const src = fs.readFileSync(script, "utf8");
-    expect(src).toMatch(/if \(twins\.length\) \{\s*rungTwinUnderSiblingKey\+\+;/);
+    const marker = /\} else \{\s*rungTwinUnderSiblingKey\+\+;\s*if \(rungTwinExamples\.length < 20\) rungTwinExamples\.push\(example\);\s*return;\s*\}/;
+    expect(src).toMatch(marker);
+    // Removing only the `return;` inside the un-waived branch: the row is
+    // still COUNTED as a twin, but no longer SKIPPED -- the exact shape of
+    // "the guard fires but does not gate the write" this test exists to
+    // catch.
     const mutated = src.replace(
-      /if \(twins\.length\) \{[\s\S]*?return;\s*\}\s*\}/,
-      "}",
+      marker,
+      "} else {\n              rungTwinUnderSiblingKey++;\n              if (rungTwinExamples.length < 20) rungTwinExamples.push(example);\n            }",
     );
     expect(mutated).not.toBe(src);
 
@@ -386,12 +397,105 @@ describe("mutation checks: both skip branches actually gate the write", () => {
         },
         encoding: "utf8",
       });
-      expect(r2.status).toBe(0);
-      expect(String(r2.stdout)).toContain("catalog rows written   1");
+      // The mutant still COUNTS the twin (rungTwinUnderSiblingKey++) but no
+      // longer SKIPS it (no `return;`), so the row it should have refused is
+      // BOTH written AND counted as skipped -- the exact "guard fires but
+      // does not gate" shape this test exists to catch. The row landing in
+      // two buckets at once is exactly what the rows-read reconciliation
+      // (CF-CSV-ROWS-READ-MUST-EQUAL-EVERY-BUCKET-THAT-CLAIMS-ONE) exists to
+      // catch, so the mutant's own FATAL exit is the proof the guard mattered.
+      expect(r2.status).not.toBe(0);
+      expect(String(r2.stdout) + String(r2.stderr)).toMatch(/MISMATCH|FATAL/);
       expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(1);
     } finally {
       try { fs.rmSync(mutantPath, { force: true }); } catch { /* best effort */ }
     }
+  });
+});
+
+describe("the twin query is capped by its own semaphore, independent of CONCURRENCY", () => {
+  // 20 distinct rows in one file, all clean (no twin, no exact-id match), so
+  // every row reaches the twin query and the run's CONCURRENCY (default 48)
+  // fans all 20 out at once -- if the semaphore did not cap them, up to 20
+  // concurrent `items.query` calls would be in flight at once.
+  const rows = Array.from({ length: 20 }, (_, i) => `base,${i + 1},Silver Prizm,false,,Player ${i + 1}`);
+  const dir = stageDir("2020-twin-baseball-burst", [
+    "category,cardNumber,parallel,isAuto,printRun,player",
+    ...rows,
+    "",
+  ].join("\n"), { sport: "baseball", year: 2020, setKey: "bowman", setName: "2020 Bowman Burst" });
+
+  function burstShim(limit: number): { path: string; maxInFlightFile: string } {
+    const maxInFlightFile = path.join(tmp, `maxinflight-${Math.random().toString(36).slice(2)}.json`);
+    fs.writeFileSync(maxInFlightFile, "0");
+    const p = path.join(tmp, `shim-burst-${Math.random().toString(36).slice(2)}.cjs`);
+    fs.writeFileSync(p, `
+const fs = require("node:fs");
+const Module = require("node:module");
+const MAX_FILE = ${JSON.stringify(maxInFlightFile)};
+let inFlight = 0;
+const stub = {
+  CosmosClient: class {
+    database() {
+      return {
+        container() {
+          return {
+            item() { return { read: async () => { const e = new Error("404"); e.code = 404; throw e; } }; },
+            items: {
+              upsert: async (doc) => ({ resource: doc }),
+              query() {
+                let done = false;
+                return {
+                  hasMoreResults: () => !done,
+                  fetchNext: async () => {
+                    inFlight++;
+                    const max = Number(fs.readFileSync(MAX_FILE, "utf8"));
+                    if (inFlight > max) fs.writeFileSync(MAX_FILE, String(inFlight));
+                    // Hold the "query" open briefly so overlapping callers,
+                    // if the semaphore did not cap them, would actually
+                    // overlap here rather than resolving before the next one
+                    // even starts.
+                    await new Promise((r) => setTimeout(r, 15));
+                    inFlight--;
+                    done = true;
+                    return { resources: [] };
+                  },
+                };
+              },
+            },
+          };
+        },
+      };
+    }
+  },
+};
+const realLoad = Module._load;
+Module._load = function (request) {
+  if (request === "@azure/cosmos") return stub;
+  return realLoad.apply(this, arguments);
+};
+`);
+    return { path: p, maxInFlightFile };
+  }
+
+  it("never lets more than TWIN_QUERY_LIMIT (default 6) twin queries run at once, even with CONCURRENCY=48 fanning out 20 rows", () => {
+    const { path: shim, maxInFlightFile } = burstShim(6);
+    const { stdout, status } = runIngestApply(dir, shim);
+    expect(status).toBe(0);
+    expect(stdout).toContain("catalog rows written   20");
+    const maxInFlight = Number(fs.readFileSync(maxInFlightFile, "utf8"));
+    expect(maxInFlight).toBeGreaterThan(0);
+    expect(maxInFlight).toBeLessThanOrEqual(6);
+  });
+
+  it("honours a TWIN_QUERY_LIMIT override", () => {
+    const { path: shim, maxInFlightFile } = burstShim(2);
+    const { stdout, status } = runIngestApply(dir, shim, { TWIN_QUERY_LIMIT: "2" });
+    expect(status).toBe(0);
+    expect(stdout).toContain("catalog rows written   20");
+    const maxInFlight = Number(fs.readFileSync(maxInFlightFile, "utf8"));
+    expect(maxInFlight).toBeGreaterThan(0);
+    expect(maxInFlight).toBeLessThanOrEqual(2);
   });
 });
 
