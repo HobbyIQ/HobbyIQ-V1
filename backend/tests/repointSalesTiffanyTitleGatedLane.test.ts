@@ -254,6 +254,32 @@ describe("repoint-sales-tiffany-title-gated -- titleSaysTiffany / nameContainsTi
     expect(lane.titleSaysTiffany("xTiffany 1989 Topps")).toBe(false);
   });
 
+  // COORDINATOR FIX (PR #2426 review): a bare `\bTiffany\b` matches
+  // "Tiffany's" and "Tiffany-like" too, because an apostrophe and a hyphen
+  // are BOTH non-word characters, so `\b` (word-char / non-word-char
+  // boundary) fires right after the "y" regardless of what follows. The
+  // trailing edge is now a lookahead requiring whitespace, a digit, '#',
+  // ')', or end-of-string -- never an apostrophe or a hyphen.
+  it("does NOT match a possessive ('Tiffany's') -- the trailing edge is not a bare \\b", () => {
+    expect(lane.titleSaysTiffany("Tiffany's Card Shop 1989 Topps #1")).toBe(false);
+    expect(lane.titleSaysTiffany("1989 Topps Tiffany's Auction")).toBe(false);
+  });
+
+  it("does NOT match a compound word ('Tiffany-like') -- the trailing edge is not a bare \\b", () => {
+    expect(lane.titleSaysTiffany("1989 Topps Tiffany-like glossy reprint")).toBe(false);
+    expect(lane.titleSaysTiffany("1989 Topps Tiffany-style #1")).toBe(false);
+  });
+
+  it("MATCHES 'Tiffany #1' and 'Tiffany 1989' -- the token followed by '#' or a digit is a real Tiffany mention", () => {
+    expect(lane.titleSaysTiffany("1989 Topps Tiffany #1 George Bell")).toBe(true);
+    expect(lane.titleSaysTiffany("1989 Topps Tiffany 1989 George Bell")).toBe(true);
+  });
+
+  it("MATCHES the token at end-of-string and before a closing paren", () => {
+    expect(lane.titleSaysTiffany("1989 Topps Tiffany")).toBe(true);
+    expect(lane.titleSaysTiffany("1989 Topps (Tiffany) George Bell")).toBe(true);
+  });
+
   it("nameContainsTiffany fires on a person literally named Tiffany", () => {
     expect(lane.nameContainsTiffany("Tiffany Jones")).toBe(true);
     expect(lane.nameContainsTiffany("George Bell")).toBe(false);
@@ -322,6 +348,52 @@ describe("repoint-sales-tiffany-title-gated -- THE TITLE GATE (end-to-end, mutat
     expect(r.code).toBe(0);
     expect(r.led.salesUpserts.length).toBe(0);
     expect(r.out).toMatch(/LEFT: no-tiffany-title\s+1/);
+  });
+
+  // COORDINATOR FIX (PR #2426 review): end-to-end proof that the tightened
+  // trailing-edge boundary actually gates a real sale, not just the unit
+  // predicate above.
+  it("LEAVES a sale whose title says \"Tiffany's\" (possessive) untouched -- never read as the finish token", () => {
+    const fromId = `${TOPPS_PREFIX}1:base:no-auto`;
+    const sale = {
+      id: "s1", cardId: fromId, hobbyiqCardId: fromId,
+      title: "1989 Topps #1 George Bell -- from Tiffany's Card Shop",
+      sport: SPORT, cardYear: YEAR, price: 5, isAuto: false, playerName: "George Bell",
+      soldAt: "2026-07-06T18:23:27.000Z", source: "cardsight",
+    };
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [CATALOG_ROW()] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.out).toMatch(/LEFT: no-tiffany-title\s+1/);
+  });
+
+  it("MOVES a sale whose title says \"Tiffany #1\" (token followed by '#')", () => {
+    const fromId = `${TOPPS_PREFIX}1:base:no-auto`;
+    const sale = {
+      id: "s1", cardId: fromId, hobbyiqCardId: fromId,
+      title: "1989 Topps Tiffany #1 George Bell",
+      sport: SPORT, cardYear: YEAR, price: 40, isAuto: false, playerName: "George Bell",
+      soldAt: "2026-07-06T18:23:27.000Z", source: "cardsight",
+    };
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [CATALOG_ROW()] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.out).toMatch(/MOVED\s+1/);
+  });
+
+  it("MOVES a sale whose title says \"Tiffany 1989\" (token followed by a digit)", () => {
+    const fromId = `${TOPPS_PREFIX}1:base:no-auto`;
+    const sale = {
+      id: "s1", cardId: fromId, hobbyiqCardId: fromId,
+      title: "Topps Tiffany 1989 George Bell #1",
+      sport: SPORT, cardYear: YEAR, price: 40, isAuto: false, playerName: "George Bell",
+      soldAt: "2026-07-06T18:23:27.000Z", source: "cardsight",
+    };
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [CATALOG_ROW()] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.out).toMatch(/MOVED\s+1/);
   });
 
   it("REPORT mode finds the same candidate, checks the SAME catalog/name guards, and writes nothing", () => {
@@ -687,6 +759,56 @@ describe("repoint-sales-tiffany-title-gated -- MUTATION: removing the dest-row c
     const real = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [] });
     expect(real.led.salesUpserts.length).toBe(0);
     expect(real.out).toMatch(/LEFT: no-dest-row\s+1/);
+  });
+});
+
+// COORDINATOR FIX (PR #2426 review): the destination's YEAR must come from
+// the id the sale was actually SCANNED under (segs.year), never from
+// sale.cardYear / sale.year, which can disagree with the address a sale
+// lives at (a stale or mismatched field on the document). Building the
+// destination from a field instead of the id could silently move a sale
+// filed under one year's cell onto a DIFFERENT year's Tiffany product.
+describe("repoint-sales-tiffany-title-gated -- destination year is IDENTITY-PRESERVING (from the id, never sale.cardYear)", () => {
+  it("when sale.cardYear disagrees with the id's own year, the destination is still built from the ID'S year", () => {
+    // The sale lives at the 1989 cell (its id's own year segment is 1989 --
+    // this is also what the SCOPE=baseball:1989 STARTSWITH query selected
+    // it under), but its own cardYear FIELD says 1990 -- a stale/mismatched
+    // field that must never override the address the row was found at.
+    const fromId = `${TOPPS_PREFIX}1:base:no-auto`; // hiq:baseball:1989:topps:1:base:no-auto
+    const sale = {
+      id: "s1", cardId: fromId, hobbyiqCardId: fromId,
+      title: "1989 Topps Tiffany #1 George Bell",
+      sport: SPORT, cardYear: 1990, year: 1990, // deliberately disagrees with the id's 1989
+      price: 40, isAuto: false, playerName: "George Bell",
+      soldAt: "2026-07-06T18:23:27.000Z", source: "cardsight",
+    };
+    // A 1990-dated destination row (the WRONG target if the field won) is
+    // absent; only the 1989 destination row (the id's own year) exists.
+    const destRow1989 = CATALOG_ROW(); // topps-tiffany:1:base:no-auto @ YEAR=1989, matches TIFFANY_PREFIX
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [destRow1989] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.out).toMatch(/MOVED\s+1/);
+    // The example line prints "<fromId> -> <newId>" -- the new id must carry
+    // the ID'S year (1989), never the disagreeing field's year (1990).
+    expect(r.out).toContain(`${TOPPS_PREFIX}1:base:no-auto -> ${TIFFANY_PREFIX}1:base:no-auto`);
+    expect(r.out).not.toMatch(/hiq:baseball:1990:topps-tiffany/);
+  });
+
+  it("REPORT mode: same identity-preserving year, with a destination row that only exists at the id's own (1989) year", () => {
+    const fromId = `${TOPPS_PREFIX}1:base:no-auto`;
+    const sale = {
+      id: "s1", cardId: fromId, hobbyiqCardId: fromId,
+      title: "1989 Topps Tiffany #1 George Bell",
+      sport: SPORT, cardYear: 1990, year: 1990,
+      price: 40, isAuto: false, playerName: "George Bell",
+      soldAt: "2026-07-06T18:23:27.000Z", source: "cardsight",
+    };
+    const r = drive(DEFAULT_ENV, { sales: [sale], catalog: [CATALOG_ROW()] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/WOULD MOVE\s+1/);
+    expect(r.out).toContain(`${TOPPS_PREFIX}1:base:no-auto -> ${TIFFANY_PREFIX}1:base:no-auto`);
+    expect(r.led.salesUpserts.length).toBe(0);
   });
 });
 

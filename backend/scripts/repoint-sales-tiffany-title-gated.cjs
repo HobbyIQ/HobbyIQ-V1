@@ -110,12 +110,21 @@ const LIMIT = Number(process.env.LIMIT || 0);
 const SHARD_SCOPE = runnerShardScope({ label: "repoint-sales-tiffany-title-gated" });
 const shardOf = (key) => parseInt(crypto.createHash("sha1").update(String(key)).digest("hex").slice(0, 8), 16) % SHARD_SCOPE.SLOTS;
 
-// ── THE TITLE GATE. `\bTiffany\b`, case-insensitive, word-bounded so it
-// never fires on a substring inside an unrelated word. THIS IS THE WHOLE
-// LANE -- a title that does not carry this token is NEVER moved, no matter
-// what the year/setKey/number say. Removing this predicate (or the call
-// site that gates on it) is the mutation the test suite pins red.
-const TIFFANY_TITLE_RE = /\bTiffany\b/i;
+// ── THE TITLE GATE. `\bTiffany\b`, case-insensitive, word-bounded on the
+// LEADING edge so it never fires on a substring inside an unrelated word
+// ("xTiffany"). THE TRAILING edge is NOT a bare `\b`: `\b` sits at the
+// boundary between a word char and a non-word char, and an apostrophe or a
+// hyphen are BOTH non-word chars -- so a bare `\bTiffany\b` matches
+// "Tiffany's" and "Tiffany-like" too, reading a possessive or a compound
+// word as the finish token (coordinator review, PR #2426). The trailing
+// edge is instead an explicit lookahead: the token must be followed by
+// whitespace, a digit, '#', ')', or end-of-string -- never an apostrophe or
+// a hyphen. THIS IS THE WHOLE LANE -- a title that does not carry this
+// token, correctly bounded, is NEVER moved, no matter what the
+// year/setKey/number say. Removing this predicate (or loosening the
+// trailing-edge lookahead back to a bare `\b`) is the mutation the test
+// suite pins red.
+const TIFFANY_TITLE_RE = /\bTiffany(?=[\s\d#)]|$)/i;
 function titleSaysTiffany(title) {
   return TIFFANY_TITLE_RE.test(String(title ?? ""));
 }
@@ -123,9 +132,14 @@ function titleSaysTiffany(title) {
 // ── THE NAME GUARD. A person literally named Tiffany must never be read as
 // the finish word -- checked against BOTH the sale's own playerName and the
 // destination catalog row's playerName, so a false-positive on either side
-// refuses rather than moves.
+// refuses rather than moves. Same trailing-edge discipline as the title
+// gate above, so "Tiffany's Card Shop" (a hypothetical consignor name
+// embedded in playerName) does not itself trip the guard on a possessive it
+// was never meant to catch -- though in practice this guard exists for the
+// bare name "Tiffany" itself, which the lookahead still matches (followed by
+// whitespace or end-of-string).
 function nameContainsTiffany(name) {
-  return /\bTiffany\b/i.test(String(name ?? ""));
+  return TIFFANY_TITLE_RE.test(String(name ?? ""));
 }
 
 // ── THE SCOPE. baseball:<year> cells ONLY, and ONLY 1984-1991 -- the years
@@ -328,8 +342,20 @@ async function main() {
     const toKey = DEST_KEY_OF[fromKey];
     let newId;
     try {
+      // COORDINATOR FIX (PR #2426 review): the YEAR the destination is built
+      // from is the id's OWN year segment (`segs.year`), never
+      // `sale.cardYear ?? sale.year` -- this lane's whole candidate
+      // selection already keyed off the id's `hiq:baseball:<year>:topps[-
+      // traded]:` prefix (the STARTSWITH query, and `idSegments` above), so
+      // the identity this lane is REPOINTING must stay pinned to that SAME
+      // year even if a sale's own `cardYear`/`year` field disagrees with the
+      // address it was actually scanned under (a stale or mismatched field,
+      // never authoritative over the id it lives at). Building the
+      // destination from a field instead of the id could silently move a
+      // sale to a DIFFERENT year's Tiffany product than the one its id
+      // named it under.
       newId = computeHobbyIqCardId({
-        sport: sale.sport, year: sale.cardYear ?? sale.year,
+        sport: sale.sport, year: Number(segs.year),
         setKey: toKey,
         cardNumber: segs.cardNumber,
         parallel: sale.parallel || "Base",
