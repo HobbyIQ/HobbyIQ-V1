@@ -130,24 +130,27 @@ describe("the scope travels on the runner's EXISTING `card_numbers` input, no ne
 });
 
 describe("the source: where the filter is applied, and what it does NOT change", () => {
-  it("the scope helper exists and defaults to true (in scope) when unset", () => {
-    expect(SRC).toContain("function inCardNumberScope(cardNumber)");
-    expect(SRC).toContain("if (!HAS_CARD_NUMBER_SCOPE) return true;");
+  it("inCardNumberScope delegates to card-number-scope.cjs, not an inline reimplementation", () => {
+    // The subset-segment bug (fixed in cardNumberScope.test.ts's own suite)
+    // lives in ONE place now -- a caller cannot silently regress to reading
+    // a literal [4] because there is no id-parsing logic left in this file
+    // to regress.
+    expect(SRC).toContain('require(path.join(__dirname, "lib", "card-number-scope.cjs"))');
+    expect(SRC).toContain("const { matchesCardNumberScope } =");
+    expect(SRC).toContain("function inCardNumberScope(id) {\n  return matchesCardNumberScope(id, CARD_NUMBER_SCOPE);\n}");
+    // and NOT an inline split(":")[4] anywhere in this script -- that read
+    // belongs to card-number-scope.cjs alone now.
+    expect(SRC).not.toContain('.split(":")[4]');
   });
 
-  it("the match is prefix-OR-exact, case-insensitive -- mirrors isUntrustedSource's shape", () => {
-    const m = SRC.match(/function inCardNumberScope\(cardNumber\)[\s\S]*?\n\}/);
-    expect(m, "inCardNumberScope must exist").toBeTruthy();
-    expect(m![0]).toContain(".toLowerCase()");
-    expect(m![0]).toContain("n === p || n.startsWith(p)");
-  });
-
-  it("MODE=catalog: the filter runs in the SAME candidates filter both scan passes share", () => {
+  it("MODE=catalog: the filter runs in the SAME candidates filter both scan passes share, and passes the WHOLE id", () => {
     // Both the setKey-field pass and the id-stem pass build `candidates` from
     // this one filter -- so a single change covers both, and a filter placed
     // in only one pass's own branch would be the bug this test catches.
+    // Passing the whole `d.id` (not a pre-sliced segment) is deliberate: the
+    // segment-vs-subset decision belongs entirely to card-number-scope.cjs.
     const block = SRC.slice(SRC.indexOf("const candidates = rows.filter"), SRC.indexOf("for (let i = 0; i < candidates.length"));
-    expect(block).toContain("inCardNumberScope(String(d.id ?? \"\").split(\":\")[4])");
+    expect(block).toContain("inCardNumberScope(d.id)");
     expect(block).toContain("s.cardNumberOutOfScope++");
   });
 
@@ -169,9 +172,9 @@ describe("the source: where the filter is applied, and what it does NOT change",
     expect(skippedLine).not.toContain("cardNumberOutOfScope");
   });
 
-  it("MODE=pool: the filter runs alongside the shard filter, before scanned counts the row", () => {
+  it("MODE=pool: the filter runs alongside the shard filter, passes the WHOLE hobbyiqCardId, before scanned counts the row", () => {
     const block = SRC.slice(SRC.indexOf("const mine = rows.filter"), SRC.indexOf("for (let i = 0; i < mine.length"));
-    expect(block).toContain("inCardNumberScope(String(r.hobbyiqCardId ?? \"\").split(\":\")[4])");
+    expect(block).toContain("inCardNumberScope(r.hobbyiqCardId)");
     expect(block).toContain("s.cardNumberOutOfScope++");
     const mineIdx = SRC.indexOf("const mine = rows.filter");
     const scannedIdx = SRC.indexOf("s.scanned += batch.length");
@@ -201,36 +204,45 @@ describe("the source: where the filter is applied, and what it does NOT change",
     expect(holdingsFn).not.toContain("inCardNumberScope");
     expect(holdingsFn).not.toContain("cardNumberOutOfScope");
   });
+
+  it("the comment block documents the subset-id case (sub-{slug} pushes the number to index 5)", () => {
+    expect(SRC).toContain("THE CARD-NUMBER SEGMENT IS NOT ALWAYS INDEX 4");
+    expect(SRC).toContain("subsetInId");
+  });
+
+  it("the undocumented direct-env override (CARD_NUMBER_SCOPE, read before BACKFILL_CARD_NUMBERS) is explained in the comment, not silent", () => {
+    expect(SRC).toContain("CARD_NUMBER_SCOPE has no runner-facing default of its own");
+    expect(SRC).toContain("it is not itself a\n// second input, just an alternate spelling of the one input this feature\n// uses");
+  });
 });
 
 // ── MUTATION CHECKS ─────────────────────────────────────────────────────────
 
-describe("MUTATION: inCardNumberScope", () => {
-  it("a mutant that dropped the case-fold would miss an upper-case dispatch typo", () => {
-    // The runner's own examples are lower-case ("bma-,rma-,..."), but an
-    // operator retyping the dispatch by hand is exactly the case this guards.
-    const m = SRC.match(/function inCardNumberScope\(cardNumber\)[\s\S]*?\n\}/)![0];
-    expect(m).toContain("String(cardNumber ?? \"\").trim().toLowerCase()");
-  });
-
-  it("a mutant that used only startsWith (no exact-equality arm) would still pass this shape, so both are pinned", () => {
-    const m = SRC.match(/function inCardNumberScope\(cardNumber\)[\s\S]*?\n\}/)![0];
-    expect(m).toMatch(/n === p/);
-    expect(m).toMatch(/n\.startsWith\(p\)/);
-  });
-
-  it("a mutant that let an empty cardNumber segment match would fold malformed ids into every scope", () => {
-    const m = SRC.match(/function inCardNumberScope\(cardNumber\)[\s\S]*?\n\}/)![0];
-    expect(m).toContain("if (!n) return false;");
-  });
-
-  it("a mutant that inverted HAS_CARD_NUMBER_SCOPE would refuse every dispatch that sets no scope", () => {
+describe("MUTATION: inCardNumberScope's wiring in this script", () => {
+  it("a mutant that inverted HAS_CARD_NUMBER_SCOPE's role would refuse every dispatch that sets no scope", () => {
+    // HAS_CARD_NUMBER_SCOPE / CARD_NUMBER_SCOPE still live in THIS file (env
+    // parsing does not belong in the pure lib) and are handed to the lib's
+    // matchesCardNumberScope as `scopeList` -- an empty list there means
+    // "everything is in scope", pinned directly in cardNumberScope.test.ts.
     expect(SRC).toContain("const HAS_CARD_NUMBER_SCOPE = CARD_NUMBER_SCOPE.length > 0;");
-    expect(SRC).toContain("if (!HAS_CARD_NUMBER_SCOPE) return true;");
   });
 
-  it("a mutant that read the setKey segment (index 3) instead of the cardNumber segment (index 4) would filter the wrong axis", () => {
-    expect(SRC).toContain('inCardNumberScope(String(d.id ?? "").split(":")[4])');
-    expect(SRC).toContain('inCardNumberScope(String(r.hobbyiqCardId ?? "").split(":")[4])');
+  it("a mutant that read the setKey segment instead of delegating to the id-aware helper would filter the wrong axis", () => {
+    // Both call sites pass the id/hobbyiqCardId UNSLICED -- a mutant that
+    // reintroduced any manual segment slicing here (setKey at index 3, or a
+    // literal cardNumber index) would show up as a diff against these exact
+    // call shapes.
+    expect(SRC).toContain("inCardNumberScope(d.id)");
+    expect(SRC).toContain("inCardNumberScope(r.hobbyiqCardId)");
+  });
+
+  it("a mutant that reverted the extraction to a literal [4] is caught in cardNumberScope.test.ts, not here", () => {
+    // This file pins WIRING (who calls what, with what argument, and where).
+    // The extraction RULE itself (index 4 vs 5, the sub- prefix check) is
+    // pinned as a real unit test against plain strings in
+    // tests/cardNumberScope.test.ts, which is the only place a revert to
+    // `.split(":")[4]` can be mechanically caught -- this file no longer
+    // contains that logic to mutate.
+    expect(SRC).not.toContain('.split(":")[4]');
   });
 });

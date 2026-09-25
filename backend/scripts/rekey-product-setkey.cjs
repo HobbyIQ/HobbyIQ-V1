@@ -138,7 +138,17 @@
  *                               otherwise consumed only by
  *                               backfill-cardsight-title-identity.cjs, a
  *                               different `script` selection, so the two can
- *                               never collide on one dispatch.
+ *                               never collide on one dispatch. The card-number
+ *                               SEGMENT itself is read the way
+ *                               parseHobbyIqCardId reads it, not by a literal
+ *                               index: a row minted with a subset (`hiq:
+ *                               sport:year:setKey:sub-{slug}:number:...`)
+ *                               carries the number at segment 5, not 4 -- see
+ *                               cardNumberSegmentOf below. CARD_NUMBER_SCOPE
+ *                               (bare env) works the same as the runner's
+ *                               `card_numbers` input above and exists only so
+ *                               a workstation invocation can set the scope
+ *                               without going through the runner's env name.
  *
  * Requires dist/ (catalogRowOps, hobbyIqCardId, writeReconciliation).
  */
@@ -149,6 +159,9 @@ const path = require("path");
 // tables, so it cannot break the contract that this script is requirable (and
 // its dispatch refusals drivable) without a compiled tree.
 const { marketVerdict } = require(path.join(__dirname, "lib", "market-guard.cjs"));
+// CF-A-CARD-NUMBER-SUBSET-IS-NOT-A-WHOLE-PRODUCT. Same requirability contract
+// as market-guard.cjs above -- pure, self-contained, no dist/ dependency.
+const { matchesCardNumberScope } = require(path.join(__dirname, "lib", "card-number-scope.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const SPORT = String(process.env.SPORT || "").trim().toLowerCase();
@@ -347,19 +360,39 @@ function isUntrustedSource(source) {
 // script), so there is no need to pack two scopes into one input when a
 // second, genuinely idle input already exists to carry the second one on its
 // own.
+//
+// THE CARD-NUMBER SEGMENT IS NOT ALWAYS INDEX 4. A row minted with a subset
+// (hobbyIqCardId.service.ts's `subsetInId`) carries an OPTIONAL `:sub-{slug}`
+// segment right after setKey -- `hiq:baseball:2026:bowman-chrome:sub-cards-
+// that-never-were:bma-1:base:no-auto` -- which pushes the card number from
+// index 4 to index 5. parseHobbyIqCardId tells the two apart by the `sub-`
+// PREFIX, never by counting, and cardNumberSegmentOf below does the same.
+// Reading a literal [4] would silently score that row's card number as
+// "sub-cards-that-never-were", fail every scope check, and strand it at FROM
+// under a report line that looks like an ordinary out-of-scope skip.
+// CARD_NUMBER_SCOPE has no runner-facing default of its own beyond the
+// undocumented direct-env override below: the runner's own input is
+// `card_numbers` (-> BACKFILL_CARD_NUMBERS), documented in the Env block
+// above. CARD_NUMBER_SCOPE is read FIRST only so a workstation invocation (or
+// a future caller of this script that is not the runner) can set it directly
+// without going through the runner's env name at all -- it is not itself a
+// second input, just an alternate spelling of the one input this feature
+// uses, kept for the same reason RETIRE_UNTWINNED_SOURCES also reads the bare
+// `SOURCES` alongside the runner's `RETIRE_UNTWINNED_SOURCES` name above.
 const CARD_NUMBER_SCOPE = String(process.env.CARD_NUMBER_SCOPE || process.env.BACKFILL_CARD_NUMBERS || "")
   .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 const HAS_CARD_NUMBER_SCOPE = CARD_NUMBER_SCOPE.length > 0;
 
-/** Does this card-number SEGMENT fall inside the (optional) scope? Prefix
- *  match (`^<prefix>`) or exact, case-insensitive, mirroring isUntrustedSource
- *  above. No scope set -> everything is in scope (today's behaviour, byte
- *  for byte). */
-function inCardNumberScope(cardNumber) {
-  if (!HAS_CARD_NUMBER_SCOPE) return true;
-  const n = String(cardNumber ?? "").trim().toLowerCase();
-  if (!n) return false;
-  return CARD_NUMBER_SCOPE.some((p) => n === p || n.startsWith(p));
+/** Does this id fall inside the (optional) CARD_NUMBER_SCOPE? Delegates to
+ *  card-number-scope.cjs's matchesCardNumberScope, which reads the id's
+ *  cardNumber segment the SAME subset-aware way parseHobbyIqCardId does (see
+ *  that module's header) -- extracted there, rather than inlined here, so it
+ *  is `require`-able and unit-testable with plain strings, the same
+ *  requirability contract market-guard.cjs / name-agreement.cjs already keep
+ *  for this script's other pure decisions. Takes the whole id, not a
+ *  pre-sliced segment, so no caller can regress to a literal [4]. */
+function inCardNumberScope(id) {
+  return matchesCardNumberScope(id, CARD_NUMBER_SCOPE);
 }
 
 /** hiq:sport:year:setKey:number:parallel:auto[:num-N] -> parts, else null.
@@ -613,7 +646,7 @@ async function main() {
           // both see the same id, and without this check a row outside
           // CARD_NUMBER_SCOPE would be counted once per pass that reaches it.
           if (seen.has(String(d.id))) return false;
-          if (!inCardNumberScope(String(d.id ?? "").split(":")[4])) { s.cardNumberOutOfScope++; return false; }
+          if (!inCardNumberScope(d.id)) { s.cardNumberOutOfScope++; return false; }
           return true;
         });
         for (let i = 0; i < candidates.length; i += CONCURRENCY) {
@@ -1082,11 +1115,15 @@ async function main() {
         // CF-A-CARD-NUMBER-SUBSET-IS-NOT-A-WHOLE-PRODUCT, the pool half. Same
         // treatment as `otherSlot` above: a row outside CARD_NUMBER_SCOPE is
         // dropped BEFORE s.scanned counts it, so it is untouched rather than a
-        // skip this dispatch adjudicated. The scope reads hobbyiqCardId's OWN
-        // cardNumber segment, mirroring the catalog lane exactly.
+        // skip this dispatch adjudicated. inCardNumberScope reads the WHOLE
+        // id via cardNumberSegmentOf, which is subset-aware (a row minted with
+        // `subsetInId` carries an optional `:sub-{slug}` segment right after
+        // setKey, pushing the card number from index 4 to index 5 --
+        // hobbyIqCardId.service.ts's parseHobbyIqCardId), mirroring the
+        // catalog lane exactly.
         const mine = rows.filter((r) => {
           if (!mineByShard(r.id)) { s.otherSlot++; return false; }
-          if (!inCardNumberScope(String(r.hobbyiqCardId ?? "").split(":")[4])) { s.cardNumberOutOfScope++; return false; }
+          if (!inCardNumberScope(r.hobbyiqCardId)) { s.cardNumberOutOfScope++; return false; }
           return true;
         });
         for (let i = 0; i < mine.length; i += CONCURRENCY) {
