@@ -152,20 +152,19 @@ describe("the shipped reference carries its stamp", () => {
   it("records the stamp and the commit the census was measured under", () => {
     expect(TABLE.measuredUnder).toBeTruthy();
     expect(TABLE.measuredUnder.stamp).toMatch(/^d[0-9a-f]{12}\+/);
-    // 62497120 — main at the 2026-09-21 32-slot census dispatch (PR #2393,
-    // "scope 11 autograph-set cardNumber prefixes to product-year, not
-    // global", stamp-moving: parseTitleIdentity.service.ts and
-    // rematch-derive-identity.cjs both changed). Plain census, all 32 slots
-    // (no SOURCES=backing — not needed for this re-baseline), one run each,
-    // no relaunch chains. One commit names the tree every artifact was
-    // measured under.
-    expect(TABLE.measuredUnder.commit).toBe("6249712dd9ab90e859c37522212de00d3f508abf");
+    // 844a7b20 — main at the 2026-09-22 32-slot census dispatch (PRs #2407 +
+    // #2409, both stamp-moving: parseTitleIdentity.service.ts and
+    // hobbyIqCardId.service.ts changed; #2407 also rematch-classify.cjs).
+    // Plain census, all 32 slots (no SOURCES=backing — not needed for this
+    // re-baseline), one run each, no relaunch chains. One commit names the
+    // tree every artifact was measured under.
+    expect(TABLE.measuredUnder.commit).toBe("844a7b20a34c8b2dfdd0178b0a078bf1f332d4be");
     // pricingContract.ts exists now, so the stamp carries its version.
     expect(TABLE.measuredUnder.contract).toBe("2026-09-06.a");
     // The 32-slot reference stays 32 slots (#1888 stands), every slot finished.
     expect(TABLE.slotCount).toBe(32);
     expect(TABLE.classifiedTotal).toBeGreaterThan(11_000_000);
-    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.322, 2);
+    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.321, 2);
   });
 
   it("says WHAT FRACTION of the corpus it saw, and which slots are partial", () => {
