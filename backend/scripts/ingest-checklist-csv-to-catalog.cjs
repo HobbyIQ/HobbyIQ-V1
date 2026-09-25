@@ -106,6 +106,9 @@ const { claimedSubsetOf } = require(path.join(__dirname, "lib", "subset-identity
 // 2,949 documents because base #1 and nine inserts' #1 all computed one id.
 // See lib/insert-set-key.cjs for the rule, the measurement and the refusal.
 const INSERT_SET = require(path.join(__dirname, "lib", "insert-set-key.cjs"));
+// CF-A-SIBLING-KEY-IS-STILL-THE-SAME-RUNG (Drew 2026-09-25): the rung-level
+// sibling check the planner cannot run itself, since it has no Cosmos access.
+const SIBLING_RUNG_TWIN = require(path.join(__dirname, "lib", "sibling-rung-twin.cjs"));
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
 const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "ingest-checklist-csv-to-catalog" });
@@ -163,6 +166,16 @@ function productOf(csvPath) {
           // parallel names this product declares as rungs. Absent = no
           // exemption, which is every product that does not need one.
           parallelVocabulary: Array.isArray(m.parallelVocabulary) ? m.parallelVocabulary : null,
+          // CF-A-SIBLING-KEY-IS-STILL-THE-SAME-RUNG. The rung-level sibling
+          // check refuses by default. Bypassing it is an assertion by the
+          // person who staged the file that a same-numbered, same-rung twin
+          // under another setKey is NOT this product's card -- e.g. a genuine
+          // reprint set that deliberately mirrors its parent's numbering --
+          // and it must be explicit and stated, never an env flag a whole
+          // run could carry by accident.
+          allowSiblingRungTwins: m.allowSiblingRungTwins === true && typeof m.allowSiblingRungTwinsReason === "string" && m.allowSiblingRungTwinsReason.trim().length > 0
+            ? { reason: m.allowSiblingRungTwinsReason.trim() }
+            : null,
         };
       }
     } catch { /* fall through */ }
@@ -490,6 +503,22 @@ async function main() {
   // differ silently. They are reconciled at the end of the run.
   let filesRefused = 0, refusedRows = 0, insertSetKeys = 0, insertSetRows = 0, plannedIds = 0, rungRows = 0;
   let sourceDuplicates = 0;
+  // CF-A-SIBLING-KEY-IS-STILL-THE-SAME-RUNG counters. Both are COUNTED,
+  // DECLARED skips, exactly like every other per-row gate above -- never
+  // folded into `keptExisting`, which only ever fires AFTER an upsert call;
+  // these two never reach the upsert at all.
+  //
+  // `alreadyPresentChecklist`: the exact id is already held by a checklist-
+  // grade row. Never overwrite a checklist row with another checklist row
+  // unless the manifest explicitly supersedes it -- so the write is skipped,
+  // not attempted, saving the upsert's RUs entirely.
+  let alreadyPresentChecklist = 0;
+  // `rungTwinUnderSiblingKey`: no exact-id match, but the SAME rung (sport,
+  // year, cardNumber, parallel slug, isAuto, printRun) already exists at
+  // checklist authority under a DIFFERENT setKey -- the exact shape that
+  // produced the lava/draft-sapphire/RA- duplicate pools.
+  let rungTwinUnderSiblingKey = 0;
+  const rungTwinExamples = [];
   let stopReason = null;
 
   // CF-THE-CLASH-IS-A-FACT-ABOUT-THE-PRODUCT-NOT-THE-FILE (2026-09-13).
@@ -798,6 +827,48 @@ async function main() {
           let known = await lookup(slug);
           let slugForWrite = slug;
           let subsetInId = false;
+
+          // CF-A-SIBLING-KEY-IS-STILL-THE-SAME-RUNG (Drew, 2026-09-25).
+          //
+          // (a) EXACT-ID CHECKLIST PRESENT. The planner dedupes on exact id
+          // only and has no Cosmos access; `known` above is the point read the
+          // write path already pays for. If it is already a checklist-grade
+          // row, this run's own row can only ever backfill or no-op against it
+          // (mergeCatalogEntries' equal-rank tie), so the upsert is skipped
+          // outright rather than paying its RUs to learn nothing -- unless the
+          // manifest explicitly says this product supersedes it.
+          if (known && catalogAuthorityOf(known.source) === "checklist" && !(product.allowSiblingRungTwins)) {
+            alreadyPresentChecklist++;
+            return;
+          }
+          // (b) RUNG-LEVEL SIBLING CHECK. No exact-id match (or the manifest
+          // allows writing over one), but the SAME rung -- same sport+year+
+          // cardNumber, same parallel slug + isAuto + printRun -- already
+          // exists at checklist authority under a DIFFERENT setKey. This is
+          // the shape that produced the lava/draft-sapphire/RA- duplicate
+          // pools: `bowman` vs `bowman-chrome`, `topps` vs `topps-series-1`.
+          // Bypassable ONLY by the manifest's explicit, reasoned field --
+          // never an env flag -- checked here rather than skipped above so a
+          // manifest that allows twins still gets the exact-id checklist skip
+          // waived too (both guards answer the same policy question).
+          if (!product.allowSiblingRungTwins) {
+            const twins = await SIBLING_RUNG_TWIN.findSiblingRungTwins(catalogContainer(), r, {
+              sport: product.sport, year: product.year, setKey: rowSetKey,
+              parallelSlugOf: (p) => slugify(p || "Base"),
+              catalogAuthorityOf,
+            });
+            if (twins.length) {
+              rungTwinUnderSiblingKey++;
+              if (rungTwinExamples.length < 20) {
+                const t = twins[0];
+                rungTwinExamples.push(
+                  `${String(r.cardNumber).toUpperCase()}|${r.parallel || "base"} -> sibling key "${t.setKey}" `
+                  + `(${t.playerName || "?"}, source=${t.source})`,
+                );
+              }
+              return;
+            }
+          }
 
           // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (Drew ruling,
           // 2026-09-04). SUPERSEDES CF-A-SUBSET-IS-NOT-IN-THE-IDENTITY (#1741),
@@ -1132,6 +1203,9 @@ async function main() {
     }
   }
   console.log(`  rows skipped           ${f(skippedRow)}   <- no card number, no player, or unslugable`);
+  console.log(`  already present (checklist) ${f(alreadyPresentChecklist)}   <- exact id already held by a checklist-grade row; upsert SKIPPED, never overwrite a checklist row with another checklist row`);
+  console.log(`  rung twin under sibling key ${f(rungTwinUnderSiblingKey)}   <- same sport+year+cardNumber+parallel+isAuto+printRun already checklist-attested under a DIFFERENT setKey; SKIPPED, not a duplicate row`);
+  for (const line of rungTwinExamples) console.log(`      ${line}`);
   console.log(`  subset clashes RESOLVED   ${f(subsetDisambiguated)}   <- same (cardNumber, rung) under a DIFFERENT subset; both cards re-minted with a :sub- segment (${f(subsetIncumbentMoved)} incumbents MOVED off the plain id, vacating it; ${f(subsetSalesRepointed)} sales re-pointed)`);
   if (subsetVacateFailed) {
     // LOUD. Each of these is a plain id still answering for two cards.
@@ -1208,7 +1282,7 @@ async function main() {
     // a loss -- so it is added here, not to `refuseCount()` (that term is for
     // a whole refused file/category, and duplicates are never refused: the
     // row's twin already landed).
-    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skipCount() + refuseCount() + sourceDuplicates, failed });
+    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skipCount() + refuseCount() + sourceDuplicates + siblingGuardCount(), failed });
   }
   // The per-row gates this file dropped before ever reaching the batch: a
   // DELIBERATE, DECLARED skip, never a lost row.
@@ -1223,6 +1297,16 @@ async function main() {
   }
   const skipped = skipCount();
   const refused = refuseCount();
+  // CF-A-SIBLING-KEY-IS-STILL-THE-SAME-RUNG, its own term -- never folded into
+  // `skipCount()`. Both guards below run ONLY where Cosmos is actually being
+  // read (the APPLY-gated half of the per-row loop, same as `lookup()` itself),
+  // so a REPORT run's rows-read banner is unaffected and this is always 0
+  // there; an APPLY run's banner must still balance with the new bucket named,
+  // exactly like `sourceDuplicates` before it.
+  function siblingGuardCount() {
+    return alreadyPresentChecklist + rungTwinUnderSiblingKey;
+  }
+  const siblingGuardSkipped = siblingGuardCount();
 
   // CF-CSV-ROWS-READ-MUST-EQUAL-EVERY-BUCKET-THAT-CLAIMS-ONE (2026-09-13,
   // follow-up to the id-integrity guard above). `rows skipped` and `failed`
@@ -1237,10 +1321,10 @@ async function main() {
   // it is its own term. Hiding it inside `skipped` would let a real skip grow
   // unnoticed behind it; leaving it out breaks the identity the reconciliation
   // exists to prove.
-  const reconciled = written + failed + skipped + refused + sourceDuplicates;
-  console.log(`  csv rows read ${f(rows)} = written ${f(written)} + failed ${f(failed)} + skipped ${f(skipped)} + refused ${f(refused)} + source duplicates ${f(sourceDuplicates)}${rows === reconciled ? "  (balances)" : `  <- MISMATCH: sums to ${f(reconciled)}`}`);
+  const reconciled = written + failed + skipped + refused + sourceDuplicates + siblingGuardSkipped;
+  console.log(`  csv rows read ${f(rows)} = written ${f(written)} + failed ${f(failed)} + skipped ${f(skipped)} + refused ${f(refused)} + source duplicates ${f(sourceDuplicates)} + present/checklist ${f(alreadyPresentChecklist)} + rung twin ${f(rungTwinUnderSiblingKey)}${rows === reconciled ? "  (balances)" : `  <- MISMATCH: sums to ${f(reconciled)}`}`);
   if (rows !== reconciled) {
-    console.error(`\nFATAL: csv rows read (${f(rows)}) does not equal written + failed + skipped + refused + source duplicates (${f(reconciled)}).`);
+    console.error(`\nFATAL: csv rows read (${f(rows)}) does not equal written + failed + skipped + refused + source duplicates + present/checklist + rung twin (${f(reconciled)}).`);
     console.error(`       ${f(Math.abs(rows - reconciled))} row(s) ${rows > reconciled ? "vanished from every counter this run declares" : "were double-counted across buckets"}.`);
     console.error(`       A row this run read must land in exactly one bucket -- the banner cannot be trusted otherwise.`);
     return { exitCode: 5 };
