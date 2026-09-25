@@ -326,10 +326,26 @@ async function main() {
       cardId: sale?.cardId ?? null, hobbyiqCardId: sale?.hobbyiqCardId ?? null,
       fromCardNumber: extra.fromCardNumber ?? null, toCardNumber: extra.toCardNumber ?? null,
       target: extra.target ?? null,
+      error: extra.error ?? null, duplicateLeft: extra.duplicateLeft ?? null,
     };
     try { fs.appendFileSync(planFd, JSON.stringify(record) + "\n"); }
     catch (e) { console.log(`\n::warning::PLAN_OUT write failed for ${sale?.id}: ${e?.message}`); }
   }
+
+  // FOLLOW-UP (APPLY run 35810708478, baseball:2025 bowmans-best, "failed 4"
+  // exit 4): the reconcile balanced (4,629 = 4,379 written + 246 refused + 4
+  // failed) but the log printed NO per-sale line for the 4 failures -- every
+  // REFUSED class prints examples, `failed` never did. `failures` mirrors
+  // repoint-sales-parallel-suffix.cjs's own `failures` array/banner
+  // (`FAILED relocate <id>@<from> -> <to>: <error>`), extended here to name
+  // whether relocateSoldComp's own `duplicatesLeft` fired -- CF-A-VERIFY-
+  // MISMATCH-IS-A-DUPLICATE-NOT-A-FAILURE (relocate-sold-comp.cjs's own
+  // doctrine): a `stage:"verify"` mismatch means the keeper upsert ALREADY
+  // SUCCEEDED and the old row's delete never ran, so the sale is now
+  // resident at BOTH addresses -- a real duplicate, not a no-op failure --
+  // while a `stage:"upsert"`/`stage:"guard"` failure never wrote anything,
+  // so the sale is untouched at its old address only.
+  const failures = [];
 
   async function residentAt(saleId, cardId) {
     try { return (await pool.item(saleId, cardId).read()).resource ?? null; }
@@ -410,7 +426,11 @@ async function main() {
       destRow = await catalogRowAt(newId);
     } catch (e) {
       s.failed++;
-      console.log(`\n::warning::catalog read failed for ${sale.id} -> ${newId}: ${e?.message || e}`);
+      const code = e?.code ?? e?.statusCode ?? "unknown";
+      const msg = `FAILED catalog-read ${sale.id}@${currentId} -> ${newId}: [${code}] ${e?.message || e} -- nothing written, sale untouched at its old address`;
+      failures.push(`  ${msg}`);
+      emitPlanRow(sale, "failed", "catalog-read", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId, error: `[${code}] ${e?.message || String(e)}` });
+      console.log(`\n::warning::${msg}`);
       return;
     }
     if (!destRow || !isChecklist(destRow.source)) {
@@ -470,10 +490,38 @@ async function main() {
         emitPlanRow(sale, "refused", "stale-since-plan", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
       } else {
         s.failed++;
+        // CF-A-VERIFY-MISMATCH-IS-A-DUPLICATE-NOT-A-FAILURE (relocate-sold-
+        // comp.cjs): `duplicatesLeft.length > 0` means the keeper upsert at
+        // `newId` ALREADY SUCCEEDED and the old row's delete never ran (a
+        // verify mismatch skips the delete phase entirely, or a delete
+        // itself failed non-404/412) -- the sale is resident at BOTH
+        // `sale.cardId` (old) and `newId` (new). Named here, never folded
+        // into a bare "failed" that reads the same as a no-op.
+        const duplicateLeft = Array.isArray(result?.duplicatesLeft) && result.duplicatesLeft.length > 0;
+        const stage = result?.stage ?? "unknown";
+        const errMsg = result?.error ?? "unknown";
+        const state = duplicateLeft
+          ? `DUPLICATE LEFT -- keeper upserted+verified at ${newId}, old row at ${sale.cardId} was NOT deleted; sale now resident at BOTH addresses`
+          : `nothing written -- sale untouched at its old address ${sale.cardId}`;
+        const msg = `FAILED relocate ${sale.id}@${currentId} -> ${newId}: [stage=${stage}] ${errMsg} -- ${state}`;
+        failures.push(`  ${msg}`);
+        emitPlanRow(sale, "failed", "relocate", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId, error: `[stage=${stage}] ${errMsg}`, duplicateLeft });
+        console.log(`\n::warning::${msg}`);
       }
     } catch (e) {
       s.failed++;
-      console.log(`\n::warning::relocate failed for ${sale.id}: ${e?.message || e}`);
+      // A THROW here means relocateSoldComp itself did not return a shaped
+      // result -- e.g. the guard module failed to load, or an error escaped
+      // its own try/catch stages. Cannot know from here whether the upsert
+      // landed before the throw, so this is reported as UNKNOWN state
+      // (never asserted single-copy) rather than guessed either way -- the
+      // FORENSICS step (point-read both addresses) is what actually answers
+      // it for a run that hits this path.
+      const code = e?.code ?? e?.statusCode ?? "unknown";
+      const msg = `FAILED relocate ${sale.id}@${currentId} -> ${newId}: [${code}] ${e?.message || e} -- UNKNOWN whether the write landed before the throw; verify both addresses`;
+      failures.push(`  ${msg}`);
+      emitPlanRow(sale, "failed", "relocate-threw", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId, error: `[${code}] ${e?.message || String(e)}` });
+      console.log(`\n::warning::${msg}`);
     }
   }
 
@@ -510,6 +558,10 @@ async function main() {
     if (!lines.length) continue;
     console.log(`\n  REFUSED (${reason}), up to 20 shown:`);
     for (const line of lines.slice(0, 20)) console.log(line);
+  }
+  if (failures.length) {
+    console.log(`\n  FAILURES (${f(failures.length)}), every one listed:`);
+    for (const line of failures) console.log(line);
   }
 
   console.log("");
