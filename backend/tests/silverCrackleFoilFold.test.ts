@@ -42,7 +42,11 @@ const RETIRE_DERIVED_FILE = "2026-09-25-silver-crackle-foil-retire-derived-occup
 const RETIRE_AFTER_MOVE_FILE = "2026-09-25-silver-crackle-foil-retire-after-move.json";
 const ALL_FILES = [...ALL_MOVE_FILES, RETIRE_DERIVED_FILE, RETIRE_AFTER_MOVE_FILE];
 
-type Entry = { id: string; action: string; to?: string; reason?: string; evidence?: string; nameSuperset?: boolean; afterDerivedRetire?: boolean };
+type Entry = {
+  id: string; action: string; to?: string; reason?: string; evidence?: string;
+  nameSuperset?: boolean; afterDerivedRetire?: boolean; salesAtRetireTime?: number;
+};
+type HeldRow = { id: string; salesCount: number; evidence?: string };
 type List = {
   generatedAt: string;
   forLane: string;
@@ -51,6 +55,8 @@ type List = {
   rulings: string[];
   census: Record<string, unknown>;
   entries: Entry[];
+  checkedAt?: string;
+  held?: HeldRow[];
 };
 
 const load = (f: string) => JSON.parse(readFileSync(path.join(DIR, f), "utf8")) as List;
@@ -133,10 +139,64 @@ describe("the five files exist, are chunked to the runner budget, and cover the 
     expect(load(RETIRE_DERIVED_FILE).entries.length).toBe(68);
   });
 
-  it("retire-after-move holds exactly 825 entries (65 name-superset)", () => {
+  it("retire-after-move holds exactly 822 entries (65 name-superset) plus 3 held", () => {
     const doc = load(RETIRE_AFTER_MOVE_FILE);
-    expect(doc.entries.length).toBe(825);
+    expect(doc.entries.length).toBe(822);
     expect(doc.entries.filter((e) => e.nameSuperset).length).toBe(65);
+    expect(doc.held?.length).toBe(3);
+  });
+});
+
+describe("PR #2427 re-review: 3 live sales-holders were pulled out of retire-after-move into a HELD section", () => {
+  const EXPECTED_HELD: Record<string, number> = {
+    "hiq:baseball:2026:topps:138:silver-crackle-foilboard:no-auto": 2,
+    "hiq:baseball:2026:topps:200:silver-crackle-foilboard:no-auto": 1,
+    "hiq:baseball:2026:topps:131:silver-crackle-foilboard:no-auto": 1,
+  };
+
+  it("the held section names exactly the three ids the live recheck found, with their sale counts", () => {
+    const held = load(RETIRE_AFTER_MOVE_FILE).held ?? [];
+    expect(held.length).toBe(3);
+    for (const h of held) {
+      expect(EXPECTED_HELD[h.id], `unexpected held id ${h.id}`).toBeDefined();
+      expect(h.salesCount).toBe(EXPECTED_HELD[h.id]);
+    }
+    const heldIds = new Set(held.map((h) => h.id));
+    for (const id of Object.keys(EXPECTED_HELD)) expect(heldIds.has(id)).toBe(true);
+  });
+
+  it("none of the three held ids appear anywhere in the retire-after-move entries list", () => {
+    const doc = load(RETIRE_AFTER_MOVE_FILE);
+    const entryIds = new Set(doc.entries.map((e) => e.id));
+    for (const id of Object.keys(EXPECTED_HELD)) expect(entryIds.has(id)).toBe(false);
+  });
+
+  it("both retire files record the live-recheck timestamp", () => {
+    expect(load(RETIRE_AFTER_MOVE_FILE).checkedAt).toBeTruthy();
+    expect(load(RETIRE_DERIVED_FILE).checkedAt).toBeTruthy();
+  });
+});
+
+describe("every retire entry carries salesAtRetireTime: 0 -- the live pre-commit recheck", () => {
+  it("every retire-after-move entry has salesAtRetireTime === 0", () => {
+    for (const e of load(RETIRE_AFTER_MOVE_FILE).entries) {
+      expect(e.salesAtRetireTime, `${e.id} missing salesAtRetireTime`).toBe(0);
+    }
+  });
+
+  it("every retire-derived-occupants entry has salesAtRetireTime === 0", () => {
+    for (const e of load(RETIRE_DERIVED_FILE).entries) {
+      expect(e.salesAtRetireTime, `${e.id} missing salesAtRetireTime`).toBe(0);
+    }
+  });
+
+  it("no held row is hiding as a live salesAtRetireTime:0 entry -- the field is truly 0, not just present", () => {
+    for (const f of [RETIRE_DERIVED_FILE, RETIRE_AFTER_MOVE_FILE]) {
+      for (const e of load(f).entries) {
+        expect(typeof e.salesAtRetireTime).toBe("number");
+        expect(e.salesAtRetireTime).toBe(0);
+      }
+    }
   });
 });
 
@@ -164,7 +224,7 @@ describe("no destination appears twice across ALL move files -- exactly one move
         seen.add(e.id);
       }
     }
-    expect(seen.size).toBe(1656 + 68 + 68 + 825);
+    expect(seen.size).toBe(1656 + 68 + 68 + 822);
   });
 });
 
@@ -369,9 +429,15 @@ describe("every source parallel is one of the ruling's non-canonical spellings, 
 });
 
 describe("counts reconcile against the census in the file headers", () => {
-  it("all five files' entry counts sum to the measured 2,617 listed rows", () => {
+  it("all five files' entry counts sum to the measured 2,614 listed rows (2,617 minus the 3 held)", () => {
     const total = ALL_FILES.reduce((n, f) => n + load(f).entries.length, 0);
-    expect(total).toBe(1656 + 68 + 68 + 825);
-    expect(total).toBe(2617);
+    expect(total).toBe(1656 + 68 + 68 + 822);
+    expect(total).toBe(2614);
+  });
+
+  it("the stale '36 groups' claim is corrected to 35 groups / 65 entries in retire-after-move's finding", () => {
+    const doc = load(RETIRE_AFTER_MOVE_FILE);
+    expect(doc.finding).toMatch(/35 of them pure name-superset/);
+    expect(doc.finding).not.toMatch(/36 of them/);
   });
 });

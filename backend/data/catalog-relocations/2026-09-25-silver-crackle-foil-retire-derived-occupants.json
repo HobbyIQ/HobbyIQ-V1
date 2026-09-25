@@ -11,419 +11,490 @@
   "DESTINATION COMPUTED BY THE REAL computeHobbyIqCardId, NEVER STRING-HACKED. Every destination id was produced by the built dist/services/portfolioiq/hobbyIqCardId.service.js, changing ONLY parallel to \"Silver Crackle Foil\" -- one axis.",
   "APPLY ORDER: 1st. move-03-after-derived-retire.json depends on every entry here having landed -- its destinations are these exact ids.",
   "NEVER A ROW WITH SALES STILL POINTING AT ITS EXACT ID. Every candidate's sold_comps count was read by exact hobbyiqCardId equality before being listed; any candidate with sales>0 was moved to the HELD section below instead (see PR body) and is NOT retired here.",
-  "MEASURED 2026-09-25: 68 retire-derived entries, 7 HELD (sales present, reported in the PR body, retired by neither list)."
+  "MEASURED 2026-09-25: 68 retire-derived entries, 7 HELD (sales present, reported in the PR body, retired by neither list).",
+  "LIVE RECHECK BEFORE COMMIT (2026-09-25T23:20:16.463Z, PR #2427 re-review). All 68 entries were re-queried live by exact hobbyiqCardId equality immediately before this commit; 0 violators (sales>0) found. Every entry carries salesAtRetireTime: 0."
  ],
  "census": {
-  "entries": 68
+  "entries": 68,
+  "recheckedAt": "2026-09-25T23:20:16.463Z"
  },
  "entries": [
   {
    "id": "hiq:baseball:2026:topps:209:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:209:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:209:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:261:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:261:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:261:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:273:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:273:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:273:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:35:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:35:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:35:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:309:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:309:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:309:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:152:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:152:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:152:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91a-af:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91a-af:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91a-af:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:ha-4:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:ha-4:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:ha-4:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:ha-3:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:ha-3:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:ha-3:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91a-sch:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91a-sch:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91a-sch:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91c-8:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-8:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-8:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:ha-10:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:ha-10:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:ha-10:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:cc-cco:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:cc-cco:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:cc-cco:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:mlm-rs:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlm-rs:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlm-rs:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:t91-27:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-27:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-27:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91c-2:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-2:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-2:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91r-rs:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91r-rs:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91r-rs:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91r-fl:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91r-fl:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91r-fl:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:gh-11:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:gh-11:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:gh-11:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:fp-8:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:fp-8:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:fp-8:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:smlb-12:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:smlb-12:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:smlb-12:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:t91-6:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-6:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-6:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:t91-75:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-75:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-75:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:t91-30:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-30:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-30:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91a-jjo:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91a-jjo:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91a-jjo:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:smlb-6:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:smlb-6:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:smlb-6:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:mlm-st:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlm-st:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlm-st:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:smlb-29:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:smlb-29:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:smlb-29:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91c-20:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-20:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-20:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:gh-26:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:gh-26:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:gh-26:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:btp-22:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:btp-22:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:btp-22:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:gh-12:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:gh-12:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:gh-12:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91c-44:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-44:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-44:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91c-78:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-78:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-78:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:bsa-jhg:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:bsa-jhg:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:bsa-jhg:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:tp-8:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:tp-8:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:tp-8:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:mlm-mma:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlm-mma:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlm-mma:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91a-eg:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91a-eg:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91a-eg:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:bsa-kca:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:bsa-kca:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:bsa-kca:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:gh-27:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:gh-27:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:gh-27:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:tp-24:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:tp-24:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:tp-24:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91c-76:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-76:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-76:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:t91-2:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-2:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-2:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:smlb-3:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:smlb-3:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:smlb-3:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:bsa-ca:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:bsa-ca:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:bsa-ca:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91r-ja:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91r-ja:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91r-ja:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:t91-33:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-33:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-33:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91c-68:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-68:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-68:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:gh-22:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:gh-22:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:gh-22:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91r-pa:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91r-pa:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91r-pa:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:t91-28:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-28:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:t91-28:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:ha-5:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:ha-5:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:ha-5:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:gh-4:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:gh-4:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:gh-4:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:cc-ca:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:cc-ca:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:cc-ca:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:mlm-cmo:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlm-cmo:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlm-cmo:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:cc-bb:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:cc-bb:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:cc-bb:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91c-48:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-48:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-48:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91r-bho:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91r-bho:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91r-bho:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91r-yy:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91r-yy:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91r-yy:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:cc-mv:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:cc-mv:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:cc-mv:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:cc-mma:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:cc-mma:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:cc-mma:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:mlm-af:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlm-af:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlm-af:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:tp-16:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:tp-16:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:tp-16:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:91c-82:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-82:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:91c-82:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:mlma-ra:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlma-ra:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlma-ra:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:mlm-mw:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlm-mw:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:mlm-mw:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:cc-fl:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:cc-fl:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:cc-fl:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   },
   {
    "id": "hiq:baseball:2026:topps:tp-11:silver-crackle-foil:no-auto",
    "action": "retire",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This row is the DERIVED occupant of that canonical address (catalogAuthorityOf classifies its source as \"derived\"), and a checklist-grade transcription of the same card exists under a non-canonical spelling. A derived row must never outvote a checklist row (catalogAuthority.service.ts doctrine) -- retiring this occupant clears the address for the checklist row's move.",
-   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:tp-11:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced."
+   "evidence": "occupant source=catalog-explode-actuals-2026-08-12, parallel=\"Silver Crackle Foil\". catalogAuthorityOf(\"catalog-explode-actuals-2026-08-12\") = \"derived\". sold_comps point-read by exact hobbyiqCardId=\"hiq:baseball:2026:topps:tp-11:silver-crackle-foil:no-auto\" on 2026-09-25: 0 rows -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
   }
- ]
+ ],
+ "checkedAt": "2026-09-25T23:20:16.463Z"
 }
