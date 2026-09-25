@@ -1,0 +1,495 @@
+{
+ "generatedAt": "2026-09-25T22:50:37.085Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "2026-09-25 Drew ruling: the unnumbered 2026 Topps baseball Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". This list folds rows whose canonical destination is FREE onto that address -- one axis (parallel) changed. This chunk's destinations are currently OCCUPIED by a derived (catalog-explode-actuals / ingest-auto-seed) row that 2026-09-25-silver-crackle-foil-retire-derived-occupants.json retires. Do NOT run this file before that retire has landed and been verified -- the lane refuses a reslug onto an occupied address.",
+ "rulings": [
+  "OWNER RULING (Drew, 2026-09-25 ~21:20Z): the unnumbered 2026 Topps baseball Super Box parallel carries ONE spelling, \"Silver Crackle Foil\". Five non-canonical spellings of the same unnumbered non-auto rung were measured under setKeys topps/topps-series-1/topps-series-2/topps-update/topps-chrome: \"Silver Crackle Foil (Super Box exclusive)\" (1,712), \"Silver Crackleboard Foil Board\"/\"Crackleboard Foil\" (350+150=500), \"Silver Crackle Foilboard\" (375), bare \"Silver Crackle\" (0 found). Colour rungs are DISTINCT cards and excluded by construction.",
+  "REVISED 2026-09-25 after PR #2427 review (REQUEST CHANGES). The original retire list was INVERTED: it called catalog-explode-actuals-2026-08-12 occupants 'checklist-grade' by a hand-rolled source-prefix regex that never matched `^catalog-explode`, so it accepted derived rows as checklist-grade and would have retired 109 real checklist-transcribed rows in favour of derived duplicates. Every grade decision below is now made with the REAL catalogAuthorityOf (backend/dist/services/catalog/catalogAuthority.service.js), never a source-prefix guess. catalogAuthorityOf classifies catalog-explode-actuals-2026-08-12 and ingest-auto-seed as DERIVED (matches the DERIVED regex's `catalog-explode`/`ingest-auto-seed` stems) and checklistinsider-*/checklistcenter-*/baseballcardpedia-ladders-* as CHECKLIST.",
+  "DESTINATION COLLISIONS ARE DEDUPED. 472 of the 1,738 destinations this fold touches are targeted by 2-3 source rows (1,276 of 2,587 in-scope rows), because the same card is transcribed under multiple non-canonical spellings by multiple checklist packages (baseballcardpedia-ladders, checklistcenter, checklistinsider all mint their own copy). Exactly ONE mover is kept per destination -- the fullest player name agreeing with the checklist majority, tie-broken checklistinsider > checklistcenter > baseballcardpedia -- and the remaining same-player duplicates are RETIRED, never moved, after the mover lands (see retire-after-move.json). 36 of the 472 groups are pure name-superset pairs (\"Bobby Witt\" vs \"Bobby Witt Jr.\", diacritic pairs like \"Julio Rodriguez\"/\"Julio Rodríguez\", or a trailing checklist-position tag like \" CL\"); the fuller name is kept as the mover in every one.",
+  "CROSS-PLAYER COLLISIONS ARE PARKED, NOT RESOLVED HERE. Where two DIFFERENT players' names land on the same canonical destination (a genuine numbering disagreement between sources, not a spelling variant), this lane parks nothing and moves nothing automatically -- every such row is reported to Drew in the PR body for a ruling, and appears in NO list file.",
+  "DESTINATION COMPUTED BY THE REAL computeHobbyIqCardId, NEVER STRING-HACKED. Every destination id was produced by the built dist/services/portfolioiq/hobbyIqCardId.service.js, changing ONLY parallel to \"Silver Crackle Foil\" -- one axis.",
+  "APPLY ORDER: 3rd -- after retire-derived-occupants.json (1st) and after move-01/move-02 (2nd, independent). Re-verify each destination point-reads 404 immediately before running this file; if the derived retire has not landed yet, every entry here will be correctly refused as occupied rather than merged."
+ ],
+ "census": {
+  "entries": 68
+ },
+ "entries": [
+  {
+   "id": "hiq:baseball:2026:topps-series-1:209:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:209:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Riley Greene\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:209:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:261:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:261:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Zack Wheeler\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:261:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:273:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:273:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mason Barnett\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:273:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:35:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:35:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"C.J. Kayfus\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:35:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:309:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:309:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Kyle Manzardo\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:309:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:152:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:152:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"CJ Abrams\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:152:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91a-af:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91a-af:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Alex Freeland\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91a-af:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:ha-4:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:ha-4:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Kyle Teel\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:ha-4:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:ha-3:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:ha-3:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Aaron Judge\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:ha-3:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91a-sch:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91a-sch:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Spencer Schwellenbach\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91a-sch:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91c-8:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91c-8:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cole Young\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91c-8:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:ha-10:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:ha-10:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Christian Moore\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:ha-10:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:cc-cco:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:cc-cco:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Carlos Correa\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:cc-cco:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:mlm-rs:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:mlm-rs:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Roki Sasaki\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:mlm-rs:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:t91-27:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:t91-27:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Shoeless Joe Jackson\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:t91-27:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91c-2:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91c-2:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Junior Caminero\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91c-2:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91r-rs:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91r-rs:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Roki Sasaki\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91r-rs:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91r-fl:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91r-fl:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Francisco Lindor\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91r-fl:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:gh-11:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:gh-11:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Andrew McCutchen\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:gh-11:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:fp-8:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:fp-8:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Alysha Newman\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:fp-8:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:smlb-12:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:smlb-12:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Elly De La Cruz\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:smlb-12:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:t91-6:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:t91-6:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Colby Thomas\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:t91-6:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:t91-75:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:t91-75:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Pedro Martinez\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:t91-75:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:t91-30:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:t91-30:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Derek Jeter\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:t91-30:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91a-jjo:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91a-jjo:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jared Jones\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91a-jjo:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:smlb-6:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:smlb-6:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Vladimir Guerrero Jr.\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:smlb-6:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:mlm-st:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:mlm-st:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Spencer Torkelson\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:mlm-st:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:smlb-29:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:smlb-29:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Tarik Skubal\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:smlb-29:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91c-20:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91c-20:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Otto Kemp\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91c-20:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:gh-26:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:gh-26:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Roman Anthony\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:gh-26:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:btp-22:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:btp-22:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jac Caglianone\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:btp-22:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:gh-12:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:gh-12:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Byron Buxton\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:gh-12:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91c-44:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91c-44:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Juan Soto\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91c-44:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91c-78:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91c-78:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"James Wood\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91c-78:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:bsa-jhg:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:bsa-jhg:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jhostynxon Garcia\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:bsa-jhg:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:tp-8:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:tp-8:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mookie Betts\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:tp-8:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:mlm-mma:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:mlm-mma:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Marcelo Mayer\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:mlm-mma:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91a-eg:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91a-eg:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Eric Gagne\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91a-eg:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:bsa-kca:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:bsa-kca:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Kerry Carpenter\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:bsa-kca:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:gh-27:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:gh-27:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Michael Busch\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:gh-27:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:tp-24:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:tp-24:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cal Raleigh\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:tp-24:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91c-76:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91c-76:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Matt Olson\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91c-76:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:t91-2:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:t91-2:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Riley Greene\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:t91-2:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:smlb-3:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:smlb-3:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Fernando Tatis Jr.\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:smlb-3:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:bsa-ca:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:bsa-ca:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"CJ Abrams\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:bsa-ca:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91r-ja:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91r-ja:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jose Altuve\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91r-ja:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:t91-33:crackleboard-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:t91-33:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Crackleboard Foil\", playerName=\"Ichiro\", source=checklistcenter-2026-08-29. Destination hiq:baseball:2026:topps:t91-33:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91c-68:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91c-68:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Robin Yount\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91c-68:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:gh-22:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:gh-22:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Marcus Semien\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:gh-22:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91r-pa:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91r-pa:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Pete Alonso\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91r-pa:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:t91-28:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:t91-28:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Brice Matthews\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:t91-28:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:ha-5:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:ha-5:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Shohei Ohtani\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:ha-5:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:gh-4:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:gh-4:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"James Wood\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:gh-4:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:cc-ca:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:cc-ca:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"CJ Abrams\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:cc-ca:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:mlm-cmo:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:mlm-cmo:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Colson Montgomery\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:mlm-cmo:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:cc-bb:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:cc-bb:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bo Bichette\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:cc-bb:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91c-48:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91c-48:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nolan McLean\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91c-48:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91r-bho:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91r-bho:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Brady House\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91r-bho:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91r-yy:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91r-yy:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Yoshinobu Yamamoto\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91r-yy:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:cc-mv:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:cc-mv:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mark Vientos\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:cc-mv:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:cc-mma:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:cc-mma:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Manny Machado\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:cc-mma:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:mlm-af:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:mlm-af:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Alex Freeland\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:mlm-af:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:tp-16:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:tp-16:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bobby Witt Jr.\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:tp-16:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:91c-82:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:91c-82:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Aaron Judge\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91c-82:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:mlma-ra:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:mlma-ra:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Randy Arozarena\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:mlma-ra:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:mlm-mw:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:mlm-mw:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Masyn Winn\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:mlm-mw:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:cc-fl:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:cc-fl:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Francisco Lindor\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:cc-fl:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2026:topps-series-1:tp-11:silver-crackle-foil-super-box-exclusive:no-auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2026:topps:tp-11:silver-crackle-foil:no-auto",
+   "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Juan Soto\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:tp-11:silver-crackle-foil:no-auto is occupied by a DERIVED row retired in 2026-09-25-silver-crackle-foil-retire-derived-occupants.json -- this entry MUST run AFTER that retire lands. One axis changed: parallel only."
+  }
+ ]
+}
