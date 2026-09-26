@@ -355,6 +355,10 @@ const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budge
 // Loaded defensively (see lib/player-identity.cjs): a tree-less run falls back
 // to the legacy expression rather than failing to load.
 const { playerIdentityKey, identityKeyIsBuilt } = require(path.join(__dirname, "lib", "player-identity.cjs"));
+// The dual cross-partition + partition-scoped sales check every retire gate
+// on this runner shares -- see lib/sales-at-id.cjs for the reproduced
+// anomaly a single cross-partition query missed.
+const { salesAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
 // The dist/ and Cosmos requires live inside main(), as the pool lane does it:
 // loading this module must not need a built tree, so the runner contract test
 // can require it and drive the scope refusal without a compile step.
@@ -1019,15 +1023,21 @@ async function main() {
     catch (err) { if (err?.code === 404 || err?.statusCode === 404) return null; throw err; }
   };
   // How many sales point at a slug. Printed for a retire so the size of the
-  // hand-off to the rematch is visible BEFORE the apply.
+  // hand-off to the rematch is visible BEFORE the apply. DUAL check: a bare
+  // cross-partition equality query can miss a real row (see lib/sales-at-id
+  // for the reproduced 0.6% anomaly), so this unions it with the same
+  // predicate scoped to `partitionKey: slug` and logs both counts.
+  //
+  // NEVER SWALLOWS. A query throw here used to come back as `null` --
+  // "unknown", printed and forgotten. That let a retire (below) delete on an
+  // UNANSWERED sales check, which is exactly the failure mode the dual check
+  // exists to close from the other side. The throw now propagates to
+  // whichever call site awaits it, so every caller must decide -- and
+  // every caller below decides "failed", never "proceed".
   const salesAt = async (slug) => {
-    try {
-      const { resources } = await retry(() => pool.items.query({
-        query: "SELECT VALUE COUNT(1) FROM c WHERE c.hobbyiqCardId = @s",
-        parameters: [{ name: "@s", value: slug }],
-      }, { maxItemCount: 1 }).fetchAll());
-      return Number(resources[0] ?? 0) || 0;
-    } catch { return null; }
+    const { xp, pk, total } = await salesAtId(pool, slug, { retry });
+    console.log(`      sales at id: xp=${xp} pk=${pk}`);
+    return total;
   };
 
   let retired = 0, resluged = 0, alreadyRight = 0, notFound = 0, failed = 0;
@@ -1064,6 +1074,10 @@ async function main() {
   // REFUSAL, not a skip: the entry's premise about the row's state is wrong.
   let refusedNotPending = 0;
   let refusedOccupied = 0, salesUnplaced = 0, salesRepointed = 0, gradedRetired = 0;
+  // A retire whose sales check found sales present (either form, dual check)
+  // -- refused, never deleted. `salesUnplaced` above is what a LICENSED
+  // retire hands to the rematch; this is the entry that never got that far.
+  let refusedSalesPresent = 0;
   // A SUBSET of refusedOccupied, never an addition to it: the reconciliation
   // identity below counts occupied refusals once, and a superset IS one.
   let refusedNameSuperset = 0;
@@ -1173,12 +1187,21 @@ async function main() {
     // owns catalog field writes -- never a raw container.patch (#1614 left
     // rows unfindable exactly that way).
     if (action === "park") {
-      const pointing = await salesAt(id);
+      // Reporting only -- park never deletes `id`, so this is not a gate.
+      // Still must not crash the process on a query throw.
+      let pointing;
+      try {
+        pointing = await salesAt(id);
+      } catch (err) {
+        failed++;
+        console.error(`      FAILED: sales check threw — ${String(err?.message ?? err).slice(0, 80)}`);
+        continue;
+      }
       console.log(`  PARK  ${id.slice(0, 70)}`);
       console.log(`      ${String(row.playerName ?? "(no player)")} — ${String(row.setName ?? "")}`.slice(0, 100));
       console.log(`      reason: ${reason.slice(0, 90)}`);
       if (evidence) console.log(`      evidence: ${evidence.slice(0, 90)}`);
-      console.log(`      sales staying on this row: ${pointing === null ? "unknown" : f(pointing)}   <- kept WITH the row, and unpriced`);
+      console.log(`      sales staying on this row: ${f(pointing)}   <- kept WITH the row, and unpriced`);
       if (row.identityUnverified === true) {
         alreadyParked++;
         console.log("      already identityUnverified — nothing to write");
@@ -1255,13 +1278,31 @@ async function main() {
     }
 
     if (action === "retire") {
-      const pointing = await salesAt(id);
       console.log(`  RETIRE  ${id.slice(0, 70)}`);
       console.log(`      ${String(row.playerName ?? "(no player)")} — ${String(row.setName ?? "")}`.slice(0, 100));
       console.log(`      reason: ${reason.slice(0, 90)}`);
       if (evidence) console.log(`      evidence: ${evidence.slice(0, 90)}`);
-      console.log(`      sales pointing here: ${pointing === null ? "unknown" : f(pointing)}   <- become UNPLACED, the rematch owns them`);
-      if (pointing) salesUnplaced += pointing;
+      // THE SALES CHECK IS A GATE, NOT A LOG LINE. `salesAt` no longer
+      // swallows a query throw -- it propagates here, where it is treated
+      // exactly like any other unanswered check: `failed`, never `retired`,
+      // and retireCatalogRow is never reached. Only `pointing === 0` (both
+      // the cross-partition and the partition-scoped form, via salesAtId's
+      // union) may proceed to delete.
+      let pointing;
+      try {
+        pointing = await salesAt(id);
+      } catch (err) {
+        failed++;
+        console.error(`      FAILED: sales check threw — ${String(err?.message ?? err).slice(0, 80)}`);
+        continue;
+      }
+      console.log(`      sales pointing here: ${f(pointing)}   <- become UNPLACED, the rematch owns them`);
+      if (pointing > 0) {
+        refusedSalesPresent++;
+        console.error(`  REFUSED (sales present, n=${f(pointing)})  ${id.slice(0, 70)}`);
+        console.error("      a retire needs zero sales by BOTH the cross-partition and the partition-scoped read");
+        continue;
+      }
       if (!APPLY) { retired++; continue; }
       try {
         const res = await retireCatalogRow(cat, id, row.cardId ?? id, reason, { retry });
@@ -1475,8 +1516,19 @@ async function main() {
     // the retire's `sales pointing here` line is.
     const keepSales = keepsSales(e, doc);
     if (keepSales) {
-      const staying = await salesAt(id);
-      console.log(`      sales staying at this slug: ${staying === null ? "unknown" : f(staying)}`
+      // Reporting only -- a reslug never deletes `id` here (moveCatalogRow's
+      // own source-retire, gated separately below, is what removes the old
+      // row), so a thrown sales check cannot be swallowed as "unknown" and
+      // silently waved through: it is `failed`, same as the retire gate.
+      let staying;
+      try {
+        staying = await salesAt(id);
+      } catch (err) {
+        failed++;
+        console.error(`      FAILED: sales check threw — ${String(err?.message ?? err).slice(0, 80)}`);
+        continue;
+      }
+      console.log(`      sales staying at this slug: ${f(staying)}`
         + "   <- NOT re-pointed; they are the other card's, the rematch re-derives them");
       if (staying) salesLeftBehind += staying;
     }
@@ -1580,6 +1632,7 @@ async function main() {
   }
   console.log(`  refused — cross-market  ${f(refusedCrossMarket)}   <- a JA row may never land on an EN key, or the reverse`);
   console.log(`  refused — rung text     ${f(refusedRungTextMissing)}   <- the rung moved with no parallel text, or the text does not produce "to"`);
+  console.log(`  refused — sales present ${f(refusedSalesPresent)}   <- a retire needs zero sales by BOTH forms of the dual check`);
   console.log(`  already gone            ${f(alreadyRight)}`);
   console.log(`  not found               ${f(notFound)}`);
   console.log(`  read-back needed a retry ${f(readBackRetried)}   <- replica lag, delete confirmed landed — NOT failed`);
@@ -1614,7 +1667,7 @@ async function main() {
   // reconcile as a skip, the same way `already gone` does for a retire.
   const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked + verified + patchedFields;
   const skipped = alreadyRight + notFound + alreadyParked + alreadyVerified;
-  const refused = refusedOccupied + refusedCrossMarket + refusedNotPending + refusedRungTextMissing;
+  const refused = refusedOccupied + refusedCrossMarket + refusedNotPending + refusedRungTextMissing + refusedSalesPresent;
   // A PARTIAL RUN STILL RECONCILES. The identity has to hold over what the
   // loop CONSIDERED, not over the file, or a budget stop reads as 6,695 lost
   // entries. `not reached` carries the remainder explicitly so the two numbers

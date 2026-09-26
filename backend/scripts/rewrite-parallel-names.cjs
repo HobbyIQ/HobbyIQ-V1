@@ -139,6 +139,10 @@ const crypto = require("node:crypto");
 const backend = path.resolve(__dirname, "..");
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
+// The dual cross-partition + partition-scoped sales check every retire gate
+// on this runner shares -- see lib/sales-at-id.cjs for the reproduced
+// anomaly a single cross-partition query missed.
+const { salesAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const f = (n) => Number(n).toLocaleString();
@@ -334,22 +338,16 @@ const retry = async (fn, tries = 12) => {
   }
 };
 
-/** Paginated equality count of sold_comps rows at a given hobbyiqCardId.
- *  Never COUNT/GROUP BY -- pages the ids and counts client-side, which is
- *  the same "informational, never an aggregate the container refuses"
- *  shape every other lane on this runner uses. */
+/** Sales at a given hobbyiqCardId, by the DUAL check (lib/sales-at-id.cjs):
+ *  a cross-partition query UNIONed with the same predicate scoped to
+ *  `partitionKey: slug`. A bare cross-partition equality query can miss a
+ *  real row -- see that module for the reproduced anomaly -- so this lane's
+ *  "retire only if 0 sales" gate never relies on the cross-partition form
+ *  alone. Never COUNT/GROUP BY, never maxItemCount: -1. */
 async function salesCountAt(pool, slug) {
-  const query = {
-    query: "SELECT c.id FROM c WHERE c.hobbyiqCardId = @s",
-    parameters: [{ name: "@s", value: slug }],
-  };
-  const iter = pool.items.query(query, { maxItemCount: 500, maxDegreeOfParallelism: -1 });
-  let n = 0;
-  while (iter.hasMoreResults()) {
-    const { resources } = await retry(() => iter.fetchNext());
-    n += (resources ?? []).length;
-  }
-  return n;
+  const { xp, pk, total } = await salesAtId(pool, slug, { retry });
+  console.log(`      sales at id: xp=${xp} pk=${pk}`);
+  return total;
 }
 
 /** A checklist-grade row somewhere in (sport, year, setKey) already carrying
@@ -581,7 +579,17 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
           if (occupantIsChecklist) {
             // A duplicate of an already-canonical rung. Retire the SOURCE
             // only when zero sales point at it -- never a silent orphan.
-            const n = await salesCountAt(pool, row.id);
+            // THE CHECK IS THE GATE: a thrown query is an unanswered
+            // question, never a green light. It lands in `failed`, and
+            // retireCatalogRow below is never reached on that path.
+            let n;
+            try {
+              n = await salesCountAt(pool, row.id);
+            } catch (e) {
+              failed++;
+              console.error(`      FAILED sales check ${String(row.id).slice(0, 60)}: ${e.message}`);
+              continue;
+            }
             st.salesUnderOldId += n;
             if (n > 0) {
               st.heldSales++;
