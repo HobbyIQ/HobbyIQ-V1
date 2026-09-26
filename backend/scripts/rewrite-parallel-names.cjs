@@ -201,6 +201,76 @@ const SHARD_SCOPE = runnerShardScope({ label: "rewrite-parallel-names" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const shardOf = (id) => parseInt(crypto.createHash("sha1").update(String(id)).digest("hex").slice(0, 8), 16) % SLOTS;
 
+// CF-A-RETIRE-NEEDS-A-LEDGER (review, PR #2438). Every RETIRE this lane
+// performs is a hard delete with no read-back (retireCatalogRow), same as
+// resolve-split-identity-parks/collapse-ch-synthetic-twins/fold-catalog-
+// duplicate-rungs before it -- same PLAN_OUT convention, same fixed-path-
+// guarded-on-script wiring, so a REPORT and an APPLY both write one NDJSON
+// record per MOVE or RETIRE (never per refused/failed/left/healed row --
+// those have no write to audit) into `${PLAN_OUT}/plan-slot-${SLOT}.ndjson`,
+// truncated at open exactly like every sibling lane's own plan file.
+//
+// WIRING GAP, STATED PLAINLY: PLAN_OUT only takes effect for a script that
+// this repo's .github/workflows/backfill-runner.yml names in its own
+// script-gated ternary (see the other PLAN_OUT lanes above) -- and that file
+// is backend/src's sibling off-limits path for this PR (the same "no
+// backend/src, no .github" scope the original defect-fix PR was built
+// under). This commit adds the SCRIPT-SIDE half only: rewrite-parallel-names
+// reads PLAN_OUT like every sibling lane and writes the same NDJSON shape,
+// so wiring it into the workflow later is a one-line ternary addition, not a
+// script change. Until that workflow edit lands, PLAN_OUT is unset for this
+// script in the real runner and the ledger is inert (same as it would be for
+// any lane never added to that ternary) -- this is a real, stated gap, not a
+// hidden one.
+const PLAN_OUT = String(process.env.PLAN_OUT || "").trim();
+
+/**
+ * Build one plan-file emitter, scoped to a single runLane() call -- factored
+ * out (rather than module-level closure state) so a test can point it at a
+ * scratch directory and assert on the file it writes without spawning a
+ * child process or reloading this module. `main()` builds the real one from
+ * PLAN_OUT/SLOT; runLane() defaults to a no-op emitter when the caller
+ * passes none, so every existing in-process test that does not care about
+ * the ledger is unaffected.
+ *
+ * One NDJSON record per confirmed MOVE or RETIRE -- APPLY writes it only
+ * after its own write succeeds (never before, matching the same
+ * confirmed-write discipline the moved/retired counters now use); REPORT
+ * writes the identical shape with `mode: "report"` so an operator can diff
+ * a REPORT's plan against a later APPLY's. Never called for
+ * refused/failed/left/healed rows -- there is no write to audit there.
+ */
+function makePlanEmitter(planOut, slot) {
+  const dir = String(planOut ?? "").trim();
+  let fd = null; // null = not yet opened, -1 = tried and failed (never retry)
+  function open() {
+    if (!dir || fd !== null) return;
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      const planPath = path.join(dir, `plan-slot-${slot}.ndjson`);
+      fd = fs.openSync(planPath, "w"); // truncate: each run's own selection, not an append log
+      console.log(`  plan file         ${planPath}`);
+    } catch (e) {
+      console.log(`\n::warning::could not open PLAN_OUT (${dir}): ${e?.message}`);
+      fd = -1;
+    }
+  }
+  return {
+    emitPlanRow(record) {
+      if (!dir) return;
+      open();
+      if (!fd || fd === -1) return;
+      try { fs.appendFileSync(fd, JSON.stringify({ ts: new Date().toISOString(), ...record }) + "\n"); }
+      catch (e) { console.log(`\n::warning::PLAN_OUT write failed for ${record?.id}: ${e?.message}`); }
+    },
+    close() {
+      if (fd && fd !== -1) { try { fs.closeSync(fd); } catch { /* best-effort */ } }
+      fd = null;
+    },
+  };
+}
+const noopPlanEmitter = { emitPlanRow() {}, close() {} };
+
 const CHECKLIST_SQL = "(c.source = 'bccp' OR STARTSWITH(c.source,'baseballcardpedia') OR STARTSWITH(c.source,'checklist') OR STARTSWITH(c.source,'beckett') OR STARTSWITH(c.source,'tcgdex') OR STARTSWITH(c.source,'cardboardchecklist'))";
 
 // ─── RULE LOADING AND VALIDATION ──────────────────────────────────────────
@@ -430,21 +500,36 @@ function computeNewIdPreservingSetKey(row, newName, printRun, deps) {
   if (probeParsed.printRun) parts.push(`num-${probeParsed.printRun}`);
   const candidateParent = parts.join(":");
 
-  // VERIFY THE ROUND-TRIP. Re-parse the reconstructed id and confirm every
-  // field OTHER than parallel/printRun agrees with the row's own parsed id --
-  // sport, year, setKey (this is the actual cross-product guard), cardNumber,
-  // isAuto, subsetName/subsetInId. A rule may legitimately change parallel
-  // (that is its whole job) and, under printRunFromName, printRun; nothing
-  // else may move.
+  // VERIFY THE ROUND-TRIP. Re-parse the reconstructed id.
+  //
+  // WHAT THIS CAN ACTUALLY CATCH (review, PR #2438): `sport`/`year`/`setKey`/
+  // `cardNumber` below are placed into `parts` verbatim from `own.*` (the row's
+  // OWN parsed id) two lines above, and parseHobbyIqCardId does nothing but
+  // echo `parts[1..3]` straight back with no validation -- so a mismatch on
+  // any of those four is structurally impossible today; they can never fail
+  // and the actual cross-product protection is "never build the candidate's
+  // setKey segment from anything but own.setKey", not this comparison. Kept
+  // as DEFENSE IN DEPTH ONLY: if a future change to the reconstruction above
+  // (or to parseHobbyIqCardId itself) ever lets one of these segments drift,
+  // this still catches it -- but do not read a passing check on these four as
+  // proof of anything; read the construction above instead.
+  //
+  // isAuto IS a real check: it comes from `probeParsed`, a value this
+  // function does not itself control, not from `own`. subsetName/subsetInId
+  // are also real: whether the `sub-` segment is included at all depends on
+  // `own.subsetInId`, and a parser disagreement there is a genuine defect
+  // this guard is designed to catch (see #2434's own subset-dropping defect).
   const verify = parseHobbyIqCardId(candidateParent);
   if (!verify) {
     return { refused: "cross-product", detail: `reconstructed id "${candidateParent}" does not itself parse` };
   }
   const mismatches = [];
+  // -- defense in depth only; see note above, these cannot fail today --
   if (verify.sport !== own.sport) mismatches.push(`sport ${verify.sport} != ${own.sport}`);
   if (verify.year !== own.year) mismatches.push(`year ${verify.year} != ${own.year}`);
   if (verify.setKey !== own.setKey) mismatches.push(`setKey ${verify.setKey} != ${own.setKey}`);
   if (verify.cardNumber !== own.cardNumber) mismatches.push(`cardNumber ${verify.cardNumber} != ${own.cardNumber}`);
+  // -- real checks: probeParsed/conditional-segment sourced --
   if (verify.isAuto !== own.isAuto) mismatches.push(`isAuto ${verify.isAuto} != ${own.isAuto}`);
   if ((verify.subsetName ?? null) !== (own.subsetName ?? null)) mismatches.push(`subsetName ${verify.subsetName} != ${own.subsetName}`);
   if ((verify.subsetInId ?? false) !== (own.subsetInId ?? false)) mismatches.push(`subsetInId ${verify.subsetInId} != ${own.subsetInId}`);
@@ -498,7 +583,7 @@ const retry = async (fn, tries = 12) => {
 async function salesCountAt(pool, slug) {
   const { xp, pk, total } = await salesAtId(pool, slug, { retry });
   console.log(`      sales at id: xp=${xp} pk=${pk}`);
-  return total;
+  return { xp, pk, total };
 }
 
 /** A checklist-grade row somewhere in (sport, year, setKey) already carrying
@@ -562,7 +647,8 @@ function productCellsOf(rule) {
  * @param {number} [opts.slot]
  * @param {number} [opts.slots]
  */
-async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sharded = false, slot = 0, slots = 1 }) {
+async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sharded = false, slot = 0, slots = 1, planEmitter = noopPlanEmitter }) {
+  const { emitPlanRow } = planEmitter;
   const {
     moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow,
     computeHobbyIqCardId, parseHobbyIqCardId,
@@ -701,9 +787,15 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
             // states the projection, APPLY credits `moved` only after
             // moveCatalogRow returns something other than "refused" --
             // never before the write, and never left standing after a
-            // thrown write (that row lands in `failed` only).
+            // thrown write (that row lands in `failed` only). PLAN_OUT gets
+            // one record per outcome (mode "report" or "apply"), never one
+            // for a refusal or a thrown write -- those have nothing to audit.
             if (st.examples.length < 10) st.examples.push({ id: row.id, from: row.parallel, to: newName, newId, action: "move" });
-            if (!apply) { st.moved++; continue; }
+            if (!apply) {
+              st.moved++;
+              emitPlanRow({ mode: "report", action: "move", id: row.id, newId, reason: rule.reason });
+              continue;
+            }
             try {
               const changedFields = { parallel: newName };
               if (printRunFromName) changedFields.printRun = printRun;
@@ -719,6 +811,7 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
               } else {
                 st.moved++;
                 if (printRunFromName) st.printRunFilled++;
+                emitPlanRow({ mode: "apply", action: "move", id: row.id, newId, reason: rule.reason });
               }
             } catch (e) {
               failed++;
@@ -734,14 +827,15 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
             // THE CHECK IS THE GATE: a thrown query is an unanswered
             // question, never a green light. It lands in `failed`, and
             // retireCatalogRow below is never reached on that path.
-            let n;
+            let salesCheck;
             try {
-              n = await salesCountAt(pool, row.id);
+              salesCheck = await salesCountAt(pool, row.id);
             } catch (e) {
               failed++;
               console.error(`      FAILED sales check ${String(row.id).slice(0, 60)}: ${e.message}`);
               continue;
             }
+            const { xp: salesXp, pk: salesPk, total: n } = salesCheck;
             st.salesUnderOldId += n;
             if (n > 0) {
               st.heldSales++;
@@ -750,12 +844,21 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
             }
             // RETIRE (duplicate). Same confirmed-write discipline: REPORT
             // states the projection, APPLY credits `retired` only once
-            // retireCatalogRow actually returns.
+            // retireCatalogRow actually returns. PLAN_OUT carries the sales
+            // check's own xp/pk breakdown (the dual cross-partition +
+            // partition-scoped read this gate is built on) so a read-back
+            // audit can see the ZERO-sales evidence, not just the verdict --
+            // this is a hard delete with no other read-back path.
             if (st.examples.length < 10) st.examples.push({ id: row.id, from: row.parallel, to: newName, newId, action: "retire-duplicate" });
-            if (!apply) { st.retired++; continue; }
+            if (!apply) {
+              st.retired++;
+              emitPlanRow({ mode: "report", action: "retire", id: row.id, twinId: newId, reason: rule.reason, salesXp, salesPk });
+              continue;
+            }
             try {
               await retireCatalogRow(cat, row.id, row.cardId ?? row.id, `rewrite-parallel-names: duplicate of canonical ${newId} (${rule.reason})`, { retry });
               st.retired++;
+              emitPlanRow({ mode: "apply", action: "retire", id: row.id, twinId: newId, reason: rule.reason, salesXp, salesPk });
             } catch (e) {
               failed++;
               console.error(`      FAILED retire ${String(row.id).slice(0, 60)}: ${e.message}`);
@@ -813,6 +916,8 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
     console.log("  every entry is idempotent: an already-moved row re-reads as left-canonical, an already-retired source is simply gone.");
   }
 
+  planEmitter.close();
+
   return {
     exitCode, totalMatched, totalMoved, totalRetired, totalHeldSales, totalHeldDerived,
     totalLeft, totalHealed, totalRefused, failed, written, held, stoppedAt, perRule,
@@ -869,6 +974,7 @@ async function main() {
     cat, pool, rules, apply: APPLY, budget: b,
     deps: { moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow, computeHobbyIqCardId, parseHobbyIqCardId },
     limit: LIMIT, sharded: SHARDED, slot: SLOT, slots: SLOTS,
+    planEmitter: makePlanEmitter(PLAN_OUT, SLOT),
   });
 
   process.exitCode = result.exitCode;
@@ -888,5 +994,5 @@ if (require.main === module) {
 
 module.exports = {
   SCOPE, APPLY, loadRules, ruleMatchesProduct, applyRule, runLane, productCellsOf, salesCountAt, checklistAttestsPrintRun,
-  computeNewIdPreservingSetKey, preflight,
+  computeNewIdPreservingSetKey, preflight, makePlanEmitter,
 };

@@ -33,6 +33,7 @@
 //      row is read, so an operator sees the scope before an APPLY
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, beforeAll, vi } from "vitest";
@@ -48,10 +49,11 @@ const lib = require_(scriptPath) as {
   applyRule: (rule: any, raw: string) => { name: string; strippedNote: string | null; empty?: boolean } | null;
   runLane: (opts: any) => Promise<any>;
   productCellsOf: (rule: any) => Array<{ sport: string; year: number; setKey: string }>;
-  salesCountAt: (pool: any, slug: string) => Promise<number>;
+  salesCountAt: (pool: any, slug: string) => Promise<{ xp: number; pk: number; total: number }>;
   checklistAttestsPrintRun: (cat: any, sport: string, year: number, setKey: string, parallel: string, printRun: number) => Promise<boolean>;
   computeNewIdPreservingSetKey: (row: any, newName: string, printRun: number | null, deps: any) => { newId: string } | { refused: string; detail: string };
   preflight: (row: any, outcome: any) => { ok: true; newId: string } | { ok: false; refused: string; detail: string };
+  makePlanEmitter: (planOut: string, slot: number) => { emitPlanRow: (record: any) => void; close: () => void };
 };
 
 const RULES_FILE = path.join(
@@ -930,6 +932,116 @@ describe("rewrite-parallel-names -- a rename never changes the product (0926 fix
   });
 });
 
+// ── CF-A-RETIRE-NEEDS-A-LEDGER (review, PR #2438) ──────────────────────────
+// Every RETIRE (and MOVE) writes one NDJSON record via PLAN_OUT, same
+// convention as resolve-split-identity-parks/collapse-ch-synthetic-twins/
+// fold-catalog-duplicate-rungs -- so a hard-deleted retire has a read-back
+// audit trail. REPORT and APPLY write the identical shape, tagged by `mode`.
+
+describe("rewrite-parallel-names -- PLAN_OUT ledger (review, PR #2438)", () => {
+  function readLedger(dir: string, slot = 0): any[] {
+    const p = path.join(dir, `plan-slot-${slot}.ndjson`);
+    if (!fs.existsSync(p)) return [];
+    return fs.readFileSync(p, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  }
+  function scratchDir(): string {
+    return fs.mkdtempSync(path.join(os.tmpdir(), "rpn-plan-out-"));
+  }
+
+  it("APPLY: one ledger line per confirmed MOVE, mode 'apply', none for refused/failed rows", async () => {
+    const dir = scratchDir();
+    try {
+      const movable = baseRow({
+        id: "hiq:baseball:2026:topps:1:gold-wave-hobby:no-auto", cardId: "hiq:baseball:2026:topps:1:gold-wave-hobby:no-auto",
+      });
+      const refusedRow = baseRow({
+        id: "legacy-non-hiq-id-2", cardId: "legacy-non-hiq-id-2", cardNumber: "2",
+      });
+      const cat = new FakeCatalog([movable, refusedRow]);
+      const pool = new FakePool([]);
+      const emitter = lib.makePlanEmitter(dir, 0);
+      const result = await lib.runLane({
+        cat, pool, rules: [STRIP_HOBBY_RULE], apply: true, budget: fakeBudget(), deps, planEmitter: emitter,
+      });
+      expect(result.totalMoved).toBe(1);
+      expect(result.totalRefused).toBe(1);
+      const lines = readLedger(dir);
+      expect(lines).toHaveLength(1);
+      expect(lines[0]).toMatchObject({ mode: "apply", action: "move", id: movable.id });
+      expect(typeof lines[0].newId).toBe("string");
+      expect(typeof lines[0].ts).toBe("string");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("APPLY: one ledger line per confirmed RETIRE, carrying salesXp/salesPk from the zero-sales gate; a MOVE that throws writes NO line", async () => {
+    const dir = scratchDir();
+    try {
+      const source_ = baseRow({ id: "hiq:baseball:2026:topps:1:gold-wave-hobby:no-auto", cardId: "hiq:baseball:2026:topps:1:gold-wave-hobby:no-auto" });
+      const canonical = baseRow({
+        id: "hiq:baseball:2026:topps:1:gold-wave:no-auto", cardId: "hiq:baseball:2026:topps:1:gold-wave:no-auto",
+        parallel: "Gold Wave", parallelSlug: "gold-wave", source: "checklistinsider-2026",
+      });
+      const willThrow = baseRow({
+        id: "hiq:baseball:2026:topps:3:gold-wave-hobby:no-auto", cardId: "hiq:baseball:2026:topps:3:gold-wave-hobby:no-auto", cardNumber: "3",
+      });
+      const cat = new FakeCatalog([source_, canonical, willThrow]);
+      const pool = new FakePool([]);
+      const throwingDeps = { ...deps, moveCatalogRow: async () => { throw new Error("simulated write failure"); } };
+      const emitter = lib.makePlanEmitter(dir, 0);
+      const result = await lib.runLane({
+        cat, pool, rules: [STRIP_HOBBY_RULE], apply: true, budget: fakeBudget(), deps: throwingDeps, planEmitter: emitter,
+      });
+      expect(result.totalRetired).toBe(1);
+      expect(result.failed).toBe(1); // willThrow's move
+      const lines = readLedger(dir);
+      expect(lines).toHaveLength(1); // only the confirmed retire -- nothing for the thrown move
+      expect(lines[0]).toMatchObject({ mode: "apply", action: "retire", id: source_.id, twinId: canonical.id });
+      expect(typeof lines[0].salesXp).toBe("number");
+      expect(typeof lines[0].salesPk).toBe("number");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("REPORT (apply=false): writes the identical shape, tagged mode 'report', with no actual Cosmos write", async () => {
+    const dir = scratchDir();
+    try {
+      const row = baseRow();
+      const cat = new FakeCatalog([row]);
+      const pool = new FakePool([]);
+      const emitter = lib.makePlanEmitter(dir, 0);
+      const result = await lib.runLane({
+        cat, pool, rules: [STRIP_HOBBY_RULE], apply: false, budget: fakeBudget(), deps, planEmitter: emitter,
+      });
+      expect(result.totalMoved).toBe(1);
+      expect(cat.log).toHaveLength(0); // no write happened
+      const lines = readLedger(dir);
+      expect(lines).toHaveLength(1);
+      expect(lines[0]).toMatchObject({ mode: "report", action: "move", id: row.id });
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("no PLAN_OUT (default no-op emitter) -- runLane behaves exactly as before, no file written, no error", async () => {
+    const row = baseRow();
+    const cat = new FakeCatalog([row]);
+    const pool = new FakePool([]);
+    const result = await lib.runLane({
+      cat, pool, rules: [STRIP_HOBBY_RULE], apply: true, budget: fakeBudget(), deps, // no planEmitter passed
+    });
+    expect(result.totalMoved).toBe(1);
+  });
+
+  it("makePlanEmitter('', slot) is a true no-op -- open()/emitPlanRow never touch the filesystem", () => {
+    const emitter = lib.makePlanEmitter("", 0);
+    expect(() => emitter.emitPlanRow({ mode: "apply", action: "move", id: "x", newId: "y" })).not.toThrow();
+    expect(() => emitter.close()).not.toThrow();
+  });
+});
+
 // ── mutation-class checks (source pins) ────────────────────────────────────
 
 describe("rewrite-parallel-names -- mutation checks", () => {
@@ -1022,11 +1134,29 @@ describe("rewrite-parallel-names -- mutation checks", () => {
     const body = source.slice(idx, source.indexOf("\n}\n", idx));
     expect(body).toContain('refused: "cross-product"');
     // The reconstructed id's setKey segment comes from `own.setKey` (the
-    // row's OWN parsed id), never from the probe's output setKey.
+    // row's OWN parsed id), never from the probe's output setKey -- THIS
+    // CONSTRUCTION is the actual cross-product guard (see the review-finding
+    // test below for why the verify.setKey comparison itself is not).
     expect(body).toMatch(/const parts = \["hiq", own\.sport, String\(own\.year\), own\.setKey\]/);
-    // And the round-trip verification explicitly checks setKey agreement --
-    // this is the actual cross-product guard.
     expect(body).toContain("verify.setKey !== own.setKey");
+  });
+
+  it("(review, PR #2438) the verify.setKey/sport/year/cardNumber comparisons are documented as tautological defense-in-depth, not the real guard", () => {
+    // Since `own.sport`/`own.year`/`own.setKey`/`own.cardNumber` are placed
+    // verbatim into `parts` and parseHobbyIqCardId does nothing but echo
+    // segments 1-3 straight back (verified directly against dist/: feeding
+    // it "hiq:baseball:2024:topps:583:..." returns sport/year/setKey/
+    // cardNumber identical to what was in the string), a mismatch on any of
+    // those four inside `verify` is structurally impossible today. The real
+    // protection is the construction itself (own.setKey going INTO parts),
+    // not this comparison -- this test pins that the source says so, so a
+    // future reader (or reviewer) does not mistake a passing check here for
+    // proof of the guard.
+    const idx = source.indexOf("function computeNewIdPreservingSetKey(");
+    const body = source.slice(idx, source.indexOf("\n}\n", idx));
+    expect(body).toMatch(/structurally impossible/i);
+    expect(body).toMatch(/defense in depth/i);
+    expect(body).toMatch(/cannot fail today/i);
   });
 
   it("(0926 cross-product fix) REPORT and APPLY share the identical preflight() guard -- REPORT never skips it", () => {
@@ -1102,6 +1232,24 @@ describe("rewrite-parallel-names -- workflow wiring", () => {
   it("backfill-runner.yml stays under 512 KB", () => {
     const bytes = fs.statSync(workflowPath).size;
     expect(bytes).toBeLessThan(512 * 1024);
+  });
+
+  it("(review, PR #2438) STATED GAP: PLAN_OUT is not yet wired for this script in the ternary -- the ledger this PR adds is script-side only until a follow-up touches .github", () => {
+    // This PR's own scope excludes backend/src AND .github (git diff main
+    // --stat against both must stay empty -- see the byte-scan/diff-scope
+    // describe block below). Wiring PLAN_OUT into the real runner is a
+    // one-line addition to the ternary this test reads, in a SEPARATE PR;
+    // until that lands, PLAN_OUT is unset for rewrite-parallel-names in the
+    // actual workflow and the ledger this PR adds is inert there -- exactly
+    // like any other lane never added to this ternary. This test pins that
+    // gap so it is impossible to forget, rather than because we prefer it:
+    // when the follow-up PR adds `inputs.script == 'rewrite-parallel-names'
+    // && '/tmp/rewrite-parallel-names-plan'` to this ternary, THIS assertion
+    // is the one that needs to flip.
+    const idx = yml.indexOf("PLAN_OUT:");
+    expect(idx).toBeGreaterThan(-1);
+    const line = yml.slice(idx, yml.indexOf("\n", idx));
+    expect(line).not.toContain("rewrite-parallel-names");
   });
 
   it("the relaunch preamble greps this lane's own budget marker phrase", () => {
