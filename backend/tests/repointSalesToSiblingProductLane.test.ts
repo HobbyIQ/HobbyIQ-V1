@@ -62,6 +62,12 @@ const lane = require(LANE) as {
   playerMatchesRow: (fn: any, salePlayer: string | null, rowPlayer: string | null) => boolean;
   forbiddenFragmentsFor: (from: string, to: string) => readonly string[];
   USER_SEED_SOURCES: Set<string>;
+  siblingCandidateSetKeys: (deps: any, from: string) => string[];
+  sourceRowVerdict: (deps: any, sourceRow: any) => { hasChecklistRow: boolean; derivedResident: boolean };
+  fromRowVerdict: (deps: any, fromRowsAtNumber: any[], saleNameSource: string) => "no-row" | "agrees" | "disagrees";
+  agreeingSiblingRows: (deps: any, siblingRowsAtNumber: any[], saleNameSource: string) => any[];
+  rungCandidatesForSibling: (rows: any[], saleParallel: string | null, statedPrintRun: number | null) => any[];
+  planByPlayerSiblingMove: (deps: any, sale: any, ctx: any) => any;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -72,6 +78,19 @@ const { playerIdentityKey } = require(path.join(backend, "dist/services/catalog/
 const { withProductSetKey } = require(path.join(backend, "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
 
 const deps = { cardNumberVariants, playerIdentityKey, withProductSetKey };
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { productParentOf, productSetKeys } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { namesAgree } = require(path.join(backend, "scripts/lib/name-agreement.cjs"));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { parseSlugWithGrade } = require(path.join(backend, "scripts/lib/graded-id.cjs"));
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { parseHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+
+const byPlayerDeps = { catalogAuthorityOf, namesAgree, withProductSetKey, productParentOf, productSetKeys };
 
 // ── THE PILOT CELL: baseball 2025, topps > topps-update-series ──────────────
 const SPORT = "baseball";
@@ -340,6 +359,303 @@ describe("classifySaleForSiblingMove -- the four shapes, enumerated", () => {
     expect(lane.classifySaleForSiblingMove({ cardId: other, hobbyiqCardId: FROM_HIQ }, ctx).ok).toBe(false);
     expect(lane.classifySaleForSiblingMove({ cardId: FROM_HIQ, hobbyiqCardId: other }, ctx).ok).toBe(false);
     expect(lane.classifySaleForSiblingMove({ cardId: other, hobbyiqCardId: other }, ctx).ok).toBe(false);
+  });
+});
+
+// ── MODE=by-player -- PURE FUNCTION UNIT TESTS ──────────────────────────────
+// The worked example is the PR's own evidence (C:/tmp/bc26_mojo_trace_1530/
+// RESULT.md): 2026 Bowman Chrome #52's checklist names JJ Wetherholt; the
+// sale in question is titled for Shohei Ohtani, whose real checklist-graded
+// #52 lives under sibling `bowman` (the Mega Box "Mega Chrome Mojo" ladder).
+const BP_SPORT = "baseball";
+const BP_YEAR = 2026;
+const BP_FROM = "bowman-chrome";
+const BP_SIBLING = "bowman";
+const BP_NUMBER = "52";
+const BP_WRONG_PLAYER = "JJ Wetherholt"; // bowman-chrome's OWN checklist row at #52
+const BP_SALE_PLAYER = "Shohei Ohtani";
+const BP_FROM_HIQ = `hiq:${BP_SPORT}:${BP_YEAR}:${BP_FROM}:${BP_NUMBER}:mojo-refractor:no-auto`;
+const BP_SIBLING_HIQ = `hiq:${BP_SPORT}:${BP_YEAR}:${BP_SIBLING}:${BP_NUMBER}:mega-chrome-mojo:no-auto`;
+
+/** bowman-chrome's OWN checklist row at #52 -- names a DIFFERENT player
+ *  (Wetherholt) than the sale (Ohtani). This is gate 2's fixture.
+ *
+ *  IMPORTANT: this row lives at a DIFFERENT exact id than the sale
+ *  (bowman-chrome's own checklist-attested "Base" rung for Wetherholt at
+ *  #52), NOT at the sale's own "Mojo Refractor" address -- matching the real
+ *  trace exactly: the resident row AT the sale's exact address
+ *  (`...:mojo-refractor:no-auto`) is DERIVED (source=ingest-auto-seed, see
+ *  BP_FROM_DERIVED_ROW below), while Wetherholt's real checklist authority
+ *  for #52 sits at a rung the Ohtani sale never occupies. Gate 1 (the
+ *  SALE's own exact address) and gate 2 (the FROM product's row AT THIS
+ *  NUMBER, any parallel) are deliberately two different addresses here,
+ *  exactly as they are in production. */
+const BP_FROM_ROW = (over: Record<string, unknown> = {}) => ({
+  id: `hiq:${BP_SPORT}:${BP_YEAR}:${BP_FROM}:${BP_NUMBER}:base:no-auto`, cardId: `hiq:${BP_SPORT}:${BP_YEAR}:${BP_FROM}:${BP_NUMBER}:base:no-auto`,
+  sport: BP_SPORT, year: BP_YEAR, cardYear: BP_YEAR, setKey: BP_FROM,
+  cardNumber: BP_NUMBER, playerName: BP_WRONG_PLAYER, source: "checklistcenter-2026-08-29",
+  parallel: "Base", parallelSlug: "base", isAuto: false,
+  ...over,
+});
+
+/** The DERIVED row squatting at the sale's own exact address -- what the
+ *  live trace actually measured (source=ingest-auto-seed) before this class
+ *  had a fix; gate 1 must see this as "no checklist row" and continue. */
+const BP_FROM_DERIVED_ROW = (over: Record<string, unknown> = {}) => ({
+  id: BP_FROM_HIQ, cardId: BP_FROM_HIQ, sport: BP_SPORT, year: BP_YEAR, cardYear: BP_YEAR, setKey: BP_FROM,
+  cardNumber: BP_NUMBER, playerName: BP_SALE_PLAYER, source: "ingest-auto-seed",
+  parallel: "Mojo Refractor", parallelSlug: "mojo-refractor", isAuto: false,
+  ...over,
+});
+
+/** the sibling `bowman` checklist row at #52 -- the REAL Ohtani card. */
+const BP_SIBLING_ROW = (over: Record<string, unknown> = {}) => ({
+  id: BP_SIBLING_HIQ, cardId: BP_SIBLING_HIQ, sport: BP_SPORT, year: BP_YEAR, cardYear: BP_YEAR, setKey: BP_SIBLING,
+  cardNumber: BP_NUMBER, playerName: BP_SALE_PLAYER, source: "checklistcenter-2026-08-29",
+  parallel: "Mega Chrome Mojo", parallelSlug: "mega-chrome-mojo", isAuto: false,
+  ...over,
+});
+
+/** The sale as it is actually stored: at bowman-chrome's own #52 address
+ *  (a DERIVED row per the trace, source=ingest-auto-seed), titled for Ohtani. */
+const BP_SALE = (over: Record<string, unknown> = {}) => ({
+  id: "bp1", cardId: BP_FROM_HIQ, hobbyiqCardId: BP_FROM_HIQ,
+  sport: BP_SPORT, cardYear: BP_YEAR, cardNumber: BP_NUMBER, playerName: BP_SALE_PLAYER,
+  parallel: "Mojo Refractor", isAuto: false,
+  title: "2026 Bowman Chrome Shohei Ohtani Mojo Refractor #52",
+  source: "tca-ebay", price: 45, soldAt: "2026-09-01",
+  ...over,
+});
+
+const bpCtxFor = (over: Record<string, unknown> = {}) => ({
+  from: BP_FROM, fromSlug: BP_FROM_HIQ, toSlug: BP_FROM_HIQ,
+  sourceRow: null, // no checklist row at the sale's own exact address (gate 1)
+  fromRowsAtNumber: [BP_FROM_ROW()],
+  siblingRowsBySetKey: new Map([[BP_SIBLING, [BP_SIBLING_ROW()]]]),
+  saleNameSource: BP_SALE_PLAYER,
+  statedPrintRun: null,
+  gradeTier: null,
+  ...over,
+});
+
+describe("siblingCandidateSetKeys -- mechanically derived from the registry, never a hand pair", () => {
+  it("finds bowman-chrome's sibling family includes its own parent, bowman", () => {
+    const siblings = lane.siblingCandidateSetKeys(byPlayerDeps, "bowman-chrome");
+    expect(siblings).toContain("bowman");
+  });
+
+  it("returns [] for a setKey with no registered parent (nothing to guess)", () => {
+    expect(lane.siblingCandidateSetKeys(byPlayerDeps, "totally-unregistered-key-xyz")).toEqual([]);
+  });
+});
+
+describe("sourceRowVerdict -- GATE 1: does the sale's own exact address have a checklist row?", () => {
+  it("no row at all -> no checklist row, not a derived resident", () => {
+    expect(lane.sourceRowVerdict(byPlayerDeps, null)).toEqual({ hasChecklistRow: false, derivedResident: false });
+  });
+
+  it("a checklist-grade row -> hasChecklistRow true", () => {
+    expect(lane.sourceRowVerdict(byPlayerDeps, { source: "checklistcenter-2026-08-29" }).hasChecklistRow).toBe(true);
+  });
+
+  it("a DERIVED row (ingest-auto-seed) -> not checklist, but flagged derivedResident (never a refusal by itself)", () => {
+    const v = lane.sourceRowVerdict(byPlayerDeps, { source: "ingest-auto-seed" });
+    expect(v.hasChecklistRow).toBe(false);
+    expect(v.derivedResident).toBe(true);
+  });
+});
+
+describe("fromRowVerdict -- GATE 2: the FROM product's row at this number must DISAGREE", () => {
+  it("no FROM row at all -> 'no-row' (STALE-NO-ROW, a DIFFERENT class)", () => {
+    expect(lane.fromRowVerdict(byPlayerDeps, [], "Shohei Ohtani")).toBe("no-row");
+  });
+
+  it("the FROM row's player AGREES with the sale -> 'agrees' (not this class's defect)", () => {
+    expect(lane.fromRowVerdict(byPlayerDeps, [BP_FROM_ROW({ playerName: "Shohei Ohtani" })], "Shohei Ohtani")).toBe("agrees");
+  });
+
+  it("the FROM row's player DISAGREES (Wetherholt vs Ohtani) -> 'disagrees', gate 2 satisfied", () => {
+    expect(lane.fromRowVerdict(byPlayerDeps, [BP_FROM_ROW()], "Shohei Ohtani")).toBe("disagrees");
+  });
+});
+
+describe("planByPlayerSiblingMove -- the worked example: Ohtani #52 moves from bowman-chrome to bowman", () => {
+  it("MOVEs (relocate) when every one of the five gates holds", () => {
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE(), bpCtxFor());
+    expect(plan.action).toBe("relocate");
+    expect(plan.toSetKey).toBe(BP_SIBLING);
+    expect(plan.newCardId).toBe(BP_SIBLING_HIQ);
+  });
+
+  it("GATE 1: the sale's OWN exact address ALREADY has a checklist row -> refuses already-checklist-backed", () => {
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE(), bpCtxFor({ sourceRow: { source: "checklistcenter-2026-08-29" } }));
+    expect(plan.action).toBe("refuse");
+    expect(plan.reason).toBe("already-checklist-backed");
+  });
+
+  it("a DERIVED row at the source (ingest-auto-seed) does NOT block the ladder, and is reported for the retire list", () => {
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE(), bpCtxFor({ sourceRow: { source: "ingest-auto-seed" } }));
+    expect(plan.action).toBe("relocate");
+    expect(plan.derivedResident).toBe(true);
+  });
+
+  it("GATE 2 (STALE-NO-ROW): the FROM product has NO row at this number at all -- a DIFFERENT class, refused", () => {
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE(), bpCtxFor({ fromRowsAtNumber: [] }));
+    expect(plan.action).toBe("refuse");
+    expect(plan.reason).toBe("stale-no-row");
+  });
+
+  it("GATE 2: the Wetherholt-titled sale at bowman-chrome's OWN #52 STAYS -- the from-row agrees, not this class", () => {
+    // The reviewer's own control case: a #52 sale that IS Wetherholt (the
+    // FROM row's real, correctly-filed player) must never be moved.
+    const wetherholtSale = BP_SALE({ id: "bp-control", playerName: BP_WRONG_PLAYER, title: "2026 Bowman Chrome JJ Wetherholt Mojo Refractor #52" });
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, wetherholtSale, bpCtxFor({ saleNameSource: BP_WRONG_PLAYER }));
+    expect(plan.action).toBe("refuse");
+    expect(plan.reason).toBe("from-row-agrees");
+  });
+
+  it("GATE 3: TWO siblings both agreeing -> refuses ambiguous-sibling, never guessed", () => {
+    const otherSiblingHiq = `hiq:${BP_SPORT}:${BP_YEAR}:bowman-mega:${BP_NUMBER}:mega-chrome-mojo:no-auto`;
+    const otherSiblingRow = { id: otherSiblingHiq, cardId: otherSiblingHiq, setKey: "bowman-mega", cardNumber: BP_NUMBER, playerName: BP_SALE_PLAYER, source: "checklistcenter-2026-08-29", parallel: "Mega Chrome Mojo", parallelSlug: "mega-chrome-mojo", isAuto: false };
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE(), bpCtxFor({
+      siblingRowsBySetKey: new Map([[BP_SIBLING, [BP_SIBLING_ROW()]], ["bowman-mega", [otherSiblingRow]]]),
+    }));
+    expect(plan.action).toBe("refuse");
+    expect(plan.reason).toBe("ambiguous-sibling");
+    expect(plan.detail).toContain("bowman");
+    expect(plan.detail).toContain("bowman-mega");
+  });
+
+  it("GATE 3: a sibling row that is DERIVED (not checklist-grade) never counts as agreeing", () => {
+    // The caller is responsible for pre-filtering siblingRowsBySetKey to
+    // checklist-grade rows (mirroring the base lane's own loadChecklistRows
+    // discipline); this pins that a DERIVED row handed in regardless still
+    // is not read as agreement by namesAgree alone -- the caller's own
+    // filter is what actually excludes it in production (see the end-to-end
+    // suite below), but the pure function must not silently launder a
+    // derived row into a destination either.
+    const derivedSiblingRow = { ...BP_SIBLING_ROW(), source: "ingest-auto-seed" };
+    // Even though namesAgree(playerName) still returns true (same player
+    // string), production code never hands a derived row to this function
+    // in siblingRowsBySetKey -- the loader filters by catalogAuthorityOf
+    // BEFORE building the map. This test documents that contract at the
+    // loader boundary, exercised end-to-end below.
+    expect(byPlayerDeps.catalogAuthorityOf(derivedSiblingRow.source)).not.toBe("checklist");
+  });
+
+  it("GATE 3: no sibling agrees -> refuses destination-rung-not-on-checklist", () => {
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE(), bpCtxFor({ siblingRowsBySetKey: new Map() }));
+    expect(plan.action).toBe("refuse");
+    expect(plan.reason).toBe("destination-rung-not-on-checklist");
+  });
+
+  it("GATE 4: rung ambiguity -- the one agreeing sibling has TWO parallels matching the sale's own parallel text -> refuses ambiguous-rung", () => {
+    const dup = { ...BP_SIBLING_ROW(), id: `${BP_SIBLING_HIQ}-dup`, printRun: 299 };
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE(), bpCtxFor({
+      siblingRowsBySetKey: new Map([[BP_SIBLING, [BP_SIBLING_ROW(), dup]]]),
+    }));
+    expect(plan.action).toBe("refuse");
+    expect(plan.reason).toBe("ambiguous-rung");
+  });
+
+  it("GATE 4: a stated print run in the title narrows two same-parallel rungs to one", () => {
+    const numbered = { ...BP_SIBLING_ROW(), id: `${BP_SIBLING_HIQ}:num-299`, printRun: 299 };
+    const unnumbered = { ...BP_SIBLING_ROW(), printRun: null };
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE(), bpCtxFor({
+      siblingRowsBySetKey: new Map([[BP_SIBLING, [numbered, unnumbered]]]),
+      statedPrintRun: 299,
+    }));
+    expect(plan.action).toBe("relocate");
+    expect(plan.targetRow.printRun).toBe(299);
+  });
+
+  it("a SINGLE agreeing candidate MOVES even when its parallel TEXT differs from the sale's own -- cross-product spelling (Mojo Refractor vs Mega Chrome Mojo) is expected, not a contradiction, once gates 1-3 already proved uniqueness", () => {
+    // This is the ACTUAL evidence shape: bowman-chrome's own vocabulary
+    // ("Mojo Refractor") never matches bowman's vocabulary for the same
+    // physical rung ("Mega Chrome Mojo") -- requiring textual agreement
+    // here would refuse the entire class this mode exists to move.
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE({ parallel: "Some Other Parallel Text" }), bpCtxFor());
+    expect(plan.action).toBe("relocate");
+    expect(plan.newCardId).toBe(BP_SIBLING_HIQ);
+  });
+
+  it("GATE 4: TWO OR MORE candidates, NEITHER matching the sale's parallel text and NO stated print run to narrow -> refuses ambiguous-rung, never guesses", () => {
+    const other = { ...BP_SIBLING_ROW(), id: `${BP_SIBLING_HIQ}-other`, parallel: "A Totally Different Parallel", parallelSlug: "a-totally-different-parallel", printRun: 150 };
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE({ parallel: "Yet Another Parallel Text" }), bpCtxFor({
+      siblingRowsBySetKey: new Map([[BP_SIBLING, [BP_SIBLING_ROW(), other]]]),
+    }));
+    expect(plan.action).toBe("refuse");
+    expect(plan.reason).toBe("ambiguous-rung");
+  });
+
+  it("refuses split-identity when cardId and hobbyiqCardId name two different cards (#2339, shared with the base ladder)", () => {
+    const other = `hiq:${BP_SPORT}:${BP_YEAR}:panini-prizm:12:base:no-auto`;
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE({ cardId: other }), bpCtxFor());
+    expect(plan.action).toBe("refuse");
+    expect(plan.reason).toBe("split-identity");
+  });
+
+  it("refuses every NEVER-MOVE marker before any checklist work", () => {
+    const cases: Array<[Record<string, unknown>, string]> = [
+      [{ verifiedByUser: true }, "pinned-or-verified"],
+      [{ flaggedWrong: true }, "flagged-or-excluded"],
+      [{ excludedFromFmv: true }, "flagged-or-excluded"],
+      [{ identityUnverified: true }, "already-parked"],
+    ];
+    for (const [over, reason] of cases) {
+      const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE(over), bpCtxFor());
+      expect(plan.action, JSON.stringify(over)).toBe("refuse");
+      expect(plan.reason, JSON.stringify(over)).toBe(reason);
+    }
+  });
+
+  it("PATCHes (hobbyiqCardId only) when cardId is a raw vendor partition", () => {
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, BP_SALE({ cardId: "vendor-xyz-1" }), bpCtxFor());
+    expect(plan.action).toBe("patch");
+    expect(plan.newHiq).toBe(BP_SIBLING_HIQ);
+  });
+
+  it("GATE 5: a graded sale's grade tail is preserved verbatim, reappended onto the destination checklist row's own id", () => {
+    const gradedFromHiq = `${BP_FROM_HIQ}:psa-10`;
+    const gradedToHiq = `${BP_SIBLING_HIQ}:psa-10`;
+    const plan = lane.planByPlayerSiblingMove(
+      byPlayerDeps,
+      BP_SALE({ cardId: gradedFromHiq, hobbyiqCardId: gradedFromHiq }),
+      bpCtxFor({ fromSlug: gradedFromHiq, toSlug: gradedFromHiq, gradeTier: "psa-10" }),
+    );
+    expect(plan.action).toBe("relocate");
+    expect(plan.newCardId).toBe(gradedToHiq);
+    expect(plan.newCardId.endsWith(":psa-10")).toBe(true);
+  });
+
+  it("parseSlugWithGrade itself preserves the tail (graded-id.cjs mirror, direct check)", () => {
+    const split = parseSlugWithGrade(`${BP_FROM_HIQ}:psa-10`, parseHobbyIqCardId);
+    expect(split).not.toBeNull();
+    expect(split!.gradeTier).toBe("psa-10");
+    expect(split!.parentSlug).toBe(BP_FROM_HIQ);
+  });
+});
+
+// ── SECOND WORKED EXAMPLE: BCP-149 (Andrew Fischer) -- same shape, a
+// print-run-suffixed destination id, confirming gate 4 handles the :num-N
+// tail correctly on the REAL evidence id shape from the trace.
+describe("planByPlayerSiblingMove -- second worked example: BCP-149 Andrew Fischer", () => {
+  const NUM = "bcp-149";
+  const FROM_HIQ2 = `hiq:baseball:2026:bowman-chrome:${NUM}:mojo-refractor:no-auto`;
+  const TO_HIQ2 = `hiq:baseball:2026:bowman:${NUM}:mega-chrome-prospects-fuchsia-mojo-refractor:no-auto:num-299`;
+  const FROM_ROW2 = { id: FROM_HIQ2, cardId: FROM_HIQ2, setKey: "bowman-chrome", cardNumber: NUM, playerName: "Someone Else", source: "checklistcenter-2026-08-29", parallel: "Mojo Refractor", parallelSlug: "mojo-refractor", isAuto: false };
+  const TO_ROW2 = { id: TO_HIQ2, cardId: TO_HIQ2, setKey: "bowman", cardNumber: NUM, playerName: "Andrew Fischer", source: "checklistcenter-2026-08-29", parallel: "Mega Chrome Prospects Fuchsia Mojo Refractor", parallelSlug: "mega-chrome-prospects-fuchsia-mojo-refractor", isAuto: false, printRun: 299 };
+  const SALE2 = { id: "bp2", cardId: FROM_HIQ2, hobbyiqCardId: FROM_HIQ2, cardNumber: NUM, playerName: "Andrew Fischer", parallel: "Mega Chrome Prospects Fuchsia Mojo Refractor", isAuto: false, title: "2026 Bowman Chrome Andrew Fischer Mojo Refractor BCP-149 /299", source: "tca-ebay", price: 8, soldAt: "2026-09-02" };
+
+  it("MOVEs to the sibling's :num-299 destination id, exactly", () => {
+    const plan = lane.planByPlayerSiblingMove(byPlayerDeps, SALE2, {
+      from: "bowman-chrome", fromSlug: FROM_HIQ2, toSlug: TO_HIQ2,
+      sourceRow: null, fromRowsAtNumber: [FROM_ROW2],
+      siblingRowsBySetKey: new Map([["bowman", [TO_ROW2]]]),
+      saleNameSource: "Andrew Fischer", statedPrintRun: 299,
+    });
+    expect(plan.action).toBe("relocate");
+    expect(plan.newCardId).toBe(TO_HIQ2);
   });
 });
 
@@ -936,6 +1252,134 @@ describe("repoint-sales-to-sibling-product -- REPORT runs every check APPLY runs
   });
 });
 
+// ── MODE=by-player -- END TO END, against the committed file ───────────────
+// Same fake-Cosmos shim as the base mode's own suite above (checklistSpec's
+// STARTSWITH(c.id, @prefix) and salesSpec's STARTSWITH(c.hobbyiqCardId, @p)
+// are already supported by `makeContainer`'s query dispatch, and point reads
+// via .item(id, pk).read() are generic across both containers) -- no shim
+// change needed to exercise the by-player mode's own I/O shell.
+describe("repoint-sales-to-sibling-product MODE=by-player -- end to end, the Ohtani #52 worked example", () => {
+  const BP_SCOPE = `${BP_SPORT}:${BP_YEAR}`;
+
+  it("MOVEs the Ohtani #52 sale from bowman-chrome to its checklist-backed bowman address", () => {
+    const r = drive(
+      { SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: BP_FROM, BACKFILL_APPLY: "true" },
+      { catalog: [BP_FROM_ROW(), BP_FROM_DERIVED_ROW(), BP_SIBLING_ROW()], sales: [BP_SALE()] },
+    );
+    expect(r.code, r.out).toBe(0);
+    expect(r.led.salesUpserts).toContain("bp1");
+    expect(r.led.salesDeletes).toContain("bp1");
+    expect(num(r.out, /RELOCATED\s+([\d,]+)/)).toBe(1);
+    expect(num(r.out, /DERIVED-RESIDENT-AT-SOURCE\s+([\d,]+)/)).toBe(1);
+  });
+
+  it("REPORT (no BACKFILL_APPLY) writes nothing but reports the same intended move", () => {
+    const r = drive(
+      { SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: BP_FROM },
+      { catalog: [BP_FROM_ROW(), BP_FROM_DERIVED_ROW(), BP_SIBLING_ROW()], sales: [BP_SALE()] },
+    );
+    expect(r.code, r.out).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(num(r.out, /WOULD RELOCATE\s+([\d,]+)/)).toBe(1);
+  });
+
+  it("MOVEs even with NO derived row at the source at all (absent, not just non-checklist)", () => {
+    const r = drive(
+      { SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: BP_FROM, BACKFILL_APPLY: "true" },
+      { catalog: [BP_FROM_ROW(), BP_SIBLING_ROW()], sales: [BP_SALE()] },
+    );
+    expect(r.code, r.out).toBe(0);
+    expect(num(r.out, /RELOCATED\s+([\d,]+)/)).toBe(1);
+    expect(num(r.out, /DERIVED-RESIDENT-AT-SOURCE\s+([\d,]+)/)).toBe(0);
+  });
+
+  it("the Wetherholt-titled control sale at bowman-chrome's OWN #52 (base rung) STAYS -- from-row-agrees, never moved", () => {
+    const wetherholtSale = BP_SALE({
+      id: "bp-control", cardId: BP_FROM_ROW().id as string, hobbyiqCardId: BP_FROM_ROW().id as string,
+      playerName: BP_WRONG_PLAYER, parallel: "Base",
+      title: "2026 Bowman Chrome JJ Wetherholt #52",
+    });
+    const r = drive(
+      { SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: BP_FROM, BACKFILL_APPLY: "true" },
+      { catalog: [BP_FROM_ROW(), BP_SIBLING_ROW()], sales: [wetherholtSale] },
+    );
+    expect(r.code, r.out).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(num(r.out, /REFUSED: already-checklist-backed\s+([\d,]+)/)).toBe(1);
+  });
+
+  it("TWO agreeing siblings (bowman AND bowman-mega both carry a checklist row) -> refuses ambiguous-sibling, never moved", () => {
+    const megaHiq = `hiq:${BP_SPORT}:${BP_YEAR}:bowman-mega:${BP_NUMBER}:mega-chrome-mojo:no-auto`;
+    const megaRow = { id: megaHiq, cardId: megaHiq, sport: BP_SPORT, year: BP_YEAR, cardYear: BP_YEAR, setKey: "bowman-mega", cardNumber: BP_NUMBER, playerName: BP_SALE_PLAYER, source: "checklistcenter-2026-08-29", parallel: "Mega Chrome Mojo", parallelSlug: "mega-chrome-mojo", isAuto: false };
+    const r = drive(
+      { SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: BP_FROM, BACKFILL_APPLY: "true" },
+      { catalog: [BP_FROM_ROW(), BP_SIBLING_ROW(), megaRow], sales: [BP_SALE()] },
+    );
+    expect(r.code, r.out).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(num(r.out, /REFUSED: ambiguous-sibling\s+([\d,]+)/)).toBe(1);
+  });
+
+  it("a sibling row that is DERIVED (not checklist-grade) is never counted as agreeing -- refuses destination-rung-not-on-checklist", () => {
+    const derivedSiblingRow = { ...BP_SIBLING_ROW(), source: "ingest-auto-seed" };
+    const r = drive(
+      { SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: BP_FROM, BACKFILL_APPLY: "true" },
+      { catalog: [BP_FROM_ROW(), derivedSiblingRow], sales: [BP_SALE()] },
+    );
+    expect(r.code, r.out).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(num(r.out, /REFUSED: destination-rung-not-on-checklist\s+([\d,]+)/)).toBe(1);
+  });
+
+  it("STALE-NO-ROW: the FROM product has no checklist row at this number at all -- a DIFFERENT class, refused and counted, never moved", () => {
+    const r = drive(
+      { SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: BP_FROM, BACKFILL_APPLY: "true" },
+      { catalog: [BP_SIBLING_ROW()], sales: [BP_SALE()] },
+    );
+    expect(r.code, r.out).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(num(r.out, /REFUSED: stale-no-row \(different class\)\s+([\d,]+)/)).toBe(1);
+  });
+
+  it("a graded sale's grade tail is preserved through the move", () => {
+    const gradedFromHiq = `${BP_FROM_HIQ}:psa-10`;
+    const gradedSale = BP_SALE({ id: "bp-graded", cardId: gradedFromHiq, hobbyiqCardId: gradedFromHiq });
+    const r = drive(
+      { SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: BP_FROM, BACKFILL_APPLY: "true" },
+      { catalog: [BP_FROM_ROW(), BP_SIBLING_ROW()], sales: [gradedSale] },
+    );
+    expect(r.code, r.out).toBe(0);
+    expect(r.led.salesUpserts).toContain("bp-graded");
+    expect(r.out).toMatch(/matched -- every scanned sale is moved, patched, collapsed, refused/);
+  });
+
+  it("REJECTS an empty or wildcard `titles` under MODE=by-player -- a plain FROM setKey list is required, never pairs", () => {
+    for (const v of ["", "all", "*"]) {
+      const r = drive({ SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: v });
+      expect(r.code, `"${v}" must be refused`).toBe(2);
+      expect(r.out).toMatch(/plain comma-separated list of FROM setKeys/);
+    }
+  });
+
+  it("REJECTS an unrecognised MODE value", () => {
+    const r = drive({ SCOPE: BP_SCOPE, MODE: "not-a-real-mode", SET_KEYS: BP_FROM });
+    expect(r.code).toBe(2);
+    expect(r.out).toMatch(/MODE="not-a-real-mode" is not recognised/);
+  });
+
+  it("REPORT's counts equal APPLY's on a mixed fixture -- the same pure-decision parity pin as the base mode", () => {
+    const fixture = { catalog: [BP_FROM_ROW(), BP_FROM_DERIVED_ROW(), BP_SIBLING_ROW()], sales: [BP_SALE()] };
+    const report = drive({ SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: BP_FROM }, fixture);
+    const apply = drive({ SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: BP_FROM, BACKFILL_APPLY: "true" }, fixture);
+    expect(report.code).toBe(0);
+    expect(apply.code).toBe(0);
+    expect(num(report.out, /WOULD RELOCATE\s+([\d,]+)/)).toBe(num(apply.out, /RELOCATED\s+([\d,]+)/));
+    expect(num(report.out, /sales scanned\s+([\d,]+)/)).toBe(num(apply.out, /sales scanned\s+([\d,]+)/));
+  });
+});
+
 describe("repoint-sales-to-sibling-product -- the runner contract", () => {
   const RUNNER = fs.readFileSync(path.join(backend, "..", ".github", "workflows", "backfill-runner.yml"), "utf8");
 
@@ -951,12 +1395,20 @@ describe("repoint-sales-to-sibling-product -- the runner contract", () => {
     expect(RUNNER).toMatch(/BCP_TITLES: \$\{\{ inputs\.titles \}\}/);
   });
 
-  it("uploads its log and self-relaunches on the budget marker, forwarding scope and titles", () => {
+  it("uploads its log and self-relaunches on the budget marker, forwarding scope, titles, AND mode", () => {
     expect(RUNNER).toMatch(/Upload the repoint-sales-to-sibling-product log/);
     const relaunch = RUNNER.slice(RUNNER.indexOf("Self-relaunch the sibling-product repoint"));
     expect(relaunch).toMatch(/script: repoint-sales-to-sibling-product/);
     expect(relaunch).toMatch(/-f scope="\$\{\{ inputs\.scope \}\}"/);
     expect(relaunch).toMatch(/-f titles="\$\{\{ inputs\.titles \}\}"/);
+    // MODE=by-player must survive a self-relaunch after a budget stop, or a
+    // continued run silently reverts to the operator-pairs ladder.
+    expect(relaunch).toMatch(/-f mode="\$\{\{ inputs\.mode \}\}"/);
+  });
+
+  it("MODE=by-player is documented on the shared `mode` input, reusing it rather than claiming a new one", () => {
+    expect(RUNNER).toMatch(/repoint-sales-to-sibling-product \(2026-09-26\)[^"]*'by-player'/s);
+    expect(RUNNER).toMatch(/MODE: \$\{\{ inputs\.mode \}\}/);
   });
 
   it("BACKFILL_APPLY is what arms it, not APPLY alone", () => {

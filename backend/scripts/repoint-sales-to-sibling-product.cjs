@@ -175,6 +175,93 @@
  * playerIdentityKey, parseTitleIdentity, hobbyIqCardId, soldCompsStore,
  * resolveProductByChecklist, statedFinishFromChecklist, titleOutranksVendorTag,
  * playerTheTitleAllows, cardCatalog, writeReconciliation).
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * MODE=by-player (2026-09-26) -- "rung exists only under a sibling product".
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * THE DEFECT THIS MODE ADDS (evidence: C:/tmp/bc26_mojo_trace_1530/RESULT.md,
+ * the tail of C:/tmp/rematch-0926-runs.txt, owner Drew 2026-09-26 "Let's get
+ * these done FAST"). 337 sales at hiq:baseball:2026:bowman-chrome:52:mojo-
+ * refractor:no-auto name Shohei Ohtani in their titles; bowman-chrome's own
+ * checklist at #52 is JJ Wetherholt (a DIFFERENT player), while `bowman`
+ * carries a checklist-grade Ohtani row at hiq:baseball:2026:bowman:52:mega-
+ * chrome-mojo:no-auto (the Mega Box "Mega Chrome Mojo" ladder). Same shape:
+ * BCP-149 (Andrew Fischer -> bowman:bcp-149:mega-chrome-prospects-fuchsia-
+ * mojo-refractor:no-auto:num-299) and #9 (Murakami -> bowman:9:mega-chrome-
+ * burgundy-mojo-refractor:no-auto:num-275; bowman-chrome #9 is Cody
+ * Bellinger). PR #2440's R75 setKey redirect does NOT reach this class --
+ * titles carry no "Mega Box" word, so the redirect's own title-inference has
+ * nothing to key off; the read-back in rematch-0926-runs.txt confirms all
+ * three evidence ids sat at their pre-#2440 row counts after that pass ran.
+ *
+ * WHY THE ORIGINAL FOUR GATES DO NOT REACH IT. The operator-ruled `titles`
+ * pair list (`from>to`) is right when the OPERATOR already knows which two
+ * products are confusable; this class is the opposite shape -- the FROM
+ * product (bowman-chrome) DOES have a checklist row at the number (#52 is a
+ * real, checklist-backed Wetherholt card), so gate 1
+ * (number-exists-in-from-product) would refuse every one of these sales
+ * outright. The defect is not "the number is missing from FROM", it is "the
+ * sale's OWN id is missing a checklist row, AND the FROM product's row at
+ * that number names somebody else" -- a different question, answered by a
+ * different gate ladder, activated only under MODE=by-player.
+ *
+ * MODE=by-player's FIVE GATES (all must hold, else refuse by name; the
+ * ordinary MODE="" pair-list ladder above is completely unchanged and unused
+ * here):
+ *
+ *   1. no-checklist-at-source -- the sale's current EXACT id has NO
+ *      checklist-grade card_catalog row (catalogAuthorityOf(source) ===
+ *      "checklist"). A DERIVED or VENDOR row at that exact id is not a
+ *      refusal -- it is counted separately as "derived-resident-at-source"
+ *      (for a later retire list) and the gate ladder continues, because a
+ *      self-confirming derived row is not evidence the sale is correctly
+ *      filed (CF-CATALOG-AUTHORITY).
+ *   2. from-row-names-different-player -- the FROM product's checklist row
+ *      AT THAT CARD NUMBER (any parallel) must exist AND `namesAgree`
+ *      (lib/name-agreement.cjs) between its playerName and the sale's title/
+ *      playerName must be FALSE. When the FROM product has NO row at that
+ *      number at all, that is a DIFFERENT class -- STALE-NO-ROW -- refused
+ *      and counted, never moved (there is nothing at the source to prove
+ *      wrong).
+ *   3. exactly-one-agreeing-sibling -- of the sibling setKeys sharing the
+ *      FROM product's own registered family (productParentOf(from), plus
+ *      every OTHER registered key with that same parent -- productSetKeys()
+ *      filtered by productParentOf, never a hand-authored pair, never a
+ *      title-inferred guess), EXACTLY ONE must carry a checklist-grade row
+ *      at the same card number whose playerName `namesAgree` TRUE with the
+ *      sale. Zero -> destination-rung-not-on-checklist (folds into the base
+ *      lane's own reason name). Two or more -> ambiguous-sibling, refused,
+ *      NEVER guessed.
+ *   4. rung-disambiguation -- when the one agreeing sibling carries EXACTLY
+ *      ONE candidate row at that number, THAT row is the destination by
+ *      construction (gates 1-3 already proved it is the only checklist-
+ *      grade, player-agreeing row this sibling has here) -- no textual
+ *      parallel match is required, because a cross-product move's whole
+ *      premise is that the two products spell the SAME physical rung
+ *      DIFFERENTLY (bowman-chrome's "Mojo Refractor" vs bowman's "Mega
+ *      Chrome Mojo" for the identical print). When the sibling carries MORE
+ *      than one candidate row at that number (several parallels), the sale's
+ *      own parallel text narrows via the checklist-parallel spelling corpus
+ *      (normParallelForRung, case-insensitive, the same fold gate 2 of the
+ *      base lane already uses); if a stated print run in the title is also
+ *      present it narrows further among whatever still matches. Zero or
+ *      more-than-one surviving candidate after both narrowings -> ambiguous-
+ *      rung, refused, never guessed.
+ *   5. graded-id-preserved -- a graded sale's grade-tier tail
+ *      (lib/graded-id.cjs's parseSlugWithGrade) is carried through the move
+ *      byte-for-byte; the move never re-derives or drops it.
+ *
+ * `titles` under MODE=by-player is a plain comma list of FROM setKeys (NOT
+ * `from>to` pairs -- the destination is discovered, never operator-named,
+ * because the whole point of this mode is that the operator does NOT yet
+ * know which sibling a given number belongs to). Empty or a wildcard is
+ * REFUSED exactly as the base mode refuses an empty/wildcard pair list.
+ *
+ * REPORT dispatch for the worked example (this PR's own evidence, run
+ * before any APPLY):
+ *   gh workflow run backfill-runner.yml --ref main -f script=repoint-sales-to-sibling-product \
+ *     -f mode=by-player -f scope=baseball:2026 -f titles=bowman-chrome -f apply=false
  */
 "use strict";
 const path = require("path");
@@ -299,8 +386,33 @@ function parseSiblingPairs(raw) {
   return { pairs };
 }
 
-const PAIRS_PARSE = parseSiblingPairs(process.env.SET_KEYS || process.env.BCP_TITLES);
+// ── MODE=by-player (2026-09-26). The runner's generic `mode` input, exactly
+// the "For <script>: value | value ..." convention every other multi-mode
+// lane on this runner already uses -- no new workflow_dispatch input. Empty
+// (the default) is the ORIGINAL operator-pairs ladder above, completely
+// unchanged; "by-player" activates the namesAgree-gated sibling-discovery
+// ladder (see the header). Anything else is a named startup error --
+// VALIDATED INSIDE main() ONLY (below), never at module load: vitest and
+// other harnesses can set an unrelated MODE env var (measured: vitest's own
+// default env carries MODE=test), and a module-load process.exit would break
+// every pure-function unit test that merely requires this file, exactly the
+// failure parseSiblingPairs's own header warns against for its `error` case.
+const MODE = lower(process.env.MODE || "");
+const BY_PLAYER_MODE = MODE === "by-player";
+const MODE_RECOGNISED = MODE === "" || BY_PLAYER_MODE;
+
+const PAIRS_PARSE = BY_PLAYER_MODE ? { pairs: [] } : parseSiblingPairs(process.env.SET_KEYS || process.env.BCP_TITLES);
 const SIBLING_PAIRS = PAIRS_PARSE.pairs ?? [];
+
+// Under MODE=by-player, `titles` (SET_KEYS/BCP_TITLES) is a plain comma list
+// of FROM setKeys -- never a pair list, because the destination is
+// DISCOVERED (gate 3), not operator-named. Empty or a wildcard token is
+// REFUSED, same discipline as the base mode's empty/wildcard pair list: a
+// whole-source scan needs its own name.
+const BY_PLAYER_FROM_KEYS = BY_PLAYER_MODE
+  ? [...new Set(csv(process.env.SET_KEYS || process.env.BCP_TITLES).map(lower))]
+  : [];
+const BY_PLAYER_FROM_KEYS_BAD = BY_PLAYER_MODE ? BY_PLAYER_FROM_KEYS.filter((k) => WILDCARDS.has(k)) : [];
 
 // Jittered backoff, same widening both sibling lanes carry: under bounded
 // parallelism several workers can be throttled at once, and a fixed sleep
@@ -479,6 +591,276 @@ function rowsAtDestinationRung(candidateRows, saleParallel, saleIsAuto) {
 }
 
 const USER_SEED_SOURCES = new Set(["ebay-user-purchase", "ebay-user-sale", "manual-user-entry", "user-verified"]);
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * MODE=by-player -- the namesAgree-gated sibling-discovery ladder. See the
+ * file header for the class this exists for (evidence:
+ * C:/tmp/bc26_mojo_trace_1530/RESULT.md) and why the operator-pairs ladder
+ * above cannot reach it (gate 1 there refuses the exact rows this mode moves).
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * GATE 3's CANDIDATE SET, mechanically derived, never a hand-authored pair
+ * and never a title-inferred guess: every OTHER registered setKey sharing
+ * the FROM product's own `productParentOf`, plus that parent itself (a
+ * product's own parent is a "sibling" in the collector sense too -- bowman-
+ * chrome's parent IS `bowman`, and that is exactly where the Ohtani #52 row
+ * lives). `allSetKeys` is `productSetKeys()`'s own output; a FROM key with
+ * no registered parent (an unregistered or root product) has an empty
+ * sibling set, which is not an error -- it simply means gate 3 finds
+ * candidates 0.
+ */
+function siblingCandidateSetKeys(deps, from) {
+  const parent = deps.productParentOf(from);
+  if (!parent) return [];
+  const out = new Set([parent]);
+  for (const k of deps.productSetKeys()) {
+    if (k === from) continue;
+    if (deps.productParentOf(k) === parent) out.add(k);
+  }
+  return [...out];
+}
+
+/**
+ * GATE 1. Does the sale's own EXACT current address carry a checklist-grade
+ * card_catalog row? `sourceRow` is the point-read result (or null/undefined
+ * for a 404) the caller already fetched -- this function is pure and takes
+ * the row, never the network. A DERIVED/VENDOR row (present but not
+ * checklist-grade) is reported separately as "derived-resident-at-source"
+ * (for a later retire list) but does NOT block the gate ladder -- a
+ * self-confirming derived row proves nothing about whether the sale is
+ * correctly filed (CF-CATALOG-AUTHORITY).
+ */
+function sourceRowVerdict(deps, sourceRow) {
+  if (!sourceRow) return { hasChecklistRow: false, derivedResident: false };
+  const isChecklist = deps.catalogAuthorityOf(sourceRow.source) === "checklist";
+  return { hasChecklistRow: isChecklist, derivedResident: !isChecklist };
+}
+
+/**
+ * GATE 2. The FROM product's own checklist row(s) at the sale's card number
+ * (any parallel) -- `fromRowsAtNumber` is the caller's pre-filtered list
+ * (checklist rows only, this exact number, this FROM setKey). Returns one of:
+ *   "no-row"      -- STALE-NO-ROW, a DIFFERENT class from this mode's own
+ *                    defect: there is no FROM-side evidence to contradict, so
+ *                    this is refused and counted, never moved.
+ *   "agrees"      -- the FROM row's own player agrees with the sale; this is
+ *                    NOT the defect this mode exists to fix (the sale is
+ *                    plausibly filed where it belongs) -- refused, named
+ *                    "from-row-agrees".
+ *   "disagrees"   -- namesAgree is FALSE between the FROM row and the sale;
+ *                    gate 2 is satisfied, proceed to gate 3.
+ * `saleNameSource` is whichever of the sale's own playerName / a
+ * title-derived guess the caller decided to compare (the caller's job, not
+ * this function's -- kept pure and injectable so a test can drive either).
+ */
+function fromRowVerdict(deps, fromRowsAtNumber, saleNameSource) {
+  if (!fromRowsAtNumber.length) return "no-row";
+  const anyAgrees = fromRowsAtNumber.some((r) => deps.namesAgree(r.playerName, saleNameSource));
+  return anyAgrees ? "agrees" : "disagrees";
+}
+
+/**
+ * GATE 3. Of the sibling candidate rows at the same card number (already
+ * filtered to checklist-grade by the caller), which ones `namesAgree` with
+ * the sale? Grouped by setKey so the caller can tell "exactly one sibling
+ * setKey agrees" (even if that one setKey has several rung candidates, e.g.
+ * several parallels) from "two or more DIFFERENT sibling setKeys agree"
+ * (ambiguous-sibling).
+ */
+function agreeingSiblingRows(deps, siblingRowsAtNumber, saleNameSource) {
+  return siblingRowsAtNumber.filter((r) => deps.namesAgree(r.playerName, saleNameSource));
+}
+
+/**
+ * GATE 4. Of one sibling setKey's own agreeing rows (already narrowed to a
+ * SINGLE setKey by the caller, per gate 3), which is THE destination rung?
+ *
+ * EXACTLY ONE candidate row is the answer BY CONSTRUCTION: gates 1-3 already
+ * proved this is the only checklist-grade, player-agreeing row this sibling
+ * carries at this card number, so there is nothing left to disambiguate --
+ * this is also why cross-product moves in this class routinely CANNOT match
+ * the sale's own parallel TEXT against the destination row's (the vendor
+ * title's parallel words are drawn from the WRONG product's vocabulary --
+ * "Mojo Refractor" at bowman-chrome's own #52 vs "Mega Chrome Mojo" at
+ * bowman's real #52 IS the same physical rung, spelled two different ways by
+ * two different products' checklists; requiring textual agreement here would
+ * refuse the very class this mode exists to move).
+ *
+ * When the sibling carries MORE THAN ONE agreeing row at this number (a
+ * product with several print-run tiers of the same color, e.g. numbered and
+ * unnumbered releases under one setKey), text/print-run evidence is what
+ * narrows: first a case-insensitive parallel-text match
+ * (normParallelForRung), then -- if more than one still matches -- a STATED
+ * print run in the title. Zero or more than one surviving candidate after
+ * both narrowings is ambiguous, refused, NEVER guessed.
+ */
+function rungCandidatesForSibling(candidateRows, saleParallel, statedPrintRun) {
+  if (candidateRows.length <= 1) return candidateRows;
+
+  const wantParallel = normParallelForRung(saleParallel);
+  let rows = candidateRows.filter((r) => normParallelForRung(r.parallelSlug ?? r.parallel) === wantParallel);
+  if (!rows.length) rows = candidateRows; // the sale's parallel text names the WRONG product's vocabulary; fall through to print-run evidence over the full candidate set
+  if (rows.length > 1 && statedPrintRun != null) {
+    const narrowed = rows.filter((r) => Number(r.printRun) === Number(statedPrintRun));
+    if (narrowed.length) rows = narrowed;
+  }
+  return rows;
+}
+
+/**
+ * THE PURE PER-SALE DECISION for MODE=by-player -- no I/O, mirroring
+ * `planSiblingMove`'s own REPORT/APPLY parity discipline exactly: every field
+ * this needs is precomputed by the caller (point reads, checklist preloads)
+ * and passed in `ctx`, so REPORT and APPLY run the IDENTICAL decision.
+ *
+ * `ctx`:
+ *   from                the FROM setKey the sale is currently filed under
+ *   sourceRow            the point-read card_catalog row at the sale's OWN
+ *                        exact address (or null/undefined)
+ *   fromRowsAtNumber     FROM product's checklist rows at this card number
+ *                        (any parallel), already filtered checklist-grade
+ *   siblingRowsBySetKey  Map<siblingSetKey, checklistRow[]> -- every sibling
+ *                        candidate's checklist rows at this card number,
+ *                        already filtered checklist-grade
+ *   saleNameSource       the name string namesAgree compares the catalog
+ *                        rows against (sale.playerName, or a title-derived
+ *                        guess the caller chose)
+ *   statedPrintRun       a print run parsed from the sale's own title, or
+ *                        null
+ *   gradeTier            the sale's own parsed grade tier (graded-id.cjs), or
+ *                        null for a raw sale -- carried through verbatim,
+ *                        never re-derived (gate 5)
+ *
+ * @returns {{action:"relocate"|"patch"|"refuse", reason?:string, detail?:string,
+ *            derivedResident?:boolean, targetRow?:object}}
+ */
+function planByPlayerSiblingMove(deps, sale, ctx) {
+  // ── NEVER-MOVE MARKERS, first, before any checklist or title work --
+  // identical bucket names to the base mode's own ladder.
+  if (sale.verifiedByUser === true) {
+    return { action: "refuse", reason: "pinned-or-verified", detail: "verifiedByUser=true -- a real user attested this exact sale to this exact card" };
+  }
+  if (USER_SEED_SOURCES.has(String(sale.source ?? ""))) {
+    return { action: "refuse", reason: "pinned-or-verified", detail: `source=${sale.source} -- a user-owned transaction already reconciled through the catalog at write time (CF-A-USER-SALE-IS-ALWAYS-RECONCILED)` };
+  }
+  if (sale.identityUnverified === true) {
+    return { action: "refuse", reason: "already-parked", detail: "identityUnverified=true -- already parked; unparking is a different lane's job" };
+  }
+  if (sale.flaggedWrong === true) {
+    return { action: "refuse", reason: "flagged-or-excluded", detail: "flaggedWrong=true -- a user already told the engine this comp is wrong; re-addressing it compounds that, it does not resolve it" };
+  }
+  if (sale.excludedFromFmv === true) {
+    return { action: "refuse", reason: "flagged-or-excluded", detail: "excludedFromFmv=true -- already excluded from pricing; moving it does not restore trust" };
+  }
+
+  // ── SHAPE. Split identity refuses before any evidence is weighed -- this
+  // mode reuses the SAME shape enumeration the base mode uses (below), with
+  // ctx.toSlug == ctx.fromSlug (the real destination is not known until gate
+  // 3 resolves in this mode -- see the caller), so only the "cardId/
+  // hobbyiqCardId both name fromSlug" and "vendor cardId" shapes are ever
+  // reached; a hobbyiqCardId naming any OTHER hiq: slug still refuses here.
+  const classified = classifySaleForSiblingMove(sale, ctx);
+  if (!classified.ok) {
+    return {
+      action: "refuse", reason: "split-identity",
+      detail: `cardId=${classified.cardId} hobbyiqCardId=${classified.hobbyiqCardId} -- these do not agree on both naming ${ctx.fromSlug}; pre-existing split, not this lane's to arbitrate`,
+    };
+  }
+
+  // ── GATE 1. The sale's OWN exact address already carries a checklist-grade
+  // row -- nothing to fix. A DERIVED/VENDOR row is noted but does not refuse.
+  const source = sourceRowVerdict(deps, ctx.sourceRow);
+  if (source.hasChecklistRow) {
+    return {
+      action: "refuse", reason: "already-checklist-backed",
+      detail: "the sale's own exact address already carries a checklist-grade card_catalog row -- nothing to fix",
+    };
+  }
+
+  // ── GATE 2. The FROM product's row at this number must exist and DISAGREE
+  // on the player. No row at all is a DIFFERENT class (STALE-NO-ROW).
+  const fromVerdict = fromRowVerdict(deps, ctx.fromRowsAtNumber, ctx.saleNameSource);
+  if (fromVerdict === "no-row") {
+    return {
+      action: "refuse", reason: "stale-no-row",
+      detail: `${ctx.from} has NO checklist row at #${sale.cardNumber ?? ""} at all -- this is a different class (STALE-NO-ROW / acquisition gap), never a sibling move`,
+      derivedResident: source.derivedResident,
+    };
+  }
+  if (fromVerdict === "agrees") {
+    return {
+      action: "refuse", reason: "from-row-agrees",
+      detail: `${ctx.from}'s own checklist row at #${sale.cardNumber ?? ""} names a player who AGREES with this sale -- not this class's defect`,
+      derivedResident: source.derivedResident,
+    };
+  }
+
+  // ── GATE 3. Exactly ONE sibling setKey must have a checklist row at this
+  // number whose player namesAgree TRUE.
+  const agreeingBySetKey = new Map();
+  for (const [siblingKey, rows] of ctx.siblingRowsBySetKey.entries()) {
+    const agreeing = agreeingSiblingRows(deps, rows, ctx.saleNameSource);
+    if (agreeing.length) agreeingBySetKey.set(siblingKey, agreeing);
+  }
+  if (agreeingBySetKey.size === 0) {
+    return {
+      action: "refuse", reason: "destination-rung-not-on-checklist",
+      detail: `no sibling of ${ctx.from} (same registered family) carries a checklist row at #${sale.cardNumber ?? ""} whose player agrees with this sale`,
+      derivedResident: source.derivedResident,
+    };
+  }
+  if (agreeingBySetKey.size > 1) {
+    return {
+      action: "refuse", reason: "ambiguous-sibling",
+      detail: `${agreeingBySetKey.size} DIFFERENT sibling setKeys (${[...agreeingBySetKey.keys()].sort().join(", ")}) each carry a checklist row at #${sale.cardNumber ?? ""} agreeing with this sale -- never guessed`,
+      derivedResident: source.derivedResident,
+    };
+  }
+  const [[toSetKey, candidateRows]] = agreeingBySetKey.entries();
+
+  // ── GATE 4. Rung disambiguation within the one agreeing sibling.
+  const rungRows = rungCandidatesForSibling(candidateRows, sale.parallel, ctx.statedPrintRun);
+  if (rungRows.length === 0) {
+    return {
+      action: "refuse", reason: "ambiguous-rung",
+      detail: `${toSetKey} #${sale.cardNumber ?? ""} has agreeing rows, but none matches the sale's parallel ("${sale.parallel ?? "base"}") -- never invent a rung`,
+      derivedResident: source.derivedResident,
+    };
+  }
+  if (rungRows.length > 1) {
+    return {
+      action: "refuse", reason: "ambiguous-rung",
+      detail: `${toSetKey} #${sale.cardNumber ?? ""} has ${rungRows.length} candidate rungs matching the sale's parallel text and no stated print run narrows them further -- never guessed`,
+      derivedResident: source.derivedResident,
+    };
+  }
+  const targetRow = rungRows[0];
+
+  // ── GATE 5. Grade tail preserved verbatim -- carried by the caller
+  // (ctx.gradeTier), never re-derived here; this function only asserts the
+  // move keeps it, by construction, in main()'s id-building step. Nothing
+  // to branch on here; documented for the reader tracing all five gates.
+
+  // ── MOVE. Unlike the base pair-list mode (which changes ONLY the setKey
+  // segment, because its gate 2 requires the TO product to attest the EXACT
+  // same rung the FROM address already names), this mode's destination is
+  // the CHECKLIST ROW ITSELF (`targetRow.id`) -- the whole point of the
+  // by-player class is that the sibling spells the SAME physical rung with a
+  // DIFFERENT parallel segment (bowman-chrome's "mojo-refractor" vs bowman's
+  // "mega-chrome-mojo" for the identical print), so setKey is not the only
+  // axis that changes. GATE 5: a graded sale's grade tail (checklist rows
+  // are never themselves graded, so it is never on targetRow.id) is
+  // reappended verbatim, never re-derived.
+  const newParent = String(targetRow.id ?? targetRow.cardId ?? "");
+  const newHiq = ctx.gradeTier ? `${newParent}:${ctx.gradeTier}` : newParent;
+  if (classified.action === "relocate") {
+    return { action: "relocate", newCardId: newHiq, newHiq, targetRow, toSetKey, derivedResident: source.derivedResident };
+  }
+  return { action: "patch", newHiq, targetRow, toSetKey, derivedResident: source.derivedResident };
+}
 
 /**
  * The shape enumeration -- mirroring repoint-sales-to-checklist-numbered.cjs's
@@ -660,6 +1042,12 @@ async function main() {
   console.log(`  MODE: ${APPLY ? "APPLY -- this run WRITES" : "REPORT ONLY -- nothing is written"}`);
   console.log("=".repeat(78));
 
+  if (!MODE_RECOGNISED) {
+    console.error("");
+    console.error(`FATAL: MODE="${MODE}" is not recognised -- this lane supports "" (operator-pairs, default) or "by-player".`);
+    process.exit(2);
+  }
+
   if (SCOPE_REJECTED.length) {
     console.error("");
     console.error(`FATAL: SCOPE carries ${SCOPE_REJECTED.length} value(s) that are not cells: ${SCOPE_REJECTED.join(", ")}`);
@@ -673,7 +1061,16 @@ async function main() {
     console.error("       (comma-separate for several cells).");
     process.exit(2);
   }
-  if (PAIRS_PARSE.error || !SIBLING_PAIRS.length) {
+  if (BY_PLAYER_MODE) {
+    if (BY_PLAYER_FROM_KEYS_BAD.length || !BY_PLAYER_FROM_KEYS.length) {
+      console.error("");
+      console.error("FATAL: under MODE=by-player, the `titles` input (SET_KEYS/BCP_TITLES) is");
+      console.error("       REQUIRED and carries a plain comma-separated list of FROM setKeys --");
+      console.error("       NOT from>to pairs (the destination is DISCOVERED, gate 3, never");
+      console.error("       operator-named in this mode). Dispatch with -f titles=bowman-chrome.");
+      process.exit(2);
+    }
+  } else if (PAIRS_PARSE.error || !SIBLING_PAIRS.length) {
     console.error("");
     console.error("FATAL: the `titles` input (SET_KEYS/BCP_TITLES) is REQUIRED and carries this");
     console.error("       lane's SIBLING PAIR LIST -- fromSetKey>toSetKey, comma-separated.");
@@ -688,10 +1085,13 @@ async function main() {
 
   const { CosmosClient } = require("@azure/cosmos");
   const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
-  const { productParentOf, productAncestry } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
+  const { productParentOf, productAncestry, productSetKeys } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
   const { withProductSetKey, guardSoldCompDoc } = require(path.join(backend, "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
   const { playerIdentityKey } = require(path.join(backend, "dist/services/catalog/playerIdentityKey.js"));
   const { cardNumberVariants, sameCardNumber, slugify, foldCardNumber } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+  const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
+  const { parseSlugWithGrade } = require(path.join(__dirname, "lib", "graded-id.cjs"));
+  const { parseHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf, is412 } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
 
@@ -942,6 +1342,14 @@ async function main() {
       };
     }
     return { names: false };
+  }
+
+  if (BY_PLAYER_MODE) {
+    await runByPlayerMode({
+      conn, CosmosClient, catalogAuthorityOf, productParentOf, productSetKeys,
+      withProductSetKey, guardSoldCompDoc, namesAgree, parseSlugWithGrade, parseHobbyIqCardId,
+    });
+    return;
   }
 
   const deps = { cardNumberVariants, playerIdentityKey, withProductSetKey };
@@ -1508,6 +1916,478 @@ async function main() {
   }
 }
 
+/**
+ * MODE=by-player's own I/O shell around `planByPlayerSiblingMove`. Kept as a
+ * SEPARATE function (not threaded through the pair-list `main()` body above)
+ * so the base mode's ladder is byte-for-byte untouched by this addition --
+ * every reviewer diff for this class is isolated to this function plus the
+ * pure decision functions above it.
+ *
+ * Checklist rows at a given (sport, year, setKey, cardNumber) are loaded by
+ * the SAME cell-prefix STARTSWITH scan `checklistSpec` already uses (never a
+ * per-number point query against card_catalog -- the id is not addressable
+ * by number alone), then filtered client-side to the requested number. This
+ * costs one full-cell preload per (cell, from) -- the same cost the base
+ * mode's own `loadChecklistRows` already pays -- and is cached per cell so
+ * scanning many sales against one preloaded set is cheap.
+ */
+async function runByPlayerMode(io) {
+  const {
+    conn, CosmosClient, catalogAuthorityOf, productParentOf, productSetKeys,
+    withProductSetKey, guardSoldCompDoc, namesAgree, parseSlugWithGrade, parseHobbyIqCardId,
+  } = io;
+  const deps = { catalogAuthorityOf, namesAgree, withProductSetKey, productParentOf, productSetKeys };
+  const { relocateSoldComp, stripSystem, contentHashOf, is412 } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+
+  const client = new CosmosClient(conn);
+  const db = client.database(process.env.COSMOS_DATABASE || "hobbyiq");
+  const cat = db.container("card_catalog");
+  const pool = db.container("sold_comps");
+
+  console.log(`  MODE=by-player`);
+  console.log(`  scope (${SCOPE_CELLS.length} cell${SCOPE_CELLS.length === 1 ? "" : "s"})    ${SCOPE_CELLS.join(", ")}`);
+  console.log(`  from setKeys     ${BY_PLAYER_FROM_KEYS.join(", ")}`);
+  console.log(`  ${SHARD_SCOPE.banner()}`);
+  console.log(`  ${CLOCK.describe()}`);
+  console.log("");
+  console.log("  a sale MOVES only when: (1) its OWN exact address has NO checklist row,");
+  console.log("  (2) the FROM product HAS a checklist row at this number that DISAGREES on");
+  console.log("  player (no row at all = STALE-NO-ROW, a different class), (3) EXACTLY ONE");
+  console.log("  sibling (same registered productParentOf family) has a checklist row at this");
+  console.log("  number that AGREES on player, (4) the rung is unambiguous, (5) a graded id's");
+  console.log("  grade tail is preserved verbatim.");
+  console.log("");
+
+  const s = {
+    fromKeysScanned: 0, salesScanned: 0, salesQueries: 0,
+    salesMoved: 0, salesPatched: 0, collapsedOntoResident: 0,
+    refusedAlreadyChecklistBacked: 0, refusedStaleNoRow: 0, refusedFromRowAgrees: 0,
+    refusedDestinationRungNotOnChecklist: 0, refusedAmbiguousSibling: 0, refusedAmbiguousRung: 0,
+    refusedSplitIdentity: 0, refusedPossibleTwin: 0,
+    refusedPinnedOrVerified: 0, refusedFlaggedOrExcluded: 0, refusedAlreadyParked: 0,
+    refusedGuardParked: 0, refusedEtagChanged: 0, refusedGradedParseFailed: 0,
+    derivedResidentAtSource: 0,
+    salesFailed: 0, notReached: 0, otherShard: 0,
+  };
+  const REFUSAL_KEYS_BY_PLAYER = Object.freeze([
+    "already-checklist-backed", "stale-no-row", "from-row-agrees",
+    "destination-rung-not-on-checklist", "ambiguous-sibling", "ambiguous-rung",
+    "split-identity", "possible-twin-at-destination",
+    "pinned-or-verified", "flagged-or-excluded", "already-parked",
+    "guard-parked", "stale-since-plan",
+  ]);
+  const COUNTER_FOR_REASON_BY_PLAYER = Object.freeze({
+    "already-checklist-backed": "refusedAlreadyChecklistBacked",
+    "stale-no-row": "refusedStaleNoRow",
+    "from-row-agrees": "refusedFromRowAgrees",
+    "destination-rung-not-on-checklist": "refusedDestinationRungNotOnChecklist",
+    "ambiguous-sibling": "refusedAmbiguousSibling",
+    "ambiguous-rung": "refusedAmbiguousRung",
+    "split-identity": "refusedSplitIdentity",
+    "possible-twin-at-destination": "refusedPossibleTwin",
+    "pinned-or-verified": "refusedPinnedOrVerified",
+    "flagged-or-excluded": "refusedFlaggedOrExcluded",
+    "already-parked": "refusedAlreadyParked",
+    "guard-parked": "refusedGuardParked",
+    "stale-since-plan": "refusedEtagChanged",
+  });
+  const refusals = Object.fromEntries(REFUSAL_KEYS_BY_PLAYER.map((k) => [k, []]));
+  // by-(from setKey -> to setKey) counters, the PER-(FROM->TO SETKEY) table
+  // the gate spec requires: candidates, would-move, refused-by-gate,
+  // derived-resident-at-source.
+  const byPair = new Map(); // "from|to" -> { candidates, moved, refusedByReason: Map }
+  function pairBucket(from, to) {
+    const key = `${from}|${to}`;
+    if (!byPair.has(key)) byPair.set(key, { from, to, candidates: 0, moved: 0, refusedByReason: new Map() });
+    return byPair.get(key);
+  }
+  const examples = [];
+  const failures = [];
+  let stoppedAtBudget = false;
+
+  function noteRefusal(reason, line, fromKey, toKeyForTable) {
+    const counter = COUNTER_FOR_REASON_BY_PLAYER[reason];
+    if (!counter) throw new Error(`repoint-sales-to-sibling-product (by-player): unnamed refusal reason "${reason}"`);
+    s[counter]++;
+    refusals[reason].push(line);
+    const bucket = pairBucket(fromKey, toKeyForTable ?? "(none)");
+    bucket.refusedByReason.set(reason, (bucket.refusedByReason.get(reason) ?? 0) + 1);
+  }
+
+  const PLAN_OUT_BY_PLAYER = str(process.env.PLAN_OUT);
+  let planFd = null;
+  if (PLAN_OUT_BY_PLAYER) {
+    try {
+      fs.mkdirSync(PLAN_OUT_BY_PLAYER, { recursive: true });
+      const planPath = path.join(PLAN_OUT_BY_PLAYER, `plan-slot-${SHARD_SCOPE.SLOT}.ndjson`);
+      planFd = fs.openSync(planPath, "w");
+      console.log(`  plan file         ${planPath}`);
+    } catch (e) {
+      console.log(`\n::warning::could not open PLAN_OUT (${PLAN_OUT_BY_PLAYER}): ${e?.message}`);
+      planFd = null;
+    }
+  }
+  let planRowsWritten = 0;
+  function emitPlanRow(sale, action, reason, extra = {}) {
+    planRowsWritten++;
+    if (!planFd) return;
+    const record = {
+      action, reason: reason ?? null,
+      id: sale?.id ?? null, source: sale?.source ?? null, title: sale?.title ?? null,
+      cardId: sale?.cardId ?? null, hobbyiqCardId: sale?.hobbyiqCardId ?? null,
+      cardNumber: sale?.cardNumber ?? null, playerName: sale?.playerName ?? null,
+      fromSetKey: extra.from ?? null, toSetKey: extra.to ?? null, toId: extra.toId ?? null,
+      derivedResident: extra.derivedResident ?? false,
+    };
+    try { fs.appendFileSync(planFd, JSON.stringify(record) + "\n"); }
+    catch (e) { console.log(`\n::warning::PLAN_OUT write failed for ${sale?.id}: ${e?.message}`); }
+  }
+
+  async function residentAt(saleId, cardId) {
+    try { return (await retry(() => pool.item(saleId, cardId).read())).resource ?? null; }
+    catch (e) { if (e?.code === 404 || e?.statusCode === 404) return null; throw e; }
+  }
+  async function catalogRowAt(id) {
+    try { return (await retry(() => cat.item(id, id).read())).resource ?? null; }
+    catch (e) { if (e?.code === 404 || e?.statusCode === 404) return null; throw e; }
+  }
+
+  /** Every checklist-grade catalog row of ONE setKey in this cell, keyed by
+   *  normalised card number -> row[] (several rows per number = several
+   *  parallels). Loaded ONCE per (cell, setKey), reused across every sale
+   *  and every sibling candidate that shares it. */
+  async function loadChecklistByNumber(sport, year, setKey) {
+    const byNumber = new Map();
+    await forEachPage(cat, checklistSpec(sport, year, setKey), async (page) => {
+      if (CLOCK.outOfClock()) { stoppedAtBudget = true; return false; }
+      for (const r of page) {
+        if (catalogAuthorityOf(r.source) !== "checklist") continue;
+        const num = normNumber(r.cardNumber);
+        if (!byNumber.has(num)) byNumber.set(num, []);
+        byNumber.get(num).push(r);
+      }
+      return true;
+    });
+    return byNumber;
+  }
+
+  async function processFromKey(sport, year, fromKey) {
+    if (CLOCK.outOfClock()) { stoppedAtBudget = true; return; }
+    s.fromKeysScanned++;
+
+    const siblingKeys = siblingCandidateSetKeys(deps, fromKey);
+    console.log(`  [${sport}:${year}] ${fromKey}: sibling candidates (same registered family) = ${siblingKeys.length ? siblingKeys.join(", ") : "(none -- unregistered or root product)"}`);
+
+    const fromByNumber = await loadChecklistByNumber(sport, year, fromKey);
+    const siblingByNumberByKey = new Map();
+    for (const sk of siblingKeys) {
+      if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
+      siblingByNumberByKey.set(sk, await loadChecklistByNumber(sport, year, sk));
+    }
+
+    const queryStarted = Date.now();
+    const sales = [];
+    await forEachPage(pool, salesSpec(sport, year, fromKey), async (page) => {
+      if (CLOCK.outOfClock()) { stoppedAtBudget = true; return false; }
+      for (const row of page) sales.push(row);
+      return true;
+    });
+    s.salesQueries++;
+
+    for (const sale of sales) {
+      if (CLOCK.outOfClock()) { stoppedAtBudget = true; s.notReached++; continue; }
+      if (LIMIT && (s.salesMoved + s.salesPatched) >= LIMIT) { s.notReached++; continue; }
+      if (SHARD_SCOPE.SHARDED && shardOf(String(sale.id)) !== SHARD_SCOPE.SLOT) { s.otherShard++; continue; }
+
+      const fromSlug = String(sale.hobbyiqCardId ?? sale.cardId ?? "");
+      const seg = fromSlug.split(":");
+      if (seg.length < 4 || seg[0] !== "hiq" || seg[1] !== sport || Number(seg[2]) !== year || seg[3] !== fromKey) continue;
+      s.salesScanned++;
+
+      // GATE 5 (parse first): a graded id's tail is carried through
+      // verbatim. An id that does not parse at all (grade-aware or
+      // otherwise) never becomes a candidate for this mode.
+      const split = parseSlugWithGrade(fromSlug, parseHobbyIqCardId);
+      if (!split) {
+        s.refusedGradedParseFailed++;
+        continue;
+      }
+      const { parsed, gradeTier } = split;
+      const num = normNumber(parsed.cardNumber);
+      const fromRowsAtNumber = fromByNumber.get(num) ?? [];
+      const siblingRowsBySetKey = new Map();
+      for (const [sk, byNumber] of siblingByNumberByKey.entries()) {
+        const rows = byNumber.get(num) ?? [];
+        if (rows.length) siblingRowsBySetKey.set(sk, rows);
+      }
+
+      // The gate ladder's own destination guess for the per-pair table
+      // (best-effort; a refuse before gate 3 has no destination yet).
+      const guessedTo = siblingRowsBySetKey.size === 1 ? [...siblingRowsBySetKey.keys()][0] : "(undetermined)";
+      const bucket = pairBucket(fromKey, guessedTo);
+      bucket.candidates++;
+
+      let sourceRow;
+      try { sourceRow = await catalogRowAt(fromSlug); }
+      catch (e) {
+        s.salesFailed++;
+        const msg = `FAILED catalog-read ${sale.id}@${fromSlug}: [${e?.code ?? e?.statusCode ?? "unknown"}] ${e?.message || e}`;
+        failures.push(`  ${msg}`);
+        emitPlanRow(sale, "failed", "catalog-read", { from: fromKey, to: guessedTo });
+        continue;
+      }
+
+      const saleNameSource = sale.playerName ?? "";
+      // toSlug is NOT knowable before gate 3 resolves in this mode (the
+      // destination's setKey AND its parallel segment are both discovered,
+      // not derived) -- classifySaleForSiblingMove's own shape-4
+      // "already-at-toSlug" idempotency shortcut therefore cannot run here.
+      // Passing fromSlug for both collapses that branch to a no-op (it never
+      // distinguishes from shape 1) without weakening shape 1/2/3 detection
+      // or the split-identity refusal, which depend only on fromSlug.
+      // Idempotency is still guaranteed by the scan's own STARTSWITH prefix:
+      // a moved sale's hobbyiqCardId no longer starts with the FROM cell
+      // prefix, so a relaunch after a budget stop never re-selects it.
+      const ctx = {
+        from: fromKey, fromSlug, toSlug: fromSlug,
+        sourceRow, fromRowsAtNumber, siblingRowsBySetKey,
+        saleNameSource, statedPrintRun: parsed.printRun ?? null, gradeTier,
+      };
+      const plan = planByPlayerSiblingMove(deps, sale, ctx);
+
+      if (plan.derivedResident) { s.derivedResidentAtSource++; }
+
+      if (plan.action === "refuse") {
+        noteRefusal(plan.reason, `  ${sale.id}@${sale.cardId} (${fromSlug}): ${plan.detail}`, fromKey, guessedTo);
+        emitPlanRow(sale, "refused", plan.reason, { from: fromKey, to: guessedTo, derivedResident: plan.derivedResident ?? false });
+        continue;
+      }
+
+      const toKey = plan.toSetKey;
+      const toBucket = pairBucket(fromKey, toKey);
+      // Move the candidate tally to the REAL destination, undoing the
+      // provisional guess above when they differ (guessedTo is only a
+      // display aid before gate 3 resolves; the real bucket is truth).
+      if (toKey !== guessedTo) { bucket.candidates--; toBucket.candidates++; }
+
+      try {
+        if (plan.action === "relocate") {
+          const keep = {
+            ...stripSystem(sale),
+            cardId: plan.newCardId, hobbyiqCardId: plan.newHiq,
+            reslugedFrom: fromSlug,
+            reslugedReason: `card #${sale.cardNumber ?? ""} is checklist-backed under sibling ${toKey}, not ${fromKey} (repoint-sales-to-sibling-product MODE=by-player)`,
+            reslugedAt: new Date().toISOString(),
+          };
+          keep.contentHash = contentHashOf(keep);
+
+          const resident = await residentAt(sale.id, plan.newCardId);
+          if (resident) {
+            if (contentHashOf(resident) === contentHashOf(keep)) {
+              if (APPLY) await retry(() => pool.item(sale.id, sale.cardId).delete());
+              s.collapsedOntoResident++;
+              toBucket.moved++;
+              emitPlanRow(sale, "collapse", "same-sale-at-destination", { from: fromKey, to: toKey, toId: plan.newCardId });
+              continue;
+            }
+            noteRefusal("possible-twin-at-destination", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: a DIFFERENT sale already resides at the destination; NEITHER moved`, fromKey, toKey);
+            emitPlanRow(sale, "refused", "possible-twin-at-destination", { from: fromKey, to: toKey, toId: plan.newCardId });
+            continue;
+          }
+
+          let fresh = null;
+          try { fresh = await residentAt(sale.id, sale.cardId); }
+          catch (e) { s.salesFailed++; failures.push(`  FAILED relocate ${sale.id}@${sale.cardId} -> ${plan.newCardId}: could not re-read before write: ${String(e?.message ?? e)}`); continue; }
+          if (!fresh || String(fresh._etag ?? "") !== String(sale._etag ?? "")) {
+            noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: stale since the planning read`, fromKey, toKey);
+            emitPlanRow(sale, "refused", "stale-since-plan", { from: fromKey, to: toKey, toId: plan.newCardId });
+            continue;
+          }
+
+          const verdict = guardSoldCompDoc({ ...keep }, { guardedBy: "repoint-sales-to-sibling-product:by-player" });
+          if (verdict.verdict === "park" && verdict.reason === "malformed-key") {
+            noteRefusal("guard-parked", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: ${verdict.detail ?? verdict.reason}`, fromKey, toKey);
+            emitPlanRow(sale, "refused", "guard-parked", { from: fromKey, to: toKey, toId: plan.newCardId });
+            continue;
+          }
+
+          const res = await relocateSoldComp(pool, {
+            keep, drop: [{ id: sale.id, cardId: sale.cardId, ifMatchEtag: fresh._etag }],
+            retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY,
+          });
+          if (res.staleSincePlan?.length) {
+            noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: delete refused (412)`, fromKey, toKey);
+            emitPlanRow(sale, "refused", "stale-since-plan", { from: fromKey, to: toKey, toId: plan.newCardId });
+            continue;
+          }
+          if (!res.ok && res.stage !== "dry-run") {
+            s.salesFailed++;
+            failures.push(`  FAILED relocate ${sale.id}@${sale.cardId} -> ${plan.newCardId}: ${res.error ?? "unknown"}`);
+            emitPlanRow(sale, "failed", res.error ?? "unknown", { from: fromKey, to: toKey, toId: plan.newCardId });
+            continue;
+          }
+          s.salesMoved++;
+          toBucket.moved++;
+          if (examples.length < 24) examples.push(`  RELOCATE ${sale.id}@${sale.cardId} -> ${plan.newCardId}`);
+          emitPlanRow(sale, "relocate", null, { from: fromKey, to: toKey, toId: plan.newCardId, derivedResident: plan.derivedResident ?? false });
+          continue;
+        }
+
+        // PATCH shape: vendor cardId, only hobbyiqCardId moves.
+        let fresh = null;
+        try { fresh = await residentAt(sale.id, sale.cardId); }
+        catch (e) { s.salesFailed++; failures.push(`  FAILED patch ${sale.id}@${sale.cardId}: could not re-read before write: ${String(e?.message ?? e)}`); continue; }
+        if (!fresh || String(fresh._etag ?? "") !== String(sale._etag ?? "")) {
+          noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId}: stale since the planning read`, fromKey, toKey);
+          emitPlanRow(sale, "refused", "stale-since-plan", { from: fromKey, to: toKey, toId: plan.newHiq });
+          continue;
+        }
+        const wouldBe = { ...stripSystem(sale), hobbyiqCardId: plan.newHiq };
+        const verdict = guardSoldCompDoc(wouldBe, { guardedBy: "repoint-sales-to-sibling-product:by-player" });
+        if (verdict.verdict === "park" && verdict.reason === "malformed-key") {
+          noteRefusal("guard-parked", `  ${sale.id}@${sale.cardId}: ${verdict.detail ?? verdict.reason}`, fromKey, toKey);
+          emitPlanRow(sale, "refused", "guard-parked", { from: fromKey, to: toKey, toId: plan.newHiq });
+          continue;
+        }
+        if (APPLY) {
+          try {
+            await retry(() => pool.item(sale.id, sale.cardId).patch([
+              { op: "set", path: "/hobbyiqCardId", value: plan.newHiq },
+              { op: "set", path: "/reslugedFrom", value: fromSlug },
+              { op: "set", path: "/reslugedReason", value: `card #${sale.cardNumber ?? ""} is checklist-backed under sibling ${toKey}, not ${fromKey} (repoint-sales-to-sibling-product MODE=by-player)` },
+              { op: "set", path: "/reslugedAt", value: new Date().toISOString() },
+            ], { accessCondition: { type: "IfMatch", condition: fresh._etag } }));
+          } catch (e) {
+            if (is412(e)) {
+              noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId}: patch refused (412)`, fromKey, toKey);
+              emitPlanRow(sale, "refused", "stale-since-plan", { from: fromKey, to: toKey, toId: plan.newHiq });
+              continue;
+            }
+            throw e;
+          }
+        }
+        s.salesPatched++;
+        toBucket.moved++;
+        if (examples.length < 24) examples.push(`  PATCH ${sale.id}@${sale.cardId} hobbyiqCardId ${fromSlug} -> ${plan.newHiq}`);
+        emitPlanRow(sale, "patch", null, { from: fromKey, to: toKey, toId: plan.newHiq, derivedResident: plan.derivedResident ?? false });
+      } catch (e) {
+        s.salesFailed++;
+        failures.push(`  FAILED ${plan.action} ${sale.id}@${sale.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
+        emitPlanRow(sale, "failed", String(e?.message ?? e), { from: fromKey, to: toKey });
+      }
+    }
+  }
+
+  async function runPool(units, worker) {
+    let idx = 0;
+    const run = async () => { while (idx < units.length) { const my = idx++; await worker(units[my]); } };
+    const lanes = Math.min(CONCURRENCY, Math.max(units.length, 1));
+    await Promise.all(Array.from({ length: lanes }, run));
+  }
+
+  const units = [];
+  for (const cell of SCOPE_CELLS) {
+    const [sport, yearStr] = cell.split(":");
+    for (const fromKey of BY_PLAYER_FROM_KEYS) units.push({ sport, year: Number(yearStr), fromKey });
+  }
+  await runPool(units, async (u) => { await processFromKey(u.sport, u.year, u.fromKey); });
+
+  console.log("");
+  console.log(`  PER-(FROM -> TO SETKEY) COUNTS:`);
+  for (const [, bucket] of [...byPair.entries()].sort((a, b) => b[1].candidates - a[1].candidates)) {
+    console.log(`\n  ${bucket.from} -> ${bucket.to}`);
+    console.log(`    candidates       ${f(bucket.candidates)}`);
+    console.log(`    ${APPLY ? "moved" : "would-move"}            ${f(bucket.moved)}`);
+    for (const [reason, n] of [...bucket.refusedByReason.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log(`    refused (${reason})  ${f(n)}`);
+    }
+  }
+
+  console.log("");
+  console.log(`from setKeys scanned                 ${f(s.fromKeysScanned)}`);
+  console.log(`sales scanned (in shape, in scope)   ${f(s.salesScanned)}${SHARD_SCOPE.SHARDED ? `  (${f(s.otherShard)} in other shards)` : ""}`);
+  console.log(`  ${APPLY ? "RELOCATED" : "WOULD RELOCATE"}    ${f(s.salesMoved)}`);
+  console.log(`  ${APPLY ? "PATCHED" : "WOULD PATCH"}      ${f(s.salesPatched)}`);
+  console.log(`  COLLAPSED onto a resident            ${f(s.collapsedOntoResident)}`);
+  console.log(`  DERIVED-RESIDENT-AT-SOURCE            ${f(s.derivedResidentAtSource)}   <- source id carried a DERIVED/VENDOR row; logged for a later retire list, never a refusal`);
+  console.log("");
+  console.log(`  REFUSED: already-checklist-backed           ${f(s.refusedAlreadyChecklistBacked)}`);
+  console.log(`  REFUSED: stale-no-row (different class)     ${f(s.refusedStaleNoRow)}   <- FROM has NO row at this number at all -- acquisition gap, not this class`);
+  console.log(`  REFUSED: from-row-agrees                    ${f(s.refusedFromRowAgrees)}   <- FROM's own row agrees with the sale -- not this class's defect`);
+  console.log(`  REFUSED: destination-rung-not-on-checklist  ${f(s.refusedDestinationRungNotOnChecklist)}   <- no sibling agrees at this number`);
+  console.log(`  REFUSED: ambiguous-sibling                  ${f(s.refusedAmbiguousSibling)}   <- 2+ DIFFERENT siblings agree -- never guessed`);
+  console.log(`  REFUSED: ambiguous-rung                     ${f(s.refusedAmbiguousRung)}   <- the one agreeing sibling has 0 or 2+ matching rungs -- never guessed`);
+  console.log(`  REFUSED: split-identity                     ${f(s.refusedSplitIdentity)}`);
+  console.log(`  REFUSED: possible-twin-at-destination       ${f(s.refusedPossibleTwin)}`);
+  console.log(`  REFUSED: pinned-or-verified                 ${f(s.refusedPinnedOrVerified)}`);
+  console.log(`  REFUSED: flagged-or-excluded                ${f(s.refusedFlaggedOrExcluded)}`);
+  console.log(`  REFUSED: already-parked                     ${f(s.refusedAlreadyParked)}`);
+  console.log(`  REFUSED: guard-parked (malformed key)       ${f(s.refusedGuardParked)}`);
+  console.log(`  REFUSED: stale-since-plan                   ${f(s.refusedEtagChanged)}`);
+  console.log(`  REFUSED: graded-parse-failed (not a candidate) ${f(s.refusedGradedParseFailed)}`);
+  console.log(`  failed                                     ${f(s.salesFailed)}`);
+  console.log(`  not reached (budget / LIMIT)                ${f(s.notReached)}`);
+
+  if (examples.length) { console.log(`\n  examples:`); for (const e of [...examples].sort()) console.log(e); }
+  for (const [reason, list] of Object.entries(refusals)) {
+    if (list.length) { console.log(`\n  REFUSED (${reason}), every one listed (${f(list.length)}):`); for (const l of [...list].sort()) console.log(l); }
+  }
+  if (failures.length) { console.log(`\n  FAILURES (${f(failures.length)}):`); for (const fl of [...failures].sort()) console.log(fl); }
+
+  if (planFd) {
+    console.log(`\n  plan rows written  ${f(planRowsWritten)}`);
+    try { fs.closeSync(planFd); } catch { /* best effort */ }
+  }
+
+  // CF-A-SALE-IS-NEVER-LOST reconciliation, same discipline as the base mode.
+  const written = s.salesMoved + s.salesPatched + s.collapsedOntoResident;
+  const refused = s.refusedAlreadyChecklistBacked + s.refusedStaleNoRow + s.refusedFromRowAgrees
+    + s.refusedDestinationRungNotOnChecklist + s.refusedAmbiguousSibling + s.refusedAmbiguousRung
+    + s.refusedSplitIdentity + s.refusedPossibleTwin
+    + s.refusedPinnedOrVerified + s.refusedFlaggedOrExcluded + s.refusedAlreadyParked
+    + s.refusedGuardParked + s.refusedEtagChanged;
+  // refusedGradedParseFailed is excluded from `left`'s population exactly as
+  // isauto-flip's own refusedGradedParse is: a row that never parsed never
+  // became a candidate, so it is reported on its own line and excluded from
+  // both sides of this equation (folding it in would over-account).
+  const left = s.salesScanned - written - refused - s.salesFailed - s.refusedGradedParseFailed;
+  console.log("");
+  console.log(`CF-A-SALE-IS-NEVER-LOST`);
+  console.log(`  sales scanned              ${f(s.salesScanned)}`);
+  console.log(`  ${APPLY ? "=" : "would be ="} moved ${f(s.salesMoved)} + patched ${f(s.salesPatched)} + collapsed ${f(s.collapsedOntoResident)} + refused ${f(refused)} + failed ${f(s.salesFailed)} + graded-parse-failed ${f(s.refusedGradedParseFailed)} + left ${f(left)}`);
+  const accountedFor = written + refused + s.salesFailed + s.refusedGradedParseFailed + left;
+  if (accountedFor !== s.salesScanned) {
+    console.error(`!! CF-A-SALE-IS-NEVER-LOST: accounted ${f(accountedFor)} != scanned ${f(s.salesScanned)}. Exit 4.`);
+    process.exitCode = 4;
+  } else {
+    console.log(`  matched -- every scanned sale is moved, patched, collapsed, refused (named), failed (named), graded-parse-failed, or left with a reason accounted above.`);
+  }
+
+  if (APPLY) {
+    const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+    reportWrites({
+      job: "repoint-sales-to-sibling-product:by-player",
+      intended: s.salesScanned,
+      written,
+      skipped: left,
+      refused,
+      failed: s.salesFailed,
+    });
+  }
+
+  console.log("");
+  console.log(`  ${APPLY ? "RELOCATED" : "WOULD RELOCATE"} ${f(s.salesMoved)}   ${APPLY ? "PATCHED" : "WOULD PATCH"} ${f(s.salesPatched)}`);
+  if (stoppedAtBudget || CLOCK.outOfClock()) {
+    console.log(`  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- the slot has more to do`);
+  }
+  if (!APPLY) console.log(`\nREPORT ONLY -- nothing was written. Re-run with BACKFILL_APPLY=true to apply.`);
+
+  if (s.salesFailed) {
+    console.error(`::error::${f(s.salesFailed)} sale(s) failed -- see FAILURES above.`);
+    process.exitCode = 4;
+  }
+}
+
 module.exports = {
   parseSiblingPairs, planSiblingMove, classifySaleForSiblingMove,
   numberExistsInFromProduct, destinationRowsForNumber, rowsAtDestinationRung,
@@ -1515,6 +2395,8 @@ module.exports = {
   forbiddenFragmentsFor, PAIR_TITLE_RULES,
   USER_SEED_SOURCES, INHERITED_SCOPES, CELL_RE, WILDCARDS,
   checklistSpec, salesSpec,
+  siblingCandidateSetKeys, sourceRowVerdict, fromRowVerdict, agreeingSiblingRows,
+  rungCandidatesForSibling, planByPlayerSiblingMove,
 };
 
 if (require.main === module) {
