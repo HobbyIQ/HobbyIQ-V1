@@ -550,7 +550,7 @@ describe("F -- canary coverage: every one of the 32 shards has a pool that must 
     expect(hand.length).toBe(7);
     // the four the findings and the memory index name explicitly
     const slugs = hand.map((c) => c.slug);
-    expect(slugs).toContain("hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto");
+    expect(slugs).toContain("hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto");
     expect(slugs).toContain("hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499");
     expect(slugs).toContain("hiq:baseball:2020:bowman-draft:bd-152:image-variation:no-auto");
     expect(slugs).toContain("hiq:basketball:1993:topps-finest:99:refractor:no-auto");

@@ -18,10 +18,10 @@
     {
       "name": "Figueroa 2026 Bowman Chrome CPA-VF Black & White Red Ink auto",
       "holdingId": "9f082213-22c8-4c26-b488-55d3f9edb1b6",
-      "slug": "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto",
-      "poolRows": 1,
+      "slug": "hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto",
+      "poolRows": 13,
       "verifiedMarketDirection": "exact-pool",
-      "note": "Red Ink is the SSP of the B&W Shimmer auto and its OWN row (Drew 2026-08-30) -- never folded into a shade of red. The holding's stored cardId is still a vendor bubble id (1778815951741x...), so the pool lives under the hobbyiqCardId slug: the canary must read the UNION or it measures nothing. Single-sale pool: losing that row empties the pool.",
+      "note": "Red Ink is the SSP of the B&W Shimmer auto and its OWN row (Drew 2026-08-30) -- never folded into a shade of red. The pool lives at hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto (13 rows), not under either bowman-chrome red-ink id (both hold 0 rows, no catalog row). catalog row source checklist-drew-ruling-2026-08-30-red-ink, parallel 'Black & White Red Ink'. Protected anchor confirmed by DIRECT POINT READ (item(id,partitionKey).read(), not a query): id ebay-user-purchase::147344007201-10082410797719, partition/cardId = the live slug above, price $270, hobbyiqCardId field byte-identical to the slug -- checkedAt 2026-09-26T04:07:30Z. NOTE: an equality query (SELECT ... WHERE c.hobbyiqCardId = @id) against this exact id returned 0 rows for this same document while the point read found it -- a live index inconsistency on sold_comps's /hobbyiqCardId/? path, under investigation by the coordinator as of this checkedAt; the point read is document truth. Single-sale-anchor pool: losing that row is a regression regardless of query-path symptoms.",
       "protectedIdentity": true,
       "shardSlot": 6
     },
@@ -342,9 +342,9 @@
     },
     {
       "name": "[derived] slot 20 2022 topps-chrome 221 refractor-image-variation",
-      "slug": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+      "slug": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
       "shardSlot": 20,
-      "poolRows": 12,
+      "poolRows": 17,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 2,
@@ -353,10 +353,10 @@
         "verifiedByUser"
       ],
       "anchorRowId": "ebay-user-purchase::128012724525-10083011221909",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 20's apply means sales moved away from a card a person vouched for. poolRows 2 is a FLOOR measured at capture (1 in the slug partition + 1 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: the anchor row (ebay-user-purchase::128012724525-10083011221909) was re-keyed by Drew's 2026-09-11 ruling (R23, source cardpedia-drew-ruling-2026-09-11) from hiq:baseball:2022:topps-chrome:221:refractor-image-variation:no-auto to hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto -- Refractor Image Variation and Image Variation Sonic are the SAME named card, not two rows. The old slug is now an UNTOUCHED-POOL ALARM false positive: 0 rows live there and none ever will again. Re-pointed to the checklist-backed identity (card_catalog verificationStatus=verified, confidence 0.95); poolRows refreshed from the captured floor of 2 to the live union count of 12. The anchor's own verifiedByUser flag now reads false (a newer verifyStatus=confirmed field has superseded it) -- flagged for the coordinator to confirm the provenance-protection doctrine still covers this row under the new field name, but this does not block the re-point since the row is unambiguously present and priced at its new address.]",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 20's apply means sales moved away from a card a person vouched for. anchor was re-keyed to plain Refractor on 2026-09-18 (writer unknown) despite parallel text 'Refractor Image Variation' -- doctrine #1613 breach pending an Image Variation rung for 2022 topps-chrome 221; canary watches the live address. Both image-variation-sonic and refractor-image-variation now hold 0 rows and have no catalog row; hiq:baseball:2022:topps-chrome:221:image-variations:no-auto holds 6 separately and is NOT this pool. Anchor confirmed by DIRECT POINT READ (item(id,partitionKey).read()): id ebay-user-purchase::128012724525-10083011221909, partition/cardId = hiq:baseball:2022:topps-chrome:221:refractor:no-auto, price $224.75, parallel text 'Refractor Image Variation', _ts 2026-09-18T21:35:41Z -- checkedAt 2026-09-26T04:07:30Z, live union count 17. NOTE: an equality query (SELECT ... WHERE c.hobbyiqCardId = @id) against this exact id returned 0 rows for this same document while the point read found it -- the same live index inconsistency on sold_comps's /hobbyiqCardId/? path flagged on the Figueroa canary, under investigation by the coordinator as of this checkedAt; the point read is document truth. [RECAPTURED 2026-09-14: superseded by cardpedia-drew-ruling-2026-09-11 (R23) from refractor-image-variation to image-variation-sonic -- that re-point is itself now stale; the anchor moved AGAIN on 2026-09-18 to plain Refractor, which is the doctrine #1613 breach this entry now watches.]",
       "protectedIdentity": true,
-      "supersededSlug": "hiq:baseball:2022:topps-chrome:221:refractor-image-variation:no-auto",
-      "supersededReason": "anchor moved by cardpedia-drew-ruling-2026-09-11 (ruling R23) on 2026-09-11 -- verificationStatus=verified; old slug pool is now EMPTY (0 rows), new slug carries the full pool (12 rows) including both provenance-protected ebay-user-purchase rows."
+      "supersededSlug": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+      "supersededReason": "anchor re-keyed to plain Refractor on 2026-09-18 (writer unknown), despite stored parallel text 'Refractor Image Variation' -- doctrine #1613 breach (no Image Variation rung for 2022 topps-chrome 221) pending acquisition follow-up; old slug (image-variation-sonic, itself a 2026-09-11 supersession of refractor-image-variation) now holds 0 rows, new slug carries the full pool (17 rows) including both provenance-protected ebay-user-purchase rows."
     },
     {
       "name": "[derived] slot 21 2018 topps c-25 coins",
