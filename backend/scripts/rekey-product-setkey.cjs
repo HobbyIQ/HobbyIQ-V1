@@ -162,6 +162,13 @@ const { marketVerdict } = require(path.join(__dirname, "lib", "market-guard.cjs"
 // CF-A-CARD-NUMBER-SUBSET-IS-NOT-A-WHOLE-PRODUCT. Same requirability contract
 // as market-guard.cjs above -- pure, self-contained, no dist/ dependency.
 const { matchesCardNumberScope } = require(path.join(__dirname, "lib", "card-number-scope.cjs"));
+// CF-A-PREFIX-SCAN-SCOPES-TO-WHAT-IT-KNOWS (2026-09-26, run 36246861648). Same
+// requirability contract -- pure, self-contained, no dist/ dependency. See
+// that module's header for the incident: an unscoped id-stem STARTSWITH
+// cross-partition-scanned the entire 31.4M-row baseball catalog and hung
+// silently under stacked SDK/script retry for 87 minutes before a 150-minute
+// GH Actions step timeout killed it.
+const { buildIdStemSpecs } = require(path.join(__dirname, "lib", "rekey-id-stem-scope.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const SPORT = String(process.env.SPORT || "").trim().toLowerCase();
@@ -416,6 +423,15 @@ function withSetKeySegment(oldSlug, setKey) {
 /** The setKey segment of an id -- the product, per CF-THE-ID-CARRIES-THE-PRODUCT. */
 const idSetKeySegment = (id) => String(id ?? "").split(":")[3] ?? "";
 
+// CF-A-THROTTLED-PASS-IS-NEVER-SILENT (run 36246861648). retry() is the
+// SCRIPT'S OWN retry layer -- it only ever sees a 429/throttle error that the
+// Cosmos SDK's connectionPolicy.retryOptions (30 attempts / 120s each,
+// main()'s CosmosClient construction below) did NOT already absorb silently
+// inside fetchNext(). So this console.log is a lower bound on how much
+// throttling actually happened, not the whole story -- but it is the
+// cheapest signal available without wiring App Insights RU diagnostics into
+// an ops script, and it turns "no output for 87 minutes" into "at least one
+// retry every few seconds", visible in the runner log within minutes.
 const retry = async (fn, tries = 8) => {
   let wait = 500;
   for (let a = 0; ; a++) {
@@ -423,17 +439,66 @@ const retry = async (fn, tries = 8) => {
     catch (e) {
       const msg = String(e?.message ?? e);
       if (!/request rate|429|ETIMEDOUT|ECONNRESET|503|Request timed out/i.test(msg) || a >= tries) throw e;
+      console.log(`  [retry ${a + 1}/${tries}] ${msg.slice(0, 90)} -- waiting ${wait}ms`);
       await new Promise((r) => setTimeout(r, wait)); wait = Math.min(wait * 2, 15000);
     }
   }
 };
 
+/** Every Nth page (and any page slower than SLOW_PAGE_MS, regardless of N):
+ *  rows seen this spec / kept by onPage's own return / elapsed / RU charge
+ *  from the response headers, if the SDK surfaces it. CF-A-THROTTLED-PASS-IS-
+ *  NEVER-SILENT: the id-stem incident produced 87 minutes of nothing between
+ *  "-- scanning by id stem" and the step timeout, because forEachPage printed
+ *  nothing between pages and the SDK's own retry (30x/120s,
+ *  connectionPolicy.retryOptions below) can absorb a 429 for the better part
+ *  of an hour inside ONE fetchNext() call, before this function's caller
+ *  (retry(), above) ever sees an error to log. A page slower than
+ *  SLOW_PAGE_MS is exactly what that absorption looks like from the outside:
+ *  logged immediately, not batched into the next Nth-page tick. */
+const PROGRESS_EVERY_PAGES = Number(process.env.REKEY_PROGRESS_EVERY_PAGES || 25);
+const SLOW_PAGE_MS = Number(process.env.REKEY_SLOW_PAGE_MS || 30_000);
+
 async function forEachPage(container, spec, onPage, pageSize = 200) {
   let token;
+  let pageNum = 0;
+  let rowsSeen = 0;
+  let rowsKept = 0;
+  let ruTotal = 0;
+  const startedAt = Date.now();
   do {
+    const pageStartedAt = Date.now();
     const page = await retry(() => container.items.query(spec, { maxItemCount: pageSize, continuationToken: token }).fetchNext());
+    const pageMs = Date.now() - pageStartedAt;
     token = page.continuationToken;
-    if ((await onPage(page.resources ?? [])) === false) return;
+    const rows = page.resources ?? [];
+    pageNum++;
+    rowsSeen += rows.length;
+    // requestCharge lives at different depths across @azure/cosmos versions;
+    // read every shape it has been seen under rather than assume one. Absent
+    // -> 0, never thrown -- this is visibility, not a hard dependency.
+    const ru = Number(page.requestCharge ?? page.headers?.["x-ms-request-charge"] ?? 0) || 0;
+    ruTotal += ru;
+    // CF-A-THROTTLED-PASS-IS-NEVER-SILENT: a slow page is logged the moment
+    // it is seen, never held for the next Nth-page tick -- that is precisely
+    // the shape (one page, absorbing SDK-level 429 retry for a long time)
+    // that produced the 87-minute silent hang this fix is for.
+    if (pageMs > SLOW_PAGE_MS) {
+      console.log(`  [slow page] ${spec.name} page ${pageNum} took ${(pageMs / 1000).toFixed(1)}s (> ${(SLOW_PAGE_MS / 1000).toFixed(0)}s threshold) -- possible sustained 429 throttling absorbed inside fetchNext()`);
+    }
+    // `onPage`'s own return says "keep going" (anything but `false`); it does
+    // not report how many of this page's rows it kept vs discarded, and
+    // teaching every existing caller to return a count would be a much wider
+    // diff for a log line's benefit. "kept" here means "this page was not the
+    // one that stopped the scan" -- still a real signal (a page that DID stop
+    // the scan is visible immediately via the final log line before return).
+    const keepResult = await onPage(rows);
+    if (keepResult !== false) rowsKept += rows.length;
+    if (pageNum % PROGRESS_EVERY_PAGES === 0 || !token || keepResult === false) {
+      const elapsedS = ((Date.now() - startedAt) / 1000).toFixed(1);
+      console.log(`  [progress] ${spec.name}  page ${pageNum}  rows seen ${f(rowsSeen)}  rows kept ${f(rowsKept)}  elapsed ${elapsedS}s  RU charged ${f(Math.round(ruTotal))}`);
+    }
+    if (keepResult === false) return;
   } while (token);
 }
 
@@ -619,9 +684,30 @@ async function main() {
 
     // Both spellings of "this row belongs to FROM": the field says so, or the
     // id stem says so. A row can have either without the other (D30 drift).
+    //
+    // CF-A-PREFIX-SCAN-SCOPES-TO-WHAT-IT-KNOWS (run 36246861648, see
+    // lib/rekey-id-stem-scope.cjs's header for the incident). The "id stem"
+    // pass used to be ONE cross-partition STARTSWITH over the whole sport
+    // (`hiq:${SPORT}:`), year- and stem-filtered only client-side after every
+    // row in the sport was already fetched -- against a 31.4M-row baseball
+    // catalog that is a full-source scan wearing a narrow name. This
+    // dispatch already knows SPORT, YEARS and FROM by the time specs are
+    // built, so buildIdStemSpecs narrows to one STARTSWITH per year in scope
+    // (`hiq:${SPORT}:${year}:${FROM}:`) -- a strict subset of what the old
+    // query returned, never a superset, so the client-side filters just
+    // below (parts[3] !== FROM, the YEARS.includes check) are UNCHANGED and
+    // still run: this is a second guard, not a replacement for one. When
+    // YEARS is empty (MODE=catalog's YEAR is optional, unlike MODE=pool's)
+    // there is nothing to narrow BY, so buildIdStemSpecs falls back to the
+    // original full-sport query byte-for-byte and this dispatch logs a
+    // WARNING naming the full scan -- never a silent one.
+    const idStem = buildIdStemSpecs({ sport: SPORT, years: YEARS, fromSetKey: FROM });
+    if (!idStem.narrowed) {
+      console.log(`WARNING: id-stem pass could not narrow past sport -- ${idStem.fallbackReason}`);
+    }
     const specs = [
       { name: "setKey field", query: "SELECT * FROM c WHERE c.sport = @sp AND c.setKey = @k", parameters: [{ name: "@sp", value: SPORT }, { name: "@k", value: FROM }] },
-      { name: "id stem", query: "SELECT * FROM c WHERE STARTSWITH(c.id, @p)", parameters: [{ name: "@p", value: `hiq:${SPORT}:` }] },
+      ...idStem.specs,
     ];
     const seen = new Set();
 
