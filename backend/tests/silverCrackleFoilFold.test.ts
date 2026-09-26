@@ -45,6 +45,7 @@ const ALL_FILES = [...ALL_MOVE_FILES, RETIRE_DERIVED_FILE, RETIRE_AFTER_MOVE_FIL
 type Entry = {
   id: string; action: string; to?: string; reason?: string; evidence?: string;
   nameSuperset?: boolean; afterDerivedRetire?: boolean; salesAtRetireTime?: number;
+  parallel?: string;
 };
 type HeldRow = { id: string; salesCount: number; evidence?: string };
 type List = {
@@ -347,6 +348,41 @@ describe("every move changes ONLY the parallel to Silver Crackle Foil -- one axi
       }
     }
   });
+
+  /**
+   * CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT (2026-09-26).
+   *
+   * The defect this fold shipped WITH: crossProductFields() asked
+   * moveCatalogRow for a setKey change but never for a parallel change, so
+   * buildIncoming's `merged = { ...stripSlugBoundFields(oldRow), ...changedFields }`
+   * carried each row's OLD parallel text onto its new canonical id -- 1,500
+   * move-01 rows landed with the RIGHT id and the WRONG `parallel` field
+   * (confirmed 30/30 sampled on prod). Every entry in every move file changes
+   * the parallel SEGMENT (asserted above: `to.parallelSlug` is always
+   * "silver-crackle-foil" and always differs from `from.parallelSlug`), so
+   * every entry must now carry the human-form text the fixed lane requires.
+   *
+   * move-01.json ITSELF IS EXCLUDED HERE, deliberately: it already APPLIED
+   * (run 36204682368) before this fix existed, so its own file is frozen as
+   * the historical record of what actually ran -- the 1,500 rows it wrote are
+   * healed going FORWARD by 2026-09-26-silver-crackle-foil-heal-parallel-
+   * text.json (see the heal-list describe block below), never by rewriting
+   * the list that already ran. move-02 and move-03, not yet applied, are
+   * updated in place instead and are covered here.
+   */
+  it("every move-02/move-03 entry whose rung segment changes carries the human-form parallel text", () => {
+    for (const f of [MOVE_FREE_FILES[1], MOVE_AFTER_DERIVED_FILE]) {
+      for (const e of load(f).entries) {
+        const from = parseSlug(e.id);
+        const to = parseSlug(e.to!);
+        // Every entry in these files changes the rung (pinned above); the
+        // guard is written generally so a future entry that did NOT change
+        // the rung would correctly be exempt rather than silently required.
+        if (from.parallelSlug === to.parallelSlug) continue;
+        expect(e.parallel, `${e.id} changes the rung but carries no "parallel" text`).toBe(CANON);
+      }
+    }
+  });
 });
 
 describe("the real computeHobbyIqCardId reproduces every move's destination", () => {
@@ -439,5 +475,73 @@ describe("counts reconcile against the census in the file headers", () => {
     const doc = load(RETIRE_AFTER_MOVE_FILE);
     expect(doc.finding).toMatch(/35 of them pure name-superset/);
     expect(doc.finding).not.toMatch(/36 of them/);
+  });
+});
+
+// ── the heal list for move-01's already-written rows ────────────────────────
+
+/**
+ * CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT, the heal half
+ * (2026-09-26). move-01.json's own APPLY (run 36204682368) landed before the
+ * lane fix existed, so its 1,500 rows carry the RIGHT id and the WRONG
+ * `parallel` text (confirmed 30/30 sampled on prod). This list heals them in
+ * place through the new `patchFields` action -- id unchanged, verified
+ * canonical, parallel (and its derived/search fields) rewritten.
+ */
+const HEAL_FILE = "2026-09-26-silver-crackle-foil-heal-parallel-text.json";
+
+describe("the heal list covers exactly move-01's 1,500 destinations", () => {
+  const heal = load(HEAL_FILE);
+  const move01 = load(MOVE_FREE_FILES[0]);
+
+  it("holds exactly 1,500 entries, every one patchFields with no destination", () => {
+    expect(heal.entries).toHaveLength(1500);
+    for (const e of heal.entries) {
+      expect(e.action).toBe("patchFields");
+      expect(e.to).toBeUndefined();
+      expect(e.parallel).toBe(CANON);
+    }
+  });
+
+  it("its ids are EXACTLY move-01's `to` ids, no more and no fewer", () => {
+    const healIds = new Set(heal.entries.map((e) => e.id));
+    const move01Tos = new Set(move01.entries.map((e) => e.to));
+    expect(healIds.size).toBe(1500);
+    expect(move01Tos.size).toBe(1500);
+    for (const id of move01Tos) expect(healIds.has(id), `${id} missing from heal list`).toBe(true);
+    for (const id of healIds) expect(move01Tos.has(id), `${id} not a move-01 destination`).toBe(true);
+  });
+
+  it("names this lane, states its ruling and cites the offending run", () => {
+    expect(heal.forLane).toBe("relocate-catalog-rows-by-list");
+    expect(heal.reportOnlyUntil).toMatch(/no apply is authorized/i);
+    expect(JSON.stringify(heal.rulings)).toMatch(/36204682368/);
+    expect(JSON.stringify(heal.rulings)).toMatch(/crossProductFields/);
+    expect(heal.checkedAt).toBeTruthy();
+  });
+
+  it("every entry passes the lane's own validation", () => {
+    for (const e of heal.entries) {
+      const v = classifyEntry(e);
+      expect(v.ok, `${e.id}: ${v.why}`).toBeTruthy();
+      expect(v.action).toBe("patchFields");
+    }
+  });
+
+  it("every entry's id already computes from itself with the new parallel text", () => {
+    for (const e of heal.entries) {
+      const p = parseSlug(e.id);
+      const recomputed = computeHobbyIqCardId({
+        sport: p.sport, year: p.year, setKey: p.setKey, cardNumber: p.cardNumber,
+        parallel: e.parallel!, isAuto: p.autoSeg === "auto",
+        printRun: p.printRunSeg ? Number(p.printRunSeg.replace(/^num-/, "")) : null,
+      });
+      expect(recomputed).toBe(e.id);
+    }
+  });
+
+  it("no duplicate ids", () => {
+    const ids = heal.entries.map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

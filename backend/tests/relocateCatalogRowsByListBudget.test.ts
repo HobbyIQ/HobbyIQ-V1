@@ -67,8 +67,13 @@ function makeList(dir: string, retires: number, reslugs: number): string {
     ...Array.from({ length: reslugs }, (_, i) => ({
       id: `hiq:soccer:2022:panini-prizm:r${i}:gold-prizm:no-auto`,
       action: "reslug",
-      to: `hiq:soccer:2022:panini-prizm:r${i}:gold-prizm:no-auto:num-10`,
-      reason: "the print run belongs in the address",
+      // A renumber: same setKey stem, same parallel/isAuto/printRun segments
+      // -- a fold moveCatalogRow's strict path accepts with no changedFields,
+      // and untouched by CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-
+      // TEXT's rung-text requirement (2026-09-26), which this probe is not
+      // testing.
+      to: `hiq:soccer:2022:panini-prizm:rr${i}:gold-prizm:no-auto`,
+      reason: "the card number belongs in the address",
       evidence: "probe",
     })),
   ];
@@ -148,6 +153,30 @@ const fakeOps = {
     spend(UNIT_MS);
     if (!(opts && opts.dryRun)) gone.add(row.id);
     return { action: "moved", salesRepointed: 0, gradedChildrenRetired: 0 };
+  },
+  // Not exercised by this probe's fixtures (no park/verify/patchFields entry,
+  // and every reslug here is a same-parallel renumber -- see makeList), but
+  // the lane destructures all four off this module at require-time, so an
+  // absent export here is a crash before the loop ever runs, regardless of
+  // whether the probe's own entries would reach it.
+  patchCatalogRowFields: async () => { throw new Error("fakeOps.patchCatalogRowFields: not exercised by this probe"); },
+  rebuildSearchFields: (row) => ({ searchText: "", searchTokens: [], displayName: String(row && row.playerName || "") }),
+  parseSlugWithGrade: (slug) => {
+    // A minimal stand-in for catalogRowOps' real splitter -- good enough for
+    // this probe's own ids (never graded, never malformed), which is all
+    // rungChangeFields needs to answer "same parallel, nothing to require"
+    // for the probe's renumber-only reslugs.
+    const parts = String(slug).split(":");
+    if (parts.length < 7 || parts[0] !== "hiq") return null;
+    return {
+      parsed: {
+        sport: parts[1], year: Number(parts[2]), setKey: parts[3], cardNumber: parts[4],
+        parallel: parts[5], isAuto: parts[6] === "auto",
+        printRun: parts[7] && parts[7].startsWith("num-") ? Number(parts[7].slice(4)) : null,
+      },
+      parentSlug: slug,
+      gradeTier: null,
+    };
   },
 };
 const fakeReconcile = { reportWrites: () => {} };

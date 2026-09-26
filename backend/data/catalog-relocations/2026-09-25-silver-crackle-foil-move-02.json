@@ -20,1092 +20,1248 @@
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-em:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Edgar Martinez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-em:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Edgar Martinez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-em:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:pas-11:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:pas-11:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mookie Betts\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:pas-11:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mookie Betts\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:pas-11:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlm-hk:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlm-hk:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Hyeseong Kim\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-hk:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Hyeseong Kim\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-hk:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:75ya-cf:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:75ya-cf:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Carlton Fisk\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-cf:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Carlton Fisk\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-cf:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:ha-17:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:ha-17:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nolan McLean\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ha-17:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nolan McLean\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ha-17:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:tfap-ble:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:tfap-ble:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Brooks Lee\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:tfap-ble:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Brooks Lee\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:tfap-ble:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:75ya-jch:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:75ya-jch:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jackson Chourio\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-jch:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jackson Chourio\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-jch:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:itn-ac:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:itn-ac:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Aroldis Chapman\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-ac:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Aroldis Chapman\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-ac:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:8b-15:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:8b-15:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cal Ripken Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:8b-15:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cal Ripken Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:8b-15:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-cwh:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-cwh:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Carson Whisenhunt\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-cwh:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Carson Whisenhunt\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-cwh:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:itn-fl:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:itn-fl:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Francisco Lindor\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-fl:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Francisco Lindor\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-fl:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:cc-am:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:cc-am:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Andrew McCutchen\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:cc-am:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Andrew McCutchen\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:cc-am:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:itn-rg:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:itn-rg:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Riley Greene\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-rg:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Riley Greene\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-rg:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-pk:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-pk:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Paul Konerko\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-pk:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Paul Konerko\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-pk:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlma-ab:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlma-ab:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Alex Bregman\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-ab:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Alex Bregman\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-ab:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-reg:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-reg:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Reggie Jackson\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-reg:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Reggie Jackson\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-reg:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:75ya-dw:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:75ya-dw:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"David Wright\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-dw:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"David Wright\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-dw:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:itn-ro:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:itn-ro:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ryan O'Hearn\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-ro:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ryan O'Hearn\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-ro:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-mb:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-mb:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mookie Betts\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-mb:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mookie Betts\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-mb:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-mc:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-mc:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Miguel Cabrera\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91r-mc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Miguel Cabrera\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91r-mc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-am:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-am:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Andrew McCutchen\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-am:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Andrew McCutchen\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-am:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-ap:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-ap:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Albert Pujols\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-ap:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Albert Pujols\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-ap:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-raj:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-raj:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ronald Acuña Jr.\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:hlar-raj:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ronald Acuña Jr.\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:hlar-raj:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlm-cr:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlm-cr:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cal Raleigh\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-cr:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cal Raleigh\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-cr:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mas-mrm:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mas-mrm:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mr. Met\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mas-mrm:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mr. Met\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mas-mrm:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:75ya-jva:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:75ya-jva:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jason Varitek\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-jva:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jason Varitek\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-jva:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-jch:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-jch:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jackson Chourio\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-jch:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jackson Chourio\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-jch:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlma-ns:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlma-ns:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nolan Schanuel\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-ns:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nolan Schanuel\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-ns:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:ccar-ja:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:ccar-ja:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jose Altuve\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ccar-ja:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jose Altuve\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ccar-ja:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:btp-5:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:btp-5:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Elly De La Cruz\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:btp-5:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Elly De La Cruz\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:btp-5:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-cj:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-cj:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Chipper Jones\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-cj:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Chipper Jones\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-cj:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-ar:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-ar:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Adley Rutschman\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-ar:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Adley Rutschman\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-ar:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:gh-2:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:gh-2:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Aaron Judge\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gh-2:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Aaron Judge\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gh-2:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91c-69:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91c-69:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jacob Melton\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-69:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jacob Melton\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-69:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91c-84:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91c-84:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"José Ramírez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-84:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"José Ramírez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-84:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlma-gs:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlma-gs:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"George Springer\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-gs:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"George Springer\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-gs:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:att-5:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:att-5:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bobby Witt Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:att-5:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bobby Witt Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:att-5:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlma-cc:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlma-cc:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Corbin Carroll\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-cc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Corbin Carroll\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-cc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:8b-16:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:8b-16:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nolan Ryan\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:8b-16:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nolan Ryan\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:8b-16:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-bwi:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-bwi:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Brian Wilson\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-bwi:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Brian Wilson\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-bwi:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:ha-15:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:ha-15:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Samuel Basallo\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ha-15:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Samuel Basallo\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ha-15:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:aa-3:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:aa-3:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nolan Ryan\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:aa-3:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nolan Ryan\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:aa-3:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:itn-ksc:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:itn-ksc:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Kyle Schwarber\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:itn-ksc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Kyle Schwarber\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:itn-ksc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-bz:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-bz:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Barry Zito\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-bz:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Barry Zito\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-bz:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlm-an:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlm-an:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Aaron Nola\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-an:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Aaron Nola\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-an:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:btp-24:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:btp-24:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Chase Burns\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:btp-24:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Chase Burns\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:btp-24:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91c-29:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91c-29:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Don Mattingly\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-29:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Don Mattingly\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-29:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:cc-mh:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:cc-mh:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Michael Harris II\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:cc-mh:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Michael Harris II\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:cc-mh:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:t91-90:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:t91-90:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"C.J. Kayfus\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:t91-90:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"C.J. Kayfus\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:t91-90:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-sp:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-sp:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Salvador Perez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-sp:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Salvador Perez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-sp:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-mel:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-mel:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jacob Melton\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-mel:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jacob Melton\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-mel:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:itn-ck:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:itn-ck:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Clayton Kershaw\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-ck:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Clayton Kershaw\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-ck:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91c-16:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91c-16:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Gunnar Henderson\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-16:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Gunnar Henderson\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-16:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-jcj:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-jcj:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jazz Chisholm Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-jcj:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jazz Chisholm Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-jcj:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91c-1:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91c-1:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Adrian Beltré\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-1:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Adrian Beltré\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-1:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-dmu:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-dmu:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Dale Murphy\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-dmu:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Dale Murphy\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-dmu:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:covr-aj:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:covr-aj:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Aaron Judge\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:covr-aj:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Aaron Judge\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:covr-aj:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:m-8:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:m-8:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mariner Moose\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:m-8:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mariner Moose\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:m-8:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:gh-15:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:gh-15:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cody Bellinger\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gh-15:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cody Bellinger\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gh-15:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-ff:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-ff:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Freddie Freeman\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-ff:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Freddie Freeman\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-ff:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:75ya-jrod:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:75ya-jrod:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Julio Rodríguez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-jrod:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Julio Rodríguez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-jrod:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hl-4:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hl-4:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bryce Harper\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hl-4:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bryce Harper\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hl-4:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:st-moh:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:st-moh:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bryce Harper\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:st-moh:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bryce Harper\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:st-moh:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-kg:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-kg:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ken Griffey Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-kg:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ken Griffey Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-kg:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:bsa-nc:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:bsa-nc:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nathan Church\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:bsa-nc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nathan Church\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:bsa-nc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-jvo:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-jvo:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Joey Votto\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-jvo:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Joey Votto\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-jvo:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlma-jcj:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlma-jcj:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jazz Chisholm Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-jcj:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jazz Chisholm Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-jcj:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlm-km:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlm-km:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ketel Marte\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-km:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ketel Marte\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-km:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlma-whi:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlma-whi:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Carson Whisenhunt\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-whi:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Carson Whisenhunt\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-whi:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-kt:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-kt:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Kyle Teel\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-kt:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Kyle Teel\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-kt:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-mas:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-mas:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mason Miller\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-mas:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mason Miller\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-mas:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:75ya-mmc:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:75ya-mmc:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mark McGwire\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-mmc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mark McGwire\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-mmc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mas-mrs:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mas-mrs:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mrs. Met\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mas-mrs:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mrs. Met\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mas-mrs:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:75yta-jch:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:75yta-jch:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jamie Chung\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:75yta-jch:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jamie Chung\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:75yta-jch:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-cam:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-cam:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cam Smith\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-cam:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cam Smith\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-cam:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hl-11:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hl-11:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Babe Ruth\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:hl-11:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Babe Ruth\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:hl-11:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91c-17:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91c-17:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jose Altuve\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-17:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jose Altuve\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-17:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:ha-14:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:ha-14:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jacob Misiorowski\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ha-14:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jacob Misiorowski\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ha-14:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-jbe:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-jbe:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Johnny Bench\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-jbe:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Johnny Bench\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-jbe:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlm-oa:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlm-oa:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ozzie Albies\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-oa:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ozzie Albies\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-oa:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:itn-ce:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:itn-ce:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Carlos Estévez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-ce:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Carlos Estévez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-ce:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlm-jtr:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlm-jtr:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"J.T. Realmuto\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-jtr:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"J.T. Realmuto\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-jtr:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-so:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-so:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Shohei Ohtani\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-so:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Shohei Ohtani\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-so:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlm-jm:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlm-jm:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jackson Merrill\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-jm:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jackson Merrill\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-jm:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlma-wc:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlma-wc:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"William Contreras\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:mlma-wc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"William Contreras\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:mlma-wc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:tfap-gsr:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:tfap-gsr:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"George Springer\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:tfap-gsr:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"George Springer\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:tfap-gsr:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:itn-raj:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:itn-raj:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ronald Acuña Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-raj:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ronald Acuña Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-raj:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:ak-3:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:ak-3:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bryce Harper\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ak-3:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bryce Harper\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ak-3:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:cc-cr:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:cc-cr:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cal Raleigh\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:cc-cr:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cal Raleigh\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:cc-cr:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91c-37:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91c-37:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Barry Larkin\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-37:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Barry Larkin\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-37:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:aa-7:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:aa-7:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bubba Chandler\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:aa-7:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bubba Chandler\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:aa-7:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:gh-17:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:gh-17:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Shohei Ohtani\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gh-17:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Shohei Ohtani\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gh-17:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-ft:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-ft:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Fernando Tatis Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-ft:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Fernando Tatis Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-ft:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-sk:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-sk:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Sandy Koufax\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-sk:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Sandy Koufax\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-sk:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:att-8:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:att-8:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Julio Rodríguez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:att-8:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Julio Rodríguez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:att-8:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:pas-13:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:pas-13:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Fernando Tatis Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:pas-13:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Fernando Tatis Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:pas-13:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlm-jd:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlm-jd:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jasson Domínguez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-jd:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jasson Domínguez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlm-jd:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:t91-46:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:t91-46:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Christian Moore\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:t91-46:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Christian Moore\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:t91-46:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-cye:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-cye:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Christian Yelich\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-cye:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Christian Yelich\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-cye:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91c-80:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91c-80:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cal Raleigh\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-80:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cal Raleigh\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-80:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:tfap-sfr:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:tfap-sfr:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Sal Frelick\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:tfap-sfr:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Sal Frelick\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:tfap-sfr:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mdlap-mm:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mdlap-mm:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mr. Met\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:mdlap-mm:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mr. Met\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:mdlap-mm:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-dw:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-dw:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"David Wright\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91a-dw:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"David Wright\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91a-dw:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-cm:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-cm:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Christian Moore\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-cm:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Christian Moore\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-cm:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:btp-6:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:btp-6:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Corbin Carroll\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:btp-6:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Corbin Carroll\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:btp-6:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-csc:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-csc:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cam Schlittler\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-csc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cam Schlittler\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-csc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:75ya-av:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:75ya-av:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Anthony Volpe\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-av:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Anthony Volpe\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-av:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-bc:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-bc:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bubba Chandler\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-bc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Bubba Chandler\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-bc:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-ap:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-ap:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Albert Pujols\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-ap:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Albert Pujols\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-ap:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-jri:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-jri:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jim Rice\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-jri:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jim Rice\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-jri:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-kwa:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-kwa:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Steven Kwan\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-kwa:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Steven Kwan\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-kwa:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91c-11:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91c-11:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Owen Caissie\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-11:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Owen Caissie\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-11:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:tfap-rle:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:tfap-rle:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Royce Lewis\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:tfap-rle:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Royce Lewis\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:tfap-rle:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:pas-1:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:pas-1:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mike Trout\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:pas-1:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mike Trout\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:pas-1:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-hb:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-hb:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Harold Baines\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-hb:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Harold Baines\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-hb:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:ak-12:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:ak-12:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Barry Bonds\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ak-12:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Barry Bonds\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ak-12:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlma-ln:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlma-ln:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Lars Nootbaar\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-ln:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Lars Nootbaar\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-ln:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlma-jmi:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlma-jmi:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jacob Misiorowski\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-jmi:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jacob Misiorowski\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-jmi:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-wl:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-wl:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Wyatt Langford\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-wl:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Wyatt Langford\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-wl:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-jd:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-jd:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jasson Domínguez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-jd:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jasson Domínguez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-jd:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-na:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-na:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nolan Arenado\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-na:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nolan Arenado\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-na:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:gd-6:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:gd-6:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ronald Acuña Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gd-6:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ronald Acuña Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gd-6:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hl-7:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hl-7:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Pete Crow-Armstrong\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hl-7:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Pete Crow-Armstrong\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hl-7:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-gb:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-gb:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"George Brett\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-gb:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"George Brett\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-gb:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:tfap-kse:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:tfap-kse:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Kodai Senga\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:tfap-kse:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Kodai Senga\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:tfap-kse:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91c-15:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91c-15:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Brady House\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91c-15:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Brady House\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:91c-15:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:bsa-bs:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:bsa-bs:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Brady Singer\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:bsa-bs:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Brady Singer\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:bsa-bs:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:ccar-nh:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:ccar-nh:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nico Hoerner\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ccar-nh:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Nico Hoerner\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ccar-nh:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-jh:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-jh:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jackson Holliday\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-jh:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Jackson Holliday\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-jh:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-mg:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-mg:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mark Grace\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-mg:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mark Grace\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-mg:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:cc-hgr:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:cc-hgr:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Hunter Greene\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:cc-hgr:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Hunter Greene\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:cc-hgr:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-mtx:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-mtx:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mark Teixeira\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-mtx:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mark Teixeira\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:hlar-mtx:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:gd-17:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:gd-17:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Matt Chapman\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gd-17:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Matt Chapman\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gd-17:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:bsa-bsp:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:bsa-bsp:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Brandon Sproat\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:bsa-bsp:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Brandon Sproat\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:bsa-bsp:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-kl:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-kl:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Kenny Lofton\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-kl:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Kenny Lofton\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-kl:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:cc-la:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:cc-la:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Luis Arraez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:cc-la:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Luis Arraez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:cc-la:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:gd-3:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:gd-3:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Javier Báez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gd-3:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Javier Báez\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gd-3:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-ts:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-ts:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Tim Salmon\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-ts:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Tim Salmon\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-ts:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:75ya-mma:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:75ya-mma:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Manny Machado\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-mma:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Manny Machado\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-mma:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:ak-9:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:ak-9:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cal Ripken Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ak-9:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Cal Ripken Jr.\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:ak-9:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:gd-20:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:gd-20:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Carlos Correa\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gd-20:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Carlos Correa\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:gd-20:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:itn-edl:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:itn-edl:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Elly De La Cruz\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-edl:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Elly De La Cruz\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:itn-edl:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:8b-17:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:8b-17:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Rickey Henderson\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:8b-17:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Rickey Henderson\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:8b-17:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91c-49:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91c-49:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mark McGwire\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-49:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mark McGwire\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91c-49:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-low:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-low:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Rhett Lowder\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-low:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Rhett Lowder\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-low:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:tp-4:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:tp-4:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Gunnar Henderson\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:tp-4:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Gunnar Henderson\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:tp-4:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91r-oa:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91r-oa:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ozzie Albies\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-oa:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Ozzie Albies\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91r-oa:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-dru:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-dru:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Andruw Jones\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-dru:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Andruw Jones\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-dru:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:75yta-mfi:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:75yta-mfi:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Michele Fitzgerald\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75yta-mfi:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Michele Fitzgerald\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75yta-mfi:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:91a-laz:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:91a-laz:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Lazaro Estrada\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-laz:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Lazaro Estrada\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:91a-laz:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:covr-mt:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:covr-mt:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mike Trout\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:covr-mt:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Mike Trout\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:covr-mt:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:cc-rg:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:cc-rg:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Riley Greene\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:cc-rg:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Riley Greene\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:cc-rg:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:75ya-fth:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:75ya-fth:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Frank Thomas\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-fth:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Frank Thomas\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:75ya-fth:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:mlma-fp:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:mlma-fp:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Freddy Peralta\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-fp:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Freddy Peralta\", source=checklistinsider-2026-08-29. Destination hiq:baseball:2026:topps:mlma-fp:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:hlar-mma:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:hlar-mma:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Manny Machado\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:hlar-mma:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Manny Machado\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:hlar-mma:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   },
   {
    "id": "hiq:baseball:2026:topps-series-1:pas-22:silver-crackle-foil-super-box-exclusive:no-auto",
    "action": "reslug",
    "to": "hiq:baseball:2026:topps:pas-22:silver-crackle-foil:no-auto",
    "reason": "2026-09-25 Drew ruling: the unnumbered Super Box parallel carries ONE spelling, \"Silver Crackle Foil\" -- this row is the same card under a non-canonical spelling.",
-   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Chris Sale\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:pas-22:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only."
+   "evidence": "parallel=\"Silver Crackle Foil (Super Box exclusive)\", playerName=\"Chris Sale\", source=checklistinsider-2026-08-27. Destination hiq:baseball:2026:topps:pas-22:silver-crackle-foil:no-auto point-read 404 on 2026-09-25 -- free. One axis changed: parallel only.",
+   "parallel": "Silver Crackle Foil"
   }
  ]
 }

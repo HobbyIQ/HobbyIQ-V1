@@ -395,6 +395,49 @@ const f = (n) => Number(n).toLocaleString();
  *
  * Returns { ok, action, reason } where a falsy `ok` carries the refusal text.
  */
+/**
+ * Is a human-form text field EXACTLY its own normalized form -- trimmed, with
+ * internal whitespace collapsed to single spaces, non-empty, and cased like a
+ * deliberate human-form name rather than a slug someone forgot to Title-Case?
+ *
+ * "silver crackle foil", "Silver Crackle Foil " and "Silver  Crackle Foil"
+ * all slugify to the identical id segment and would otherwise be stored
+ * verbatim as the row's canonical `parallel` field: sloppy casing or
+ * whitespace silently becoming the text every future reader sees, because
+ * computeHobbyIqCardId lower-cases on its way to a slug and so cannot tell
+ * "silver crackle foil" from "Silver Crackle Foil" -- the id-reproduction
+ * check alone would pass either one. This function never case-folds or
+ * reformats on the caller's behalf -- it only tells the caller exactly what
+ * is wrong, so the LIST gets fixed rather than the lane quietly cleaning up
+ * after it or silently accepting whichever case a list author typed.
+ *
+ * THE CASE RULE, stated precisely because there is no oracle for the "right"
+ * case: a card parallel name in this catalog is always human-form Title Case
+ * (Silver Crackle Foil, X-Fractor, 1st Bowman Rookie, BASE-parallel raw
+ * vendor text is cleaned before it ever reaches a `parallel` field written by
+ * a curated list) -- so a text with letters and NOT ONE UPPERCASE LETTER
+ * anywhere is rejected as the slug-cased shape this guard exists to catch,
+ * without this function inventing what the "correct" capitalization is.
+ *
+ * Returns `{ ok: true, value }` when `raw` is already its exact normalized
+ * form, or `{ ok: false, why }` naming the mismatch (`why` is null when the
+ * text was empty/whitespace-only -- the caller distinguishes "missing" from
+ * "sloppy" for its own message).
+ */
+function normalizedTextOrRefusal(raw) {
+  const rawStr = String(raw ?? "");
+  const trimmed = rawStr.trim();
+  if (!trimmed) return { ok: false, why: null, value: "" };
+  const normalized = trimmed.replace(/\s+/g, " ");
+  if (rawStr !== normalized) {
+    return { ok: false, why: `has leading/trailing or doubled whitespace — the list must give exactly "${normalized.slice(0, 60)}"`, value: normalized };
+  }
+  if (/[a-z]/i.test(normalized) && !/[A-Z]/.test(normalized)) {
+    return { ok: false, why: "is entirely lowercase — this reads like a slug, not the human-form text a checklist or Drew's ruling would give", value: normalized };
+  }
+  return { ok: true, value: normalized };
+}
+
 function classifyEntry(e) {
   const id = String(e?.id ?? "").trim();
   const action = String(e?.action ?? "").trim();
@@ -402,8 +445,8 @@ function classifyEntry(e) {
   const reason = String(e?.reason ?? "").trim();
   if (!id) return { ok: false, why: "entry has no id" };
   if (!id.startsWith("hiq:")) return { ok: false, why: `id is not a hiq slug: ${id.slice(0, 60)}` };
-  if (action !== "retire" && action !== "reslug" && action !== "park" && action !== "verify") {
-    return { ok: false, why: `action must be "retire", "reslug", "park" or "verify", got ${JSON.stringify(e?.action ?? null)}` };
+  if (action !== "retire" && action !== "reslug" && action !== "park" && action !== "verify" && action !== "patchFields") {
+    return { ok: false, why: `action must be "retire", "reslug", "park", "verify" or "patchFields", got ${JSON.stringify(e?.action ?? null)}` };
   }
   // The reason is what a reviewer reads in the diff and what the write stamps.
   // An unexplained delete is not reviewable.
@@ -413,12 +456,38 @@ function classifyEntry(e) {
     if (!to.startsWith("hiq:")) return { ok: false, why: `"to" is not a hiq slug: ${to.slice(0, 60)}` };
     if (to === id) return { ok: false, why: `reslug "to" equals the id: ${id.slice(0, 60)}` };
   } else if (to) {
-    // A PARK, A RETIRE AND A VERIFY ALL STAY PUT, so none may name a
-    // destination. A `to` on one of them is a list author reaching for the
-    // reslug they were told not to write, and it is refused rather than
+    // A PARK, A RETIRE, A VERIFY AND A PATCHFIELDS ALL STAY PUT, so none may
+    // name a destination. A `to` on one of them is a list author reaching for
+    // the reslug they were told not to write, and it is refused rather than
     // ignored: silently dropping a stated destination is how a rejected move
     // becomes a no-op nobody notices.
     return { ok: false, why: `${action} entry must not name a "to": ${id.slice(0, 60)}` };
+  }
+  // A PATCHFIELDS ENTRY NAMES ITS FIELD IN-LINE, NOT IN A NESTED OBJECT --
+  // `parallel` is the only field this shape may touch (CF-A-RESLUG-THAT-
+  // CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT heal, 2026-09-26). Scoped to one
+  // field deliberately: this action exists to heal the ONE gap the reslug fix
+  // closed going forward -- rows already moved with stale parallel text --
+  // never as a general-purpose raw-field escape hatch. Anything else in the
+  // entry besides id/action/reason/evidence/parallel is a typo'd key or a
+  // request to patch a field this shape was never reviewed to touch.
+  if (action === "patchFields") {
+    const normalized = normalizedTextOrRefusal(e?.parallel);
+    if (!normalized.ok) {
+      return {
+        ok: false,
+        why: normalized.why === null
+          ? `patchFields entry has no "parallel" text: ${id.slice(0, 60)}`
+          : `patchFields entry's "parallel" text ${normalized.why}: ${id.slice(0, 60)}`,
+      };
+    }
+    const parallel = normalized.value;
+    const KNOWN_KEYS = new Set(["id", "action", "to", "reason", "evidence", "parallel"]);
+    const stray = e && typeof e === "object" ? Object.keys(e).filter((k) => !KNOWN_KEYS.has(k)) : [];
+    if (stray.length) {
+      return { ok: false, why: `patchFields entry carries unsupported field(s) ${stray.join(", ")} — this shape only patches "parallel": ${id.slice(0, 60)}` };
+    }
+    return { ok: true, id, action, to, reason, parallel };
   }
   // A VERIFY MUST CITE ITS EVIDENCE, BOTH FIELDS, BEFORE ANY ROW IS EVEN READ.
   // Doctrine: "verified" means checklist-backed or ruled by Drew WITH A
@@ -488,6 +557,147 @@ function crossProductFields(id, to) {
   const from = idSetKey(id);
   const dest = idSetKey(to);
   return dest && from && dest !== from ? { setKey: dest } : {};
+}
+
+/**
+ * CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT (2026-09-26).
+ *
+ * `crossProductFields` answers "did the caller ask for a new PRODUCT?" by
+ * comparing setKey segments. This answers the sibling question for the other
+ * three identity segments the id grammar carries: cardNumber, parallel
+ * (rung), isAuto, printRun. A reslug is free to renumber (cardNumber) without
+ * saying anything else -- `merged.cardNumber` in buildIncoming already reads
+ * off `newSlug`'s own segment via `parsed.cardNumber`, so the id always wins
+ * there regardless of what the OLD row's field said. The RUNG is different:
+ * `buildIncoming` takes `merged.parallel` -- the human-form display text --
+ * literally off `changedFields.parallel ?? oldRow.parallel`, and the id
+ * grammar carries only the SLUG of that text (`parallelSlug`), never the
+ * words. So when the id's parallel segment moves, the row's own `parallel`
+ * field is instantly stale English UNLESS the caller states the new text, and
+ * nothing about the slug can supply it: "silver-crackle-foil" does not say
+ * whether the checklist calls it "Silver Crackle Foil" or something else
+ * entirely.
+ *
+ * THE SAME ARGUMENT DOES NOT APPLY TO isAuto/printRun, but for a different
+ * reason than cardNumber -- there IS no free-text field parallel to `parallel`
+ * for either: `isAuto`/`printRun` are written straight from the parsed
+ * segment in buildIncoming, so nothing goes stale. But a list entry that
+ * changes one of THOSE segments is asking this lane to arbitrate whether a
+ * card is an autograph or how many were printed off nothing but the address
+ * it typed, which is a different (and bigger) claim than "this address's
+ * rung has different words" -- outside a curated fold's remit, so it is
+ * refused here rather than silently accepted.
+ *
+ * PARSED WITH THE GRADE-AWARE SPLITTER, NOT THE BARE ONE (2026-09-26 review
+ * finding). `parseId` (`parseHobbyIqCardId`) returns null for EVERY graded
+ * child (`...:no-auto:cgc-10`) because the tier segment is not part of the
+ * card-id grammar -- so a bare call here treated every graded-child reslug as
+ * unparseable and, on the old code path, silently WAIVED the text
+ * requirement for exactly the ids most likely to be a curated fold's
+ * destination (a graded twin of a rung this list is renaming). `parseGrade`
+ * is `lib/graded-id.cjs`'s `parseSlugWithGrade`, a MIRROR of
+ * catalogRowOps.service.ts's own private `parseSlugWithGrade` (the one
+ * moveCatalogRow's buildIncoming uses) -- kept outside backend/src because
+ * exporting the real one is a backend/src change; see that file's own header
+ * for the parity argument. Required to parse BOTH `id` and `to` now; either
+ * failing is a REFUSAL ("cannot parse id"), never a silent pass, and the
+ * comparison runs on the PARENT identity while the grade tier is carried
+ * back onto the recomputed id before it is checked against `to`.
+ *
+ * Returns `{ ok: true, changedFields }` when the entry may proceed (with
+ * `changedFields` extending whatever `crossProductFields` already returned),
+ * or `{ ok: false, why }` naming the refusal.
+ */
+function rungChangeFields(id, to, entry, oldRow, parseId, computeId, parseGrade) {
+  const base = crossProductFields(id, to);
+  const splitFrom = parseGrade(id);
+  const splitDest = parseGrade(to);
+  if (!splitFrom || !splitDest) {
+    // A GENUINELY MALFORMED ID IS A REFUSAL, NEVER A SILENT PASS. The old
+    // behaviour here waived the whole text requirement on parse failure,
+    // which is exactly wrong for a graded-child id -- parseHobbyIqCardId
+    // alone always fails on one, so every graded-child rung change slipped
+    // through unchecked. moveCatalogRow's own buildIncoming will throw on a
+    // truly malformed newSlug regardless; this refusal just makes the same
+    // fact visible in the REPORT, before any write is attempted.
+    return {
+      ok: false,
+      why: `cannot parse id — "${(!splitFrom ? id : to).slice(0, 70)}" is not a hiq slug (with or without a grade tail)`,
+    };
+  }
+  const from = splitFrom.parsed;
+  const dest = splitDest.parsed;
+  if (Boolean(from.isAuto) !== Boolean(dest.isAuto)) {
+    return {
+      ok: false,
+      why: "reslug changes the isAuto segment — that arbitrates whether this is an autograph, out of scope for this lane; split into its own ruling",
+    };
+  }
+  const fromPrintRun = from.printRun ?? null;
+  const destPrintRun = dest.printRun ?? null;
+  if (fromPrintRun !== destPrintRun) {
+    return {
+      ok: false,
+      why: "reslug changes the printRun segment — that arbitrates how many were printed, out of scope for this lane; split into its own ruling",
+    };
+  }
+  if (from.parallel === dest.parallel) {
+    // The rung did not move; nothing to require or verify.
+    return { ok: true, changedFields: base };
+  }
+  // THE RUNG MOVED. A human-form parallel text is REQUIRED, never derived from
+  // the slug (a slug segment is lossy -- it cannot say whether the checklist
+  // spells it "Silver Crackle Foil" or something else).
+  //
+  // NORMALIZED, THEN REQUIRED TO MATCH EXACTLY (2026-09-26 review finding):
+  // "silver crackle foil", "Silver Crackle Foil " and "Silver  Crackle Foil"
+  // all slugify to the SAME segment and would otherwise be stored verbatim --
+  // sloppy casing or whitespace silently becoming the canonical human-form
+  // text on 1,500+ rows. See normalizedTextOrRefusal's own doc.
+  const normalized = normalizedTextOrRefusal(entry?.parallel);
+  if (!normalized.ok) {
+    return {
+      ok: false,
+      why: normalized.why === null
+        ? 'reslug changes the rung but the list gives no parallel text — add "parallel": "<human form>" to this entry'
+        : `reslug's parallel text "${String(entry?.parallel ?? "").slice(0, 60)}" ${normalized.why}`,
+    };
+  }
+  const parallelText = normalized.value;
+  // VERIFY: the text the list gives, fed through the REAL id computation off
+  // the row's own other fields, must reproduce `to` exactly. This is what
+  // stops a typo'd or mismatched parallel text from being trusted blindly --
+  // computeHobbyIqCardId is the same function moveCatalogRow's derivation
+  // (deriveCatalogEntry) is built on, so a text that does not reproduce the
+  // destination is a text that does not belong on this row. Run on the
+  // PARENT identity -- the grade tier (if any) rides back on afterward, since
+  // computeHobbyIqCardId's grammar has no notion of a grade segment.
+  let recomputedParent;
+  try {
+    recomputedParent = computeId({
+      sport: String(oldRow?.sport ?? from.sport ?? ""),
+      year: dest.year,
+      setKey: dest.setKey,
+      cardNumber: dest.cardNumber,
+      parallel: parallelText,
+      isAuto: dest.isAuto,
+      printRun: destPrintRun,
+      ...(dest.subsetName ? { subsetName: dest.subsetName, subsetInId: true } : {}),
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      why: `reslug's parallel text "${parallelText.slice(0, 60)}" could not be computed into an id: ${String(err?.message ?? err).slice(0, 100)}`,
+    };
+  }
+  const recomputed = splitDest.gradeTier ? `${recomputedParent}:${splitDest.gradeTier}` : recomputedParent;
+  if (recomputed !== to) {
+    return {
+      ok: false,
+      why: `reslug's parallel text "${parallelText.slice(0, 60)}" produces "${recomputed}", not the entry's "to" ("${to}") — parallel text does not produce the destination id`,
+    };
+  }
+  return { ok: true, changedFields: { ...base, parallel: parallelText } };
 }
 
 /**
@@ -737,9 +947,28 @@ async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const {
-    moveCatalogRow, retireCatalogRow, patchCatalogRowFields,
+    moveCatalogRow, retireCatalogRow, patchCatalogRowFields, rebuildSearchFields,
   } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { marketVerdict } = require(path.join(__dirname, "lib", "market-guard.cjs"));
+  // CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT (2026-09-26).
+  // Loaded from the built tree, the same way moveCatalogRow itself is -- this
+  // lane never re-implements the CARD-ID grammar. The GRADE-tail splitter is
+  // different: catalogRowOps.parseSlugWithGrade is the real one, but it is
+  // private to backend/src (exporting it is a backend/src change tonight's
+  // merge authority for this fix excludes), so `lib/graded-id.cjs` MIRRORS
+  // its logic outside backend/src -- see that file's own header for the
+  // parity argument and the pinned test. The bare parseHobbyIqCardId returns
+  // null for every graded-child id, so rungChangeFields is given the
+  // grade-aware splitter to avoid waiving the text requirement on exactly
+  // the ids most likely to be a curated fold's target.
+  const { parseHobbyIqCardId, computeHobbyIqCardId } = require(
+    path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"),
+  );
+  const gradedIdLib = require(path.join(__dirname, "lib", "graded-id.cjs"));
+  // Bound to THIS run's parseHobbyIqCardId, so every call site below reads
+  // as a plain single-argument splitter -- the same shape catalogRowOps'
+  // own parseSlugWithGrade(slug) has, just mirrored outside backend/src.
+  const parseSlugWithGrade = (slug) => gradedIdLib.parseSlugWithGrade(slug, parseHobbyIqCardId);
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
@@ -823,6 +1052,12 @@ async function main() {
   // list -- a "verified 40" line says nothing about whether that was 40
   // checklist confirms or 40 bare rulings.
   const verifiedBySource = new Map();
+  // Rows healed by patchFields: parallel (and its derived/search fields)
+  // patched in place, id unchanged. A WRITE, so it reconciles beside park,
+  // verify, retire and reslug -- never as a skip. A row already carrying the
+  // entry's exact text is `alreadyRight`, the same skip a re-run of any other
+  // idempotent shape in this lane gets.
+  let patchedFields = 0;
   // Verifies whose row exists but is NOT pending-review — verify answers one
   // question ("is this specific unconfirmed row now confirmed?") and that
   // question is meaningless off a row with no pending state to confirm. A
@@ -842,6 +1077,12 @@ async function main() {
   // GENUINE year-N+1 row that was always the right one for them.
   let salesLeftBehind = 0;
   let refusedCrossMarket = 0;
+  // Reslugs refused because the rung (parallel) segment moved with no human
+  // text to carry, or a printRun/isAuto segment moved at all -- see
+  // rungChangeFields. Counted apart from refusedOccupied/refusedCrossMarket
+  // because the reason a reviewer needs to fix is a different one: edit the
+  // LIST, not the destination or the collision.
+  let refusedRungTextMissing = 0;
   // Moves whose destination landed but whose SOURCE survived every retried
   // read and the cross-partition query. Its own outcome, neither success nor
   // plain failure: the card arrived, and a second row still holds its old
@@ -919,6 +1160,9 @@ async function main() {
       }
       if (action === "verify") {
         console.error("      a verify needs a row to stamp — this entry's premise is gone; re-measure the list");
+      }
+      if (action === "patchFields") {
+        console.error("      a patchFields heal needs a row to patch — this entry's premise is gone; re-measure the list");
       }
       continue;
     }
@@ -1045,6 +1289,84 @@ async function main() {
       continue;
     }
 
+    // ── PATCHFIELDS ───────────────────────────────────────────────────────
+    //
+    // CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT heal
+    // (2026-09-26). Nothing moves and nothing is deleted: this is the same
+    // shape as park/verify -- an in-place field patch through
+    // patchCatalogRowFields, never a raw container.patch -- narrowed to the
+    // ONE field the gap that produced this entry needs healed: `parallel`.
+    // It exists to fix rows a PRIOR reslug already moved onto their correct
+    // (canonical) id while leaving the human-form `parallel` field spelling
+    // the OLD rung -- the id is right, the text is stale.
+    //
+    // THE ID MUST ALREADY BE CANONICAL, checked by the same means the reslug
+    // fix uses: computeHobbyIqCardId of this row with `parallel` replaced by
+    // the entry's text must equal the row's OWN id. A row whose id would NOT
+    // reproduce under the new text is not this gap -- it needs a reslug, not
+    // a field patch, and is refused rather than silently patched into a
+    // parallel field that disagrees with its own address.
+    if (action === "patchFields") {
+      console.log(`  PATCH FIELDS  ${id.slice(0, 62)}`);
+      console.log(`      ${String(row.playerName ?? "(no player)")} — ${String(row.setName ?? "")}`.slice(0, 100));
+      console.log(`      reason: ${reason.slice(0, 90)}`);
+      console.log(`      parallel: "${String(row.parallel ?? "")}" -> "${c.parallel}"`);
+      // GRADE-AWARE, so a graded child's own id is not mistaken for
+      // unparseable (parseHobbyIqCardId alone returns null for every graded
+      // child -- see rungChangeFields's own doc for the same fix, 2026-09-26
+      // review finding).
+      const splitOwnId = parseSlugWithGrade(id);
+      if (!splitOwnId) {
+        failed++;
+        console.error(`      FAILED: id is not a parseable hiq slug (with or without a grade tail): ${id.slice(0, 70)}`);
+        continue;
+      }
+      const parsedOwnId = splitOwnId.parsed;
+      let recomputedOwnId;
+      try {
+        const recomputedParent = computeHobbyIqCardId({
+          sport: String(row.sport ?? parsedOwnId.sport ?? ""),
+          year: parsedOwnId.year,
+          setKey: parsedOwnId.setKey,
+          cardNumber: parsedOwnId.cardNumber,
+          parallel: c.parallel,
+          isAuto: parsedOwnId.isAuto,
+          printRun: parsedOwnId.printRun ?? null,
+          ...(parsedOwnId.subsetName ? { subsetName: parsedOwnId.subsetName, subsetInId: true } : {}),
+        });
+        recomputedOwnId = splitOwnId.gradeTier ? `${recomputedParent}:${splitOwnId.gradeTier}` : recomputedParent;
+      } catch (err) {
+        failed++;
+        console.error(`      FAILED: parallel text could not be computed into an id: ${String(err?.message ?? err).slice(0, 90)}`);
+        continue;
+      }
+      if (recomputedOwnId !== id) {
+        refusedRungTextMissing++;
+        console.error(`  REFUSED (patchFields id mismatch)  ${id.slice(0, 62)}`);
+        console.error(`      "${c.parallel}" computes to ${recomputedOwnId}, not this row's own id — this row needs a reslug, not a field patch`);
+        continue;
+      }
+      // The derived/search fields are rebuilt through the SAME builder the
+      // reslug path relies on (CF-A-RESLUG-CARRIES-ITS-OWN-SEARCH-FIELDS,
+      // #1614's rule extended here): a parallel patch that left searchText/
+      // searchTokens/displayName spelling the old rung would just move the
+      // staleness from one field to four.
+      const rebuiltFields = rebuildSearchFields({ ...row, parallel: c.parallel, parallelSlug: parsedOwnId.parallel });
+      try {
+        const res = await patchCatalogRowFields(
+          cat, id, row.cardId ?? id,
+          { parallel: c.parallel, parallelSlug: parsedOwnId.parallel, ...rebuiltFields },
+          { retry, dryRun: !APPLY },
+        );
+        if (res?.action === "noop") { alreadyRight++; continue; }
+        patchedFields++;
+      } catch (err) {
+        failed++;
+        console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
+      }
+      continue;
+    }
+
     // ── RESLUG ────────────────────────────────────────────────────────────
     const incumbent = await rowAt(to);
 
@@ -1111,7 +1433,24 @@ async function main() {
     // destination said sv2a, the id said 151, and buildIncoming threw.
     // A same-product move (a fold: renumber, parallel fix) still passes
     // nothing, so the stem must equal the old one -- that guard is untouched.
-    const changed = crossProductFields(id, to);
+    //
+    // AND WHEN THE RUNG (PARALLEL) SEGMENT ALSO MOVES, THE TEXT MOVES WITH IT
+    // (2026-09-26). `crossProductFields` alone answers the setKey axis; a
+    // destination whose parallel segment differs from the id's is asking this
+    // row to carry a NEW human-form `parallel` field too, and that text cannot
+    // be derived from the slug -- see rungChangeFields's own doc for why. A
+    // list entry that changes the rung with no `parallel` text, or whose text
+    // does not reproduce `to`, is refused here rather than silently writing
+    // stale English onto a moved row.
+    const rung = rungChangeFields(id, to, e, row, parseHobbyIqCardId, computeHobbyIqCardId, parseSlugWithGrade);
+    if (!rung.ok) {
+      refusedRungTextMissing++;
+      console.error(`  REFUSED (rung text)  ${id.slice(0, 62)}`);
+      console.error(`      -> ${to.slice(0, 70)}`);
+      console.error(`      ${rung.why}`);
+      continue;
+    }
+    const changed = rung.changedFields;
 
     // ...AND THE MARKET GUARD VALIDATES IT. Honouring the list is not trusting
     // it blindly: a destination whose market contradicts the ROW's market is
@@ -1228,6 +1567,7 @@ async function main() {
   }
   console.log(`  already verified        ${f(alreadyVerified)}   <- the stamp was already there; a re-run writes nothing`);
   console.log(`  refused — not pending-review ${f(refusedNotPending)}   <- verify only confirms a pending-review row`);
+  console.log(`  PATCHED FIELDS          ${f(patchedFields)}   <- parallel (and its derived/search fields) healed in place, id unchanged`);
   console.log(`  moves COMPLETED         ${f(movesCompleted)}   <- destination already held the row; the source was retired`);
   console.log(`  move landed; source retire failed ${f(moveSourceLeftBehind)}   <- TWO rows hold one card; re-run finishes it`);
   console.log(`  refused — occupied      ${f(refusedOccupied)}   <- a different card holds the target address`);
@@ -1239,6 +1579,7 @@ async function main() {
     console.log("        (accents and ☆ ♀ ♂ α β γ δ are deleted, not transliterated); build the tree for the full compare");
   }
   console.log(`  refused — cross-market  ${f(refusedCrossMarket)}   <- a JA row may never land on an EN key, or the reverse`);
+  console.log(`  refused — rung text     ${f(refusedRungTextMissing)}   <- the rung moved with no parallel text, or the text does not produce "to"`);
   console.log(`  already gone            ${f(alreadyRight)}`);
   console.log(`  not found               ${f(notFound)}`);
   console.log(`  read-back needed a retry ${f(readBackRetried)}   <- replica lag, delete confirmed landed — NOT failed`);
@@ -1271,9 +1612,9 @@ async function main() {
   // A PARK OR A VERIFY WROTE: each patches a field on a row. `alreadyParked`
   // and `alreadyVerified` did not -- the stamp was already there -- so both
   // reconcile as a skip, the same way `already gone` does for a retire.
-  const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked + verified;
+  const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked + verified + patchedFields;
   const skipped = alreadyRight + notFound + alreadyParked + alreadyVerified;
-  const refused = refusedOccupied + refusedCrossMarket + refusedNotPending;
+  const refused = refusedOccupied + refusedCrossMarket + refusedNotPending + refusedRungTextMissing;
   // A PARTIAL RUN STILL RECONCILES. The identity has to hold over what the
   // loop CONSIDERED, not over the file, or a budget stop reads as 6,695 lost
   // entries. `not reached` carries the remainder explicitly so the two numbers
@@ -1320,5 +1661,5 @@ if (require.main === module) {
 
 module.exports = {
   SCOPE, APPLY, classifyEntry, occupiedByDifferentCard, occupancyRefusal, crossProductFields, idSetKey, keepsSales,
-  confirmRetired, RETIRE_READ_BACK_ATTEMPTS,
+  confirmRetired, RETIRE_READ_BACK_ATTEMPTS, rungChangeFields, normalizedTextOrRefusal,
 };
