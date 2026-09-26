@@ -81,6 +81,16 @@ const INSERT_TOKENS: readonly string[] = [
   "one and one",
   "bowman's best",
   "bowmans best",
+  // TOPPS LIVING SET (stamp-fix batch 2, 2026-09-26). With no token here,
+  // "living" fell to neither BRAND_TOKENS nor INSERT_TOKENS, so it was never
+  // in `ctx.insert`/`setPartsLower` and survived into the player-name
+  // candidate run instead: "2024 Topps Living Shohei Ohtani #729 PSA 10 Gem
+  // Mint" parsed playerName "Living Shohei Ohtani". Adding it here does two
+  // things at once, the same way "chrome"/"heritage" already do for their
+  // own products: buildSetName(brand, insert) now composes "Topps Living",
+  // and extractPlayerName's setPartsLower strip removes the token before the
+  // player-name run is found. Evidence: C:/tmp/topps24_trace_1530/RESULT.md.
+  "living",
 ];
 
 // CF-THE-TITLE-COMPOSES-ITS-FINISH (2026-08-29). The parallel is the

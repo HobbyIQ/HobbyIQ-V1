@@ -54,6 +54,7 @@ import { slugify } from "./hobbyIqCardId.service.js";
 import { statedFinishFromChecklist, titleStatesAnUnconfirmedFinish } from "./statedFinishFromChecklist.js";
 import { bareColourAliasFromChecklist } from "./bareColourAliasFromChecklist.js";
 import { pokemonFinishFromTitle } from "./pokemonFinishFromTitle.js";
+import { isScopedAutoOnlyPrefix } from "./scopedAutoOnlyPrefixes.js";
 
 /** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
  *  (secret/hyper rares are numbered above set size), so only the <=400 bound
@@ -1001,96 +1002,16 @@ export function parseListingIdentity(
   };
 }
 
-/** CF-SCOPED-AUTO-PREFIX (Drew, 2026-09-21). A (sport, year, setKey) -> set
- *  of card-number prefixes that are auto-only for THAT product-year ONLY --
- *  never global, unlike the curated list below.
- *
- *  WHY SCOPED, NOT ADDED TO THE GLOBAL LIST. The 2025-26 Topps/Bowman
- *  autograph-insert prefixes below (AC-, CRDA-, CHRU-, CLA-, BSA2-, CCA2-,
- *  WCDA-, FPA-, 90AU-, 90CAS-, BMA-, RMA-, IVA-) are auto-only ONLY for the
- *  exact product-year listed. The SAME letters recur as a DIFFERENT,
- *  genuinely-mixed or non-auto product in other years/sets -- e.g. `AC-` in
- *  2018-2024 `topps-diamond-icons` or `bowman-npb`, `CLA-` in the base
- *  `topps-chrome` flagship parallel ladder (not the Chrome Legends insert),
- *  `BMA-`/`RMA-` in `topps-gypsy-queen` and `bowman-university-best`. A bare
- *  global prefix add was measured (2026-09-21 blast radius, ~6,000 sold_comps
- *  + ~3,000 catalog rows across baseball/football/basketball/hockey) to
- *  false-positive 40-98% of the time depending on prefix -- see PR body for
- *  the full table. Scoping to the verified product-year is what makes the
- *  fix safe.
- *
- *  PROVENANCE. Each entry was confirmed ALWAYS-AUTO by two independent
- *  source-page reads today (2026-09-21) plus a catalog cross-check: every
- *  `:no-auto` row sharing the prefix traces to one of the defective sources
- *  (checklistinsider-2026-08-27/-29/-30, bccp, catalog-explode-actuals-
- *  2026-08-12 -- CF-CHECKLISTINSIDER-MINTS-AUTOS-UNSIGNED), while every
- *  `:auto` row for the identical cardNumber traces to checklistcenter-*,
- *  beckett-*, baseballcardpedia-*, or today's checklistinsider-2026-09-21
- *  re-scrape. See PR body for the (year, setKey, prefix, source, count)
- *  repair-scope table -- those ~32k catalog rows are NOT touched here.
- *
- *  Keys are `${sport}|${year}|${setKey}` with setKey as normalizeSetKey /
- *  computeHobbyIqCardId spell it (topps Series 1/2 fold into "topps";
- *  Chrome Update folds into "topps-chrome-update-series"; Bowman Mega Box
- *  folds into "bowman-chrome-mega-box" for 2025-and-earlier, but from 2026
- *  a BARE "Bowman Mega Box" title -- no "chrome" -- resolves to the
- *  DISTINCT `bowman-mega` key instead, R75). */
-const SCOPED_AUTO_PREFIX: ReadonlyMap<string, ReadonlySet<string>> = new Map([
-  // 2025 Topps Chrome Update Series -- Autographs, Rookie Debut Autographs,
-  // Chromeography, Chrome Legends Autographs. Source: checklistcenter /
-  // baseballcardpedia product-page autograph sections, confirmed 2026-09-21.
-  ["baseball|2025|topps-chrome-update-series", new Set(["AC-", "CRDA-", "CHRU-", "CLA-"])],
-  // 2025 Topps Series 1/2 (+ Update, folded into "topps") -- Baseball Stars
-  // Autographs S2, City Connect Swatch Collection Autograph Relics S2, World
-  // Champion Dual Autographs, First Pitch/Finest Personality Autographs,
-  // 1990 Topps Autographs, 1990 Chrome All-Stars Autographs. Source:
-  // checklistcenter / beckett-scraped product-page autograph sections,
-  // confirmed 2026-09-21.
-  ["baseball|2025|topps", new Set(["BSA2-", "CCA2-", "WCDA-", "FPA-", "90AU-", "90CAS-"])],
-  // 2026 Bowman Mega Box -- Bowman Mega Autographs, Rookie Mega Autographs.
-  // CF-R75-BOWMAN-MEGA-BOX-SPLIT (hobbyIqCardId.service.ts ~2678): from 2026
-  // a title reading "Bowman Mega Box" WITHOUT "chrome" resolves to the
-  // distinct `bowman-mega` key, not `bowman-chrome-mega-box` -- confirmed
-  // against real sold_comps rows (e.g. "2026 Bowman Mega Box Baseball
-  // #BMA-KW Base" -> hiq:baseball:2026:bowman-mega:bma-kw:...), where
-  // `bowman-mega` carries the overwhelming majority of 2026 BMA-/RMA- rows
-  // (1,777 / 242) and the identical defective-source split (no-auto only
-  // from checklistinsider-2026-08-27; auto from checklistinsider-2026-09-21
-  // / beckett-s3-2026-09-19). Source: checklistcenter / beckett-checklist
-  // product-page autograph sections, confirmed 2026-09-21.
-  ["baseball|2026|bowman-mega", new Set(["BMA-", "RMA-"])],
-  // 2026 Bowman CHROME Mega Box -- a DIFFERENT product sharing the same
-  // BMA-/RMA- numbering convention (different roster at the same numbers,
-  // per R75). Verified separately: 119 (BMA-) / 30 (RMA-) strict :auto rows
-  // from beckett-scraped-2026-08-13 / ingest-auto-seed, ZERO no-auto rows
-  // from any source under this exact setKey+year. Kept as its own entry.
-  ["baseball|2026|bowman-chrome-mega-box", new Set(["BMA-", "RMA-"])],
-  // 2026 Topps Chrome Black -- Ivory Autographs. Source: checklistinsider
-  // 2026-09-21 / checklistcenter product-page autograph section.
-  ["baseball|2026|topps-chrome-black", new Set(["IVA-"])],
-]);
-
-/** Look up whether `cardNumber` starts with one of the auto-only prefixes
- *  scoped to this exact (sport, year, setKey). Returns false on any miss --
- *  unknown scope, unscoped call, or a scope not in the table -- so this can
- *  only ever ADD a positive on top of the global rule, never remove one. */
-function isScopedAutoPrefix(
-  cardNumber: string | null,
-  scope?: { sport?: string | null; year?: number | null; setKey?: string | null } | null,
-): boolean {
-  if (!cardNumber || !scope) return false;
-  const sport = String(scope.sport ?? "").toLowerCase().trim();
-  const year = scope.year;
-  const setKey = String(scope.setKey ?? "").toLowerCase().trim();
-  if (!sport || !year || !setKey) return false;
-  const prefixes = SCOPED_AUTO_PREFIX.get(`${sport}|${year}|${setKey}`);
-  if (!prefixes) return false;
-  const cn = String(cardNumber).toUpperCase().replace(/^#/, "");
-  for (const p of prefixes) {
-    if (cn.startsWith(p)) return true;
-  }
-  return false;
-}
+// CF-SCOPED-AUTO-PREFIX (Drew, 2026-09-21; moved to its own module, stamp-fix
+// batch 2 review round 2, 2026-09-26). The (sport, year, setKey) -> auto-only
+// cardNumber-prefix table, and its lookup, now live in
+// scopedAutoOnlyPrefixes.ts -- a plain-data module with NO imports of its
+// own. This file and hobbyIqCardId.service.ts both import from there instead
+// of each other (this file imports `slugify` FROM that one, so it could
+// never import a table defined there without a cycle). See that module for
+// the full per-entry provenance and the false-positive-rate measurement that
+// is why this list is scoped rather than added to the global regex below.
+const isScopedAutoPrefix = isScopedAutoOnlyPrefix;
 
 /** CF-SCOPED-MARKET-LANGUAGE (Drew, 2026-09-21). "Blue Sapphire is just a
  *  Sapphire base term" -- Sapphire products are blue by design, so on a
@@ -3173,6 +3094,85 @@ function liftInterposedYear(lowerTitle: string): string {
   );
 }
 
+/** A Bowman PRODUCT word immediately following "bowman" (or "bowman's"),
+ *  the same sub-product vocabulary the ladder above this function's own
+ *  bare-Topps guard defers to. Used to tell a real Bowman product name from
+ *  a bare "bowman" that is a player's SURNAME or a place/insert word --
+ *  see `titleNamesBowmanBrand` below, which this feeds. THE ONE LIST: both
+ *  of `titleNamesBowmanBrand`'s conditions (a) and (b) read this same
+ *  constant, so the product vocabulary cannot drift between the two. */
+const BOWMAN_PRODUCT_WORD_RE =
+  /\bbowman(?:'?s)?\b\s*(?:chrome|draft|sterling|platinum|best|mega|sapphire|1st|first|prospects?|inception|heritage|high\s*tek|black|university|baseball)\b/i;
+
+/**
+ * DOES "bowman" IN THIS TITLE NAME THE BOWMAN BRAND, rather than a player's
+ * surname or an unrelated word ("Matt Bowman", "Bowman Park Legends")?
+ *
+ * CF-BOWMAN-WORD-IS-NOT-ALWAYS-THE-BRAND (stamp-fix batch, 2026-09-26,
+ * defect 2 correction, per review). The guard this feeds used to be a bare
+ * `!/\bbowman\b/.test(t)`, which reads the WORD "bowman" ANYWHERE as the
+ * brand -- including a player's own surname. Two rounds of review found
+ * this function's own successive fixes still too wide:
+ *
+ *   round 1: bare word match -- caught "Matt Bowman", "Bowman Park Legends".
+ *   round 2: "bowman before the card number (`#`)" -- still WRONG, because
+ *     Year-Brand-PLAYER-Number is this corpus's own common order, so a
+ *     player's surname sits before the `#` just as often as a real brand
+ *     word does: "2015 Topps Matt Bowman #481 RC St. Louis Cardinals",
+ *     "2024 Topps Bowman Park #45", "Topps 2015 Matt Bowman Rookie #481",
+ *     "2015 Topps Matt Bowman 481 RC" (no `#` at all) all mis-routed to
+ *     "Bowman" under round 2, though `main` correctly answers "Topps" for
+ *     every one of them.
+ *
+ * TWO WAYS a title genuinely names the brand, either is sufficient, and
+ * BOTH read the SAME product-word list (`BOWMAN_PRODUCT_WORD_RE`) so the
+ * vocabulary cannot drift between them:
+ *
+ *   (a) A real Bowman sub-product word sits right after "bowman"
+ *       (`BOWMAN_PRODUCT_WORD_RE`) -- unambiguous regardless of position.
+ *       Covers "2024 Topps Bowman Chrome Jackson Holliday" -> Bowman.
+ *   (b) "bowman" occupies the YEAR-BRAND SLOT: the token right after a
+ *       leading year, or the very first token, AND the token after IT is
+ *       not itself a card number or a `#...` token (which would make
+ *       "bowman" the thing being counted, not the brand naming it).
+ *       Covers "2024 Bowman Matt Bowman #481" -> Bowman (the FIRST
+ *       "bowman" is the brand; the corpus's own player-name span, "Matt
+ *       Bowman", sits after it and this rule never even looks there).
+ *
+ * AMBIGUOUS TITLES KEEP `main`'s BEHAVIOR (return false, i.e. plain
+ * "Topps") -- a smaller blast radius at the next re-baseline than trying to
+ * resolve every Year-Brand-Player-Number ordering by position alone. This
+ * intentionally no longer resolves "Topps 2025 Bowman Munetaka Murakami RC
+ * #9 ..." / "Topps Bowman 2025 Jacob Misiorowski ..." (the original
+ * defect-2 titles) to "Bowman" -- neither states a Bowman product word, and
+ * neither puts "bowman" in the year-brand slot ("Topps" occupies position 0
+ * in both). Per the owner's ruling on this correction, staying "Topps" for
+ * these two ambiguous cases is the accepted, narrower tradeoff.
+ */
+function titleNamesBowmanBrand(t: string): boolean {
+  if (BOWMAN_PRODUCT_WORD_RE.test(t)) return true;
+  const toks = t.trim().split(/\s+/).filter(Boolean);
+  let idx = 0;
+  if (/^(?:19|20)\d{2}(?:[/'-]\d{2,4})?$/.test(toks[0] ?? "")) idx = 1;
+  const rawTok = toks[idx] ?? "";
+  // CF-A-TRAILING-COMMA-IS-A-NAME-LIST-NOT-A-BRAND (round 3, per review).
+  // "Bowman, Matt 2015 Topps #481" is the "Lastname, Firstname" eBay listing
+  // convention -- the comma on the RAW token is the tell that this is a
+  // surname heading a name list, not the brand occupying the year-brand
+  // slot. Stripping the comma BEFORE the brand test (as this line used to)
+  // erases exactly the evidence that disqualifies it, so the strip must
+  // happen only for a genuine trailing-punctuation case (a period after an
+  // abbreviation, say) and the comma check must run against the RAW token
+  // first, before any stripping.
+  if (/,$/.test(rawTok)) return false;
+  const bowmanTok = rawTok.replace(/[.,;:]+$/, "");
+  if (!/^bowman(?:'?s)?$/i.test(bowmanTok)) return false;
+  const next = toks[idx + 1];
+  if (!next) return false;
+  if (/^#/.test(next) || /^\d/.test(next)) return false;
+  return true;
+}
+
 /**
  * DOES THIS TITLE SPELL THE BOWMAN **DRAFT** PRODUCT?
  * (CF-BOWMAN-CHROME-DRAFT-KEEPS-DRAFT — Drew, 2026-09-06, #1911 then #1912.)
@@ -3981,6 +3981,23 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // `distinct`, 453 checklist rows) with no parser rule.
   if (/bowman\s+tiffany/.test(t)) return "Bowman Tiffany";
   if (/topps\s+heritage/.test(t)) return "Topps Heritage";
+  // TOPPS LIVING SET (stamp-fix batch 2, 2026-09-26). An annual, continuously
+  // numbered product ("Living Set") -- own numbering that keeps counting up
+  // year over year (2024 numbers run into the 700s-900s), never resets or
+  // shares a range with Series 1/2/Update. With no rule here the title fell
+  // through every specific Topps line below to the bare `/topps/` catch-all
+  // at the bottom of this function, and "Living"/"Living Set" -- having
+  // matched nothing -- got folded into the player span instead
+  // ("playerName: 'Living Shohei Ohtani'"), a second, compounding defect.
+  // Must run BEFORE the bare /topps/ rule (CF-A-MAKER-LESS-CATCH-ALL /
+  // "specific never folds to flagship" -- same doctrine as every other named
+  // Topps line in this block). Evidence: C:/tmp/topps24_trace_1530/RESULT.md
+  // -- 1,632 2024 sales, 41 distinct cardNumbers (700s-900s), stored under
+  // bare `hiq:baseball:2024:topps:*` with zero Topps Living Set checklist
+  // rows registered anywhere. "Set" is optional -- both "Topps Living
+  // Baseball #737 Base" and "Topps Living Set #737 ..." name the same
+  // product.
+  if (/topps\s+living(?:\s+set)?/i.test(t)) return "Topps Living Set";
   if (/topps\s+heavy\s+lumber|heavy\s+lumber/.test(t)) return "Topps Heavy Lumber";
   // CF-TOPPS-PRODUCT-LINES (Drew, 2026-07-29). Complete Topps taxonomy so
   // rows for these distinct product lines stop collapsing to bare "topps"
@@ -4509,12 +4526,71 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // "Topps": "Holiday", "Gallery" and "Midnight" are ordinary words and a bare
   // rule for any of them would claim another brand's title -- the negative-
   // evidence lesson the Museum Collection and Finest rules above both carry.
-  if (/topps\s+holiday|holiday\s+mega\s*box/i.test(t)) return "Topps Holiday";
+  //
+  // CF-HOLIDAY-ADJACENCY (stamp-fix batch, 2026-09-26, defect 1 /
+  // C:/tmp/rootcause_1234/RESULT.md). The rule used to require "topps" and
+  // "holiday" TEXTUALLY ADJACENT, which missed every real eBay-idiom title
+  // where series/player/card-number/parallel words separate the two: "Topps
+  // Series 2 - Roki Sasaki #558 Holiday", "Topps Roki Sasaki RC Holiday Sun
+  // Rookie #558" -- 82 of a 5,000-row sample (~1,300 extrapolated), each one
+  // priced into the flagship `topps` pool instead of its own product's,
+  // exactly the split-pool shape `feedback_one_card_one_row_one_pool` names.
+  // Same bounded-gap shape as the Bowman's Best Preview rule above (up to 6
+  // intervening tokens -- generous enough for a card number plus a short
+  // parallel phrase, narrow enough that "topps" and "holiday" from unrelated
+  // clauses late in a long title still fall through to bare Topps).
+  //
+  // NEGATIVE GATE, NOT WIDENED CARELESSLY: "...Value Box Holiday Beach
+  // Ball/Hot Dog..." is flagship Topps Baseball's own "Holiday" PARALLEL
+  // name inside a Value Box release, not the Topps Holiday PRODUCT -- reading
+  // it as the product would misfile a real Value-Box card into the wrong
+  // pool. The gate refuses whenever "value box" appears within the same
+  // bounded window ahead of "holiday".
+  if (
+    /topps\s+holiday|holiday\s+mega\s*box/i.test(t)
+    || (
+      /topps\b(?:[\s\-:#/]+[a-z0-9.'#/]+){0,6}?[\s\-:]+holiday\b/i.test(t)
+      && !/value\s*box(?:[\s\-:]+[a-z0-9.'#/]+){0,2}?[\s\-:]+holiday\b/i.test(t)
+    )
+  ) return "Topps Holiday";
   if (/topps\s+diamond\s+icons|diamond\s+icons/i.test(t)) return "Topps Diamond Icons";
   if (/topps\s+brooklyn\s+collection|brooklyn\s+collection/i.test(t)) return "Topps Brooklyn Collection";
   if (/topps\s+gallery/i.test(t)) return "Topps Gallery";
   if (/topps\s+midnight/i.test(t)) return "Topps Midnight";
-  if (/topps/.test(t)) return "Topps";
+  // CF-BARE-TOPPS-DEFERS-TO-A-NAMED-BOWMAN (stamp-fix batch, 2026-09-26,
+  // defect 2 / C:/tmp/rootcause_1234/RESULT.md). Every SPECIFIC Bowman
+  // sub-product rule (Chrome, Draft, Sterling, 1st Edition, Best, ...) lives
+  // in the ladder above this line and already runs first when it matches.
+  // But the ladder has no BARE-Bowman rule of its own -- that generic
+  // fallback sits far below, after this bare `/topps/` catch-all -- so a
+  // title naming both brands with no specific Bowman sub-product word
+  // ("Topps 2025 Bowman Munetaka Murakami RC #9 ...", "Topps Bowman 2025
+  // Jacob Misiorowski ...") fell through the whole specific ladder and was
+  // claimed here, by the word "topps", before ever reaching the word it
+  // should have answered to. 68 of the 5,000-row sample this investigation
+  // measured (~590 extrapolated), each one a real Bowman card priced into
+  // the Topps flagship pool.
+  //
+  // A title stating BOTH brand words, with neither's specific ladder having
+  // matched, defers to the generic Bowman fallback a few hundred lines down
+  // rather than being claimed here by the word "topps" alone -- Bowman
+  // being the second, more specific brand actually printing THIS card (the
+  // seller-written "Topps Bowman ..." / "Topps 2025 Bowman ..." idiom always
+  // names the manufacturer once and the product once, and the product word
+  // is what should win). A title naming Topps alone is unaffected.
+  //
+  // CORRECTED TWICE (2026-09-26, per review; see `titleNamesBowmanBrand`'s
+  // own comment for the full history). The guard originally read a bare
+  // `!/\bbowman\b/.test(t)` (caught surnames anywhere), then "bowman before
+  // the card number" (still caught surnames, since Year-Brand-PLAYER-Number
+  // is this corpus's own common order). `titleNamesBowmanBrand` now requires
+  // either a real Bowman sub-product word right after "bowman", or "bowman"
+  // to occupy the YEAR-BRAND SLOT itself (right after the leading year, or
+  // token 0) with something other than a number/`#` immediately after it --
+  // never a position test against the card number. Ambiguous titles
+  // (neither condition holds) keep `main`'s "Topps" answer, the accepted
+  // smaller-blast-radius tradeoff.
+  if (/topps/.test(t) && !titleNamesBowmanBrand(t)) return "Topps";
   // CF-INFER-SET-POKEMON-GUARD (Drew, 2026-08-03). Bowman is the
   // baseball default for unmatched sports titles, but TCA firehose
   // pipes Pokemon/TCG in the same pool. Returning "Bowman" for
