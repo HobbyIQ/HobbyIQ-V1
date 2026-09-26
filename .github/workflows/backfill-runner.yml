@@ -316,6 +316,26 @@ on:
           # write. The pilot dispatch is scope=baseball:1989
           # titles=topps-traded.
           - repoint-sales-tiffany-title-gated
+          # LIVE TRACE (C:/tmp/bb25_trace_1530/RESULT.md, 2026-09-26). Of
+          # 23,383 2025 Bowman's Best base-parallel sales, 5,121 (21.9%) are
+          # backed ONLY at the OTHER isAuto value -- same sport/year/setKey/
+          # cardNumber/parallel/printRun, wrong auto/no-auto segment.
+          # feedback_isauto_boundary_is_cardnumber_not_text.md: isAuto is a
+          # property of the checklist's OWN card-number section, never the
+          # sale's title, so a checklist row at the flipped id is the truth
+          # and the sale's id is wrong. Repoints a sale whose exact id has NO
+          # checklist-grade card_catalog row but whose isAuto-flipped id
+          # (auto <-> no-auto, every other segment byte-for-byte unchanged,
+          # grade tail preserved) DOES -- NEVER moves when BOTH ids carry a
+          # checklist row (ambiguous, logged by cardNumber, left alone), and
+          # NEVER treats a DERIVED/VENDOR row at the flip as a destination
+          # (CF-CATALOG-AUTHORITY). SCOPE is REQUIRED (`scope`, sport:year
+          # cells, no whole-corpus mode); `titles` (BCP_TITLES/SET_KEYS)
+          # OPTIONALLY narrows to one or more setKeys, same convention as
+          # every sibling repoint lane above. Owner Drew, 2026-09-26: "Let's
+          # get these done FAST." The pilot dispatch is scope=baseball:2025
+          # titles=bowmans-best.
+          - repoint-sales-isauto-flip
           # CF-INGEST-KEEPS-STORED-IDENTITY repair (Drew, 2026-09-19, PR #2331
           # follow-up). The R66/R67/R70 ingest-time insert re-key only ever
           # fires for a FRESH sale being written today; a sale that landed in
@@ -2348,7 +2368,7 @@ jobs:
           # resolve-disagreeing-sale-twins (2026-09-20): one NDJSON record per
           # twins-disagree pair -- same fixed-path-guarded-on-script
           # convention, no new input.
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'repoint-sales-isauto-flip' && '/tmp/repoint-sales-isauto-flip-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -3935,6 +3955,40 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${R:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-tiffany-title-gated -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+
+      - name: Upload the repoint-sales-isauto-flip log
+        if: ${{ always() && inputs.script == 'repoint-sales-isauto-flip' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: repoint-sales-isauto-flip-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/repoint-sales-isauto-flip-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the isAuto-flip repoint until the scope is clean
+        # Same discipline as the tiffany title-gated sibling immediately
+        # above: stops at its own 110-minute budget and PRINTS its summary;
+        # idempotent by construction (a repointed sale's own auto/no-auto
+        # segment no longer matches the current-absent/flip-checklist shape
+        # on a re-scan).
+        if: ${{ !cancelled() && inputs.script == 'repoint-sales-isauto-flip' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: repoint-sales-isauto-flip
+          preamble: |
+            R=$(grep -aoE "(REPOINTED|WOULD REPOINT) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "repointed=${R:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (repointed=${R:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repointed=${R:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-isauto-flip -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
       # This lane's whole point is the stored insert sales the R66/R67/R70
       # ingest-time re-key can never reach (CF-INGEST-KEEPS-STORED-IDENTITY),
