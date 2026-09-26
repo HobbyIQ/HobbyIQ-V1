@@ -258,7 +258,7 @@ describe("the rows-read reconciliation balances with both new buckets folded in"
     });
     const { stdout, status } = runIngestApply(dir, shim);
     expect(status).toBe(0);
-    expect(stdout).toMatch(/csv rows read 3 = written 1 \+ failed 0 \+ skipped 0 \+ refused 0 \+ source duplicates 0 \+ present\/checklist 1 \+ rung twin 1\s+\(balances\)/);
+    expect(stdout).toMatch(/csv rows read 3 = written 1 \+ failed 0 \+ skipped 0 \+ refused 0 \+ source duplicates 0 \+ present\/checklist 1 \+ rung twin 1 \+ note in rung name 0\s+\(balances\)/);
     expect(stdout).not.toContain("WORK VANISHED");
     expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(1);
   });
@@ -292,7 +292,7 @@ describe("the manifest can explicitly waive the guard -- never an env flag", () 
     // names the manifest's own stated reason.
     expect(stdout).toMatch(/rung twins WAIVED \(reason: test fixture: reprint set deliberately mirrors its parent's numbering\) 1/);
     expect(stdout).toMatch(/WAIVED: 1\|Silver Prizm -> sibling key "bowman-chrome"/);
-    expect(stdout).toMatch(/csv rows read 1 = written 1 \+ failed 0 \+ skipped 0 \+ refused 0 \+ source duplicates 0 \+ present\/checklist 0 \+ rung twin 0\s+\(balances\)/);
+    expect(stdout).toMatch(/csv rows read 1 = written 1 \+ failed 0 \+ skipped 0 \+ refused 0 \+ source duplicates 0 \+ present\/checklist 0 \+ rung twin 0 \+ note in rung name 0\s+\(balances\)/);
     expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(1);
   });
 
