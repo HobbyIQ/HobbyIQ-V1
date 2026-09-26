@@ -1068,6 +1068,27 @@ const SCOPED_AUTO_PREFIX: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   // 2026 Topps Chrome Black -- Ivory Autographs. Source: checklistinsider
   // 2026-09-21 / checklistcenter product-page autograph section.
   ["baseball|2026|topps-chrome-black", new Set(["IVA-"])],
+  // 2025 Panini Prizm (base flagship) -- Sensational Signatures, a
+  // same-numbered AUTOGRAPH-ONLY insert. AUTO_SETNAME_RE below already
+  // recognizes the phrase "sensational signatures" in title TEXT, but most
+  // real sale titles are generic vendor listings ("#SS-JW Base") that never
+  // say the insert name, so the cardNumber prefix has to carry the signal
+  // too -- mirrors the parallel fix in hobbyIqCardId.service.ts's
+  // AUTO_ONLY_CARDNUMBER_PREFIX (that file cannot import this table --
+  // this file imports `slugify` FROM it -- so the entry is duplicated
+  // locally there under the identical (sport, year, setKey) key).
+  //
+  // Scoped, not global: "SS-" is a card-number-INITIALS token with no auto
+  // meaning on OTHER products -- e.g. "2020 Panini Prizm Basketball
+  // #SS-AEW Base" (wrestling initials; see inferSportFromTitle's own
+  // comment on this exact card) -- a global add would mislabel every one
+  // of those.
+  //
+  // Evidence: C:/tmp/prizm_ss_trace_1422/RESULT.md, 2026-09-26 -- 7,058
+  // sold_comps rows under `hiq:baseball:2025:panini-prizm:ss-*`, 86% stored
+  // isAuto=false while checklist rows for the same cardNumber+parallel are
+  // already :auto (SS-JL, SS-HK, SS-JG, SS-CK, SS-CE, etc.).
+  ["baseball|2025|panini-prizm", new Set(["SS-"])],
 ]);
 
 /** Look up whether `cardNumber` starts with one of the auto-only prefixes
@@ -4060,6 +4081,23 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // `distinct`, 453 checklist rows) with no parser rule.
   if (/bowman\s+tiffany/.test(t)) return "Bowman Tiffany";
   if (/topps\s+heritage/.test(t)) return "Topps Heritage";
+  // TOPPS LIVING SET (stamp-fix batch 2, 2026-09-26). An annual, continuously
+  // numbered product ("Living Set") -- own numbering that keeps counting up
+  // year over year (2024 numbers run into the 700s-900s), never resets or
+  // shares a range with Series 1/2/Update. With no rule here the title fell
+  // through every specific Topps line below to the bare `/topps/` catch-all
+  // at the bottom of this function, and "Living"/"Living Set" -- having
+  // matched nothing -- got folded into the player span instead
+  // ("playerName: 'Living Shohei Ohtani'"), a second, compounding defect.
+  // Must run BEFORE the bare /topps/ rule (CF-A-MAKER-LESS-CATCH-ALL /
+  // "specific never folds to flagship" -- same doctrine as every other named
+  // Topps line in this block). Evidence: C:/tmp/topps24_trace_1530/RESULT.md
+  // -- 1,632 2024 sales, 41 distinct cardNumbers (700s-900s), stored under
+  // bare `hiq:baseball:2024:topps:*` with zero Topps Living Set checklist
+  // rows registered anywhere. "Set" is optional -- both "Topps Living
+  // Baseball #737 Base" and "Topps Living Set #737 ..." name the same
+  // product.
+  if (/topps\s+living(?:\s+set)?/i.test(t)) return "Topps Living Set";
   if (/topps\s+heavy\s+lumber|heavy\s+lumber/.test(t)) return "Topps Heavy Lumber";
   // CF-TOPPS-PRODUCT-LINES (Drew, 2026-07-29). Complete Topps taxonomy so
   // rows for these distinct product lines stop collapsing to bare "topps"
