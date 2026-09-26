@@ -113,9 +113,19 @@ describe("R31 fills only a phrase the product's ladder actually names", () => {
     // Checker` is `Prizm Black and White Checker` — same card, and the write
     // is correct. Refusing these would trade a leak for a regression; the
     // SPELLING is a separate concern from whether the rung exists.
+    //
+    // THE CHECKLIST NOW ATTESTS TWO WORD ORDERS FOR THE SAME CARD
+    // (2026-09-25 corpus rebuild). A newly-committed 2024 Panini Prizm
+    // Football scrape spells it "Black and White Checker Prizms" (product
+    // word LAST) alongside C:/tmp/ci/csv2's own long-standing "Prizm Black
+    // and White Checker" (product word FIRST) -- verified against both raw
+    // source CSVs, both real. `checklistRungPhrase` iterates a Set, so which
+    // one comes back is not something this test should pin; what matters
+    // (and IS pinned) is that the rung resolves at all and the write
+    // qualifies, whichever spelling won.
     expect(VOCAB.checklistRungPhrase("snakeskin", 2024, "panini-prizm")).toBe("snakeskin prizms");
     expect(VOCAB.checklistRungPhrase("black and white checker", 2024, "panini-prizm"))
-      .toBe("prizm black and white checker");
+      .toMatch(/^(prizm black and white checker|black and white checker prizms)$/);
     for (const p of ["snakeskin", "black and white checker"]) {
       expect(r31({ title: "t", parallel: p, listsToken: true, isRungPhrase: true }).qualifies).toBe(true);
     }
@@ -172,7 +182,6 @@ describe("insert names and truncated phrases stay refused", () => {
     ["my house", "panini-donruss"],
     ["captain in charge", "panini-donruss"],
     ["downtown duo", "panini-donruss"],
-    ["purple", "panini-donruss"],
   ])("%s is not a rung of %s", (parallel, setKey) => {
     // Pinned at the VOCABULARY, so this stays true regardless of which leg
     // does the refusing as the guards evolve.
@@ -181,6 +190,36 @@ describe("insert names and truncated phrases stay refused", () => {
     const r = r31({ title: "t", parallel, listsToken: false });
     expect(r.qualifies).toBe(false);
     expect(r.failed).toContain(`rung-not-in-product-checklist-vocabulary:${parallel}`);
+  });
+
+  // "purple" MOVED OFF the shared list above (2026-09-25 corpus rebuild).
+  //
+  // A newly-included fuller CSV gave `football|2024|panini-donruss` a real
+  // base rung, "Purple Press Proof" (verified against the raw source, under
+  // the plain `base` category) -- so the LOOSE token test
+  // (`checklistListsParallel`, "every word of the candidate appears
+  // somewhere in this product's vocabulary") now correctly answers TRUE for
+  // bare "purple": the token genuinely belongs to this product now, via
+  // that real rung. The STRICT phrase test (`checklistListsRungPhrase`,
+  // "this exact name/extension is a rung") correctly still answers FALSE --
+  // bare "purple" alone remains a different, shorter, non-existent card
+  // from "Purple Press Proof". Both answers are correct; they simply
+  // stopped being the same answer, which is why this case needs its own
+  // test rather than the shared it.each above (which asserts both agree).
+  //
+  // A separate override (checklist-parallel-names.overrides.json) already
+  // drops the corpus's OWN bare "Purple" entry, because that one came from
+  // AUTOGRAPH insert categories misread as base-like, not from a real base
+  // parallel -- see that override's own `reason` for the full trace. This
+  // test is about the token-vocabulary SIDE EFFECT of a real, DIFFERENT
+  // rung ("Purple Press Proof") existing, which the override does not (and
+  // should not) touch.
+  it("purple: the loose token test now sees it (Purple Press Proof is real); the strict phrase test still refuses it", () => {
+    expect(VOCAB.checklistListsParallel("purple", 2024, "panini-donruss")).toBe(true);
+    expect(VOCAB.checklistListsRungPhrase("purple", 2024, "panini-donruss")).toBe(false);
+    const r = r31({ title: "t", parallel: "purple", listsToken: false });
+    expect(r.qualifies).toBe(false);
+    expect(r.failed).toContain("rung-not-in-product-checklist-vocabulary:purple");
   });
 });
 

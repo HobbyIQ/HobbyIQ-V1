@@ -1,0 +1,254 @@
+{
+  "_README": "Rulings that DISAGREE with what every scraped source spells, applied LAST by the builder -- after the overlay, the insert-set split and the self-naming filter, all of which are entitled to run on the source's own words first. See loadOverrides()/applyOverride() in build-parallel-vocabulary.cjs for the mechanism and why the additive overlay (checklist-parallel-overlays.json) cannot do this: its merge rule lets the SOURCE win once one exists, which is backwards for a ruling that overrides an EXISTING source spelling.\n\nEach entry is scoped to an exact (sport, year, setKey). `drop` removes names case-insensitively even though a source stated them; `add` is the ruling's own spelling, appended only if not already present after the drop. Re-applying is idempotent. Every entry that adds a name MUST carry non-empty `ruling`, `rulingDate` and `reason` -- loadOverrides() fails the build otherwise (assertOverrideEntry).",
+  "schema": "hobbyiq/checklist-parallel-names-overrides/v1",
+  "overrides": [
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "topps",
+      "ruling": "Drew, 2026-09-25 -- the unnumbered non-auto Super Box exclusive rung is spelled \"Silver Crackle Foil\", matching the spelling PR #2427 folds the 2026 catalog onto. A corpus that adopts sales onto \"Foilboard\" (or a boilerplate-suffixed/parenthetical variant) would fight that fold in the 03:00Z nightly.",
+      "rulingDate": "2026-09-25",
+      "reason": "Extended to the whole 2026 Topps flagship family (topps, topps-series-1, topps-series-2, topps-update) on the 09-25 re-review, so a future scrape of any of these setKeys cannot silently reintroduce the Foilboard/parenthetical collision this ruling closes. Only baseball|2026|topps-series-1 has a scraped source today (C:/tmp/ci/csv2/2026-topps-series-1-baseball.csv, not committed to the repo, spelling \"Silver Crackle Foil (Super Box exclusive)\" on every base row); the other three setKeys carry no crackle rung yet -- this entry is a standing guard, not a correction of an existing row.",
+      "drop": [
+        "Silver Crackle Foil (Super Box exclusive)",
+        "Silver Crackle Foilboard",
+        "Silver Crackle Foilboard (Super Box exclusive)",
+        "Silver Crackleboard Foil Board",
+        "Silver Crackle Foil (Super Box Exclusive)",
+        "Crackleboard Foil Board",
+        "Crackleboard Foil"
+      ],
+      "add": [
+        "Silver Crackle Foil"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "topps-series-1",
+      "ruling": "Drew, 2026-09-25 -- the unnumbered non-auto Super Box exclusive rung is spelled \"Silver Crackle Foil\", matching the spelling PR #2427 folds the 2026 catalog onto. A corpus that adopts sales onto \"Foilboard\" (or a boilerplate-suffixed variant) would fight that fold in the 03:00Z nightly.",
+      "rulingDate": "2026-09-25",
+      "reason": "C:/tmp/ci/csv2/2026-topps-series-1-baseball.csv (not yet committed to the repo) spells this rung \"Silver Crackle Foil (Super Box exclusive)\" on every base row -- the cleaner does not strip the parenthetical (a channel/box exclusivity note is normally a REAL distinction) or the word \"exclusive\", so the source spelling would otherwise win. The 2025 sibling products spell the analogous rung \"Silver Crackle Foilboard\" (Series 1/2) or \"Silver Crackle Foil\" (Update Series) -- see PR body for the full breakdown; only 2026 is ruled here.",
+      "drop": [
+        "Silver Crackle Foil (Super Box exclusive)",
+        "Silver Crackle Foilboard",
+        "Silver Crackle Foilboard (Super Box exclusive)",
+        "Silver Crackleboard Foil Board",
+        "Silver Crackle Foil (Super Box Exclusive)",
+        "Crackleboard Foil Board",
+        "Crackleboard Foil"
+      ],
+      "add": [
+        "Silver Crackle Foil"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "topps-series-2",
+      "ruling": "Drew, 2026-09-25 -- the unnumbered non-auto Super Box exclusive rung is spelled \"Silver Crackle Foil\", matching the spelling PR #2427 folds the 2026 catalog onto. A corpus that adopts sales onto \"Foilboard\" (or a boilerplate-suffixed/parenthetical variant) would fight that fold in the 03:00Z nightly.",
+      "rulingDate": "2026-09-25",
+      "reason": "Extended to the whole 2026 Topps flagship family on the 09-25 re-review as a standing guard -- no scraped source carries this setKey yet, so this is pre-emptive: if 2026 Topps Series 2 is scraped later with the 2025 Series 1/2 CSVs' 'Foilboard' spelling (or a parenthetical-suffixed variant), the ruling still wins.",
+      "drop": [
+        "Silver Crackle Foil (Super Box exclusive)",
+        "Silver Crackle Foilboard",
+        "Silver Crackle Foilboard (Super Box exclusive)",
+        "Silver Crackleboard Foil Board",
+        "Silver Crackle Foil (Super Box Exclusive)",
+        "Crackleboard Foil Board",
+        "Crackleboard Foil"
+      ],
+      "add": [
+        "Silver Crackle Foil"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 2026,
+      "setKey": "topps-update-series",
+      "ruling": "Drew, 2026-09-25 -- the unnumbered non-auto Super Box exclusive rung is spelled \"Silver Crackle Foil\", matching the spelling PR #2427 folds the 2026 catalog onto. A corpus that adopts sales onto \"Foilboard\" (or a boilerplate-suffixed/parenthetical variant) would fight that fold in the 03:00Z nightly.",
+      "rulingDate": "2026-09-25",
+      "reason": "Extended to the whole 2026 Topps flagship family on the 09-25 re-review as a standing guard -- no scraped source carries this setKey yet. The 2025 Update Series CSVs already spell the analogous rung 'Silver Crackle Foil' (no 'board'), so this guard is consistent with that source's own pattern, unlike Series 1/2.",
+      "drop": [
+        "Silver Crackle Foil (Super Box exclusive)",
+        "Silver Crackle Foilboard",
+        "Silver Crackle Foilboard (Super Box exclusive)",
+        "Silver Crackleboard Foil Board",
+        "Silver Crackle Foil (Super Box Exclusive)",
+        "Crackleboard Foil Board",
+        "Crackleboard Foil"
+      ],
+      "add": [
+        "Silver Crackle Foil"
+      ]
+    },
+    {
+      "sport": "basketball",
+      "year": 2024,
+      "setKey": "panini-prizm",
+      "ruling": "N/A -- not a spelling ruling. This entry restores the registration PR #2355 (feat(catalog): register 85 named insert/auto keys unblocking Wave-1 Prizm FB/BK + Select BK) already made: `panini-prizm-fireworks` (slug of the bare root \"Fireworks\") is the registered key insertSetTitleReader.ts / productSetKeys.ts expect. It is a rootRename, not a drop/add, and rootRename has the same non-empty-provenance requirement as add.",
+      "rulingDate": "2026-09-25",
+      "reason": "A fuller/different 2024-25 Panini Prizm Basketball CSV spells the Fireworks insert's colour rungs verbatim \"Fireworks Prizms Black/Gold/...\" (confirmed against the raw source -- \"Prizms\" really is in the checklist's own text, not builder noise). Each colour landed as its OWN one-item root (\"Fireworks Prizms Black\", \"Fireworks Prizms Gold\", ... -- 9 roots, never merged, because no bare \"Fireworks Prizms\" child exists to anchor the merge). insertSetTitleReader.ts looks up `${setKey}-${slugifyRoot(root)}` per root, so every one of those 9 slugs (`panini-prizm-fireworks-prizms-black`, etc.) misses #2355's single registered `panini-prizm-fireworks` -- and the terse title \"...Fireworks Some Player #6\" (which named no colour) stopped resolving at all, breaking tests/insertSetF4BaseConfirmedUntouched.test.ts's #2355 pin. Renaming all 9 roots' LABEL to \"Fireworks\" (never touching any child's real, fully-spelled name) lets the terse title match the shared root and the fully-spelled titles keep matching their own child, both under the one key #2355 registered.",
+      "rootRename": [
+        { "from": "Fireworks Prizms Black", "to": "Fireworks" },
+        { "from": "Fireworks Prizms Blue Ice", "to": "Fireworks" },
+        { "from": "Fireworks Prizms Blue Wave", "to": "Fireworks" },
+        { "from": "Fireworks Prizms Fast Break", "to": "Fireworks" },
+        { "from": "Fireworks Prizms Gold", "to": "Fireworks" },
+        { "from": "Fireworks Prizms Mojo", "to": "Fireworks" },
+        { "from": "Fireworks Prizms Orange", "to": "Fireworks" },
+        { "from": "Fireworks Prizms Silver", "to": "Fireworks" },
+        { "from": "Fireworks Prizms White Wave", "to": "Fireworks" }
+      ]
+    },
+    {
+      "sport": "football",
+      "year": 2024,
+      "setKey": "panini-zenith",
+      "ruling": "N/A -- not a spelling ruling. Restores an insert set the builder's own category reader found correctly before this rebuild widened --dirs; see build-parallel-vocabulary.cjs's applyInsertSetAdd for the mechanism.",
+      "rulingDate": "2026-09-25",
+      "reason": "C:/tmp/ci/csv2/2024-panini-zenith-football.csv states \"Z Marquee\"'s colours on SIBLING categories (insert-z-marquee-blue/gold/orange/red/white, each blank on the bare insert-z-marquee row) -- the shape insertSetsFromCategories() is built to read. backend/data/checklists/scraped/acq-2026-09-19-beckett-panini-zenith-fb/2024-panini-zenith-football.csv (committed 09-19, added to this rebuild's --dirs) states the SAME colours directly on the bare insert-z-marquee category's own rows instead. categoryRowsByProduct merges both files' rows for this one product, so the merged 'insert-z-marquee' category is no longer blank on every row, and insertSetsFromCategories's own precondition (its whole point: a bare category that states no parallel of its own) correctly, structurally refuses to fire -- 'Z Marquee' silently vanished from the corpus, taking 5 colour children with it, and breaking insertSetTitleReader.test.ts's own 'coverage gap has closed' pin. Both sources agree on the card; only the merge of their two different shapes produced the gap.",
+      "insertSetAdd": [
+        {
+          "root": "Z Marquee",
+          "children": ["Z Marquee Blue", "Z Marquee Gold", "Z Marquee Orange", "Z Marquee Red", "Z Marquee White"]
+        }
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 1983,
+      "setKey": "donruss",
+      "reason": "TOKEN LEAK (2026-09-25) -- see build-parallel-vocabulary.cjs's applyDropInsertSetRoots header. This rebuild's fuller CSV set (vs the 09-19 build) added real, checklist-backed error-variation rows whose text literally embeds a player's first name (\"ERR Photo Actuall Is Juan Eichelberger\", \"UER Photo Is Joe Pittman\", \"UER Middle Name Is Nolan\"). playerSegmentIsAPerson.ts's everyCorpusName reads these into the SAME shared token vocabulary titleNamesFinish/cardQueryParser/computeHobbyIqCardId all consult; once \"Juan\"/\"Joe\"/\"Nolan\" recur across >=2 base brands (this row plus a player-named insert on a different product -- \"Nolan\" pairs with baseball|2003|topps's \"Record Breakers Nolan Ryan\"), that module's own frequency floor (documented in its header as the exact defence against this) admits them, and every OTHER \"Juan ...\"/\"Joe ...\"/\"Nolan ...\" sale in the pool loses its first name. Dropped, not corrected -- these are real cards; the corpus simply does not need to spell-adopt or vocabulary-index a one-off error-variation name.",
+      "drop": [
+        "ERR Photo Actuall Is Juan Eichelberger",
+        "UER Photo Is Joe Pittman",
+        "UER Middle Name Is Nolan"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 1986,
+      "setKey": "donruss",
+      "reason": "TOKEN LEAK (2026-09-25) -- see build-parallel-vocabulary.cjs's applyDropInsertSetRoots header. \"NNO Hank Aaron PUZ\" / \"PUZ Hank Aaron\" are real Donruss puzzle-back checklist rows this rebuild's fuller CSV set surfaced for the first time; their text embeds \"Aaron\", which crosses playerSegmentIsAPerson.ts's corpus-frequency floor once combined with a player-named insert on a different product (panini-flawless's \"Aaron Judge \\\"All Rise\\\"\") and starts eating \"Aaron\" from every unrelated Aaron [Judge/Rodgers/...] sale title in the pool. Dropped, not corrected -- see the 1983 Donruss entry above for the full mechanism.",
+      "drop": [
+        "NNO Hank Aaron PUZ",
+        "PUZ Hank Aaron"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 1988,
+      "setKey": "donruss",
+      "reason": "TOKEN LEAK (2026-09-25) -- see the 1983 Donruss entry above and build-parallel-vocabulary.cjs's applyDropInsertSetRoots header for the mechanism. \"UER Photo Is Juan Samuel\" contributes to the same \"Juan\" token-frequency crossing as 1983/1989 Donruss's Juan-named error rows.",
+      "drop": [
+        "UER Photo Is Juan Samuel"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 1989,
+      "setKey": "donruss",
+      "reason": "TOKEN LEAK (2026-09-25) -- see the 1983 Donruss entry above and build-parallel-vocabulary.cjs's applyDropInsertSetRoots header for the mechanism. \"UER: Born In San Juan\" contributes \"Juan\" (from the CITY name, not even a player) to the same token-frequency crossing as 1983/1988 Donruss's Juan-named error rows -- an even weaker case for keeping it, since here the word is not even naming a person.",
+      "drop": [
+        "UER: Born In San Juan"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 2015,
+      "setKey": "topps",
+      "reason": "TOKEN LEAK (2026-09-25) -- see build-parallel-vocabulary.cjs's applyDropInsertSetRoots header. Every colour/finish variant of the same 2015 Topps error row (\"ERR: Bio And Stats Are For Ken Giles\", repeated under Black/Gold/Clear/Framed/Oversized/Pink/Platinum/Purple/Rainbow Foil/Red/Snow Camo/Sparkle Foil/the 10x14 poster) embeds \"Ken\", which crosses playerSegmentIsAPerson.ts's corpus-frequency floor once combined with panini-flawless's \"Ken Griffey Jr. \\\"The Kid\\\"\" insert and starts eating \"Ken\" from every unrelated Ken [Griffey/Dryden/...] sale title in the pool -- measured directly: tests/unparsedIsNotUnnumbered.test.ts's \"Ken Griffey Jr.\" slug lost \"ken\" to exactly this leak.",
+      "drop": [
+        "ERR: Bio And Stats Are For Ken Giles",
+        "Black ERR: Bio And Stats Are For Ken Giles",
+        "Gold ERR: Bio And Stats Are For Ken Giles",
+        "10\" X 14\" Posters ERR: Bio And Stats Are For Ken Giles",
+        "Clear ERR: Bio And Stats Are For Ken Giles",
+        "Framed ERR: Bio And Stats Are For Ken Giles",
+        "Oversized ERR: Bio And Stats Are For Ken Giles",
+        "Pink ERR: Bio And Stats Are For Ken Giles",
+        "Platinum ERR: Bio And Stats Are For Ken Giles",
+        "Purple ERR: Bio And Stats Are For Ken Giles",
+        "Rainbow Foil ERR: Bio And Stats Are For Ken Giles",
+        "Red ERR: Bio And Stats Are For Ken Giles",
+        "Snow Camo ERR: Bio And Stats Are For Ken Giles",
+        "Sparkle Foil ERR: Bio And Stats Are For Ken Giles"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 2024,
+      "setKey": "panini-flawless",
+      "reason": "TOKEN LEAK (2026-09-25) -- see build-parallel-vocabulary.cjs's applyDropInsertSetRoots header. \"Joe Mauer 2024 HOF Class\" and \"Ken Griffey Jr. \\\"The Kid\\\"\" are real, checklist-backed player-tribute inserts, each a one-item root. Their first names (\"Joe\"/\"Ken\") are exactly the case playerSegmentIsAPerson.ts's own header documents as the motivating example for its corpus-frequency floor (>=2 base brands) -- and this rebuild's fuller CSV set gave each of them a SECOND occurrence elsewhere in the corpus (vintage Donruss error-variation rows), crossing that floor for the first time. Dropped from the corpus's shared vocabulary, not from card_catalog -- these remain real, checklist-backed cards; only their contribution to the cross-product token index is removed.",
+      "drop": [
+        "Joe Mauer 2024 HOF Class",
+        "Ken Griffey Jr. \"The Kid\""
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 2025,
+      "setKey": "panini-flawless",
+      "reason": "TOKEN LEAK (2026-09-25) -- see the 2024 Panini Flawless entry above and build-parallel-vocabulary.cjs's applyDropInsertSetRoots header for the mechanism. \"Aaron Judge \\\"All Rise\\\"\" is the second occurrence of \"Aaron\"/\"Judge\" (alongside 1986 Donruss's Hank Aaron puzzle-back rows and this same insert's own repetition) that crosses playerSegmentIsAPerson.ts's corpus-frequency floor -- measured directly: tests/cardQueryParser.test.ts's \"Aaron Judge\" parse lost \"Aaron\" to exactly this leak.",
+      "drop": [
+        "Aaron Judge \"All Rise\""
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 2024,
+      "setKey": "topps-chrome-update",
+      "reason": "TOKEN LEAK (2026-09-25) -- see build-parallel-vocabulary.cjs's applyDropInsertSetRoots header. \"With Juan Soto Image Variation SP\" embeds \"Juan\"/\"Soto\", contributing to the same cross-product token-frequency crossing as the Donruss Juan-named error rows and panini-flawless's player-tribute inserts -- measured directly: tests/playerSegmentCatalogTitle.test.ts's \"Juan Soto\" parse lost \"Juan\" to exactly this leak.",
+      "drop": [
+        "With Juan Soto Image Variation SP"
+      ]
+    },
+    {
+      "sport": "football",
+      "year": 2024,
+      "setKey": "panini-donruss",
+      "reason": "NOT A BASE-LADDER RUNG (2026-09-25). A newly-included fuller CSV (data/checklists/scraped/acq-2026-09-19-beckett-panini-donruss-fb-full/2024-panini-donruss-football.csv) carries a bare \"Purple\" parallel column value ONLY under three AUTOGRAPH insert categories (auto-rated-rookies-autographs, auto-signature-marks, auto-signature-series -- verified against the raw source, isAuto=true, printRun 150 on every row). The builder's base-wins guard in splitInsertSets treats any `auto-*` category as base-like (readChecklistCategory's kind==='auto'), which is right for `auto-base*` (the base card, signed) but wrong here: this product's BASE ladder's own purple rung is separately and distinctly named \"Purple Press Proof\" (confirmed present under the plain `base` category on the same CSV) -- bare \"Purple\" is the autograph inserts' OWN colour, never a rung of the base card. tests/r31R33WriteGuards.test.ts pins \"purple\" as refused for panini-donruss alongside other insert-only fragments (passing grade, downtown duo, ...); this bare \"Purple\" is exactly that shape, not a base parallel. Dropped from parallels[] only -- \"Purple Press Proof\" (the real base rung) is untouched, and nothing about the autograph inserts' own child rows is affected (they are not present as insert-set entries in this corpus shape, since their parallel column states only the bare colour word, same as the base-wins guard already handles for other products).",
+      "drop": [
+        "Purple"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 2002,
+      "setKey": "donruss",
+      "reason": "TOKEN LEAK, a THIRD reader affected (2026-09-25) -- see build-parallel-vocabulary.cjs's applyDropInsertSetRoots header for the mechanism (that header documents playerSegmentIsAPerson.ts; this is the SAME class of defect in a DIFFERENT consumer, statedFinishFromChecklist.ts, which builds its own GLOBAL finish-word vocabulary from every corpus name). \"Chicago Collection\" is a real Donruss insert set this rebuild's fuller CSV set surfaced for the first time; its token \"chicago\" entered the global finish-word stream and made every OTHER title naming a Chicago sports team (\"...Chicago Bears...\") read as stating an unconfirmed finish -- measured directly: tests/r32SplitScopeR55.test.ts's 86-row fixture gained a false park on a Caleb Williams / Chicago Bears row for exactly this reason. Dropped, not corrected -- \"Chicago Collection\" remains a real, checklist-backed insert; only its contribution to the global vocabulary is removed.",
+      "drop": [
+        "Chicago Collection"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 2003,
+      "setKey": "donruss",
+      "reason": "TOKEN LEAK (2026-09-25) -- see the 2002 Donruss entry above for the full mechanism. \"Chicago Collection\" recurs here, the second of the two occurrences that gave the global \"chicago\" token its foothold.",
+      "drop": [
+        "Chicago Collection"
+      ]
+    },
+    {
+      "sport": "baseball",
+      "year": 2018,
+      "setKey": "diamond-kings",
+      "reason": "TOKEN LEAK, a FOURTH reader affected (2026-09-25) -- see build-parallel-vocabulary.cjs's applyDropInsertSetRoots header for the general mechanism. \"The Ryan Express\" (Nolan Ryan's nickname) is a real, checklist-backed image-variation insert this rebuild's fuller CSV set surfaced for the first time; its token \"ryan\" combined with baseball|2003|topps's pre-existing \"Record Breakers Nolan Ryan\" (already on main, previously a harmless single occurrence) crosses persistVendorSalesToPool.service.ts's / cardQueryParser.js's shared player-name-guess vocabulary's corpus-frequency floor for the first time -- measured directly: tests/tcaEbayPlayerNameChecklistRecovery.test.ts's Upper Deck hockey fixture lost \"Ryan\" from three unrelated titles (Ryan Strome, Ryan Greene, Ryan Suzuki). Dropped, not corrected -- \"The Ryan Express\" remains a real, checklist-backed insert; only its contribution to the shared vocabulary is removed. baseball|2003|topps's own \"Record Breakers Nolan Ryan\" is untouched (it alone, at one occurrence, was never the problem).",
+      "drop": [
+        "The Ryan Express Image Variation SP",
+        "The Ryan Express Image Variation Blue SP",
+        "The Ryan Express Image Variation Red SP",
+        "The Ryan Express Image Variation Artist Proof SP",
+        "The Ryan Express Image Variation Black SP",
+        "The Ryan Express Image Variation Brown SP",
+        "The Ryan Express Image Variation Framed SP",
+        "The Ryan Express Image Variation Gold SP",
+        "The Ryan Express Image Variation Gray SP",
+        "The Ryan Express Image Variation Green SP",
+        "The Ryan Express Image Variation Masterpiece SP"
+      ]
+    }
+  ]
+}

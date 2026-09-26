@@ -146,6 +146,244 @@ function loadOverlay(file) {
   return { byProduct, count, entries: (raw.overlays ?? []).length };
 }
 
+/**
+ * THE OVERRIDE FILE: A RULING THAT DISAGREES WITH WHAT EVERY SOURCE SAYS.
+ *
+ * CF-A-RULING-OUTRANKS-A-SCRAPE (2026-09-25, Drew's Silver Crackle ruling).
+ *
+ * The overlay above (`loadOverlay`) can only ADD a name no source carries,
+ * and its own merge rule makes the SOURCE win once one finally publishes the
+ * rung -- correct for "this ruling fills a hole", wrong for "this ruling
+ * disagrees with what every source spells". 2025/2026 Topps Series 1/2 CSVs
+ * (both C:/tmp/ci/csv2 and the committed 09-20 scrapes) spell the Super-Box-
+ * exclusive base rung "Silver Crackle Foil**board**"; the 2026 CSV glues an
+ * exclusivity parenthetical on top ("... (Super Box exclusive)"); Drew ruled
+ * (2026-09-25) that the card is "Silver Crackle Foil", full stop, to match
+ * the spelling PR #2427 folds the 2026 catalog onto -- and every one of
+ * those source spellings would otherwise win, because the source always
+ * wins over the additive overlay.
+ *
+ * So a SEPARATE, small, committed file carries entries the builder applies
+ * LAST, after everything else (the overlay, the split, the self-naming
+ * filter) -- a ruling is the final word, not a fallback for a gap. Each
+ * entry names an exact (sport, year, setKey), a `drop` list (exact names,
+ * case-insensitive, to remove even though a source stated them) and an `add`
+ * list (the name the ruling says is correct), plus its own `reason` and
+ * `rulingDate` so the file says why. This is NOT a scrape and never
+ * pretends to be one -- no `spellings`/`seen` provenance is invented; `add`
+ * entries carry only what the ruling itself asserts.
+ *
+ * SCOPED, NOT GLOBAL. Only the (sport, year, setKey) rows named apply --
+ * dropping "Silver Crackle Foilboard" here never touches a DIFFERENT
+ * product that happens to share the string, because the override is keyed
+ * exactly like every other product bucket in this file.
+ *
+ * `rootRename` (2026-09-25, the Fireworks/#2355 regression) is the fourth
+ * verb, alongside `drop`/`add`: `[{from, to}]` renames an INSERT SET's root
+ * LABEL only, never a child's fully-spelled name -- see `applyRootRename`'s
+ * own header for why a more complete source can widen a root far enough to
+ * break an already-registered key. It carries the same non-empty
+ * ruling/rulingDate/reason requirement as `add` (`assertOverrideEntry`).
+ *
+ * `insertSetAdd` (2026-09-25, the Z Marquee regression) is the fifth verb:
+ * `[{root, children}]` adds a WHOLE insert set the merge of two source files
+ * hid -- see `applyInsertSetAdd`'s own header for why two sources shaping
+ * the same bare category differently (one via blank-parallel siblings, one
+ * via the colour text directly on the bare category's own rows) makes
+ * `insertSetsFromCategories`'s "states no parallel of its own" test fail on
+ * the merged rows even though every attested value, from either source,
+ * genuinely names the same insert. Additive only -- never removes a root
+ * the builder DID find -- and carries the same provenance requirement.
+ */
+/**
+ * AN `add` WITH NO RULING IS A SYNTHETIC PARALLEL BY ANOTHER NAME.
+ *
+ * `feedback_no_synthetic_parallels_only_actuals` rules out inventing a rung
+ * with no provenance; the override file's whole justification (see
+ * `loadOverrides`'s header) is that a NAMED ruling outranks a source, not
+ * that this file is a second place to type a name. So any entry that adds a
+ * name must carry non-empty `ruling`, `rulingDate` AND `reason` -- the same
+ * three fields `applyOverride` already rides onto the emitted row's
+ * `override` provenance. An entry that only drops (no `add`) is exempt: it
+ * is refusing a bad spelling, not asserting a new one, though it is still
+ * good practice to explain the drop via `reason`.
+ *
+ * FAILS THE BUILD, not a warning -- an unreviewed `add` silently shipping a
+ * spelling is exactly the defect class this file exists to prevent from the
+ * OTHER direction (a source outranking a ruling); a bare string with no
+ * `ruling` is unreviewed by definition.
+ */
+function assertOverrideEntry(e) {
+  const assertsSomething = (e.add ?? []).length > 0 || (e.rootRename ?? []).length > 0 || (e.insertSetAdd ?? []).length > 0;
+  if (!assertsSomething) return;
+  const missing = ["ruling", "rulingDate", "reason"].filter((f) => !String(e[f] ?? "").trim());
+  if (missing.length) {
+    throw new Error(
+      `checklist-parallel-names.overrides.json: ${e.sport}|${e.year}|${e.setKey} adds a name, an insert set, or renames a root but is missing ${missing.join(", ")} -- ` +
+      `every 'add'/'rootRename'/'insertSetAdd' must carry a non-empty ruling, rulingDate and reason (see loadOverrides()'s header).`,
+    );
+  }
+}
+
+function loadOverrides(file) {
+  if (!file || !fs.existsSync(file)) return { byProduct: new Map(), entries: 0 };
+  const raw = JSON.parse(fs.readFileSync(file, "utf8"));
+  const byProduct = new Map();
+  for (const e of raw.overrides ?? []) {
+    assertOverrideEntry(e);
+    const pk = `${e.sport}|${e.year}|${e.setKey}`;
+    byProduct.set(pk, e);
+  }
+  return { byProduct, entries: (raw.overrides ?? []).length };
+}
+
+/**
+ * Apply one product's override to its finished `parallels[]` list. Drops are
+ * matched case-insensitively on the exact name (never a substring, same
+ * discipline as the self-naming filter above); adds are appended only when
+ * not already present post-drop, so re-running is idempotent.
+ */
+function applyOverride(parallels, override) {
+  if (!override) return parallels;
+  const dropKeys = new Set((override.drop ?? []).map((n) => key(n)));
+  const kept = parallels.filter((e) => !dropKeys.has(key(e.name)));
+  const keptKeys = new Set(kept.map((e) => key(e.name)));
+  for (const name of override.add ?? []) {
+    const k = key(name);
+    if (keptKeys.has(k)) continue;
+    keptKeys.add(k);
+    kept.push({
+      name, printRun: null, odds: null, seen: 1, spellings: [name],
+      override: { ruling: override.ruling, rulingDate: override.rulingDate, reason: override.reason },
+    });
+  }
+  return kept;
+}
+
+/**
+ * RENAME AN INSERT SET'S ROOT LABEL, WITHOUT TOUCHING ITS CHILDREN.
+ *
+ * CF-A-MORE-COMPLETE-SOURCE-CAN-WIDEN-A-REGISTERED-ROOT (2026-09-25).
+ *
+ * The root-detection walk in `splitInsertSets` computes a root from the
+ * LONGEST common leading run across a set's children -- correct in general,
+ * but a fuller/different source can lengthen that run in a way that breaks a
+ * NARROW registration made against the shorter root. Measured: PR #2355
+ * registered `panini-prizm-fireworks` (slug of the bare root "Fireworks")
+ * for `basketball|2024|panini-prizm`; a fuller CSV whose colour rungs are
+ * verbatim "Fireworks Prizms Black/Gold/..." (confirmed against the raw
+ * source -- "Prizms" really is in the checklist's own text) widens the
+ * common-prefix root to "Fireworks Prizms", and `insertSetTitleReader.ts`'s
+ * `${setKey}-${slugifyRoot(root)}` then looks up `panini-prizm-fireworks-
+ * prizms`, which #2355 never registered -- the insert stops resolving for
+ * every title that (correctly, per the OLD root) said only "Fireworks".
+ *
+ * `rootRename` renames the ROOT LABEL ONLY. The children keep their real,
+ * fully-spelled checklist names ("Fireworks Prizms Black" stays exactly
+ * that) -- only the shorter, ALREADY-REGISTERED root string is restored as
+ * the matchable root, so `insertSetTitleReader` resolves both the terse
+ * "Fireworks" title (root match) and the fully-spelled one (child match)
+ * against the SAME registered key.
+ */
+function applyRootRename(insertSets, override) {
+  if (!override?.rootRename?.length) return insertSets;
+  const renameByKey = new Map(override.rootRename.map((r) => [key(r.from), r.to]));
+  return insertSets.map((s) => {
+    const to = renameByKey.get(key(s.root));
+    if (to === undefined) return s;
+    return { ...s, root: to, rootKey: normForRoot(to) };
+  });
+}
+
+/**
+ * ADD A WHOLE INSERT SET THE MERGE OF TWO SOURCES HID.
+ *
+ * CF-TWO-SOURCES-SHAPE-THE-SAME-CATEGORY-DIFFERENTLY (2026-09-25, the Z
+ * Marquee regression).
+ *
+ * `categoryRowsByProduct` merges EVERY source file's rows for one product
+ * into a single array, which is right when the files agree on shape -- but
+ * `insertSetsFromCategories`'s "this bare category states no parallel of its
+ * own" test (`if (pars.size) continue`) reads that merged array, so if ONE
+ * source states the bare category's colour rungs on SIBLING categories
+ * (`insert-z-marquee-blue`, blank on `insert-z-marquee` itself) while a
+ * SECOND, newer source states the SAME colours directly on the bare
+ * category's own rows (`insert-z-marquee` carrying "Blue"/"Gold"/...), the
+ * merged `pars` set for `insert-z-marquee` is no longer empty and the whole
+ * root is skipped -- even though every attested value, from either source,
+ * genuinely describes this one insert set. Measured: `football|2024|panini-
+ * zenith` had "Z Marquee" (root + 5 colour children) before a second,
+ * committed 09-19 scrape of the same product was added to this rebuild's
+ * `--dirs`; after, "Z Marquee" vanished from the corpus entirely, breaking
+ * insertSetTitleReader.test.ts's own "coverage gap has closed" pin.
+ *
+ * THIS IS NOT A SPELLING RULING -- both sources agree the card is named "Z
+ * Marquee" with "Blue"/"Gold"/"Orange"/"Red"/"White" rungs; the merge
+ * mechanics, not either source, produced the gap. `insertSetAdd` restores
+ * the insert set exactly as the two sources' own attested colours describe
+ * it, carries the same non-empty ruling/rulingDate/reason discipline as
+ * `add`/`rootRename` so the restoration is not silent, and is additive only
+ * -- it never removes a root the builder DID find.
+ */
+function applyInsertSetAdd(insertSets, override) {
+  if (!override?.insertSetAdd?.length) return insertSets;
+  const existingRoots = new Set(insertSets.map((s) => key(s.root)));
+  const added = override.insertSetAdd.filter((s) => !existingRoots.has(key(s.root)));
+  if (!added.length) return insertSets;
+  return [
+    ...insertSets,
+    ...added.map((s) => ({
+      root: s.root, rootKey: normForRoot(s.root), children: [...s.children].sort(), categories: [],
+      override: { ruling: override.ruling, rulingDate: override.rulingDate, reason: override.reason },
+    })),
+  ].sort((a, b) => a.rootKey.localeCompare(b.rootKey));
+}
+
+/**
+ * DROP ALSO REMOVES A MATCHING INSERT SET ROOT, NOT JUST A PARALLEL.
+ *
+ * CF-A-PLAYER-NAMED-INSERT-IS-ALSO-A-TOKEN-LEAK (2026-09-25).
+ *
+ * `playerSegmentIsAPerson.ts`'s `everyCorpusName` builds its "this word is
+ * card vocabulary" floor from BOTH `parallels[]` and `insertSets[]` (root
+ * AND every child) -- see that module's own header, which names this exact
+ * failure mode and ships a frequency floor (a token must recur across >=2
+ * distinct base brands) specifically to keep a one-off player-named insert
+ * ("Ken Griffey Jr. \"The Kid\"", "Joe Mauer 2024 HOF Class") from poisoning
+ * the shared vocabulary. That floor is per-TOKEN, corpus-wide -- it cannot
+ * see that "Aaron"/"Ken"/"Juan"/"Joe" are about to cross it because a
+ * REBUILD widened the corpus to include vintage error-variation checklist
+ * rows ("PUZ Hank Aaron", "UER Photo Is Joe Pittman") that independently
+ * repeat the same first names another player-named insert already
+ * contributed one occurrence of. Once two occurrences exist, the floor
+ * (correctly, by its own design) admits the token, and titles like "2024
+ * Topps #131 Aaron Judge PSA 10" start losing "Aaron" wherever the shared
+ * player-name vocabulary is read -- cardQueryParser, playerSegmentIsAPerson,
+ * playerSegmentCatalogTitle, the TCA eBay checklist-lookup recovery fixture,
+ * computeHobbyIqCardId's slug minting, titleNamesFinish's finish-token
+ * index, and the CardHedge title-contradiction veto all consume that one
+ * shared vocabulary and all regressed together -- one root cause, many
+ * symptoms.
+ *
+ * These entries ARE real, checklist-backed cards (a genuine Donruss error
+ * variation, a genuine HOF-tribute insert) -- dropping them from the CORPUS
+ * is not a claim they are wrong. It is the same trade this module already
+ * makes for pack odds and channel-exclusivity noise: nobody sells "PUZ Hank
+ * Aaron" and needs its finish spelling adopted from this corpus, so keeping
+ * it out of `checklistSpellingFor`'s and `everyCorpusName`'s shared
+ * vocabulary costs nothing real while the alternative (leaving it in) costs
+ * the first name off every OTHER Aaron/Ken/Juan/Joe sale in the pool.
+ *
+ * Reuses the SAME `drop` list `applyOverride` reads for `parallels[]` --
+ * one override entry says "this exact name is gone from this product",
+ * wherever in the corpus it happened to land.
+ */
+function applyDropInsertSetRoots(insertSets, override) {
+  if (!override?.drop?.length) return insertSets;
+  const dropKeys = new Set(override.drop.map((n) => key(n)));
+  return insertSets.filter((s) => !dropKeys.has(key(s.root)));
+}
+
 /** Root comparison key: case and punctuation are spelling, not identity. */
 const normForRoot = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
@@ -350,6 +588,14 @@ const arg = (n, d) => {
 const DIRS = arg("dirs", "C:/tmp/beckett-bulk,C:/tmp/ci/csv2").split(",").map((s) => s.trim()).filter(Boolean);
 const OUT = arg("out", "backend/data/checklist-parallel-names.json");
 const OVERLAY = arg("overlay", path.join(__dirname, "..", "data", "checklist-parallel-overlays.json"));
+const OVERRIDES = arg("overrides", path.join(__dirname, "..", "data", "checklist-parallel-names.overrides.json"));
+
+/** A directory outside this checked-out repo -- not reachable by a fresh
+ * clone, so a product whose vocabulary comes ONLY from these is invisible
+ * to anyone who has not also populated them locally. Tracked per product
+ * (see `sourceDirs` on each product below) so the file itself says which
+ * rungs a plain `git clone` cannot reproduce. */
+const isRepoDir = (d) => path.resolve(d).toLowerCase().includes(path.resolve(__dirname, "..", "data", "checklists").toLowerCase());
 
 const f = (n) => Number(n).toLocaleString();
 
@@ -463,6 +709,10 @@ function main() {
   // category exists and has siblings -- so this is the second, unfiltered
   // copy they read.
   const categoryRowsByProduct = new Map();   // pk -> Array<{category, parallel}>
+  // WHICH DIRECTORIES CONTRIBUTED EACH PRODUCT, split repo vs non-repo -- see
+  // `isRepoDir`'s header. A product whose set here is entirely non-repo dirs
+  // has a vocabulary nobody outside this machine can currently reproduce.
+  const sourceDirsByProduct = new Map();     // pk -> Set(dir)
   let files = 0, rows = 0, cleaned = 0, runsRecovered = 0, dropped = 0;
 
   for (const dir of DIRS) {
@@ -477,6 +727,8 @@ function main() {
       const bucket = vocab.get(pk);
       if (!categoryRowsByProduct.has(pk)) categoryRowsByProduct.set(pk, []);
       const categoryRows = categoryRowsByProduct.get(pk);
+      if (!sourceDirsByProduct.has(pk)) sourceDirsByProduct.set(pk, new Set());
+      sourceDirsByProduct.get(pk).add(dir);
 
       const lines = fs.readFileSync(p, "utf8").split("\n");
       for (let i = 1; i < lines.length; i++) {
@@ -686,6 +938,12 @@ function main() {
     return { parallels, sets: merged };
   }
 
+  // THE OVERRIDE IS LOADED HERE BUT APPLIED LAST (at out[pk] below) -- a
+  // ruling outranks the split, the overlay and the self-naming filter, all
+  // of which are entitled to run on the source's own words first.
+  const overrides = loadOverrides(OVERRIDES);
+  let overridesDropped = 0, overridesAdded = 0;
+
   // THE OVERLAY IS APPLIED BEFORE THE SPLIT, so an overlay rung is judged by
   // exactly the same rules as a scraped one -- including the insert-set test.
   const overlay = loadOverlay(OVERLAY);
@@ -863,22 +1121,49 @@ function main() {
       ? split.parallels.filter((e) => !selfNamed.selfNames.has(e.name.toLowerCase()))
       : split.parallels;
 
+    const namedParallels = parallelsWithoutSelfNames
+      .sort((a, b) => b.seen - a.seen || a.name.localeCompare(b.name))
+      .map((e) => {
+        if (e.printRun !== null) withRun++;
+        return {
+          name: e.name, printRun: e.printRun, odds: e.odds ?? null,
+          seen: e.seen, spellings: e.spellings,
+          // Provenance rides on the row, so the file itself says which names
+          // a ruling admitted and which a scrape found.
+          ...(e.overlay ? { overlay: e.overlay } : {}),
+        };
+      });
+
+    // THE OVERRIDE IS THE LAST WORD -- see loadOverrides's header. Applied
+    // to the fully-assembled, sorted `parallels[]`, so a drop removes
+    // exactly what a human would read in the finished file and an add
+    // cannot be re-split into an insert set or re-caught by the self-naming
+    // filter (both already ran).
+    const override = overrides.byProduct.get(pk);
+    const finalParallels = applyOverride(namedParallels, override);
+    if (override) {
+      const droppedHere = (override.drop ?? []).filter((n) => namedParallels.some((e) => key(e.name) === key(n))).length;
+      const addedHere = finalParallels.filter((e) => e.override).length;
+      overridesDropped += droppedHere;
+      overridesAdded += addedHere;
+    }
+    for (const e of finalParallels) names++;
+    // DROP ALSO REMOVES A MATCHING INSERT SET ROOT -- see
+    // applyDropInsertSetRoots's header (the token-leak defence).
+    const insertSetsAfterDrop = applyDropInsertSetRoots(mergedInsertSets, override);
+    // ROOT RENAME -- see applyRootRename's header. Restores a shorter,
+    // already-REGISTERED root label a fuller source widened, without
+    // touching any child's real, fully-spelled name.
+    const insertSetsAfterRename = applyRootRename(insertSetsAfterDrop, override);
+    // INSERT SET ADD -- see applyInsertSetAdd's header. Restores a whole
+    // insert set a two-source merge hid, additive only.
+    const finalInsertSets = applyInsertSetAdd(insertSetsAfterRename, override);
+
+    const dirsForProduct = [...(sourceDirsByProduct.get(pk) ?? [])];
     out[pk] = {
       sport, year: Number(year), setKey,
-      parallels: parallelsWithoutSelfNames
-        .sort((a, b) => b.seen - a.seen || a.name.localeCompare(b.name))
-        .map((e) => {
-          names++;
-          if (e.printRun !== null) withRun++;
-          return {
-            name: e.name, printRun: e.printRun, odds: e.odds ?? null,
-            seen: e.seen, spellings: e.spellings,
-            // Provenance rides on the row, so the file itself says which names
-            // a ruling admitted and which a scrape found.
-            ...(e.overlay ? { overlay: e.overlay } : {}),
-          };
-        }),
-      ...(mergedInsertSets.length ? { insertSets: mergedInsertSets } : {}),
+      parallels: finalParallels,
+      ...(finalInsertSets.length ? { insertSets: finalInsertSets } : {}),
       // The split refused itself for this product (see splitInsertSets): its
       // source labels the base ladder as inserts, so the names stay flat and
       // what WOULD have moved is recorded instead of acted on.
@@ -887,8 +1172,26 @@ function main() {
       // today. Populated only by a future source without it, so a consumer can
       // see a SUSPICION rather than a silent flattening.
       ...(/* placeholder for a source without category */ false ? { suspectInsertRoots: [] } : {}),
+      // PROVENANCE (2026-09-25): which directories this product's vocabulary
+      // came from, and whether any of them are outside this repo -- see
+      // `isRepoDir`. A product with `reproducibleFromRepo: false` cannot be
+      // regenerated by a plain `git clone`; its rungs depend on a local
+      // scratch directory this file's history has always read from but never
+      // committed.
+      sourceDirs: dirsForProduct.sort(),
+      reproducibleFromRepo: dirsForProduct.every(isRepoDir),
     };
   }
+
+  // REPO-VS-NON-REPO PROVENANCE, CORPUS-WIDE. Counted here rather than left
+  // for a reader to re-derive from every product's `sourceDirs` -- see
+  // `isRepoDir`'s header. A product is "repo-only" when every directory it
+  // drew from is a plain `git clone` away; otherwise its vocabulary depends
+  // on a local scratch directory nothing in this repo reproduces.
+  const repoOnlyProducts = Object.values(out).filter((p) => p.reproducibleFromRepo).length;
+  const nonRepoProducts = products - repoOnlyProducts;
+  let namesFromNonRepoOnly = 0;
+  for (const p of Object.values(out)) if (!p.reproducibleFromRepo) namesFromNonRepoOnly += p.parallels.length;
 
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify({
@@ -896,6 +1199,11 @@ function main() {
     sources: DIRS,
     productCount: products,
     parallelNameCount: names,
+    // See the "REPO-VS-NON-REPO PROVENANCE" comment above main()'s end --
+    // this is the corpus-wide rollup; each product's own `sourceDirs` /
+    // `reproducibleFromRepo` is the per-product detail.
+    productsNotReproducibleFromRepo: nonRepoProducts,
+    namesFromProductsNotReproducibleFromRepo: namesFromNonRepoOnly,
     out: undefined,
   }, null, 1).replace(/\n \"out\": undefined\n/, "\n") .slice(0, -2) + ",\n \"products\": " + JSON.stringify(out, null, 1) + "\n}\n");
 
@@ -905,6 +1213,8 @@ function main() {
   console.log(`distinct parallel names  ${f(names)}`);
   console.log(`insert sets              ${f(insertSetCount)}  (${f(insertNameCount)} names moved out of parallels)`);
   console.log(`overlay                  ${f(overlayAdded)} added, ${f(overlayAlreadyPresent)} already in a source (source wins)`);
+  console.log(`overrides                ${f(overridesDropped)} dropped, ${f(overridesAdded)} added (ruling outranks the source)`);
+  console.log(`non-repo provenance      ${f(nonRepoProducts)} of ${f(products)} products (${f(namesFromNonRepoOnly)} names) depend on a dir outside this repo`);
   console.log(`  carrying a print run   ${f(withRun)}`);
   console.log(`names cleaned of source noise ${f(cleaned)}`);
   console.log(`  print runs recovered   ${f(runsRecovered)}`);
@@ -912,6 +1222,6 @@ function main() {
   console.log(`\nwritten to ${OUT}`);
 }
 
-module.exports = { cleanName, splitCsv, bareSelfNamedInsertRoots, foldedPhrase };
+module.exports = { cleanName, splitCsv, bareSelfNamedInsertRoots, foldedPhrase, loadOverrides, applyOverride, applyRootRename, applyInsertSetAdd, applyDropInsertSetRoots, assertOverrideEntry };
 
 if (require.main === module) main();

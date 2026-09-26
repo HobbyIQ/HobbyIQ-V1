@@ -215,7 +215,16 @@ describe("every checklist name round-trips to itself", () => {
 describe("bareColourAliasFromChecklist answers a clean name", () => {
   it.each([
     ["2024 Topps Update Baseball #US294 Yellow", "topps-update-series", 2024, "Yellow"],
-    ["2025 Topps Update Baseball #US319 Pink Diamante Foil", "topps-update-series", 2025, "Pink Diamante Foil"],
+    // "Pink" on 2025 topps-update-series is a GENUINE TIE, not a spelling
+    // gap (2026-09-25 corpus rebuild): the checklist attests BOTH "Pink
+    // Diamante Foil" (a Hanger exclusive) and "Pink Holo Foil" (a Retail
+    // exclusive, limited to 800) -- both real, distinct cards, both exactly
+    // three words after cleaning. colourMapForProduct's own tie-detector
+    // (bareColourAliasFromChecklist.ts) correctly refuses to pick between
+    // them, the same tie-refusal this module documents for every other
+    // ambiguous colour. Verified against the raw checklist CSV, not
+    // asserted from prose.
+    ["2025 Topps Update Baseball #US319 Pink Diamante Foil", "topps-update-series", 2025, null],
   ])("%s", (title, setKey, year, want) => {
     expect(bareColourAliasFromChecklist(title as string, {
       setKey: setKey as string,

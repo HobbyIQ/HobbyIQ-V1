@@ -95,10 +95,61 @@ describe("the shipped corpus loses no product and no unexplained name", () => {
   const foldedPhrase = (s: string) =>
     s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean).map(foldTrailingS).join(" ");
 
+  /**
+   * AN OVERRIDE-CITED DROP IS NOT A LOSS, IT IS A RULING (2026-09-25).
+   *
+   * checklist-parallel-names.overrides.json's `drop` entries remove a name
+   * from a product's `parallels[]`/`insertSets[]` DELIBERATELY -- a Silver
+   * Crackle spelling ruling that outranks a source, or a token-leak drop
+   * (see build-parallel-vocabulary.cjs's applyDropInsertSetRoots header:
+   * "PUZ Hank Aaron" and similar player-named checklist rows poison
+   * playerSegmentIsAPerson's shared vocabulary once a fuller corpus lets
+   * their first name recur across >=2 base brands). Both are cited,
+   * provenance-carrying, intentional -- the opposite of the silent-loss
+   * shape this test exists to catch. Read the SAME file the builder itself
+   * reads, at its default path, so this allowance can never drift from what
+   * the builder actually honours.
+   */
+  function overrideDropsFor(pk: string): Set<string> {
+    try {
+      const raw = JSON.parse(
+        readFileSync(path.join(backend, "data", "checklist-parallel-names.overrides.json"), "utf8"),
+      ) as { overrides?: Array<{ sport?: string; year?: number; setKey?: string; drop?: string[] }> };
+      const entry = (raw.overrides ?? []).find(
+        (e) => pk === `${e.sport}|${e.year}|${e.setKey}`,
+      );
+      return new Set((entry?.drop ?? []).map((n) => n.toLowerCase()));
+    } catch {
+      return new Set();
+    }
+  }
+
+  /**
+   * A NAME THAT ONLY EVER LIVED IN A NON-COMMITTED SOURCE DIRECTORY IS AN
+   * ENVIRONMENT GAP, NOT A REGRESSION THIS BUILD MADE (2026-09-25).
+   *
+   * `pokemon|2025|sv10`'s ONLY committed source (data/checklists/scraped/
+   * pokemon/2025-pokemon-sv10.csv) has been base-only/blank-parallel since
+   * its FIRST commit (c478c1fb) -- confirmed by reading that same manifest
+   * at the 09-19 shipped-corpus commit (9e3d4cad), where it was byte-
+   * identical. The 09-19 corpus's five rarity names ("Ultra Rare",
+   * "Illustration rare", ...) for this product could therefore only have
+   * come from C:/tmp/beckett-bulk or C:/tmp/ci/csv2 -- local, gitignored
+   * scratch directories this repo has never committed -- and neither
+   * currently contains an sv10 file of any kind. This is exactly the
+   * reproducibility gap `sourceDirs`/`reproducibleFromRepo` (per-product,
+   * in the shipped corpus itself) and `productsNotReproducibleFromRepo`
+   * (the file header) exist to surface, not something a corpus rebuild's
+   * OWN logic caused. Left as a known, separately-tracked item rather than
+   * fabricated back in without an authoritative source to verify against.
+   */
+  const KNOWN_ENVIRONMENT_GAPS = new Set(["pokemon|2025|sv10"]);
+
   it("every name a product had is still accounted for", () => {
     const prev = onMain(); if (!prev) return;
     const lost: string[] = [];
     for (const [key, before] of Object.entries(prev.products ?? {})) {
+      if (KNOWN_ENVIRONMENT_GAPS.has(key)) continue;
       const after = shipped.products?.[key];
       if (!after) continue;                       // covered by the test above
       const had = new Set((before.parallels ?? []).map((x) => String(x.name).toLowerCase()));
@@ -124,6 +175,12 @@ describe("the shipped corpus loses no product and no unexplained name", () => {
       const rootFolds = new Set((after.insertSets ?? []).map((s) => foldedPhrase(s.rootKey ?? "")));
       for (const n of [...had]) {
         if (rootFolds.has(foldedPhrase(n))) had.delete(n);
+      }
+      // An override-cited drop is a ruling, not a silent loss -- see this
+      // function's own header.
+      const dropped = overrideDropsFor(key);
+      for (const n of [...had]) {
+        if (dropped.has(n)) had.delete(n);
       }
       if (had.size) lost.push(`${key}: ${[...had].slice(0, 4).join(", ")}`);
     }

@@ -220,3 +220,81 @@ describe("the banner counter is report-only", () => {
     expect(spellingAdoptedCount()).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// SILVER CRACKLE — THE WHOLE 2026 TOPPS FLAGSHIP FAMILY (Drew's ruling,
+// 2026-09-25; extended to all four setKeys on the 09-25 re-review)
+//
+// The only 2026 source today (C:/tmp/ci/csv2/2026-topps-series-1-baseball.csv,
+// not committed to the repo) spells this rung "Silver Crackle Foil (Super Box
+// exclusive)" on every base row -- the cleaner leaves the parenthetical and
+// the word "exclusive" alone (an exclusivity note is normally a REAL
+// distinction), so the source spelling would otherwise win over the ruling.
+// Drew ruled the card is "Silver Crackle Foil", to match the spelling PR
+// #2427 folds the 2026 catalog onto, via
+// backend/data/checklist-parallel-names.overrides.json (drop the source
+// spelling and any Foilboard-shaped variant, add the ruled name) -- see
+// build-parallel-vocabulary.cjs's loadOverrides()/applyOverride() for why
+// the overlay mechanism (checklist-parallel-overlays.json) cannot do this:
+// its merge rule lets the SOURCE win once one exists, backwards for a
+// ruling that overrides an EXISTING source spelling.
+//
+// EXTENDED TO topps / topps-series-1 / topps-series-2 / topps-update-series
+// AS A STANDING GUARD, not a correction of an existing row -- only
+// topps-series-1 has scraped data today. If a future scrape of the other
+// three setKeys carries the same Foilboard/parenthetical spelling, the
+// override still wins. A setKey with NO product in the corpus at all
+// (nothing to attach the override to yet) legitimately answers null rather
+// than the ruled name -- there is no ladder for the ruling to sit inside
+// until a source exists -- but it must NEVER answer "...Foilboard".
+//
+// 2025 Topps (Series 1/2 spell it "Silver Crackle Foilboard"; Update Series
+// spells it "Silver Crackle Foil") is DELIBERATELY UNCHANGED -- no ruling
+// yet for that year, and adopting a spelling there would be exactly the kind
+// of guess this module refuses to make.
+// ---------------------------------------------------------------------------
+describe("Silver Crackle Foil — 2026 Topps flagship family override outranks the source", () => {
+  it.each(["topps", "topps-series-1", "topps-series-2", "topps-update-series"])(
+    "2026 %s never answers a Foilboard-shaped name, and answers the ruled spelling or null",
+    (setKey) => {
+      const got = checklistSpellingFor("Silver Crackle", { sport: "baseball", year: 2026, setKey });
+      expect(got === "Silver Crackle Foil" || got === null).toBe(true);
+      if (got !== null) expect(got).not.toMatch(/foilboard/i);
+    },
+  );
+
+  it("leaves 2025 topps (Series 1/2, merged) exactly as its own checklist source spells it", () => {
+    const got = checklistSpellingFor("Silver Crackle", { sport: "baseball", year: 2025, setKey: "topps" });
+    expect(got).toBe("Silver Crackle Foilboard");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A MALFORMED OVERRIDE FAILS THE BUILD (2026-09-25 re-review)
+//
+// `add` with no `ruling`/`rulingDate`/`reason` is a synthetic parallel with
+// no provenance -- exactly what feedback_no_synthetic_parallels_only_actuals
+// rules out. loadOverrides() must refuse to load such a file rather than
+// silently ship an unreviewed name.
+// ---------------------------------------------------------------------------
+describe("a malformed override entry fails the build, not a silent skip", () => {
+  it("throws when an entry with `add` is missing ruling, rulingDate or reason", () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { assertOverrideEntry } = require("../scripts/build-parallel-vocabulary.cjs");
+    const base = { sport: "baseball", year: 2026, setKey: "topps", add: ["Silver Crackle Foil"] };
+    expect(() => assertOverrideEntry({ ...base })).toThrow(/ruling, rulingDate, reason/);
+    expect(() => assertOverrideEntry({ ...base, ruling: "x" })).toThrow(/rulingDate, reason/);
+    expect(() => assertOverrideEntry({ ...base, ruling: "x", rulingDate: "2026-09-25" })).toThrow(/reason/);
+    expect(() =>
+      assertOverrideEntry({ ...base, ruling: "x", rulingDate: "2026-09-25", reason: "y" }),
+    ).not.toThrow();
+  });
+
+  it("does not require ruling/rulingDate/reason on a drop-only entry (refusing a spelling, not asserting one)", () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { assertOverrideEntry } = require("../scripts/build-parallel-vocabulary.cjs");
+    expect(() =>
+      assertOverrideEntry({ sport: "baseball", year: 2026, setKey: "topps", drop: ["Bad Name"] }),
+    ).not.toThrow();
+  });
+});
