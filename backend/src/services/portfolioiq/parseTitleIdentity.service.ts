@@ -3173,6 +3173,51 @@ function liftInterposedYear(lowerTitle: string): string {
   );
 }
 
+/** A Bowman PRODUCT word immediately following "bowman" (or "bowman's"),
+ *  the same sub-product vocabulary the ladder above this function's own
+ *  bare-Topps guard defers to. Used to tell a real Bowman product name from
+ *  a bare "bowman" that is a player's SURNAME or a place/insert word --
+ *  see `titleNamesBowmanBrand` below, which this feeds. */
+const BOWMAN_PRODUCT_WORD_RE =
+  /\bbowman(?:'?s)?\b\s*(?:chrome|draft|sterling|platinum|best|mega|sapphire|1st|first|prospects?|inception|heritage|high\s*tek|black|university)\b/i;
+
+/**
+ * DOES "bowman" IN THIS TITLE NAME THE BOWMAN BRAND, rather than a player's
+ * surname or an unrelated word ("Matt Bowman", "Bowman Park Legends")?
+ *
+ * CF-BOWMAN-WORD-IS-NOT-ALWAYS-THE-BRAND (stamp-fix batch, 2026-09-26,
+ * defect 2 correction, per review). The guard this feeds used to be a bare
+ * `!/\bbowman\b/.test(t)`, which reads the WORD "bowman" ANYWHERE as the
+ * brand -- including a player's own surname ("2015 Topps Baseball #481
+ * Matt Bowman St. Louis Cardinals RC") or an adversarial insert-sounding
+ * phrase after the card number ("2024 Topps Series 1 #45 Bowman Park
+ * Legends"). Both would have been mis-routed to plain "Bowman" although
+ * `main` correctly answers "Topps" for both -- a regression the reviewer
+ * reproduced against the prior commit.
+ *
+ * TWO WAYS a title genuinely names the brand, either is sufficient:
+ *   1. A real Bowman sub-product word sits right after "bowman"
+ *      (`BOWMAN_PRODUCT_WORD_RE`) -- unambiguous regardless of position.
+ *   2. "bowman" appears BEFORE the card number token (`#...`). Titles in
+ *      this corpus state Year-Brand-Product before the player and card
+ *      number ("Topps 2025 Bowman Munetaka Murakami RC #9 ..."), so a brand
+ *      word sits ahead of the `#`; a word appearing AFTER the `#` is
+ *      describing the player/team/insert context, not naming the product
+ *      ("...#481 Matt Bowman St. Louis Cardinals", "...#45 Bowman Park
+ *      Legends"). A title with no `#` at all has nothing to compare
+ *      against, so "bowman" anywhere is taken at face value (the pre-
+ *      existing, unaffected behavior for titles this narrow shape cannot
+ *      even apply to).
+ */
+function titleNamesBowmanBrand(t: string): boolean {
+  if (BOWMAN_PRODUCT_WORD_RE.test(t)) return true;
+  const bowmanIdx = t.search(/\bbowman\b/i);
+  if (bowmanIdx < 0) return false;
+  const hashIdx = t.indexOf("#");
+  if (hashIdx < 0) return true;
+  return bowmanIdx < hashIdx;
+}
+
 /**
  * DOES THIS TITLE SPELL THE BOWMAN **DRAFT** PRODUCT?
  * (CF-BOWMAN-CHROME-DRAFT-KEEPS-DRAFT — Drew, 2026-09-06, #1911 then #1912.)
@@ -4509,12 +4554,71 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // "Topps": "Holiday", "Gallery" and "Midnight" are ordinary words and a bare
   // rule for any of them would claim another brand's title -- the negative-
   // evidence lesson the Museum Collection and Finest rules above both carry.
-  if (/topps\s+holiday|holiday\s+mega\s*box/i.test(t)) return "Topps Holiday";
+  //
+  // CF-HOLIDAY-ADJACENCY (stamp-fix batch, 2026-09-26, defect 1 /
+  // C:/tmp/rootcause_1234/RESULT.md). The rule used to require "topps" and
+  // "holiday" TEXTUALLY ADJACENT, which missed every real eBay-idiom title
+  // where series/player/card-number/parallel words separate the two: "Topps
+  // Series 2 - Roki Sasaki #558 Holiday", "Topps Roki Sasaki RC Holiday Sun
+  // Rookie #558" -- 82 of a 5,000-row sample (~1,300 extrapolated), each one
+  // priced into the flagship `topps` pool instead of its own product's,
+  // exactly the split-pool shape `feedback_one_card_one_row_one_pool` names.
+  // Same bounded-gap shape as the Bowman's Best Preview rule above (up to 6
+  // intervening tokens -- generous enough for a card number plus a short
+  // parallel phrase, narrow enough that "topps" and "holiday" from unrelated
+  // clauses late in a long title still fall through to bare Topps).
+  //
+  // NEGATIVE GATE, NOT WIDENED CARELESSLY: "...Value Box Holiday Beach
+  // Ball/Hot Dog..." is flagship Topps Baseball's own "Holiday" PARALLEL
+  // name inside a Value Box release, not the Topps Holiday PRODUCT -- reading
+  // it as the product would misfile a real Value-Box card into the wrong
+  // pool. The gate refuses whenever "value box" appears within the same
+  // bounded window ahead of "holiday".
+  if (
+    /topps\s+holiday|holiday\s+mega\s*box/i.test(t)
+    || (
+      /topps\b(?:[\s\-:#/]+[a-z0-9.'#/]+){0,6}?[\s\-:]+holiday\b/i.test(t)
+      && !/value\s*box(?:[\s\-:]+[a-z0-9.'#/]+){0,2}?[\s\-:]+holiday\b/i.test(t)
+    )
+  ) return "Topps Holiday";
   if (/topps\s+diamond\s+icons|diamond\s+icons/i.test(t)) return "Topps Diamond Icons";
   if (/topps\s+brooklyn\s+collection|brooklyn\s+collection/i.test(t)) return "Topps Brooklyn Collection";
   if (/topps\s+gallery/i.test(t)) return "Topps Gallery";
   if (/topps\s+midnight/i.test(t)) return "Topps Midnight";
-  if (/topps/.test(t)) return "Topps";
+  // CF-BARE-TOPPS-DEFERS-TO-A-NAMED-BOWMAN (stamp-fix batch, 2026-09-26,
+  // defect 2 / C:/tmp/rootcause_1234/RESULT.md). Every SPECIFIC Bowman
+  // sub-product rule (Chrome, Draft, Sterling, 1st Edition, Best, ...) lives
+  // in the ladder above this line and already runs first when it matches.
+  // But the ladder has no BARE-Bowman rule of its own -- that generic
+  // fallback sits far below, after this bare `/topps/` catch-all -- so a
+  // title naming both brands with no specific Bowman sub-product word
+  // ("Topps 2025 Bowman Munetaka Murakami RC #9 ...", "Topps Bowman 2025
+  // Jacob Misiorowski ...") fell through the whole specific ladder and was
+  // claimed here, by the word "topps", before ever reaching the word it
+  // should have answered to. 68 of the 5,000-row sample this investigation
+  // measured (~590 extrapolated), each one a real Bowman card priced into
+  // the Topps flagship pool.
+  //
+  // A title stating BOTH brand words, with neither's specific ladder having
+  // matched, defers to the generic Bowman fallback a few hundred lines down
+  // rather than being claimed here by the word "topps" alone -- Bowman
+  // being the second, more specific brand actually printing THIS card (the
+  // seller-written "Topps Bowman ..." / "Topps 2025 Bowman ..." idiom always
+  // names the manufacturer once and the product once, and the product word
+  // is what should win). A title naming Topps alone is unaffected.
+  //
+  // CORRECTED (2026-09-26, per review): the guard originally read a bare
+  // `!/\bbowman\b/.test(t)`, which treats the WORD "bowman" ANYWHERE as the
+  // brand -- wrongly catching a player's own surname ("2015 Topps Baseball
+  // #481 Matt Bowman St. Louis Cardinals RC") and an adversarial
+  // insert-sounding phrase after the card number ("2024 Topps Series 1 #45
+  // Bowman Park Legends"), both of which `main` correctly answers "Topps"
+  // for. `titleNamesBowmanBrand` (defined above `inferFamilySetKeyFromTitle`)
+  // requires either a real Bowman sub-product word right after "bowman", or
+  // "bowman" to sit BEFORE the card number -- the position a brand name
+  // occupies in this corpus's Year-Brand-Product-Player-Number title
+  // convention, never where a trailing surname/place word sits.
+  if (/topps/.test(t) && !titleNamesBowmanBrand(t)) return "Topps";
   // CF-INFER-SET-POKEMON-GUARD (Drew, 2026-08-03). Bowman is the
   // baseball default for unmatched sports titles, but TCA firehose
   // pipes Pokemon/TCG in the same pool. Returning "Bowman" for

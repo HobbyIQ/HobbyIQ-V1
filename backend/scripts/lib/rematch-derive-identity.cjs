@@ -61,9 +61,31 @@ function deriveIdentity(row, deps) {
   const eraSpelled = deps.spellForEra
     ? deps.spellForEra(deps.normalizeSetKey(setKeyRaw), cardYear ?? null)
     : deps.normalizeSetKey(setKeyRaw);
-  const siblingCorrected = deps.applySiblingChecklistOverride
-    ? deps.applySiblingChecklistOverride(eraSpelled, cardNumber, cardYear ?? 0)
+  // CF-R75-REDIRECT-BOTH-ANSWERS-AGREE (stamp-fix batch, 2026-09-26, defect 5
+  // / C:/tmp/mega_ident_1430/RESULT.md). Same seam, same reasoning as the two
+  // comments above: `slug` a few lines down is computed through
+  // deps.computeHobbyIqCardId, which calls resolveSetKeyForSlug internally
+  // and so already carries R75 (BOWMAN_MEGA_BOX_SPLIT_FROM_YEAR -- a bare
+  // "Bowman Mega Box" title, no "chrome", year >= 2026, resolves to the
+  // distinct `bowman-mega` key, not `bowman-chrome-mega-box`). Nothing above
+  // this line ever called resolveSetKeyForSlug, so identity.setKey silently
+  // kept answering "bowman-chrome-mega-box" for every bare 2026 Mega Box
+  // title -- the exact "one function disagreeing with itself" shape
+  // CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT and CF-METAL-UNIVERSE-NAME-WAS-
+  // REVIVED already exist to prevent, just never patched at this one call.
+  // `setKeyRaw` (the title's own raw setName text) is what resolveSetKeyForSlug
+  // needs to see "no chrome" -- passing `eraSpelled` (already folded to a
+  // fixed-point key) would hide the very word the redirect keys on.
+  // ONLY-IMPROVE / additive: an undeclared dep leaves eraSpelled standing
+  // exactly as it was, so a caller that has not wired resolveSetKeyForSlug in
+  // sees identical behavior to before this change.
+  const redirected = deps.resolveSetKeyForSlug
+    ? deps.resolveSetKeyForSlug(sport ?? "", setKeyRaw, cardYear ?? 0)
     : eraSpelled;
+  const eraAndRedirectSpelled = deps.normalizeSetKey(redirected || eraSpelled);
+  const siblingCorrected = deps.applySiblingChecklistOverride
+    ? deps.applySiblingChecklistOverride(eraAndRedirectSpelled, cardNumber, cardYear ?? 0)
+    : eraAndRedirectSpelled;
   // RULING R29 (Drew, 2026-09-13): THE CHECKLIST DECIDES THE PRODUCT.
   //
   // THE SAME DECISION THE SERVICE PATH MAKES, READ FROM A MAP RATHER THAN
@@ -96,7 +118,72 @@ function deriveIdentity(row, deps) {
   const guard = deps.guardSlugInputs({ sport, year: cardYear, normalizedSetKey: setKey, cardNumber, playerName: row.playerName ?? null });
   if (!guard.ok) return { ok: false, reasons: guard.reasons.map((r) => `guard:${r}`) };
 
-  const isAuto = parsed.isAuto || row.isAuto === true;
+  // CF-ISAUTO-FROM-CHECKLIST-NOT-JUST-TITLE (stamp-fix batch, 2026-09-26,
+  // defect 4 / C:/tmp/rootcause_1234/RESULT.md, corrected 2026-09-26 per
+  // review). `parsed.isAuto` alone is ONLY a title-word reader OR'd with a
+  // cardNumber-prefix reader (parseListingIdentity), which is structurally
+  // blind to a signed variant that shares its base card's number with no
+  // distinguishing letter prefix -- 2025 Bowman's Best (B25-xx) mints its
+  // autograph rung exactly this way (5,121 of 23,383 traced base-parallel
+  // sales, 21.9%, backed only at the FLIPPED isAuto value --
+  // C:/tmp/bb25_trace_1530/RESULT.md). The fix is to consult the
+  // checklist's own signed-row list at this card number
+  // (checklistAutoLookup.ts's `checklistSaysAuto`, exposed through
+  // parseTitleIdentity.service.ts's exported `inferIsAuto`) -- gated on
+  // corroboration, so it can only CONFIRM a positive some other signal
+  // already raised, never invent one from a bare base-card title.
+  //
+  // THE DOCTRINE THIS MUST NOT VIOLATE (feedback_isauto_boundary_is_not_
+  // text; memory ruling "isAuto boundary is cardNumber, not text -- text on
+  // card_set is HARMFUL"). `inferIsAuto` ALSO carries an earlier,
+  // UNCONDITIONAL branch that reads `input.setName` against
+  // AUTO_SETNAME_RE with no corroboration gate at all -- a setName
+  // containing the word "Autographs" (e.g. a product-wide label a vendor
+  // slapped on every row, base cards included) would flip isAuto true with
+  // zero connection to THIS row's card number. That is exactly the "text on
+  // card_set is HARMFUL" shape the ruling forbids, so `setName` is
+  // deliberately NEVER passed to `inferIsAuto` here -- only the checklist
+  // branch is reachable from this call, and it alone decides.
+  //
+  // ADDITIVE ONLY, DOCTRINE-COMPLIANT ONLY: an absent `inferIsAuto` dep, or
+  // an absent `checklistAuto` dep, leaves `isAuto` exactly as it was (the
+  // plain OR below) -- the checklist can only turn a false into a true,
+  // never the reverse, and only when the checklist itself says this exact
+  // cardNumber is signed.
+  //
+  // CORROBORATION SOURCE, STATED PLAINLY (added 2026-09-26 per review). With
+  // corroboration sourced from `row.isAuto === true` ALONE, this branch can
+  // only ever CONFIRM a row the plain OR below already resolves true --
+  // it cannot flip a single real row, because a row with row.isAuto=false
+  // and no title auto text never corroborates, so the checklist never even
+  // runs. That is NOT a repair for the 5,121 Bowman's Best sales the trace
+  // measured (C:/tmp/bb25_trace_1530/RESULT.md) -- those need either a
+  // genuinely independent signal (slab OCR, see
+  // `slabOcrVerify.service.ts`'s own `isAuto` label read, which this
+  // deriver has no access to) or a direct repoint list, neither of which is
+  // parser work. `row.autoCorroborated` is added below as the pass-through
+  // for exactly that future independent signal -- a caller holding one
+  // (e.g. an OCR pipeline) can set it on the row and this wiring uses it
+  // immediately, with no further code change; today, with no caller
+  // setting it, `row.isAuto` is the only corroboration source in practice
+  // and this remains a confirm-only, no-op-for-real-rows wiring.
+  const isAuto = deps.inferIsAuto
+    ? deps.inferIsAuto({
+        sport, year: cardYear, setKey, cardNumber,
+        // setName is INTENTIONALLY OMITTED -- see the doctrine note above.
+        titleHasAutoText: parsed.isAuto === true,
+        // CORROBORATION, NOT INVENTION: the checklist only confirms an
+        // autograph some INDEPENDENT signal already pointed at -- the
+        // row's own STORED isAuto verdict from an earlier ingest, OR an
+        // explicit `row.autoCorroborated` a caller with its own evidence
+        // (slab OCR, a manual review) can set. A plain base-card title at
+        // a shared number with no other signal stays non-auto, exactly as
+        // `checklistAutoLookup.ts`'s own doc comment requires (most
+        // #B25-GW sales are the base prospect, not the auto).
+        autoCorroboration: row.isAuto === true || row.autoCorroborated === true,
+        checklistAuto: deps.checklistAuto ?? null,
+      })
+    : (parsed.isAuto || row.isAuto === true);
   // THE ONE THING THAT LEGITIMATELY MAKES A ROW AN AUTO.
   //
   // parseListingIdentity ORs a title-word reader with the cardNumber reader
