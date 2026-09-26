@@ -37,6 +37,47 @@
  * Jr./Sr. split -- keeps the rows apart exactly as it does everywhere else
  * `namesAgree` is wired in.
  *
+ * CF-A-COINCIDENCE-IS-NOT-A-SIBLING (incident, 2026-09-26, run 36275442077).
+ * "same setKey" was the ONLY thing `isSiblingRungTwin` refused to call a
+ * twin -- ANY other setKey, related or not, qualified. 2018 Topps Living Set
+ * #1 (Aaron Judge, base, unnumbered) staged clean and got read as a twin of
+ * 2018 Topps Chrome #1 -- same Judge, same number, by pure coincidence of two
+ * completely unrelated products' numbering, not because Living Set is a
+ * sibling of Chrome (it isn't; `topps-living-set` has no parent and its own
+ * `family`, per catalog/productSetKeys.ts). 16 of 480 rows skipped this way.
+ *
+ * CF-A-COUSIN-IS-NOT-A-SIBLING-EITHER (review, PR #2448, 2026-09-26). The
+ * first fix widened the check to "the two setKeys' full ancestry chains
+ * share ANY entry" -- which caught the Living Set incident, but also let two
+ * COUSINS (children of the same grandparent, neither one the other's parent)
+ * read as twins: `bowman-draft` and `bowman-sterling` both roll up to
+ * `bowman` but are unrelated products, and `bowman-chrome` vs
+ * `bowman-chrome-sapphire` shared `bowman-chrome` in their chains even though
+ * "sapphire never crosses" is stated doctrine (the header comment on this
+ * table, catalog/productSetKeys.ts, and project_bowman_setkey_taxonomy:
+ * bowman-vs-chrome and sapphire are DIFFERENT cards). The guard exists to
+ * stop re-minting the SAME card attested a second time under a sibling key
+ * (`bowman` vs `bowman-chrome`, `topps-chrome` vs `topps-series-1` -- BOTH
+ * direct children of `topps`, so this predicate treats "direct parent/child"
+ * as covering the immediate family a checklist genuinely shares numbering
+ * with) -- not to refuse every product that happens to share an ancestor
+ * several steps up, and never a specialization the registry's own doctrine
+ * says stays home.
+ *
+ * THE RULE, restated: `isKnownSiblingSetKey` is true ONLY when one setKey is
+ * the OTHER's direct `parent` (via `productParentOf` -- one hop, not the
+ * full ancestry walk) AND neither side is a NEVER-CROSSES specialization
+ * (`isNeverCrossingSpecialization` below -- sapphire, 1st edition; the exact
+ * two families the table's own header comment names as never crossing, and
+ * the ONLY vocabulary this file hand-lists, because the registry carries no
+ * single boolean field for "this specific parent/child pair never crosses"
+ * -- `refines` is close but does not cover the bowman/bowman-chrome or
+ * panini-prizm/panini-prizm-draft-picks pairs this fix must KEEP, so it is
+ * not reused here). `isKnownSiblingSetKey` below is REQUIRED before the rung
+ * shape or `namesAgree` are even consulted. An unrelated product, a cousin,
+ * or a never-crossing specialization is never a twin, no matter how many
+ * other fields happen to line up.
+ *
  * Pure query-shape + pure classification live here, with the Cosmos call
  * itself injected as `queryPage`, so a test can drive this with a fake page
  * source and never touch a network -- the same separation
@@ -44,6 +85,44 @@
  * halves.
  */
 const { namesAgree } = require("./name-agreement.cjs");
+
+/**
+ * CF-A-COUSIN-IS-NOT-A-SIBLING-EITHER. The two specializations the registry's
+ * own header comment (catalog/productSetKeys.ts, ruling (c): "sapphire never
+ * crosses") and project_bowman_setkey_taxonomy name explicitly as NEVER
+ * crossing into their immediate parent's pool, however directly related the
+ * parent/child pair otherwise is: `bowman-chrome-sapphire` is not
+ * `bowman-chrome`, `topps-series-1-1st-edition` is not `topps-series-1`. A
+ * closed, doctrine-cited list rather than a derived field, because no single
+ * boolean on the table's own entries distinguishes "chrome IS a sibling of
+ * its flagship" from "sapphire is NOT a sibling of its own parent" -- both
+ * shapes are `P(child, { parent })` with no `family` override. Matched as a
+ * hyphen-bounded token (`-sapphire` / `sapphire-` / exact `sapphire`, same
+ * for `1st-edition`) so a setKey is flagged only when the word itself
+ * appears, never a substring accident.
+ */
+const NEVER_CROSSING_TOKENS = [/(^|-)sapphire(-|$)/, /(^|-)1st-edition(-|$)/];
+function isNeverCrossingSpecialization(setKey) {
+  const s = String(setKey ?? "").trim().toLowerCase();
+  return NEVER_CROSSING_TOKENS.some((re) => re.test(s));
+}
+
+/**
+ * Is `candidateSetKey` an actual sibling of `setKey` -- a DIRECT parent/child
+ * pair in `productParentOf`'s own registry (one hop only, checked in both
+ * directions so the pair reads the same whichever side is "the incoming
+ * row"), with NEITHER side a never-crossing specialization? Two children of
+ * the same grandparent (`bowman-draft` and `bowman-sterling`, both `parent:
+ * "bowman"`) are cousins, not siblings, and are correctly refused: neither
+ * is the other's direct parent.
+ */
+function isKnownSiblingSetKey(candidateSetKey, setKey, productParentOf) {
+  const a = String(candidateSetKey ?? "").trim().toLowerCase();
+  const b = String(setKey ?? "").trim().toLowerCase();
+  if (!a || !b || a === b) return false;
+  if (isNeverCrossingSpecialization(a) || isNeverCrossingSpecialization(b)) return false;
+  return productParentOf(a) === b || productParentOf(b) === a;
+}
 
 /** The SQL this check runs. Exposed so a test can assert the shape without
  *  a live container, and so every caller runs the identical predicate. */
@@ -65,9 +144,17 @@ function siblingRungTwinQuery({ sport, year, cardNumber }) {
  * Does `row` (an existing catalog document from the query above) name the
  * same rung as the staged row, under a DIFFERENT setKey, at checklist
  * authority? Pure: no I/O, so the branch is unit-testable with plain objects.
+ *
+ * `productParentOf` is REQUIRED (CF-A-COINCIDENCE-IS-NOT-A-SIBLING /
+ * CF-A-COUSIN-IS-NOT-A-SIBLING-EITHER): a same-number match under an
+ * unrelated product's setKey, a cousin's setKey, or a never-crossing
+ * specialization's setKey is checked FIRST, before the rung shape or
+ * `namesAgree` ever run, so none of those can reach the write-blocking
+ * branch no matter what else happens to line up.
  */
-function isSiblingRungTwin(row, staged, { setKey, parallelSlugOf, catalogAuthorityOf }) {
+function isSiblingRungTwin(row, staged, { setKey, parallelSlugOf, catalogAuthorityOf, productParentOf }) {
   if (!row || row.setKey === setKey) return false;
+  if (!isKnownSiblingSetKey(row.setKey, setKey, productParentOf)) return false;
   if (catalogAuthorityOf(row.source) !== "checklist") return false;
   const rowParallelSlug = parallelSlugOf(row.parallel || "Base");
   const stagedParallelSlug = parallelSlugOf(staged.parallel || "Base");
@@ -117,11 +204,16 @@ async function drainQuery(container, query, retry = (fn) => fn()) {
  * matching row (for the SKIP decision) plus the full list (for the banner's
  * examples), so a caller wanting only "is there one" is not forced to
  * materialise every match, while the banner can still show up to 20.
+ *
+ * `productParentOf` is REQUIRED, same as `setKey`/`parallelSlugOf`/
+ * `catalogAuthorityOf` -- there is no default that would be safe to fall back
+ * to (a caller that forgot it would rather see every row come back as "not a
+ * twin" loudly in its own tests than silently widen back to "any setKey").
  */
-async function findSiblingRungTwins(container, staged, { sport, year, setKey, parallelSlugOf, catalogAuthorityOf, retry }) {
+async function findSiblingRungTwins(container, staged, { sport, year, setKey, parallelSlugOf, catalogAuthorityOf, productParentOf, retry }) {
   const query = siblingRungTwinQuery({ sport, year, cardNumber: staged.cardNumber });
   const rows = await drainQuery(container, query, retry);
-  return rows.filter((row) => isSiblingRungTwin(row, staged, { setKey, parallelSlugOf, catalogAuthorityOf }));
+  return rows.filter((row) => isSiblingRungTwin(row, staged, { setKey, parallelSlugOf, catalogAuthorityOf, productParentOf }));
 }
 
 /**
@@ -159,6 +251,8 @@ function createSemaphore(limit) {
 }
 
 module.exports = {
+  isNeverCrossingSpecialization,
+  isKnownSiblingSetKey,
   siblingRungTwinQuery,
   isSiblingRungTwin,
   drainQuery,
