@@ -166,7 +166,7 @@ describe("a fixture with a folded source duplicate balances and does not alarm",
   it("prints the balanced rows-read banner with the fold declared", () => {
     const { stdout, status } = runIngestApply(dir);
     expect(status).toBe(0);
-    expect(stdout).toMatch(/csv rows read 3 = written 2 \+ failed 0 \+ skipped 0 \+ refused 0 \+ source duplicates 1 \+ present\/checklist 0 \+ rung twin 0\s+\(balances\)/);
+    expect(stdout).toMatch(/csv rows read 3 = written 2 \+ failed 0 \+ skipped 0 \+ refused 0 \+ source duplicates 1 \+ present\/checklist 0 \+ rung twin 0 \+ note in rung name 0\s+\(balances\)/);
   });
 
   it("does NOT print WORK VANISHED / UNACCOUNTED — the reportWrites call must declare the fold too", () => {
@@ -206,7 +206,7 @@ describe("a row that vanishes for real still alarms", () => {
     // desynchronise it through the network layer.
     const { stdout, status } = runIngestApply(dir, { failCardNumber: "2" });
     expect(status).toBe(0);
-    expect(stdout).toMatch(/csv rows read 3 = written 2 \+ failed 0 \+ skipped 0 \+ refused 0 \+ source duplicates 1 \+ present\/checklist 0 \+ rung twin 0\s+\(balances\)/);
+    expect(stdout).toMatch(/csv rows read 3 = written 2 \+ failed 0 \+ skipped 0 \+ refused 0 \+ source duplicates 1 \+ present\/checklist 0 \+ rung twin 0 \+ note in rung name 0\s+\(balances\)/);
   });
 
   it("a mutant that under-declares skipped to reportWrites (drops sourceDuplicates) DOES alarm on this fixture", () => {
@@ -217,7 +217,7 @@ describe("a row that vanishes for real still alarms", () => {
     // slop, is what silences it.
     const src = fs.readFileSync(script, "utf8");
     const mutated = src.replace(
-      "skipped: skipCount() + refuseCount() + sourceDuplicates + siblingGuardCount(), failed });",
+      "skipped: skipCount() + refuseCount() + sourceDuplicates + siblingGuardCount() + noteInRungName, failed });",
       "skipped: skipCount() + refuseCount(), failed });",
     );
     expect(mutated).not.toBe(src);
@@ -248,7 +248,7 @@ describe("the fix is the declared call site, not a change to the shared reconcil
   it("reportWrites is called with sourceDuplicates folded into skipped", () => {
     const src = fs.readFileSync(script, "utf8");
     expect(src).toMatch(
-      /reportWrites\(\{ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skipCount\(\) \+ refuseCount\(\) \+ sourceDuplicates \+ siblingGuardCount\(\), failed \}\);/,
+      /reportWrites\(\{ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skipCount\(\) \+ refuseCount\(\) \+ sourceDuplicates \+ siblingGuardCount\(\) \+ noteInRungName, failed \}\);/,
     );
   });
 

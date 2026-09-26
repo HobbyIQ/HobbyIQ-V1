@@ -109,6 +109,13 @@ const INSERT_SET = require(path.join(__dirname, "lib", "insert-set-key.cjs"));
 // CF-A-SIBLING-KEY-IS-STILL-THE-SAME-RUNG (Drew 2026-09-25): the rung-level
 // sibling check the planner cannot run itself, since it has no Cosmos access.
 const SIBLING_RUNG_TWIN = require(path.join(__dirname, "lib", "sibling-rung-twin.cjs"));
+// CF-A-NOTE-IS-NOT-A-RUNG (Drew 2026-09-25): 251,043 checklist-grade rows
+// carry a channel word, an inline print run, "exclusive", pack odds, SKU
+// text or a stray parenthetical glued into `parallel`. Pure classifier, no
+// Cosmos access needed -- a dirty name is REFUSED here, never rewritten: the
+// human-form name must be verified against the checklist by a person before
+// it becomes the stored value.
+const { rungNameHygiene } = require(path.join(__dirname, "lib", "rung-name-hygiene.cjs"));
 // CF-A-BURST-IS-NOT-A-BATCH (review finding, 2026-09-25 PR #2422). The
 // per-row loop below fans out CONCURRENCY (default 48) rows at once; without
 // its own cap, the sibling-twin query -- a SEPARATE cross-partition query,
@@ -183,6 +190,14 @@ function productOf(csvPath) {
           // run could carry by accident.
           allowSiblingRungTwins: m.allowSiblingRungTwins === true && typeof m.allowSiblingRungTwinsReason === "string" && m.allowSiblingRungTwinsReason.trim().length > 0
             ? { reason: m.allowSiblingRungTwinsReason.trim() }
+            : null,
+          // CF-A-NOTE-IS-NOT-A-RUNG waiver. The rare product where a
+          // parenthetical, a channel word or a digit run genuinely IS part
+          // of the stated rung name -- never an env flag, always a stated,
+          // reasoned assertion by the person who staged the file, exactly
+          // like allowSiblingRungTwins above.
+          allowNoteInRungName: m.allowNoteInRungName === true && typeof m.allowNoteInRungNameReason === "string" && m.allowNoteInRungNameReason.trim().length > 0
+            ? { reason: m.allowNoteInRungNameReason.trim() }
             : null,
         };
       }
@@ -327,6 +342,11 @@ function planStagedDirectory(DIR, files) {
       const player = cleanPlayerName(rawPlayer);
       if (!cardNumber || !player) continue;
       if (isCardLineParallel(parallel, declaredVocab)) continue;
+      // CF-A-NOTE-IS-NOT-A-RUNG: a dirty parallel is dropped from the plan
+      // entirely, same as a card-line parallel above -- it must never reach
+      // the id-collision math, or a note-carrying row could shape another
+      // row's registered key.
+      if (!product.allowNoteInRungName && !rungNameHygiene(parallel).clean) continue;
       rawRows.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote });
     }
     // CF-A-PLAYER-IS-NOT-A-RUNG, per file: the file knows its own players.
@@ -432,6 +452,16 @@ async function main() {
   const REINGEST = String(process.env.REINGEST || "") === "true";
   let alreadyDone = 0;
   let cardLineParallel = 0, explodedFiles = 0, explodedCategories = 0, explodedRows = 0, playerNameParallel = 0;
+  // CF-A-NOTE-IS-NOT-A-RUNG counters. `noteInRungName` is a DECLARED,
+  // per-row skip -- exactly like cardLineParallel above -- never an upsert
+  // attempt, so it costs nothing in RUs. `noteInRungNameWaived` mirrors
+  // CF-WAIVED-IS-NOT-INVISIBLE: informational only, never added to the
+  // reconciliation, because a waived row is already counted once by falling
+  // through to every other gate as if it were clean.
+  let noteInRungName = 0;
+  const noteInRungNameExamples = [];
+  let noteInRungNameWaived = 0;
+  let noteInRungNameWaivedReason = null;
   const foldName = (v) => String(v ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte"]);
   const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
@@ -570,6 +600,11 @@ async function main() {
         const [category, cardNumber, parallel, isAuto, printRun, rawPlayer] = splitCsv(t);
         const player = cleanPlayerName(rawPlayer);
         if (!cardNumber || !player) continue;
+        // CF-A-NOTE-IS-NOT-A-RUNG: a dirty parallel must not shape this
+        // product's sibling-separation measurement -- it is refused per-row
+        // below and never reaches an upsert, so it must not be allowed to
+        // decide another row's registered key either.
+        if (!product.allowNoteInRungName && !rungNameHygiene(parallel).clean) continue;
         entry.rows.push({
           category, cardNumber, parallel, isAuto, printRun, player,
           subsetName: product.subsetName || null,
@@ -619,6 +654,31 @@ async function main() {
       // parallel column is a scraper joining a card line to a rung; it can
       // never name a parallel. Skipped per row, counted, never written.
       if (isCardLineParallel(parallel, declaredVocab)) { cardLineParallel++; continue; }
+      // CF-A-NOTE-IS-NOT-A-RUNG (Drew 2026-09-25). A channel word, an inline
+      // print-run count, "exclusive", pack odds, SKU text or a stray
+      // parenthetical glued into the checklist's own `parallel` column is
+      // REFUSED, never auto-rewritten -- the human-form name a person
+      // verifies against the checklist is the only thing that may become
+      // the stored value. The manifest's stated waiver still runs the
+      // classifier (CF-WAIVED-IS-NOT-INVISIBLE): the row is counted and
+      // named either way, and only the SKIP itself is conditional.
+      {
+        const hygiene = rungNameHygiene(parallel);
+        if (!hygiene.clean) {
+          const example = `${String(cardNumber).toUpperCase()}|"${parallel}" -> ${hygiene.kind}`
+            + (hygiene.suggestedName ? ` (suggested: "${hygiene.suggestedName}"` : " (suggested: ")
+            + (hygiene.suggestedPrintRun ? `, printRun ${hygiene.suggestedPrintRun})` : ")");
+          if (product.allowNoteInRungName) {
+            noteInRungNameWaived++;
+            noteInRungNameWaivedReason = product.allowNoteInRungName.reason;
+            if (noteInRungNameExamples.length < 20) noteInRungNameExamples.push(`WAIVED: ${example}`);
+          } else {
+            noteInRungName++;
+            if (noteInRungNameExamples.length < 5) noteInRungNameExamples.push(example);
+            continue;
+          }
+        }
+      }
       rawRows.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote });
       continue;
       batch.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote: parallelNote || null });
@@ -1203,6 +1263,15 @@ async function main() {
   console.log(`  files with nothing left ${f(explodedFiles)}   <- every category refused`);
   console.log(`  rows with card-line parallel ${f(cardLineParallel)}   <- "100 Mike Trout" is not a rung; skipped`);
   console.log(`  rows with player-name parallel ${f(playerNameParallel)}   <- a roster line, not a rung; skipped`);
+  console.log(`  refused: note in rung name ${f(noteInRungName)}   <- channel word, print run, "exclusive", pack odds, SKU text or a stray parenthetical glued into the name; REFUSED, never auto-rewritten`);
+  for (const line of noteInRungNameExamples.filter((e) => !e.startsWith("WAIVED:")).slice(0, 5)) console.log(`      ${line}`);
+  if (noteInRungNameWaived) {
+    // CF-WAIVED-IS-NOT-INVISIBLE, same discipline as the sibling-rung-twin
+    // waiver: informational only, never added to the reconciliation, because
+    // these rows fall through and are already counted wherever they land.
+    console.log(`  note-in-rung-name WAIVED (reason: ${noteInRungNameWaivedReason}) ${f(noteInRungNameWaived)}   <- manifest.allowNoteInRungName suppressed the refusal; these rows WERE written`);
+    for (const line of noteInRungNameExamples.filter((e) => e.startsWith("WAIVED:")).slice(0, 5)) console.log(`      ${line}`);
+  }
   console.log(`  csv rows read          ${f(rows)}`);
   console.log(`  files REFUSED, id integrity ${f(filesRefused)} (${f(refusedRows)} rows)   <- unregistered insert-set keys, or ids claimed by two rows; named above, whole file, never half-ingested`);
   console.log(`  insert sets on their own key ${f(insertSetKeys)} (${f(insertSetRows)} rows)   <- SAME-NUMBERED subsets only; base and its rungs stay on the product key`);
@@ -1317,7 +1386,7 @@ async function main() {
     // a loss -- so it is added here, not to `refuseCount()` (that term is for
     // a whole refused file/category, and duplicates are never refused: the
     // row's twin already landed).
-    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skipCount() + refuseCount() + sourceDuplicates + siblingGuardCount(), failed });
+    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skipCount() + refuseCount() + sourceDuplicates + siblingGuardCount() + noteInRungName, failed });
   }
   // The per-row gates this file dropped before ever reaching the batch: a
   // DELIBERATE, DECLARED skip, never a lost row.
@@ -1342,6 +1411,12 @@ async function main() {
     return alreadyPresentChecklist + rungTwinUnderSiblingKey;
   }
   const siblingGuardSkipped = siblingGuardCount();
+  // CF-A-NOTE-IS-NOT-A-RUNG, its own term -- never folded into skipCount()
+  // (that would let a channel-word/print-run/odds/SKU shape hide behind an
+  // ordinary "no card number/player" drop) nor refuseCount() (that term is
+  // for a whole FILE or CATEGORY the id-integrity guard refused; a dirty
+  // name is refused per ROW, before the row ever reaches that plan).
+  const noteInRungNameRefused = noteInRungName;
 
   // CF-CSV-ROWS-READ-MUST-EQUAL-EVERY-BUCKET-THAT-CLAIMS-ONE (2026-09-13,
   // follow-up to the id-integrity guard above). `rows skipped` and `failed`
@@ -1356,10 +1431,10 @@ async function main() {
   // it is its own term. Hiding it inside `skipped` would let a real skip grow
   // unnoticed behind it; leaving it out breaks the identity the reconciliation
   // exists to prove.
-  const reconciled = written + failed + skipped + refused + sourceDuplicates + siblingGuardSkipped;
-  console.log(`  csv rows read ${f(rows)} = written ${f(written)} + failed ${f(failed)} + skipped ${f(skipped)} + refused ${f(refused)} + source duplicates ${f(sourceDuplicates)} + present/checklist ${f(alreadyPresentChecklist)} + rung twin ${f(rungTwinUnderSiblingKey)}${rows === reconciled ? "  (balances)" : `  <- MISMATCH: sums to ${f(reconciled)}`}`);
+  const reconciled = written + failed + skipped + refused + sourceDuplicates + siblingGuardSkipped + noteInRungNameRefused;
+  console.log(`  csv rows read ${f(rows)} = written ${f(written)} + failed ${f(failed)} + skipped ${f(skipped)} + refused ${f(refused)} + source duplicates ${f(sourceDuplicates)} + present/checklist ${f(alreadyPresentChecklist)} + rung twin ${f(rungTwinUnderSiblingKey)} + note in rung name ${f(noteInRungNameRefused)}${rows === reconciled ? "  (balances)" : `  <- MISMATCH: sums to ${f(reconciled)}`}`);
   if (rows !== reconciled) {
-    console.error(`\nFATAL: csv rows read (${f(rows)}) does not equal written + failed + skipped + refused + source duplicates + present/checklist + rung twin (${f(reconciled)}).`);
+    console.error(`\nFATAL: csv rows read (${f(rows)}) does not equal written + failed + skipped + refused + source duplicates + present/checklist + rung twin + note in rung name (${f(reconciled)}).`);
     console.error(`       ${f(Math.abs(rows - reconciled))} row(s) ${rows > reconciled ? "vanished from every counter this run declares" : "were double-counted across buckets"}.`);
     console.error(`       A row this run read must land in exactly one bucket -- the banner cannot be trusted otherwise.`);
     return { exitCode: 5 };
