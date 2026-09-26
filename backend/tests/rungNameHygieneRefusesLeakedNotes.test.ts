@@ -35,6 +35,14 @@ describe("rungNameHygiene: dirty shapes are refused with a kind + suggested clea
     { input: "Sapphire 8700 copies", kind: "print-run", suggestedName: "Sapphire", suggestedPrintRun: 8700 },
     { input: "Gold Refractor numbered to 500", kind: "print-run", suggestedName: "Gold Refractor", suggestedPrintRun: 500 },
     { input: "Vintage Stock 199 cards", kind: "print-run", suggestedName: "Vintage Stock", suggestedPrintRun: 199 },
+    // -- CF-A-YEAR-LEAD-IS-NOT-A-PRINT-RUN (review finding, PR #2432): a
+    // bare 4-digit count followed by a run-unit word is the SAME WIDTH as a
+    // real year lead ("1989 Topps Design") and must still refuse.
+    { input: "8700 copies", kind: "print-run", suggestedName: null, suggestedPrintRun: 8700 },
+    { input: "5000 made", kind: "print-run", suggestedName: null, suggestedPrintRun: 5000 },
+    { input: "2999 cards", kind: "print-run", suggestedName: null, suggestedPrintRun: 2999 },
+    { input: "1999 made", kind: "print-run", suggestedName: null, suggestedPrintRun: 1999 },
+    { input: "2500 printed", kind: "print-run", suggestedName: null, suggestedPrintRun: 2500 },
     // -- pack odds --
     { input: "Gold Wave 1:38 packs", kind: "odds", suggestedName: "Gold Wave" },
     { input: "Prizm Silver 1:24 packs", kind: "odds", suggestedName: "Prizm Silver" },
@@ -70,6 +78,7 @@ describe("rungNameHygiene: dirty shapes are refused with a kind + suggested clea
 describe("rungNameHygiene: legitimate rung names classify clean", () => {
   const clean = [
     "1989 Topps Design",       // year-lead insert name
+    "1990 Topps Baseball",     // year-lead insert name, review-finding pin (PR #2432)
     "Gold /50",                // numbered parallel; the run is in its own column
     "X-Fractor",
     "Base Autograph",

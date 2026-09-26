@@ -139,6 +139,55 @@ describe("the manifest can waive the guard for a genuine stated rung -- never an
     expect(stdout).toContain("refused: note in rung name 1");
     expect(stdout).toContain("catalog rows written   0");
   });
+
+  // CF-A-WAIVER-IS-NOT-A-BLANK-CHECK (review finding, PR #2432). The waiver
+  // is scoped to kinds channel/parenthetical/exclusive -- a human judgment
+  // call about whether a parenthetical IS the stated name. print-run, odds,
+  // sku and run-on-digits are machine-detectable corruptions that no
+  // manifest reason can excuse: a waived product with a print-run-leak row
+  // must still refuse THAT row, even though the same manifest legitimately
+  // waives an unrelated channel-word row alongside it.
+  it("a manifest waiver does NOT waive a print-run leak -- that row still refuses", () => {
+    const dirPrintRun = stageDir("2024-note-waived-printrun", [
+      "category,cardNumber,parallel,isAuto,printRun,player",
+      'base,1,"Crackle Foil: 10,400 copies",false,,Alpha Player',
+      "base,2,Purple Tinsel (Meijer exclusive),false,,Beta Player",
+      "",
+    ].join("\n"), {
+      sport: "basketball", year: 2024, setKey: "note-waived-printrun-set", setName: "2024 Note Waived Print Run",
+      allowNoteInRungName: true,
+      allowNoteInRungNameReason: "test fixture: waives the channel-word row only, never the print-run leak",
+    });
+    const { stdout, status } = runIngestReport(dirPrintRun);
+    expect(status).toBe(0);
+    // Row #1 (print-run) is REFUSED despite the waiver; row #2 (channel) is
+    // waived and written.
+    expect(stdout).toContain("refused: note in rung name 1");
+    expect(stdout).toMatch(/1\|"Crackle Foil: 10,400 copies" -> print-run/);
+    expect(stdout).toContain("catalog rows written   1");
+    expect(stdout).toMatch(/note-in-rung-name WAIVED .* 1 {3}<- manifest\.allowNoteInRungName suppressed the refusal for kinds \[channel\] only/);
+    expect(stdout).toMatch(/csv rows read 2 = written 1 \+ failed 0 \+ skipped 0 \+ refused 0 \+ source duplicates 0 \+ present\/checklist 0 \+ rung twin 0 \+ note in rung name 1\s+\(balances\)/);
+  });
+
+  it("a manifest waiver does not waive odds, sku or run-on-digits either", () => {
+    const dirOther = stageDir("2024-note-waived-other-kinds", [
+      "category,cardNumber,parallel,isAuto,printRun,player",
+      "base,1,Gold Wave 1:38 packs,false,,Alpha Player",
+      "base,2,Gold SKU 84356,false,,Beta Player",
+      "base,3,Platinum2999,false,,Gamma Player",
+      "",
+    ].join("\n"), {
+      sport: "basketball", year: 2024, setKey: "note-waived-other-set", setName: "2024 Note Waived Other Kinds",
+      allowNoteInRungName: true,
+      allowNoteInRungNameReason: "test fixture: no row here is a waivable kind",
+    });
+    const { stdout, status } = runIngestReport(dirOther);
+    expect(status).toBe(0);
+    expect(stdout).toContain("refused: note in rung name 3");
+    expect(stdout).toContain("catalog rows written   0");
+    // No row was waived, so the WAIVED line must not print at all.
+    expect(stdout).not.toContain("note-in-rung-name WAIVED");
+  });
 });
 
 describe("REPORT mode never touches Cosmos -- the gate is a pure per-row check", () => {

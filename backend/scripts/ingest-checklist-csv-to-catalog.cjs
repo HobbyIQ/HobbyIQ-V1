@@ -116,6 +116,24 @@ const SIBLING_RUNG_TWIN = require(path.join(__dirname, "lib", "sibling-rung-twin
 // human-form name must be verified against the checklist by a person before
 // it becomes the stored value.
 const { rungNameHygiene } = require(path.join(__dirname, "lib", "rung-name-hygiene.cjs"));
+// CF-A-WAIVER-IS-NOT-A-BLANK-CHECK (review finding, PR #2432). The manifest
+// waiver exists for the rare product where a channel word, a stray
+// parenthetical or "exclusive" genuinely IS part of the stated rung name --
+// a human judgment call about GRAMMAR. print-run/odds/sku/run-on-digits are
+// never that: each is a MACHINE-DETECTABLE corruption (a digit count, pack
+// odds, a product code, a glued-on number) that is never itself a stated
+// rung name on any product, so no manifest reason can make writing one
+// correct. Scoping the waiver to kind protects a scraper misconfiguration
+// from writing "Crackle Foil: 10,400 copies" verbatim just because the same
+// manifest legitimately waives an unrelated channel-word product.
+const NOTE_IN_RUNG_NAME_WAIVABLE_KINDS = new Set(["channel", "parenthetical", "exclusive"]);
+/** Is this row's dirty classification waived by the product's manifest?
+ *  false for a clean row (nothing to waive) and false for any kind outside
+ *  NOTE_IN_RUNG_NAME_WAIVABLE_KINDS, regardless of what the manifest says --
+ *  print-run/odds/sku/run-on-digits refuse UNCONDITIONALLY. */
+function noteInRungNameWaivedFor(product, hygiene) {
+  return Boolean(product.allowNoteInRungName) && !hygiene.clean && NOTE_IN_RUNG_NAME_WAIVABLE_KINDS.has(hygiene.kind);
+}
 // CF-A-BURST-IS-NOT-A-BATCH (review finding, 2026-09-25 PR #2422). The
 // per-row loop below fans out CONCURRENCY (default 48) rows at once; without
 // its own cap, the sibling-twin query -- a SEPARATE cross-partition query,
@@ -345,8 +363,13 @@ function planStagedDirectory(DIR, files) {
       // CF-A-NOTE-IS-NOT-A-RUNG: a dirty parallel is dropped from the plan
       // entirely, same as a card-line parallel above -- it must never reach
       // the id-collision math, or a note-carrying row could shape another
-      // row's registered key.
-      if (!product.allowNoteInRungName && !rungNameHygiene(parallel).clean) continue;
+      // row's registered key. The manifest waiver is KIND-SCOPED
+      // (noteInRungNameWaivedFor): print-run/odds/sku/run-on-digits drop
+      // here regardless of what the manifest says.
+      {
+        const hygiene = rungNameHygiene(parallel);
+        if (!hygiene.clean && !noteInRungNameWaivedFor(product, hygiene)) continue;
+      }
       rawRows.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote });
     }
     // CF-A-PLAYER-IS-NOT-A-RUNG, per file: the file knows its own players.
@@ -462,6 +485,11 @@ async function main() {
   const noteInRungNameExamples = [];
   let noteInRungNameWaived = 0;
   let noteInRungNameWaivedReason = null;
+  // CF-A-WAIVER-IS-NOT-A-BLANK-CHECK. Which KINDS the manifest's waiver
+  // actually suppressed this run, named in the banner -- so "WAIVED 12"
+  // never reads as "the manifest waived everything" when it only ever
+  // waived channel-word rows.
+  const noteInRungNameWaivedKinds = new Set();
   const foldName = (v) => String(v ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte"]);
   const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
@@ -603,8 +631,12 @@ async function main() {
         // CF-A-NOTE-IS-NOT-A-RUNG: a dirty parallel must not shape this
         // product's sibling-separation measurement -- it is refused per-row
         // below and never reaches an upsert, so it must not be allowed to
-        // decide another row's registered key either.
-        if (!product.allowNoteInRungName && !rungNameHygiene(parallel).clean) continue;
+        // decide another row's registered key either. Kind-scoped waiver,
+        // same as the planner above.
+        {
+          const hygiene = rungNameHygiene(parallel);
+          if (!hygiene.clean && !noteInRungNameWaivedFor(product, hygiene)) continue;
+        }
         entry.rows.push({
           category, cardNumber, parallel, isAuto, printRun, player,
           subsetName: product.subsetName || null,
@@ -662,15 +694,24 @@ async function main() {
       // the stored value. The manifest's stated waiver still runs the
       // classifier (CF-WAIVED-IS-NOT-INVISIBLE): the row is counted and
       // named either way, and only the SKIP itself is conditional.
+      //
+      // CF-A-WAIVER-IS-NOT-A-BLANK-CHECK (review finding, PR #2432). The
+      // waiver is KIND-SCOPED via noteInRungNameWaivedFor: only
+      // channel/parenthetical/exclusive -- a human judgment call about
+      // whether the parenthetical IS the stated name -- can be waived.
+      // print-run/odds/sku/run-on-digits are machine-detectable corruptions
+      // that are never themselves a stated rung name on any product, so they
+      // refuse UNCONDITIONALLY regardless of what the manifest says.
       {
         const hygiene = rungNameHygiene(parallel);
         if (!hygiene.clean) {
           const example = `${String(cardNumber).toUpperCase()}|"${parallel}" -> ${hygiene.kind}`
             + (hygiene.suggestedName ? ` (suggested: "${hygiene.suggestedName}"` : " (suggested: ")
             + (hygiene.suggestedPrintRun ? `, printRun ${hygiene.suggestedPrintRun})` : ")");
-          if (product.allowNoteInRungName) {
+          if (noteInRungNameWaivedFor(product, hygiene)) {
             noteInRungNameWaived++;
             noteInRungNameWaivedReason = product.allowNoteInRungName.reason;
+            noteInRungNameWaivedKinds.add(hygiene.kind);
             if (noteInRungNameExamples.length < 20) noteInRungNameExamples.push(`WAIVED: ${example}`);
           } else {
             noteInRungName++;
@@ -1269,7 +1310,7 @@ async function main() {
     // CF-WAIVED-IS-NOT-INVISIBLE, same discipline as the sibling-rung-twin
     // waiver: informational only, never added to the reconciliation, because
     // these rows fall through and are already counted wherever they land.
-    console.log(`  note-in-rung-name WAIVED (reason: ${noteInRungNameWaivedReason}) ${f(noteInRungNameWaived)}   <- manifest.allowNoteInRungName suppressed the refusal; these rows WERE written`);
+    console.log(`  note-in-rung-name WAIVED (reason: ${noteInRungNameWaivedReason}) ${f(noteInRungNameWaived)}   <- manifest.allowNoteInRungName suppressed the refusal for kinds [${[...noteInRungNameWaivedKinds].sort().join(", ")}] only; these rows WERE written; print-run/odds/sku/run-on-digits always refuse regardless`);
     for (const line of noteInRungNameExamples.filter((e) => e.startsWith("WAIVED:")).slice(0, 5)) console.log(`      ${line}`);
   }
   console.log(`  csv rows read          ${f(rows)}`);

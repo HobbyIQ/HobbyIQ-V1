@@ -96,13 +96,15 @@ const ANY_PAREN_RE = /\(([^()]*)\)/g;
 const ODDS_RE = /\b\d{1,4}\s*(?::|in)\s*\d{1,5}\s*(?:packs?|boxes?|cases?|hobby|retail)?\b/i;
 
 /** Inline print-run counts glued into the name: "10,400 copies",
- *  "8700 copies", ": 10,400 copies", "/50 copies", "numbered to 500". A bare
- *  "/50" with NOTHING else around it is the standard numbered-parallel
- *  grammar ("Gold /50") and is handled separately as clean when it is the
- *  row's entire trailing token -- this regex requires the word "copies"/
- *  "made"/"cards" or an explicit "numbered to" so it never fires on that
- *  shape. */
-const PRINT_RUN_WORDS_RE = /(\d[\d,]{0,6})\s*(?:copies|cards made|cards|made)\b/i;
+ *  "8700 copies", "2500 printed", ": 10,400 copies", "/50 copies", "numbered
+ *  to 500". A bare "/50" with NOTHING else around it is the standard
+ *  numbered-parallel grammar ("Gold /50") and is handled separately as
+ *  clean when it is the row's entire trailing token -- this regex requires
+ *  the word "copies"/"made"/"cards"/"printed" or an explicit "numbered to"
+ *  so it never fires on that shape. Kept in sync with
+ *  RUN_UNIT_AFTER_DIGITS_RE above, which the year-lead exemption checks
+ *  against -- the same run-unit vocabulary decides both. */
+const PRINT_RUN_WORDS_RE = /(\d[\d,]{0,6})\s*(?:copies|cards made|cards|made|printed)\b/i;
 const NUMBERED_TO_RE = /numbered\s+to\s*(\d[\d,]{0,6})/i;
 const COLON_PRINT_RUN_RE = /:\s*(\d[\d,]{0,6})\s*copies\b/i;
 
@@ -117,11 +119,29 @@ const BARE_EXCLUSIVE_RE = /\bexclusive\b/i;
 const SKU_RE = /\b(?:SKU|UPC|ITEM\s*#?)\s*[:#]?\s*[A-Z0-9-]{4,}\b/i;
 const LONG_DIGIT_RUN_RE = /\b\d{6,}\b/;
 
+/** Run-unit words that follow a bare count -- "8700 copies", "5000 made",
+ *  "2999 cards", "1999 made", "2500 printed", "numbered to 500". A 4-digit
+ *  count in this shape is a print-run leak, not a year, even though it is
+ *  digit-for-digit the same WIDTH as "1989 Topps Design"'s year lead -- see
+ *  CF-A-YEAR-LEAD-IS-NOT-A-PRINT-RUN below. */
+const RUN_UNIT_AFTER_DIGITS_RE = /^(?:copies|made|cards?|printed|numbered)\b/i;
+
 /** Known-good grammar that must NEVER be misread as a dirty parenthetical or
  *  a run-on-digit corruption. Checked FIRST, before any dirty-shape test, so
- *  a legitimate rung can never be caught by a broader pattern below it. */
+ *  a legitimate rung can never be caught by a broader pattern below it.
+ *
+ *  CF-A-YEAR-LEAD-IS-NOT-A-PRINT-RUN (review finding, PR #2432). The
+ *  original year-lead exemption, `/^\d{4}\s+[A-Za-z]/`, matched ANY 4-digit
+ *  lead followed by a letter -- including "8700 copies", "5000 made", "2999
+ *  cards" and "1999 made", every one a print-run leak the SAME width as a
+ *  real year ("1989 Topps Design"). Those four are digit-for-digit
+ *  indistinguishable from a year by width alone, so the exemption is
+ *  narrowed to require the word immediately after the digits NOT be a
+ *  run-unit word -- a year is always followed by a PRODUCT/BRAND word
+ *  ("Topps", "Bowman", "Design"), never "copies"/"made"/"cards". */
+const YEAR_LEAD_RE = { test: (v) => /^\d{4}\s+[A-Za-z]/.test(v) && !RUN_UNIT_AFTER_DIGITS_RE.test(v.replace(/^\d{4}\s+/, "")) };
 const KNOWN_GOOD_RE = [
-  /^\d{4}\s+[A-Za-z]/,                 // "1989 Topps Design" -- a year-lead insert name
+  YEAR_LEAD_RE,                        // "1989 Topps Design" -- a year-lead insert name
   /^[A-Za-z][\w'.-]*\s*\/\s*\d{1,6}$/, // "Gold /50" -- numbered parallel, run in its own column
   /^\d{1,3}\s*\/\s*\d{1,6}$/,          // "1/1"
   /^[A-Za-z][\w'-]*-Fractor$/i,        // "X-Fractor"
