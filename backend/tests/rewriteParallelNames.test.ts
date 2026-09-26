@@ -437,9 +437,24 @@ class FakePool {
     };
   }
   readonly items = {
-    query: (spec: { query: string; parameters?: Array<{ name: string; value: unknown }> }) => {
+    // lib/sales-at-id.cjs's dual check: `@id` matched against EITHER
+    // hobbyiqCardId or cardId, run once cross-partition and once with
+    // `partitionKey` in feedOptions -- the fake honours partitionKey by
+    // filtering to docs whose OWN cardId equals it, exactly as a real
+    // partition-scoped query on a /cardId container would.
+    query: (
+      spec: { query: string; parameters?: Array<{ name: string; value: unknown }> },
+      feedOptions?: { partitionKey?: unknown },
+    ) => {
       const p = Object.fromEntries((spec.parameters ?? []).map((x) => [x.name, x.value]));
-      const rows = this.docs.filter((d) => d.hobbyiqCardId === p["@s"]).map((d) => ({ id: d.id, cardId: d.cardId }));
+      const target = p["@id"] ?? p["@s"];
+      let scoped = this.docs;
+      if (feedOptions && feedOptions.partitionKey !== undefined) {
+        scoped = scoped.filter((d) => d.cardId === feedOptions.partitionKey);
+      }
+      const rows = scoped
+        .filter((d) => d.hobbyiqCardId === target || d.cardId === target)
+        .map((d) => ({ id: d.id, cardId: d.cardId }));
       let done = false;
       return {
         hasMoreResults: () => !done,

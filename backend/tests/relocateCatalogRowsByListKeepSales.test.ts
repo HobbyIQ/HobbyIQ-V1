@@ -159,14 +159,36 @@ class FakeContainer {
       this.log.push(`${this.name}.upsert ${doc.id}`);
       return { resource: structuredClone(doc) };
     },
-    query: (spec: { query: string; parameters?: Array<{ name: string; value: unknown }> }) => ({
-      fetchNext: async () => ({ resources: this.run(spec), continuationToken: undefined }),
-      fetchAll: async () => ({ resources: this.run(spec) }),
-    }),
+    query: (
+      spec: { query: string; parameters?: Array<{ name: string; value: unknown }> },
+      feedOptions?: { partitionKey?: unknown },
+    ) => {
+      let done = false;
+      return {
+        hasMoreResults: () => !done,
+        fetchNext: async () => { done = true; return { resources: this.run(spec, feedOptions), continuationToken: undefined }; },
+        fetchAll: async () => ({ resources: this.run(spec, feedOptions) }),
+      };
+    },
   };
-  private run(spec: { query: string; parameters?: Array<{ name: string; value: unknown }> }): Doc[] {
+  private run(
+    spec: { query: string; parameters?: Array<{ name: string; value: unknown }> },
+    feedOptions?: { partitionKey?: unknown },
+  ): Doc[] {
     const p = Object.fromEntries((spec.parameters ?? []).map((x) => [x.name, x.value]));
-    const all = [...this.docs.values()];
+    let all = [...this.docs.values()];
+    if (feedOptions && feedOptions.partitionKey !== undefined) {
+      all = all.filter((d) => d.cardId === feedOptions.partitionKey);
+    }
+    // lib/sales-at-id.cjs's dual check: `@id` matched against EITHER
+    // hobbyiqCardId or cardId, run once cross-partition and once scoped by
+    // `partitionKey` in feedOptions (handled above).
+    if (spec.query.includes("c.hobbyiqCardId = @id") && spec.query.includes("c.cardId = @id")) {
+      const target = p["@id"];
+      return all.filter((d) => d.hobbyiqCardId === target || d.cardId === target).map((d) => ({ id: d.id, cardId: d.cardId }));
+    }
+    // moveCatalogRow's OWN sales re-pointing query -- unrelated to the
+    // salesAt gate this file's edits are about; unchanged from before.
     if (spec.query.includes("c.hobbyiqCardId = @s")) {
       return all.filter((d) => d.hobbyiqCardId === p["@s"]).map((d) => ({ id: d.id, cardId: d.cardId }));
     }

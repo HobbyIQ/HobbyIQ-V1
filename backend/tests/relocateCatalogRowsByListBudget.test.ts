@@ -115,9 +115,11 @@ const container = (name) => ({
       ? { resource: undefined }
       : { resource: { id, cardId: pk, playerName: "Probe", setName: "Probe Set", sport: "soccer" } }) };
   },
-  // Two shapes ride this one query: salesAt's COUNT (a number) and
-  // confirmRetired's id lookup (rows). A deleted id must return NEITHER a
-  // count nor a row, so the parameter decides.
+  // Three shapes ride this one query: salesAt's dual check (paginated
+  // iterator, lib/sales-at-id.cjs -- always empty here, this probe is not
+  // exercising the sales gate) and confirmRetired's id lookup (rows, via
+  // fetchAll). A deleted id must return NEITHER a hit nor a row, so the
+  // parameter decides.
   items: {
     query: (spec) => ({
       fetchAll: async () => {
@@ -129,6 +131,11 @@ const container = (name) => ({
         }
         return { resources: [0] };
       },
+      // lib/sales-at-id.cjs drives the drain by hasMoreResults(), never by
+      // page emptiness -- one empty page, then done, is enough for a probe
+      // that carries no sold_comps rows at all.
+      hasMoreResults: (() => { let done = false; return () => !done && ((done = true), true); })(),
+      fetchNext: async () => ({ resources: [] }),
     }),
   },
 });

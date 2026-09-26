@@ -355,6 +355,10 @@ const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budge
 // Loaded defensively (see lib/player-identity.cjs): a tree-less run falls back
 // to the legacy expression rather than failing to load.
 const { playerIdentityKey, identityKeyIsBuilt } = require(path.join(__dirname, "lib", "player-identity.cjs"));
+// The dual cross-partition + partition-scoped sales check every retire gate
+// on this runner shares -- see lib/sales-at-id.cjs for the reproduced
+// anomaly a single cross-partition query missed.
+const { salesAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
 // The dist/ and Cosmos requires live inside main(), as the pool lane does it:
 // loading this module must not need a built tree, so the runner contract test
 // can require it and drive the scope refusal without a compile step.
@@ -1019,14 +1023,15 @@ async function main() {
     catch (err) { if (err?.code === 404 || err?.statusCode === 404) return null; throw err; }
   };
   // How many sales point at a slug. Printed for a retire so the size of the
-  // hand-off to the rematch is visible BEFORE the apply.
+  // hand-off to the rematch is visible BEFORE the apply. DUAL check: a bare
+  // cross-partition equality query can miss a real row (see lib/sales-at-id
+  // for the reproduced 0.6% anomaly), so this unions it with the same
+  // predicate scoped to `partitionKey: slug` and logs both counts.
   const salesAt = async (slug) => {
     try {
-      const { resources } = await retry(() => pool.items.query({
-        query: "SELECT VALUE COUNT(1) FROM c WHERE c.hobbyiqCardId = @s",
-        parameters: [{ name: "@s", value: slug }],
-      }, { maxItemCount: 1 }).fetchAll());
-      return Number(resources[0] ?? 0) || 0;
+      const { xp, pk, total } = await salesAtId(pool, slug, { retry });
+      console.log(`      sales at id: xp=${xp} pk=${pk}`);
+      return total;
     } catch { return null; }
   };
 
