@@ -1747,3 +1747,47 @@ describe("inferSetKeyFromTitle — Topps Holiday, non-adjacent (defect 1)", () =
     ).toBe("Topps");
   });
 });
+// STAMP-FIX BATCH 0926 — defect 2: bare /topps/ fires before the Bowman
+// ladder when a title names BOTH brands (same files as defect 1).
+//
+// THE DEFECT. The bare `/topps/` catch-all sat at line 4517, textually
+// BEFORE the Bowman ladder starting ~line 4194, so a title naming both
+// brands — a seller-written "Topps Bowman ..." or "Topps 2025 Bowman ..."
+// idiom — never reached the Bowman rules at all. 68 of the same 5,000-row
+// sample (~590 extrapolated) were filed as bare `topps` although the title
+// plainly states Bowman, violating the "specific never folds to flagship"
+// doctrine (project_product_family_ladder) from the WRONG flagship's side.
+//
+// THE FIX. When a title states "topps" AND "bowman" together, defer to the
+// Bowman ladder (checked first, since it already carries every specific
+// Bowman sub-product rule) before falling through to the bare Topps
+// catch-all — mirroring the same "wouldFoldUpToAnAncestor" idea R29 already
+// applies for checklist-driven overrides, at the title-word layer instead.
+describe("inferSetKeyFromTitle — Topps names Bowman too (defect 2)", () => {
+  it.each([
+    ["Topps 2025 Bowman Munetaka Murakami RC #9 Chicago White Sox Purple /250", "Bowman"],
+    ["Topps Bowman 2025 Jacob Misiorowski Milwaukee Brewers Rookie RC #35", "Bowman"],
+  ])("%s -> %s", (title, want) => {
+    expect(inferSetKeyFromTitle(title)).toBe(want);
+  });
+
+  it("a Bowman University title defers to the Bowman ladder, not bare Topps", () => {
+    // Pinned against the SAME title with no "Topps" prefix (unaffected by
+    // this defect, confirms the expectation is the ladder's own answer, not
+    // one invented for this fix): "Bowman University Best Darryn Peterson
+    // Kansas Auto #BA-DP /25" -> "Bowman" today, word order not "best"
+    // adjacent to "bowman" the way BOWMAN_BEST_UNIVERSITY's regex requires.
+    // The point of this case is that the "Topps" prefix must stop mattering,
+    // not that this particular title reaches the University-specific rung.
+    expect(inferSetKeyFromTitle("Topps 2025/26 Bowman University Best Darryn Peterson Kansas Auto #BA-DP /25"))
+      .toBe(inferSetKeyFromTitle("2025/26 Bowman University Best Darryn Peterson Kansas Auto #BA-DP /25"));
+  });
+
+  it("a bare Topps title with no Bowman word is unaffected", () => {
+    expect(inferSetKeyFromTitle("2025 Topps Series 1 Baseball #100 Aaron Judge")).toBe("Topps");
+  });
+
+  it("a bare Bowman title with no Topps word is unaffected", () => {
+    expect(inferSetKeyFromTitle("2024 Bowman Chrome Prospect Auto #CPA-AB")).toBe("Bowman Chrome");
+  });
+});

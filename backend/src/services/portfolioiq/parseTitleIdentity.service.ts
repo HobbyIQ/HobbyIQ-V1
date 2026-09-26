@@ -4540,7 +4540,28 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   if (/topps\s+brooklyn\s+collection|brooklyn\s+collection/i.test(t)) return "Topps Brooklyn Collection";
   if (/topps\s+gallery/i.test(t)) return "Topps Gallery";
   if (/topps\s+midnight/i.test(t)) return "Topps Midnight";
-  if (/topps/.test(t)) return "Topps";
+  // CF-BARE-TOPPS-DEFERS-TO-A-NAMED-BOWMAN (stamp-fix batch, 2026-09-26,
+  // defect 2 / C:/tmp/rootcause_1234/RESULT.md). Every SPECIFIC Bowman
+  // sub-product rule (Chrome, Draft, Sterling, 1st Edition, Best, ...) lives
+  // in the ladder above this line and already runs first when it matches.
+  // But the ladder has no BARE-Bowman rule of its own -- that generic
+  // fallback sits far below, after this bare `/topps/` catch-all -- so a
+  // title naming both brands with no specific Bowman sub-product word
+  // ("Topps 2025 Bowman Munetaka Murakami RC #9 ...", "Topps Bowman 2025
+  // Jacob Misiorowski ...") fell through the whole specific ladder and was
+  // claimed here, by the word "topps", before ever reaching the word it
+  // should have answered to. 68 of the 5,000-row sample this investigation
+  // measured (~590 extrapolated), each one a real Bowman card priced into
+  // the Topps flagship pool.
+  //
+  // A title stating BOTH brand words, with neither's specific ladder having
+  // matched, defers to the generic Bowman fallback a few hundred lines down
+  // rather than being claimed here by the word "topps" alone -- Bowman
+  // being the second, more specific brand actually printing THIS card (the
+  // seller-written "Topps Bowman ..." / "Topps 2025 Bowman ..." idiom always
+  // names the manufacturer once and the product once, and the product word
+  // is what should win). A title naming Topps alone is unaffected.
+  if (/topps/.test(t) && !/\bbowman\b/.test(t)) return "Topps";
   // CF-INFER-SET-POKEMON-GUARD (Drew, 2026-08-03). Bowman is the
   // baseball default for unmatched sports titles, but TCA firehose
   // pipes Pokemon/TCG in the same pool. Returning "Bowman" for
