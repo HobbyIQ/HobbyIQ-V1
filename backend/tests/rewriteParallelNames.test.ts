@@ -50,6 +50,8 @@ const lib = require_(scriptPath) as {
   productCellsOf: (rule: any) => Array<{ sport: string; year: number; setKey: string }>;
   salesCountAt: (pool: any, slug: string) => Promise<number>;
   checklistAttestsPrintRun: (cat: any, sport: string, year: number, setKey: string, parallel: string, printRun: number) => Promise<boolean>;
+  computeNewIdPreservingSetKey: (row: any, newName: string, printRun: number | null, deps: any) => { newId: string } | { refused: string; detail: string };
+  preflight: (row: any, outcome: any) => { ok: true; newId: string } | { ok: false; refused: string; detail: string };
 };
 
 const RULES_FILE = path.join(
@@ -466,13 +468,14 @@ class FakePool {
 }
 
 const realDeps = require_(path.join(backend, "dist", "services", "catalog", "catalogRowOps.service.js"));
-const { computeHobbyIqCardId } = require_(path.join(backend, "dist", "services", "portfolioiq", "hobbyIqCardId.service.js"));
+const { computeHobbyIqCardId, parseHobbyIqCardId } = require_(path.join(backend, "dist", "services", "portfolioiq", "hobbyIqCardId.service.js"));
 const deps = {
   moveCatalogRow: realDeps.moveCatalogRow,
   patchCatalogRowFields: realDeps.patchCatalogRowFields,
   rebuildSearchFields: realDeps.rebuildSearchFields,
   retireCatalogRow: realDeps.retireCatalogRow,
   computeHobbyIqCardId,
+  parseHobbyIqCardId,
 };
 
 function fakeBudget() {
@@ -682,21 +685,30 @@ describe("rewrite-parallel-names -- runLane outcomes against a fake Cosmos", () 
     expect(newRow!.printRun).toBe(10400);
   });
 
-  it("isAuto is never touched by this lane -- read straight off the row, never set to a derived/new value, never patched", () => {
+  it("isAuto is never touched by this lane -- read straight off the row's own parsed id, never set to a derived/new value, never patched", () => {
+    // The 0926 cross-product fix moved the id-recompute out of runLane and
+    // into computeNewIdPreservingSetKey, so the invariant is now checked
+    // across that helper: `runLane` itself no longer names `isAuto` at all
+    // (it never appears in a `fields`/`changedFields` patch/move payload
+    // there), and the helper reads it straight off the row's OWN parsed id
+    // (`own.isAuto`) -- never a derived/new value -- for both the probe call
+    // and the round-trip verification.
     const runLaneSrc = source.slice(source.indexOf("async function runLane("), source.indexOf("async function main()"));
-    // The ONE isAuto reference in the whole loop is a pass-through into
-    // computeHobbyIqCardId: `isAuto: row.isAuto`. Nothing else names it --
-    // in particular, it never appears inside a `fields`/`changedFields`
-    // object (the patch/move payloads), which is what "never touched"
-    // actually means for a field this lane must not arbitrate.
-    // "isAuto: row.isAuto" itself contains the token twice (the property
-    // name and the read); both occurrences come from that ONE line.
-    const refs = [...runLaneSrc.matchAll(/\bisAuto\b/g)];
-    expect(refs.length).toBe(2);
-    expect(runLaneSrc).toMatch(/isAuto:\s*row\.isAuto\b/);
-    const line = runLaneSrc.split("\n").find((l) => l.includes("isAuto"));
-    expect(runLaneSrc.split("\n").filter((l) => l.includes("isAuto"))).toHaveLength(1);
-    expect(line).toContain("isAuto: row.isAuto");
+    expect(runLaneSrc).not.toMatch(/\bisAuto\b/);
+
+    const helperSrc = source.slice(source.indexOf("function computeNewIdPreservingSetKey("), source.indexOf("function preflight("));
+    const refs = [...helperSrc.matchAll(/\bisAuto\b/g)];
+    expect(refs.length).toBeGreaterThan(0);
+    expect(helperSrc).toMatch(/isAuto:\s*own\.isAuto\b/); // the probe call reads the row's own parsed isAuto
+    expect(helperSrc).toMatch(/verify\.isAuto\s*!==\s*own\.isAuto/); // round-trip verifies it, never overwrites it
+    // Never named inside either write payload object literal (the heal
+    // `fields` object or the move `changedFields` object) -- both are built
+    // with only `parallel` (and, guarded, `printRun`), never `isAuto`.
+    const fieldsLit = source.slice(source.indexOf("const fields = { parallel: newName };"), source.indexOf("const fields = { parallel: newName };") + 200);
+    const changedFieldsLit = source.slice(source.indexOf("const changedFields = { parallel: newName };"), source.indexOf("const changedFields = { parallel: newName };") + 200);
+    expect(fieldsLit).not.toMatch(/isAuto/);
+    expect(changedFieldsLit).not.toMatch(/isAuto/);
+
     // printRun is written in exactly two places: the changedFields/fields
     // object under the printRunFromName gate (heal, move) -- both guarded.
     const printRunWrites = [...runLaneSrc.matchAll(/\.printRun\s*=\s*printRun|printRun\s*:\s*printRun\b/g)];
@@ -746,6 +758,175 @@ describe("rewrite-parallel-names -- runLane outcomes against a fake Cosmos", () 
     expect(newRow).toBeTruthy();
     expect(newRow!.id).toContain(":sub-home-run-kings:");
     expect(newRow!.id).not.toBe("hiq:baseball:2026:topps:1:gold-wave:no-auto");
+  });
+});
+
+// ── CF-A-RENAME-NEVER-CHANGES-THE-PRODUCT (run 36227642297, exit 4) ────────
+// A topps-series-2 row, run through a strip-note rule, must move within
+// topps-series-2 -- never re-resolve to the flagship "topps". A rule whose
+// destination genuinely names a different product must be refused,
+// identically, whether the caller is REPORT or APPLY.
+
+describe("rewrite-parallel-names -- a rename never changes the product (0926 fix)", () => {
+  const seriesRow = () => baseRow({
+    id: "hiq:baseball:2024:topps-series-2:583:gold-foil-hobby:no-auto",
+    cardId: "hiq:baseball:2024:topps-series-2:583:gold-foil-hobby:no-auto",
+    sport: "baseball", year: 2024, setKey: "topps-series-2",
+    cardNumber: "583", parallel: "Gold Foil - Hobby", parallelSlug: "gold-foil-hobby",
+  });
+  const stripHobbySeries2 = {
+    ...STRIP_HOBBY_RULE,
+    id: "test-strip-hobby-series2",
+    sport: "baseball", years: [2024], setKey: "topps-series-2", setKeyPrefix: "", setKeys: ["topps-series-2"],
+  };
+
+  it("a topps-series-2 row with a strip-note rule keeps setKey topps-series-2 in the new id and MOVES cleanly (APPLY)", async () => {
+    const row = seriesRow();
+    const cat = new FakeCatalog([row]);
+    const pool = new FakePool([]);
+    const result = await lib.runLane({
+      cat, pool, rules: [stripHobbySeries2], apply: true, budget: fakeBudget(), deps,
+    });
+    expect(result.totalRefused).toBe(0);
+    expect(result.totalMoved).toBe(1);
+    const newRow = [...cat.docs.values()].find((d: any) => d.parallel === "Gold Foil");
+    expect(newRow).toBeTruthy();
+    expect(String(newRow!.id)).toContain(":topps-series-2:");
+    expect(String(newRow!.id)).not.toContain(":topps:"); // never folded to the flagship
+  });
+
+  // computeHobbyIqCardId folds topps-series-1 to "topps" the SAME way it
+  // folds topps-series-2 -- verified directly against dist/ (both return
+  // "hiq:baseball:2024:topps:100:gold-foil:no-auto" under authoritativeSetKey:
+  // true). There is no asymmetry in the service to exploit or worry about:
+  // computeNewIdPreservingSetKey never trusts EITHER family's computed
+  // setKey -- it always forces the row's OWN id segment and verifies the
+  // round-trip -- so both families are preserved identically by construction.
+  it("a topps-series-1 row with the same strip-note shape keeps setKey topps-series-1 in the new id and MOVES cleanly -- proves the guard does not depend on the service treating series-1/series-2 differently", async () => {
+    const row = baseRow({
+      id: "hiq:baseball:2024:topps-series-1:100:gold-foil-hobby:no-auto",
+      cardId: "hiq:baseball:2024:topps-series-1:100:gold-foil-hobby:no-auto",
+      sport: "baseball", year: 2024, setKey: "topps-series-1",
+      cardNumber: "100", parallel: "Gold Foil - Hobby", parallelSlug: "gold-foil-hobby",
+    });
+    const stripHobbySeries1 = {
+      ...STRIP_HOBBY_RULE,
+      id: "test-strip-hobby-series1",
+      sport: "baseball", years: [2024], setKey: "topps-series-1", setKeyPrefix: "", setKeys: ["topps-series-1"],
+    };
+    const cat = new FakeCatalog([row]);
+    const pool = new FakePool([]);
+    const result = await lib.runLane({
+      cat, pool, rules: [stripHobbySeries1], apply: true, budget: fakeBudget(), deps,
+    });
+    expect(result.totalRefused).toBe(0);
+    expect(result.totalMoved).toBe(1);
+    const newRow = [...cat.docs.values()].find((d: any) => d.parallel === "Gold Foil");
+    expect(newRow).toBeTruthy();
+    expect(String(newRow!.id)).toContain(":topps-series-1:");
+    expect(String(newRow!.id)).not.toContain(":topps:"); // never folded to the flagship
+  });
+
+  it("the same row/rule in REPORT mode (apply=false) reports the identical outcome -- no cross-product move hidden until APPLY", async () => {
+    const row = seriesRow();
+    const cat = new FakeCatalog([row]);
+    const pool = new FakePool([]);
+    const result = await lib.runLane({
+      cat, pool, rules: [stripHobbySeries2], apply: false, budget: fakeBudget(), deps,
+    });
+    expect(result.totalRefused).toBe(0);
+    expect(result.totalMoved).toBe(1);
+  });
+
+  it("a row whose own id cannot be reconciled with the rule's output is refused cross-product identically in REPORT and APPLY", async () => {
+    // computeNewIdPreservingSetKey refuses outright when the row's own id
+    // cannot even be parsed with the grade-aware splitter -- this is the same
+    // refusal surface a genuinely product-changing alias output would hit
+    // once it disagreed with the row's own address on round-trip (setKey,
+    // sport, year, cardNumber, subset, isAuto); a malformed/legacy id is the
+    // simplest fixture that reliably reaches that branch without depending on
+    // resolveSetKeyForSlug's own fold behaviour.
+    const legacyRow = baseRow({
+      id: "legacy-non-hiq-id-583", cardId: "legacy-non-hiq-id-583",
+      sport: "baseball", year: 2024, setKey: "topps-series-2", cardNumber: "583",
+      parallel: "Gold Foil - Hobby", parallelSlug: "gold-foil-hobby",
+    });
+    const outcome = lib.computeNewIdPreservingSetKey(legacyRow, "Gold Foil", null, deps);
+    expect(outcome.refused).toBe("cross-product");
+
+    // And the SAME refusal shape is what runLane surfaces, in both modes.
+    const catApply = new FakeCatalog([legacyRow]);
+    const poolApply = new FakePool([]);
+    const applyResult = await lib.runLane({
+      cat: catApply, pool: poolApply, rules: [stripHobbySeries2], apply: true, budget: fakeBudget(), deps,
+    });
+    expect(applyResult.totalRefused).toBe(1);
+    expect(applyResult.totalMoved).toBe(0);
+    // The source row is untouched -- refused, never written.
+    expect(catApply.docs.has(keyOf(legacyRow.id, legacyRow.cardId))).toBe(true);
+
+    const catReport = new FakeCatalog([legacyRow]);
+    const poolReport = new FakePool([]);
+    const reportResult = await lib.runLane({
+      cat: catReport, pool: poolReport, rules: [stripHobbySeries2], apply: false, budget: fakeBudget(), deps,
+    });
+    expect(reportResult.totalRefused).toBe(1);
+    expect(reportResult.totalMoved).toBe(0);
+  });
+
+  it("a MOVE that throws at write time lands in `failed`, never in `moved`", async () => {
+    const row = seriesRow();
+    const cat = new FakeCatalog([row]);
+    const pool = new FakePool([]);
+    const originalMove = deps.moveCatalogRow;
+    const throwingDeps = { ...deps, moveCatalogRow: async () => { throw new Error("simulated write failure"); } };
+    try {
+      const result = await lib.runLane({
+        cat, pool, rules: [stripHobbySeries2], apply: true, budget: fakeBudget(), deps: throwingDeps,
+      });
+      expect(result.totalMoved).toBe(0);
+      expect(result.failed).toBe(1);
+      expect(result.totalRefused).toBe(0);
+      // reconcile identity still holds under a thrown write.
+      const held = result.totalHeldSales + result.totalHeldDerived;
+      expect(result.totalMoved + result.totalRetired + result.totalHealed + held + result.totalLeft + result.totalRefused + result.failed)
+        .toBe(result.totalMatched);
+      expect(result.exitCode).toBe(0);
+    } finally {
+      void originalMove;
+    }
+  });
+
+  it("reconcile identity holds under a mix of moved/refused/failed outcomes in one APPLY run", async () => {
+    const movable = seriesRow();
+    // A malformed/legacy id (still IS_DEFINED(c.parallel), still c.setKey ===
+    // the scanned cell) that computeNewIdPreservingSetKey cannot parse --
+    // the refusal surface a genuinely product-changing rule output would
+    // also hit, per the test above.
+    const refusedRow = { ...seriesRow(), id: "legacy-non-hiq-id-584", cardId: "legacy-non-hiq-id-584", cardNumber: "584" };
+    const willThrow = { ...seriesRow(), id: "hiq:baseball:2024:topps-series-2:585:gold-foil-hobby:no-auto", cardId: "hiq:baseball:2024:topps-series-2:585:gold-foil-hobby:no-auto", cardNumber: "585" };
+    const cat = new FakeCatalog([movable, refusedRow, willThrow]);
+    const pool = new FakePool([]);
+    let calls = 0;
+    const mixedDeps = {
+      ...deps,
+      moveCatalogRow: async (...args: any[]) => {
+        calls++;
+        if (args[1]?.id === willThrow.id) throw new Error("simulated write failure");
+        return (deps.moveCatalogRow as any)(...args);
+      },
+    };
+    const result = await lib.runLane({
+      cat, pool, rules: [stripHobbySeries2], apply: true, budget: fakeBudget(), deps: mixedDeps,
+    });
+    expect(calls).toBeGreaterThan(0);
+    expect(result.totalMoved).toBe(1); // movable only
+    expect(result.totalRefused).toBe(1); // refusedRow
+    expect(result.failed).toBe(1); // willThrow
+    const held = result.totalHeldSales + result.totalHeldDerived;
+    expect(result.totalMoved + result.totalRetired + result.totalHealed + held + result.totalLeft + result.totalRefused + result.failed)
+      .toBe(result.totalMatched);
+    expect(result.exitCode).toBe(0);
   });
 });
 
@@ -813,12 +994,76 @@ describe("rewrite-parallel-names -- mutation checks", () => {
     expect(idx).toBeLessThan(productCellsIdx);
   });
 
-  it("(#2434 review) computeHobbyIqCardId is called with subsetName and subsetInId sourced from the row", () => {
-    const idx = source.indexOf("newId = computeHobbyIqCardId({");
+  it("(#2434 review / 0926 cross-product fix) computeHobbyIqCardId's PROBE call is fed subsetName and subsetInId sourced from the row's own parsed id", () => {
+    // Moved into computeNewIdPreservingSetKey by the 0926 cross-product fix
+    // (#2431 exit-4 review) -- the row's own fields still feed the call, now
+    // one layer down from runLane's inline block, and now sourced from the
+    // row's OWN PARSED id (`own.subsetName`/`own.subsetInId`) rather than the
+    // raw row fields, since the probe's setKey input is no longer trusted for
+    // anything but shape.
+    const idx = source.indexOf("probe = computeHobbyIqCardId({");
+    expect(idx).toBeGreaterThan(-1);
     const callEnd = source.indexOf("});", idx);
     const call = source.slice(idx, callEnd);
-    expect(call).toContain("subsetName: row.subsetName");
-    expect(call).toMatch(/subsetInId:\s*row\.subsetInId\s*===\s*true/);
+    expect(call).toContain("subsetName: own.subsetName");
+    expect(call).toMatch(/subsetInId:\s*own\.subsetInId\s*===\s*true/);
+  });
+
+  it("(0926 cross-product fix) newId is built via computeNewIdPreservingSetKey + a shared preflight(), never a bare computeHobbyIqCardId call inline in runLane", () => {
+    const runLaneSrc = source.slice(source.indexOf("async function runLane("), source.indexOf("async function main()"));
+    expect(runLaneSrc).toContain("computeNewIdPreservingSetKey(row, newName");
+    expect(runLaneSrc).toContain("preflight(row, idOutcome)");
+    expect(runLaneSrc).not.toMatch(/newId\s*=\s*computeHobbyIqCardId\(/);
+  });
+
+  it("(0926 cross-product fix) computeNewIdPreservingSetKey never trusts computeHobbyIqCardId's own setKey output -- it forces the row's OWN setKey segment into the reconstructed id and verifies the round-trip", () => {
+    const idx = source.indexOf("function computeNewIdPreservingSetKey(");
+    expect(idx).toBeGreaterThan(-1);
+    const body = source.slice(idx, source.indexOf("\n}\n", idx));
+    expect(body).toContain('refused: "cross-product"');
+    // The reconstructed id's setKey segment comes from `own.setKey` (the
+    // row's OWN parsed id), never from the probe's output setKey.
+    expect(body).toMatch(/const parts = \["hiq", own\.sport, String\(own\.year\), own\.setKey\]/);
+    // And the round-trip verification explicitly checks setKey agreement --
+    // this is the actual cross-product guard.
+    expect(body).toContain("verify.setKey !== own.setKey");
+  });
+
+  it("(0926 cross-product fix) REPORT and APPLY share the identical preflight() guard -- REPORT never skips it", () => {
+    const idx = source.indexOf("const idOutcome = computeNewIdPreservingSetKey(");
+    expect(idx).toBeGreaterThan(-1);
+    const block = source.slice(idx, idx + 400);
+    // This block runs unconditionally, before the `if (!apply)` branch point
+    // for LEFT/HEAL/MOVE -- i.e. it is not gated on apply at all.
+    expect(block).not.toMatch(/if\s*\(\s*!?apply\s*\)/);
+    expect(block).toContain("gate.ok");
+  });
+
+  it("(0926 cross-product fix) moved/healed/retired are credited only after their write call returns, never before it, in APPLY mode", () => {
+    const runLaneSrc = source.slice(source.indexOf("async function runLane("), source.indexOf("async function main()"));
+    // HEAL: st.healed++ must appear AFTER the patchCatalogRowFields call, and
+    // the REPORT-mode credit (`if (!apply) { st.healed++`) is the only other
+    // place it appears before a write.
+    const healBlock = runLaneSrc.slice(runLaneSrc.indexOf("// HEAL:"), runLaneSrc.indexOf("const occupant = await rowAt(newId);"));
+    const healPatchIdx = healBlock.indexOf("await patchCatalogRowFields(");
+    const healCreditIdx = healBlock.indexOf("st.healed++", healPatchIdx);
+    expect(healPatchIdx).toBeGreaterThan(-1);
+    expect(healCreditIdx).toBeGreaterThan(healPatchIdx);
+
+    // MOVE: st.moved++ must appear AFTER the moveCatalogRow call resolves,
+    // inside the branch that is NOT the refused branch.
+    const moveBlock = runLaneSrc.slice(runLaneSrc.indexOf("// MOVE."), runLaneSrc.indexOf("const occupantIsChecklist ="));
+    const moveCallIdx = moveBlock.indexOf("await moveCatalogRow(");
+    const moveCreditIdx = moveBlock.indexOf("st.moved++", moveCallIdx);
+    expect(moveCallIdx).toBeGreaterThan(-1);
+    expect(moveCreditIdx).toBeGreaterThan(moveCallIdx);
+
+    // RETIRE: st.retired++ must appear AFTER the retireCatalogRow call.
+    const retireBlock = runLaneSrc.slice(runLaneSrc.indexOf("// RETIRE (duplicate)."), runLaneSrc.indexOf("// Occupied by a DERIVED"));
+    const retireCallIdx = retireBlock.indexOf("await retireCatalogRow(");
+    const retireCreditIdx = retireBlock.indexOf("st.retired++", retireCallIdx);
+    expect(retireCallIdx).toBeGreaterThan(-1);
+    expect(retireCreditIdx).toBeGreaterThan(retireCallIdx);
   });
 });
 

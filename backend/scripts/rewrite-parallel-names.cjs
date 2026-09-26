@@ -33,6 +33,29 @@
  * the clean rung actually lives, and this lane reads that address before
  * deciding MOVE, RETIRE-source-as-duplicate or HOLD.
  *
+ * CF-A-RENAME-NEVER-CHANGES-THE-PRODUCT (run 36227642297, exit 4, review
+ * 2026-09-26). `computeHobbyIqCardId({ ..., setKey: row.setKey,
+ * authoritativeSetKey: true })` does NOT keep a refinement-family setKey
+ * verbatim: `authoritativeSetKey` only skips the CHROME-PREFIX override
+ * applied AFTER `resolveSetKeyForSlug` has already run, and that earlier
+ * step folds a refinement like "topps-series-2" to its flagship "topps" --
+ * the exact same normalization a vendor-facing (non-checklist) caller
+ * relies on. Feeding it a row's OWN already-canonical setKey therefore
+ * silently re-addresses the row onto a DIFFERENT product's numbering. At
+ * APPLY, moveCatalogRow's own cross-product guard (catalogRowOps.service.ts,
+ * "a cross-product move is not a move") refused every one of the 12,155 rows
+ * this produced -- but REPORT never calls moveCatalogRow at all, so it showed
+ * them as clean moves nobody could see would fail before dispatch.
+ *
+ * THE FIX: `computeNewIdPreservingSetKey` below builds `newId` by parsing the
+ * row's OWN id (grade-aware, via lib/graded-id.cjs) to recover its setKey
+ * SEGMENT exactly as spelled -- never re-derived, never normalized -- then
+ * asks computeHobbyIqCardId to reproduce that same segment verbatim. When it
+ * cannot (an alias whose destination genuinely names a different product),
+ * the shared `preflight()` refuses with `refused: "cross-product"` in BOTH
+ * REPORT and APPLY, identically -- REPORT now runs every guard APPLY runs,
+ * so a clean REPORT is never a false promise.
+ *
  * THE FOUR OUTCOMES AT A NEW ADDRESS, PER ENTRY:
  *
  *   LEFT             newId === id: the slug already carries the clean name;
@@ -143,6 +166,12 @@ const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-s
 // on this runner shares -- see lib/sales-at-id.cjs for the reproduced
 // anomaly a single cross-partition query missed.
 const { salesAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
+// The grade-aware id splitter (#2431/#2434 mirror of catalogRowOps.service.ts's
+// private parseSlugWithGrade) -- used ONLY to recover THIS lane's own row's
+// setKey segment as it is actually SPELLED in the row's existing id, never as
+// text computeHobbyIqCardId is free to re-resolve. See computeNewIdPreservingSetKey
+// below for why that distinction is the whole fix.
+const { parseSlugWithGrade } = require(path.join(__dirname, "lib", "graded-id.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const f = (n) => Number(n).toLocaleString();
@@ -325,6 +354,128 @@ function applyRule(rule, rawParallel) {
   return null;
 }
 
+// ─── NEW-ID DERIVATION THAT NEVER CHANGES THE PRODUCT ─────────────────────
+
+/**
+ * Build the row's new id with its OWN setKey segment preserved, and verify
+ * the round-trip before trusting it -- see the CF-A-RENAME-NEVER-CHANGES-THE-
+ * PRODUCT header comment above for why `computeHobbyIqCardId` cannot simply
+ * be handed `row.setKey` and trusted, even under `authoritativeSetKey: true`:
+ * `resolveSetKeyForSlug` treats its `setKey` argument as untrusted free text
+ * to RE-RESOLVE (alias tables, family folds), not as an already-canonical
+ * segment to pass through, and `authoritativeSetKey` only gates the LATER
+ * chrome-prefix step -- verified live (2026-09-26): feeding it the literal
+ * segment "topps-series-2" with authoritativeSetKey:true still returns
+ * "topps". THE SERVICE CANNOT BE FORCED for a refinement-family setKey, so
+ * this function never trusts its setKey output -- it uses computeHobbyIqCardId
+ * ONLY to get the correctly-normalized parallel/printRun/auto SEGMENTS (via
+ * a probe call), then reconstructs the id by substituting ONLY those segments
+ * into the row's OWN id, leaving every other segment -- setKey, subset,
+ * cardNumber, year, sport -- byte-for-byte what the row's own id already
+ * says. The round-trip is then verified by RE-PARSING the reconstructed id
+ * and confirming every field except parallel/printRun equals what the row's
+ * own id parsed to; any disagreement (a malformed reconstruction, or a rule
+ * whose output cannot be reconciled with the row's own address at all) is a
+ * refusal, never a silent guess.
+ *
+ * @returns {{ newId: string } | { refused: "cross-product", detail: string }}
+ */
+function computeNewIdPreservingSetKey(row, newName, printRun, deps) {
+  const { computeHobbyIqCardId, parseHobbyIqCardId } = deps;
+  const ownId = String(row.id);
+  const split = parseSlugWithGrade(ownId, parseHobbyIqCardId);
+  if (!split) {
+    return { refused: "cross-product", detail: `cannot parse the row's own id "${ownId}" with the grade-aware splitter` };
+  }
+  const own = split.parsed;
+  const finalPrintRun = printRun ?? own.printRun ?? null;
+
+  // PROBE ONLY: this call's setKey is never trusted (see header above) --
+  // it exists solely to reproduce the exact parallel-slug/auto/printRun
+  // segments the real minting path would produce for this (sport, year,
+  // cardNumber, parallel, printRun) combination, INCLUDING product-specific
+  // tiering rules (e.g. the 1997 Topps Finest bronze/silver/gold-by-number
+  // fold) that live inside computeHobbyIqCardId and nowhere else. Its setKey
+  // input is the row's own -- passed only so a same-family probe doesn't
+  // trip an unrelated guard -- and its OUTPUT setKey is discarded entirely.
+  let probe;
+  try {
+    probe = computeHobbyIqCardId({
+      sport: own.sport, year: own.year, setKey: row.setKey ?? own.setKey,
+      cardNumber: own.cardNumber, isAuto: own.isAuto, parallel: newName,
+      printRun: finalPrintRun,
+      authoritativeSetKey: true,
+      unnumberedByChecklist: true,
+      playerName: row.playerName ?? null,
+      subsetName: own.subsetName ?? null,
+      subsetInId: own.subsetInId === true,
+    });
+  } catch (e) {
+    return { refused: "cross-product", detail: `computeHobbyIqCardId threw while probing the new parallel/printRun segments: ${e.message}` };
+  }
+  const probeParsed = parseHobbyIqCardId(probe);
+  if (!probeParsed) {
+    return { refused: "cross-product", detail: `probe id "${probe}" does not itself parse` };
+  }
+
+  // Reconstruct the id with ONLY the setKey segment forced back to the row's
+  // OWN, verbatim, spelling -- every other segment comes from the probe
+  // (parallel slug, auto flag, printRun) or the row's own parsed id (sport,
+  // year, cardNumber, subset). This is the literal "replace ONLY the
+  // parallel segment" the fix requires, generalized to also carry a
+  // printRunFromName change through the same substitution.
+  const parts = ["hiq", own.sport, String(own.year), own.setKey];
+  if (own.subsetInId && own.subsetName) parts.push(`sub-${own.subsetName}`);
+  parts.push(own.cardNumber, probeParsed.parallel, probeParsed.isAuto ? "auto" : "no-auto");
+  if (probeParsed.printRun) parts.push(`num-${probeParsed.printRun}`);
+  const candidateParent = parts.join(":");
+
+  // VERIFY THE ROUND-TRIP. Re-parse the reconstructed id and confirm every
+  // field OTHER than parallel/printRun agrees with the row's own parsed id --
+  // sport, year, setKey (this is the actual cross-product guard), cardNumber,
+  // isAuto, subsetName/subsetInId. A rule may legitimately change parallel
+  // (that is its whole job) and, under printRunFromName, printRun; nothing
+  // else may move.
+  const verify = parseHobbyIqCardId(candidateParent);
+  if (!verify) {
+    return { refused: "cross-product", detail: `reconstructed id "${candidateParent}" does not itself parse` };
+  }
+  const mismatches = [];
+  if (verify.sport !== own.sport) mismatches.push(`sport ${verify.sport} != ${own.sport}`);
+  if (verify.year !== own.year) mismatches.push(`year ${verify.year} != ${own.year}`);
+  if (verify.setKey !== own.setKey) mismatches.push(`setKey ${verify.setKey} != ${own.setKey}`);
+  if (verify.cardNumber !== own.cardNumber) mismatches.push(`cardNumber ${verify.cardNumber} != ${own.cardNumber}`);
+  if (verify.isAuto !== own.isAuto) mismatches.push(`isAuto ${verify.isAuto} != ${own.isAuto}`);
+  if ((verify.subsetName ?? null) !== (own.subsetName ?? null)) mismatches.push(`subsetName ${verify.subsetName} != ${own.subsetName}`);
+  if ((verify.subsetInId ?? false) !== (own.subsetInId ?? false)) mismatches.push(`subsetInId ${verify.subsetInId} != ${own.subsetInId}`);
+  if (mismatches.length) {
+    return {
+      refused: "cross-product",
+      detail: `newId "${candidateParent}" disagrees with the row's own id "${ownId}" on: ${mismatches.join(", ")} `
+        + `-- a rename never changes the product`,
+    };
+  }
+
+  // Re-attach the grade tier the ORIGINAL id carried (this lane never
+  // touches a grade tier's own text -- it only ever moves the parent).
+  const newId = split.gradeTier ? `${candidateParent}:${split.gradeTier}` : candidateParent;
+  return { newId };
+}
+
+/**
+ * Shared guard run identically by REPORT and APPLY, so a clean REPORT can
+ * never promise a move that APPLY's own moveCatalogRow guard would refuse.
+ * `outcome` is computeNewIdPreservingSetKey's return value.
+ *
+ * @returns {{ ok: true, newId: string } | { ok: false, refused: "cross-product", detail: string }}
+ */
+function preflight(row, outcome) {
+  if (outcome.refused) {
+    return { ok: false, refused: outcome.refused, detail: outcome.detail };
+  }
+  return { ok: true, newId: outcome.newId };
+}
+
 // ─── COSMOS-DEPENDENT MAIN (requires COSMOS_CONNECTION_STRING + dist/) ────
 
 const retry = async (fn, tries = 12) => {
@@ -413,7 +564,8 @@ function productCellsOf(rule) {
  */
 async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sharded = false, slot = 0, slots = 1 }) {
   const {
-    moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow, computeHobbyIqCardId,
+    moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow,
+    computeHobbyIqCardId, parseHobbyIqCardId,
   } = deps;
 
   const rowAt = async (id) => {
@@ -498,34 +650,20 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
             }
           }
 
-          let newId;
-          try {
-            newId = computeHobbyIqCardId({
-              sport: row.sport, year: row.year, setKey: row.setKey,
-              cardNumber: row.cardNumber, isAuto: row.isAuto, parallel: newName,
-              printRun,
-              // Checklist-grade rows already resolved these questions once;
-              // re-deriving must reproduce the SAME answer, never re-litigate
-              // whether the row's own number is authoritative or unnumbered.
-              authoritativeSetKey: true,
-              unnumberedByChecklist: true,
-              playerName: row.playerName ?? null,
-              // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (review
-              // finding, 2026-09-26). computeHobbyIqCardId drops the `:sub-`
-              // segment entirely unless subsetInId is literally true --
-              // omitting these two fields silently re-addresses a subset row
-              // onto its PARENT product's numbering, a different card. Read
-              // straight off the row, mirroring rebuildSearchFields' own
-              // `row.subsetName` read: this lane never invents a subset, it
-              // only ever carries the row's existing one forward.
-              subsetName: row.subsetName ?? null,
-              subsetInId: row.subsetInId === true,
-            });
-          } catch (e) {
+          // CF-A-RENAME-NEVER-CHANGES-THE-PRODUCT: newId is built with the
+          // row's OWN setKey segment preserved (computeNewIdPreservingSetKey),
+          // then run through the SAME preflight() REPORT and APPLY both call
+          // -- a rule whose output would re-address the row onto a different
+          // product's numbering is refused HERE, before any occupant read,
+          // identically in both modes.
+          const idOutcome = computeNewIdPreservingSetKey(row, newName, printRunFromName ? printRun : null, { computeHobbyIqCardId, parseHobbyIqCardId });
+          const gate = preflight(row, idOutcome);
+          if (!gate.ok) {
             st.refused++;
-            console.error(`  REFUSED (cannot compute id)  ${String(row.id).slice(0, 70)}: ${e.message}`);
+            console.error(`  REFUSED (${gate.refused})  ${String(row.id).slice(0, 70)}: ${gate.detail}`);
             continue;
           }
+          const newId = gate.newId;
 
           if (newId === row.id) {
             if (row.parallel === newName && (!printRunFromName || row.printRun === printRun)) {
@@ -533,15 +671,22 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
               continue;
             }
             // HEAL: already at the right address, but the field text (or a
-            // recovered printRun) has not caught up to it.
-            st.healed++;
+            // recovered printRun) has not caught up to it. In REPORT mode
+            // (apply=false) there is no write to confirm, so `healed` states
+            // the projection, exactly as before. In APPLY mode `healed` is
+            // credited ONLY once patchCatalogRowFields actually returns --
+            // CF-MOVED-COUNTS-CONFIRMED-WRITES-ONLY (run 36227642297, exit 4):
+            // a count taken before the write is attempted double-counts a
+            // row that then fails, because the failure path could only add
+            // to `failed`, never subtract the pre-emptive credit.
             if (st.examples.length < 10) st.examples.push({ id: row.id, from: row.parallel, to: newName, newId, action: "heal" });
-            if (!apply) continue;
+            if (!apply) { st.healed++; continue; }
             try {
               const fields = { parallel: newName };
               if (printRunFromName) fields.printRun = printRun;
               Object.assign(fields, rebuildSearchFields({ ...row, ...fields }));
               await patchCatalogRowFields(cat, row.id, row.cardId ?? row.id, fields, { retry });
+              st.healed++;
               if (printRunFromName) st.printRunFilled++;
             } catch (e) {
               failed++;
@@ -552,9 +697,13 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
 
           const occupant = await rowAt(newId);
           if (!occupant) {
-            st.moved++;
+            // MOVE. Same confirmed-write discipline as HEAL above: REPORT
+            // states the projection, APPLY credits `moved` only after
+            // moveCatalogRow returns something other than "refused" --
+            // never before the write, and never left standing after a
+            // thrown write (that row lands in `failed` only).
             if (st.examples.length < 10) st.examples.push({ id: row.id, from: row.parallel, to: newName, newId, action: "move" });
-            if (!apply) continue;
+            if (!apply) { st.moved++; continue; }
             try {
               const changedFields = { parallel: newName };
               if (printRunFromName) changedFields.printRun = printRun;
@@ -565,9 +714,12 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
                 dryRun: false, salesContainer: pool, known: occupant, retry,
               });
               if (res?.action === "refused") {
-                st.refused++; st.moved--;
+                st.refused++;
                 console.error(`      FAILED move ${String(row.id).slice(0, 60)}: ${res.decision}`);
-              } else if (printRunFromName) st.printRunFilled++;
+              } else {
+                st.moved++;
+                if (printRunFromName) st.printRunFilled++;
+              }
             } catch (e) {
               failed++;
               console.error(`      FAILED move ${String(row.id).slice(0, 60)}: ${e.message}`);
@@ -596,11 +748,14 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
               console.error(`  HOLD (sales present, n=${n})  ${String(row.id).slice(0, 70)} -> ${String(newId).slice(0, 70)}`);
               continue;
             }
-            st.retired++;
+            // RETIRE (duplicate). Same confirmed-write discipline: REPORT
+            // states the projection, APPLY credits `retired` only once
+            // retireCatalogRow actually returns.
             if (st.examples.length < 10) st.examples.push({ id: row.id, from: row.parallel, to: newName, newId, action: "retire-duplicate" });
-            if (!apply) continue;
+            if (!apply) { st.retired++; continue; }
             try {
               await retireCatalogRow(cat, row.id, row.cardId ?? row.id, `rewrite-parallel-names: duplicate of canonical ${newId} (${rule.reason})`, { retry });
+              st.retired++;
             } catch (e) {
               failed++;
               console.error(`      FAILED retire ${String(row.id).slice(0, 60)}: ${e.message}`);
@@ -672,7 +827,7 @@ async function main() {
   const {
     moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow,
   } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
-  const { computeHobbyIqCardId } = require(
+  const { computeHobbyIqCardId, parseHobbyIqCardId } = require(
     path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"),
   );
 
@@ -712,7 +867,7 @@ async function main() {
 
   const result = await runLane({
     cat, pool, rules, apply: APPLY, budget: b,
-    deps: { moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow, computeHobbyIqCardId },
+    deps: { moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow, computeHobbyIqCardId, parseHobbyIqCardId },
     limit: LIMIT, sharded: SHARDED, slot: SLOT, slots: SLOTS,
   });
 
@@ -733,4 +888,5 @@ if (require.main === module) {
 
 module.exports = {
   SCOPE, APPLY, loadRules, ruleMatchesProduct, applyRule, runLane, productCellsOf, salesCountAt, checklistAttestsPrintRun,
+  computeNewIdPreservingSetKey, preflight,
 };
