@@ -67,8 +67,13 @@ function makeList(dir: string, retires: number, reslugs: number): string {
     ...Array.from({ length: reslugs }, (_, i) => ({
       id: `hiq:soccer:2022:panini-prizm:r${i}:gold-prizm:no-auto`,
       action: "reslug",
-      to: `hiq:soccer:2022:panini-prizm:r${i}:gold-prizm:no-auto:num-10`,
-      reason: "the print run belongs in the address",
+      // A renumber: same setKey stem, same parallel/isAuto/printRun segments
+      // -- a fold moveCatalogRow's strict path accepts with no changedFields,
+      // and untouched by CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-
+      // TEXT's rung-text requirement (2026-09-26), which this probe is not
+      // testing.
+      to: `hiq:soccer:2022:panini-prizm:rr${i}:gold-prizm:no-auto`,
+      reason: "the card number belongs in the address",
       evidence: "probe",
     })),
   ];

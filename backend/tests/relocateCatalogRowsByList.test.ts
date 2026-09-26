@@ -387,11 +387,24 @@ describe("a report that cannot predict its apply is the defect", () => {
     // The helper existing is not the fix; the lane USING it is. Mutating the
     // call site back to `{}` -- the shipped 2026-09-06 lane -- must go red
     // here, or every crossProductFields assertion below is testing a function
-    // nothing calls.
-    expect(laneSrc).toMatch(/const changed = crossProductFields\(id, to\);/);
+    // nothing calls. crossProductFields itself now runs INSIDE rungChangeFields
+    // (2026-09-26, CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT),
+    // which also asks for the rung's own text when the parallel segment
+    // moves -- `changed` is `rung.changedFields`, not a bare crossProductFields
+    // call, but it carries the same setKey answer through untouched.
+    expect(laneSrc).toMatch(/const rung = rungChangeFields\(id, to, e, row, parseHobbyIqCardId, computeHobbyIqCardId\);/);
+    expect(laneSrc).toMatch(/const changed = rung\.changedFields;/);
     expect(laneSrc).toMatch(/await moveCatalogRow\(cat, row, to, changed,/);
     // ...and the guard is asked about the key that is actually being used.
     expect(laneSrc).toMatch(/marketVerdict\(row, changed\.setKey \?\? idSetKey\(to\), row\.sport\)/);
+  });
+
+  it("rungChangeFields calls crossProductFields for the setKey axis, unchanged", () => {
+    // The mutation guard for the OLD call site now lives one level down:
+    // rungChangeFields must still be the thing that asks crossProductFields
+    // for the destination's product, or the 2026-09-06/09-07 Japanese-151 and
+    // Crown Zenith incidents this file already pins would be reachable again.
+    expect(laneSrc).toContain("const base = crossProductFields(id, to);");
   });
 
   // ── the destination names the product ──────────────────────────────────────
@@ -1041,9 +1054,12 @@ describe("the move verifies its source the way the retire does", () => {
     // account for every entry exactly once. A `park` writes too (it patches a
     // field), so it joins the same sum -- see the park suite below. A
     // `verify` writes the same way (it patches verificationStatus +
-    // verifiedBy), and joins it too -- see relocateCatalogRowsByListVerify.
+    // verifiedBy), and joins it too -- see relocateCatalogRowsByListVerify. A
+    // `patchFields` writes the same way again (it patches parallel + the
+    // rebuilt search fields), and joins it too -- CF-A-RESLUG-THAT-CHANGES-
+    // THE-RUNG-CARRIES-THE-RUNG'S-TEXT, 2026-09-26.
     expect(s).toContain(
-      "const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked + verified;",
+      "const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked + verified + patchedFields;",
     );
   });
 });
