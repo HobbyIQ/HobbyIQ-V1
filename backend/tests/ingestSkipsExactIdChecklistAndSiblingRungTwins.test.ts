@@ -212,9 +212,66 @@ describe("sibling-key rung twin -> SKIPPED, with an example named in the banner"
     expect(status).toBe(0);
     expect(stdout).toMatch(/rung twin under sibling key\s+1/);
     expect(stdout).toContain("catalog rows written   0");
-    expect(stdout).toMatch(/1\|Silver Prizm -> sibling key "bowman-chrome"/);
-    expect(stdout).toContain("Alpha Player");
+    expect(stdout).toMatch(/bowman -> twinSetKey "bowman-chrome"/);
+    expect(stdout).toContain("cardNumber=1|Silver Prizm");
+    expect(stdout).toContain('player="Alpha Player" vs twinPlayer="Alpha Player"');
     expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(0);
+  });
+});
+
+describe("UNRELATED product sharing a number by coincidence -> WRITTEN, never treated as a twin", () => {
+  // CF-A-COINCIDENCE-IS-NOT-A-SIBLING (incident 2026-09-26, run 36275442077).
+  // 2018 Topps Living Set #1 (Aaron Judge, base, unnumbered) staged clean and
+  // was skipped as a "twin" of 2018 Topps Chrome #1 -- same number, same
+  // player, by coincidence of two completely unrelated products' numbering.
+  // `topps-living-set` has no parent and its own family in the registry
+  // (catalog/productSetKeys.ts), so it is never a sibling of `topps-chrome`
+  // (parent: `topps`) in either direction.
+  const dir = stageDir("2018-living-set-vs-chrome", [
+    "category,cardNumber,parallel,isAuto,printRun,player",
+    "base,1,,false,,Aaron Judge",
+    "",
+  ].join("\n"), { sport: "baseball", year: 2018, setKey: "topps-living-set", setName: "2018 Topps Living Set" });
+
+  it("writes the row even though a checklist-grade row with the same number and player exists under topps-chrome -- unrelated products, not siblings", () => {
+    const { path: shim, writtenFile } = shimOf({
+      bySibling: [{
+        id: "hiq:baseball:2018:topps-chrome:1:base:no-auto",
+        setKey: "topps-chrome", parallel: null, isAuto: false, printRun: null,
+        source: "sportscardchecklist", playerName: "Aaron Judge",
+      }],
+    });
+    const { stdout, status } = runIngestApply(dir, shim);
+    expect(status).toBe(0);
+    expect(stdout).toContain("rung twin under sibling key 0");
+    expect(stdout).toContain("catalog rows written   1");
+    expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(1);
+  });
+});
+
+describe("sibling key, same rung, DIFFERENT player -> WRITTEN, never treated as a twin", () => {
+  // Registry says bowman/bowman-chrome ARE siblings, but namesAgree says the
+  // players disagree -- a real different-player pair still writes, exactly
+  // as the #2422 fix requires.
+  const dir = stageDir("2020-bowman-sibling-diff-player", [
+    "category,cardNumber,parallel,isAuto,printRun,player",
+    "base,1,Silver Prizm,false,,Gamma Player",
+    "",
+  ].join("\n"), { sport: "baseball", year: 2020, setKey: "bowman", setName: "2020 Bowman Diff Player" });
+
+  it("writes the row: sibling-key scope matches but the player does not", () => {
+    const { path: shim, writtenFile } = shimOf({
+      bySibling: [{
+        id: "hiq:baseball:2020:bowman-chrome:1:silver-prizm:no-auto",
+        setKey: "bowman-chrome", parallel: "Silver Prizm", isAuto: false, printRun: null,
+        source: "sportscardchecklist", playerName: "Delta Player",
+      }],
+    });
+    const { stdout, status } = runIngestApply(dir, shim);
+    expect(status).toBe(0);
+    expect(stdout).toContain("rung twin under sibling key 0");
+    expect(stdout).toContain("catalog rows written   1");
+    expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(1);
   });
 });
 
@@ -291,7 +348,7 @@ describe("the manifest can explicitly waive the guard -- never an env flag", () 
     // separately from written (never added to the reconciliation), and
     // names the manifest's own stated reason.
     expect(stdout).toMatch(/rung twins WAIVED \(reason: test fixture: reprint set deliberately mirrors its parent's numbering\) 1/);
-    expect(stdout).toMatch(/WAIVED: 1\|Silver Prizm -> sibling key "bowman-chrome"/);
+    expect(stdout).toMatch(/WAIVED: bowman -> twinSetKey "bowman-chrome"\s+cardNumber=1\|Silver Prizm/);
     expect(stdout).toMatch(/csv rows read 1 = written 1 \+ failed 0 \+ skipped 0 \+ refused 0 \+ source duplicates 0 \+ present\/checklist 0 \+ rung twin 0 \+ note in rung name 0\s+\(balances\)/);
     expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(1);
   });
@@ -411,6 +468,54 @@ describe("mutation checks: both skip branches actually gate the write", () => {
       try { fs.rmSync(mutantPath, { force: true }); } catch { /* best effort */ }
     }
   });
+
+  it("removing the sibling-SCOPE check writes the UNRELATED-product row through the guard instead of past it", () => {
+    // CF-A-COINCIDENCE-IS-NOT-A-SIBLING. lib/sibling-rung-twin.cjs is loaded
+    // by the real ingester via a fixed relative require
+    // (`require(path.join(__dirname, "lib", "sibling-rung-twin.cjs"))`), so
+    // the mutant has to replace the REAL file on disk (restored in `finally`)
+    // rather than a substitute module the script would never load.
+    const libPath = path.join(path.dirname(script), "lib", "sibling-rung-twin.cjs");
+    const libSrc = fs.readFileSync(libPath, "utf8");
+    const marker = /if \(!isKnownSiblingSetKey\(row\.setKey, setKey, productAncestryOf\)\) return false;/;
+    expect(libSrc).toMatch(marker);
+    const mutatedLib = libSrc.replace(marker, "");
+    expect(mutatedLib).not.toBe(libSrc);
+
+    const dir = stageDir("2018-mutant-living-set-vs-chrome", [
+      "category,cardNumber,parallel,isAuto,printRun,player",
+      "base,1,,false,,Aaron Judge",
+      "",
+    ].join("\n"), { sport: "baseball", year: 2018, setKey: "topps-living-set", setName: "2018 Mutant Living Set" });
+    const { path: shim, writtenFile } = shimOf({
+      bySibling: [{
+        id: "hiq:baseball:2018:topps-chrome:1:base:no-auto",
+        setKey: "topps-chrome", parallel: null, isAuto: false, printRun: null,
+        source: "sportscardchecklist", playerName: "Aaron Judge",
+      }],
+    });
+    fs.writeFileSync(libPath, mutatedLib);
+    try {
+      const r2 = spawnSync(process.execPath, [script], {
+        env: {
+          ...process.env, COSMOS_CONNECTION_STRING, DIR: dir, SOURCE: "sportscardchecklist",
+          BACKFILL_APPLY: "true", REINGEST: "true",
+          NODE_OPTIONS: `--require ${JSON.stringify(shim)}`,
+        },
+        encoding: "utf8",
+      });
+      // Without the sibling-scope check, the Living Set row (an unrelated
+      // product coincidentally sharing #1 + player) now reads as a twin and
+      // is wrongly skipped instead of written -- the exact incident this fix
+      // exists to close.
+      expect(r2.status).toBe(0);
+      expect(String(r2.stdout)).toContain("rung twin under sibling key 1");
+      expect(String(r2.stdout)).toContain("catalog rows written   0");
+      expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(0);
+    } finally {
+      fs.writeFileSync(libPath, libSrc);
+    }
+  });
 });
 
 describe("the twin query is capped by its own semaphore, independent of CONCURRENCY", () => {
@@ -514,5 +619,9 @@ describe("REPORT mode writes nothing and never touches Cosmos at all", () => {
     expect(status).toBe(0);
     expect(stdout).toContain("catalog rows written   1");
     expect(stdout).toContain("REPORT ONLY — nothing written");
+    // The banner states, in REPORT mode, that the guard was never evaluated
+    // -- so a clean "0 collisions" REPORT is never mistaken for this guard's
+    // own verdict.
+    expect(stdout).toMatch(/REPORT mode: the sibling-rung-twin guard is evaluated in APPLY only/);
   });
 });

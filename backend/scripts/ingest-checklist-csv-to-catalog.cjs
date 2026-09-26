@@ -43,6 +43,11 @@ const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReco
 const { upsertCatalogEntry, cleanPlayerName } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
 const { computeHobbyIqCardId, slugify, normalizeSetKey } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+// CF-A-COINCIDENCE-IS-NOT-A-SIBLING: the SAME registry the worklist
+// (acquisition-worklist.cjs) and the matcher's own widening already trust for
+// "is this setKey part of that product's family" -- never a hand-coded pair
+// table of our own.
+const { productAncestry } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
 // CF-VACATE-THE-PLAIN-ID-OR-REFUSE: the incumbent is MOVED, never re-upserted
 // at a second address, so the ambiguous plain id genuinely stops existing and
 // the sales hanging off it follow the card.
@@ -529,6 +534,13 @@ async function main() {
     console.log("");
   }
   console.log(`${f(files.length)} files  source=${SOURCE} (${authority})  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
+  // CF-A-COINCIDENCE-IS-NOT-A-SIBLING / CF-A-SIBLING-KEY-IS-STILL-THE-SAME-
+  // RUNG: the sibling-rung-twin guard needs a live Cosmos query (the planner
+  // has no container access), so it is evaluated in APPLY only -- REPORT
+  // mode never touches Cosmos at all and cannot see a sibling twin either
+  // way. Stated here so a REPORT run's "0 collisions" is never read as this
+  // guard's own verdict.
+  if (!APPLY) console.log(`REPORT mode: the sibling-rung-twin guard is evaluated in APPLY only -- this run never queried Cosmos and cannot see a sibling twin.\n`);
 
   let rows = 0, written = 0, skippedRow = 0, noProduct = 0, failed = 0, files_ok = 0;
   // CF-A-FAILED-ROW-IS-NOT-A-SKIPPED-ROW (2026-09-13). The summary printed
@@ -977,11 +989,16 @@ async function main() {
             sport: product.sport, year: product.year, setKey: rowSetKey,
             parallelSlugOf: (p) => slugify(p || "Base"),
             catalogAuthorityOf,
+            productAncestryOf: productAncestry,
           }));
           if (twins.length) {
             const t = twins[0];
-            const example = `${String(r.cardNumber).toUpperCase()}|${r.parallel || "base"} -> sibling key "${t.setKey}" `
-              + `(${t.playerName || "?"}, source=${t.source})`;
+            // CF-A-COINCIDENCE-IS-NOT-A-SIBLING: name what was actually
+            // compared -- both setKeys, the cardNumber, and both players --
+            // so a reviewer can tell a real sibling-key skip from a bug
+            // without re-deriving the query by hand.
+            const example = `${rowSetKey} -> twinSetKey "${t.setKey}"  cardNumber=${String(r.cardNumber).toUpperCase()}|${r.parallel || "base"}  `
+              + `player="${r.player || "?"}" vs twinPlayer="${t.playerName || "?"}" (source=${t.source})`;
             if (product.allowSiblingRungTwins) {
               // CF-WAIVED-IS-NOT-INVISIBLE (review finding, 2026-09-25 PR
               // #2422). The manifest's stated reason waives the skip -- the

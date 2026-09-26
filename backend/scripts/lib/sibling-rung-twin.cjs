@@ -37,6 +37,27 @@
  * Jr./Sr. split -- keeps the rows apart exactly as it does everywhere else
  * `namesAgree` is wired in.
  *
+ * CF-A-COINCIDENCE-IS-NOT-A-SIBLING (incident, 2026-09-26, run 36275442077).
+ * "same setKey" was the ONLY thing `isSiblingRungTwin` refused to call a
+ * twin -- ANY other setKey, related or not, qualified. 2018 Topps Living Set
+ * #1 (Aaron Judge, base, unnumbered) staged clean and got read as a twin of
+ * 2018 Topps Chrome #1 -- same Judge, same number, by pure coincidence of two
+ * completely unrelated products' numbering, not because Living Set is a
+ * sibling of Chrome (it isn't; `topps-living-set` has no parent and its own
+ * `family`, per catalog/productSetKeys.ts). 16 of 480 rows skipped this way.
+ * The guard exists to stop re-minting the SAME card attested a second time
+ * under a sibling key (`bowman` vs `bowman-chrome` -- direct parent/child --
+ * and `topps-chrome` vs `topps-series-1` -- both children of `topps`, neither
+ * one the other's parent -- in the SAME registry the worklist and lanes
+ * already trust, `productAncestry`) -- not to refuse every accidental number
+ * collision across the whole catalog. `isKnownSiblingSetKey` below is now
+ * REQUIRED before the rung shape or `namesAgree` are even consulted: the two
+ * setKeys' full ancestry chains (each key, then its parent, grandparent, ...
+ * to the root) must share ANY entry at all -- a direct parent/child pair is
+ * just the case where one chain is a prefix of the other. An unrelated
+ * product's disjoint chain is never a twin, no matter how many other fields
+ * happen to line up.
+ *
  * Pure query-shape + pure classification live here, with the Cosmos call
  * itself injected as `queryPage`, so a test can drive this with a fake page
  * source and never touch a network -- the same separation
@@ -44,6 +65,36 @@
  * halves.
  */
 const { namesAgree } = require("./name-agreement.cjs");
+
+/**
+ * Is `candidateSetKey` an actual sibling of `setKey` in `productAncestryOf`'s
+ * own registry -- either a direct parent/child (`bowman` <-> `bowman-chrome`)
+ * OR two children of the same ancestor (`topps-chrome` and `topps-series-1`,
+ * both rolling up to `topps`, neither one the other's parent)? Checked by
+ * walking each key's FULL ancestry chain (`productAncestry` always lists the
+ * key itself first, then parent, grandparent, ... to the root) and asking
+ * whether the two chains share ANY entry at all -- direct inclusion is just
+ * the special case where one chain is a prefix of the other.
+ *
+ * The trivial "a key is its own sibling" case (`row.setKey === setKey`) is
+ * NOT specially excluded here -- identical chains obviously intersect -- the
+ * caller (`isSiblingRungTwin`) already guards that case separately and must
+ * keep doing so.
+ *
+ * Two keys with genuinely disjoint ancestry chains -- `topps-living-set`
+ * (parent: null, its own family, chain = [topps-living-set]) and
+ * `topps-chrome` (parent: `topps`, chain = [topps-chrome, topps]) -- share
+ * nothing in either chain and are NOT siblings, however many other fields
+ * happen to match (CF-A-COINCIDENCE-IS-NOT-A-SIBLING, incident 2026-09-26).
+ */
+function isKnownSiblingSetKey(candidateSetKey, setKey, productAncestryOf) {
+  const a = String(candidateSetKey ?? "").trim().toLowerCase();
+  const b = String(setKey ?? "").trim().toLowerCase();
+  if (!a || !b) return false;
+  const ancestryA = new Set(productAncestryOf(a));
+  const ancestryB = productAncestryOf(b);
+  return ancestryB.some((k) => ancestryA.has(k));
+}
 
 /** The SQL this check runs. Exposed so a test can assert the shape without
  *  a live container, and so every caller runs the identical predicate. */
@@ -65,9 +116,16 @@ function siblingRungTwinQuery({ sport, year, cardNumber }) {
  * Does `row` (an existing catalog document from the query above) name the
  * same rung as the staged row, under a DIFFERENT setKey, at checklist
  * authority? Pure: no I/O, so the branch is unit-testable with plain objects.
+ *
+ * `productAncestryOf` is REQUIRED (CF-A-COINCIDENCE-IS-NOT-A-SIBLING, incident
+ * 2026-09-26): a same-number match under an unrelated product's setKey is
+ * checked FIRST, before the rung shape or `namesAgree` ever run, so an
+ * unrelated product can never reach the write-blocking branch no matter what
+ * else happens to line up.
  */
-function isSiblingRungTwin(row, staged, { setKey, parallelSlugOf, catalogAuthorityOf }) {
+function isSiblingRungTwin(row, staged, { setKey, parallelSlugOf, catalogAuthorityOf, productAncestryOf }) {
   if (!row || row.setKey === setKey) return false;
+  if (!isKnownSiblingSetKey(row.setKey, setKey, productAncestryOf)) return false;
   if (catalogAuthorityOf(row.source) !== "checklist") return false;
   const rowParallelSlug = parallelSlugOf(row.parallel || "Base");
   const stagedParallelSlug = parallelSlugOf(staged.parallel || "Base");
@@ -117,11 +175,16 @@ async function drainQuery(container, query, retry = (fn) => fn()) {
  * matching row (for the SKIP decision) plus the full list (for the banner's
  * examples), so a caller wanting only "is there one" is not forced to
  * materialise every match, while the banner can still show up to 20.
+ *
+ * `productAncestryOf` is REQUIRED, same as `setKey`/`parallelSlugOf`/
+ * `catalogAuthorityOf` -- there is no default that would be safe to fall back
+ * to (a caller that forgot it would rather see every row come back as "not a
+ * twin" loudly in its own tests than silently widen back to "any setKey").
  */
-async function findSiblingRungTwins(container, staged, { sport, year, setKey, parallelSlugOf, catalogAuthorityOf, retry }) {
+async function findSiblingRungTwins(container, staged, { sport, year, setKey, parallelSlugOf, catalogAuthorityOf, productAncestryOf, retry }) {
   const query = siblingRungTwinQuery({ sport, year, cardNumber: staged.cardNumber });
   const rows = await drainQuery(container, query, retry);
-  return rows.filter((row) => isSiblingRungTwin(row, staged, { setKey, parallelSlugOf, catalogAuthorityOf }));
+  return rows.filter((row) => isSiblingRungTwin(row, staged, { setKey, parallelSlugOf, catalogAuthorityOf, productAncestryOf }));
 }
 
 /**
@@ -159,6 +222,7 @@ function createSemaphore(limit) {
 }
 
 module.exports = {
+  isKnownSiblingSetKey,
   siblingRungTwinQuery,
   isSiblingRungTwin,
   drainQuery,
