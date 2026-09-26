@@ -119,30 +119,41 @@ function deriveIdentity(row, deps) {
   if (!guard.ok) return { ok: false, reasons: guard.reasons.map((r) => `guard:${r}`) };
 
   // CF-ISAUTO-FROM-CHECKLIST-NOT-JUST-TITLE (stamp-fix batch, 2026-09-26,
-  // defect 4 / C:/tmp/rootcause_1234/RESULT.md). `parsed.isAuto` alone is
-  // ONLY a title-word reader OR'd with a cardNumber-prefix reader
-  // (parseListingIdentity), which is structurally blind to a signed variant
-  // that shares its base card's number with no distinguishing letter prefix
-  // -- 2025 Bowman's Best (B25-xx) mints its autograph rung exactly this
-  // way, the 1,252-sales case. The service path already combines two more
-  // signals for this (parseTitleIdentity.service.ts's `inferIsAuto`): the
-  // product's own setName keyword (AUTO_SETNAME_RE -- unconditional, no
-  // corroboration needed, e.g. row.setName containing "Autographs") and the
-  // checklist's own signed-row list (checklistSaysAuto -- gated on
+  // defect 4 / C:/tmp/rootcause_1234/RESULT.md, corrected 2026-09-26 per
+  // review). `parsed.isAuto` alone is ONLY a title-word reader OR'd with a
+  // cardNumber-prefix reader (parseListingIdentity), which is structurally
+  // blind to a signed variant that shares its base card's number with no
+  // distinguishing letter prefix -- 2025 Bowman's Best (B25-xx) mints its
+  // autograph rung exactly this way (5,121 of 23,383 traced base-parallel
+  // sales, 21.9%, backed only at the FLIPPED isAuto value --
+  // C:/tmp/bb25_trace_1530/RESULT.md). The fix is to consult the
+  // checklist's own signed-row list at this card number
+  // (checklistAutoLookup.ts's `checklistSaysAuto`, exposed through
+  // parseTitleIdentity.service.ts's exported `inferIsAuto`) -- gated on
   // corroboration, so it can only CONFIRM a positive some other signal
-  // already raised, never invent one from a bare base-card title). Neither
-  // reached `deriveIdentity` before this change; calling the SAME exported
-  // function the service path uses (rather than re-implementing its
-  // combination logic here) is what keeps the two paths from drifting, the
-  // same discipline `isCardNumberAutoSubset` above already follows.
+  // already raised, never invent one from a bare base-card title.
   //
-  // ADDITIVE ONLY: an absent `inferIsAuto` dep leaves `isAuto` exactly as it
-  // was (the plain OR below); a caller that does supply it but not
-  // `checklistAuto` gets only the (unconditional, safe) setName signal.
+  // THE DOCTRINE THIS MUST NOT VIOLATE (feedback_isauto_boundary_is_not_
+  // text; memory ruling "isAuto boundary is cardNumber, not text -- text on
+  // card_set is HARMFUL"). `inferIsAuto` ALSO carries an earlier,
+  // UNCONDITIONAL branch that reads `input.setName` against
+  // AUTO_SETNAME_RE with no corroboration gate at all -- a setName
+  // containing the word "Autographs" (e.g. a product-wide label a vendor
+  // slapped on every row, base cards included) would flip isAuto true with
+  // zero connection to THIS row's card number. That is exactly the "text on
+  // card_set is HARMFUL" shape the ruling forbids, so `setName` is
+  // deliberately NEVER passed to `inferIsAuto` here -- only the checklist
+  // branch is reachable from this call, and it alone decides.
+  //
+  // ADDITIVE ONLY, DOCTRINE-COMPLIANT ONLY: an absent `inferIsAuto` dep, or
+  // an absent `checklistAuto` dep, leaves `isAuto` exactly as it was (the
+  // plain OR below) -- the checklist can only turn a false into a true,
+  // never the reverse, and only when the checklist itself says this exact
+  // cardNumber is signed.
   const isAuto = deps.inferIsAuto
     ? deps.inferIsAuto({
         sport, year: cardYear, setKey, cardNumber,
-        setName: row.setName ?? null,
+        // setName is INTENTIONALLY OMITTED -- see the doctrine note above.
         titleHasAutoText: parsed.isAuto === true,
         // CORROBORATION, NOT INVENTION: the checklist only confirms an
         // autograph this row already pointed at -- the row's own STORED
