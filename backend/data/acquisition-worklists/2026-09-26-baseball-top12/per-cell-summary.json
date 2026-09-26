@@ -1,0 +1,586 @@
+{
+  "baseball|2026|topps": {
+    "scanned": 28261,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.2796713861213075,
+    "buckets": {
+      "CARD-MISSING": 257,
+      "RUNG-MISSING": 3294,
+      "STALE": 1185,
+      "STALE-NO-ROW": 3182,
+      "BACKED-DERIVED-ONLY": 15,
+      "NO-NUMBER": 67
+    },
+    "bucketShares": {
+      "CARD-MISSING": 0.032125,
+      "RUNG-MISSING": 0.41175,
+      "STALE": 0.148125,
+      "STALE-NO-ROW": 0.39775,
+      "BACKED-DERIVED-ONLY": 0.001875,
+      "NO-NUMBER": 0.008375
+    },
+    "staleWithRowCount": 1185,
+    "acquisitionCount": 6733,
+    "classificationCounts": {
+      "KEY-DEFECT": 4721,
+      "ACQUIRE": 1749,
+      "ISAUTO-DEFECT": 17,
+      "SPELLING": 246,
+      "STALE": 15,
+      "NO-NUMBER": 67
+    },
+    "classificationShares": {
+      "KEY-DEFECT": 0.6927366104181951,
+      "ACQUIRE": 0.2566397652237711,
+      "ISAUTO-DEFECT": 0.0024944974321349962,
+      "SPELLING": 0.03609684519442406,
+      "STALE": 0.0022010271460014674,
+      "NO-NUMBER": 0.009831254585473221
+    },
+    "rematchVsAcquisitionSplit": {
+      "rematch": 1185,
+      "acquisition": 6733
+    },
+    "acquisitionVsDefectSplit": {
+      "acquire": 1749,
+      "keyDefect": 4721,
+      "spelling": 246,
+      "isAutoDefect": 17
+    }
+  },
+  "baseball|2025|topps": {
+    "scanned": 24391,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.323506813862267,
+    "buckets": {
+      "RUNG-MISSING": 2044,
+      "BACKED-DERIVED-ONLY": 399,
+      "STALE-NO-ROW": 3391,
+      "STALE": 1857,
+      "CARD-MISSING": 236,
+      "NO-NUMBER": 73
+    },
+    "bucketShares": {
+      "RUNG-MISSING": 0.2555,
+      "BACKED-DERIVED-ONLY": 0.049875,
+      "STALE-NO-ROW": 0.423875,
+      "STALE": 0.232125,
+      "CARD-MISSING": 0.0295,
+      "NO-NUMBER": 0.009125
+    },
+    "staleWithRowCount": 1857,
+    "acquisitionCount": 5671,
+    "classificationCounts": {
+      "SPELLING": 2356,
+      "ISAUTO-DEFECT": 130,
+      "ACQUIRE": 2025,
+      "STALE": 399,
+      "KEY-DEFECT": 1160,
+      "NO-NUMBER": 73
+    },
+    "classificationShares": {
+      "SPELLING": 0.3835259645124532,
+      "ISAUTO-DEFECT": 0.021162298551196484,
+      "ACQUIRE": 0.3296434966628683,
+      "STALE": 0.06495197786097998,
+      "KEY-DEFECT": 0.18883281784144554,
+      "NO-NUMBER": 0.011883444571056487
+    },
+    "rematchVsAcquisitionSplit": {
+      "rematch": 1857,
+      "acquisition": 5671
+    },
+    "acquisitionVsDefectSplit": {
+      "acquire": 2025,
+      "keyDefect": 1160,
+      "spelling": 2356,
+      "isAutoDefect": 130
+    }
+  },
+  "baseball|2025|bowman-chrome": {
+    "scanned": 14829,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.5333333333333333,
+    "buckets": {
+      "STALE": 507,
+      "CARD-MISSING": 99,
+      "STALE-NO-ROW": 3191,
+      "NO-NUMBER": 36,
+      "RUNG-MISSING": 4126,
+      "BACKED-DERIVED-ONLY": 41
+    },
+    "bucketShares": {
+      "STALE": 0.063375,
+      "CARD-MISSING": 0.012375,
+      "STALE-NO-ROW": 0.398875,
+      "NO-NUMBER": 0.0045,
+      "RUNG-MISSING": 0.51575,
+      "BACKED-DERIVED-ONLY": 0.005125
+    },
+    "staleWithRowCount": 507,
+    "acquisitionCount": 7416,
+    "classificationCounts": {
+      "ACQUIRE": 1095,
+      "KEY-DEFECT": 5832,
+      "NO-NUMBER": 36,
+      "SPELLING": 436,
+      "ISAUTO-DEFECT": 53,
+      "STALE": 41
+    },
+    "classificationShares": {
+      "ACQUIRE": 0.1461363939677032,
+      "KEY-DEFECT": 0.7783264380088082,
+      "NO-NUMBER": 0.004804484185239557,
+      "SPELLING": 0.05818764179901241,
+      "ISAUTO-DEFECT": 0.007073268383824903,
+      "STALE": 0.005471773655411717
+    },
+    "rematchVsAcquisitionSplit": {
+      "rematch": 507,
+      "acquisition": 7416
+    },
+    "acquisitionVsDefectSplit": {
+      "acquire": 1095,
+      "keyDefect": 5832,
+      "spelling": 436,
+      "isAutoDefect": 53
+    }
+  },
+  "baseball|2025|topps-chrome": {
+    "scanned": 34105,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.23454220293764108,
+    "buckets": {
+      "STALE-NO-ROW": 4458,
+      "STALE": 1386,
+      "RUNG-MISSING": 1339,
+      "BACKED-DERIVED-ONLY": 562,
+      "NO-NUMBER": 89,
+      "CARD-MISSING": 166
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.55725,
+      "STALE": 0.17325,
+      "RUNG-MISSING": 0.167375,
+      "BACKED-DERIVED-ONLY": 0.07025,
+      "NO-NUMBER": 0.011125,
+      "CARD-MISSING": 0.02075
+    },
+    "staleWithRowCount": 1386,
+    "acquisitionCount": 5963,
+    "classificationCounts": {
+      "SPELLING": 2049,
+      "KEY-DEFECT": 1165,
+      "ACQUIRE": 2695,
+      "ISAUTO-DEFECT": 54,
+      "STALE": 562,
+      "NO-NUMBER": 89
+    },
+    "classificationShares": {
+      "SPELLING": 0.3097973994557,
+      "KEY-DEFECT": 0.1761415179921379,
+      "ACQUIRE": 0.40746900514061085,
+      "ISAUTO-DEFECT": 0.008164499546416692,
+      "STALE": 0.08497127305715149,
+      "NO-NUMBER": 0.013456304807983066
+    },
+    "rematchVsAcquisitionSplit": {
+      "rematch": 1386,
+      "acquisition": 5963
+    },
+    "acquisitionVsDefectSplit": {
+      "acquire": 2695,
+      "keyDefect": 1165,
+      "spelling": 2049,
+      "isAutoDefect": 54
+    }
+  },
+  "baseball|2026|bowman-chrome": {
+    "scanned": 21687,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.3668210371864826,
+    "buckets": {
+      "STALE-NO-ROW": 3885,
+      "CARD-MISSING": 639,
+      "RUNG-MISSING": 2910,
+      "NO-NUMBER": 29,
+      "STALE": 537
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.485625,
+      "CARD-MISSING": 0.079875,
+      "RUNG-MISSING": 0.36375,
+      "NO-NUMBER": 0.003625,
+      "STALE": 0.067125
+    },
+    "staleWithRowCount": 537,
+    "acquisitionCount": 7434,
+    "classificationCounts": {
+      "KEY-DEFECT": 2078,
+      "SPELLING": 1425,
+      "ACQUIRE": 3919,
+      "NO-NUMBER": 29,
+      "ISAUTO-DEFECT": 12
+    },
+    "classificationShares": {
+      "KEY-DEFECT": 0.2784403055071687,
+      "SPELLING": 0.19094198043682165,
+      "ACQUIRE": 0.5251239447943187,
+      "NO-NUMBER": 0.0038858367948546163,
+      "ISAUTO-DEFECT": 0.001607932466836393
+    },
+    "rematchVsAcquisitionSplit": {
+      "rematch": 537,
+      "acquisition": 7434
+    },
+    "acquisitionVsDefectSplit": {
+      "acquire": 3919,
+      "keyDefect": 2078,
+      "spelling": 1425,
+      "isAutoDefect": 12
+    }
+  },
+  "baseball|2025|bowman": {
+    "scanned": 18586,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.42225271825187377,
+    "buckets": {
+      "STALE-NO-ROW": 4528,
+      "RUNG-MISSING": 1597,
+      "STALE": 889,
+      "CARD-MISSING": 92,
+      "NO-NUMBER": 744,
+      "BACKED-DERIVED-ONLY": 150
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.566,
+      "RUNG-MISSING": 0.199625,
+      "STALE": 0.111125,
+      "CARD-MISSING": 0.0115,
+      "NO-NUMBER": 0.093,
+      "BACKED-DERIVED-ONLY": 0.01875
+    },
+    "staleWithRowCount": 889,
+    "acquisitionCount": 6217,
+    "classificationCounts": {
+      "KEY-DEFECT": 2544,
+      "SPELLING": 1622,
+      "ISAUTO-DEFECT": 484,
+      "NO-NUMBER": 744,
+      "ACQUIRE": 1567,
+      "STALE": 150
+    },
+    "classificationShares": {
+      "KEY-DEFECT": 0.3577555899310927,
+      "SPELLING": 0.22809731402053157,
+      "ISAUTO-DEFECT": 0.06806356349317957,
+      "NO-NUMBER": 0.10462663479116861,
+      "ACQUIRE": 0.22036281816903389,
+      "STALE": 0.02109407959499367
+    },
+    "rematchVsAcquisitionSplit": {
+      "rematch": 889,
+      "acquisition": 6217
+    },
+    "acquisitionVsDefectSplit": {
+      "acquire": 1567,
+      "keyDefect": 2544,
+      "spelling": 1622,
+      "isAutoDefect": 484
+    }
+  },
+  "baseball|2026|topps-chrome": {
+    "scanned": 46376,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.1713208840157615,
+    "buckets": {
+      "STALE-NO-ROW": 3162,
+      "RUNG-MISSING": 949,
+      "CARD-MISSING": 954,
+      "STALE": 2795,
+      "BACKED-DERIVED-ONLY": 72,
+      "NO-NUMBER": 68
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.39525,
+      "RUNG-MISSING": 0.118625,
+      "CARD-MISSING": 0.11925,
+      "STALE": 0.349375,
+      "BACKED-DERIVED-ONLY": 0.009,
+      "NO-NUMBER": 0.0085
+    },
+    "staleWithRowCount": 2795,
+    "acquisitionCount": 5065,
+    "classificationCounts": {
+      "ISAUTO-DEFECT": 44,
+      "SPELLING": 1008,
+      "KEY-DEFECT": 565,
+      "ACQUIRE": 3448,
+      "STALE": 72,
+      "NO-NUMBER": 68
+    },
+    "classificationShares": {
+      "ISAUTO-DEFECT": 0.00845341018251681,
+      "SPELLING": 0.1936599423631124,
+      "KEY-DEFECT": 0.10854947166186359,
+      "ACQUIRE": 0.6624399615754083,
+      "STALE": 0.0138328530259366,
+      "NO-NUMBER": 0.013064361191162345
+    },
+    "rematchVsAcquisitionSplit": {
+      "rematch": 2795,
+      "acquisition": 5065
+    },
+    "acquisitionVsDefectSplit": {
+      "acquire": 3448,
+      "keyDefect": 565,
+      "spelling": 1008,
+      "isAutoDefect": 44
+    }
+  },
+  "baseball|2025|panini-prizm": {
+    "scanned": 16433,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.48062481225593273,
+    "buckets": {
+      "BACKED-DERIVED-ONLY": 854,
+      "STALE-NO-ROW": 3006,
+      "RUNG-MISSING": 3195,
+      "CARD-MISSING": 588,
+      "STALE": 345,
+      "NO-NUMBER": 12
+    },
+    "bucketShares": {
+      "BACKED-DERIVED-ONLY": 0.10675,
+      "STALE-NO-ROW": 0.37575,
+      "RUNG-MISSING": 0.399375,
+      "CARD-MISSING": 0.0735,
+      "STALE": 0.043125,
+      "NO-NUMBER": 0.0015
+    },
+    "staleWithRowCount": 345,
+    "acquisitionCount": 6789,
+    "classificationCounts": {
+      "STALE": 854,
+      "SPELLING": 2722,
+      "ACQUIRE": 3840,
+      "KEY-DEFECT": 201,
+      "NO-NUMBER": 12,
+      "ISAUTO-DEFECT": 26
+    },
+    "classificationShares": {
+      "STALE": 0.11156107119529719,
+      "SPELLING": 0.35558458523840625,
+      "ACQUIRE": 0.5016329196603527,
+      "KEY-DEFECT": 0.026257348138471588,
+      "NO-NUMBER": 0.0015676028739386022,
+      "ISAUTO-DEFECT": 0.0033964728935336383
+    },
+    "rematchVsAcquisitionSplit": {
+      "rematch": 345,
+      "acquisition": 6789
+    },
+    "acquisitionVsDefectSplit": {
+      "acquire": 3840,
+      "keyDefect": 201,
+      "spelling": 2722,
+      "isAutoDefect": 26
+    }
+  },
+  "baseball|2024|topps": {
+    "scanned": 21865,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.3635867836204154,
+    "buckets": {
+      "STALE-NO-ROW": 3896,
+      "RUNG-MISSING": 2364,
+      "STALE": 1256,
+      "BACKED-DERIVED-ONLY": 185,
+      "CARD-MISSING": 277,
+      "NO-NUMBER": 22
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.487,
+      "RUNG-MISSING": 0.2955,
+      "STALE": 0.157,
+      "BACKED-DERIVED-ONLY": 0.023125,
+      "CARD-MISSING": 0.034625,
+      "NO-NUMBER": 0.00275
+    },
+    "staleWithRowCount": 1256,
+    "acquisitionCount": 6537,
+    "classificationCounts": {
+      "SPELLING": 1111,
+      "KEY-DEFECT": 3167,
+      "ACQUIRE": 2042,
+      "STALE": 185,
+      "ISAUTO-DEFECT": 217,
+      "NO-NUMBER": 22
+    },
+    "classificationShares": {
+      "SPELLING": 0.16473902728351128,
+      "KEY-DEFECT": 0.4696026097271649,
+      "ACQUIRE": 0.3027876631079478,
+      "STALE": 0.027431791221826807,
+      "ISAUTO-DEFECT": 0.032176749703440095,
+      "NO-NUMBER": 0.003262158956109134
+    },
+    "rematchVsAcquisitionSplit": {
+      "rematch": 1256,
+      "acquisition": 6537
+    },
+    "acquisitionVsDefectSplit": {
+      "acquire": 2042,
+      "keyDefect": 3167,
+      "spelling": 1111,
+      "isAutoDefect": 217
+    }
+  },
+  "baseball|2026|bowman-chrome-mega-box": {
+    "scanned": 6830,
+    "sampled": 2122,
+    "unbacked": 2122,
+    "sampledFraction": 0.31068814055636895,
+    "buckets": {
+      "STALE-NO-ROW": 844,
+      "RUNG-MISSING": 1250,
+      "CARD-MISSING": 25,
+      "NO-NUMBER": 2,
+      "STALE": 1
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.3977379830348728,
+      "RUNG-MISSING": 0.589066918001885,
+      "CARD-MISSING": 0.0117813383600377,
+      "NO-NUMBER": 0.000942507068803016,
+      "STALE": 0.000471253534401508
+    },
+    "staleWithRowCount": 1,
+    "acquisitionCount": 2119,
+    "classificationCounts": {
+      "KEY-DEFECT": 1258,
+      "ACQUIRE": 861,
+      "NO-NUMBER": 2
+    },
+    "classificationShares": {
+      "KEY-DEFECT": 0.5931164545025931,
+      "ACQUIRE": 0.40594059405940597,
+      "NO-NUMBER": 0.000942951438000943
+    },
+    "rematchVsAcquisitionSplit": {
+      "rematch": 1,
+      "acquisition": 2119
+    },
+    "acquisitionVsDefectSplit": {
+      "acquire": 861,
+      "keyDefect": 1258,
+      "spelling": 0,
+      "isAutoDefect": 0
+    }
+  },
+  "baseball|2026|bowman": {
+    "scanned": 34677,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.2282844424152494,
+    "buckets": {
+      "STALE": 298,
+      "STALE-NO-ROW": 5561,
+      "RUNG-MISSING": 1676,
+      "CARD-MISSING": 88,
+      "NO-NUMBER": 377
+    },
+    "bucketShares": {
+      "STALE": 0.03725,
+      "STALE-NO-ROW": 0.695125,
+      "RUNG-MISSING": 0.2095,
+      "CARD-MISSING": 0.011,
+      "NO-NUMBER": 0.047125
+    },
+    "staleWithRowCount": 298,
+    "acquisitionCount": 7325,
+    "classificationCounts": {
+      "KEY-DEFECT": 4904,
+      "SPELLING": 941,
+      "NO-NUMBER": 377,
+      "ACQUIRE": 1474,
+      "ISAUTO-DEFECT": 6
+    },
+    "classificationShares": {
+      "KEY-DEFECT": 0.6367177356530771,
+      "SPELLING": 0.12217605816670994,
+      "NO-NUMBER": 0.04894832511036094,
+      "ACQUIRE": 0.19137886263308232,
+      "ISAUTO-DEFECT": 0.0007790184367696703
+    },
+    "rematchVsAcquisitionSplit": {
+      "rematch": 298,
+      "acquisition": 7325
+    },
+    "acquisitionVsDefectSplit": {
+      "acquire": 1474,
+      "keyDefect": 4904,
+      "spelling": 941,
+      "isAutoDefect": 6
+    }
+  },
+  "baseball|2025|topps-heritage": {
+    "scanned": 33255,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.2405219325937284,
+    "buckets": {
+      "STALE-NO-ROW": 3949,
+      "RUNG-MISSING": 2053,
+      "STALE": 1963,
+      "BACKED-DERIVED-ONLY": 13,
+      "CARD-MISSING": 16,
+      "NO-NUMBER": 6
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.493625,
+      "RUNG-MISSING": 0.256625,
+      "STALE": 0.245375,
+      "BACKED-DERIVED-ONLY": 0.001625,
+      "CARD-MISSING": 0.002,
+      "NO-NUMBER": 0.00075
+    },
+    "staleWithRowCount": 1963,
+    "acquisitionCount": 6018,
+    "classificationCounts": {
+      "SPELLING": 5513,
+      "KEY-DEFECT": 175,
+      "ACQUIRE": 295,
+      "STALE": 13,
+      "ISAUTO-DEFECT": 35,
+      "NO-NUMBER": 6
+    },
+    "classificationShares": {
+      "SPELLING": 0.9132019214841809,
+      "KEY-DEFECT": 0.028987907901275468,
+      "ACQUIRE": 0.048865330462150074,
+      "STALE": 0.002153387444094749,
+      "ISAUTO-DEFECT": 0.0057975815802550935,
+      "NO-NUMBER": 0.0009938711280437303
+    },
+    "rematchVsAcquisitionSplit": {
+      "rematch": 1963,
+      "acquisition": 6018
+    },
+    "acquisitionVsDefectSplit": {
+      "acquire": 295,
+      "keyDefect": 175,
+      "spelling": 5513,
+      "isAutoDefect": 35
+    }
+  }
+}
