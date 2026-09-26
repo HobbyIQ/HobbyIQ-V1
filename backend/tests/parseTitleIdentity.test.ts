@@ -1690,3 +1690,60 @@ describe("inferSetKeyFromTitle — a title that says DRAFT is a Bowman Draft car
       .toBe("Bowman Draft Paper");
   });
 });
+
+// STAMP-FIX BATCH 0926 — defect 1: Holiday adjacency
+// (C:/tmp/gap2025topps_1430/RESULT.md, C:/tmp/rootcause_1234/RESULT.md,
+// parseTitleIdentity.service.ts ~line 4512).
+//
+// THE DEFECT. The line-4512 rule required "topps" and "holiday" to sit
+// TEXTUALLY ADJACENT (`/topps\s+holiday/`), so it missed every real title
+// where the series/player/card-number/parallel words the eBay listing
+// convention inserts push the two words apart — 82 of a 5,000-row sample
+// (~1,300 extrapolated), all genuinely `topps-holiday` cards priced into the
+// flagship `topps` pool instead (a split-pool defect,
+// feedback_one_card_one_row_one_pool).
+//
+// THE FIX. A bounded gap (same shape as the Bowman's Best Preview rule a
+// few hundred lines up): up to 6 intervening tokens between "topps" and
+// "holiday", so "Topps Series 2 - Roki Sasaki #558 Holiday" and "Topps Roki
+// Sasaki RC Holiday Sun Rookie #558" both resolve, while bucket-C's own
+// Value Box Holiday PARALLEL name (a flagship Topps card, not the Holiday
+// PRODUCT) stays correctly `topps` via a negative gate on "value box ...
+// holiday" within the same bounded window.
+describe("inferSetKeyFromTitle — Topps Holiday, non-adjacent (defect 1)", () => {
+  it.each([
+    ["2025 Topps Series 2 - Roki Sasaki #558 Holiday (RC)", "Topps Holiday"],
+    ["2025 Topps Roki Sasaki RC Holiday Sun Rookie #558 Dodgers", "Topps Holiday"],
+    ["2025 Topps #15 Mitch Haniger Holiday Flowers #/50", "Topps Holiday"],
+    ["2025 Topps Baseball #12 Holiday", "Topps Holiday"],
+    ["Roki Sasaki 2025 Topps #558 Summer Sunshine Holiday Parallel Rookie Card RC", "Topps Holiday"],
+  ])("%s -> %s", (title, want) => {
+    expect(inferSetKeyFromTitle(title)).toBe(want);
+  });
+
+  it("still resolves the adjacent form (unchanged)", () => {
+    expect(inferSetKeyFromTitle("2025 Topps Holiday #H1 Aaron Judge Blue Metallic Glitter"))
+      .toBe("Topps Holiday");
+  });
+
+  it("Value Box Holiday PARALLEL (bucket C) stays flagship Topps, not Topps Holiday", () => {
+    // "Holiday" here qualifies a Value Box product parallel, not the Topps
+    // Holiday release — widening the rule to reach this would misfile a
+    // real flagship-Value-Box card into the wrong product's pool.
+    expect(inferSetKeyFromTitle("2025 Topps Baseball #603 Value Box Holiday Beach Umbrella"))
+      .toBe("Topps");
+    expect(inferSetKeyFromTitle("2025 Topps Series 1 Value Box Holiday Beach Ball/Hot Dog Parallel"))
+      .toBe("Topps");
+  });
+
+  it("an unbounded gap is refused — Topps and Holiday from unrelated clauses stay flagship Topps", () => {
+    // Guardrail against over-widening: eight-plus intervening words is no
+    // longer the same phrase, and the negative-evidence lesson every rule in
+    // this ladder carries applies here too.
+    expect(
+      inferSetKeyFromTitle(
+        "2025 Topps Baseball Complete Master Set All Series Base Rookies Stars Legends Holiday Card",
+      ),
+    ).toBe("Topps");
+  });
+});

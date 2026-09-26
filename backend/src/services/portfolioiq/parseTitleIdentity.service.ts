@@ -4509,7 +4509,33 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // "Topps": "Holiday", "Gallery" and "Midnight" are ordinary words and a bare
   // rule for any of them would claim another brand's title -- the negative-
   // evidence lesson the Museum Collection and Finest rules above both carry.
-  if (/topps\s+holiday|holiday\s+mega\s*box/i.test(t)) return "Topps Holiday";
+  //
+  // CF-HOLIDAY-ADJACENCY (stamp-fix batch, 2026-09-26, defect 1 /
+  // C:/tmp/rootcause_1234/RESULT.md). The rule used to require "topps" and
+  // "holiday" TEXTUALLY ADJACENT, which missed every real eBay-idiom title
+  // where series/player/card-number/parallel words separate the two: "Topps
+  // Series 2 - Roki Sasaki #558 Holiday", "Topps Roki Sasaki RC Holiday Sun
+  // Rookie #558" -- 82 of a 5,000-row sample (~1,300 extrapolated), each one
+  // priced into the flagship `topps` pool instead of its own product's,
+  // exactly the split-pool shape `feedback_one_card_one_row_one_pool` names.
+  // Same bounded-gap shape as the Bowman's Best Preview rule above (up to 6
+  // intervening tokens -- generous enough for a card number plus a short
+  // parallel phrase, narrow enough that "topps" and "holiday" from unrelated
+  // clauses late in a long title still fall through to bare Topps).
+  //
+  // NEGATIVE GATE, NOT WIDENED CARELESSLY: "...Value Box Holiday Beach
+  // Ball/Hot Dog..." is flagship Topps Baseball's own "Holiday" PARALLEL
+  // name inside a Value Box release, not the Topps Holiday PRODUCT -- reading
+  // it as the product would misfile a real Value-Box card into the wrong
+  // pool. The gate refuses whenever "value box" appears within the same
+  // bounded window ahead of "holiday".
+  if (
+    /topps\s+holiday|holiday\s+mega\s*box/i.test(t)
+    || (
+      /topps\b(?:[\s\-:#/]+[a-z0-9.'#/]+){0,6}?[\s\-:]+holiday\b/i.test(t)
+      && !/value\s*box(?:[\s\-:]+[a-z0-9.'#/]+){0,2}?[\s\-:]+holiday\b/i.test(t)
+    )
+  ) return "Topps Holiday";
   if (/topps\s+diamond\s+icons|diamond\s+icons/i.test(t)) return "Topps Diamond Icons";
   if (/topps\s+brooklyn\s+collection|brooklyn\s+collection/i.test(t)) return "Topps Brooklyn Collection";
   if (/topps\s+gallery/i.test(t)) return "Topps Gallery";
