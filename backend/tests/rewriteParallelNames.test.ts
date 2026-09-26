@@ -22,11 +22,20 @@
 //      changedFields.parallel from the move call fails
 //  16. every rule in the shipped rules file has non-empty sources
 //  17. no 0x08/0x00 bytes in the script (heredoc-authoring guard)
+//  18. (#2434 review) a setKeyPrefix rule with no scope.setKeys is refused
+//      at load; productCellsOf reaches every setKey a rule names by id,
+//      with no dependency on any OTHER rule's own setKey (the defect that
+//      left topps-series-1 unreachable by 9 of 15 shipped rules)
+//  19. (#2434 review) computeHobbyIqCardId is fed the row's own
+//      subsetName/subsetInId, so a `:sub-` row's MOVE round-trips onto its
+//      own subset address, never the parent product's bare numbering
+//  20. REPORT prints the per-rule scan scope (product cells) before any
+//      row is read, so an operator sees the scope before an APPLY
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll, vi } from "vitest";
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 
@@ -38,7 +47,7 @@ const lib = require_(scriptPath) as {
   loadRules: (p: string, titles: string[]) => any[];
   applyRule: (rule: any, raw: string) => { name: string; strippedNote: string | null; empty?: boolean } | null;
   runLane: (opts: any) => Promise<any>;
-  productCellsOf: (rule: any, discovered: Set<string>) => Array<{ sport: string; year: number; setKey: string }>;
+  productCellsOf: (rule: any) => Array<{ sport: string; year: number; setKey: string }>;
   salesCountAt: (pool: any, slug: string) => Promise<number>;
   checklistAttestsPrintRun: (cat: any, sport: string, year: number, setKey: string, parallel: string, printRun: number) => Promise<boolean>;
 };
@@ -80,6 +89,13 @@ describe("rewrite-parallel-names -- loadRules refusals (before any row is read)"
     ["alias missing to", { id: "a1", scope: validRule.scope, kind: "alias", from: "X", ruling: "r", rulingDate: "2026-09-26", sources: ["q"] }],
     ["alias from === to", { id: "a1", scope: validRule.scope, kind: "alias", from: "X", to: "X", ruling: "r", rulingDate: "2026-09-26", sources: ["q"] }],
     ["duplicate rule id", "DUPLICATE_CASE"],
+    // CF-A-PREFIX-NAMES-A-SHAPE-A-SCAN-NAMES-AN-ADDRESS (review finding,
+    // 2026-09-26): a setKeyPrefix rule with no scope.setKeys array would
+    // silently scan zero cells (or, before this fix, whatever cells another
+    // rule happened to name) -- refused at load, before any row is read.
+    ["setKeyPrefix with no scope.setKeys", { ...validRule, scope: { sport: "baseball", year: 2026, setKeyPrefix: "topps" } }],
+    ["setKeyPrefix with an empty scope.setKeys array", { ...validRule, scope: { sport: "baseball", year: 2026, setKeyPrefix: "topps", setKeys: [] } }],
+    ["setKeyPrefix with a scope.setKeys entry that does not start with the prefix", { ...validRule, scope: { sport: "baseball", year: 2026, setKeyPrefix: "topps", setKeys: ["topps-chrome", "bowman"] } }],
   ];
 
   for (const [label, rule] of cases) {
@@ -131,6 +147,69 @@ describe("rewrite-parallel-names -- loadRules refusals (before any row is read)"
       expect(() => lib.applyRule(rules[0], "Gold Wave Retail")).toThrow(/no capture group/);
     } finally {
       fs.unlinkSync(p);
+    }
+  });
+
+  it("accepts a setKeyPrefix rule whose scope.setKeys is a valid, prefix-matching, non-empty list", () => {
+    const p = writeTempRules({
+      rules: [{ ...validRule, scope: { sport: "baseball", year: 2026, setKeyPrefix: "topps", setKeys: ["topps", "topps-chrome"] } }],
+    });
+    try {
+      const rules = lib.loadRules(p, []);
+      expect(rules).toHaveLength(1);
+      expect(rules[0].setKeys).toEqual(["topps", "topps-chrome"]);
+    } finally {
+      fs.unlinkSync(p);
+    }
+  });
+});
+
+// ── productCellsOf: the scan scope is EXACTLY the rule's own setKeys ───────
+
+describe("rewrite-parallel-names -- productCellsOf reaches every setKey a rule names, no discovery", () => {
+  it("a rule listing topps-series-1 in scope.setKeys returns it from productCellsOf -- the #2434 review finding", () => {
+    const p = writeTempRules({
+      rules: [{
+        ...validRule,
+        scope: { sport: "baseball", years: [2024, 2025, 2026], setKeyPrefix: "topps", setKeys: ["topps", "topps-series-1", "topps-chrome"] },
+      }],
+    });
+    try {
+      const rules = lib.loadRules(p, []);
+      const cells = lib.productCellsOf(rules[0]);
+      const setKeys = new Set(cells.map((c: any) => c.setKey));
+      expect(setKeys.has("topps-series-1")).toBe(true);
+      expect(cells).toHaveLength(9); // 3 setKeys x 3 years
+      expect(cells).toContainEqual({ sport: "baseball", year: 2026, setKey: "topps-series-1" });
+    } finally {
+      fs.unlinkSync(p);
+    }
+  });
+
+  it("a plain scope.setKey (no prefix) yields exactly one setKey across every year", () => {
+    const p = writeTempRules({ rules: [{ ...validRule, scope: { sport: "baseball", years: [2025, 2026], setKey: "topps-chrome" } }] });
+    try {
+      const rules = lib.loadRules(p, []);
+      const cells = lib.productCellsOf(rules[0]);
+      expect(cells).toEqual([
+        { sport: "baseball", year: 2025, setKey: "topps-chrome" },
+        { sport: "baseball", year: 2026, setKey: "topps-chrome" },
+      ]);
+    } finally {
+      fs.unlinkSync(p);
+    }
+  });
+
+  it("every setKeyPrefix rule in the SHIPPED rules file reaches topps-series-1 or its Bowman-family sibling it should, and productCellsOf never depends on a sibling rule's own setKey", () => {
+    const rules = lib.loadRules(RULES_FILE, []);
+    const toppsFamily = ["topps", "topps-series-1", "topps-series-2", "topps-update-series", "topps-chrome", "topps-chrome-update-series", "topps-holiday"];
+    const bowmanFamily = ["bowman", "bowman-chrome", "bowman-draft", "bowman-chrome-draft", "bowman-mega", "bowmans-best", "bowman-draft-sapphire", "bowman-chrome-sapphire"];
+    for (const rule of rules) {
+      if (!rule.setKeyPrefix) continue;
+      const cells = lib.productCellsOf(rule);
+      const reached = new Set(cells.map((c: any) => c.setKey));
+      const family = rule.setKeyPrefix === "topps" ? toppsFamily : bowmanFamily;
+      for (const sk of family) expect(reached.has(sk), `${rule.id} reaches ${sk}`).toBe(true);
     }
   });
 });
@@ -387,7 +466,7 @@ function fakeBudget() {
 
 const STRIP_HOBBY_RULE = {
   id: "test-strip-hobby",
-  sport: "baseball", years: [2026], setKey: "topps", setKeyPrefix: "",
+  sport: "baseball", years: [2026], setKey: "topps", setKeyPrefix: "", setKeys: ["topps"],
   kind: "strip-note",
   patterns: [/^(.*?)\s*-\s*Hobby\.?\s*$/],
   printRunFromName: false,
@@ -441,6 +520,25 @@ describe("rewrite-parallel-names -- runLane outcomes against a fake Cosmos", () 
     expect(result.totalMoved).toBe(1);
     expect(cat.docs).toEqual(before);
     expect(cat.log).toHaveLength(0);
+  });
+
+  it("prints the per-rule scan scope (product cells) BEFORE any row is read, in both REPORT and APPLY -- an operator sees the scope before an APPLY", async () => {
+    const row = baseRow();
+    const logs: string[] = [];
+    const spy = vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => { logs.push(args.join(" ")); });
+    try {
+      const cat = new FakeCatalog([row]);
+      const pool = new FakePool([]);
+      await lib.runLane({ cat, pool, rules: [STRIP_HOBBY_RULE], apply: false, budget: fakeBudget(), deps });
+    } finally {
+      spy.mockRestore();
+    }
+    const scopeHeaderIdx = logs.findIndex((l) => l.includes("scan scope, per rule"));
+    expect(scopeHeaderIdx).toBeGreaterThan(-1);
+    const cellLine = logs.find((l) => l.includes("baseball/2026/topps"));
+    expect(cellLine).toBeTruthy();
+    // The rule-id line naming this rule's cell count appears too.
+    expect(logs.some((l) => l.includes(STRIP_HOBBY_RULE.id) && l.includes("cell"))).toBe(true);
   });
 
   it("LEFT (already canonical): newId equals id, field already clean -> no write, no move", async () => {
@@ -602,6 +700,38 @@ describe("rewrite-parallel-names -- runLane outcomes against a fake Cosmos", () 
       .toBe(result.totalMatched);
     expect(result.exitCode).toBe(0);
   });
+
+  it("a :sub- row's subset segment survives the MOVE round-trip -- the #2434 review finding (computeHobbyIqCardId was dropping it)", async () => {
+    // Built with the REAL computeHobbyIqCardId so the fixture's own id is
+    // exactly what a genuine subset card would carry.
+    const subsetId = computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "topps", cardNumber: "1",
+      parallel: "Gold Wave - Hobby", isAuto: false, printRun: null,
+      subsetName: "Home Run Kings", subsetInId: true,
+      authoritativeSetKey: true, unnumberedByChecklist: true, playerName: "Test Player",
+    });
+    expect(subsetId).toContain(":sub-home-run-kings:");
+    const row = baseRow({
+      id: subsetId, cardId: subsetId,
+      subsetName: "Home Run Kings", subsetInId: true,
+    });
+    const cat = new FakeCatalog([row]);
+    const pool = new FakePool([]);
+    const result = await lib.runLane({
+      cat, pool, rules: [STRIP_HOBBY_RULE], apply: true, budget: fakeBudget(), deps,
+    });
+    expect(result.totalMoved).toBe(1);
+    // The OLD subset row is gone.
+    expect(cat.docs.has(keyOf(row.id, row.cardId))).toBe(false);
+    // The NEW row still carries the subset segment in its id, not the
+    // parent product's bare numbering -- the defect this pins would have
+    // produced "hiq:baseball:2026:topps:1:gold-wave:no-auto" (no :sub-),
+    // silently re-addressing this card onto a DIFFERENT card's identity.
+    const newRow = [...cat.docs.values()].find((d) => d.parallel === "Gold Wave");
+    expect(newRow).toBeTruthy();
+    expect(newRow!.id).toContain(":sub-home-run-kings:");
+    expect(newRow!.id).not.toBe("hiq:baseball:2026:topps:1:gold-wave:no-auto");
+  });
 });
 
 // ── mutation-class checks (source pins) ────────────────────────────────────
@@ -645,6 +775,35 @@ describe("rewrite-parallel-names -- mutation checks", () => {
   it("the reconcile mismatch sets a non-zero exit code (4)", () => {
     expect(source).toMatch(/exitCode\s*=\s*4/);
     expect(source).toContain("RECONCILE MISMATCH");
+  });
+
+  it("(#2434 review) productCellsOf takes ONE argument and reads ONLY rule.setKeys -- no discovery parameter", () => {
+    const idx = source.indexOf("function productCellsOf(");
+    expect(idx).toBeGreaterThan(-1);
+    const sigEnd = source.indexOf(")", idx);
+    expect(source.slice(idx, sigEnd + 1)).toBe("function productCellsOf(rule)");
+    const body = source.slice(idx, source.indexOf("\n}", idx));
+    expect(body).toContain("rule.setKeys");
+    expect(body).not.toMatch(/discoveredSetKeys|startsWith\(rule\.setKeyPrefix\)/);
+  });
+
+  it("(#2434 review) loadRules refuses a setKeyPrefix rule with no scope.setKeys, before productCellsOf could ever run", () => {
+    const idx = source.indexOf("if (setKeyPrefix && setKeys.length === 0)");
+    expect(idx).toBeGreaterThan(-1);
+    // The refusal is textually inside loadRules, well before the push into
+    // `rules` -- i.e. it runs at load, not at scan time.
+    const loadRulesIdx = source.indexOf("function loadRules(");
+    const productCellsIdx = source.indexOf("function productCellsOf(");
+    expect(idx).toBeGreaterThan(loadRulesIdx);
+    expect(idx).toBeLessThan(productCellsIdx);
+  });
+
+  it("(#2434 review) computeHobbyIqCardId is called with subsetName and subsetInId sourced from the row", () => {
+    const idx = source.indexOf("newId = computeHobbyIqCardId({");
+    const callEnd = source.indexOf("});", idx);
+    const call = source.slice(idx, callEnd);
+    expect(call).toContain("subsetName: row.subsetName");
+    expect(call).toMatch(/subsetInId:\s*row\.subsetInId\s*===\s*true/);
   });
 });
 

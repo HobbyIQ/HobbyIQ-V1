@@ -1,9 +1,9 @@
 {
-  "_comment": "CF-A-NOTE-IS-NOT-A-RUNG. Rules for rewrite-parallel-names.cjs, first batch, from the 2026-09-26 spelling census (C:/tmp/spellcensus_2152/RESULT.md). Scope: baseball, 2024-2026, the same 15 Topps flagship + Bowman family setKeys the census paged across its 24 (setKey,year) pairs. SuperFractor is DELIBERATELY excluded (ruling pending -- sources disagree by year and 2 of 4 target sources were unreachable; see the census Step 4). Every rule below carries its own ruling, rulingDate and verbatim source quotes; a rule missing any of the three is refused by the lane at load, before any row is read.",
+  "_comment": "CF-A-NOTE-IS-NOT-A-RUNG. Rules for rewrite-parallel-names.cjs, first batch, from the 2026-09-26 spelling census (C:/tmp/spellcensus_2152/RESULT.md). Scope: baseball, 2024-2026, the same 15 Topps flagship + Bowman family setKeys the census paged across its 24 (setKey,year) pairs. Every setKeyPrefix rule below carries an explicit scope.setKeys array naming every literal setKey it scans (review finding 2026-09-26: a prefix alone is a MATCH SHAPE, not a scan scope -- this lane never discovers setKeys from Cosmos, so a prefix rule with no scope.setKeys is refused at load). SuperFractor is DELIBERATELY excluded (ruling pending -- sources disagree by year and 2 of 4 target sources were unreachable; see the census Step 4). Every rule below carries its own ruling, rulingDate and verbatim source quotes; a rule missing any of the three is refused by the lane at load, before any row is read.",
   "rules": [
     {
       "id": "strip-retailer-channel-word",
-      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps" },
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps", "setKeys": ["topps","topps-series-1","topps-series-2","topps-update-series","topps-chrome","topps-chrome-update-series","topps-holiday"] },
       "kind": "strip-note",
       "pattern": [
         "(?i)^(.*?)\\s*[-–—:]\\s*(?:Retail|Hobby|Blaster|Mega\\s*Box|Super\\s*Box|Jumbo)(?:\\s+(?:only|exclusive))?\\.?\\s*$"
@@ -18,7 +18,7 @@
     },
     {
       "id": "strip-retailer-channel-word-bowman",
-      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "bowman" },
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "bowman", "setKeys": ["bowman","bowman-chrome","bowman-draft","bowman-chrome-draft","bowman-mega","bowmans-best","bowman-draft-sapphire","bowman-chrome-sapphire"] },
       "kind": "strip-note",
       "pattern": [
         "(?i)^(.*?)\\s*[-–—:]\\s*(?:Retail|Hobby|Blaster|Mega\\s*Box|Super\\s*Box|Jumbo)(?:\\s+(?:only|exclusive))?\\.?\\s*$"
@@ -32,7 +32,7 @@
     },
     {
       "id": "strip-parenthetical-channel-note",
-      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps" },
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps", "setKeys": ["topps","topps-series-1","topps-series-2","topps-update-series","topps-chrome","topps-chrome-update-series","topps-holiday"] },
       "kind": "strip-note",
       "pattern": [
         "(?i)^(.*?)\\s*\\((?:[^()]*(?:exclusive|retail|hobby|blaster|mega\\s*box|super\\s*box|jumbo|odds|sku)[^()]*)\\)\\s*$"
@@ -47,7 +47,7 @@
     },
     {
       "id": "strip-parenthetical-channel-note-bowman",
-      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "bowman" },
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "bowman", "setKeys": ["bowman","bowman-chrome","bowman-draft","bowman-chrome-draft","bowman-mega","bowmans-best","bowman-draft-sapphire","bowman-chrome-sapphire"] },
       "kind": "strip-note",
       "pattern": [
         "(?i)^(.*?)\\s*\\((?:[^()]*(?:exclusive|retail|hobby|blaster|mega\\s*box|super\\s*box|jumbo|odds|sku)[^()]*)\\)\\s*$"
@@ -61,7 +61,7 @@
     },
     {
       "id": "strip-exclusive-suffix-bare",
-      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps" },
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps", "setKeys": ["topps","topps-series-1","topps-series-2","topps-update-series","topps-chrome","topps-chrome-update-series","topps-holiday"] },
       "kind": "strip-note",
       "pattern": [
         "(?i)^(.*?)\\s*[-–—]\\s*[A-Za-z .]*\\bexclusive\\b\\.?\\s*$"
@@ -75,7 +75,7 @@
     },
     {
       "id": "strip-inline-print-run-count",
-      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps" },
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps", "setKeys": ["topps","topps-series-1","topps-series-2","topps-update-series","topps-chrome","topps-chrome-update-series","topps-holiday"] },
       "kind": "strip-note",
       "pattern": [
         "^(.*?)\\s*[:\\-–—]\\s*(?:#\\s*)?/?\\s*\\d[\\d,]{0,6}\\s*(?:copies|cards|made)?\\.?\\s*$",
@@ -91,7 +91,7 @@
     },
     {
       "id": "strip-inline-print-run-count-bowman",
-      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "bowman" },
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "bowman", "setKeys": ["bowman","bowman-chrome","bowman-draft","bowman-chrome-draft","bowman-mega","bowmans-best","bowman-draft-sapphire","bowman-chrome-sapphire"] },
       "kind": "strip-note",
       "pattern": [
         "^(.*?)\\s*[:\\-–—]\\s*(?:#\\s*)?/?\\s*\\d[\\d,]{0,6}\\s*(?:copies|cards|made)?\\.?\\s*$",
@@ -107,7 +107,7 @@
     },
     {
       "id": "strip-pack-odds-suffix",
-      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps" },
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps", "setKeys": ["topps","topps-series-1","topps-series-2","topps-update-series","topps-chrome","topps-chrome-update-series","topps-holiday"] },
       "kind": "strip-note",
       "pattern": [
         "(?i)^(.*?)\\s*[-–—:]\\s*\\d+\\s*(?:per|/)\\s*(?:[A-Za-z]+\\s+)?(?:pack|box|case)\\.?\\s*$",
@@ -122,7 +122,7 @@
     },
     {
       "id": "strip-sku-suffix",
-      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps" },
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps", "setKeys": ["topps","topps-series-1","topps-series-2","topps-update-series","topps-chrome","topps-chrome-update-series","topps-holiday"] },
       "kind": "strip-note",
       "pattern": [
         "(?i)^(.*?)\\s*[-–—:]\\s*(?:SKU|Item)\\s*#?\\s*[A-Za-z0-9-]+\\.?\\s*$"

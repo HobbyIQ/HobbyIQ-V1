@@ -111,11 +111,16 @@
  *   }
  *
  * `scope.year` accepts a single year or `scope.years: [2024,2025,2026]`;
- * `scope.setKey` accepts a single key or `scope.setKeyPrefix` for a family
- * (e.g. "topps-chrome" matches "topps-chrome" and
- * "topps-chrome-update-series"). A rule missing `ruling`, `rulingDate` or a
- * non-empty `sources` array is REFUSED at load -- before any row is read --
- * exactly as an unexplained retire is refused elsewhere on this runner.
+ * `scope.setKey` accepts a single key. `scope.setKeyPrefix` names the MATCH
+ * SHAPE for a family (e.g. "topps-chrome" matches "topps-chrome" and
+ * "topps-chrome-update-series"), but a prefix is not itself a scan scope --
+ * this lane never discovers which literal setKeys exist under a prefix (that
+ * is a GROUP BY, forbidden by doctrine) -- so a `setKeyPrefix` rule MUST also
+ * carry a non-empty `scope.setKeys: [...]` array naming every literal setKey
+ * it scans; a rule missing that pairing is REFUSED at load. A rule missing
+ * `ruling`, `rulingDate` or a non-empty `sources` array is REFUSED at load
+ * too -- before any row is read -- exactly as an unexplained retire is
+ * refused elsewhere on this runner.
  *
  * `TITLES` (shared input) filters to one or more rule ids, comma-separated,
  * for a canary dispatch against a single rule before the whole file runs.
@@ -213,6 +218,33 @@ function loadRules(listPath, titlesFilter) {
     const setKey = String(scope.setKey ?? "").trim();
     const setKeyPrefix = String(scope.setKeyPrefix ?? "").trim();
     if (!setKey && !setKeyPrefix) throw new Error(`rule "${id}": scope needs "setKey" or "setKeyPrefix"`);
+    // CF-A-PREFIX-NAMES-A-SHAPE-A-SCAN-NAMES-AN-ADDRESS (review finding,
+    // 2026-09-26). `setKeyPrefix` alone is not a scan scope: nothing in this
+    // file may DISCOVER which literal setKeys exist under a prefix (that is
+    // a GROUP BY this lane's own doctrine forbids), so a prefix rule with no
+    // enumerated setKeys would either scan zero cells or -- the actual
+    // defect this replaces -- silently scan only the cells some OTHER rule
+    // happened to name explicitly. Every rule states its own scan scope, by
+    // name, exactly like every other whole-scope write on this runner.
+    const setKeys = Array.isArray(scope.setKeys)
+      ? scope.setKeys.map((s) => String(s ?? "").trim()).filter(Boolean)
+      : (setKey ? [setKey] : []);
+    if (setKeyPrefix && setKeys.length === 0) {
+      throw new Error(
+        `rule "${id}": scope.setKeyPrefix requires a non-empty scope.setKeys array naming every literal `
+        + `setKey this rule scans -- a prefix is a MATCH SHAPE, not a scan scope, and this lane never `
+        + `discovers setKeys from Cosmos`,
+      );
+    }
+    if (setKeyPrefix) {
+      const offPrefix = setKeys.filter((sk) => !sk.startsWith(setKeyPrefix));
+      if (offPrefix.length) {
+        throw new Error(`rule "${id}": scope.setKeys entries ${JSON.stringify(offPrefix)} do not start with setKeyPrefix "${setKeyPrefix}"`);
+      }
+    }
+    if (!setKeyPrefix && setKeys.length === 0) {
+      throw new Error(`rule "${id}": scope.setKey resolved to no scan cells`);
+    }
 
     if (kind === "strip-note") {
       const patternsRaw = Array.isArray(r?.pattern) ? r.pattern : (r?.pattern ? [r.pattern] : []);
@@ -229,7 +261,7 @@ function loadRules(listPath, titlesFilter) {
         catch (e) { throw new Error(`rule "${id}": bad pattern ${JSON.stringify(p)}: ${e.message}`); }
       });
       rules.push({
-        id, kind, sport, years, setKey, setKeyPrefix, patterns,
+        id, kind, sport, years, setKey, setKeyPrefix, setKeys, patterns,
         printRunFromName: r?.printRunFromName === true,
         ruling, rulingDate, sources, reason: String(r?.reason ?? "").trim() || ruling,
       });
@@ -240,7 +272,7 @@ function loadRules(listPath, titlesFilter) {
       if (!to) throw new Error(`rule "${id}" (alias) needs "to"`);
       if (from === to) throw new Error(`rule "${id}" (alias): "from" equals "to" — nothing to alias`);
       rules.push({
-        id, kind, sport, years, setKey, setKeyPrefix, from, to,
+        id, kind, sport, years, setKey, setKeyPrefix, setKeys, from, to,
         printRunFromName: false,
         ruling, rulingDate, sources, reason: String(r?.reason ?? "").trim() || ruling,
       });
@@ -249,7 +281,11 @@ function loadRules(listPath, titlesFilter) {
   return rules;
 }
 
-/** Does this rule apply to this (sport, year, setKey)? */
+/** Does this rule apply to this (sport, year, setKey)? Matching still uses
+ *  the prefix (a real row's setKey may be a family member not individually
+ *  enumerated at scan time is impossible by construction now -- setKeys IS
+ *  the scan scope -- but the prefix remains the shape test so a rule reads
+ *  the same whether asked "does X match" or "what do I scan"). */
 function ruleMatchesProduct(rule, sport, year, setKey) {
   if (rule.sport !== String(sport ?? "").trim()) return false;
   if (!rule.years.includes(Number(year))) return false;
@@ -335,26 +371,25 @@ async function checklistAttestsPrintRun(cat, sport, year, setKey, parallelName, 
   return (resources ?? []).length > 0;
 }
 
-/** All distinct (sport, year, setKey) product cells a rule's scope can
- *  possibly touch -- the census's own 24 (setKey, year) pairs, generalised:
- *  a rule names its own product cells directly, so no discovery query is
- *  needed to find them. */
-function productCellsOf(rule, discoveredSetKeys) {
+/**
+ * All (sport, year, setKey) product cells a rule scans -- ENTIRELY from the
+ * rule's own `setKeys` (loadRules already resolved `scope.setKey` to a
+ * one-element list and refused a `setKeyPrefix` rule with no `scope.setKeys`
+ * array). No discovery, no second argument: a rule that scans nothing beyond
+ * what it names by id is a rule this lane can neither under- nor over-reach.
+ *
+ * CF-A-PREFIX-NAMES-A-SHAPE-A-SCAN-NAMES-AN-ADDRESS (review finding,
+ * 2026-09-26): the earlier version expanded a `setKeyPrefix` rule against
+ * whichever literal setKeys OTHER rules in the file happened to name
+ * explicitly. Every strip-note rule in the shipped file used a prefix with
+ * no sibling `setKey` rule anywhere near most of the family, so 9 of 15
+ * rules reached only 4 of the family's 15 setKeys and the Series-1-Tinsel
+ * evidence the rule was WRITTEN FROM could never be scanned by it.
+ */
+function productCellsOf(rule) {
   const cells = [];
   for (const year of rule.years) {
-    if (rule.setKey) {
-      cells.push({ sport: rule.sport, year, setKey: rule.setKey });
-    } else {
-      // setKeyPrefix: the census's own 24 pairs are enumerated in the rules
-      // file's scope entries per setKey, so a prefix rule still needs the
-      // caller to have discovered which literal setKeys exist under it.
-      // discoveredSetKeys is populated once per run from the rules file's
-      // own union of explicit setKeys plus any the operator listed via a
-      // scope.setKeys array (see loadRules callers below).
-      for (const sk of discoveredSetKeys) {
-        if (sk.startsWith(rule.setKeyPrefix)) cells.push({ sport: rule.sport, year, setKey: sk });
-      }
-    }
+    for (const sk of rule.setKeys) cells.push({ sport: rule.sport, year, setKey: sk });
   }
   return cells;
 }
@@ -396,20 +431,27 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
     salesUnderOldId: 0,
   }]));
 
-  // The known distinct setKeys a setKeyPrefix rule can expand to, discovered
-  // once from the rules file's own explicit-setKey rules plus any literal
-  // `scope.setKeys` array an operator adds for a prefix rule. This lane never
-  // discovers setKeys from Cosmos with a GROUP BY -- the rules file names its
-  // own scope, by doctrine.
-  const explicitSetKeys = new Set();
-  for (const r of rules) if (r.setKey) explicitSetKeys.add(r.setKey);
+  // THE SCOPE, PRINTED BEFORE A SINGLE ROW IS READ. Review finding
+  // (2026-09-26): a report that only shows outcomes after the fact cannot
+  // catch a rule whose scan reaches the wrong cells -- exactly the defect
+  // productCellsOf's own header now documents. Every rule's product cells
+  // come straight from its own `setKeys` (see loadRules/productCellsOf), so
+  // printing them here is the operator's chance to see the scan scope BEFORE
+  // an APPLY, not infer it from a silent zero afterwards.
+  const cellsByRule = new Map(rules.map((r) => [r.id, productCellsOf(r)]));
+  console.log("scan scope, per rule (before any row is read):");
+  for (const rule of rules) {
+    const cells = cellsByRule.get(rule.id);
+    console.log(`  ${rule.id}: ${cells.length} cell(s)`);
+    for (const c of cells) console.log(`    ${c.sport}/${c.year}/${c.setKey}`);
+  }
+  console.log("");
 
   let considered = 0, stoppedAt = null, failed = 0;
-  const intended = { current: 0 }; // filled in as cells are enumerated
 
   outer:
   for (const rule of rules) {
-    const cells = productCellsOf(rule, explicitSetKeys);
+    const cells = cellsByRule.get(rule.id);
     for (const cell of cells) {
       const query = {
         query: `SELECT * FROM c WHERE c.sport=@sp AND c.year=@yr AND c.setKey=@sk AND IS_DEFINED(c.parallel) AND ${CHECKLIST_SQL}`,
@@ -470,6 +512,16 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
               authoritativeSetKey: true,
               unnumberedByChecklist: true,
               playerName: row.playerName ?? null,
+              // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (review
+              // finding, 2026-09-26). computeHobbyIqCardId drops the `:sub-`
+              // segment entirely unless subsetInId is literally true --
+              // omitting these two fields silently re-addresses a subset row
+              // onto its PARENT product's numbering, a different card. Read
+              // straight off the row, mirroring rebuildSearchFields' own
+              // `row.subsetName` read: this lane never invents a subset, it
+              // only ever carries the row's existing one forward.
+              subsetName: row.subsetName ?? null,
+              subsetInId: row.subsetInId === true,
             });
           } catch (e) {
             st.refused++;
