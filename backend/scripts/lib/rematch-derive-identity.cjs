@@ -118,7 +118,42 @@ function deriveIdentity(row, deps) {
   const guard = deps.guardSlugInputs({ sport, year: cardYear, normalizedSetKey: setKey, cardNumber, playerName: row.playerName ?? null });
   if (!guard.ok) return { ok: false, reasons: guard.reasons.map((r) => `guard:${r}`) };
 
-  const isAuto = parsed.isAuto || row.isAuto === true;
+  // CF-ISAUTO-FROM-CHECKLIST-NOT-JUST-TITLE (stamp-fix batch, 2026-09-26,
+  // defect 4 / C:/tmp/rootcause_1234/RESULT.md). `parsed.isAuto` alone is
+  // ONLY a title-word reader OR'd with a cardNumber-prefix reader
+  // (parseListingIdentity), which is structurally blind to a signed variant
+  // that shares its base card's number with no distinguishing letter prefix
+  // -- 2025 Bowman's Best (B25-xx) mints its autograph rung exactly this
+  // way, the 1,252-sales case. The service path already combines two more
+  // signals for this (parseTitleIdentity.service.ts's `inferIsAuto`): the
+  // product's own setName keyword (AUTO_SETNAME_RE -- unconditional, no
+  // corroboration needed, e.g. row.setName containing "Autographs") and the
+  // checklist's own signed-row list (checklistSaysAuto -- gated on
+  // corroboration, so it can only CONFIRM a positive some other signal
+  // already raised, never invent one from a bare base-card title). Neither
+  // reached `deriveIdentity` before this change; calling the SAME exported
+  // function the service path uses (rather than re-implementing its
+  // combination logic here) is what keeps the two paths from drifting, the
+  // same discipline `isCardNumberAutoSubset` above already follows.
+  //
+  // ADDITIVE ONLY: an absent `inferIsAuto` dep leaves `isAuto` exactly as it
+  // was (the plain OR below); a caller that does supply it but not
+  // `checklistAuto` gets only the (unconditional, safe) setName signal.
+  const isAuto = deps.inferIsAuto
+    ? deps.inferIsAuto({
+        sport, year: cardYear, setKey, cardNumber,
+        setName: row.setName ?? null,
+        titleHasAutoText: parsed.isAuto === true,
+        // CORROBORATION, NOT INVENTION: the checklist only confirms an
+        // autograph this row already pointed at -- the row's own STORED
+        // isAuto verdict from an earlier ingest. A plain base-card title at
+        // a shared number with no other signal stays non-auto, exactly as
+        // `checklistAutoLookup.ts`'s own doc comment requires (most
+        // #B25-GW sales are the base prospect, not the auto).
+        autoCorroboration: row.isAuto === true,
+        checklistAuto: deps.checklistAuto ?? null,
+      })
+    : (parsed.isAuto || row.isAuto === true);
   // THE ONE THING THAT LEGITIMATELY MAKES A ROW AN AUTO.
   //
   // parseListingIdentity ORs a title-word reader with the cardNumber reader
