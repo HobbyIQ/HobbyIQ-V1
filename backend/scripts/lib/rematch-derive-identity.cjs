@@ -61,9 +61,31 @@ function deriveIdentity(row, deps) {
   const eraSpelled = deps.spellForEra
     ? deps.spellForEra(deps.normalizeSetKey(setKeyRaw), cardYear ?? null)
     : deps.normalizeSetKey(setKeyRaw);
-  const siblingCorrected = deps.applySiblingChecklistOverride
-    ? deps.applySiblingChecklistOverride(eraSpelled, cardNumber, cardYear ?? 0)
+  // CF-R75-REDIRECT-BOTH-ANSWERS-AGREE (stamp-fix batch, 2026-09-26, defect 5
+  // / C:/tmp/mega_ident_1430/RESULT.md). Same seam, same reasoning as the two
+  // comments above: `slug` a few lines down is computed through
+  // deps.computeHobbyIqCardId, which calls resolveSetKeyForSlug internally
+  // and so already carries R75 (BOWMAN_MEGA_BOX_SPLIT_FROM_YEAR -- a bare
+  // "Bowman Mega Box" title, no "chrome", year >= 2026, resolves to the
+  // distinct `bowman-mega` key, not `bowman-chrome-mega-box`). Nothing above
+  // this line ever called resolveSetKeyForSlug, so identity.setKey silently
+  // kept answering "bowman-chrome-mega-box" for every bare 2026 Mega Box
+  // title -- the exact "one function disagreeing with itself" shape
+  // CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT and CF-METAL-UNIVERSE-NAME-WAS-
+  // REVIVED already exist to prevent, just never patched at this one call.
+  // `setKeyRaw` (the title's own raw setName text) is what resolveSetKeyForSlug
+  // needs to see "no chrome" -- passing `eraSpelled` (already folded to a
+  // fixed-point key) would hide the very word the redirect keys on.
+  // ONLY-IMPROVE / additive: an undeclared dep leaves eraSpelled standing
+  // exactly as it was, so a caller that has not wired resolveSetKeyForSlug in
+  // sees identical behavior to before this change.
+  const redirected = deps.resolveSetKeyForSlug
+    ? deps.resolveSetKeyForSlug(sport ?? "", setKeyRaw, cardYear ?? 0)
     : eraSpelled;
+  const eraAndRedirectSpelled = deps.normalizeSetKey(redirected || eraSpelled);
+  const siblingCorrected = deps.applySiblingChecklistOverride
+    ? deps.applySiblingChecklistOverride(eraAndRedirectSpelled, cardNumber, cardYear ?? 0)
+    : eraAndRedirectSpelled;
   // RULING R29 (Drew, 2026-09-13): THE CHECKLIST DECIDES THE PRODUCT.
   //
   // THE SAME DECISION THE SERVICE PATH MAKES, READ FROM A MAP RATHER THAN
