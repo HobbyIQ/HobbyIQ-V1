@@ -54,6 +54,7 @@ import { slugify } from "./hobbyIqCardId.service.js";
 import { statedFinishFromChecklist, titleStatesAnUnconfirmedFinish } from "./statedFinishFromChecklist.js";
 import { bareColourAliasFromChecklist } from "./bareColourAliasFromChecklist.js";
 import { pokemonFinishFromTitle } from "./pokemonFinishFromTitle.js";
+import { isScopedAutoOnlyPrefix } from "./scopedAutoOnlyPrefixes.js";
 
 /** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
  *  (secret/hyper rares are numbered above set size), so only the <=400 bound
@@ -1001,117 +1002,16 @@ export function parseListingIdentity(
   };
 }
 
-/** CF-SCOPED-AUTO-PREFIX (Drew, 2026-09-21). A (sport, year, setKey) -> set
- *  of card-number prefixes that are auto-only for THAT product-year ONLY --
- *  never global, unlike the curated list below.
- *
- *  WHY SCOPED, NOT ADDED TO THE GLOBAL LIST. The 2025-26 Topps/Bowman
- *  autograph-insert prefixes below (AC-, CRDA-, CHRU-, CLA-, BSA2-, CCA2-,
- *  WCDA-, FPA-, 90AU-, 90CAS-, BMA-, RMA-, IVA-) are auto-only ONLY for the
- *  exact product-year listed. The SAME letters recur as a DIFFERENT,
- *  genuinely-mixed or non-auto product in other years/sets -- e.g. `AC-` in
- *  2018-2024 `topps-diamond-icons` or `bowman-npb`, `CLA-` in the base
- *  `topps-chrome` flagship parallel ladder (not the Chrome Legends insert),
- *  `BMA-`/`RMA-` in `topps-gypsy-queen` and `bowman-university-best`. A bare
- *  global prefix add was measured (2026-09-21 blast radius, ~6,000 sold_comps
- *  + ~3,000 catalog rows across baseball/football/basketball/hockey) to
- *  false-positive 40-98% of the time depending on prefix -- see PR body for
- *  the full table. Scoping to the verified product-year is what makes the
- *  fix safe.
- *
- *  PROVENANCE. Each entry was confirmed ALWAYS-AUTO by two independent
- *  source-page reads today (2026-09-21) plus a catalog cross-check: every
- *  `:no-auto` row sharing the prefix traces to one of the defective sources
- *  (checklistinsider-2026-08-27/-29/-30, bccp, catalog-explode-actuals-
- *  2026-08-12 -- CF-CHECKLISTINSIDER-MINTS-AUTOS-UNSIGNED), while every
- *  `:auto` row for the identical cardNumber traces to checklistcenter-*,
- *  beckett-*, baseballcardpedia-*, or today's checklistinsider-2026-09-21
- *  re-scrape. See PR body for the (year, setKey, prefix, source, count)
- *  repair-scope table -- those ~32k catalog rows are NOT touched here.
- *
- *  Keys are `${sport}|${year}|${setKey}` with setKey as normalizeSetKey /
- *  computeHobbyIqCardId spell it (topps Series 1/2 fold into "topps";
- *  Chrome Update folds into "topps-chrome-update-series"; Bowman Mega Box
- *  folds into "bowman-chrome-mega-box" for 2025-and-earlier, but from 2026
- *  a BARE "Bowman Mega Box" title -- no "chrome" -- resolves to the
- *  DISTINCT `bowman-mega` key instead, R75). */
-const SCOPED_AUTO_PREFIX: ReadonlyMap<string, ReadonlySet<string>> = new Map([
-  // 2025 Topps Chrome Update Series -- Autographs, Rookie Debut Autographs,
-  // Chromeography, Chrome Legends Autographs. Source: checklistcenter /
-  // baseballcardpedia product-page autograph sections, confirmed 2026-09-21.
-  ["baseball|2025|topps-chrome-update-series", new Set(["AC-", "CRDA-", "CHRU-", "CLA-"])],
-  // 2025 Topps Series 1/2 (+ Update, folded into "topps") -- Baseball Stars
-  // Autographs S2, City Connect Swatch Collection Autograph Relics S2, World
-  // Champion Dual Autographs, First Pitch/Finest Personality Autographs,
-  // 1990 Topps Autographs, 1990 Chrome All-Stars Autographs. Source:
-  // checklistcenter / beckett-scraped product-page autograph sections,
-  // confirmed 2026-09-21.
-  ["baseball|2025|topps", new Set(["BSA2-", "CCA2-", "WCDA-", "FPA-", "90AU-", "90CAS-"])],
-  // 2026 Bowman Mega Box -- Bowman Mega Autographs, Rookie Mega Autographs.
-  // CF-R75-BOWMAN-MEGA-BOX-SPLIT (hobbyIqCardId.service.ts ~2678): from 2026
-  // a title reading "Bowman Mega Box" WITHOUT "chrome" resolves to the
-  // distinct `bowman-mega` key, not `bowman-chrome-mega-box` -- confirmed
-  // against real sold_comps rows (e.g. "2026 Bowman Mega Box Baseball
-  // #BMA-KW Base" -> hiq:baseball:2026:bowman-mega:bma-kw:...), where
-  // `bowman-mega` carries the overwhelming majority of 2026 BMA-/RMA- rows
-  // (1,777 / 242) and the identical defective-source split (no-auto only
-  // from checklistinsider-2026-08-27; auto from checklistinsider-2026-09-21
-  // / beckett-s3-2026-09-19). Source: checklistcenter / beckett-checklist
-  // product-page autograph sections, confirmed 2026-09-21.
-  ["baseball|2026|bowman-mega", new Set(["BMA-", "RMA-"])],
-  // 2026 Bowman CHROME Mega Box -- a DIFFERENT product sharing the same
-  // BMA-/RMA- numbering convention (different roster at the same numbers,
-  // per R75). Verified separately: 119 (BMA-) / 30 (RMA-) strict :auto rows
-  // from beckett-scraped-2026-08-13 / ingest-auto-seed, ZERO no-auto rows
-  // from any source under this exact setKey+year. Kept as its own entry.
-  ["baseball|2026|bowman-chrome-mega-box", new Set(["BMA-", "RMA-"])],
-  // 2026 Topps Chrome Black -- Ivory Autographs. Source: checklistinsider
-  // 2026-09-21 / checklistcenter product-page autograph section.
-  ["baseball|2026|topps-chrome-black", new Set(["IVA-"])],
-  // 2025 Panini Prizm (base flagship) -- Sensational Signatures, a
-  // same-numbered AUTOGRAPH-ONLY insert. AUTO_SETNAME_RE below already
-  // recognizes the phrase "sensational signatures" in title TEXT, but most
-  // real sale titles are generic vendor listings ("#SS-JW Base") that never
-  // say the insert name, so the cardNumber prefix has to carry the signal
-  // too -- mirrors the parallel fix in hobbyIqCardId.service.ts's
-  // AUTO_ONLY_CARDNUMBER_PREFIX (that file cannot import this table --
-  // this file imports `slugify` FROM it -- so the entry is duplicated
-  // locally there under the identical (sport, year, setKey) key).
-  //
-  // Scoped, not global: "SS-" is a card-number-INITIALS token with no auto
-  // meaning on OTHER products -- e.g. "2020 Panini Prizm Basketball
-  // #SS-AEW Base" (wrestling initials; see inferSportFromTitle's own
-  // comment on this exact card) -- a global add would mislabel every one
-  // of those.
-  //
-  // Evidence: C:/tmp/prizm_ss_trace_1422/RESULT.md, 2026-09-26 -- 7,058
-  // sold_comps rows under `hiq:baseball:2025:panini-prizm:ss-*`, 86% stored
-  // isAuto=false while checklist rows for the same cardNumber+parallel are
-  // already :auto (SS-JL, SS-HK, SS-JG, SS-CK, SS-CE, etc.).
-  ["baseball|2025|panini-prizm", new Set(["SS-"])],
-]);
-
-/** Look up whether `cardNumber` starts with one of the auto-only prefixes
- *  scoped to this exact (sport, year, setKey). Returns false on any miss --
- *  unknown scope, unscoped call, or a scope not in the table -- so this can
- *  only ever ADD a positive on top of the global rule, never remove one. */
-function isScopedAutoPrefix(
-  cardNumber: string | null,
-  scope?: { sport?: string | null; year?: number | null; setKey?: string | null } | null,
-): boolean {
-  if (!cardNumber || !scope) return false;
-  const sport = String(scope.sport ?? "").toLowerCase().trim();
-  const year = scope.year;
-  const setKey = String(scope.setKey ?? "").toLowerCase().trim();
-  if (!sport || !year || !setKey) return false;
-  const prefixes = SCOPED_AUTO_PREFIX.get(`${sport}|${year}|${setKey}`);
-  if (!prefixes) return false;
-  const cn = String(cardNumber).toUpperCase().replace(/^#/, "");
-  for (const p of prefixes) {
-    if (cn.startsWith(p)) return true;
-  }
-  return false;
-}
+// CF-SCOPED-AUTO-PREFIX (Drew, 2026-09-21; moved to its own module, stamp-fix
+// batch 2 review round 2, 2026-09-26). The (sport, year, setKey) -> auto-only
+// cardNumber-prefix table, and its lookup, now live in
+// scopedAutoOnlyPrefixes.ts -- a plain-data module with NO imports of its
+// own. This file and hobbyIqCardId.service.ts both import from there instead
+// of each other (this file imports `slugify` FROM that one, so it could
+// never import a table defined there without a cycle). See that module for
+// the full per-entry provenance and the false-positive-rate measurement that
+// is why this list is scoped rather than added to the global regex below.
+const isScopedAutoPrefix = isScopedAutoOnlyPrefix;
 
 /** CF-SCOPED-MARKET-LANGUAGE (Drew, 2026-09-21). "Blue Sapphire is just a
  *  Sapphire base term" -- Sapphire products are blue by design, so on a

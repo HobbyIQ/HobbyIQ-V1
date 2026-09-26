@@ -17,9 +17,14 @@
  * INITIALS token on other Panini Prizm products with no auto meaning at all
  * (e.g. "2020 Panini Prizm Basketball #SS-AEW Base" -- wrestling initials,
  * see inferSportFromTitle's own comment on this exact card). Scoped to
- * (sport, year, setKey) = (baseball, 2025, panini-prizm) in BOTH tables,
- * mirroring the existing SCOPED_AUTO_PREFIX / isScopedAutoPrefix additive
- * contract -- a miss changes nothing.
+ * (sport, year, setKey) = (baseball, 2025, panini-prizm), via the shared
+ * data-only module scopedAutoOnlyPrefixes.ts -- both
+ * parseTitleIdentity.service.ts and hobbyIqCardId.service.ts import the ONE
+ * table + lookup from there rather than each keeping its own copy (review
+ * round 2, 2026-09-26: the original PR duplicated the table across both
+ * files because of the reverse-import cycle between them; the shared module
+ * has zero imports of its own, so it routes around the cycle entirely and
+ * there is exactly one place left to update). A miss changes nothing.
  *
  * DEFECT B -- "Topps Living" / "Topps Living Set" is its own annual,
  * continuously-numbered product (2018 -> present; numbers do not reset
@@ -310,5 +315,62 @@ describe("DEFECT B -- Topps Living Set is its own product, not bare 'topps'", ()
       expect(id2018).toBe("hiq:baseball:2018:topps-living-set:1:base:no-auto");
       expect(id2026).toBe("hiq:baseball:2026:topps-living-set:900:base:no-auto");
     });
+  });
+});
+
+describe("REVIEW ROUND 2 -- one shared scoped-prefix table, not two that can drift", () => {
+  // Both parseTitleIdentity.service.ts's isScopedAutoPrefix (an alias, see
+  // that file) and hobbyIqCardId.service.ts's isAuto computation now call
+  // THE SAME exported function from scopedAutoOnlyPrefixes.ts. This proves
+  // it by exercising both call sites side by side on the exact same inputs
+  // -- if a future edit ever re-forks the data (e.g. someone pastes a table
+  // back into one file "just for this one case"), one of these assertions
+  // stops agreeing with the other and the test goes red.
+  it("isCardNumberAutoSubset (parser) and computeHobbyIqCardId (write door) agree on every scoped entry", () => {
+    const scope = { sport: "baseball", year: 2025, setKey: "panini-prizm" };
+    for (const cn of ["SS-JW", "SS-JL", "SS-HK", "ss-jg", "#SS-CK"]) {
+      const parserSaysAuto = isCardNumberAutoSubset(cn, scope);
+      const writeDoorId = computeHobbyIqCardId({
+        sport: scope.sport, year: scope.year, setKey: scope.setKey,
+        cardNumber: cn, parallel: "Base", isAuto: false,
+      });
+      expect(parserSaysAuto, cn).toBe(true);
+      expect(writeDoorId, cn).toMatch(/:auto(:|$)/);
+    }
+  });
+
+  it("agree on every scope this PR did NOT touch too -- basketball SS-AEW, off-years, sibling insert", () => {
+    const negatives: Array<{ sport: string; year: number; setKey: string; cardNumber: string }> = [
+      { sport: "basketball", year: 2020, setKey: "panini-prizm", cardNumber: "SS-AEW" },
+      { sport: "baseball", year: 2024, setKey: "panini-prizm", cardNumber: "SS-JW" },
+      { sport: "baseball", year: 2025, setKey: "panini-prizm-draft-picks", cardNumber: "SS-JW" },
+    ];
+    for (const { sport, year, setKey, cardNumber } of negatives) {
+      const parserSaysAuto = isCardNumberAutoSubset(cardNumber, { sport, year, setKey });
+      const writeDoorId = computeHobbyIqCardId({ sport, year, setKey, cardNumber, parallel: "Base", isAuto: false });
+      expect(parserSaysAuto, `${sport}|${year}|${setKey}|${cardNumber}`).toBe(false);
+      expect(writeDoorId, `${sport}|${year}|${setKey}|${cardNumber}`).toMatch(/:no-auto/);
+    }
+  });
+
+  it("the underlying table is imported, not re-declared: every SCOPED_AUTO_ONLY_PREFIXES entry reaches BOTH call sites", async () => {
+    const { SCOPED_AUTO_ONLY_PREFIXES, isScopedAutoOnlyPrefix } = await import(
+      "../src/services/portfolioiq/scopedAutoOnlyPrefixes.js"
+    );
+    expect(SCOPED_AUTO_ONLY_PREFIXES.size).toBeGreaterThan(0);
+    for (const [key, prefixes] of SCOPED_AUTO_ONLY_PREFIXES.entries()) {
+      const [sport, yearStr, setKey] = key.split("|");
+      const year = Number(yearStr);
+      for (const prefix of prefixes) {
+        const cardNumber = `${prefix}TEST`;
+        // The shared module's own lookup...
+        expect(isScopedAutoOnlyPrefix(cardNumber, { sport, year, setKey }), key).toBe(true);
+        // ...and the parser's re-export of it agree, because it IS it.
+        expect(isCardNumberAutoSubset(cardNumber, { sport, year, setKey }), key).toBe(true);
+        // ...and the write door, fed through computeHobbyIqCardId, agrees too.
+        const id = computeHobbyIqCardId({ sport, year, setKey, cardNumber, parallel: "Base", isAuto: false });
+        expect(id, key).toMatch(/:auto(:|$)/);
+      }
+    }
   });
 });

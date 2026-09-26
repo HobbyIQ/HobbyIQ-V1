@@ -60,6 +60,7 @@ import { isMakerlessCatchAllSetKey, makerlessCatchAllMessage } from "../catalog/
 // The builder and the write door must agree on what a sport IS, so the builder
 // asks the door's table rather than keeping a four-alias copy of it.
 import { normalizeSportStrict } from "./slugGuard.service.js";
+import { isScopedAutoOnlyPrefix } from "./scopedAutoOnlyPrefixes.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -2667,51 +2668,17 @@ function isChromeStockSetKey(setKey: string): boolean {
 // 2026-08-11).
 const AUTO_ONLY_CARDNUMBER_PREFIX = /^(cpa|bcpa|bdcpa|cda|tcpa|cra|bspa|bpa|bda)(?:-|\d)/i;
 
-// CF-SCOPED-AUTO-ONLY-CARDNUMBER-PREFIX (stamp-fix batch 2, 2026-09-26).
-// "SS-" is auto-only ONLY on 2025 Panini Prizm baseball, where it addresses
-// the Sensational Signatures insert (an autograph-only set — every "SS-"
-// numbered card is a signed card by product definition; parseTitleIdentity's
-// AUTO_SETNAME_RE already recognizes the phrase "sensational signatures" in
-// TITLE TEXT, but a huge share of real sale titles never say the insert name
-// at all, e.g. `"2025 Panini Prizm - Sensational Signatures Jaxon Wiggins
-// #SS-JW (AU, RC)"` still needs the cardNumber prefix to catch the generic
-// vendor "Base" listings that carry none of that text).
-//
-// "SS-" CANNOT go on the unscoped AUTO_ONLY_CARDNUMBER_PREFIX regex above:
-// the identical letters are a card-number-INITIALS token on OTHER
-// sports/products with no auto meaning at all — e.g. "2020 Panini Prizm
-// Basketball #SS-AEW Base" (wrestling initials inside a Prizm insert number,
-// see inferSportFromTitle's own comment on this exact card) — so a global
-// add would mislabel every one of those as an autograph. Scoped to
-// (sport, year, setKey) the same way SCOPED_AUTO_PREFIX in
-// parseTitleIdentity.service.ts is (that table cannot be imported here:
-// parseTitleIdentity.service.ts imports `slugify` FROM this file, so the
-// scoping table is duplicated locally rather than shared, same additive
-// contract). A miss — unscoped call, or any (sport, year, setKey) not
-// listed — changes nothing.
-//
-// Evidence: C:/tmp/prizm_ss_trace_1422/RESULT.md, 2026-09-26 — 7,058
-// sold_comps rows under `hiq:baseball:2025:panini-prizm:ss-*`, 86% stored
-// isAuto=false while the checklist rows for the same cardNumber+parallel are
-// already :auto (e.g. SS-JL, SS-HK, SS-JG, SS-CK, SS-CE).
-const SCOPED_AUTO_ONLY_CARDNUMBER_PREFIX: ReadonlyMap<string, ReadonlySet<string>> = new Map([
-  ["baseball|2025|panini-prizm", new Set(["SS-"])],
-]);
-
-/** Additive-only lookup mirroring isScopedAutoPrefix in
- *  parseTitleIdentity.service.ts: a miss (unscoped, or scope not in the
- *  table) always reads false, so this can only turn a false into a true,
- *  never the reverse. */
-function isScopedAutoOnlyCardNumberPrefix(cardNumber: string, sport: string | null, year: number, setKey: string): boolean {
-  if (!cardNumber || !sport || !year || !setKey) return false;
-  const prefixes = SCOPED_AUTO_ONLY_CARDNUMBER_PREFIX.get(`${sport}|${year}|${setKey}`);
-  if (!prefixes) return false;
-  const cn = String(cardNumber).toUpperCase().replace(/^#/, "");
-  for (const p of prefixes) {
-    if (cn.startsWith(p)) return true;
-  }
-  return false;
-}
+// CF-SCOPED-AUTO-ONLY-CARDNUMBER-PREFIX (stamp-fix batch 2, 2026-09-26;
+// moved to its own module, review round 2, 2026-09-26). "SS-" is auto-only
+// ONLY on 2025 Panini Prizm baseball (Sensational Signatures) — see
+// scopedAutoOnlyPrefixes.ts for the full provenance, the wrestling-initials
+// negative-scope reasoning ("2020 Panini Prizm Basketball #SS-AEW Base"),
+// and the trace evidence. That module has NO imports of its own, so this
+// file and parseTitleIdentity.service.ts both import the ONE table from it
+// instead of each other (this file cannot import FROM that one — it
+// imports `slugify` FROM this file, so a table defined there would cycle).
+// isScopedAutoOnlyPrefix's contract is additive-only: a miss (unscoped
+// call, or a (sport, year, setKey) not in the table) always reads false.
 
 /**
  * CF-ONE-SETKEY-RESOLVER (Drew, 2026-08-17). THE sport-aware setKey
@@ -3162,7 +3129,7 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // same contract as the unscoped regex above it: it can only add a true.
   const isAuto = components.isAuto === true
     || AUTO_ONLY_CARDNUMBER_PREFIX.test(cardNumber)
-    || isScopedAutoOnlyCardNumberPrefix(cardNumber, sport, year, setKey);
+    || isScopedAutoOnlyPrefix(cardNumber, { sport, year, setKey });
   let parallelSlug = normalizeParallel(components.parallel);
   // CF-A-FINEST-TIER-IS-THE-NUMBER (Drew, 2026-09-08/09). Applied at this same
   // seam, and for the same reason: this is the one place that holds the
