@@ -1,0 +1,36 @@
+{
+  "scrapedAt": "2026-09-26T21:56:00.000Z",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/2025_Topps",
+  "sourcePageTitleVerified": "2025 Topps -- BaseballCardPedia.com -- '2024 First Pitch' section (5.3.9 in the page's own table of contents, Series One + Series Two subsections).",
+  "fetchMethod": "curl -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36\" -L, HTTP 200",
+  "source": "checklistinsider-2026-09-26",
+  "sourceNote": "Same fetch-tooling limitation as the CTH package in this PR: checklistinsider.com's own page names this insert but did not surface its card list to this session; baseballcardpedia.com (also task-approved) carried the exhaustive roster. sourceUrl reflects the page actually read.",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Topps Baseball -- 2024 First Pitch",
+  "setKey": "topps",
+  "cardNumberPrefix": "FP- (Series One, 10 cards) / FP2- (Series Two, 5 cards)",
+  "rowRange": "FP-1 through FP-10, FP2-1 through FP2-5 (15 distinct cards)",
+  "parallelColumnAuthoritative": true,
+  "rowCount": 135,
+  "distinctCards": 15,
+  "verbatimParallelsSentence": "NOTE: The following inserts are available in the following parallels: 1990 Topps Baseball, 2024 All-Topps Team, 2024's Greatest Hits, Training Ground, Call to the Hall, 2024 First Pitch. Pink (limited, but not serial-numbered, to 600 copies) Blue (serial-numbered to 150 copies) Green (serial-numbered to 99 copies) Gold (serial-numbered to 50 copies) Orange (serial-numbered to 25 copies) Black (serial-numbered to ten) Red (serial-numbered to five) FoilFractor (one-of-one)",
+  "printRuns": { "Pink": null, "Blue": 150, "Green": 99, "Gold": 50, "Orange": 25, "Black": 10, "Red": 5, "FoilFractor": 1 },
+  "rowCount_check": "15 cards x 9 rungs (blank base + Pink + Blue + Green + Gold + Orange + Black + Red + FoilFractor) = 135 rows.",
+  "absenceCheck": {
+    "method": "Same as the CTH package in this PR: planStagedDirectory-equivalent id via computeHobbyIqCardId + insert-set-key.cjs from backend/dist, point-read card_catalog read-only.",
+    "totalRows": 135,
+    "absent": 120,
+    "presentChecklistGrade": 15,
+    "presentDerived": 0,
+    "presentNote": "All 15 blank-parallel base rows (FP-1..10, FP2-1..5) already exist at checklist authority (source=baseballcardpedia-ladders-2026-08-29 for FP-, checklistinsider-2026-08-27 for FP-2, baseballcardpedia-ladders-2026-09-02 for FP2-). Excluded from this package."
+  },
+  "siblingRungTwinsExcluded": {
+    "count": 5,
+    "detail": "FP2-1 FoilFractor through FP2-5 FoilFractor (all 5 Series Two First Pitch FoilFractor rows) are already checklist-present under setKey=topps-series-2, source=checklistinsider-2026-08-27, at ids like hiq:baseball:2025:topps-series-2:fp2-1:foilfractor:no-auto:num-1 -- same cardNumber, same rung, same player, checklist authority. These 5 rows are EXCLUDED from the staged CSV below (spelling/address twin under a sibling setKey, not a genuine gap). All other 25 FP2- rows (Pink/Blue/Green/Gold/Orange/Black/Red for FP2-1..5, plus the FP2- base blank already excluded above) returned zero twins and ARE staged.",
+    "note": "No FP- (Series One) rows produced a twin."
+  },
+  "rowsStaged": 115,
+  "ownerRuling": "FP-/FP2- lives under `topps` (no separate key); FoilFractor rungs on the FP2- cards are addressed under topps-series-2 already and are not restaged here.",
+  "readyToIngest": true
+}
