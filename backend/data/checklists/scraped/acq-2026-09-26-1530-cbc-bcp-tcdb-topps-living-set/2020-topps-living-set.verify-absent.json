@@ -1,0 +1,949 @@
+{
+  "summary": {
+    "csv": "data/checklists/scraped/acq-2026-09-26-1530-cbc-bcp-tcdb-topps-living-set/2020-topps-living-set.csv",
+    "ranAt": "2026-09-26T19:14:26.752Z",
+    "totalRows": 104,
+    "presentChecklist": 104,
+    "presentDerived": 0,
+    "absent": 0,
+    "reconciled": true
+  },
+  "results": [
+    {
+      "id": "hiq:baseball:2020:topps:273:base:no-auto",
+      "cardNumber": "273",
+      "parallel": "",
+      "printRun": null,
+      "player": "Lucas Giolito",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:274:base:no-auto",
+      "cardNumber": "274",
+      "parallel": "",
+      "printRun": null,
+      "player": "Kenley Jansen",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:275:base:no-auto",
+      "cardNumber": "275",
+      "parallel": "",
+      "printRun": null,
+      "player": "Todd Helton",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:276:base:no-auto",
+      "cardNumber": "276",
+      "parallel": "",
+      "printRun": null,
+      "player": "David Fletcher",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:277:base:no-auto",
+      "cardNumber": "277",
+      "parallel": "",
+      "printRun": null,
+      "player": "Whit Merrifield",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:278:base:no-auto",
+      "cardNumber": "278",
+      "parallel": "",
+      "printRun": null,
+      "player": "Sonny Gray",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:279:base:no-auto",
+      "cardNumber": "279",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jeff Bagwell",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:280:base:no-auto",
+      "cardNumber": "280",
+      "parallel": "",
+      "printRun": null,
+      "player": "Caleb Smith",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:281:base:no-auto",
+      "cardNumber": "281",
+      "parallel": "",
+      "printRun": null,
+      "player": "Rollie Fingers",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:282:base:no-auto",
+      "cardNumber": "282",
+      "parallel": "",
+      "printRun": null,
+      "player": "Seth Lugo",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:283:base:no-auto",
+      "cardNumber": "283",
+      "parallel": "",
+      "printRun": null,
+      "player": "Aristides Aquino",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:284:base:no-auto",
+      "cardNumber": "284",
+      "parallel": "",
+      "printRun": null,
+      "player": "Kevin Kiermaier",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:285:base:no-auto",
+      "cardNumber": "285",
+      "parallel": "",
+      "printRun": null,
+      "player": "Edgar Martinez",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:286:base:no-auto",
+      "cardNumber": "286",
+      "parallel": "",
+      "printRun": null,
+      "player": "Brad Ziegler",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:287:base:no-auto",
+      "cardNumber": "287",
+      "parallel": "",
+      "printRun": null,
+      "player": "George Brett",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:288:base:no-auto",
+      "cardNumber": "288",
+      "parallel": "",
+      "printRun": null,
+      "player": "Mike Minor",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:289:base:no-auto",
+      "cardNumber": "289",
+      "parallel": "",
+      "printRun": null,
+      "player": "Yordan Alvarez",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:290:base:no-auto",
+      "cardNumber": "290",
+      "parallel": "",
+      "printRun": null,
+      "player": "Carson Kelly",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:291:base:no-auto",
+      "cardNumber": "291",
+      "parallel": "",
+      "printRun": null,
+      "player": "Alan Trammell",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:292:base:no-auto",
+      "cardNumber": "292",
+      "parallel": "",
+      "printRun": null,
+      "player": "Kirby Yates",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-28"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:293:base:no-auto",
+      "cardNumber": "293",
+      "parallel": "",
+      "printRun": null,
+      "player": "Didi Gregorius",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:294:base:no-auto",
+      "cardNumber": "294",
+      "parallel": "",
+      "printRun": null,
+      "player": "Adrian Morejon",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:295:base:no-auto",
+      "cardNumber": "295",
+      "parallel": "",
+      "printRun": null,
+      "player": "A.J. Puk",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:296:base:no-auto",
+      "cardNumber": "296",
+      "parallel": "",
+      "printRun": null,
+      "player": "Josh Bell",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:297:base:no-auto",
+      "cardNumber": "297",
+      "parallel": "",
+      "printRun": null,
+      "player": "Luis Robert",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:298:base:no-auto",
+      "cardNumber": "298",
+      "parallel": "",
+      "printRun": null,
+      "player": "Mike Fiers",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:299:base:no-auto",
+      "cardNumber": "299",
+      "parallel": "",
+      "printRun": null,
+      "player": "Eduardo Rodriguez",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:300:base:no-auto",
+      "cardNumber": "300",
+      "parallel": "",
+      "printRun": null,
+      "player": "Willie Mays",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:301:base:no-auto",
+      "cardNumber": "301",
+      "parallel": "",
+      "printRun": null,
+      "player": "Mookie Betts",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:302:base:no-auto",
+      "cardNumber": "302",
+      "parallel": "",
+      "printRun": null,
+      "player": "David Dahl",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:303:base:no-auto",
+      "cardNumber": "303",
+      "parallel": "",
+      "printRun": null,
+      "player": "Dellin Betances",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:304:base:no-auto",
+      "cardNumber": "304",
+      "parallel": "",
+      "printRun": null,
+      "player": "Bo Bichette",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:305:base:no-auto",
+      "cardNumber": "305",
+      "parallel": "",
+      "printRun": null,
+      "player": "Julio Teheran",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:306:base:no-auto",
+      "cardNumber": "306",
+      "parallel": "",
+      "printRun": null,
+      "player": "Gavin Lux",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:307:base:no-auto",
+      "cardNumber": "307",
+      "parallel": "",
+      "printRun": null,
+      "player": "Gary Sheffield",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:308:base:no-auto",
+      "cardNumber": "308",
+      "parallel": "",
+      "printRun": null,
+      "player": "Dylan Cease",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:309:base:no-auto",
+      "cardNumber": "309",
+      "parallel": "",
+      "printRun": null,
+      "player": "Salvador Perez",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:310:base:no-auto",
+      "cardNumber": "310",
+      "parallel": "",
+      "printRun": null,
+      "player": "Nico Hoerner",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:311:base:no-auto",
+      "cardNumber": "311",
+      "parallel": "",
+      "printRun": null,
+      "player": "Avisail Garcia",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:312:base:no-auto",
+      "cardNumber": "312",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jesus Luzardo",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:313:base:no-auto",
+      "cardNumber": "313",
+      "parallel": "",
+      "printRun": null,
+      "player": "Shane Bieber",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:314:base:no-auto",
+      "cardNumber": "314",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jordan Yamamoto",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:315:base:no-auto",
+      "cardNumber": "315",
+      "parallel": "",
+      "printRun": null,
+      "player": "Andruw Jones",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:316:base:no-auto",
+      "cardNumber": "316",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jose Urquidy",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:317:base:no-auto",
+      "cardNumber": "317",
+      "parallel": "",
+      "printRun": null,
+      "player": "Trevor Bauer",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:318:base:no-auto",
+      "cardNumber": "318",
+      "parallel": "",
+      "printRun": null,
+      "player": "Zac Gallen",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:319:base:no-auto",
+      "cardNumber": "319",
+      "parallel": "",
+      "printRun": null,
+      "player": "Starlin Castro",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:320:base:no-auto",
+      "cardNumber": "320",
+      "parallel": "",
+      "printRun": null,
+      "player": "Brendan McKay",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:321:base:no-auto",
+      "cardNumber": "321",
+      "parallel": "",
+      "printRun": null,
+      "player": "Larry Walker",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:322:base:no-auto",
+      "cardNumber": "322",
+      "parallel": "",
+      "printRun": null,
+      "player": "J.P. Crawford",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:323:base:no-auto",
+      "cardNumber": "323",
+      "parallel": "",
+      "printRun": null,
+      "player": "Willson Contreras",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:324:base:no-auto",
+      "cardNumber": "324",
+      "parallel": "",
+      "printRun": null,
+      "player": "Nick Solak",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:325:base:no-auto",
+      "cardNumber": "325",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jorge Polanco",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:326:base:no-auto",
+      "cardNumber": "326",
+      "parallel": "",
+      "printRun": null,
+      "player": "Dustin May",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:327:base:no-auto",
+      "cardNumber": "327",
+      "parallel": "",
+      "printRun": null,
+      "player": "Eddie Murray",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:328:base:no-auto",
+      "cardNumber": "328",
+      "parallel": "",
+      "printRun": null,
+      "player": "Sean Murphy",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:329:base:no-auto",
+      "cardNumber": "329",
+      "parallel": "",
+      "printRun": null,
+      "player": "Josh Donaldson",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:330:base:no-auto",
+      "cardNumber": "330",
+      "parallel": "",
+      "printRun": null,
+      "player": "Isan Diaz",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:331:base:no-auto",
+      "cardNumber": "331",
+      "parallel": "",
+      "printRun": null,
+      "player": "Kenny Lofton",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:332:base:no-auto",
+      "cardNumber": "332",
+      "parallel": "",
+      "printRun": null,
+      "player": "Mauricio Dubon",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:333:base:no-auto",
+      "cardNumber": "333",
+      "parallel": "",
+      "printRun": null,
+      "player": "Yasmani Grandal",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:334:base:no-auto",
+      "cardNumber": "334",
+      "parallel": "",
+      "printRun": null,
+      "player": "Kyle Lewis",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:335:base:no-auto",
+      "cardNumber": "335",
+      "parallel": "",
+      "printRun": null,
+      "player": "Michael Brantley",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:336:base:no-auto",
+      "cardNumber": "336",
+      "parallel": "",
+      "printRun": null,
+      "player": "Andres Munoz",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:337:base:no-auto",
+      "cardNumber": "337",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jack Morris",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:338:base:no-auto",
+      "cardNumber": "338",
+      "parallel": "",
+      "printRun": null,
+      "player": "Anthony Kay",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:339:base:no-auto",
+      "cardNumber": "339",
+      "parallel": "",
+      "printRun": null,
+      "player": "Nick Castellanos",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:340:base:no-auto",
+      "cardNumber": "340",
+      "parallel": "",
+      "printRun": null,
+      "player": "Aaron Civale",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:341:base:no-auto",
+      "cardNumber": "341",
+      "parallel": "",
+      "printRun": null,
+      "player": "Greg Maddux",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:342:base:no-auto",
+      "cardNumber": "342",
+      "parallel": "",
+      "printRun": null,
+      "player": "Matt Thaiss",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:343:base:no-auto",
+      "cardNumber": "343",
+      "parallel": "",
+      "printRun": null,
+      "player": "Kenta Maeda",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:344:base:no-auto",
+      "cardNumber": "344",
+      "parallel": "",
+      "printRun": null,
+      "player": "Dinelson Lamet",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:345:base:no-auto",
+      "cardNumber": "345",
+      "parallel": "",
+      "printRun": null,
+      "player": "Dallas Keuchel",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:346:base:no-auto",
+      "cardNumber": "346",
+      "parallel": "",
+      "printRun": null,
+      "player": "Kwang-Hyun Kim",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:347:base:no-auto",
+      "cardNumber": "347",
+      "parallel": "",
+      "printRun": null,
+      "player": "Zack Wheeler",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:348:base:no-auto",
+      "cardNumber": "348",
+      "parallel": "",
+      "printRun": null,
+      "player": "Donovan Solano",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:349:base:no-auto",
+      "cardNumber": "349",
+      "parallel": "",
+      "printRun": null,
+      "player": "Adalberto Mondesi",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:350:base:no-auto",
+      "cardNumber": "350",
+      "parallel": "",
+      "printRun": null,
+      "player": "Corbin Burnes",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:351:base:no-auto",
+      "cardNumber": "351",
+      "parallel": "",
+      "printRun": null,
+      "player": "DJ LeMahieu",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:352:base:no-auto",
+      "cardNumber": "352",
+      "parallel": "",
+      "printRun": null,
+      "player": "Alec Mills",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:353:base:no-auto",
+      "cardNumber": "353",
+      "parallel": "",
+      "printRun": null,
+      "player": "Randy Arozarena",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:354:base:no-auto",
+      "cardNumber": "354",
+      "parallel": "",
+      "printRun": null,
+      "player": "Bob Gibson",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:355:base:no-auto",
+      "cardNumber": "355",
+      "parallel": "",
+      "printRun": null,
+      "player": "Trent Grisham",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:356:base:no-auto",
+      "cardNumber": "356",
+      "parallel": "",
+      "printRun": null,
+      "player": "Nomar Garciaparra",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:357:base:no-auto",
+      "cardNumber": "357",
+      "parallel": "",
+      "printRun": null,
+      "player": "Marcus Semien",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:358:base:no-auto",
+      "cardNumber": "358",
+      "parallel": "",
+      "printRun": null,
+      "player": "Tyler Glasnow",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:359:base:no-auto",
+      "cardNumber": "359",
+      "parallel": "",
+      "printRun": null,
+      "player": "Corey Seager",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:360:base:no-auto",
+      "cardNumber": "360",
+      "parallel": "",
+      "printRun": null,
+      "player": "Masahiro Tanaka",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:361:base:no-auto",
+      "cardNumber": "361",
+      "parallel": "",
+      "printRun": null,
+      "player": "Austin Nola",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:362:base:no-auto",
+      "cardNumber": "362",
+      "parallel": "",
+      "printRun": null,
+      "player": "Fred McGriff",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:363:base:no-auto",
+      "cardNumber": "363",
+      "parallel": "",
+      "printRun": null,
+      "player": "Merrill Kelly",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:364:base:no-auto",
+      "cardNumber": "364",
+      "parallel": "",
+      "printRun": null,
+      "player": "Carlos Carrasco",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:365:base:no-auto",
+      "cardNumber": "365",
+      "parallel": "",
+      "printRun": null,
+      "player": "Devin Williams",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:366:base:no-auto",
+      "cardNumber": "366",
+      "parallel": "",
+      "printRun": null,
+      "player": "Tony Oliva",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:367:base:no-auto",
+      "cardNumber": "367",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jorge Posada",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:368:base:no-auto",
+      "cardNumber": "368",
+      "parallel": "",
+      "printRun": null,
+      "player": "Teoscar Hernandez",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:369:base:no-auto",
+      "cardNumber": "369",
+      "parallel": "",
+      "printRun": null,
+      "player": "Michael Conforto",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:370:base:no-auto",
+      "cardNumber": "370",
+      "parallel": "",
+      "printRun": null,
+      "player": "Willi Castro",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:371:base:no-auto",
+      "cardNumber": "371",
+      "parallel": "",
+      "printRun": null,
+      "player": "Aaron Nola",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:372:base:no-auto",
+      "cardNumber": "372",
+      "parallel": "",
+      "printRun": null,
+      "player": "Renato Nunez",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:373:base:no-auto",
+      "cardNumber": "373",
+      "parallel": "",
+      "printRun": null,
+      "player": "Johnny Bench",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:374:base:no-auto",
+      "cardNumber": "374",
+      "parallel": "",
+      "printRun": null,
+      "player": "Brandon Woodruff",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:375:base:no-auto",
+      "cardNumber": "375",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jose Canseco",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    },
+    {
+      "id": "hiq:baseball:2020:topps:376:base:no-auto",
+      "cardNumber": "376",
+      "parallel": "",
+      "printRun": null,
+      "player": "Tony Gonsolin",
+      "present": true,
+      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+    }
+  ]
+}

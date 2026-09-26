@@ -1,0 +1,34 @@
+{
+  "scrapedAt": "2026-09-26T21:30:00.000Z",
+  "sourceUrls": [
+    "https://baseballcardpedia.com/index.php/Topps_Living_Set",
+    "https://www.cardboardconnection.com/topps-living-set-baseball-cards"
+  ],
+  "source": "baseballcardpedia-cardboardconnection-2026-09-26",
+  "sport": "baseball",
+  "year": 2018,
+  "setName": "2018 Topps Living Set",
+  "productKey": "2018-topps-living-set",
+  "setKey": "topps-living-set",
+  "rowCount": 126,
+  "cardNumberRange": "1-126",
+  "mintedBy": "Acquisition builder (2026-09-26). Topps Living Set is a genuinely absent product -- card_catalog holds ZERO rows for any Living Set spelling (topps-living, topps-living-set both load 0). Debuted March 2018; continuous weekly-release numbering that never resets across years (1953-Topps-style base design, artwork by Mayumi Seto, print-to-order, no serial numbers on base cards). 2,373 sold_comps sales are mis-keyed under bare `topps` at hiq:baseball:2018:topps:<n>:base:no-auto because computeHobbyIqCardId collapses the unregistered setKey topps-living-set to flagship topps (confirmed empirically, see PROBE note in MANIFEST.md).",
+  "rungsMinted": [
+    { "parallel": "(none -- single-rung product, no stated parallel ladder)", "printRun": null }
+  ],
+  "cardNumbersFilled": 126,
+  "notMinted": {
+    "parallelLadder": {
+      "reason": "Both sources state explicitly that base Living Set carries no parallel/color ladder for 2018. baseballcardpedia: 'Each player will have one, and only one, Living Set card UNLESS that player changes teams.' Neither source's 2018 section mentions any colored/serial-numbered variant. The only later variant either source documents (a 'Black Text' first-ten-copies micro-variant, not serial-numbered) begins in 2023 (#595+), well outside this package's scope. Per the topps-mini (1975) PR's convention: parallel column left BLANK, never 'Base' -- blank means no sourced parallel exists, not 'unknown'."
+    },
+    "checklistCards": {
+      "reason": "This product periodically issues its own unnumbered 'Checklist #N' insert cards bundled with a release week (e.g. CL-01/CL-02 in 2019, CL-03 in 2020, CL-07 in 2024). None fall in the 2018 window. Per doctrine, a checklist/index card names no player and is not staged as a priceable card."
+    }
+  },
+  "spellingAudit": "Card numbers, player names and release dates taken verbatim from baseballcardpedia.com's single continuous 'Topps Living Set' wiki page (2018 subsection). Print runs and player names cross-checked card-for-card against cardboardconnection.com's independent 'Ultimate Topps Living Set Baseball Cards Checklist Breakdown Guide' page -- all 126 cards agree exactly on print run; the two sources are complementary rather than conflicting (baseballcardpedia gives release date but no team; cardboardconnection gives team but no release date). One cosmetic difference only: baseballcardpedia renders accented/suffixed names with diacritics/commas (\"Ronald Acuña, Jr.\"), cardboardconnection without (\"Ronald Acuna\") -- same player, house-style difference, not a disagreement. cardboardconnection's own page has one self-typo (\"San Deigo Padres\" for card #24) corrected to \"San Diego Padres\" in this CSV's team column (visible in MANIFEST.md, not silently fixed).",
+  "provenance": {
+    "cardsFrom": "baseballcardpedia.com (cardNumber, player, releaseDate) cross-corroborated by cardboardconnection.com (cardNumber, player, team, printRun) -- print run and player/number agree exactly across both sources for all 126 rows.",
+    "rungsFrom": "n/a -- no parallel ladder sourced; see notMinted.parallelLadder",
+    "dedup": "card_catalog holds zero rows under topps-living, topps-living-set, or any other Living Set spelling for any year -- confirmed read-only, 2026-09-26."
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "scrapedAt": "2026-09-26T21:35:00.000Z",
+  "sourceUrls": [
+    "https://baseballcardpedia.com/index.php/Topps_Living_Set"
+  ],
+  "source": "baseballcardpedia-2026-09-26",
+  "sport": "baseball",
+  "year": 2019,
+  "setName": "2019 Topps Living Set",
+  "productKey": "2019-topps-living-set",
+  "setKey": "topps-living-set",
+  "rowCount": 146,
+  "cardNumberRange": "127-272",
+  "singleSourceCaveat": "SINGLE-SOURCE year. cardboardconnection.com returned HTTP 404 on every 2019-specific URL tried and its site search surfaced no usable result; tcdb.com blocked every attempt with HTTP 403. This package rests on baseballcardpedia.com alone for 2019. Not a source DISAGREEMENT (the task's exclusion trigger) -- no second source was reachable to agree or disagree with. Flagged here rather than silently treated as equal-confidence to the 2018/2020/2024 packages, which each have two-source or better corroboration.",
+  "mintedBy": "Acquisition builder (2026-09-26). Continuation of the 2018 Topps Living Set package -- same genuinely-absent-product finding, same continuous cross-year numbering (2018 ends #126, 2019 runs #127-272, 2020 begins #273). 577 sold_comps sales for 2019 are mis-keyed under bare `topps`.",
+  "rungsMinted": [
+    { "parallel": "(none -- single-rung product, no stated parallel ladder)", "printRun": null }
+  ],
+  "cardNumbersFilled": 146,
+  "notMinted": {
+    "parallelLadder": {
+      "reason": "Source states no parallel/color ladder existed until the 2023 'Black Text' micro-variant (#595+). Nothing for 2019. Parallel column left BLANK, never 'Base', per the topps-mini (1975) PR's convention."
+    },
+    "checklistCards": {
+      "reason": "CL-01 (Checklist #1-100) and CL-02 (Checklist #101-200), both bundled with the 19-Jun-2019 release week, are Topps' own unnumbered index inserts -- no player, not staged as priceable cards, per doctrine."
+    },
+    "teamColumn": {
+      "reason": "baseballcardpedia's checklist row format for every year is 'cardNumber | player | printRun | releaseDate' -- it does not carry a team field at all. With no second source reachable for 2019 (see singleSourceCaveat), team is left BLANK for all 146 rows rather than filled from unsourced general knowledge."
+    }
+  },
+  "spellingAudit": "Card numbers, player names, print runs and release dates taken verbatim from baseballcardpedia.com's 'Topps Living Set' wiki page, 2019 subsection (cardNumber 127 Kris Bryant through 272 Mike Yastrzemski). Boundary self-consistent within the same single page: 2018 section's own last row (#126 Justin Upton, 26-Dec) and 2020 section's own first row (#273 Lucas Giolito, 1-Jan) both agree with this package's stated range.",
+  "provenance": {
+    "cardsFrom": "baseballcardpedia.com only (see singleSourceCaveat)",
+    "rungsFrom": "n/a -- no parallel ladder sourced",
+    "dedup": "card_catalog holds zero rows under topps-living, topps-living-set, or any other Living Set spelling for any year -- confirmed read-only, 2026-09-26."
+  }
+}

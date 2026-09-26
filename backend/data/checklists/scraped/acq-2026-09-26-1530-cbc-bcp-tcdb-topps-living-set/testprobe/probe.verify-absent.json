@@ -1,0 +1,22 @@
+{
+  "summary": {
+    "csv": "C:/tmp/acq_living_1530_work/testprobe/probe.csv",
+    "ranAt": "2026-09-26T19:09:03.484Z",
+    "totalRows": 1,
+    "presentChecklist": 0,
+    "presentDerived": 0,
+    "absent": 1,
+    "reconciled": true
+  },
+  "results": [
+    {
+      "id": "hiq:baseball:2024:topps:729:base:no-auto",
+      "cardNumber": "729",
+      "parallel": "",
+      "printRun": null,
+      "player": "Shohei Ohtani",
+      "present": false,
+      "presentSource": null
+    }
+  ]
+}
