@@ -126,6 +126,54 @@ describe("deriveIdentity — checklist-driven isAuto (defect 4)", () => {
     expect(der.identity.isAuto).toBe(true);
   });
 
+  it("REAL PROTECTIVE CASE: an independent corroboration signal (row.autoCorroborated), not row.isAuto, is the ONLY path to true", () => {
+    // The case the reviewer asked for: row.isAuto is FALSE (not merely
+    // absent), the title has no auto word, and cardNumber "B25-GW" has no
+    // distinguishing letter-prefix -- every signal the OLD code
+    // (`parsed.isAuto || row.isAuto === true`) can see says non-auto, so
+    // main's unmodified deriveIdentity returns isAuto=false here. Only the
+    // NEW `row.autoCorroborated` pass-through (a caller's own independent
+    // evidence -- e.g. slab OCR reading "AUTOGRAPH" off the label, per
+    // checklistAutoLookup.ts's own doc comment) plus the checklist's
+    // signed-row list can turn this into true. This is the fixture that
+    // proves the new code path does something a row.isAuto-only test
+    // cannot: it fails against main's .cjs (see the mutation check in the
+    // commit body) and passes only with this PR's wiring.
+    const der = deriveIdentity(
+      {
+        title: SHARED_NUMBER_TITLE,
+        sport: "baseball",
+        cardYear: 2025,
+        playerName: "George Wolkow",
+        isAuto: false,
+        autoCorroborated: true,
+      },
+      baseDeps({ checklistAuto: fakeChecklistAuto }),
+    );
+    expect(der.ok).toBe(true);
+    expect(der.identity.isAuto).toBe(true);
+  });
+
+  it("row.autoCorroborated alone, with NO checklist hit at this number, still stays non-auto (corroboration is not invention)", () => {
+    // Same independent signal, but the checklist has no entry for THIS
+    // card number -- corroboration makes an existing checklist positive
+    // usable, it does not manufacture one. Confirms the new fixture above
+    // is not passing merely because autoCorroborated is truthy.
+    const der = deriveIdentity(
+      {
+        title: "2025 Bowman's Best Someone Else #B25-ZZZ Refractor /150",
+        sport: "baseball",
+        cardYear: 2025,
+        playerName: "Someone Else",
+        isAuto: false,
+        autoCorroborated: true,
+      },
+      baseDeps({ checklistAuto: fakeChecklistAuto }),
+    );
+    expect(der.ok).toBe(true);
+    expect(der.identity.isAuto).toBe(false);
+  });
+
   it("a checklist-signed number with NO corroborating signal at all stays non-auto (never swept in blind)", () => {
     // Same product, same signed number, but NOTHING on this row points at
     // an autograph -- no title auto word, no stored isAuto, no setName

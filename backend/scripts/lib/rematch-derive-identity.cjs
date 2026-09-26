@@ -150,18 +150,37 @@ function deriveIdentity(row, deps) {
   // plain OR below) -- the checklist can only turn a false into a true,
   // never the reverse, and only when the checklist itself says this exact
   // cardNumber is signed.
+  //
+  // CORROBORATION SOURCE, STATED PLAINLY (added 2026-09-26 per review). With
+  // corroboration sourced from `row.isAuto === true` ALONE, this branch can
+  // only ever CONFIRM a row the plain OR below already resolves true --
+  // it cannot flip a single real row, because a row with row.isAuto=false
+  // and no title auto text never corroborates, so the checklist never even
+  // runs. That is NOT a repair for the 5,121 Bowman's Best sales the trace
+  // measured (C:/tmp/bb25_trace_1530/RESULT.md) -- those need either a
+  // genuinely independent signal (slab OCR, see
+  // `slabOcrVerify.service.ts`'s own `isAuto` label read, which this
+  // deriver has no access to) or a direct repoint list, neither of which is
+  // parser work. `row.autoCorroborated` is added below as the pass-through
+  // for exactly that future independent signal -- a caller holding one
+  // (e.g. an OCR pipeline) can set it on the row and this wiring uses it
+  // immediately, with no further code change; today, with no caller
+  // setting it, `row.isAuto` is the only corroboration source in practice
+  // and this remains a confirm-only, no-op-for-real-rows wiring.
   const isAuto = deps.inferIsAuto
     ? deps.inferIsAuto({
         sport, year: cardYear, setKey, cardNumber,
         // setName is INTENTIONALLY OMITTED -- see the doctrine note above.
         titleHasAutoText: parsed.isAuto === true,
         // CORROBORATION, NOT INVENTION: the checklist only confirms an
-        // autograph this row already pointed at -- the row's own STORED
-        // isAuto verdict from an earlier ingest. A plain base-card title at
+        // autograph some INDEPENDENT signal already pointed at -- the
+        // row's own STORED isAuto verdict from an earlier ingest, OR an
+        // explicit `row.autoCorroborated` a caller with its own evidence
+        // (slab OCR, a manual review) can set. A plain base-card title at
         // a shared number with no other signal stays non-auto, exactly as
         // `checklistAutoLookup.ts`'s own doc comment requires (most
         // #B25-GW sales are the base prospect, not the auto).
-        autoCorroboration: row.isAuto === true,
+        autoCorroboration: row.isAuto === true || row.autoCorroborated === true,
         checklistAuto: deps.checklistAuto ?? null,
       })
     : (parsed.isAuto || row.isAuto === true);
