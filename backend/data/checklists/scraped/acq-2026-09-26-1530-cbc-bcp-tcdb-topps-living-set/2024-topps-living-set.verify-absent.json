@@ -1,124 +1,124 @@
 {
   "summary": {
     "csv": "data/checklists/scraped/acq-2026-09-26-1530-cbc-bcp-tcdb-topps-living-set/2024-topps-living-set.csv",
-    "ranAt": "2026-09-26T19:14:41.176Z",
+    "ranAt": "2026-09-26T21:25:02.362Z",
     "totalRows": 104,
-    "presentChecklist": 16,
-    "presentDerived": 7,
-    "absent": 81,
+    "presentChecklist": 0,
+    "presentDerived": 0,
+    "absent": 104,
     "reconciled": true
   },
   "results": [
     {
-      "id": "hiq:baseball:2024:topps:689:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:689:base:no-auto",
       "cardNumber": "689",
       "parallel": "",
       "printRun": null,
       "player": "Sean Murphy",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-09-02"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:690:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:690:base:no-auto",
       "cardNumber": "690",
       "parallel": "",
       "printRun": null,
       "player": "Hanley Ramirez",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-09-02"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:691:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:691:base:no-auto",
       "cardNumber": "691",
       "parallel": "",
       "printRun": null,
       "player": "Mo Vaughn",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-09-02"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:692:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:692:base:no-auto",
       "cardNumber": "692",
       "parallel": "",
       "printRun": null,
       "player": "Dennis Eckersley",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-09-02"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:693:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:693:base:no-auto",
       "cardNumber": "693",
       "parallel": "",
       "printRun": null,
       "player": "William Contreras",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-09-02"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:694:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:694:base:no-auto",
       "cardNumber": "694",
       "parallel": "",
       "printRun": null,
       "player": "Leody Taveras",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-09-02"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:695:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:695:base:no-auto",
       "cardNumber": "695",
       "parallel": "",
       "printRun": null,
       "player": "Torii Hunter",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-09-02"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:696:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:696:base:no-auto",
       "cardNumber": "696",
       "parallel": "",
       "printRun": null,
       "player": "Ha-Seong Kim",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-09-02"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:697:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:697:base:no-auto",
       "cardNumber": "697",
       "parallel": "",
       "printRun": null,
       "player": "Garret Anderson",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-09-02"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:698:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:698:base:no-auto",
       "cardNumber": "698",
       "parallel": "",
       "printRun": null,
       "player": "Zach Eflin",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-09-02"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:699:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:699:base:no-auto",
       "cardNumber": "699",
       "parallel": "",
       "printRun": null,
       "player": "John Smoltz",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-09-02"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:700:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:700:base:no-auto",
       "cardNumber": "700",
       "parallel": "",
       "printRun": null,
       "player": "Satchel Paige",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-09-02"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:701:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:701:base:no-auto",
       "cardNumber": "701",
       "parallel": "",
       "printRun": null,
@@ -127,7 +127,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:702:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:702:base:no-auto",
       "cardNumber": "702",
       "parallel": "",
       "printRun": null,
@@ -136,7 +136,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:703:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:703:base:no-auto",
       "cardNumber": "703",
       "parallel": "",
       "printRun": null,
@@ -145,7 +145,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:704:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:704:base:no-auto",
       "cardNumber": "704",
       "parallel": "",
       "printRun": null,
@@ -154,7 +154,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:705:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:705:base:no-auto",
       "cardNumber": "705",
       "parallel": "",
       "printRun": null,
@@ -163,7 +163,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:706:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:706:base:no-auto",
       "cardNumber": "706",
       "parallel": "",
       "printRun": null,
@@ -172,7 +172,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:707:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:707:base:no-auto",
       "cardNumber": "707",
       "parallel": "",
       "printRun": null,
@@ -181,7 +181,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:708:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:708:base:no-auto",
       "cardNumber": "708",
       "parallel": "",
       "printRun": null,
@@ -190,7 +190,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:709:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:709:base:no-auto",
       "cardNumber": "709",
       "parallel": "",
       "printRun": null,
@@ -199,7 +199,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:710:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:710:base:no-auto",
       "cardNumber": "710",
       "parallel": "",
       "printRun": null,
@@ -208,7 +208,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:711:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:711:base:no-auto",
       "cardNumber": "711",
       "parallel": "",
       "printRun": null,
@@ -217,7 +217,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:712:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:712:base:no-auto",
       "cardNumber": "712",
       "parallel": "",
       "printRun": null,
@@ -226,7 +226,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:713:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:713:base:no-auto",
       "cardNumber": "713",
       "parallel": "",
       "printRun": null,
@@ -235,7 +235,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:714:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:714:base:no-auto",
       "cardNumber": "714",
       "parallel": "",
       "printRun": null,
@@ -244,16 +244,16 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:715:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:715:base:no-auto",
       "cardNumber": "715",
       "parallel": "",
       "printRun": null,
       "player": "Chien-Ming Wang",
-      "present": true,
-      "presentSource": "bccp"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:716:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:716:base:no-auto",
       "cardNumber": "716",
       "parallel": "",
       "printRun": null,
@@ -262,7 +262,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:717:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:717:base:no-auto",
       "cardNumber": "717",
       "parallel": "",
       "printRun": null,
@@ -271,7 +271,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:718:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:718:base:no-auto",
       "cardNumber": "718",
       "parallel": "",
       "printRun": null,
@@ -280,7 +280,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:719:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:719:base:no-auto",
       "cardNumber": "719",
       "parallel": "",
       "printRun": null,
@@ -289,7 +289,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:720:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:720:base:no-auto",
       "cardNumber": "720",
       "parallel": "",
       "printRun": null,
@@ -298,7 +298,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:721:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:721:base:no-auto",
       "cardNumber": "721",
       "parallel": "",
       "printRun": null,
@@ -307,25 +307,25 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:722:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:722:base:no-auto",
       "cardNumber": "722",
       "parallel": "",
       "printRun": null,
       "player": "Christian Encarnacion-Strand",
-      "present": true,
-      "presentSource": "ingest-auto-seed"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:723:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:723:base:no-auto",
       "cardNumber": "723",
       "parallel": "",
       "printRun": null,
       "player": "Graig Nettles",
-      "present": true,
-      "presentSource": "ingest-auto-seed"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:724:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:724:base:no-auto",
       "cardNumber": "724",
       "parallel": "",
       "printRun": null,
@@ -334,7 +334,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:725:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:725:base:no-auto",
       "cardNumber": "725",
       "parallel": "",
       "printRun": null,
@@ -343,7 +343,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:726:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:726:base:no-auto",
       "cardNumber": "726",
       "parallel": "",
       "printRun": null,
@@ -352,7 +352,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:727:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:727:base:no-auto",
       "cardNumber": "727",
       "parallel": "",
       "printRun": null,
@@ -361,7 +361,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:728:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:728:base:no-auto",
       "cardNumber": "728",
       "parallel": "",
       "printRun": null,
@@ -370,7 +370,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:729:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:729:base:no-auto",
       "cardNumber": "729",
       "parallel": "",
       "printRun": null,
@@ -379,7 +379,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:730:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:730:base:no-auto",
       "cardNumber": "730",
       "parallel": "",
       "printRun": null,
@@ -388,25 +388,25 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:731:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:731:base:no-auto",
       "cardNumber": "731",
       "parallel": "",
       "printRun": null,
       "player": "Colton Cowser",
-      "present": true,
-      "presentSource": "ingest-auto-seed"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:732:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:732:base:no-auto",
       "cardNumber": "732",
       "parallel": "",
       "printRun": null,
       "player": "Jim Kaat",
-      "present": true,
-      "presentSource": "bccp"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:733:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:733:base:no-auto",
       "cardNumber": "733",
       "parallel": "",
       "printRun": null,
@@ -415,7 +415,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:734:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:734:base:no-auto",
       "cardNumber": "734",
       "parallel": "",
       "printRun": null,
@@ -424,7 +424,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:735:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:735:base:no-auto",
       "cardNumber": "735",
       "parallel": "",
       "printRun": null,
@@ -433,7 +433,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:736:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:736:base:no-auto",
       "cardNumber": "736",
       "parallel": "",
       "printRun": null,
@@ -442,7 +442,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:737:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:737:base:no-auto",
       "cardNumber": "737",
       "parallel": "",
       "printRun": null,
@@ -451,7 +451,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:738:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:738:base:no-auto",
       "cardNumber": "738",
       "parallel": "",
       "printRun": null,
@@ -460,7 +460,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:739:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:739:base:no-auto",
       "cardNumber": "739",
       "parallel": "",
       "printRun": null,
@@ -469,7 +469,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:740:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:740:base:no-auto",
       "cardNumber": "740",
       "parallel": "",
       "printRun": null,
@@ -478,7 +478,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:741:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:741:base:no-auto",
       "cardNumber": "741",
       "parallel": "",
       "printRun": null,
@@ -487,7 +487,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:742:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:742:base:no-auto",
       "cardNumber": "742",
       "parallel": "",
       "printRun": null,
@@ -496,16 +496,16 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:743:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:743:base:no-auto",
       "cardNumber": "743",
       "parallel": "",
       "printRun": null,
       "player": "Ranger Suarez",
-      "present": true,
-      "presentSource": "ingest-auto-seed"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:744:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:744:base:no-auto",
       "cardNumber": "744",
       "parallel": "",
       "printRun": null,
@@ -514,7 +514,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:745:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:745:base:no-auto",
       "cardNumber": "745",
       "parallel": "",
       "printRun": null,
@@ -523,7 +523,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:746:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:746:base:no-auto",
       "cardNumber": "746",
       "parallel": "",
       "printRun": null,
@@ -532,7 +532,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:747:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:747:base:no-auto",
       "cardNumber": "747",
       "parallel": "",
       "printRun": null,
@@ -541,7 +541,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:748:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:748:base:no-auto",
       "cardNumber": "748",
       "parallel": "",
       "printRun": null,
@@ -550,7 +550,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:749:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:749:base:no-auto",
       "cardNumber": "749",
       "parallel": "",
       "printRun": null,
@@ -559,7 +559,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:750:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:750:base:no-auto",
       "cardNumber": "750",
       "parallel": "",
       "printRun": null,
@@ -568,7 +568,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:751:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:751:base:no-auto",
       "cardNumber": "751",
       "parallel": "",
       "printRun": null,
@@ -577,7 +577,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:752:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:752:base:no-auto",
       "cardNumber": "752",
       "parallel": "",
       "printRun": null,
@@ -586,7 +586,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:753:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:753:base:no-auto",
       "cardNumber": "753",
       "parallel": "",
       "printRun": null,
@@ -595,7 +595,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:754:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:754:base:no-auto",
       "cardNumber": "754",
       "parallel": "",
       "printRun": null,
@@ -604,7 +604,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:755:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:755:base:no-auto",
       "cardNumber": "755",
       "parallel": "",
       "printRun": null,
@@ -613,7 +613,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:756:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:756:base:no-auto",
       "cardNumber": "756",
       "parallel": "",
       "printRun": null,
@@ -622,7 +622,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:757:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:757:base:no-auto",
       "cardNumber": "757",
       "parallel": "",
       "printRun": null,
@@ -631,7 +631,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:758:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:758:base:no-auto",
       "cardNumber": "758",
       "parallel": "",
       "printRun": null,
@@ -640,7 +640,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:759:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:759:base:no-auto",
       "cardNumber": "759",
       "parallel": "",
       "printRun": null,
@@ -649,7 +649,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:760:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:760:base:no-auto",
       "cardNumber": "760",
       "parallel": "",
       "printRun": null,
@@ -658,7 +658,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:761:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:761:base:no-auto",
       "cardNumber": "761",
       "parallel": "",
       "printRun": null,
@@ -667,7 +667,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:762:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:762:base:no-auto",
       "cardNumber": "762",
       "parallel": "",
       "printRun": null,
@@ -676,7 +676,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:763:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:763:base:no-auto",
       "cardNumber": "763",
       "parallel": "",
       "printRun": null,
@@ -685,7 +685,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:764:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:764:base:no-auto",
       "cardNumber": "764",
       "parallel": "",
       "printRun": null,
@@ -694,7 +694,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:765:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:765:base:no-auto",
       "cardNumber": "765",
       "parallel": "",
       "printRun": null,
@@ -703,7 +703,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:766:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:766:base:no-auto",
       "cardNumber": "766",
       "parallel": "",
       "printRun": null,
@@ -712,7 +712,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:767:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:767:base:no-auto",
       "cardNumber": "767",
       "parallel": "",
       "printRun": null,
@@ -721,7 +721,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:768:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:768:base:no-auto",
       "cardNumber": "768",
       "parallel": "",
       "printRun": null,
@@ -730,7 +730,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:769:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:769:base:no-auto",
       "cardNumber": "769",
       "parallel": "",
       "printRun": null,
@@ -739,16 +739,16 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:770:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:770:base:no-auto",
       "cardNumber": "770",
       "parallel": "",
       "printRun": null,
       "player": "Fred Lynn",
-      "present": true,
-      "presentSource": "ingest-auto-seed"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:771:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:771:base:no-auto",
       "cardNumber": "771",
       "parallel": "",
       "printRun": null,
@@ -757,16 +757,16 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:772:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:772:base:no-auto",
       "cardNumber": "772",
       "parallel": "",
       "printRun": null,
       "player": "Colt Keith",
-      "present": true,
-      "presentSource": "bccp"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:773:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:773:base:no-auto",
       "cardNumber": "773",
       "parallel": "",
       "printRun": null,
@@ -775,7 +775,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:774:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:774:base:no-auto",
       "cardNumber": "774",
       "parallel": "",
       "printRun": null,
@@ -784,7 +784,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:775:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:775:base:no-auto",
       "cardNumber": "775",
       "parallel": "",
       "printRun": null,
@@ -793,16 +793,16 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:776:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:776:base:no-auto",
       "cardNumber": "776",
       "parallel": "",
       "printRun": null,
       "player": "Jordan Lawlar",
-      "present": true,
-      "presentSource": "ingest-auto-seed"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:777:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:777:base:no-auto",
       "cardNumber": "777",
       "parallel": "",
       "printRun": null,
@@ -811,7 +811,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:778:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:778:base:no-auto",
       "cardNumber": "778",
       "parallel": "",
       "printRun": null,
@@ -820,16 +820,16 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:779:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:779:base:no-auto",
       "cardNumber": "779",
       "parallel": "",
       "printRun": null,
       "player": "Bill Madlock",
-      "present": true,
-      "presentSource": "ingest-auto-seed"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:780:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:780:base:no-auto",
       "cardNumber": "780",
       "parallel": "",
       "printRun": null,
@@ -838,7 +838,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:781:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:781:base:no-auto",
       "cardNumber": "781",
       "parallel": "",
       "printRun": null,
@@ -847,7 +847,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:782:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:782:base:no-auto",
       "cardNumber": "782",
       "parallel": "",
       "printRun": null,
@@ -856,7 +856,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:783:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:783:base:no-auto",
       "cardNumber": "783",
       "parallel": "",
       "printRun": null,
@@ -865,7 +865,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:784:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:784:base:no-auto",
       "cardNumber": "784",
       "parallel": "",
       "printRun": null,
@@ -874,7 +874,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:785:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:785:base:no-auto",
       "cardNumber": "785",
       "parallel": "",
       "printRun": null,
@@ -883,7 +883,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:786:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:786:base:no-auto",
       "cardNumber": "786",
       "parallel": "",
       "printRun": null,
@@ -892,7 +892,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:787:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:787:base:no-auto",
       "cardNumber": "787",
       "parallel": "",
       "printRun": null,
@@ -901,7 +901,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:788:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:788:base:no-auto",
       "cardNumber": "788",
       "parallel": "",
       "printRun": null,
@@ -910,16 +910,16 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:789:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:789:base:no-auto",
       "cardNumber": "789",
       "parallel": "",
       "printRun": null,
       "player": "Cole Ragans",
-      "present": true,
-      "presentSource": "bccp"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:790:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:790:base:no-auto",
       "cardNumber": "790",
       "parallel": "",
       "printRun": null,
@@ -928,7 +928,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:791:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:791:base:no-auto",
       "cardNumber": "791",
       "parallel": "",
       "printRun": null,
@@ -937,7 +937,7 @@
       "presentSource": null
     },
     {
-      "id": "hiq:baseball:2024:topps:792:base:no-auto",
+      "id": "hiq:baseball:2024:topps-living-set:792:base:no-auto",
       "cardNumber": "792",
       "parallel": "",
       "printRun": null,

@@ -1,1147 +1,1147 @@
 {
   "summary": {
     "csv": "data/checklists/scraped/acq-2026-09-26-1530-cbc-bcp-tcdb-topps-living-set/2018-topps-living-set.csv",
-    "ranAt": "2026-09-26T19:13:53.662Z",
+    "ranAt": "2026-09-26T21:24:29.236Z",
     "totalRows": 126,
-    "presentChecklist": 126,
+    "presentChecklist": 0,
     "presentDerived": 0,
-    "absent": 0,
+    "absent": 126,
     "reconciled": true
   },
   "results": [
     {
-      "id": "hiq:baseball:2018:topps:1:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:1:base:no-auto",
       "cardNumber": "1",
       "parallel": "",
       "printRun": null,
       "player": "Aaron Judge",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:2:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:2:base:no-auto",
       "cardNumber": "2",
       "parallel": "",
       "printRun": null,
       "player": "Joe Panik",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:3:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:3:base:no-auto",
       "cardNumber": "3",
       "parallel": "",
       "printRun": null,
       "player": "Nick Castellanos",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:4:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:4:base:no-auto",
       "cardNumber": "4",
       "parallel": "",
       "printRun": null,
       "player": "Rhys Hoskins",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:5:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:5:base:no-auto",
       "cardNumber": "5",
       "parallel": "",
       "printRun": null,
       "player": "Ian Happ",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:6:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:6:base:no-auto",
       "cardNumber": "6",
       "parallel": "",
       "printRun": null,
       "player": "Nick Markakis",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:7:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:7:base:no-auto",
       "cardNumber": "7",
       "parallel": "",
       "printRun": null,
       "player": "Shohei Ohtani",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:8:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:8:base:no-auto",
       "cardNumber": "8",
       "parallel": "",
       "printRun": null,
       "player": "Russell Martin",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:9:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:9:base:no-auto",
       "cardNumber": "9",
       "parallel": "",
       "printRun": null,
       "player": "Jackie Bradley Jr.",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:10:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:10:base:no-auto",
       "cardNumber": "10",
       "parallel": "",
       "printRun": null,
       "player": "Derek Jeter",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:11:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:11:base:no-auto",
       "cardNumber": "11",
       "parallel": "",
       "printRun": null,
       "player": "Alex Gordon",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:12:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:12:base:no-auto",
       "cardNumber": "12",
       "parallel": "",
       "printRun": null,
       "player": "Jean Segura",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:13:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:13:base:no-auto",
       "cardNumber": "13",
       "parallel": "",
       "printRun": null,
       "player": "Bryce Harper",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:14:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:14:base:no-auto",
       "cardNumber": "14",
       "parallel": "",
       "printRun": null,
       "player": "Mallex Smith",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:15:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:15:base:no-auto",
       "cardNumber": "15",
       "parallel": "",
       "printRun": null,
       "player": "A.J. Pollock",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:16:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:16:base:no-auto",
       "cardNumber": "16",
       "parallel": "",
       "printRun": null,
       "player": "Jose Altuve",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:17:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:17:base:no-auto",
       "cardNumber": "17",
       "parallel": "",
       "printRun": null,
       "player": "Chris Taylor",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:18:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:18:base:no-auto",
       "cardNumber": "18",
       "parallel": "",
       "printRun": null,
       "player": "Paul DeJong",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:19:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:19:base:no-auto",
       "cardNumber": "19",
       "parallel": "",
       "printRun": null,
       "player": "Ronald Acuna Jr.",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:20:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:20:base:no-auto",
       "cardNumber": "20",
       "parallel": "",
       "printRun": null,
       "player": "Jose Ramirez",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:21:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:21:base:no-auto",
       "cardNumber": "21",
       "parallel": "",
       "printRun": null,
       "player": "Matt Olson",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:22:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:22:base:no-auto",
       "cardNumber": "22",
       "parallel": "",
       "printRun": null,
       "player": "Albert Pujols",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:23:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:23:base:no-auto",
       "cardNumber": "23",
       "parallel": "",
       "printRun": null,
       "player": "Amed Rosario",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:24:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:24:base:no-auto",
       "cardNumber": "24",
       "parallel": "",
       "printRun": null,
       "player": "Chase Headley",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:25:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:25:base:no-auto",
       "cardNumber": "25",
       "parallel": "",
       "printRun": null,
       "player": "Ichiro Suzuki",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:26:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:26:base:no-auto",
       "cardNumber": "26",
       "parallel": "",
       "printRun": null,
       "player": "Yoan Moncada",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:27:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:27:base:no-auto",
       "cardNumber": "27",
       "parallel": "",
       "printRun": null,
       "player": "Jose Berrios",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:28:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:28:base:no-auto",
       "cardNumber": "28",
       "parallel": "",
       "printRun": null,
       "player": "Rickey Henderson",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:29:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:29:base:no-auto",
       "cardNumber": "29",
       "parallel": "",
       "printRun": null,
       "player": "Rafael Devers",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:30:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:30:base:no-auto",
       "cardNumber": "30",
       "parallel": "",
       "printRun": null,
       "player": "Brandon Morrow",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:31:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:31:base:no-auto",
       "cardNumber": "31",
       "parallel": "",
       "printRun": null,
       "player": "Charlie Blackmon",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:32:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:32:base:no-auto",
       "cardNumber": "32",
       "parallel": "",
       "printRun": null,
       "player": "Ozzie Albies",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:33:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:33:base:no-auto",
       "cardNumber": "33",
       "parallel": "",
       "printRun": null,
       "player": "Lewis Brinson",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:34:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:34:base:no-auto",
       "cardNumber": "34",
       "parallel": "",
       "printRun": null,
       "player": "Gleyber Torres",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:35:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:35:base:no-auto",
       "cardNumber": "35",
       "parallel": "",
       "printRun": null,
       "player": "Adam Duvall",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:36:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:36:base:no-auto",
       "cardNumber": "36",
       "parallel": "",
       "printRun": null,
       "player": "Jordy Mercer",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:37:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:37:base:no-auto",
       "cardNumber": "37",
       "parallel": "",
       "printRun": null,
       "player": "Manny Machado",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:38:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:38:base:no-auto",
       "cardNumber": "38",
       "parallel": "",
       "printRun": null,
       "player": "Christian Villanueva",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:39:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:39:base:no-auto",
       "cardNumber": "39",
       "parallel": "",
       "printRun": null,
       "player": "Eric Sogard",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:40:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:40:base:no-auto",
       "cardNumber": "40",
       "parallel": "",
       "printRun": null,
       "player": "Scott Kingery",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:41:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:41:base:no-auto",
       "cardNumber": "41",
       "parallel": "",
       "printRun": null,
       "player": "Joey Rickard",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:42:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:42:base:no-auto",
       "cardNumber": "42",
       "parallel": "",
       "printRun": null,
       "player": "Jackie Robinson",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:43:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:43:base:no-auto",
       "cardNumber": "43",
       "parallel": "",
       "printRun": null,
       "player": "Juan Soto",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:44:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:44:base:no-auto",
       "cardNumber": "44",
       "parallel": "",
       "printRun": null,
       "player": "Bartolo Colon",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:45:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:45:base:no-auto",
       "cardNumber": "45",
       "parallel": "",
       "printRun": null,
       "player": "Brad Peacock",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:46:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:46:base:no-auto",
       "cardNumber": "46",
       "parallel": "",
       "printRun": null,
       "player": "Hank Aaron",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:47:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:47:base:no-auto",
       "cardNumber": "47",
       "parallel": "",
       "printRun": null,
       "player": "Jordan Hicks",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:48:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:48:base:no-auto",
       "cardNumber": "48",
       "parallel": "",
       "printRun": null,
       "player": "Kevin Pillar",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:49:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:49:base:no-auto",
       "cardNumber": "49",
       "parallel": "",
       "printRun": null,
       "player": "Miguel Andujar",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:50:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:50:base:no-auto",
       "cardNumber": "50",
       "parallel": "",
       "printRun": null,
       "player": "Noah Syndergaard",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:51:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:51:base:no-auto",
       "cardNumber": "51",
       "parallel": "",
       "printRun": null,
       "player": "Austin Hedges",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:52:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:52:base:no-auto",
       "cardNumber": "52",
       "parallel": "",
       "printRun": null,
       "player": "Max Scherzer",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:53:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:53:base:no-auto",
       "cardNumber": "53",
       "parallel": "",
       "printRun": null,
       "player": "Walker Buehler",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:54:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:54:base:no-auto",
       "cardNumber": "54",
       "parallel": "",
       "printRun": null,
       "player": "Mitch Haniger",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:55:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:55:base:no-auto",
       "cardNumber": "55",
       "parallel": "",
       "printRun": null,
       "player": "Ted Williams",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:56:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:56:base:no-auto",
       "cardNumber": "56",
       "parallel": "",
       "printRun": null,
       "player": "Brian Anderson",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:57:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:57:base:no-auto",
       "cardNumber": "57",
       "parallel": "",
       "printRun": null,
       "player": "Sean Manaea",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:58:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:58:base:no-auto",
       "cardNumber": "58",
       "parallel": "",
       "printRun": null,
       "player": "Giancarlo Stanton",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:59:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:59:base:no-auto",
       "cardNumber": "59",
       "parallel": "",
       "printRun": null,
       "player": "Freddy Peralta",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:60:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:60:base:no-auto",
       "cardNumber": "60",
       "parallel": "",
       "printRun": null,
       "player": "Pat Neshek",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:61:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:61:base:no-auto",
       "cardNumber": "61",
       "parallel": "",
       "printRun": null,
       "player": "Francisco Lindor",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:62:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:62:base:no-auto",
       "cardNumber": "62",
       "parallel": "",
       "printRun": null,
       "player": "Andrew Benintendi",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:63:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:63:base:no-auto",
       "cardNumber": "63",
       "parallel": "",
       "printRun": null,
       "player": "Austin Meadows",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:64:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:64:base:no-auto",
       "cardNumber": "64",
       "parallel": "",
       "printRun": null,
       "player": "Ryne Sandberg",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:65:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:65:base:no-auto",
       "cardNumber": "65",
       "parallel": "",
       "printRun": null,
       "player": "Dustin Fowler",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:66:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:66:base:no-auto",
       "cardNumber": "66",
       "parallel": "",
       "printRun": null,
       "player": "Yasiel Puig",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:67:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:67:base:no-auto",
       "cardNumber": "67",
       "parallel": "",
       "printRun": null,
       "player": "Anthony Rizzo",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:68:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:68:base:no-auto",
       "cardNumber": "68",
       "parallel": "",
       "printRun": null,
       "player": "Daniel Murphy",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:69:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:69:base:no-auto",
       "cardNumber": "69",
       "parallel": "",
       "printRun": null,
       "player": "Willy Adames",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:70:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:70:base:no-auto",
       "cardNumber": "70",
       "parallel": "",
       "printRun": null,
       "player": "Bo Jackson",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:71:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:71:base:no-auto",
       "cardNumber": "71",
       "parallel": "",
       "printRun": null,
       "player": "Jake Arrieta",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:72:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:72:base:no-auto",
       "cardNumber": "72",
       "parallel": "",
       "printRun": null,
       "player": "Dereck Rodriguez",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:73:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:73:base:no-auto",
       "cardNumber": "73",
       "parallel": "",
       "printRun": null,
       "player": "Cody Bellinger",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:74:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:74:base:no-auto",
       "cardNumber": "74",
       "parallel": "",
       "printRun": null,
       "player": "Lourdes Gurriel Jr.",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:75:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:75:base:no-auto",
       "cardNumber": "75",
       "parallel": "",
       "printRun": null,
       "player": "Joe Mauer",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:76:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:76:base:no-auto",
       "cardNumber": "76",
       "parallel": "",
       "printRun": null,
       "player": "Roberto Clemente",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:77:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:77:base:no-auto",
       "cardNumber": "77",
       "parallel": "",
       "printRun": null,
       "player": "Tyler O'Neill",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:78:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:78:base:no-auto",
       "cardNumber": "78",
       "parallel": "",
       "printRun": null,
       "player": "Avisail Garcia",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:79:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:79:base:no-auto",
       "cardNumber": "79",
       "parallel": "",
       "printRun": null,
       "player": "Jacob deGrom",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:80:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:80:base:no-auto",
       "cardNumber": "80",
       "parallel": "",
       "printRun": null,
       "player": "Victor Robles",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:81:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:81:base:no-auto",
       "cardNumber": "81",
       "parallel": "",
       "printRun": null,
       "player": "Jed Lowrie",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:82:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:82:base:no-auto",
       "cardNumber": "82",
       "parallel": "",
       "printRun": null,
       "player": "Joey Votto",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:83:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:83:base:no-auto",
       "cardNumber": "83",
       "parallel": "",
       "printRun": null,
       "player": "David Bote",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:84:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:84:base:no-auto",
       "cardNumber": "84",
       "parallel": "",
       "printRun": null,
       "player": "Trevor Story",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:85:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:85:base:no-auto",
       "cardNumber": "85",
       "parallel": "",
       "printRun": null,
       "player": "Don Mattingly",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:86:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:86:base:no-auto",
       "cardNumber": "86",
       "parallel": "",
       "printRun": null,
       "player": "Nick Williams",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:87:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:87:base:no-auto",
       "cardNumber": "87",
       "parallel": "",
       "printRun": null,
       "player": "David Wright",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:88:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:88:base:no-auto",
       "cardNumber": "88",
       "parallel": "",
       "printRun": null,
       "player": "Manny Machado",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:89:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:89:base:no-auto",
       "cardNumber": "89",
       "parallel": "",
       "printRun": null,
       "player": "Jack Flaherty",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:90:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:90:base:no-auto",
       "cardNumber": "90",
       "parallel": "",
       "printRun": null,
       "player": "Adrian Beltre",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:91:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:91:base:no-auto",
       "cardNumber": "91",
       "parallel": "",
       "printRun": null,
       "player": "J.D. Martinez",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:92:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:92:base:no-auto",
       "cardNumber": "92",
       "parallel": "",
       "printRun": null,
       "player": "Francisco Mejia",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:93:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:93:base:no-auto",
       "cardNumber": "93",
       "parallel": "",
       "printRun": null,
       "player": "Evan Gattis",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:94:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:94:base:no-auto",
       "cardNumber": "94",
       "parallel": "",
       "printRun": null,
       "player": "Christian Yelich",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:95:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:95:base:no-auto",
       "cardNumber": "95",
       "parallel": "",
       "printRun": null,
       "player": "Clayton Kershaw",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:96:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:96:base:no-auto",
       "cardNumber": "96",
       "parallel": "",
       "printRun": null,
       "player": "Ryan McMahon",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:97:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:97:base:no-auto",
       "cardNumber": "97",
       "parallel": "",
       "printRun": null,
       "player": "Chris Sale",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:98:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:98:base:no-auto",
       "cardNumber": "98",
       "parallel": "",
       "printRun": null,
       "player": "Dominic Smith",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:99:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:99:base:no-auto",
       "cardNumber": "99",
       "parallel": "",
       "printRun": null,
       "player": "Ender Inciarte",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:100:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:100:base:no-auto",
       "cardNumber": "100",
       "parallel": "",
       "printRun": null,
       "player": "Babe Ruth",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:101:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:101:base:no-auto",
       "cardNumber": "101",
       "parallel": "",
       "printRun": null,
       "player": "Sandy Alcantara",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:102:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:102:base:no-auto",
       "cardNumber": "102",
       "parallel": "",
       "printRun": null,
       "player": "Victor Martinez",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:103:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:103:base:no-auto",
       "cardNumber": "103",
       "parallel": "",
       "printRun": null,
       "player": "Javier Baez",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:104:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:104:base:no-auto",
       "cardNumber": "104",
       "parallel": "",
       "printRun": null,
       "player": "Alex Verdugo",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:105:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:105:base:no-auto",
       "cardNumber": "105",
       "parallel": "",
       "printRun": null,
       "player": "Ketel Marte",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:106:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:106:base:no-auto",
       "cardNumber": "106",
       "parallel": "",
       "printRun": null,
       "player": "Cal Ripken Jr.",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:107:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:107:base:no-auto",
       "cardNumber": "107",
       "parallel": "",
       "printRun": null,
       "player": "Blake Snell",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:108:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:108:base:no-auto",
       "cardNumber": "108",
       "parallel": "",
       "printRun": null,
       "player": "J.P. Crawford",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:109:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:109:base:no-auto",
       "cardNumber": "109",
       "parallel": "",
       "printRun": null,
       "player": "Nolan Arenado",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:110:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:110:base:no-auto",
       "cardNumber": "110",
       "parallel": "",
       "printRun": null,
       "player": "Clint Frazier",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:111:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:111:base:no-auto",
       "cardNumber": "111",
       "parallel": "",
       "printRun": null,
       "player": "Andrew Heaney",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-28"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:112:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:112:base:no-auto",
       "cardNumber": "112",
       "parallel": "",
       "printRun": null,
       "player": "Ralph Kiner",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:113:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:113:base:no-auto",
       "cardNumber": "113",
       "parallel": "",
       "printRun": null,
       "player": "Daniel Palka",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:114:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:114:base:no-auto",
       "cardNumber": "114",
       "parallel": "",
       "printRun": null,
       "player": "Billy Hamilton",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:115:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:115:base:no-auto",
       "cardNumber": "115",
       "parallel": "",
       "printRun": null,
       "player": "Luis Severino",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:116:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:116:base:no-auto",
       "cardNumber": "116",
       "parallel": "",
       "printRun": null,
       "player": "Felix Jorge",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:117:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:117:base:no-auto",
       "cardNumber": "117",
       "parallel": "",
       "printRun": null,
       "player": "Trey Mancini",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:118:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:118:base:no-auto",
       "cardNumber": "118",
       "parallel": "",
       "printRun": null,
       "player": "Nolan Ryan",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:119:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:119:base:no-auto",
       "cardNumber": "119",
       "parallel": "",
       "printRun": null,
       "player": "A.J. Minter",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:120:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:120:base:no-auto",
       "cardNumber": "120",
       "parallel": "",
       "printRun": null,
       "player": "Harrison Bader",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:121:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:121:base:no-auto",
       "cardNumber": "121",
       "parallel": "",
       "printRun": null,
       "player": "Buster Posey",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:122:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:122:base:no-auto",
       "cardNumber": "122",
       "parallel": "",
       "printRun": null,
       "player": "Jorge Alfaro",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:123:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:123:base:no-auto",
       "cardNumber": "123",
       "parallel": "",
       "printRun": null,
       "player": "David Peralta",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:124:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:124:base:no-auto",
       "cardNumber": "124",
       "parallel": "",
       "printRun": null,
       "player": "Jim Thome",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:125:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:125:base:no-auto",
       "cardNumber": "125",
       "parallel": "",
       "printRun": null,
       "player": "Ryan Yarbrough",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     },
     {
-      "id": "hiq:baseball:2018:topps:126:base:no-auto",
+      "id": "hiq:baseball:2018:topps-living-set:126:base:no-auto",
       "cardNumber": "126",
       "parallel": "",
       "printRun": null,
       "player": "Justin Upton",
-      "present": true,
-      "presentSource": "baseballcardpedia-ladders-2026-08-29"
+      "present": false,
+      "presentSource": null
     }
   ]
 }

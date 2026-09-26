@@ -218,14 +218,65 @@ All four CSVs scanned for 0x08 (backspace) and 0x00 (null) bytes: **zero
 found in every file** (2018: 7,411 bytes; 2019: 6,316 bytes; 2020: 4,499
 bytes; 2024: 4,484 bytes).
 
+## STEP 5 -- fresh verify-absent run AFTER key registration (2026-09-26, post PR #2444 merge)
+
+PR #2444 (stamp-fix batch 2, merge commit `8dc44e1`) registered `topps-living-set`
+in `productSetKeys.ts`. Re-ran `verify-absent.cjs` against all four staged CSVs
+plus `testprobe/probe.csv` from a fresh clone of this branch merged onto
+current `main`, after `npm ci && npm run build`.
+
+**The earlier `*.verify-absent.json` outputs (STEP 3, committed pre-#2444) are
+FALSE POSITIVES/NEGATIVES BY CONSTRUCTION** -- they were computed while
+`topps-living-set` collapsed silently to bare `topps` in
+`computeHobbyIqCardId`, so every id they point-read was the wrong,
+flagship-`topps` address. Do not read those files (still present in git
+history/prior commit) as evidence about the real product. **This run's
+outputs, below, replace them as the record.**
+
+Confirmed id shape now resolves under the real key, e.g.
+`hiq:baseball:2024:topps-living-set:737:base:no-auto` (no collapse).
+
+| Year | Rows | Present (checklist) | Present (derived) | Absent | Reconciled |
+|---|---|---|---|---|---|
+| 2018 | 126 | 0 | 0 | **126** | yes |
+| 2019 | 146 | 0 | 0 | **146** | yes |
+| 2020 | 104 | 0 | 0 | **104** | yes |
+| 2024 | 104 | 0 | 0 | **104** | yes |
+| probe | 1 | 0 | 0 | **1** | yes |
+| **Total** | **480** (+1 probe) | 0 | 0 | **480** (+1) | yes |
+
+Every staged row is genuinely ABSENT under `topps-living-set` today. No row
+needed removal from any CSV.
+
+**Sibling-twin re-sweep at the collapsed `topps` address** (sample of the 8
+rows flagged in STEP 3, re-read live to confirm the collapsed address is
+unchanged and nothing has moved since the original sweep):
+
+| Year | # | Collapsed id | Present | Detail |
+|---|---|---|---|---|
+| 2018 | 1 | `hiq:baseball:2018:topps:1:base:no-auto` | true | Aaron Judge, src=baseballcardpedia-ladders-2026-08-29 (unrelated flagship twin, unchanged) |
+| 2024 | 689 | `hiq:baseball:2024:topps:689:base:no-auto` | true | Josh Bell (unrelated flagship twin, unchanged) |
+| 2024 | 715 | `hiq:baseball:2024:topps:715:base:no-auto` | true | playerName null, src=bccp (nameless stub, unchanged) |
+| 2024 | 729 | `hiq:baseball:2024:topps:729:base:no-auto` | false | still absent at collapsed address |
+| 2024 | 732 | `hiq:baseball:2024:topps:732:base:no-auto` | true | playerName null, src=bccp (nameless stub, unchanged) |
+| 2024 | 737 | `hiq:baseball:2024:topps:737:base:no-auto` | false | still absent at collapsed address |
+| 2024 | 772 | `hiq:baseball:2024:topps:772:base:no-auto` | true | playerName null, src=bccp (nameless stub, unchanged) |
+| 2024 | 789 | `hiq:baseball:2024:topps:789:base:no-auto` | true | playerName null, src=bccp (nameless stub, unchanged) |
+
+Matches STEP 3's findings exactly -- no new writes landed at the collapsed
+address since the original sweep. This corroborates (does not replace) the
+480/480 absence at the real, registered address above.
+
+Byte-scan of the five new `*.verify-absent.json` outputs for 0x08/0x00: zero
+found in every file.
+
 ## STEP 4 -- scope of this PR
 
 - `backend/data/checklists/scraped/acq-2026-09-26-1530-cbc-bcp-tcdb-topps-living-set/`
-  only: 4 CSVs, 4 manifests, this MANIFEST.md.
+  only: 4 CSVs, 4 manifests, this MANIFEST.md, refreshed `*.verify-absent.json`
+  outputs (STEP 5).
 - No `backend/src`, no workflow files, no ingest dispatch.
-- **INGEST AFTER stamp-fix batch 2 merges** (setKey registration for
-  `topps-living-set` in `productSetKeys.ts` / `hobbyIqCardId.service.ts` /
-  the title parser). Re-run `verify-absent.cjs` against all four CSVs AFTER
-  that merge and before any `ingest-checklist-csv-to-catalog.cjs APPLY=true`
-  run -- today's verify-absent output is not valid evidence of absence at
-  the real address.
+- ~~**INGEST AFTER stamp-fix batch 2 merges**~~ -- DONE: PR #2444 merged
+  (`8dc44e1`), fresh verify-absent run (STEP 5) confirms 480/480 absent under
+  the real `topps-living-set` key. Cleared for
+  `ingest-checklist-csv-to-catalog.cjs APPLY=true`.
