@@ -113,6 +113,43 @@
  *   RETIRE_REASON             the reason stamped on every retired row. REQUIRED
  *     (runner: scope)         with the flag.
  *
+ *   CARD_NUMBER_SCOPE         OPTIONAL, MODE=catalog and MODE=pool. Comma-
+ *     (runner: card_numbers,    separated card-number PREFIXES (matched
+ *      env BACKFILL_CARD_       case-insensitively as `^<prefix>` on the id's
+ *      NUMBERS)                 own cardNumber SEGMENT) or exact numbers, e.g.
+ *                               `bma-,rma-,bst-,es-`. Narrows candidate
+ *                               selection to a SUBSET of FROM's card numbers,
+ *                               for a fold that is a partial split rather than
+ *                               a whole-product move (2026 Mega Box's BMA-/
+ *                               RMA-/BST-/ES-/Mojo numbers under bowman-chrome
+ *                               -> bowman-mega; a whole-product fold of
+ *                               bowman-chrome would sweep the base ladder too).
+ *                               A row outside the scope is UNTOUCHED, printed
+ *                               as `LEFT: card-number out of scope N`, and
+ *                               excluded from BOTH scanned and the
+ *                               reconciliation's skipped term -- it was never
+ *                               a candidate this dispatch was asked about.
+ *                               Empty (the default) = every card number in
+ *                               FROM is in scope, byte-identical to before
+ *                               this option existed. Carried in the runner's
+ *                               `card_numbers` input (BACKFILL_CARD_NUMBERS),
+ *                               which no other script in this dispatch's
+ *                               MODE=catalog|pool path reads -- it is
+ *                               otherwise consumed only by
+ *                               backfill-cardsight-title-identity.cjs, a
+ *                               different `script` selection, so the two can
+ *                               never collide on one dispatch. The card-number
+ *                               SEGMENT itself is read the way
+ *                               parseHobbyIqCardId reads it, not by a literal
+ *                               index: a row minted with a subset (`hiq:
+ *                               sport:year:setKey:sub-{slug}:number:...`)
+ *                               carries the number at segment 5, not 4 -- see
+ *                               cardNumberSegmentOf below. CARD_NUMBER_SCOPE
+ *                               (bare env) works the same as the runner's
+ *                               `card_numbers` input above and exists only so
+ *                               a workstation invocation can set the scope
+ *                               without going through the runner's env name.
+ *
  * Requires dist/ (catalogRowOps, hobbyIqCardId, writeReconciliation).
  */
 "use strict";
@@ -122,6 +159,9 @@ const path = require("path");
 // tables, so it cannot break the contract that this script is requirable (and
 // its dispatch refusals drivable) without a compiled tree.
 const { marketVerdict } = require(path.join(__dirname, "lib", "market-guard.cjs"));
+// CF-A-CARD-NUMBER-SUBSET-IS-NOT-A-WHOLE-PRODUCT. Same requirability contract
+// as market-guard.cjs above -- pure, self-contained, no dist/ dependency.
+const { matchesCardNumberScope } = require(path.join(__dirname, "lib", "card-number-scope.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const SPORT = String(process.env.SPORT || "").trim().toLowerCase();
@@ -279,6 +319,82 @@ function isUntrustedSource(source) {
   return RETIRE_UNTWINNED_SOURCES.some((n) => s === n || s.startsWith(`${n}-`));
 }
 
+// ── CF-A-CARD-NUMBER-SUBSET-IS-NOT-A-WHOLE-PRODUCT (2026-09-25) ─────────────
+//
+// R1/R2 above move a WHOLE product's rows from FROM to TO. That is wrong for
+// a fold that is really a PARTIAL split: 2026 Mega Box's BMA-/RMA-/BST-/ES-
+// prefixes and its Mojo ladder sit under `bowman-chrome` /
+// `bowman-chrome-mega-box` alongside every OTHER Bowman Chrome card number,
+// and only the Mega Box numbers belong at `bowman-mega`. A whole-product fold
+// of `bowman-chrome` -> `bowman-mega` would sweep the base Chrome ladder onto
+// the wrong key. Same shape for 2026 BCP- Reptilian rungs living under
+// `bowman` when only the BCP- numbers belong at `bowman-chrome`.
+//
+// SCOPE, NOT A NEW RULING SHAPE. CARD_NUMBER_SCOPE narrows candidate
+// selection to a comma-separated list of card-number PREFIXES (matched as
+// `^<prefix>` against the id's own cardNumber SEGMENT, case-insensitive) or
+// exact numbers -- `bma-,rma-,bst-,es-` or a bare `137`. It changes NOTHING
+// about how a candidate that passes the filter is adjudicated: FOLD, REPLACE,
+// REFUSED and RETIRE_UNTWINNED all still run exactly as they do today. A row
+// the filter excludes is not scanned as a candidate at all -- it is neither
+// moved nor counted as a refusal, because it was never IN this dispatch's
+// scope (CF-A-WHOLE-SOURCE-RETIRE-NEEDS-ITS-NAME's mirror: a scope that
+// narrows must say so, and a row outside it must not look like a skip this
+// run made a decision about). It is printed as `LEFT: card-number out of
+// scope N` instead.
+//
+// THE ENV. The runner has no spare workflow_dispatch input (24 of 25 used),
+// and `titles` already carries TO_SETKEY for this script, so overloading it
+// again would collide. `card_numbers` -> BACKFILL_CARD_NUMBERS is the runner's
+// EXISTING, UNUSED-BY-THIS-LANE input: it is read by exactly one script
+// (backfill-cardsight-title-identity.cjs, as an UPPERCASE-exact cardNumber
+// allowlist) and is otherwise exported to every dispatch's env unconditionally
+// and read by nobody else -- rekey-product-setkey.cjs never referenced it
+// before this change. Reusing it here cannot collide with that script's own
+// dispatch (different `script` selection, so only one of the two ever reads
+// it in a given run) and needs no new input, matching the same convention
+// `titles`/`setkey_like` already set for this lane's own FROM/TO keys.
+//
+// PARSED AS A BARE LIST, not the `titles=...;cards=...` compound the ticket
+// floated: `titles` is not overloaded today (it holds only TO_SETKEY for this
+// script), so there is no need to pack two scopes into one input when a
+// second, genuinely idle input already exists to carry the second one on its
+// own.
+//
+// THE CARD-NUMBER SEGMENT IS NOT ALWAYS INDEX 4. A row minted with a subset
+// (hobbyIqCardId.service.ts's `subsetInId`) carries an OPTIONAL `:sub-{slug}`
+// segment right after setKey -- `hiq:baseball:2026:bowman-chrome:sub-cards-
+// that-never-were:bma-1:base:no-auto` -- which pushes the card number from
+// index 4 to index 5. parseHobbyIqCardId tells the two apart by the `sub-`
+// PREFIX, never by counting, and cardNumberSegmentOf below does the same.
+// Reading a literal [4] would silently score that row's card number as
+// "sub-cards-that-never-were", fail every scope check, and strand it at FROM
+// under a report line that looks like an ordinary out-of-scope skip.
+// CARD_NUMBER_SCOPE has no runner-facing default of its own beyond the
+// undocumented direct-env override below: the runner's own input is
+// `card_numbers` (-> BACKFILL_CARD_NUMBERS), documented in the Env block
+// above. CARD_NUMBER_SCOPE is read FIRST only so a workstation invocation (or
+// a future caller of this script that is not the runner) can set it directly
+// without going through the runner's env name at all -- it is not itself a
+// second input, just an alternate spelling of the one input this feature
+// uses, kept for the same reason RETIRE_UNTWINNED_SOURCES also reads the bare
+// `SOURCES` alongside the runner's `RETIRE_UNTWINNED_SOURCES` name above.
+const CARD_NUMBER_SCOPE = String(process.env.CARD_NUMBER_SCOPE || process.env.BACKFILL_CARD_NUMBERS || "")
+  .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+const HAS_CARD_NUMBER_SCOPE = CARD_NUMBER_SCOPE.length > 0;
+
+/** Does this id fall inside the (optional) CARD_NUMBER_SCOPE? Delegates to
+ *  card-number-scope.cjs's matchesCardNumberScope, which reads the id's
+ *  cardNumber segment the SAME subset-aware way parseHobbyIqCardId does (see
+ *  that module's header) -- extracted there, rather than inlined here, so it
+ *  is `require`-able and unit-testable with plain strings, the same
+ *  requirability contract market-guard.cjs / name-agreement.cjs already keep
+ *  for this script's other pure decisions. Takes the whole id, not a
+ *  pre-sliced segment, so no caller can regress to a literal [4]. */
+function inCardNumberScope(id) {
+  return matchesCardNumberScope(id, CARD_NUMBER_SCOPE);
+}
+
 /** hiq:sport:year:setKey:number:parallel:auto[:num-N] -> parts, else null.
  *  A graded child carries a tier segment and is not an identity row. */
 function identityParts(id) {
@@ -405,6 +521,7 @@ async function main() {
     console.log(`                          a row from any OTHER source moves normally on this same run.`);
   }
   console.log(`  scope    sport=${SPORT}${YEARS.length ? `  years=${YEARS.join(",")}` : "  years=(all)"}`);
+  console.log(`  card-number scope  ${HAS_CARD_NUMBER_SCOPE ? `${CARD_NUMBER_SCOPE.join(",")}  (prefix or exact match on the id's cardNumber segment)` : "(none -- every card number in FROM is in scope)"}`);
   console.log(`  slot ${SLOT}/${SLOTS}  concurrency ${CONCURRENCY}  budget ${RUN_MS / 60000}m${LIMIT ? `  LIMIT=${f(LIMIT)}` : ""}`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
   if (MODE === "pool" && YEARS.length) {
@@ -435,6 +552,12 @@ async function main() {
       // would claim more writes than were intended and reportWrites would flag
       // the arithmetic (CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW).
       gradedRetiredDirect: 0, gradedRetiredCascade: 0, failed: 0, notReached: 0,
+      // CF-A-CARD-NUMBER-SUBSET-IS-NOT-A-WHOLE-PRODUCT. A row this run's
+      // (optional) CARD_NUMBER_SCOPE excludes -- never touched, never a skip
+      // this run adjudicated, printed separately from stemMismatch/
+      // yearMismatch so a reader does not read it as "this row disagreed with
+      // the dispatch" (it never disagreed; it was simply not asked about).
+      cardNumberOutOfScope: 0,
       // CF-A-FOLD-NEVER-CHANGES-THE-PLAYER. Two copies named DIFFERENT PLAYERS
       // at one address and nothing corroborated either, so moveCatalogRow wrote
       // NOTHING and handed back both names. A SKIP, never a write: the rows are
@@ -507,7 +630,25 @@ async function main() {
       console.log(`-- scanning by ${spec.name}`);
       await forEachPage(cat, spec, async (rows) => {
         // The id-stem pass reads the whole sport; keep only real FROM stems.
-        const candidates = rows.filter((d) => idSetKeySegment(d.id) === FROM || str(d.setKey).toLowerCase() === FROM);
+        // CF-A-CARD-NUMBER-SUBSET-IS-NOT-A-WHOLE-PRODUCT: when CARD_NUMBER_
+        // SCOPE is set, a row whose id's own cardNumber SEGMENT (index 4 --
+        // true for a graded child too, since its tier segment is appended
+        // AFTER it) falls outside the scope is dropped HERE, before s.scanned
+        // ever counts it -- the same treatment `otherSlot` rows get. It is
+        // UNTOUCHED, never a candidate this dispatch adjudicated, so it must
+        // not land in `skipped` (which would make it look like a refusal) or
+        // in `scanned` (which would make the reconciliation's own arithmetic
+        // claim this run looked at a row it never opened).
+        const candidates = rows.filter((d) => {
+          if (idSetKeySegment(d.id) !== FROM && str(d.setKey).toLowerCase() !== FROM) return false;
+          // `seen` is normally set inside the per-row loop below, AFTER this
+          // filter runs -- but the setKey-field pass and the id-stem pass can
+          // both see the same id, and without this check a row outside
+          // CARD_NUMBER_SCOPE would be counted once per pass that reaches it.
+          if (seen.has(String(d.id))) return false;
+          if (!inCardNumberScope(d.id)) { s.cardNumberOutOfScope++; return false; }
+          return true;
+        });
         for (let i = 0; i < candidates.length; i += CONCURRENCY) {
           await Promise.all(candidates.slice(i, i + CONCURRENCY).map(async (d) => {
             const id = String(d.id);
@@ -792,6 +933,7 @@ async function main() {
     console.log(`  graded children cascaded   ${f(s.gradedRetiredCascade)}   <- swept up by a parent's move, not scanned as candidates`);
     console.log(`  LEFT: id stems elsewhere   ${f(s.stemMismatch)}   <- the field drifted; the id is the product`);
     console.log(`  LEFT: year out of scope    ${f(s.yearMismatch)}`);
+    console.log(`  LEFT: card-number out of scope ${f(s.cardNumberOutOfScope)}${HAS_CARD_NUMBER_SCOPE ? "" : "   <- 0 expected: no CARD_NUMBER_SCOPE set"}`);
     console.log(`  malformed id (left)        ${f(s.malformed)}`);
     console.log(`  failed                     ${f(s.failed)}`);
     // A retired graded row is a WRITE: the ruling removed it deliberately. So
@@ -821,6 +963,9 @@ async function main() {
       // CF-A-JAPANESE-CARD-IS-NOT-AN-ENGLISH-CARD. A sale whose own title
       // states the other market. A SKIP: the sale stays in the pool it is in.
       refusedCrossMarket: 0,
+      // CF-A-CARD-NUMBER-SUBSET-IS-NOT-A-WHOLE-PRODUCT. Same meaning as the
+      // catalog lane's counter of the same name: untouched, never a skip.
+      cardNumberOutOfScope: 0,
     };
     const examples = [];
     /** Every cross-market refusal, capped: the pool lane's populations run to
@@ -967,7 +1112,20 @@ async function main() {
         // Shard on the row's own id: the partition key is a legacy vendor id
         // for most of this population and thousands of rows share one, so
         // sharding on it would pile them all into a single slot.
-        const mine = rows.filter((r) => { if (mineByShard(r.id)) return true; s.otherSlot++; return false; });
+        // CF-A-CARD-NUMBER-SUBSET-IS-NOT-A-WHOLE-PRODUCT, the pool half. Same
+        // treatment as `otherSlot` above: a row outside CARD_NUMBER_SCOPE is
+        // dropped BEFORE s.scanned counts it, so it is untouched rather than a
+        // skip this dispatch adjudicated. inCardNumberScope reads the WHOLE
+        // id via cardNumberSegmentOf, which is subset-aware (a row minted with
+        // `subsetInId` carries an optional `:sub-{slug}` segment right after
+        // setKey, pushing the card number from index 4 to index 5 --
+        // hobbyIqCardId.service.ts's parseHobbyIqCardId), mirroring the
+        // catalog lane exactly.
+        const mine = rows.filter((r) => {
+          if (!mineByShard(r.id)) { s.otherSlot++; return false; }
+          if (!inCardNumberScope(r.hobbyiqCardId)) { s.cardNumberOutOfScope++; return false; }
+          return true;
+        });
         for (let i = 0; i < mine.length; i += CONCURRENCY) {
           const batch = mine.slice(i, i + CONCURRENCY);
           s.scanned += batch.length;
@@ -993,6 +1151,7 @@ async function main() {
     console.log(`  old rows deleted           ${f(s.deleted)}`);
     console.log(`  collapsed onto an existing ${f(s.collapsedOntoExisting)}   <- the target address already held this sale`);
     console.log(`  not an identity row / out of scope ${f(s.notIdentityRow)}`);
+    console.log(`  LEFT: card-number out of scope ${f(s.cardNumberOutOfScope)}${HAS_CARD_NUMBER_SCOPE ? "" : "   <- 0 expected: no CARD_NUMBER_SCOPE set"}`);
     console.log(`  slug recompute would differ ${f(s.slugDrift)}   <- reported, never applied (D28)`);
     console.log(`  duplicates LEFT in the pool ${f(s.duplicatesLeft)}   <- a delete that failed; never a lost sale`);
     console.log(`  read-back needed a retry   ${f(s.readBackRetried)}   <- Eventual-consistency lag, confirmed not failed`);

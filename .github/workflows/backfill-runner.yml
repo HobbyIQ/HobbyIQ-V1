@@ -1075,7 +1075,7 @@ on:
         required: false
         default: ""
       card_numbers:
-        description: "For backfill-cardsight-title-identity: comma-separated cardNumbers to scope the scan (e.g. CPA-EHA,CPA-JHA). Empty = scan all."
+        description: "For backfill-cardsight-title-identity: comma-separated cardNumbers to scope the scan (e.g. CPA-EHA,CPA-JHA). Empty = scan all. For rekey-product-setkey (MODE=catalog or MODE=pool, 2026-09-25): OPTIONAL comma-separated card-number PREFIXES (e.g. bma-,rma-,bst-,es-) or exact numbers, matched case-insensitively as ^<prefix> against the id's own cardNumber segment -- narrows a whole-product fold to a card-number SUBSET (e.g. 2026 Mega Box's BMA-/RMA-/BST-/ES-/Mojo numbers under bowman-chrome -> bowman-mega, leaving the rest of bowman-chrome untouched). Empty = every card number in the FROM key is in scope, same as before this option existed. Read as BACKFILL_CARD_NUMBERS, same env both scripts share; the two are never dispatched together."
         required: false
         default: ""
       slot:
@@ -2918,7 +2918,7 @@ jobs:
           finished-notice: |
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (rekeyed=${N:-0}) — done, no re-dispatch."
           dispatch: |
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rekey-product-setkey -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f titles="${{ inputs.titles }}" -f limit="${{ inputs.limit }}" -f parents_only="${{ inputs.parents_only }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rekey-product-setkey -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f titles="${{ inputs.titles }}" -f limit="${{ inputs.limit }}" -f parents_only="${{ inputs.parents_only }}" -f card_numbers="${{ inputs.card_numbers }}"
 
       - name: Self-relaunch the umbrella fold until nothing is left to fold
         # D39. Same contract as every fleet script here: fold-umbrella-to-series
