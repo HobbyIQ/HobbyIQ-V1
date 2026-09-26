@@ -1,0 +1,38 @@
+{
+  "scrapedAt": "2026-09-26T21:40:00.000Z",
+  "sourceUrls": [
+    "https://baseballcardpedia.com/index.php/Topps_Living_Set",
+    "https://www.cardboardconnection.com/topps-living-set-baseball-cards"
+  ],
+  "source": "baseballcardpedia-cardboardconnection-2026-09-26",
+  "sport": "baseball",
+  "year": 2020,
+  "setName": "2020 Topps Living Set",
+  "productKey": "2020-topps-living-set",
+  "setKey": "topps-living-set",
+  "rowCount": 104,
+  "cardNumberRange": "273-376",
+  "disambiguation": "This is the BASEBALL Topps Living Set (continuous numbering from 2018, 1953-Topps-style design, artwork by Mayumi Seto). It is NOT '2020 Topps Star Wars Living Set', an unrelated product on its own separate numbering that also uses the 'Living Set' name. No Star Wars content appears anywhere in this package.",
+  "mintedBy": "Acquisition builder (2026-09-26). Continuation of the 2018/2019 Topps Living Set packages -- 2019 ends #272, 2020 runs #273-376, 2021 begins #377 (Gerrit Cole), all confirmed on the same single baseballcardpedia page. 133 sold_comps sales for 2020 are mis-keyed under bare `topps`.",
+  "rungsMinted": [
+    { "parallel": "(none -- single-rung product, no stated parallel ladder)", "printRun": null }
+  ],
+  "cardNumbersFilled": 104,
+  "notMinted": {
+    "parallelLadder": {
+      "reason": "Both sources confirm no parallel/color ladder existed for 2020 -- the 'Black Text' micro-variant does not begin until 2023 (#595+). Parallel column left BLANK, never 'Base'."
+    },
+    "checklistCards": {
+      "reason": "CL-03 (Checklist #201-300), bundled with the 1-Apr-2020 release week (alongside #299-300), is Topps' own unnumbered index insert -- no player, not staged."
+    },
+    "teamColumn": {
+      "reason": "baseballcardpedia carries no team field. cardboardconnection's raw page truncates (194,070-char page vs ~39,400-char raw fetch window) inside the 2018 section; a secondary summarization pass recovered team names for #273-305 only, explicitly flagged by the sourcing agent as 'high-confidence but not 100% guaranteed verbatim' (not the raw fetched bytes). Rather than mix a lower-confidence partial team column with the two fully-verbatim-sourced columns (cardNumber, player), team is left BLANK for all 104 rows in this package. The partial #273-305 team recovery is preserved only in this builder's working notes, not staged into the CSV."
+    }
+  },
+  "spellingAudit": "Card numbers, player names and release dates taken verbatim from baseballcardpedia.com's 'Topps Living Set' wiki page, 2020 subsection (cardNumber 273 Lucas Giolito through 376 Tony Gonsolin). Print runs cross-checked card-for-card against cardboardconnection.com for #273-305 (exact agreement); #306-376 rest on baseballcardpedia alone since cardboardconnection's raw fetch did not reach that far and no lower-confidence secondary-summary data for print runs beyond #305 was used.",
+  "provenance": {
+    "cardsFrom": "baseballcardpedia.com (cardNumber, player, releaseDate, printRun for all 104 rows) cross-corroborated by cardboardconnection.com (cardNumber, player, printRun) for #273-305 only.",
+    "rungsFrom": "n/a -- no parallel ladder sourced",
+    "dedup": "card_catalog holds zero rows under topps-living, topps-living-set, or any other Living Set spelling for any year -- confirmed read-only, 2026-09-26."
+  }
+}

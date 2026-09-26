@@ -1,0 +1,127 @@
+category,cardNumber,parallel,isAuto,printRun,player,team,releaseDate
+base,1,,false,,Aaron Judge,New York Yankees,2018-03-14
+base,2,,false,,Joe Panik,San Francisco Giants,2018-03-14
+base,3,,false,,Nick Castellanos,Detroit Tigers,2018-03-14
+base,4,,false,,Rhys Hoskins,Philadelphia Phillies,2018-03-21
+base,5,,false,,Ian Happ,Chicago Cubs,2018-03-21
+base,6,,false,,Nick Markakis,Atlanta Braves,2018-03-21
+base,7,,false,,Shohei Ohtani,Los Angeles Angels,2018-03-28
+base,8,,false,,Russell Martin,Toronto Blue Jays,2018-03-28
+base,9,,false,,Jackie Bradley Jr.,Boston Red Sox,2018-03-28
+base,10,,false,,Derek Jeter,New York Yankees,2018-04-04
+base,11,,false,,Alex Gordon,Kansas City Royals,2018-04-04
+base,12,,false,,Jean Segura,Seattle Mariners,2018-04-04
+base,13,,false,,Bryce Harper,Washington Nationals,2018-04-11
+base,14,,false,,Mallex Smith,Tampa Bay Rays,2018-04-11
+base,15,,false,,A.J. Pollock,Arizona Diamondbacks,2018-04-11
+base,16,,false,,Jose Altuve,Houston Astros,2018-04-18
+base,17,,false,,Chris Taylor,Los Angeles Dodgers,2018-04-18
+base,18,,false,,Paul DeJong,St. Louis Cardinals,2018-04-18
+base,19,,false,,Ronald Acuna Jr.,Atlanta Braves,2018-04-25
+base,20,,false,,Jose Ramirez,Cleveland Indians,2018-04-25
+base,21,,false,,Matt Olson,Oakland Athletics,2018-04-25
+base,22,,false,,Albert Pujols,Los Angeles Angels,2018-05-02
+base,23,,false,,Amed Rosario,New York Mets,2018-05-02
+base,24,,false,,Chase Headley,San Diego Padres,2018-05-02
+base,25,,false,,Ichiro Suzuki,Seattle Mariners,2018-05-09
+base,26,,false,,Yoan Moncada,Chicago White Sox,2018-05-09
+base,27,,false,,Jose Berrios,Minnesota Twins,2018-05-09
+base,28,,false,,Rickey Henderson,Oakland Athletics,2018-05-16
+base,29,,false,,Rafael Devers,Boston Red Sox,2018-05-16
+base,30,,false,,Brandon Morrow,Chicago Cubs,2018-05-16
+base,31,,false,,Charlie Blackmon,Colorado Rockies,2018-05-23
+base,32,,false,,Ozzie Albies,Atlanta Braves,2018-05-23
+base,33,,false,,Lewis Brinson,Miami Marlins,2018-05-23
+base,34,,false,,Gleyber Torres,New York Yankees,2018-05-30
+base,35,,false,,Adam Duvall,Cincinnati Reds,2018-05-30
+base,36,,false,,Jordy Mercer,Pittsburgh Pirates,2018-05-30
+base,37,,false,,Manny Machado,Baltimore Orioles,2018-06-06
+base,38,,false,,Christian Villanueva,San Diego Padres,2018-06-06
+base,39,,false,,Eric Sogard,Milwaukee Brewers,2018-06-06
+base,40,,false,,Scott Kingery,Philadelphia Phillies,2018-06-13
+base,41,,false,,Joey Rickard,Baltimore Orioles,2018-06-13
+base,42,,false,,Jackie Robinson,Brooklyn Dodgers,2018-06-13
+base,43,,false,,Juan Soto,Washington Nationals,2018-06-20
+base,44,,false,,Bartolo Colon,Texas Rangers,2018-06-20
+base,45,,false,,Brad Peacock,Houston Astros,2018-06-20
+base,46,,false,,Hank Aaron,Milwaukee Braves,2018-06-27
+base,47,,false,,Jordan Hicks,St. Louis Cardinals,2018-06-27
+base,48,,false,,Kevin Pillar,Toronto Blue Jays,2018-06-27
+base,49,,false,,Miguel Andujar,New York Yankees,2018-07-04
+base,50,,false,,Noah Syndergaard,New York Mets,2018-07-04
+base,51,,false,,Austin Hedges,San Diego Padres,2018-07-04
+base,52,,false,,Max Scherzer,Washington Nationals,2018-07-11
+base,53,,false,,Walker Buehler,Los Angeles Dodgers,2018-07-11
+base,54,,false,,Mitch Haniger,Seattle Mariners,2018-07-11
+base,55,,false,,Ted Williams,Boston Red Sox,2018-07-18
+base,56,,false,,Brian Anderson,Miami Marlins,2018-07-18
+base,57,,false,,Sean Manaea,Oakland Athletics,2018-07-18
+base,58,,false,,Giancarlo Stanton,New York Yankees,2018-07-25
+base,59,,false,,Freddy Peralta,Milwaukee Brewers,2018-07-25
+base,60,,false,,Pat Neshek,Philadelphia Phillies,2018-07-25
+base,61,,false,,Francisco Lindor,Cleveland Indians,2018-08-01
+base,62,,false,,Andrew Benintendi,Boston Red Sox,2018-08-01
+base,63,,false,,Austin Meadows,Pittsburgh Pirates,2018-08-01
+base,64,,false,,Ryne Sandberg,Chicago Cubs,2018-08-08
+base,65,,false,,Dustin Fowler,Oakland Athletics,2018-08-08
+base,66,,false,,Yasiel Puig,Los Angeles Dodgers,2018-08-08
+base,67,,false,,Anthony Rizzo,Chicago Cubs,2018-08-15
+base,68,,false,,Daniel Murphy,Washington Nationals,2018-08-15
+base,69,,false,,Willy Adames,Tampa Bay Rays,2018-08-15
+base,70,,false,,Bo Jackson,Kansas City Royals,2018-08-22
+base,71,,false,,Jake Arrieta,Philadelphia Phillies,2018-08-22
+base,72,,false,,Dereck Rodriguez,San Francisco Giants,2018-08-22
+base,73,,false,,Cody Bellinger,Los Angeles Dodgers,2018-08-29
+base,74,,false,,Lourdes Gurriel Jr.,Toronto Blue Jays,2018-08-29
+base,75,,false,,Joe Mauer,Minnesota Twins,2018-08-29
+base,76,,false,,Roberto Clemente,Pittsburgh Pirates,2018-09-05
+base,77,,false,,Tyler O'Neill,St. Louis Cardinals,2018-09-05
+base,78,,false,,Avisail Garcia,Chicago White Sox,2018-09-05
+base,79,,false,,Jacob deGrom,New York Mets,2018-09-12
+base,80,,false,,Victor Robles,Washington Nationals,2018-09-12
+base,81,,false,,Jed Lowrie,Oakland Athletics,2018-09-12
+base,82,,false,,Joey Votto,Cincinnati Reds,2018-09-19
+base,83,,false,,David Bote,Chicago Cubs,2018-09-19
+base,84,,false,,Trevor Story,Colorado Rockies,2018-09-19
+base,85,,false,,Don Mattingly,New York Yankees,2018-09-26
+base,86,,false,,Nick Williams,Philadelphia Phillies,2018-09-26
+base,87,,false,,David Wright,New York Mets,2018-09-26
+base,88,,false,,Manny Machado,Los Angeles Dodgers,2018-10-03
+base,89,,false,,Jack Flaherty,St. Louis Cardinals,2018-10-03
+base,90,,false,,Adrian Beltre,Texas Rangers,2018-10-03
+base,91,,false,,J.D. Martinez,Boston Red Sox,2018-10-10
+base,92,,false,,Francisco Mejia,San Diego Padres,2018-10-10
+base,93,,false,,Evan Gattis,Houston Astros,2018-10-10
+base,94,,false,,Christian Yelich,Milwaukee Brewers,2018-10-17
+base,95,,false,,Clayton Kershaw,Los Angeles Dodgers,2018-10-17
+base,96,,false,,Ryan McMahon,Colorado Rockies,2018-10-17
+base,97,,false,,Chris Sale,Boston Red Sox,2018-10-24
+base,98,,false,,Dominic Smith,New York Mets,2018-10-24
+base,99,,false,,Ender Inciarte,Atlanta Braves,2018-10-24
+base,100,,false,,Babe Ruth,New York Yankees,2018-10-31
+base,101,,false,,Sandy Alcantara,Miami Marlins,2018-10-31
+base,102,,false,,Victor Martinez,Detroit Tigers,2018-10-31
+base,103,,false,,Javier Baez,Chicago Cubs,2018-11-07
+base,104,,false,,Alex Verdugo,Los Angeles Dodgers,2018-11-07
+base,105,,false,,Ketel Marte,Arizona Diamondbacks,2018-11-07
+base,106,,false,,Cal Ripken Jr.,Baltimore Orioles,2018-11-14
+base,107,,false,,Blake Snell,Tampa Bay Rays,2018-11-14
+base,108,,false,,J.P. Crawford,Philadelphia Phillies,2018-11-14
+base,109,,false,,Nolan Arenado,Colorado Rockies,2018-11-21
+base,110,,false,,Clint Frazier,New York Yankees,2018-11-21
+base,111,,false,,Andrew Heaney,Los Angeles Angels,2018-11-21
+base,112,,false,,Ralph Kiner,Pittsburgh Pirates,2018-11-28
+base,113,,false,,Daniel Palka,Chicago White Sox,2018-11-28
+base,114,,false,,Billy Hamilton,Cincinnati Reds,2018-11-28
+base,115,,false,,Luis Severino,New York Yankees,2018-12-05
+base,116,,false,,Felix Jorge,Minnesota Twins,2018-12-05
+base,117,,false,,Trey Mancini,Baltimore Orioles,2018-12-05
+base,118,,false,,Nolan Ryan,Texas Rangers,2018-12-12
+base,119,,false,,A.J. Minter,Atlanta Braves,2018-12-12
+base,120,,false,,Harrison Bader,St. Louis Cardinals,2018-12-12
+base,121,,false,,Buster Posey,San Francisco Giants,2018-12-19
+base,122,,false,,Jorge Alfaro,Philadelphia Phillies,2018-12-19
+base,123,,false,,David Peralta,Arizona Diamondbacks,2018-12-19
+base,124,,false,,Jim Thome,Cleveland Indians,2018-12-26
+base,125,,false,,Ryan Yarbrough,Tampa Bay Rays,2018-12-26
+base,126,,false,,Justin Upton,Los Angeles Angels,2018-12-26

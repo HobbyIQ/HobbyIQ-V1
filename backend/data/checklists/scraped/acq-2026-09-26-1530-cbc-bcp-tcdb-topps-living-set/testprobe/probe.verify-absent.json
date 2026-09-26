@@ -1,0 +1,22 @@
+{
+  "summary": {
+    "csv": "data/checklists/scraped/acq-2026-09-26-1530-cbc-bcp-tcdb-topps-living-set/testprobe/probe.csv",
+    "ranAt": "2026-09-26T21:25:03.731Z",
+    "totalRows": 1,
+    "presentChecklist": 0,
+    "presentDerived": 0,
+    "absent": 1,
+    "reconciled": true
+  },
+  "results": [
+    {
+      "id": "hiq:baseball:2024:topps-living-set:729:base:no-auto",
+      "cardNumber": "729",
+      "parallel": "",
+      "printRun": null,
+      "player": "Shohei Ohtani",
+      "present": false,
+      "presentSource": null
+    }
+  ]
+}
