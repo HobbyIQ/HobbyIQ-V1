@@ -1,0 +1,336 @@
+{
+  "baseball|2026|topps": {
+    "scanned": 14909,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.5365166655489236,
+    "buckets": {
+      "CARD-MISSING": 241,
+      "RUNG-MISSING": 360,
+      "STALE-NO-ROW": 2701,
+      "STALE": 3483,
+      "BACKED-DERIVED-ONLY": 1174,
+      "NO-NUMBER": 41
+    },
+    "bucketShares": {
+      "CARD-MISSING": 0.030125,
+      "RUNG-MISSING": 0.045,
+      "STALE-NO-ROW": 0.337625,
+      "STALE": 0.435375,
+      "BACKED-DERIVED-ONLY": 0.14675,
+      "NO-NUMBER": 0.005125
+    },
+    "staleWithRowCount": 3483,
+    "acquisitionCount": 3302,
+    "rematchVsAcquisitionSplit": {
+      "rematch": 3483,
+      "acquisition": 3302
+    }
+  },
+  "baseball|2025|topps": {
+    "scanned": 12611,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.6242197253433208,
+    "buckets": {
+      "BACKED-DERIVED-ONLY": 1171,
+      "STALE-NO-ROW": 5191,
+      "STALE": 1015,
+      "RUNG-MISSING": 272,
+      "CARD-MISSING": 271,
+      "NO-NUMBER": 80
+    },
+    "bucketShares": {
+      "BACKED-DERIVED-ONLY": 0.146375,
+      "STALE-NO-ROW": 0.648875,
+      "STALE": 0.126875,
+      "RUNG-MISSING": 0.034,
+      "CARD-MISSING": 0.033875,
+      "NO-NUMBER": 0.01
+    },
+    "staleWithRowCount": 1015,
+    "acquisitionCount": 5734,
+    "rematchVsAcquisitionSplit": {
+      "rematch": 1015,
+      "acquisition": 5734
+    }
+  },
+  "baseball|2025|bowman-chrome": {
+    "scanned": 11681,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.6710846405502894,
+    "buckets": {
+      "STALE-NO-ROW": 4209,
+      "BACKED-DERIVED-ONLY": 833,
+      "RUNG-MISSING": 1696,
+      "CARD-MISSING": 751,
+      "STALE": 436,
+      "NO-NUMBER": 75
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.526125,
+      "BACKED-DERIVED-ONLY": 0.104125,
+      "RUNG-MISSING": 0.212,
+      "CARD-MISSING": 0.093875,
+      "STALE": 0.0545,
+      "NO-NUMBER": 0.009375
+    },
+    "staleWithRowCount": 436,
+    "acquisitionCount": 6656,
+    "rematchVsAcquisitionSplit": {
+      "rematch": 436,
+      "acquisition": 6656
+    }
+  },
+  "baseball|2025|topps-chrome": {
+    "scanned": 15421,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.5173640302657958,
+    "buckets": {
+      "STALE-NO-ROW": 4864,
+      "STALE": 1085,
+      "CARD-MISSING": 948,
+      "BACKED-DERIVED-ONLY": 937,
+      "RUNG-MISSING": 132,
+      "NO-NUMBER": 34
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.608,
+      "STALE": 0.135625,
+      "CARD-MISSING": 0.1185,
+      "BACKED-DERIVED-ONLY": 0.117125,
+      "RUNG-MISSING": 0.0165,
+      "NO-NUMBER": 0.00425
+    },
+    "staleWithRowCount": 1085,
+    "acquisitionCount": 5944,
+    "rematchVsAcquisitionSplit": {
+      "rematch": 1085,
+      "acquisition": 5944
+    }
+  },
+  "baseball|2026|bowman-chrome": {
+    "scanned": 8498,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.915436548804211,
+    "buckets": {
+      "STALE-NO-ROW": 6130,
+      "CARD-MISSING": 560,
+      "RUNG-MISSING": 575,
+      "BACKED-DERIVED-ONLY": 574,
+      "STALE": 150,
+      "NO-NUMBER": 11
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.76625,
+      "CARD-MISSING": 0.07,
+      "RUNG-MISSING": 0.071875,
+      "BACKED-DERIVED-ONLY": 0.07175,
+      "STALE": 0.01875,
+      "NO-NUMBER": 0.001375
+    },
+    "staleWithRowCount": 150,
+    "acquisitionCount": 7265,
+    "rematchVsAcquisitionSplit": {
+      "rematch": 150,
+      "acquisition": 7265
+    }
+  },
+  "baseball|2026|bowman-chrome-mega-box": {
+    "scanned": 6819,
+    "sampled": 6748,
+    "unbacked": 6748,
+    "sampledFraction": 0.9895879161167327,
+    "buckets": {
+      "RUNG-MISSING": 678,
+      "STALE-NO-ROW": 4859,
+      "BACKED-DERIVED-ONLY": 1190,
+      "CARD-MISSING": 19,
+      "NO-NUMBER": 2
+    },
+    "bucketShares": {
+      "RUNG-MISSING": 0.1004742145820984,
+      "STALE-NO-ROW": 0.7200652045050385,
+      "BACKED-DERIVED-ONLY": 0.17634854771784234,
+      "CARD-MISSING": 0.002815649081209247,
+      "NO-NUMBER": 0.0002963841138114997
+    },
+    "staleWithRowCount": 0,
+    "acquisitionCount": 5556,
+    "rematchVsAcquisitionSplit": {
+      "rematch": 0,
+      "acquisition": 5556
+    }
+  },
+  "baseball|2026|bowman": {
+    "scanned": 25991,
+    "sampled": 6306,
+    "unbacked": 6306,
+    "sampledFraction": 0.2426224462313878,
+    "buckets": {
+      "STALE": 489,
+      "STALE-NO-ROW": 2813,
+      "BACKED-DERIVED-ONLY": 276,
+      "NO-NUMBER": 2581,
+      "CARD-MISSING": 107,
+      "RUNG-MISSING": 40
+    },
+    "bucketShares": {
+      "STALE": 0.07754519505233111,
+      "STALE-NO-ROW": 0.44608309546463687,
+      "BACKED-DERIVED-ONLY": 0.04376784015223597,
+      "NO-NUMBER": 0.4092927370758008,
+      "CARD-MISSING": 0.016967967015540753,
+      "RUNG-MISSING": 0.006343165239454488
+    },
+    "staleWithRowCount": 489,
+    "acquisitionCount": 2960,
+    "rematchVsAcquisitionSplit": {
+      "rematch": 489,
+      "acquisition": 2960
+    }
+  },
+  "baseball|2025|bowman": {
+    "scanned": 13214,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.5947071067499257,
+    "buckets": {
+      "STALE-NO-ROW": 5264,
+      "BACKED-DERIVED-ONLY": 550,
+      "NO-NUMBER": 1822,
+      "STALE": 184,
+      "CARD-MISSING": 83,
+      "RUNG-MISSING": 97
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.658,
+      "BACKED-DERIVED-ONLY": 0.06875,
+      "NO-NUMBER": 0.22775,
+      "STALE": 0.023,
+      "CARD-MISSING": 0.010375,
+      "RUNG-MISSING": 0.012125
+    },
+    "staleWithRowCount": 184,
+    "acquisitionCount": 5444,
+    "rematchVsAcquisitionSplit": {
+      "rematch": 184,
+      "acquisition": 5444
+    }
+  },
+  "baseball|2026|topps-chrome": {
+    "scanned": 25460,
+    "sampled": 8000,
+    "unbacked": 8000,
+    "sampledFraction": 0.3090831820113588,
+    "buckets": {
+      "STALE-NO-ROW": 3191,
+      "CARD-MISSING": 979,
+      "STALE": 3433,
+      "BACKED-DERIVED-ONLY": 221,
+      "NO-NUMBER": 88,
+      "RUNG-MISSING": 88
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.398875,
+      "CARD-MISSING": 0.122375,
+      "STALE": 0.429125,
+      "BACKED-DERIVED-ONLY": 0.027625,
+      "NO-NUMBER": 0.011,
+      "RUNG-MISSING": 0.011
+    },
+    "staleWithRowCount": 3433,
+    "acquisitionCount": 4258,
+    "rematchVsAcquisitionSplit": {
+      "rematch": 3433,
+      "acquisition": 4258
+    }
+  },
+  "baseball|2025|panini-prizm": {
+    "scanned": 18531,
+    "sampled": 7977,
+    "unbacked": 7977,
+    "sampledFraction": 0.4304678646592197,
+    "buckets": {
+      "BACKED-DERIVED-ONLY": 2039,
+      "STALE-NO-ROW": 4872,
+      "RUNG-MISSING": 353,
+      "CARD-MISSING": 385,
+      "STALE": 256,
+      "NO-NUMBER": 72
+    },
+    "bucketShares": {
+      "BACKED-DERIVED-ONLY": 0.25560987840040117,
+      "STALE-NO-ROW": 0.6107559232794284,
+      "RUNG-MISSING": 0.044252225147298485,
+      "CARD-MISSING": 0.04826375830512724,
+      "STALE": 0.03209226526263006,
+      "NO-NUMBER": 0.009025949605114705
+    },
+    "staleWithRowCount": 256,
+    "acquisitionCount": 5610,
+    "rematchVsAcquisitionSplit": {
+      "rematch": 256,
+      "acquisition": 5610
+    }
+  },
+  "baseball|2024|topps": {
+    "scanned": 16208,
+    "sampled": 7526,
+    "unbacked": 7526,
+    "sampledFraction": 0.4643385982230997,
+    "buckets": {
+      "BACKED-DERIVED-ONLY": 745,
+      "STALE-NO-ROW": 4338,
+      "STALE": 1956,
+      "CARD-MISSING": 239,
+      "RUNG-MISSING": 140,
+      "NO-NUMBER": 108
+    },
+    "bucketShares": {
+      "BACKED-DERIVED-ONLY": 0.09899016741961202,
+      "STALE-NO-ROW": 0.576401807068828,
+      "STALE": 0.2598990167419612,
+      "CARD-MISSING": 0.03175657719904332,
+      "RUNG-MISSING": 0.01860217911241031,
+      "NO-NUMBER": 0.014350252458145097
+    },
+    "staleWithRowCount": 1956,
+    "acquisitionCount": 4717,
+    "rematchVsAcquisitionSplit": {
+      "rematch": 1956,
+      "acquisition": 4717
+    }
+  },
+  "baseball|2025|topps-heritage": {
+    "scanned": 4879,
+    "sampled": 1553,
+    "unbacked": 1553,
+    "sampledFraction": 0.31830293092846895,
+    "buckets": {
+      "STALE-NO-ROW": 523,
+      "STALE": 580,
+      "BACKED-DERIVED-ONLY": 403,
+      "CARD-MISSING": 22,
+      "RUNG-MISSING": 20,
+      "NO-NUMBER": 5
+    },
+    "bucketShares": {
+      "STALE-NO-ROW": 0.33676754668383774,
+      "STALE": 0.3734707018673535,
+      "BACKED-DERIVED-ONLY": 0.25949774629748873,
+      "CARD-MISSING": 0.014166130070830651,
+      "RUNG-MISSING": 0.0128783000643915,
+      "NO-NUMBER": 0.003219575016097875
+    },
+    "staleWithRowCount": 580,
+    "acquisitionCount": 565,
+    "rematchVsAcquisitionSplit": {
+      "rematch": 580,
+      "acquisition": 565
+    }
+  }
+}
