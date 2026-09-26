@@ -1790,4 +1790,24 @@ describe("inferSetKeyFromTitle — Topps names Bowman too (defect 2)", () => {
   it("a bare Bowman title with no Topps word is unaffected", () => {
     expect(inferSetKeyFromTitle("2024 Bowman Chrome Prospect Auto #CPA-AB")).toBe("Bowman Chrome");
   });
+
+  // REVIEW CORRECTION (2026-09-26). The first fix's guard was a bare
+  // `!/\bbowman\b/.test(t)`, which reads the WORD "bowman" ANYWHERE in the
+  // title as the brand -- including a player's own SURNAME and an
+  // adversarial insert-sounding phrase, neither of which name the Bowman
+  // product. Both titles below are real regressions the reviewer
+  // reproduced against the prior commit: `main` (unaffected by either
+  // defect) correctly answers "Topps" for both, and the prior fix wrongly
+  // flipped them to "Bowman".
+  it.each([
+    ["2015 Topps Baseball #481 Matt Bowman St. Louis Cardinals RC", "Topps"],
+    ["2024 Topps Series 1 #45 Bowman Park Legends", "Topps"],
+  ])("a Bowman-shaped SURNAME/place word after the card number stays Topps: %s -> %s", (title, want) => {
+    expect(inferSetKeyFromTitle(title)).toBe(want);
+  });
+
+  it("the dual-brand case this defect exists for still resolves Bowman (unaffected by the correction)", () => {
+    expect(inferSetKeyFromTitle("Topps 2025 Bowman Munetaka Murakami RC #9 Chicago White Sox Purple /250"))
+      .toBe("Bowman");
+  });
 });
