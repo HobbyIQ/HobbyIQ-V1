@@ -48,11 +48,20 @@ const { parseHobbyIqCardId, computeHobbyIqCardId } = require_(
   computeHobbyIqCardId: (c: Record<string, unknown>) => string;
 };
 
-const { parseSlugWithGrade } = require_(
-  join(__dirname, "..", "dist", "services", "catalog", "catalogRowOps.service.js"),
+// catalogRowOps.service.ts's OWN parseSlugWithGrade is NOT exported --
+// exporting it is a backend/src change tonight's merge authority for this
+// fix excludes. `lib/graded-id.cjs` mirrors it outside backend/src (parity
+// pinned in tests/gradedIdParity.test.ts); this file uses the SAME mirror
+// the lane itself wires in, bound to the same parseHobbyIqCardId.
+const gradedIdLib = require_(
+  join(__dirname, "..", "scripts", "lib", "graded-id.cjs"),
 ) as {
-  parseSlugWithGrade: (slug: string) => { parsed: Record<string, unknown>; parentSlug: string; gradeTier: string | null } | null;
+  parseSlugWithGrade: (
+    slug: string,
+    parseId: (id: string) => Record<string, unknown> | null,
+  ) => { parsed: Record<string, unknown>; parentSlug: string; gradeTier: string | null } | null;
 };
+const parseSlugWithGrade = (slug: string) => gradedIdLib.parseSlugWithGrade(slug, parseHobbyIqCardId);
 
 const L = require_(lane) as {
   classifyEntry: (e: unknown) => { ok: boolean; why?: string; action?: string; parallel?: string };
@@ -172,9 +181,11 @@ describe("rungChangeFields requires and verifies the rung's human-form text", ()
   // tail is not part of the card-id grammar), so the FIRST version of this
   // fix -- parsing `id`/`to` with the bare parser and treating a parse
   // failure as "nothing to add" -- silently WAIVED the text requirement for
-  // every graded-child reslug. Fixed by parsing with `parseSlugWithGrade`
-  // (catalogRowOps' own splitter, the same one moveCatalogRow's buildIncoming
-  // uses) and comparing on the PARENT identity while the tier rides along.
+  // every graded-child reslug. Fixed by parsing with `lib/graded-id.cjs`'s
+  // `parseSlugWithGrade` (a mirror of catalogRowOps' own private splitter --
+  // the same one moveCatalogRow's buildIncoming uses -- kept outside
+  // backend/src; see gradedIdParity.test.ts for the parity pin) and comparing
+  // on the PARENT identity while the tier rides along.
   const GRADED_SRC = "hiq:pokemon:2023:swsh12-5:gg01:full-art:no-auto:cgc-10";
   const GRADED_DEST = "hiq:pokemon:2023:swsh12-5:gg01:alt-art:no-auto:cgc-10";
   const GRADED_ROW = { sport: "pokemon" };

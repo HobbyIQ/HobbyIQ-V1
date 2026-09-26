@@ -595,11 +595,14 @@ function crossProductFields(id, to) {
  * unparseable and, on the old code path, silently WAIVED the text
  * requirement for exactly the ids most likely to be a curated fold's
  * destination (a graded twin of a rung this list is renaming). `parseGrade`
- * (`parseSlugWithGrade`, catalogRowOps' own splitter -- the same one
- * moveCatalogRow's buildIncoming uses) is required to parse BOTH `id` and
- * `to` now; either failing is a REFUSAL ("cannot parse id"), never a silent
- * pass, and the comparison runs on the PARENT identity while the grade tier
- * is carried back onto the recomputed id before it is checked against `to`.
+ * is `lib/graded-id.cjs`'s `parseSlugWithGrade`, a MIRROR of
+ * catalogRowOps.service.ts's own private `parseSlugWithGrade` (the one
+ * moveCatalogRow's buildIncoming uses) -- kept outside backend/src because
+ * exporting the real one is a backend/src change; see that file's own header
+ * for the parity argument. Required to parse BOTH `id` and `to` now; either
+ * failing is a REFUSAL ("cannot parse id"), never a silent pass, and the
+ * comparison runs on the PARENT identity while the grade tier is carried
+ * back onto the recomputed id before it is checked against `to`.
  *
  * Returns `{ ok: true, changedFields }` when the entry may proceed (with
  * `changedFields` extending whatever `crossProductFields` already returned),
@@ -944,19 +947,28 @@ async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const {
-    moveCatalogRow, retireCatalogRow, patchCatalogRowFields, rebuildSearchFields, parseSlugWithGrade,
+    moveCatalogRow, retireCatalogRow, patchCatalogRowFields, rebuildSearchFields,
   } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { marketVerdict } = require(path.join(__dirname, "lib", "market-guard.cjs"));
   // CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT (2026-09-26).
-  // All three loaded from the built tree, the same way moveCatalogRow itself
-  // is -- this lane never re-implements the id grammar. parseSlugWithGrade is
-  // the GRADE-AWARE splitter (catalogRowOps' own, the one buildIncoming uses)
-  // -- the bare parseHobbyIqCardId returns null for every graded-child id, so
-  // rungChangeFields is given the grade-aware one to avoid waiving the text
-  // requirement on exactly the ids most likely to be a curated fold's target.
+  // Loaded from the built tree, the same way moveCatalogRow itself is -- this
+  // lane never re-implements the CARD-ID grammar. The GRADE-tail splitter is
+  // different: catalogRowOps.parseSlugWithGrade is the real one, but it is
+  // private to backend/src (exporting it is a backend/src change tonight's
+  // merge authority for this fix excludes), so `lib/graded-id.cjs` MIRRORS
+  // its logic outside backend/src -- see that file's own header for the
+  // parity argument and the pinned test. The bare parseHobbyIqCardId returns
+  // null for every graded-child id, so rungChangeFields is given the
+  // grade-aware splitter to avoid waiving the text requirement on exactly
+  // the ids most likely to be a curated fold's target.
   const { parseHobbyIqCardId, computeHobbyIqCardId } = require(
     path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"),
   );
+  const gradedIdLib = require(path.join(__dirname, "lib", "graded-id.cjs"));
+  // Bound to THIS run's parseHobbyIqCardId, so every call site below reads
+  // as a plain single-argument splitter -- the same shape catalogRowOps'
+  // own parseSlugWithGrade(slug) has, just mirrored outside backend/src.
+  const parseSlugWithGrade = (slug) => gradedIdLib.parseSlugWithGrade(slug, parseHobbyIqCardId);
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
