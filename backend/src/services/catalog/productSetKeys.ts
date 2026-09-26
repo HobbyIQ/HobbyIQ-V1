@@ -594,6 +594,27 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // exists; a bounded sample directly against prod on 2026-09-20 confirmed
   // rows exist at that exact id prefix with real CardHedge sale data.
   P("topps-flagship", { parent: "topps" }),
+  // TOPPS LIVING SET (stamp-fix batch 2, 2026-09-26). An annual, continuously
+  // numbered product (2018 -> present) -- its own numbering keeps counting up
+  // year over year (2024 numbers run into the 700s-900s) rather than resetting
+  // like Series 1/2/Update. Registered here, `spelled: true`, so
+  // productSetKeyForName answers BEFORE the bare `/topps/` family fallback --
+  // without this entry a "2024 Topps Living Baseball #737 Base" title's
+  // inferSetKeyFromTitle "Topps Living Set" answer slugified straight past
+  // this table (nothing named it) into the bare `topps` catch-all further
+  // down. `names` carries the market's "Living" shorthand (no "Set") --
+  // "2024 Topps Living Baseball #737 Base" and "2024 Topps Living Set #737"
+  // name the same product. Own family (not `refines: "topps"`): the checklist
+  // has its own player list and numbering with no relationship to flagship
+  // Series 1/2/Update's ~1-660 range, so treating it as a flagship refinement
+  // would be exactly the kind of same-key-wrong-parallel collapse this table
+  // exists to avoid. No card_catalog rows exist for this key yet (a real,
+  // separate acquisition, tracked outside this PR) -- registering the key
+  // does not claim rows exist, only that a title naming this product resolves
+  // to its own address instead of the flagship's. Evidence:
+  // C:/tmp/topps24_trace_1530/RESULT.md -- 1,632 2024 sales, 41 distinct
+  // cardNumbers, previously mis-keyed to bare `topps`.
+  S("topps-living-set", { names: ["topps-living"], family: "topps-living-set", parent: null }),
   P("topps-chrome", { parent: "topps" }),
   S("topps-chrome-update-series", { names: ["topps-chrome-update"], family: "topps-chrome", parent: "topps-chrome", refines: "topps-chrome" }),
   S("topps-chrome-updates-and-highlights", { names: ["topps-chrome-updates-highlights"], family: "topps-chrome", parent: "topps-chrome", refines: "topps-chrome" }),
