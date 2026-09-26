@@ -1,0 +1,38 @@
+{
+  "scrapedAt": "2026-09-26T21:56:00.000Z",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/2025_Topps",
+  "sourcePageTitleVerified": "2025 Topps -- BaseballCardPedia.com -- the flagship product's own combined Series One + Series Two insert page, 'Call to the Hall' section (5.3.4 in the page's own table of contents).",
+  "fetchMethod": "curl -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36\" -L, HTTP 200",
+  "source": "baseballcardpedia-2026-09-26",
+  "sourceNote": "Every staged row's card number, player name, rung name and print run was read directly off baseballcardpedia.com (via direct HTML fetch + tag-strip). checklistinsider.com was consulted only for reconnaissance -- confirming the product's existence, name and prefix in its own overview prose ('...All Aces, Call to the Hall, Heavy Lumber...') -- but its rendered page did not surface this section's own card list to this session's fetch tooling, and no staged row's text came from it.",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Topps Baseball -- Call to the Hall",
+  "setKey": "topps",
+  "cardNumberPrefix": "CTH-",
+  "rowRange": "CTH-1 through CTH-25 (25 cards, page's own stated count: 'We estimate 84,325 copies of each Call to the Hall were produced.')",
+  "parallelColumnAuthoritative": true,
+  "rowCount_scraped": 225,
+  "distinctCards": 25,
+  "verbatimParallelsSentence": "NOTE: The following inserts are available in the following parallels: 1990 Topps Baseball, 2024 All-Topps Team, 2024's Greatest Hits, Training Ground, Call to the Hall, 2024 First Pitch. Pink (limited, but not serial-numbered, to 600 copies) Blue (serial-numbered to 150 copies) Green (serial-numbered to 99 copies) Gold (serial-numbered to 50 copies) Orange (serial-numbered to 25 copies) Black (serial-numbered to ten) Red (serial-numbered to five) FoilFractor (one-of-one)",
+  "printRuns": { "Pink": null, "Blue": 150, "Green": 99, "Gold": 50, "Orange": 25, "Black": 10, "Red": 5, "FoilFractor": 1 },
+  "rowCount_check": "25 cards x 9 rungs (blank base + Pink + Blue + Green + Gold + Orange + Black + Red + FoilFractor) = 225 rows scraped.",
+  "absenceCheck": {
+    "correctionNote": "PR #2433 review (2026-09-26) found this package's FIRST absence pass wrong: it hardcoded printRun=null when computing the id to point-read, for EVERY row, so every numbered parallel rung (Blue/150, Gold/50, ..., FoilFractor/1) was checked at the WRONG id (missing the :num-N segment computeHobbyIqCardId appends whenever printRun is a number) and 404'd unconditionally regardless of the live catalog. The first pass wrongly staged all 25 FoilFractor rows as absent -- they are in fact checklist-present (source=checklistinsider-2026-08-27) at their correct :num-1 id. Re-verified with backend/scripts/verify-absent.cjs, which reads printRun from the CSV row with no null fallback: 50 of 225 rows (the blank base row AND the FoilFractor row for all 25 cards) are checklist-present; the other 175 (Pink/Blue/Green/Gold/Orange/Black/Red x 25) are genuinely absent and are the only rows staged here.",
+    "method": "backend/scripts/verify-absent.cjs -- id via computeHobbyIqCardId from backend/dist (printRun read from the CSV row, never hardcoded), point-read against card_catalog with pk=/cardId and the None-partition shape, read-only Cosmos via az webapp config appsettings pipe (never materialized to disk, never echoed).",
+    "verifierOutput": {
+      "csv": "data/checklists/scraped/acq-2026-09-26-2156-insider-bcp-topps-2025-cth/2025-topps-cth.csv",
+      "ranAt": "2026-09-26T03:35:59.691Z",
+      "totalRows": 175,
+      "presentChecklist": 0,
+      "presentDerived": 0,
+      "absent": 175,
+      "reconciled": true
+    },
+    "note": "The verifierOutput above is the run against the FINAL, already-trimmed 175-row CSV (Pink/Blue/Green/Gold/Orange/Black/Red x 25 cards only) -- it confirms 0 present, 175 absent, i.e. every staged row is genuinely absent. The blank base row and the FoilFractor row (50 rows total, both checklist-present, source=baseballcardpedia-ladders-2026-08-29/-09-02 for base and checklistinsider-2026-08-27 for FoilFractor) are excluded from the staged CSV entirely.",
+    "siblingRungTwinCheck": "Re-verified directly (sampled CTH-1, CTH-13, CTH-25 at the Blue rung) against every setKey via lib/sibling-rung-twin.cjs's findSiblingRungTwins -- zero twins. CTH- does not collide with any sibling product's numbering."
+  },
+  "ownerRuling": "CTH- lives under `topps` (no separate key) -- own letter prefix, no clash with plain Series 1/2 base numbering or any other staged product's numbering (confirmed by the zero-twin result above).",
+  "rowsStaged": 175,
+  "readyToIngest": true
+}

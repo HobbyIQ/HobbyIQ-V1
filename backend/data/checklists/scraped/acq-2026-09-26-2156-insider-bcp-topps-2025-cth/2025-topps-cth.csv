@@ -1,0 +1,176 @@
+category,cardNumber,parallel,isAuto,printRun,player
+insert-call-to-the-hall,CTH-1,Pink,false,,Randy Johnson
+insert-call-to-the-hall,CTH-1,Blue,false,150,Randy Johnson
+insert-call-to-the-hall,CTH-1,Green,false,99,Randy Johnson
+insert-call-to-the-hall,CTH-1,Gold,false,50,Randy Johnson
+insert-call-to-the-hall,CTH-1,Orange,false,25,Randy Johnson
+insert-call-to-the-hall,CTH-1,Black,false,10,Randy Johnson
+insert-call-to-the-hall,CTH-1,Red,false,5,Randy Johnson
+insert-call-to-the-hall,CTH-2,Pink,false,,Chipper Jones
+insert-call-to-the-hall,CTH-2,Blue,false,150,Chipper Jones
+insert-call-to-the-hall,CTH-2,Green,false,99,Chipper Jones
+insert-call-to-the-hall,CTH-2,Gold,false,50,Chipper Jones
+insert-call-to-the-hall,CTH-2,Orange,false,25,Chipper Jones
+insert-call-to-the-hall,CTH-2,Black,false,10,Chipper Jones
+insert-call-to-the-hall,CTH-2,Red,false,5,Chipper Jones
+insert-call-to-the-hall,CTH-3,Pink,false,,Ty Cobb
+insert-call-to-the-hall,CTH-3,Blue,false,150,Ty Cobb
+insert-call-to-the-hall,CTH-3,Green,false,99,Ty Cobb
+insert-call-to-the-hall,CTH-3,Gold,false,50,Ty Cobb
+insert-call-to-the-hall,CTH-3,Orange,false,25,Ty Cobb
+insert-call-to-the-hall,CTH-3,Black,false,10,Ty Cobb
+insert-call-to-the-hall,CTH-3,Red,false,5,Ty Cobb
+insert-call-to-the-hall,CTH-4,Pink,false,,Hank Aaron
+insert-call-to-the-hall,CTH-4,Blue,false,150,Hank Aaron
+insert-call-to-the-hall,CTH-4,Green,false,99,Hank Aaron
+insert-call-to-the-hall,CTH-4,Gold,false,50,Hank Aaron
+insert-call-to-the-hall,CTH-4,Orange,false,25,Hank Aaron
+insert-call-to-the-hall,CTH-4,Black,false,10,Hank Aaron
+insert-call-to-the-hall,CTH-4,Red,false,5,Hank Aaron
+insert-call-to-the-hall,CTH-5,Pink,false,,"Cal Ripken, Jr."
+insert-call-to-the-hall,CTH-5,Blue,false,150,"Cal Ripken, Jr."
+insert-call-to-the-hall,CTH-5,Green,false,99,"Cal Ripken, Jr."
+insert-call-to-the-hall,CTH-5,Gold,false,50,"Cal Ripken, Jr."
+insert-call-to-the-hall,CTH-5,Orange,false,25,"Cal Ripken, Jr."
+insert-call-to-the-hall,CTH-5,Black,false,10,"Cal Ripken, Jr."
+insert-call-to-the-hall,CTH-5,Red,false,5,"Cal Ripken, Jr."
+insert-call-to-the-hall,CTH-6,Pink,false,,Stan Musial
+insert-call-to-the-hall,CTH-6,Blue,false,150,Stan Musial
+insert-call-to-the-hall,CTH-6,Green,false,99,Stan Musial
+insert-call-to-the-hall,CTH-6,Gold,false,50,Stan Musial
+insert-call-to-the-hall,CTH-6,Orange,false,25,Stan Musial
+insert-call-to-the-hall,CTH-6,Black,false,10,Stan Musial
+insert-call-to-the-hall,CTH-6,Red,false,5,Stan Musial
+insert-call-to-the-hall,CTH-7,Pink,false,,Ted Williams
+insert-call-to-the-hall,CTH-7,Blue,false,150,Ted Williams
+insert-call-to-the-hall,CTH-7,Green,false,99,Ted Williams
+insert-call-to-the-hall,CTH-7,Gold,false,50,Ted Williams
+insert-call-to-the-hall,CTH-7,Orange,false,25,Ted Williams
+insert-call-to-the-hall,CTH-7,Black,false,10,Ted Williams
+insert-call-to-the-hall,CTH-7,Red,false,5,Ted Williams
+insert-call-to-the-hall,CTH-8,Pink,false,,Jackie Robinson
+insert-call-to-the-hall,CTH-8,Blue,false,150,Jackie Robinson
+insert-call-to-the-hall,CTH-8,Green,false,99,Jackie Robinson
+insert-call-to-the-hall,CTH-8,Gold,false,50,Jackie Robinson
+insert-call-to-the-hall,CTH-8,Orange,false,25,Jackie Robinson
+insert-call-to-the-hall,CTH-8,Black,false,10,Jackie Robinson
+insert-call-to-the-hall,CTH-8,Red,false,5,Jackie Robinson
+insert-call-to-the-hall,CTH-9,Pink,false,,Johnny Bench
+insert-call-to-the-hall,CTH-9,Blue,false,150,Johnny Bench
+insert-call-to-the-hall,CTH-9,Green,false,99,Johnny Bench
+insert-call-to-the-hall,CTH-9,Gold,false,50,Johnny Bench
+insert-call-to-the-hall,CTH-9,Orange,false,25,Johnny Bench
+insert-call-to-the-hall,CTH-9,Black,false,10,Johnny Bench
+insert-call-to-the-hall,CTH-9,Red,false,5,Johnny Bench
+insert-call-to-the-hall,CTH-10,Pink,false,,Ernie Banks
+insert-call-to-the-hall,CTH-10,Blue,false,150,Ernie Banks
+insert-call-to-the-hall,CTH-10,Green,false,99,Ernie Banks
+insert-call-to-the-hall,CTH-10,Gold,false,50,Ernie Banks
+insert-call-to-the-hall,CTH-10,Orange,false,25,Ernie Banks
+insert-call-to-the-hall,CTH-10,Black,false,10,Ernie Banks
+insert-call-to-the-hall,CTH-10,Red,false,5,Ernie Banks
+insert-call-to-the-hall,CTH-11,Pink,false,,Nolan Ryan
+insert-call-to-the-hall,CTH-11,Blue,false,150,Nolan Ryan
+insert-call-to-the-hall,CTH-11,Green,false,99,Nolan Ryan
+insert-call-to-the-hall,CTH-11,Gold,false,50,Nolan Ryan
+insert-call-to-the-hall,CTH-11,Orange,false,25,Nolan Ryan
+insert-call-to-the-hall,CTH-11,Black,false,10,Nolan Ryan
+insert-call-to-the-hall,CTH-11,Red,false,5,Nolan Ryan
+insert-call-to-the-hall,CTH-12,Pink,false,,George Brett
+insert-call-to-the-hall,CTH-12,Blue,false,150,George Brett
+insert-call-to-the-hall,CTH-12,Green,false,99,George Brett
+insert-call-to-the-hall,CTH-12,Gold,false,50,George Brett
+insert-call-to-the-hall,CTH-12,Orange,false,25,George Brett
+insert-call-to-the-hall,CTH-12,Black,false,10,George Brett
+insert-call-to-the-hall,CTH-12,Red,false,5,George Brett
+insert-call-to-the-hall,CTH-13,Pink,false,,Sandy Koufax
+insert-call-to-the-hall,CTH-13,Blue,false,150,Sandy Koufax
+insert-call-to-the-hall,CTH-13,Green,false,99,Sandy Koufax
+insert-call-to-the-hall,CTH-13,Gold,false,50,Sandy Koufax
+insert-call-to-the-hall,CTH-13,Orange,false,25,Sandy Koufax
+insert-call-to-the-hall,CTH-13,Black,false,10,Sandy Koufax
+insert-call-to-the-hall,CTH-13,Red,false,5,Sandy Koufax
+insert-call-to-the-hall,CTH-14,Pink,false,,Babe Ruth
+insert-call-to-the-hall,CTH-14,Blue,false,150,Babe Ruth
+insert-call-to-the-hall,CTH-14,Green,false,99,Babe Ruth
+insert-call-to-the-hall,CTH-14,Gold,false,50,Babe Ruth
+insert-call-to-the-hall,CTH-14,Orange,false,25,Babe Ruth
+insert-call-to-the-hall,CTH-14,Black,false,10,Babe Ruth
+insert-call-to-the-hall,CTH-14,Red,false,5,Babe Ruth
+insert-call-to-the-hall,CTH-15,Pink,false,,Mickey Mantle
+insert-call-to-the-hall,CTH-15,Blue,false,150,Mickey Mantle
+insert-call-to-the-hall,CTH-15,Green,false,99,Mickey Mantle
+insert-call-to-the-hall,CTH-15,Gold,false,50,Mickey Mantle
+insert-call-to-the-hall,CTH-15,Orange,false,25,Mickey Mantle
+insert-call-to-the-hall,CTH-15,Black,false,10,Mickey Mantle
+insert-call-to-the-hall,CTH-15,Red,false,5,Mickey Mantle
+insert-call-to-the-hall,CTH-16,Pink,false,,Reggie Jackson
+insert-call-to-the-hall,CTH-16,Blue,false,150,Reggie Jackson
+insert-call-to-the-hall,CTH-16,Green,false,99,Reggie Jackson
+insert-call-to-the-hall,CTH-16,Gold,false,50,Reggie Jackson
+insert-call-to-the-hall,CTH-16,Orange,false,25,Reggie Jackson
+insert-call-to-the-hall,CTH-16,Black,false,10,Reggie Jackson
+insert-call-to-the-hall,CTH-16,Red,false,5,Reggie Jackson
+insert-call-to-the-hall,CTH-17,Pink,false,,Derek Jeter
+insert-call-to-the-hall,CTH-17,Blue,false,150,Derek Jeter
+insert-call-to-the-hall,CTH-17,Green,false,99,Derek Jeter
+insert-call-to-the-hall,CTH-17,Gold,false,50,Derek Jeter
+insert-call-to-the-hall,CTH-17,Orange,false,25,Derek Jeter
+insert-call-to-the-hall,CTH-17,Black,false,10,Derek Jeter
+insert-call-to-the-hall,CTH-17,Red,false,5,Derek Jeter
+insert-call-to-the-hall,CTH-18,Pink,false,,Rickey Henderson
+insert-call-to-the-hall,CTH-18,Blue,false,150,Rickey Henderson
+insert-call-to-the-hall,CTH-18,Green,false,99,Rickey Henderson
+insert-call-to-the-hall,CTH-18,Gold,false,50,Rickey Henderson
+insert-call-to-the-hall,CTH-18,Orange,false,25,Rickey Henderson
+insert-call-to-the-hall,CTH-18,Black,false,10,Rickey Henderson
+insert-call-to-the-hall,CTH-18,Red,false,5,Rickey Henderson
+insert-call-to-the-hall,CTH-19,Pink,false,,Mike Schmidt
+insert-call-to-the-hall,CTH-19,Blue,false,150,Mike Schmidt
+insert-call-to-the-hall,CTH-19,Green,false,99,Mike Schmidt
+insert-call-to-the-hall,CTH-19,Gold,false,50,Mike Schmidt
+insert-call-to-the-hall,CTH-19,Orange,false,25,Mike Schmidt
+insert-call-to-the-hall,CTH-19,Black,false,10,Mike Schmidt
+insert-call-to-the-hall,CTH-19,Red,false,5,Mike Schmidt
+insert-call-to-the-hall,CTH-20,Pink,false,,Roberto Clemente
+insert-call-to-the-hall,CTH-20,Blue,false,150,Roberto Clemente
+insert-call-to-the-hall,CTH-20,Green,false,99,Roberto Clemente
+insert-call-to-the-hall,CTH-20,Gold,false,50,Roberto Clemente
+insert-call-to-the-hall,CTH-20,Orange,false,25,Roberto Clemente
+insert-call-to-the-hall,CTH-20,Black,false,10,Roberto Clemente
+insert-call-to-the-hall,CTH-20,Red,false,5,Roberto Clemente
+insert-call-to-the-hall,CTH-21,Pink,false,,Tony Gwynn
+insert-call-to-the-hall,CTH-21,Blue,false,150,Tony Gwynn
+insert-call-to-the-hall,CTH-21,Green,false,99,Tony Gwynn
+insert-call-to-the-hall,CTH-21,Gold,false,50,Tony Gwynn
+insert-call-to-the-hall,CTH-21,Orange,false,25,Tony Gwynn
+insert-call-to-the-hall,CTH-21,Black,false,10,Tony Gwynn
+insert-call-to-the-hall,CTH-21,Red,false,5,Tony Gwynn
+insert-call-to-the-hall,CTH-22,Pink,false,,Willie Mays
+insert-call-to-the-hall,CTH-22,Blue,false,150,Willie Mays
+insert-call-to-the-hall,CTH-22,Green,false,99,Willie Mays
+insert-call-to-the-hall,CTH-22,Gold,false,50,Willie Mays
+insert-call-to-the-hall,CTH-22,Orange,false,25,Willie Mays
+insert-call-to-the-hall,CTH-22,Black,false,10,Willie Mays
+insert-call-to-the-hall,CTH-22,Red,false,5,Willie Mays
+insert-call-to-the-hall,CTH-23,Pink,false,,"Ken Griffey, Jr."
+insert-call-to-the-hall,CTH-23,Blue,false,150,"Ken Griffey, Jr."
+insert-call-to-the-hall,CTH-23,Green,false,99,"Ken Griffey, Jr."
+insert-call-to-the-hall,CTH-23,Gold,false,50,"Ken Griffey, Jr."
+insert-call-to-the-hall,CTH-23,Orange,false,25,"Ken Griffey, Jr."
+insert-call-to-the-hall,CTH-23,Black,false,10,"Ken Griffey, Jr."
+insert-call-to-the-hall,CTH-23,Red,false,5,"Ken Griffey, Jr."
+insert-call-to-the-hall,CTH-24,Pink,false,,Ichiro
+insert-call-to-the-hall,CTH-24,Blue,false,150,Ichiro
+insert-call-to-the-hall,CTH-24,Green,false,99,Ichiro
+insert-call-to-the-hall,CTH-24,Gold,false,50,Ichiro
+insert-call-to-the-hall,CTH-24,Orange,false,25,Ichiro
+insert-call-to-the-hall,CTH-24,Black,false,10,Ichiro
+insert-call-to-the-hall,CTH-24,Red,false,5,Ichiro
+insert-call-to-the-hall,CTH-25,Pink,false,,Albert Pujols
+insert-call-to-the-hall,CTH-25,Blue,false,150,Albert Pujols
+insert-call-to-the-hall,CTH-25,Green,false,99,Albert Pujols
+insert-call-to-the-hall,CTH-25,Gold,false,50,Albert Pujols
+insert-call-to-the-hall,CTH-25,Orange,false,25,Albert Pujols
+insert-call-to-the-hall,CTH-25,Black,false,10,Albert Pujols
+insert-call-to-the-hall,CTH-25,Red,false,5,Albert Pujols
