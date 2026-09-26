@@ -579,7 +579,17 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
           if (occupantIsChecklist) {
             // A duplicate of an already-canonical rung. Retire the SOURCE
             // only when zero sales point at it -- never a silent orphan.
-            const n = await salesCountAt(pool, row.id);
+            // THE CHECK IS THE GATE: a thrown query is an unanswered
+            // question, never a green light. It lands in `failed`, and
+            // retireCatalogRow below is never reached on that path.
+            let n;
+            try {
+              n = await salesCountAt(pool, row.id);
+            } catch (e) {
+              failed++;
+              console.error(`      FAILED sales check ${String(row.id).slice(0, 60)}: ${e.message}`);
+              continue;
+            }
             st.salesUnderOldId += n;
             if (n > 0) {
               st.heldSales++;

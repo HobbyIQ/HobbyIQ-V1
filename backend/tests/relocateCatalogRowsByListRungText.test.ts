@@ -318,7 +318,7 @@ describe("rungChangeFields requires and verifies the rung's human-form text", ()
   it("a rung-text refusal is counted and reconciled, never silently dropped", () => {
     const src = laneSrc();
     expect(src).toContain("refused — rung text");
-    expect(src).toMatch(/const refused = refusedOccupied \+ refusedCrossMarket \+ refusedNotPending \+ refusedRungTextMissing;/);
+    expect(src).toMatch(/const refused = refusedOccupied \+ refusedCrossMarket \+ refusedNotPending \+ refusedRungTextMissing \+ refusedSalesPresent;/);
   });
 });
 

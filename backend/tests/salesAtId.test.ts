@@ -186,3 +186,56 @@ describe("salesAtId -- mutation check", () => {
     expect(res.total).not.toBe(regressedCount);
   });
 });
+
+describe("salesAtId -- a query failure is never swallowed", () => {
+  // CF-A-RETIRE-NEEDS-ZERO-SALES-BY-BOTH-FORMS (review finding, 2026-09-26).
+  // The original helper never had a try/catch of its own, but the callers
+  // wrapping it (relocate-catalog-rows-by-list.cjs's old `salesAt`) turned a
+  // throw into `null` -- "unknown", logged and forgotten, then treated as a
+  // green light to delete. This pins that salesAtId itself never hides a
+  // throw, from either form, at either stage (the query call itself or a
+  // later fetchNext), so every caller is forced to make its own decision
+  // rather than inheriting a swallow.
+  function throwingContainer(failOn: "cross-partition" | "partition-scoped" | "query-call") {
+    return {
+      items: {
+        query: (_spec: QuerySpec, feedOptions?: FeedOptions) => {
+          const scoped = Boolean(feedOptions && feedOptions.partitionKey !== undefined);
+          if (failOn === "query-call") throw new Error("probe: items.query itself threw");
+          const shouldFailHere = (failOn === "partition-scoped" && scoped) || (failOn === "cross-partition" && !scoped);
+          let done = false;
+          return {
+            hasMoreResults: () => !done,
+            fetchNext: async () => {
+              done = true;
+              if (shouldFailHere) throw new Error(`probe: ${failOn} fetchNext threw`);
+              return { resources: [] };
+            },
+          };
+        },
+      },
+    };
+  }
+
+  it("propagates a throw from the cross-partition form's fetchNext", async () => {
+    await expect(lib.salesAtId(throwingContainer("cross-partition"), ANOMALY_ID))
+      .rejects.toThrow(/cross-partition fetchNext threw/);
+  });
+
+  it("propagates a throw from the partition-scoped form's fetchNext", async () => {
+    await expect(lib.salesAtId(throwingContainer("partition-scoped"), ANOMALY_ID))
+      .rejects.toThrow(/partition-scoped fetchNext threw/);
+  });
+
+  it("propagates a throw from items.query itself, before any page is fetched", async () => {
+    await expect(lib.salesAtId(throwingContainer("query-call"), ANOMALY_ID))
+      .rejects.toThrow(/items\.query itself threw/);
+  });
+
+  it("propagates a throw raised inside the caller's own `retry` wrapper", async () => {
+    const container = fakeContainer({ crossPartitionVisible: [], partitionScopedVisible: [] });
+    const retry = () => { throw new Error("probe: retry wrapper threw"); };
+    await expect(lib.salesAtId(container, ANOMALY_ID, { retry }))
+      .rejects.toThrow(/retry wrapper threw/);
+  });
+});
