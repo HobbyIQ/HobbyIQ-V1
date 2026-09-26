@@ -15,14 +15,13 @@ import path from "node:path";
 import { describe, it, expect, afterAll } from "vitest";
 import { slugify } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 import { catalogAuthorityOf } from "../src/services/catalog/catalogAuthority.service.js";
-import { productAncestry } from "../src/services/catalog/productSetKeys.js";
+import { productParentOf } from "../src/services/catalog/productSetKeys.js";
 
 const libPath = path.resolve(__dirname, "..", "scripts", "lib", "sibling-rung-twin.cjs");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const lib = require(libPath);
 
 const parallelSlugOf = (p: string) => slugify(p || "Base");
-const productAncestryOf = productAncestry;
 
 // A mutant copy needs its OWN name-agreement.cjs resolvable beside it (the
 // module does `require("./name-agreement.cjs")`), so it is written into the
@@ -65,79 +64,105 @@ describe("isSiblingRungTwin", () => {
 
   it("is a twin: same rung, checklist authority, different setKey, same player", () => {
     const row = { setKey: "bowman-chrome", parallel: "Silver Prizm", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Alpha Player" };
-    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(true);
+    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(true);
   });
 
   it("is NOT a twin at the SAME setKey -- that is the exact-id case, handled separately", () => {
     const row = { setKey: "bowman", parallel: "Silver Prizm", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Alpha Player" };
-    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(false);
+    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(false);
   });
 
   it("is NOT a twin when the sibling row is DERIVED, not checklist -- a self-confirming row is not evidence", () => {
     const row = { setKey: "bowman-chrome", parallel: "Silver Prizm", isAuto: false, printRun: null, source: "ingest-auto-seed", playerName: "Alpha Player" };
-    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(false);
+    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(false);
   });
 
   it("is NOT a twin when the parallel differs, even under the same spelling rules", () => {
     const row = { setKey: "bowman-chrome", parallel: "Gold Prizm", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Alpha Player" };
-    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(false);
+    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(false);
   });
 
   it("folds parallel through the SAME slug function on both sides -- case and spacing never matter", () => {
     const row = { setKey: "bowman-chrome", parallel: "silver   prizm", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Alpha Player" };
-    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(true);
+    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(true);
   });
 
   it("is NOT a twin when isAuto disagrees", () => {
     const row = { setKey: "bowman-chrome", parallel: "Silver Prizm", isAuto: true, printRun: null, source: "sportscardchecklist", playerName: "Alpha Player" };
-    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(false);
+    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(false);
   });
 
   it("is NOT a twin when printRun disagrees", () => {
     const row = { setKey: "bowman-chrome", parallel: "Silver Prizm", isAuto: false, printRun: 99, source: "sportscardchecklist", playerName: "Alpha Player" };
-    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(false);
+    expect(lib.isSiblingRungTwin(row, staged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(false);
   });
 
   it("blank parallel on both sides (Base vs Base) still matches when the player agrees", () => {
     const baseStaged = { cardNumber: "1", parallel: "", isAuto: "false", printRun: "", player: "Alpha Player" };
     const row = { setKey: "topps-series-1", parallel: null, isAuto: false, printRun: null, source: "beckett", playerName: "Alpha Player" };
-    expect(lib.isSiblingRungTwin(row, baseStaged, { setKey: "topps", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(true);
+    expect(lib.isSiblingRungTwin(row, baseStaged, { setKey: "topps", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(true);
   });
 
-  // CF-A-SHARED-NUMBER-IS-NOT-A-SHARED-CARD (review finding, PR #2422).
+  // CF-A-SHARED-NUMBER-IS-NOT-A-SHARED-CARD (review finding, PR #2422). Uses
+  // bowman/bowman-chrome (a true direct parent/child pair, not the
+  // topps-chrome/topps-series-1 COUSIN pair PR #2448 dropped from sibling
+  // scope) so this fixture keeps testing namesAgree specifically, not the
+  // sibling-scope check.
   it("is NOT a twin when the SAME rung under a sibling key names a DIFFERENT player -- two distinct products sharing a numbering scheme", () => {
-    const row = { setKey: "topps-chrome", parallel: "Silver Prizm", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Beta Player" };
-    expect(lib.isSiblingRungTwin(row, { ...staged, cardNumber: "1" }, { setKey: "topps-series-1", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(false);
+    const row = { setKey: "bowman-chrome", parallel: "Silver Prizm", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Beta Player" };
+    expect(lib.isSiblingRungTwin(row, { ...staged, cardNumber: "1" }, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(false);
   });
 
   it("IS a twin when the same player is spelled with a Jr. suffix on one side and a subset tag on the other", () => {
     const row = { setKey: "bowman-chrome", parallel: "Silver Prizm", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Bobby Witt Jr." };
     const stagedTagged = { ...staged, player: "Bobby Witt RCup" };
-    expect(lib.isSiblingRungTwin(row, stagedTagged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(true);
+    expect(lib.isSiblingRungTwin(row, stagedTagged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(true);
   });
 
   // CF-A-COINCIDENCE-IS-NOT-A-SIBLING (incident 2026-09-26, run 36275442077).
   it("is NOT a twin when the candidate's setKey is an UNRELATED product -- topps-living-set has no relationship to topps-chrome, a same-number match is coincidence", () => {
     const row = { setKey: "topps-chrome", parallel: "", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Aaron Judge" };
     const livingSetStaged = { cardNumber: "1", parallel: "", isAuto: "false", printRun: "", player: "Aaron Judge" };
-    expect(lib.isSiblingRungTwin(row, livingSetStaged, { setKey: "topps-living-set", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(false);
+    expect(lib.isSiblingRungTwin(row, livingSetStaged, { setKey: "topps-living-set", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(false);
   });
 
   it("IS still a twin for the #2422 case -- bowman vs bowman-chrome, true parent/child in the registry, same player", () => {
     const row = { setKey: "bowman-chrome", parallel: "", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Alpha Player" };
     const baseStaged = { cardNumber: "1", parallel: "", isAuto: "false", printRun: "", player: "Alpha Player" };
-    expect(lib.isSiblingRungTwin(row, baseStaged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(true);
+    expect(lib.isSiblingRungTwin(row, baseStaged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(true);
   });
 
   it("sibling key but a DIFFERENT player -- registry says sibling, namesAgree says no -- is NOT a twin", () => {
     const row = { setKey: "bowman-chrome", parallel: "", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Beta Player" };
     const baseStaged = { cardNumber: "1", parallel: "", isAuto: "false", printRun: "", player: "Alpha Player" };
-    expect(lib.isSiblingRungTwin(row, baseStaged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(false);
+    expect(lib.isSiblingRungTwin(row, baseStaged, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(false);
+  });
+
+  // CF-A-COUSIN-IS-NOT-A-SIBLING-EITHER (review, PR #2448). The first fix's
+  // ancestry-INTERSECTION predicate correctly caught the Living Set incident,
+  // but also let cousins and never-crossing specializations read as twins.
+  // All three are now WRITTEN, exactly like the unrelated-product case.
+  it("is NOT a twin between COUSINS -- bowman-draft and bowman-sterling both roll up to bowman, but neither is the other's direct parent", () => {
+    const row = { setKey: "bowman-sterling", parallel: "", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Alpha Player" };
+    const draftStaged = { cardNumber: "1", parallel: "", isAuto: "false", printRun: "", player: "Alpha Player" };
+    expect(lib.isSiblingRungTwin(row, draftStaged, { setKey: "bowman-draft", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(false);
+  });
+
+  it("is NOT a twin between bowman-chrome and bowman-chrome-sapphire -- direct parent/child, but sapphire never crosses (doctrine)", () => {
+    const row = { setKey: "bowman-chrome-sapphire", parallel: "", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Alpha Player" };
+    const chromeStaged = { cardNumber: "1", parallel: "", isAuto: "false", printRun: "", player: "Alpha Player" };
+    expect(lib.isSiblingRungTwin(row, chromeStaged, { setKey: "bowman-chrome", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(false);
+  });
+
+  it("is NOT a twin between topps-chrome and topps-series-1 -- both children of topps, neither is the other's parent: a Chrome card is a different card", () => {
+    const row = { setKey: "topps-series-1", parallel: "", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Alpha Player" };
+    const chromeStaged = { cardNumber: "1", parallel: "", isAuto: "false", printRun: "", player: "Alpha Player" };
+    expect(lib.isSiblingRungTwin(row, chromeStaged, { setKey: "topps-chrome", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(false);
   });
 
   it("MUTATION: removing the sibling-scope check lets an unrelated product read as a twin", () => {
     const src = fs.readFileSync(libPath, "utf8");
-    const marker = /if \(!isKnownSiblingSetKey\(row\.setKey, setKey, productAncestryOf\)\) return false;/;
+    const marker = /if \(!isKnownSiblingSetKey\(row\.setKey, setKey, productParentOf\)\) return false;/;
     expect(src).toMatch(marker);
     const mutated = src.replace(marker, "");
     expect(mutated).not.toBe(src);
@@ -149,7 +174,63 @@ describe("isSiblingRungTwin", () => {
       const livingSetStaged = { cardNumber: "1", parallel: "", isAuto: "false", printRun: "", player: "Aaron Judge" };
       // Without the sibling-scope check, the Living Set fixture above (correctly
       // refused) now reads as a twin -- the mutation is caught.
-      expect(mutantLib.isSiblingRungTwin(row, livingSetStaged, { setKey: "topps-living-set", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(true);
+      expect(mutantLib.isSiblingRungTwin(row, livingSetStaged, { setKey: "topps-living-set", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(true);
+    } finally {
+      fs.rmSync(mutantPath, { force: true });
+    }
+  });
+
+  // CF-A-COUSIN-IS-NOT-A-SIBLING-EITHER mutation checks: widen the scope
+  // predicate back to the FIRST fix's ancestry-intersection shape (share any
+  // ancestor, not just a direct parent/child), and separately delete the
+  // never-crossing exclusion -- each regression independently lets one of
+  // the three fixtures above wrongly skip again.
+  it("MUTATION: widening isKnownSiblingSetKey back to ancestry-intersection lets COUSINS read as a twin", () => {
+    const src = fs.readFileSync(libPath, "utf8");
+    const marker = /if \(isNeverCrossingSpecialization\(a\) \|\| isNeverCrossingSpecialization\(b\)\) return false;\s*\n\s*return productParentOf\(a\) === b \|\| productParentOf\(b\) === a;/;
+    expect(src).toMatch(marker);
+    // Replace the direct-parent/child check with the broader "shared
+    // ancestor at any depth" predicate the first (defective) fix used --
+    // still gated by the never-crossing exclusion, so this isolates the
+    // scope regression from the exclusion-list regression tested below.
+    const widened = `if (isNeverCrossingSpecialization(a) || isNeverCrossingSpecialization(b)) return false;
+  let curA = a; const chainA = new Set([a]);
+  while (true) { const p = productParentOf(curA); if (!p || chainA.has(p)) break; chainA.add(p); curA = p; }
+  let curB = b; const chainB = [b];
+  while (true) { const p = productParentOf(curB); if (!p || chainB.includes(p)) break; chainB.push(p); curB = p; }
+  return chainB.some((k) => chainA.has(k));`;
+    const mutated = src.replace(marker, widened);
+    expect(mutated).not.toBe(src);
+    const mutantPath = writeMutant(mutated);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mutantLib = require(mutantPath);
+      const row = { setKey: "bowman-sterling", parallel: "", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Alpha Player" };
+      const draftStaged = { cardNumber: "1", parallel: "", isAuto: "false", printRun: "", player: "Alpha Player" };
+      // Without the direct-parent/child restriction, the cousin fixture
+      // above (correctly refused) now reads as a twin -- the mutation is
+      // caught.
+      expect(mutantLib.isSiblingRungTwin(row, draftStaged, { setKey: "bowman-draft", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(true);
+    } finally {
+      fs.rmSync(mutantPath, { force: true });
+    }
+  });
+
+  it("MUTATION: removing the never-crossing exclusion lets bowman-chrome-sapphire read as a twin of bowman-chrome", () => {
+    const src = fs.readFileSync(libPath, "utf8");
+    const marker = /if \(isNeverCrossingSpecialization\(a\) \|\| isNeverCrossingSpecialization\(b\)\) return false;\n/;
+    expect(src).toMatch(marker);
+    const mutated = src.replace(marker, "");
+    expect(mutated).not.toBe(src);
+    const mutantPath = writeMutant(mutated);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mutantLib = require(mutantPath);
+      const row = { setKey: "bowman-chrome-sapphire", parallel: "", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Alpha Player" };
+      const chromeStaged = { cardNumber: "1", parallel: "", isAuto: "false", printRun: "", player: "Alpha Player" };
+      // Without the exclusion, sapphire is a direct child of bowman-chrome
+      // and now wrongly reads as a twin -- the mutation is caught.
+      expect(mutantLib.isSiblingRungTwin(row, chromeStaged, { setKey: "bowman-chrome", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(true);
     } finally {
       fs.rmSync(mutantPath, { force: true });
     }
@@ -166,10 +247,10 @@ describe("isSiblingRungTwin", () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const mutantLib = require(mutantPath);
-      const row = { setKey: "topps-chrome", parallel: "Silver Prizm", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Beta Player" };
+      const row = { setKey: "bowman-chrome", parallel: "Silver Prizm", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Beta Player" };
       // Without the name comparison, the different-player pair the test
       // above correctly refuses now reads as a twin -- the mutation is caught.
-      expect(mutantLib.isSiblingRungTwin(row, { ...staged, cardNumber: "1" }, { setKey: "topps-series-1", parallelSlugOf, catalogAuthorityOf, productAncestryOf })).toBe(true);
+      expect(mutantLib.isSiblingRungTwin(row, { ...staged, cardNumber: "1" }, { setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf })).toBe(true);
     } finally {
       fs.rmSync(mutantPath, { force: true });
     }
@@ -199,7 +280,7 @@ describe("findSiblingRungTwins", () => {
       { id: "c", setKey: "bowman-paper", parallel: "Gold Prizm", isAuto: false, printRun: null, source: "sportscardchecklist", playerName: "Alpha" },
     ]);
     const twins = await lib.findSiblingRungTwins(container, staged, {
-      sport: "baseball", year: 2020, setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf,
+      sport: "baseball", year: 2020, setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf,
     });
     expect(twins.map((t: { id: string }) => t.id)).toEqual(["a"]);
   });
@@ -223,7 +304,7 @@ describe("findSiblingRungTwins", () => {
       },
     };
     const twins = await lib.findSiblingRungTwins(container, staged, {
-      sport: "baseball", year: 2020, setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf,
+      sport: "baseball", year: 2020, setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf,
     });
     expect(twins).toHaveLength(1);
     expect(call).toBe(3);
@@ -233,7 +314,7 @@ describe("findSiblingRungTwins", () => {
     const staged = { cardNumber: "1", parallel: "Silver Prizm", isAuto: "false", printRun: "", player: "Alpha" };
     const container = fakeContainer([]);
     const twins = await lib.findSiblingRungTwins(container, staged, {
-      sport: "baseball", year: 2020, setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf,
+      sport: "baseball", year: 2020, setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf,
     });
     expect(twins).toEqual([]);
   });
@@ -244,7 +325,7 @@ describe("findSiblingRungTwins", () => {
     let retryCalls = 0;
     const retry = async (fn: () => Promise<unknown>) => { retryCalls++; return fn(); };
     await lib.findSiblingRungTwins(container, staged, {
-      sport: "baseball", year: 2020, setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productAncestryOf, retry,
+      sport: "baseball", year: 2020, setKey: "bowman", parallelSlugOf, catalogAuthorityOf, productParentOf, retry,
     });
     expect(retryCalls).toBeGreaterThan(0);
   });

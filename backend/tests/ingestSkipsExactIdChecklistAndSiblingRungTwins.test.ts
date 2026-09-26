@@ -275,6 +275,130 @@ describe("sibling key, same rung, DIFFERENT player -> WRITTEN, never treated as 
   });
 });
 
+// CF-A-COUSIN-IS-NOT-A-SIBLING-EITHER (review, PR #2448). The first fix's
+// ancestry-INTERSECTION scope check correctly closed the Living Set incident
+// but was still too wide: cousins (two children of the same grandparent) and
+// never-crossing specializations (sapphire, 1st edition) both read as twins.
+// All three are now WRITTEN, exactly like the unrelated-product case.
+describe("COUSINS sharing an ancestor -> WRITTEN, never treated as a twin", () => {
+  const dir = stageDir("2021-bowman-draft-vs-sterling", [
+    "category,cardNumber,parallel,isAuto,printRun,player",
+    "base,1,,false,,Alpha Player",
+    "",
+  ].join("\n"), { sport: "baseball", year: 2021, setKey: "bowman-draft", setName: "2021 Bowman Draft" });
+
+  it("writes the row: bowman-draft and bowman-sterling both roll up to bowman, but neither is the other's direct parent", () => {
+    const { path: shim, writtenFile } = shimOf({
+      bySibling: [{
+        id: "hiq:baseball:2021:bowman-sterling:1:base:no-auto",
+        setKey: "bowman-sterling", parallel: null, isAuto: false, printRun: null,
+        source: "sportscardchecklist", playerName: "Alpha Player",
+      }],
+    });
+    const { stdout, status } = runIngestApply(dir, shim);
+    expect(status).toBe(0);
+    expect(stdout).toContain("rung twin under sibling key 0");
+    expect(stdout).toContain("catalog rows written   1");
+    expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(1);
+  });
+});
+
+describe("a NEVER-CROSSING specialization (sapphire) -> WRITTEN, never treated as a twin of its own parent", () => {
+  const dir = stageDir("2022-bowman-chrome-vs-sapphire", [
+    "category,cardNumber,parallel,isAuto,printRun,player",
+    "base,1,,false,,Alpha Player",
+    "",
+  ].join("\n"), { sport: "baseball", year: 2022, setKey: "bowman-chrome-sapphire", setName: "2022 Bowman Chrome Sapphire" });
+
+  it("writes the row: bowman-chrome-sapphire is a direct child of bowman-chrome in the registry, but doctrine says sapphire never crosses", () => {
+    const { path: shim, writtenFile } = shimOf({
+      bySibling: [{
+        id: "hiq:baseball:2022:bowman-chrome:1:base:no-auto",
+        setKey: "bowman-chrome", parallel: null, isAuto: false, printRun: null,
+        source: "sportscardchecklist", playerName: "Alpha Player",
+      }],
+    });
+    const { stdout, status } = runIngestApply(dir, shim);
+    expect(status).toBe(0);
+    expect(stdout).toContain("rung twin under sibling key 0");
+    expect(stdout).toContain("catalog rows written   1");
+    expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(1);
+  });
+});
+
+describe("topps-chrome vs topps-series-1 -> WRITTEN: cousins, a Chrome card is a different card", () => {
+  const dir = stageDir("2019-topps-chrome-vs-series-1", [
+    "category,cardNumber,parallel,isAuto,printRun,player",
+    "base,1,,false,,Alpha Player",
+    "",
+  ].join("\n"), { sport: "baseball", year: 2019, setKey: "topps-chrome", setName: "2019 Topps Chrome" });
+
+  it("writes the row even though topps-series-1 holds the same number and player at checklist authority -- both are children of topps, neither is the other's parent", () => {
+    const { path: shim, writtenFile } = shimOf({
+      bySibling: [{
+        id: "hiq:baseball:2019:topps-series-1:1:base:no-auto",
+        setKey: "topps-series-1", parallel: null, isAuto: false, printRun: null,
+        source: "sportscardchecklist", playerName: "Alpha Player",
+      }],
+    });
+    const { stdout, status } = runIngestApply(dir, shim);
+    expect(status).toBe(0);
+    expect(stdout).toContain("rung twin under sibling key 0");
+    expect(stdout).toContain("catalog rows written   1");
+    expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(1);
+  });
+});
+
+describe("mutation: widening the sibling-scope check back to ancestry-intersection regresses the cousin fixture", () => {
+  it("removing the direct-parent/child restriction (still gated by the never-crossing exclusion) skips the bowman-draft/bowman-sterling fixture again", () => {
+    const libPath = path.join(path.dirname(script), "lib", "sibling-rung-twin.cjs");
+    const libSrc = fs.readFileSync(libPath, "utf8");
+    const marker = /if \(isNeverCrossingSpecialization\(a\) \|\| isNeverCrossingSpecialization\(b\)\) return false;\s*\n\s*return productParentOf\(a\) === b \|\| productParentOf\(b\) === a;/;
+    expect(libSrc).toMatch(marker);
+    const widened = `if (isNeverCrossingSpecialization(a) || isNeverCrossingSpecialization(b)) return false;
+  let curA = a; const chainA = new Set([a]);
+  while (true) { const p = productParentOf(curA); if (!p || chainA.has(p)) break; chainA.add(p); curA = p; }
+  let curB = b; const chainB = [b];
+  while (true) { const p = productParentOf(curB); if (!p || chainB.includes(p)) break; chainB.push(p); curB = p; }
+  return chainB.some((k) => chainA.has(k));`;
+    const mutatedLib = libSrc.replace(marker, widened);
+    expect(mutatedLib).not.toBe(libSrc);
+
+    const dir = stageDir("2021-mutant-bowman-draft-vs-sterling", [
+      "category,cardNumber,parallel,isAuto,printRun,player",
+      "base,1,,false,,Alpha Player",
+      "",
+    ].join("\n"), { sport: "baseball", year: 2021, setKey: "bowman-draft", setName: "2021 Mutant Bowman Draft" });
+    const { path: shim, writtenFile } = shimOf({
+      bySibling: [{
+        id: "hiq:baseball:2021:bowman-sterling:1:base:no-auto",
+        setKey: "bowman-sterling", parallel: null, isAuto: false, printRun: null,
+        source: "sportscardchecklist", playerName: "Alpha Player",
+      }],
+    });
+    fs.writeFileSync(libPath, mutatedLib);
+    try {
+      const r2 = spawnSync(process.execPath, [script], {
+        env: {
+          ...process.env, COSMOS_CONNECTION_STRING, DIR: dir, SOURCE: "sportscardchecklist",
+          BACKFILL_APPLY: "true", REINGEST: "true",
+          NODE_OPTIONS: `--require ${JSON.stringify(shim)}`,
+        },
+        encoding: "utf8",
+      });
+      // Without the direct-parent/child restriction, the cousin pair reads
+      // as a twin again through the shared-ancestor chain -- the mutation
+      // is caught.
+      expect(r2.status).toBe(0);
+      expect(String(r2.stdout)).toContain("rung twin under sibling key 1");
+      expect(String(r2.stdout)).toContain("catalog rows written   0");
+      expect(JSON.parse(fs.readFileSync(writtenFile, "utf8"))).toHaveLength(0);
+    } finally {
+      fs.writeFileSync(libPath, libSrc);
+    }
+  });
+});
+
 describe("no twin anywhere -> written, exactly as before this change", () => {
   const dir = stageDir("2020-twin-baseball-clean", [
     "category,cardNumber,parallel,isAuto,printRun,player",
@@ -477,7 +601,7 @@ describe("mutation checks: both skip branches actually gate the write", () => {
     // rather than a substitute module the script would never load.
     const libPath = path.join(path.dirname(script), "lib", "sibling-rung-twin.cjs");
     const libSrc = fs.readFileSync(libPath, "utf8");
-    const marker = /if \(!isKnownSiblingSetKey\(row\.setKey, setKey, productAncestryOf\)\) return false;/;
+    const marker = /if \(!isKnownSiblingSetKey\(row\.setKey, setKey, productParentOf\)\) return false;/;
     expect(libSrc).toMatch(marker);
     const mutatedLib = libSrc.replace(marker, "");
     expect(mutatedLib).not.toBe(libSrc);

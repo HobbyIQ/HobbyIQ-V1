@@ -43,11 +43,11 @@ const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReco
 const { upsertCatalogEntry, cleanPlayerName } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
 const { computeHobbyIqCardId, slugify, normalizeSetKey } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
-// CF-A-COINCIDENCE-IS-NOT-A-SIBLING: the SAME registry the worklist
-// (acquisition-worklist.cjs) and the matcher's own widening already trust for
-// "is this setKey part of that product's family" -- never a hand-coded pair
-// table of our own.
-const { productAncestry } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
+// CF-A-COINCIDENCE-IS-NOT-A-SIBLING / CF-A-COUSIN-IS-NOT-A-SIBLING-EITHER:
+// the SAME registry the worklist (acquisition-worklist.cjs) and the
+// matcher's own widening already trust for "is this setKey's DIRECT parent
+// that setKey" -- never a hand-coded pair table of our own.
+const { productParentOf } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
 // CF-VACATE-THE-PLAIN-ID-OR-REFUSE: the incumbent is MOVED, never re-upserted
 // at a second address, so the ambiguous plain id genuinely stops existing and
 // the sales hanging off it follow the card.
@@ -989,7 +989,7 @@ async function main() {
             sport: product.sport, year: product.year, setKey: rowSetKey,
             parallelSlugOf: (p) => slugify(p || "Base"),
             catalogAuthorityOf,
-            productAncestryOf: productAncestry,
+            productParentOf,
           }));
           if (twins.length) {
             const t = twins[0];
