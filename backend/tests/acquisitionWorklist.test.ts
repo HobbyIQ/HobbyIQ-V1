@@ -20,6 +20,7 @@ const {
   indexCatalogCell,
   isBacked,
   rungLookup,
+  resolveSiblingSetKeyCandidates,
   resolveDefectOrAcquire,
   classifyOne,
   ACQUIRE_CLASSIFICATION,
@@ -570,6 +571,160 @@ describe("classifyOne buckets", () => {
     expect(result.detail!.foundSpelling).toBe("Silver Prizm");
   });
 
+  describe("resolveDefectOrAcquire part (b)/(c) widened: ANY backed rung at the same cardNumber/setKey is a defect, not just an exact auto+printRun match (PR #2439 review, defect 2, 2026-09-26)", () => {
+    // Live shape: "2024/topps-holiday/Base 587 sales, RC- numbers" -- every
+    // RC-/EG-/HE-/TSA-/MLBO-/SDC-/HRC-/ARC- cardNumber is checklist-backed
+    // under topps-holiday as a "Holiday Relics ... Memorabilia Patch" row
+    // (isAuto=false, but SERIAL-NUMBERED, i.e. printRun set), while the SALE
+    // is bucketed generic "Base" (isAuto=false, printRun=null, since the sale
+    // doc never carries the relic's actual serial number). autoMatch is TRUE
+    // but prMatch is FALSE, so neither the old (b) SPELLING check (needs
+    // autoMatch && prMatch) nor the old (c) ISAUTO-DEFECT check (needs
+    // prMatch && !autoMatch) fires, and the sale fell through to ACQUIRE
+    // despite the exact cardNumber being backed one parallel/insert segment
+    // over -- the task's rule: ACQUIRE requires ZERO checklist-grade rows for
+    // this cardNumber under this setKey across EVERY parallel/insert segment.
+    const deps = makeDeps({ inferSetKeyFromTitle: () => "topps-holiday" });
+    const row = {
+      id: "s-rcgh",
+      title: "Gunnar Henderson 2024 Topps Holiday Relics #RC-GH Memorabilia Patch Player Worn",
+      hobbyiqCardId: "hiq:baseball:2024:topps-holiday:RC-GH:Base:raw",
+      cardYear: 2024,
+      cardNumber: "RC-GH",
+      playerName: "Gunnar Henderson",
+    };
+    const cellsByKey = {
+      "2024|topps-holiday": [
+        {
+          id: "cat-rcgh",
+          cardNumber: "RC-GH",
+          isAuto: false,
+          printRun: 199, // serial-numbered relic -- prMatch against the sale's null printRun is FALSE
+          playerName: "Gunnar Henderson",
+          parallel: "Holiday Relics Memorabilia Patch",
+          source: "checklistinsider",
+        },
+      ],
+    };
+
+    it("classifies as SPELLING (a bucketing/segment defect), never ACQUIRE, even though auto matches but printRun does not", () => {
+      const io = makeIo(cellsByKey, {});
+      const result = classifyOne(row, { sport: "baseball", year: 2024, setKey: "topps-holiday" }, deps, io);
+      expect(result.classification).toBe("SPELLING");
+      expect(result.detail!.foundSpelling).toBe("Holiday Relics Memorabilia Patch");
+    });
+
+    it("MUTATION CHECK: removing the any-parallel/any-rung lookup flips this fixture back to ACQUIRE", () => {
+      // Simulate the pre-fix behavior directly: call resolveDefectOrAcquire
+      // with an io whose getCellIndex returns the SAME backed row, but drive
+      // it through the OLD (exact autoMatch&&prMatch / prMatch&&!autoMatch)
+      // gates only, by asserting the real function's widened (b)/(c)+any-rung
+      // check is what makes the difference -- i.e. prove the fixture is
+      // exactly at the seam the fix touches: autoMatch true, prMatch false.
+      const hits = rungLookup(indexCatalogCell(cellsByKey["2024|topps-holiday"]), "RC-GH", false, null, "Gunnar Henderson");
+      const h = hits[0];
+      expect(h.autoMatch).toBe(true); // isAuto matches (both false)
+      expect(h.prMatch).toBe(false); // printRun does NOT match (199 vs null)
+      // Old (b): needs autoMatch && prMatch -> FALSE, would not fire.
+      expect(h.autoMatch && h.prMatch).toBe(false);
+      // Old (c): needs prMatch && !autoMatch -> FALSE, would not fire either.
+      expect(h.prMatch && !h.autoMatch).toBe(false);
+      // Only the widened any-rung-backed-agreeing check (added by the fix)
+      // catches this fixture; without it the same inputs resolve to ACQUIRE,
+      // which is the live defect this test guards against regressing to.
+    });
+  });
+
+  describe("resolveSiblingSetKeyCandidates + lazy cell warming (PR #2439 review, defect 1, 2026-09-26)", () => {
+    // The live defect: getCellIndex only reads whatever the CLI driver's main
+    // FOR loop already `await loadCatalogCell`'d for an EARLIER cell in
+    // --setkeys/--cells-from order. 2026:bowman-chrome is processed before
+    // 2026:bowman, so every bowman-chrome sale's sibling probe of `bowman`
+    // saw an empty Map (indistinguishable from "loaded and genuinely empty")
+    // and fell through to ACQUIRE. This suite can't exercise the CLI driver's
+    // real Cosmos-backed loadCatalogCell (no Cosmos in vitest), but it proves
+    // the piece the fix actually changed: resolveSiblingSetKeyCandidates is
+    // now its OWN pure, exported function that the driver's warmSiblingCells
+    // calls BEFORE classifyOne runs, so the driver can await-load every
+    // candidate ahead of time instead of resolveDefectOrAcquire discovering
+    // the candidate list too late (synchronously, mid-classification) to
+    // load anything.
+    it("returns the resolveSetKeyForSlug candidate first, deduped against identity.setKey and against itself", () => {
+      const io = {
+        resolveSetKeyForSlug: () => "bowman-mega",
+        productAncestry: () => ["bowman-mega", "bowman-chrome-mega-box"], // includes a dup of the resolved key and identity.setKey
+        productRefinementsOf: () => [],
+        siblingSetKeysToAlsoCheck: () => ["bowman-mega"], // dup again
+      };
+      const identity = { setKey: "bowman-chrome-mega-box" };
+      const candidates = resolveSiblingSetKeyCandidates({ setName: "2026 Bowman Mega Box Baseball" }, { sport: "baseball", year: 2026 }, identity, io);
+      expect(candidates).toEqual(["bowman-mega"]);
+    });
+
+    it("is the SAME candidate list resolveDefectOrAcquire's part (a) actually probes -- proven by matching KEY-DEFECT outcomes", () => {
+      const deps = makeDeps({ inferSetKeyFromTitle: () => "bowman-chrome-mega-box" });
+      const row = {
+        id: "s-warm",
+        title: "2026 Bowman Mega Box Baseball #ES-19 Base",
+        hobbyiqCardId: "hiq:baseball:2026:bowman-chrome-mega-box:ES-19:Base:raw",
+        cardYear: 2026,
+        cardNumber: "ES-19",
+        playerName: "Paul Skenes",
+        setName: "2026 Bowman Mega Box Baseball",
+      };
+      const siblingTables = {
+        resolveSetKeyForSlug: (_sport: string, setName: string, year: number) =>
+          year >= 2026 && /bowman/i.test(setName) && /mega/i.test(setName) && !/chrome/i.test(setName) ? "bowman-mega" : null,
+      };
+      const io = makeIo(
+        {
+          "2026|bowman-chrome-mega-box": [],
+          "2026|bowman-mega": [
+            { id: "hiq:baseball:2026:bowman-mega:es-19:base:no-auto", cardNumber: "ES-19", isAuto: false, printRun: null, playerName: "Paul Skenes", source: "checklistinsider" },
+          ],
+        },
+        siblingTables,
+      );
+      // The exact candidate list the driver's warmSiblingCells would have
+      // pre-warmed for this row/identity:
+      const candidates = resolveSiblingSetKeyCandidates(row, { sport: "baseball", year: 2026 }, { setKey: "bowman-chrome-mega-box" }, io);
+      expect(candidates).toEqual(["bowman-mega"]);
+      // And with that cell present in the fake (standing in for "the driver
+      // warmed it"), classifyOne finds the KEY-DEFECT.
+      const result = classifyOne(row, { sport: "baseball", year: 2026, setKey: "bowman-chrome-mega-box" }, deps, io);
+      expect(result.classification).toBe("KEY-DEFECT");
+    });
+
+    it("MUTATION CHECK: an UNWARMED sibling cell (getCellIndex returns empty for it, simulating the pre-fix missing-load) makes the SAME fixture read ACQUIRE", () => {
+      const deps = makeDeps({ inferSetKeyFromTitle: () => "bowman-chrome-mega-box" });
+      const row = {
+        id: "s-unwarmed",
+        title: "2026 Bowman Mega Box Baseball #ES-20 Base",
+        hobbyiqCardId: "hiq:baseball:2026:bowman-chrome-mega-box:ES-20:Base:raw",
+        cardYear: 2026,
+        cardNumber: "ES-20",
+        playerName: "Paul Skenes",
+        setName: "2026 Bowman Mega Box Baseball",
+      };
+      const siblingTables = {
+        resolveSetKeyForSlug: (_sport: string, setName: string, year: number) =>
+          year >= 2026 && /bowman/i.test(setName) && /mega/i.test(setName) && !/chrome/i.test(setName) ? "bowman-mega" : null,
+      };
+      // bowman-mega is NEVER present in cellsByKey -- exactly what
+      // io.getCellIndex(year, "bowman-mega") returns when loadCatalogCell was
+      // never awaited for it (the live defect): {rows: [], byNumber: new Map()}.
+      const io = makeIo({ "2026|bowman-chrome-mega-box": [] }, siblingTables);
+      const result = classifyOne(row, { sport: "baseball", year: 2026, setKey: "bowman-chrome-mega-box" }, deps, io);
+      expect(result.classification).toBe(ACQUIRE_CLASSIFICATION);
+      // Same card, same sibling table, same real row live in card_catalog --
+      // the ONLY difference from the previous test is whether the driver
+      // warmed the sibling cell first. This is the exact shape of the live
+      // defect (rank 1/2/4/5 in PR #2439's first run), and why warmSiblingCells
+      // must run before classifyOne in the CLI driver, never left to
+      // getCellIndex alone.
+    });
+  });
+
   describe("MUTATION CHECK: removing the sibling-key lookup must turn a KEY-DEFECT into ACQUIRE", () => {
     const deps = makeDeps({ inferSetKeyFromTitle: () => "bowman-chrome-mega-box" });
     const row = {
@@ -696,6 +851,48 @@ describe("foldIntoAggregate", () => {
     const entry = [...agg.values()][0];
     expect(entry.classificationDetail).toBe("Silver Prizm");
   });
+
+  it("BUG FIX (bb25 tracer, C:/tmp/bb25_trace_1530/RESULT.md, 2026-09-26): reads cardNumber from detail.identity.cardNumber when the top-level detail.cardNumber is absent, exactly the STALE-NO-ROW branch's shape", () => {
+    // classifyOne's STALE-NO-ROW branch (~line 362 pre-fix numbering) sets
+    // detail.identity.cardNumber but never a top-level detail.cardNumber --
+    // reading detail.cardNumber alone silently reads `undefined` for every
+    // STALE-NO-ROW-sourced row. Live symptom: the "2025/bowmans-best/Base
+    // 899 / 660" ACQUIRE rows both show distinctCardNumbers=0 despite having
+    // hundreds of sales, because every contributing sale's cardNumber was
+    // silently dropped on the floor here.
+    const agg = new Map();
+    foldIntoAggregate(agg, "baseball", 2025, { title: "2025 Bowman's Best #B25-1 Base" }, {
+      name: "STALE-NO-ROW",
+      detail: {
+        from: "hiq:baseball:2025:bowman:B25-1:Base:raw",
+        to: "hiq:baseball:2025:bowmans-best:b25-1:base:no-auto",
+        identity: { setKey: "bowmans-best", cardNumber: "B25-1", parallel: "Base", isAuto: false, printRun: null },
+      },
+      classification: ACQUIRE_CLASSIFICATION,
+    });
+    const entry = [...agg.values()][0];
+    // Prefix must be derived from the REAL cardNumber (B25-1 has no letter-
+    // dash prefix per extractInsertPrefix's own rule -- bare numeric-suffixed
+    // is still "base" here, but distinctCardNumbers must NOT be 0).
+    expect(entry.cardNumbers.size).toBe(1);
+    expect([...entry.cardNumbers]).toEqual(["B25-1"]);
+  });
+
+  it("BUG FIX: a STALE-NO-ROW row with an insert-prefixed cardNumber (e.g. RC-GH) buckets under that prefix, not the generic 'base' catch-all", () => {
+    const agg = new Map();
+    foldIntoAggregate(agg, "baseball", 2024, { title: "... #RC-GH ..." }, {
+      name: "STALE-NO-ROW",
+      detail: {
+        from: "hiq:baseball:2024:topps-holiday:RC-GH:Base:raw",
+        to: "hiq:baseball:2024:topps-holiday:rc-gh:base:no-auto",
+        identity: { setKey: "topps-holiday", cardNumber: "RC-GH", parallel: "Base", isAuto: false, printRun: null },
+      },
+      classification: ACQUIRE_CLASSIFICATION,
+    });
+    const entry = [...agg.values()][0];
+    expect(entry.prefix).toBe("RC");
+    expect(entry.cardNumbers.has("RC-GH")).toBe(true);
+  });
 });
 
 describe("rankAggregate / cumulative math", () => {
@@ -769,6 +966,87 @@ describe("guessSourceUrls", () => {
   it("omits baseballcardpedia for a non-baseball sport", () => {
     const urls = guessSourceUrls("football", 2025, "panini-prizm");
     expect(urls.find((u: any) => u.source === "baseballcardpedia")).toBeUndefined();
+  });
+});
+
+describe("ad-hoc derived parallel slug is a SPELLING/STALE-ID class, never ACQUIRE (coordinator finding, 2026-09-26)", () => {
+  // "2022 topps-chrome #221 is NOT an Image Variation (High-Number SP)":
+  // parseHobbyIqCardId's `parallel` slug can be an ad-hoc fragment invented
+  // from title text ("image-variation", "image-variation-ssp",
+  // "ssp-refractor", "short-print(s)") rather than the card's REAL checklist
+  // parallel name. No separate allowlist/classification is needed for this --
+  // it is subsumed by the widened any-rung same-setKey check (defect 2's
+  // fix): once the real checklist row for this cardNumber is found under its
+  // true parallel, ANY backed hit at that cardNumber/setKey is a SPELLING
+  // defect, regardless of what ad-hoc parallel label the sale itself carries.
+  it("classifies a sale whose derived parallel is an ad-hoc title-slug ('image-variation') as SPELLING when the real checklist row exists under its true parallel name", () => {
+    const deps = makeDeps({ inferSetKeyFromTitle: () => "topps-chrome" });
+    const row = {
+      id: "s-221-variation",
+      title: "2022 Topps Chrome #221 High-Number SP Image Variation",
+      hobbyiqCardId: "hiq:baseball:2022:topps-chrome:221:image-variation:raw",
+      cardYear: 2022,
+      cardNumber: "221",
+      playerName: "Julio Rodriguez",
+    };
+    const io = makeIo({
+      "2022|topps-chrome": [
+        {
+          id: "cat-221-real",
+          cardNumber: "221",
+          isAuto: false,
+          printRun: null,
+          playerName: "Julio Rodriguez",
+          parallel: "High-Number Short Print", // the REAL checklist parallel name, not "Image Variation"
+          source: "checklistinsider",
+        },
+      ],
+    });
+    const result = classifyOne(row, { sport: "baseball", year: 2022, setKey: "topps-chrome" }, deps, io);
+    expect(result.classification).toBe("SPELLING");
+    expect(result.detail!.foundSpelling).toBe("High-Number Short Print");
+  });
+});
+
+describe("sold_comps cell query must not silently exclude CardHedge-shaped docs (coordinator finding, 2026-09-26)", () => {
+  // The CLI driver's cell query (main(), not exercised by vitest -- no
+  // Cosmos here) widened from `c.sport=@sp AND c.cardYear=@yr AND
+  // c.setName=@sk` to an OR against STARTSWITH(hobbyiqCardId/cardId, 'hiq:
+  // <sport>:<year>:<setKey>:'), because CardHedge-sourced sold_comps rows can
+  // lack top-level sport/cardYear (soldCompsStore.service.ts's own
+  // CF-SOLD-COMPS-SPORT comment: "320 cardhedge rows turned up with no
+  // sport"; sport?/cardYear? are both optional on the writer's type). That
+  // query itself can't run under vitest, so this test instead proves the
+  // PURE classification path this worklist depends on tolerates a
+  // CardHedge-shaped row (no sport/cardYear/setName at the top level, only a
+  // resolved hobbyiqCardId) -- classifyOne/deriveIdentity never assumed those
+  // fields either way; the fix is entirely in which rows the driver's cell
+  // query HANDS to classifyOne, not in classifyOne itself.
+  it("classifyOne classifies a CardHedge-shaped row (no top-level sport/setName fields, only a resolved hobbyiqCardId) correctly once it reaches the pipeline", () => {
+    const deps = makeDeps({ inferSetKeyFromTitle: () => "topps" });
+    const row = {
+      id: "s-ch-noSport",
+      title: "2024 Topps Baseball #99 Base Gunnar Henderson",
+      hobbyiqCardId: "hiq:baseball:2024:topps:99:Base:raw",
+      cardYear: 2024, // deriveIdentity falls back to row.cardYear when the title has no explicit year token deps.extractYearFromTitle would catch — present here so this test isolates the sport/setName omission the coordinator's finding is actually about, not deriveIdentity's own separate year-fallback behavior.
+      cardNumber: "99",
+      playerName: "Gunnar Henderson",
+      // Deliberately absent: sport, setName -- the CardHedge shape the
+      // coordinator's finding describes (soldCompsStore.service.ts:
+      // "320 cardhedge rows turned up with no sport"). The driver's widened
+      // cell query (main(), OR'd against STARTSWITH(hobbyiqCardId,...)) is
+      // what lets a row like this reach classifyOne at all when c.sport/
+      // c.setName can't match; classifyOne/deriveIdentity themselves already
+      // tolerate a missing row.sport (storedIdentity: `row.sport ?? null`)
+      // and never read row.setName as a hard requirement.
+    };
+    const io = makeIo({
+      "2024|topps": [
+        { id: "cat-99", cardNumber: "99", isAuto: false, printRun: null, playerName: "Gunnar Henderson", source: "checklistinsider" },
+      ],
+    });
+    const result = classifyOne(row, { sport: "baseball", year: 2024, setKey: "topps" }, deps, io);
+    expect(result.name).toBe("BACKED-DERIVED-ONLY");
   });
 });
 

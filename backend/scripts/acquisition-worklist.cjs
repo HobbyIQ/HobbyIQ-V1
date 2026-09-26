@@ -180,13 +180,27 @@ function rungLookup(byNumberIndex, cardNumber, isAuto, printRun, playerName) {
  * within-cell rungLookup above — an unrelated player at the same number in a
  * sibling product is not evidence of anything.
  */
-function resolveDefectOrAcquire(sale, cell, identity, cardNumber, io) {
-  const playerName = sale.playerName || "";
-
-  // (a) SIBLING SETKEYS, in priority order: the year+setName-aware corrector
-  // first (it is the one place R75-shaped splits like Mega Box actually
-  // live), then the parent/family/refinement walk, then the hand-verified
-  // override table, then a bounded cross-sport probe as the last, widest net.
+/**
+ * Gather the ordered, deduped list of sibling setKey CANDIDATES that
+ * resolveDefectOrAcquire's part (a) would probe for this sale/identity —
+ * the year+setName-aware corrector, the parent/family/refinement walk, and
+ * the hand-verified override table (never the cross-sport probe, which is
+ * data-driven and can't be predicted ahead of a Cosmos round trip).
+ *
+ * Pulled out as its OWN function (PR #2439 review, defect 1, 2026-09-26) so
+ * the CLI driver can call it BEFORE classifyOne runs and lazily
+ * `await loadCatalogCell(year, siblingKey)` for every candidate — see the
+ * driver's warmSiblingCells. Without this, io.getCellIndex(cell.year,
+ * siblingKey) (below) only ever hits whatever the main FOR loop already
+ * `await loadCatalogCell`'d for a DIFFERENT cell earlier in --setkeys/
+ * --cells-from order — e.g. 2026:bowman-chrome processed before
+ * 2026:bowman means every bowman-chrome sale's sibling probe of `bowman`
+ * saw an EMPTY cache (getCellIndex returning `{rows: [], byNumber: new
+ * Map()}` for a cell that simply hadn't been loaded yet, indistinguishable
+ * from a cell that was loaded and is genuinely empty) and fell through to
+ * ACQUIRE despite the sibling row being live in card_catalog.
+ */
+function resolveSiblingSetKeyCandidates(sale, cell, identity, io) {
   const siblingCandidates = [];
   if (io.resolveSetKeyForSlug) {
     const resolved = io.resolveSetKeyForSlug(cell.sport, sale.setName || identity.setNameRaw || identity.setKey, cell.year);
@@ -207,6 +221,24 @@ function resolveDefectOrAcquire(sale, cell, identity, cardNumber, io) {
       if (k && k !== identity.setKey) siblingCandidates.push(k);
     }
   }
+  const seen = new Set([identity.setKey]);
+  const deduped = [];
+  for (const k of siblingCandidates) {
+    if (seen.has(k)) continue;
+    seen.add(k);
+    deduped.push(k);
+  }
+  return deduped;
+}
+
+function resolveDefectOrAcquire(sale, cell, identity, cardNumber, io) {
+  const playerName = sale.playerName || "";
+
+  // (a) SIBLING SETKEYS, in priority order: the year+setName-aware corrector
+  // first (it is the one place R75-shaped splits like Mega Box actually
+  // live), then the parent/family/refinement walk, then the hand-verified
+  // override table, then a bounded cross-sport probe as the last, widest net.
+  const siblingCandidates = resolveSiblingSetKeyCandidates(sale, cell, identity, io);
   const triedSetKeys = new Set([identity.setKey]);
   for (const siblingKey of siblingCandidates) {
     if (triedSetKeys.has(siblingKey)) continue;
@@ -252,6 +284,54 @@ function resolveDefectOrAcquire(sale, cell, identity, cardNumber, io) {
     (h) => io.isBacked(h.row) && h.agree && h.prMatch && !h.autoMatch,
   );
   if (isAutoFlip) return { classification: "ISAUTO-DEFECT", foundRowId: isAutoFlip.row.id };
+
+  // CF-ANY-RUNG-AT-THE-SAME-CARDNUMBER-IS-STILL-A-DEFECT (PR #2439 review,
+  // defect 2, 2026-09-26: "2024/topps-holiday/Base 587 sales, RC- numbers").
+  //
+  // (b) and (c) above only fire when auto/printRun match on at least one of
+  // the two axes (prMatch for SPELLING, prMatch+!autoMatch for ISAUTO-DEFECT)
+  // -- they never cover a row that differs on BOTH isAuto and printRun AT
+  // ONCE. Live proof: every RC-/EG-/HE-/TSA-/MLBO-/SDC-/HRC-/ARC- cardNumber
+  // under topps-holiday is checklist-backed as a "Holiday Relics ... Memorabilia
+  // Patch" row (isAuto=false, but serial-numbered, i.e. printRun set) while
+  // the SALE is bucketed generic "Base" (isAuto=false, printRun=null read off
+  // the sale, since the sale doc never carries the relic's actual serial
+  // number) -- prMatch is false, autoMatch happens to be true, so neither (b)
+  // nor (c) matches, and the sale fell through to ACQUIRE despite the exact
+  // cardNumber being checklist-backed one segment over.
+  //
+  // RULE (task): ACQUIRE requires ZERO checklist-grade rows for this
+  // cardNumber under this setKey across EVERY parallel/insert segment -- not
+  // just the ones that happen to share this sale's auto/printRun reading. So
+  // ANY namesAgree-gated backed hit at this cardNumber under the resolved
+  // setKey, regardless of auto/printRun/parallel, means the card is already
+  // on the books somewhere in this product; it is a bucketing defect
+  // (mislabelled parallel/insert segment -- SPELLING) for the builder to
+  // rename/reroute, never a fresh acquisition. This check is intentionally
+  // the widest of the three same-setKey checks and runs last, after the
+  // exact-rung SPELLING/ISAUTO-DEFECT reads above have had first claim on the
+  // more specific label.
+  //
+  // This same widened check is also what should catch the "ad-hoc derived
+  // parallel" class the coordinator flagged (2026-09-26): a sale whose
+  // destination `parallel` reads as a slug fragment parseHobbyIqCardId
+  // invented from title text ("image-variation", "image-variation-ssp",
+  // "ssp-refractor", "short-print(s)") rather than a real checklist parallel
+  // name -- e.g. 2022 topps-chrome #221 is NOT an "Image Variation", it is
+  // whatever parallel the checklist actually names that row. Once (a) sibling
+  // cells are correctly warmed (defect 1) and (b) this any-rung check runs,
+  // any such sale whose cardNumber IS checklist-backed under its real
+  // parallel resolves to SPELLING here rather than a fresh ACQUIRE -- no
+  // separate ad-hoc-slug allowlist needed; it is subsumed by "any backed
+  // rung at this cardNumber, any parallel, is a defect, not a gap."
+  const anyRungBackedAgreeing = sameKeyBackedAgreeing[0];
+  if (anyRungBackedAgreeing) {
+    return {
+      classification: "SPELLING",
+      foundSpelling: anyRungBackedAgreeing.row.parallel,
+      foundRowId: anyRungBackedAgreeing.row.id,
+    };
+  }
 
   return { classification: "ACQUIRE" };
 }
@@ -457,7 +537,17 @@ function foldIntoAggregate(agg, sport, year, sale, classification) {
   if (!WORKLIST_BUCKETS.has(classification.name)) return agg;
   const identity = (classification.detail && classification.detail.identity) || {};
   const setKey = identity.setKey || null;
-  const cardNumber = classification.detail && classification.detail.cardNumber;
+  // CF-CARDNUMBER-CAN-NEST-UNDER-IDENTITY (bb25 tracer, C:/tmp/bb25_trace_1530/
+  // RESULT.md, 2026-09-26): classifyOne's STALE-NO-ROW branch (~line 362) sets
+  // detail.identity.cardNumber but never a top-level detail.cardNumber, while
+  // the RUNG-MISSING/CARD-MISSING branches set BOTH. Reading detail.cardNumber
+  // alone silently reads `undefined` for every STALE-NO-ROW-sourced row, which
+  // breaks extractInsertPrefix (falls back to the "base" bucket even for a
+  // real "RC-GH"/"B25-..." prefixed number) AND distinctCardNumbers (stays 0
+  // forever). Fall back to the nested identity.cardNumber so both derived
+  // fields are correct regardless of which classifyOne branch produced this
+  // detail object.
+  const cardNumber = (classification.detail && classification.detail.cardNumber) ?? identity.cardNumber;
   const prefix = (classification.detail && classification.detail.prefix) || extractInsertPrefix(cardNumber) || null;
   const parallel = identity.parallel || "Base";
   const isAuto = identity.isAuto === true;
@@ -606,6 +696,7 @@ module.exports = {
   indexCatalogCell,
   isBacked,
   rungLookup,
+  resolveSiblingSetKeyCandidates,
   resolveDefectOrAcquire,
   classifyOne,
   WORKLIST_BUCKETS,
@@ -638,7 +729,16 @@ async function main() {
     return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : d;
   };
   const SPORT = val("--sport", "baseball");
-  const YEARS = String(val("--years", "")).split(",").map((s) => Number(s.trim())).filter(Number.isFinite);
+  // BUG FIX (2026-09-26, found while regenerating the worklist for this PR):
+  // "".split(",") is `[""]`, not `[]`, and Number("") is 0 -- which passes
+  // Number.isFinite -- so an OMITTED --years flag silently produced YEARS =
+  // [0] instead of []. resolveCells then treats a non-empty years array as a
+  // real filter (`if (years.length) rows = rows.filter(...)`) and filters
+  // every --cells-from row down to year===0, i.e. NOTHING, even though no
+  // --years filter was ever asked for. Trim blanks BEFORE the Number() map so
+  // an absent/empty --years flag produces [], matching --setkeys' own
+  // (already-correct) `.filter(Boolean)` discipline.
+  const YEARS = String(val("--years", "")).split(",").map((s) => s.trim()).filter(Boolean).map(Number).filter(Number.isFinite);
   const SETKEYS = String(val("--setkeys", "")).split(",").map((s) => s.trim()).filter(Boolean);
   const CELLS_FROM = val("--cells-from", null);
   const TOP_CELLS = Number(val("--top-cells", "0"));
@@ -832,6 +932,52 @@ async function main() {
     crossSetKeyProbe: crossSetKeyProbeSync,
   };
 
+  // PR #2439 review, defect 1 (2026-09-26): getCellIndex only ever reads the
+  // cache — it has NO fallback to loadCatalogCell, so a sibling cell that the
+  // main FOR loop below hasn't reached YET in --setkeys/--cells-from order
+  // (e.g. 2026:bowman-chrome is processed before 2026:bowman) reads back an
+  // empty Map indistinguishable from "loaded and genuinely empty", and every
+  // sibling probe against it silently misses. classifyOne/resolveDefectOrAcquire
+  // stay synchronous (see their own header comments), so this cannot be fixed
+  // by making getCellIndex itself async -- instead, mirroring the cross-probe
+  // pre-resolve-then-hand-down shape already used above, `warmSiblingCells`
+  // derives the destination identity the SAME way classifyOne does (der.slug
+  // via parseHobbyIqCardId, falling back to der.identity) and `await
+  // loadCatalogCell`s every sibling-candidate setKey resolveDefectOrAcquire
+  // could touch for THIS row -- lazily, memoized by loadCatalogCell's own
+  // cellRowCache, so a setKey is never loaded twice regardless of how many
+  // rows/cells reference it as a sibling.
+  async function warmSiblingCells(row, cell) {
+    let der;
+    try {
+      der = deriveIdentity(row, deps);
+    } catch {
+      return;
+    }
+    if (!der || !der.ok) return;
+    const slugParsed = der.slug && deps.parseHobbyIqCardId ? deps.parseHobbyIqCardId(der.slug) : null;
+    const destinationIdentity = slugParsed
+      ? {
+          sport: slugParsed.sport ?? der.identity.sport,
+          cardYear: der.identity.cardYear,
+          setKey: slugParsed.setKey,
+          cardNumber: slugParsed.cardNumber,
+          parallel: slugParsed.parallel,
+          isAuto: slugParsed.isAuto,
+          printRun: slugParsed.printRun,
+        }
+      : der.identity;
+    // Always warm the destination's OWN cell too -- (b)/(c) in
+    // resolveDefectOrAcquire read io.getCellIndex(cell.year, identity.setKey),
+    // which is the destination setKey, not necessarily cell.setKey (the cell
+    // this row was SAMPLED from) whenever der.slug redirects it.
+    await loadCatalogCell(cell.year, destinationIdentity.setKey || cell.setKey);
+    const siblingCandidates = resolveSiblingSetKeyCandidates(row, cell, destinationIdentity, io);
+    for (const siblingKey of siblingCandidates) {
+      await loadCatalogCell(cell.year, siblingKey);
+    }
+  }
+
   const perCellSummaries = {};
   const aggregate = new Map();
 
@@ -839,9 +985,37 @@ async function main() {
     console.log(`\n=== ${cell.sport} ${cell.year} ${cell.setKey} ===`);
     await loadCatalogCell(cell.year, cell.setKey);
 
+    // PR #2439 review, defect 4 (2026-09-26): CardHedge-sourced sold_comps
+    // rows do not reliably carry top-level c.sport/c.cardYear -- see
+    // soldCompsStore.service.ts's own CF-SOLD-COMPS-SPORT comment ("320
+    // cardhedge rows turned up with no sport"; sport?: string|null,
+    // cardYear?: number|null are both optional on the writer's own SoldComp
+    // type, populated by inferSportFromContext() at write time, NOT
+    // guaranteed for every row). A predicate that ANDs c.sport=@sp AND
+    // c.cardYear=@yr silently returns ZERO rows for a CardHedge doc missing
+    // either field, even when thousands of that cell's sales exist -- the
+    // cell reads as fully-backed-or-absent instead of sampling its real
+    // population. Widen to an OR against the repo-wide convention for
+    // scoping a cell by identity (STARTSWITH(c.hobbyiqCardId,...) /
+    // STARTSWITH(c.cardId,...) against the 'hiq:<sport>:<year>:<setKey>:'
+    // prefix -- the same prefix every other script in backend/scripts uses
+    // to scope a container read, see e.g. hobbyIqFmv.service.ts's own
+    // STARTSWITH(c.hobbyiqCardId, @stem)) so a row already resolved into
+    // this cell's canonical id is caught even when c.sport/c.cardYear/
+    // c.setName are absent or don't match. Rows keyed on setName ALONE
+    // (never inferred a hiq: id yet) are still caught by the original
+    // predicate; rows with NEITHER a matching setName NOR a resolved id in
+    // this cell are, correctly, not part of this cell's population.
+    const idPrefix = `hiq:${String(cell.sport).toLowerCase()}:${cell.year}:${String(cell.setKey).toLowerCase()}:`;
     const query = {
-      query: "SELECT c.id, c.cardId, c.hobbyiqCardId, c.title, c.setName, c.sport, c.cardYear, c.cardNumber, c.parallel, c.isAuto, c.printRun, c.playerName, c.gradeCompany, c.gradeValue, c.source, c.sourceSystem, c.flaggedWrong, c.excludedFromFmv FROM c WHERE c.sport=@sp AND c.cardYear=@yr AND c.setName=@sk",
-      parameters: [{ name: "@sp", value: cell.sport }, { name: "@yr", value: cell.year }, { name: "@sk", value: cell.setKey }],
+      query:
+        "SELECT c.id, c.cardId, c.hobbyiqCardId, c.title, c.setName, c.sport, c.cardYear, c.cardNumber, c.parallel, c.isAuto, c.printRun, c.playerName, c.gradeCompany, c.gradeValue, c.source, c.sourceSystem, c.flaggedWrong, c.excludedFromFmv FROM c WHERE " +
+        "(c.sport=@sp AND c.cardYear=@yr AND c.setName=@sk) " +
+        "OR STARTSWITH(LOWER(c.hobbyiqCardId), @idp) OR STARTSWITH(LOWER(c.cardId), @idp)",
+      parameters: [
+        { name: "@sp", value: cell.sport }, { name: "@yr", value: cell.year }, { name: "@sk", value: cell.setKey },
+        { name: "@idp", value: idPrefix },
+      ],
     };
     const it = pool.items.query(query, { maxItemCount: 500, maxDegreeOfParallelism: -1 });
 
@@ -881,6 +1055,13 @@ async function main() {
         } else {
           pendingCrossProbeResults = [];
         }
+        // PR #2439 review, defect 1: lazily load this row's destination cell
+        // AND every sibling cell its defect search could touch, BEFORE the
+        // (synchronous) classifyOne call below reads them via io.getCellIndex
+        // -- see warmSiblingCells' own header comment for why getCellIndex
+        // itself cannot do this (it has no async fallback and classifyOne
+        // must stay sync).
+        await warmSiblingCells(row, cell);
         let classification = classifyOne(row, cell, deps, io);
         // If deriveIdentity's cardNumber differs from the stored one (a title
         // correction) AND this row still needs the cross probe (it reached a
