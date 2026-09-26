@@ -55,9 +55,19 @@
  * grade-aware or otherwise).
  *
  * RECONCILE: candidates = repointed + collapsedOntoResident +
- * refusedNoChecklistAtFlip + refusedChecklistAtBoth + refusedGradedParse +
+ * refusedNoChecklistAtFlip + refusedChecklistAtBoth +
  * refusedPossibleTwinAtDestination + refusedEtagChanged + failed +
  * notReached. Exits non-zero when the counters do not add up.
+ *
+ * `refusedGradedParse` is DELIBERATELY NOT part of this formula, and is
+ * DELIBERATELY NOT folded into the `refused` count reportWrites() sees
+ * either: a row whose id (grade-aware) does not parse at all never becomes a
+ * candidate in the first place (`candidates` only increments after
+ * `flippedId()` succeeds), so it is counted against `scanned`, reported on
+ * its own line, and left out of both reconciliations -- folding it into
+ * either would count it against a population it was never drawn from,
+ * producing a false RECONCILE MISMATCH / reportWrites over-account on any
+ * real run that meets even one malformed id alongside a real outcome.
  *
  * SCAN SHAPE. Point reads only for the destination check (item(id,
  * pk=/cardId)); the source scan is paginated {maxItemCount:500,
@@ -506,8 +516,22 @@ async function main() {
     process.exitCode = 4;
   }
 
+  // `refusedGradedParse` is DELIBERATELY EXCLUDED here. reportWrites
+  // reconciles `refused` (and every other bucket) against `intended:
+  // s.candidates`, and a row that failed to parse never became a candidate
+  // in the first place (`s.candidates++` only runs after `flippedId()`
+  // succeeds -- see the header above and the guard at the top of
+  // `processSale`). Folding it into `refusedTotal` would count it against a
+  // population it was never drawn from: reportWrites computes `overAccounted
+  // = accounted - intended`, and a single unparseable row on top of one real
+  // outcome pushes `accounted` one past `intended` every time -- a FALSE RED
+  // ("COUNTERS DO NOT ADD UP", exit 4) on an otherwise-clean APPLY, and
+  // near-certain at scale because the scan is a bare prefix STARTSWITH that
+  // will meet malformed ids. It is reported on its own line (below and in the
+  // per-setKey table) instead, exactly as `scanned`'s own non-candidate rows
+  // already are.
   const refusedTotal = s.refusedNoChecklistAtFlip + s.refusedChecklistAtBoth
-    + s.refusedGradedParse + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged;
+    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged;
   if (APPLY) {
     reportWrites({
       job: "repoint-sales-isauto-flip",

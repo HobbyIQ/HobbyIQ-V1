@@ -449,6 +449,39 @@ describe("repoint-sales-isauto-flip -- reconcile", () => {
     expect(r.out).toMatch(/reconciled: candidates \d+ = accounted-for \d+/);
     expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
   });
+
+  // COORDINATOR FIX (PR #2441 review, 2026-09-26): refusedGradedParse must
+  // NEVER be folded into either the candidate reconcile OR the reportWrites
+  // `refused` bucket -- a row that fails to parse never became a candidate
+  // (candidates++ only runs after flippedId() succeeds), so it is drawn from
+  // a DIFFERENT population than `intended: s.candidates`. Before the fix,
+  // one unparseable row alongside one real, cleanly-repointed candidate
+  // pushed `accounted` one past `intended` inside reportWrites -- a FALSE
+  // RED ("COUNTERS DO NOT ADD UP" / overAccounted, exit 4) on an otherwise
+  // clean APPLY. This is the exact shape a bare-prefix STARTSWITH scan will
+  // meet at scale.
+  it("APPLY with one unparseable row + one real repointed row: reconciliation is OK, refusedGradedParse reported separately, no false red", () => {
+    const goodSale = SALE({ id: "s1", cardId: NO_AUTO_ID, hobbyiqCardId: NO_AUTO_ID, isAuto: false });
+    // Under the scan prefix (STARTSWITH matches) but too few segments for
+    // parseHobbyIqCardId / parseSlugWithGrade to parse at all.
+    const malformedId = `${PREFIX}only-two-segments`;
+    const badSale = SALE({ id: "s2", cardId: malformedId, hobbyiqCardId: malformedId, isAuto: false });
+    const r = drive(
+      { ...DEFAULT_ENV, BACKFILL_APPLY: "true" },
+      { sales: [goodSale, badSale], catalog: [CATALOG_ROW()] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+    expect(r.out).not.toMatch(/overAccounted/i);
+    expect(r.out).not.toMatch(/COUNTERS DO NOT ADD UP/i);
+    expect(r.out).toMatch(/REFUSED: graded-parse\s+1/);
+    expect(r.out).toMatch(/reconciled: candidates 1 = accounted-for 1/);
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.led.salesDeletes).toContain("s1");
+    // The malformed row was never touched.
+    expect(r.led.salesUpserts).not.toContain("s2");
+    expect(r.led.salesDeletes).not.toContain("s2");
+  });
 });
 
 describe("repoint-sales-isauto-flip -- per-setKey report", () => {
