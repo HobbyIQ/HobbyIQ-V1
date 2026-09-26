@@ -3177,9 +3177,11 @@ function liftInterposedYear(lowerTitle: string): string {
  *  the same sub-product vocabulary the ladder above this function's own
  *  bare-Topps guard defers to. Used to tell a real Bowman product name from
  *  a bare "bowman" that is a player's SURNAME or a place/insert word --
- *  see `titleNamesBowmanBrand` below, which this feeds. */
+ *  see `titleNamesBowmanBrand` below, which this feeds. THE ONE LIST: both
+ *  of `titleNamesBowmanBrand`'s conditions (a) and (b) read this same
+ *  constant, so the product vocabulary cannot drift between the two. */
 const BOWMAN_PRODUCT_WORD_RE =
-  /\bbowman(?:'?s)?\b\s*(?:chrome|draft|sterling|platinum|best|mega|sapphire|1st|first|prospects?|inception|heritage|high\s*tek|black|university)\b/i;
+  /\bbowman(?:'?s)?\b\s*(?:chrome|draft|sterling|platinum|best|mega|sapphire|1st|first|prospects?|inception|heritage|high\s*tek|black|university|baseball)\b/i;
 
 /**
  * DOES "bowman" IN THIS TITLE NAME THE BOWMAN BRAND, rather than a player's
@@ -3188,34 +3190,55 @@ const BOWMAN_PRODUCT_WORD_RE =
  * CF-BOWMAN-WORD-IS-NOT-ALWAYS-THE-BRAND (stamp-fix batch, 2026-09-26,
  * defect 2 correction, per review). The guard this feeds used to be a bare
  * `!/\bbowman\b/.test(t)`, which reads the WORD "bowman" ANYWHERE as the
- * brand -- including a player's own surname ("2015 Topps Baseball #481
- * Matt Bowman St. Louis Cardinals RC") or an adversarial insert-sounding
- * phrase after the card number ("2024 Topps Series 1 #45 Bowman Park
- * Legends"). Both would have been mis-routed to plain "Bowman" although
- * `main` correctly answers "Topps" for both -- a regression the reviewer
- * reproduced against the prior commit.
+ * brand -- including a player's own surname. Two rounds of review found
+ * this function's own successive fixes still too wide:
  *
- * TWO WAYS a title genuinely names the brand, either is sufficient:
- *   1. A real Bowman sub-product word sits right after "bowman"
- *      (`BOWMAN_PRODUCT_WORD_RE`) -- unambiguous regardless of position.
- *   2. "bowman" appears BEFORE the card number token (`#...`). Titles in
- *      this corpus state Year-Brand-Product before the player and card
- *      number ("Topps 2025 Bowman Munetaka Murakami RC #9 ..."), so a brand
- *      word sits ahead of the `#`; a word appearing AFTER the `#` is
- *      describing the player/team/insert context, not naming the product
- *      ("...#481 Matt Bowman St. Louis Cardinals", "...#45 Bowman Park
- *      Legends"). A title with no `#` at all has nothing to compare
- *      against, so "bowman" anywhere is taken at face value (the pre-
- *      existing, unaffected behavior for titles this narrow shape cannot
- *      even apply to).
+ *   round 1: bare word match -- caught "Matt Bowman", "Bowman Park Legends".
+ *   round 2: "bowman before the card number (`#`)" -- still WRONG, because
+ *     Year-Brand-PLAYER-Number is this corpus's own common order, so a
+ *     player's surname sits before the `#` just as often as a real brand
+ *     word does: "2015 Topps Matt Bowman #481 RC St. Louis Cardinals",
+ *     "2024 Topps Bowman Park #45", "Topps 2015 Matt Bowman Rookie #481",
+ *     "2015 Topps Matt Bowman 481 RC" (no `#` at all) all mis-routed to
+ *     "Bowman" under round 2, though `main` correctly answers "Topps" for
+ *     every one of them.
+ *
+ * TWO WAYS a title genuinely names the brand, either is sufficient, and
+ * BOTH read the SAME product-word list (`BOWMAN_PRODUCT_WORD_RE`) so the
+ * vocabulary cannot drift between them:
+ *
+ *   (a) A real Bowman sub-product word sits right after "bowman"
+ *       (`BOWMAN_PRODUCT_WORD_RE`) -- unambiguous regardless of position.
+ *       Covers "2024 Topps Bowman Chrome Jackson Holliday" -> Bowman.
+ *   (b) "bowman" occupies the YEAR-BRAND SLOT: the token right after a
+ *       leading year, or the very first token, AND the token after IT is
+ *       not itself a card number or a `#...` token (which would make
+ *       "bowman" the thing being counted, not the brand naming it).
+ *       Covers "2024 Bowman Matt Bowman #481" -> Bowman (the FIRST
+ *       "bowman" is the brand; the corpus's own player-name span, "Matt
+ *       Bowman", sits after it and this rule never even looks there).
+ *
+ * AMBIGUOUS TITLES KEEP `main`'s BEHAVIOR (return false, i.e. plain
+ * "Topps") -- a smaller blast radius at the next re-baseline than trying to
+ * resolve every Year-Brand-Player-Number ordering by position alone. This
+ * intentionally no longer resolves "Topps 2025 Bowman Munetaka Murakami RC
+ * #9 ..." / "Topps Bowman 2025 Jacob Misiorowski ..." (the original
+ * defect-2 titles) to "Bowman" -- neither states a Bowman product word, and
+ * neither puts "bowman" in the year-brand slot ("Topps" occupies position 0
+ * in both). Per the owner's ruling on this correction, staying "Topps" for
+ * these two ambiguous cases is the accepted, narrower tradeoff.
  */
 function titleNamesBowmanBrand(t: string): boolean {
   if (BOWMAN_PRODUCT_WORD_RE.test(t)) return true;
-  const bowmanIdx = t.search(/\bbowman\b/i);
-  if (bowmanIdx < 0) return false;
-  const hashIdx = t.indexOf("#");
-  if (hashIdx < 0) return true;
-  return bowmanIdx < hashIdx;
+  const toks = t.trim().split(/\s+/).filter(Boolean);
+  let idx = 0;
+  if (/^(?:19|20)\d{2}(?:[/'-]\d{2,4})?$/.test(toks[0] ?? "")) idx = 1;
+  const bowmanTok = (toks[idx] ?? "").replace(/[.,;:]+$/, "");
+  if (!/^bowman(?:'?s)?$/i.test(bowmanTok)) return false;
+  const next = toks[idx + 1];
+  if (!next) return false;
+  if (/^#/.test(next) || /^\d/.test(next)) return false;
+  return true;
 }
 
 /**
@@ -4607,17 +4630,17 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // names the manufacturer once and the product once, and the product word
   // is what should win). A title naming Topps alone is unaffected.
   //
-  // CORRECTED (2026-09-26, per review): the guard originally read a bare
-  // `!/\bbowman\b/.test(t)`, which treats the WORD "bowman" ANYWHERE as the
-  // brand -- wrongly catching a player's own surname ("2015 Topps Baseball
-  // #481 Matt Bowman St. Louis Cardinals RC") and an adversarial
-  // insert-sounding phrase after the card number ("2024 Topps Series 1 #45
-  // Bowman Park Legends"), both of which `main` correctly answers "Topps"
-  // for. `titleNamesBowmanBrand` (defined above `inferFamilySetKeyFromTitle`)
-  // requires either a real Bowman sub-product word right after "bowman", or
-  // "bowman" to sit BEFORE the card number -- the position a brand name
-  // occupies in this corpus's Year-Brand-Product-Player-Number title
-  // convention, never where a trailing surname/place word sits.
+  // CORRECTED TWICE (2026-09-26, per review; see `titleNamesBowmanBrand`'s
+  // own comment for the full history). The guard originally read a bare
+  // `!/\bbowman\b/.test(t)` (caught surnames anywhere), then "bowman before
+  // the card number" (still caught surnames, since Year-Brand-PLAYER-Number
+  // is this corpus's own common order). `titleNamesBowmanBrand` now requires
+  // either a real Bowman sub-product word right after "bowman", or "bowman"
+  // to occupy the YEAR-BRAND SLOT itself (right after the leading year, or
+  // token 0) with something other than a number/`#` immediately after it --
+  // never a position test against the card number. Ambiguous titles
+  // (neither condition holds) keep `main`'s "Topps" answer, the accepted
+  // smaller-blast-radius tradeoff.
   if (/topps/.test(t) && !titleNamesBowmanBrand(t)) return "Topps";
   // CF-INFER-SET-POKEMON-GUARD (Drew, 2026-08-03). Bowman is the
   // baseball default for unmatched sports titles, but TCA firehose

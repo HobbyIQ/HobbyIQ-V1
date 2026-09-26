@@ -1763,13 +1763,17 @@ describe("inferSetKeyFromTitle — Topps Holiday, non-adjacent (defect 1)", () =
 // Bowman sub-product rule) before falling through to the bare Topps
 // catch-all — mirroring the same "wouldFoldUpToAnAncestor" idea R29 already
 // applies for checklist-driven overrides, at the title-word layer instead.
+//
+// REVIEW ROUND 2 (2026-09-26): the two sample titles below no longer
+// resolve "Bowman" — see `titleNamesBowmanBrand`'s own comment and the
+// "ambiguous dual-brand titles" cases further down in this describe block.
+// Neither title states a Bowman product word, and neither puts "bowman" in
+// the year-brand slot ("Topps" occupies position 0 in both), so under the
+// round-2 ruling both are ambiguous and keep `main`'s "Topps" answer — the
+// accepted, smaller-blast-radius tradeoff. The defect this describe block
+// is named for is still fixed for the titles that DO satisfy one of the
+// two conditions (see the condition (a)/(b) cases below).
 describe("inferSetKeyFromTitle — Topps names Bowman too (defect 2)", () => {
-  it.each([
-    ["Topps 2025 Bowman Munetaka Murakami RC #9 Chicago White Sox Purple /250", "Bowman"],
-    ["Topps Bowman 2025 Jacob Misiorowski Milwaukee Brewers Rookie RC #35", "Bowman"],
-  ])("%s -> %s", (title, want) => {
-    expect(inferSetKeyFromTitle(title)).toBe(want);
-  });
 
   it("a Bowman University title defers to the Bowman ladder, not bare Topps", () => {
     // Pinned against the SAME title with no "Topps" prefix (unaffected by
@@ -1791,14 +1795,13 @@ describe("inferSetKeyFromTitle — Topps names Bowman too (defect 2)", () => {
     expect(inferSetKeyFromTitle("2024 Bowman Chrome Prospect Auto #CPA-AB")).toBe("Bowman Chrome");
   });
 
-  // REVIEW CORRECTION (2026-09-26). The first fix's guard was a bare
-  // `!/\bbowman\b/.test(t)`, which reads the WORD "bowman" ANYWHERE in the
-  // title as the brand -- including a player's own SURNAME and an
+  // REVIEW CORRECTION, ROUND 1 (2026-09-26). The first fix's guard was a
+  // bare `!/\bbowman\b/.test(t)`, which reads the WORD "bowman" ANYWHERE in
+  // the title as the brand -- including a player's own SURNAME and an
   // adversarial insert-sounding phrase, neither of which name the Bowman
   // product. Both titles below are real regressions the reviewer
-  // reproduced against the prior commit: `main` (unaffected by either
-  // defect) correctly answers "Topps" for both, and the prior fix wrongly
-  // flipped them to "Bowman".
+  // reproduced against the round-1 commit: `main` correctly answers
+  // "Topps" for both.
   it.each([
     ["2015 Topps Baseball #481 Matt Bowman St. Louis Cardinals RC", "Topps"],
     ["2024 Topps Series 1 #45 Bowman Park Legends", "Topps"],
@@ -1806,8 +1809,53 @@ describe("inferSetKeyFromTitle — Topps names Bowman too (defect 2)", () => {
     expect(inferSetKeyFromTitle(title)).toBe(want);
   });
 
-  it("the dual-brand case this defect exists for still resolves Bowman (unaffected by the correction)", () => {
-    expect(inferSetKeyFromTitle("Topps 2025 Bowman Munetaka Murakami RC #9 Chicago White Sox Purple /250"))
-      .toBe("Bowman");
+  // REVIEW CORRECTION, ROUND 2 (2026-09-26). Round 1's fix ("bowman before
+  // the card number") was STILL too wide: Year-Brand-PLAYER-Number is this
+  // corpus's own common order, so a player's surname sits before the `#`
+  // just as often as a real brand word does. All four titles below are
+  // real regressions the reviewer reproduced against the round-1 commit;
+  // `main` correctly answers "Topps" for every one of them, including the
+  // one with no `#` at all (round 1's guard had nothing to compare
+  // position against and took "bowman" at face value).
+  it.each([
+    ["2015 Topps Matt Bowman #481 RC St. Louis Cardinals", "Topps"],
+    ["2024 Topps Bowman Park #45", "Topps"],
+    ["Topps 2015 Matt Bowman Rookie #481", "Topps"],
+    ["2015 Topps Matt Bowman 481 RC", "Topps"],
+  ])("a surname in the Year-Brand-Player-Number slot stays Topps: %s -> %s", (title, want) => {
+    expect(inferSetKeyFromTitle(title)).toBe(want);
+  });
+
+  // The two genuine ways `titleNamesBowmanBrand` accepts "bowman" as the
+  // brand, per the round-2 ruling.
+  it('condition (a): a real Bowman product word right after "bowman" names the brand regardless of position', () => {
+    // Resolves to the MORE SPECIFIC "Bowman Chrome" once the bare-Topps
+    // guard defers -- the specific ladder above the generic Bowman
+    // fallback correctly claims it, per this whole file's "specific never
+    // folds to flagship" doctrine. The guard's job is only to let the
+    // title reach the Bowman ladder at all, not to force the literal
+    // bare "Bowman" string.
+    expect(inferSetKeyFromTitle("2024 Topps Bowman Chrome Jackson Holliday")).toBe("Bowman Chrome");
+  });
+
+  it('condition (b): "bowman" occupying the year-brand slot (not a surname sitting there) names the brand', () => {
+    // The FIRST "bowman" is the brand (token right after the leading
+    // year, and the next token "Matt" is not a number/#); the corpus's
+    // own player-name span, "Matt Bowman", sits after it and is never
+    // examined by this rule.
+    expect(inferSetKeyFromTitle("2024 Bowman Matt Bowman #481")).toBe("Bowman");
+  });
+
+  // ROUND-2 RULING: ambiguous titles keep `main`'s "Topps" answer -- a
+  // smaller blast radius at the next re-baseline than resolving every
+  // Year-Brand-Player-Number ordering by position. This intentionally
+  // reverses round 1's "Bowman" answer for the ORIGINAL defect-2 titles:
+  // neither states a Bowman product word, and neither puts "bowman" in
+  // the year-brand slot ("Topps" occupies position 0 in both).
+  it.each([
+    ["Topps 2025 Bowman Munetaka Murakami RC #9 Chicago White Sox Purple /250", "Topps"],
+    ["Topps Bowman 2025 Jacob Misiorowski Milwaukee Brewers Rookie RC #35", "Topps"],
+  ])("ambiguous dual-brand titles now keep main's Topps answer (accepted tradeoff): %s -> %s", (title, want) => {
+    expect(inferSetKeyFromTitle(title)).toBe(want);
   });
 });
