@@ -228,7 +228,32 @@ describe("R55 measured over the run's own 140 IMPROVE evidence rows", () => {
   // verified by diffing the full 86-row park/no-park list before and after
   // the byte fix and finding exactly these 3 flips, all onto an explicit
   // seller "Base" statement.
-  it("parks 46 of the 86 Base-destination rows, and keeps 40", () => {
+  //
+  // PIN UPDATED AGAIN 2026-09-25 (checklist-parallel-names corpus rebuild,
+  // 660 -> 943 products). 46 -> 45, from ONE net flip, measured by diffing
+  // the full 86-row list against main's corpus and finding exactly this:
+  //
+  //   "2025-26 Upper Deck Series 2 David Pastrnak #DZ-55 Orange Dazzlers
+  //    Boston Bruins" -- previously parked (wrongly) because the corpus had
+  //    no "Dazzlers" vocabulary for hockey|2025|upper-deck to resolve
+  //    against; the fuller corpus now recognises "Orange Dazzlers" as a
+  //    real, checklist-backed rung and the identity resolves cleanly
+  //    instead of flagging an unconfirmed finish. This is the SAME
+  //    direction as the byte-fix flips above (a false park correctly
+  //    clearing), not a new gap.
+  //
+  // Two other flips this same rebuild caused (both onto false, offsetting
+  // each other net) were TOKEN-LEAK REGRESSIONS -- a newly-scraped "Chicago
+  // Collection" insert (baseball|2002/2003|donruss) put "chicago" in the
+  // GLOBAL finish-word vocabulary statedFinishFromChecklist.ts builds, so
+  // "...Chicago Bears..." briefly read as stating an unconfirmed finish on
+  // an unrelated football|2024|panini-prizm row -- and were FIXED at the
+  // corpus (checklist-parallel-names.overrides.json drops "Chicago
+  // Collection" from both years' vocabulary contribution, not from
+  // card_catalog), verified by re-diffing after the drop and finding zero
+  // remaining Chicago-token false positives. Only the Pastrnak flip above
+  // is real and reflected in this pin.
+  it("parks 45 of the 86 Base-destination rows, and keeps 41", () => {
     let destBase = 0, parked = 0;
     for (const r of fixture.rows) {
       const dest = toSide(r.derived);
@@ -238,8 +263,8 @@ describe("R55 measured over the run's own 140 IMPROVE evidence rows", () => {
     }
     expect(fixture.rows.length).toBe(140);
     expect(destBase).toBe(86);
-    expect(parked).toBe(46);
-    expect(destBase - parked).toBe(40);
+    expect(parked).toBe(45);
+    expect(destBase - parked).toBe(41);
   });
 
   it("KNOWN GAP: 6 lot listings still move, and R55 is not the rule for them", () => {

@@ -177,6 +177,23 @@ function loadOverlay(file) {
  * dropping "Silver Crackle Foilboard" here never touches a DIFFERENT
  * product that happens to share the string, because the override is keyed
  * exactly like every other product bucket in this file.
+ *
+ * `rootRename` (2026-09-25, the Fireworks/#2355 regression) is the fourth
+ * verb, alongside `drop`/`add`: `[{from, to}]` renames an INSERT SET's root
+ * LABEL only, never a child's fully-spelled name -- see `applyRootRename`'s
+ * own header for why a more complete source can widen a root far enough to
+ * break an already-registered key. It carries the same non-empty
+ * ruling/rulingDate/reason requirement as `add` (`assertOverrideEntry`).
+ *
+ * `insertSetAdd` (2026-09-25, the Z Marquee regression) is the fifth verb:
+ * `[{root, children}]` adds a WHOLE insert set the merge of two source files
+ * hid -- see `applyInsertSetAdd`'s own header for why two sources shaping
+ * the same bare category differently (one via blank-parallel siblings, one
+ * via the colour text directly on the bare category's own rows) makes
+ * `insertSetsFromCategories`'s "states no parallel of its own" test fail on
+ * the merged rows even though every attested value, from either source,
+ * genuinely names the same insert. Additive only -- never removes a root
+ * the builder DID find -- and carries the same provenance requirement.
  */
 /**
  * AN `add` WITH NO RULING IS A SYNTHETIC PARALLEL BY ANOTHER NAME.
@@ -197,12 +214,13 @@ function loadOverlay(file) {
  * `ruling` is unreviewed by definition.
  */
 function assertOverrideEntry(e) {
-  if (!(e.add ?? []).length) return;
+  const assertsSomething = (e.add ?? []).length > 0 || (e.rootRename ?? []).length > 0 || (e.insertSetAdd ?? []).length > 0;
+  if (!assertsSomething) return;
   const missing = ["ruling", "rulingDate", "reason"].filter((f) => !String(e[f] ?? "").trim());
   if (missing.length) {
     throw new Error(
-      `checklist-parallel-names.overrides.json: ${e.sport}|${e.year}|${e.setKey} adds a name but is missing ${missing.join(", ")} -- ` +
-      `every 'add' must carry a non-empty ruling, rulingDate and reason (see loadOverrides()'s header).`,
+      `checklist-parallel-names.overrides.json: ${e.sport}|${e.year}|${e.setKey} adds a name, an insert set, or renames a root but is missing ${missing.join(", ")} -- ` +
+      `every 'add'/'rootRename'/'insertSetAdd' must carry a non-empty ruling, rulingDate and reason (see loadOverrides()'s header).`,
     );
   }
 }
@@ -240,6 +258,130 @@ function applyOverride(parallels, override) {
     });
   }
   return kept;
+}
+
+/**
+ * RENAME AN INSERT SET'S ROOT LABEL, WITHOUT TOUCHING ITS CHILDREN.
+ *
+ * CF-A-MORE-COMPLETE-SOURCE-CAN-WIDEN-A-REGISTERED-ROOT (2026-09-25).
+ *
+ * The root-detection walk in `splitInsertSets` computes a root from the
+ * LONGEST common leading run across a set's children -- correct in general,
+ * but a fuller/different source can lengthen that run in a way that breaks a
+ * NARROW registration made against the shorter root. Measured: PR #2355
+ * registered `panini-prizm-fireworks` (slug of the bare root "Fireworks")
+ * for `basketball|2024|panini-prizm`; a fuller CSV whose colour rungs are
+ * verbatim "Fireworks Prizms Black/Gold/..." (confirmed against the raw
+ * source -- "Prizms" really is in the checklist's own text) widens the
+ * common-prefix root to "Fireworks Prizms", and `insertSetTitleReader.ts`'s
+ * `${setKey}-${slugifyRoot(root)}` then looks up `panini-prizm-fireworks-
+ * prizms`, which #2355 never registered -- the insert stops resolving for
+ * every title that (correctly, per the OLD root) said only "Fireworks".
+ *
+ * `rootRename` renames the ROOT LABEL ONLY. The children keep their real,
+ * fully-spelled checklist names ("Fireworks Prizms Black" stays exactly
+ * that) -- only the shorter, ALREADY-REGISTERED root string is restored as
+ * the matchable root, so `insertSetTitleReader` resolves both the terse
+ * "Fireworks" title (root match) and the fully-spelled one (child match)
+ * against the SAME registered key.
+ */
+function applyRootRename(insertSets, override) {
+  if (!override?.rootRename?.length) return insertSets;
+  const renameByKey = new Map(override.rootRename.map((r) => [key(r.from), r.to]));
+  return insertSets.map((s) => {
+    const to = renameByKey.get(key(s.root));
+    if (to === undefined) return s;
+    return { ...s, root: to, rootKey: normForRoot(to) };
+  });
+}
+
+/**
+ * ADD A WHOLE INSERT SET THE MERGE OF TWO SOURCES HID.
+ *
+ * CF-TWO-SOURCES-SHAPE-THE-SAME-CATEGORY-DIFFERENTLY (2026-09-25, the Z
+ * Marquee regression).
+ *
+ * `categoryRowsByProduct` merges EVERY source file's rows for one product
+ * into a single array, which is right when the files agree on shape -- but
+ * `insertSetsFromCategories`'s "this bare category states no parallel of its
+ * own" test (`if (pars.size) continue`) reads that merged array, so if ONE
+ * source states the bare category's colour rungs on SIBLING categories
+ * (`insert-z-marquee-blue`, blank on `insert-z-marquee` itself) while a
+ * SECOND, newer source states the SAME colours directly on the bare
+ * category's own rows (`insert-z-marquee` carrying "Blue"/"Gold"/...), the
+ * merged `pars` set for `insert-z-marquee` is no longer empty and the whole
+ * root is skipped -- even though every attested value, from either source,
+ * genuinely describes this one insert set. Measured: `football|2024|panini-
+ * zenith` had "Z Marquee" (root + 5 colour children) before a second,
+ * committed 09-19 scrape of the same product was added to this rebuild's
+ * `--dirs`; after, "Z Marquee" vanished from the corpus entirely, breaking
+ * insertSetTitleReader.test.ts's own "coverage gap has closed" pin.
+ *
+ * THIS IS NOT A SPELLING RULING -- both sources agree the card is named "Z
+ * Marquee" with "Blue"/"Gold"/"Orange"/"Red"/"White" rungs; the merge
+ * mechanics, not either source, produced the gap. `insertSetAdd` restores
+ * the insert set exactly as the two sources' own attested colours describe
+ * it, carries the same non-empty ruling/rulingDate/reason discipline as
+ * `add`/`rootRename` so the restoration is not silent, and is additive only
+ * -- it never removes a root the builder DID find.
+ */
+function applyInsertSetAdd(insertSets, override) {
+  if (!override?.insertSetAdd?.length) return insertSets;
+  const existingRoots = new Set(insertSets.map((s) => key(s.root)));
+  const added = override.insertSetAdd.filter((s) => !existingRoots.has(key(s.root)));
+  if (!added.length) return insertSets;
+  return [
+    ...insertSets,
+    ...added.map((s) => ({
+      root: s.root, rootKey: normForRoot(s.root), children: [...s.children].sort(), categories: [],
+      override: { ruling: override.ruling, rulingDate: override.rulingDate, reason: override.reason },
+    })),
+  ].sort((a, b) => a.rootKey.localeCompare(b.rootKey));
+}
+
+/**
+ * DROP ALSO REMOVES A MATCHING INSERT SET ROOT, NOT JUST A PARALLEL.
+ *
+ * CF-A-PLAYER-NAMED-INSERT-IS-ALSO-A-TOKEN-LEAK (2026-09-25).
+ *
+ * `playerSegmentIsAPerson.ts`'s `everyCorpusName` builds its "this word is
+ * card vocabulary" floor from BOTH `parallels[]` and `insertSets[]` (root
+ * AND every child) -- see that module's own header, which names this exact
+ * failure mode and ships a frequency floor (a token must recur across >=2
+ * distinct base brands) specifically to keep a one-off player-named insert
+ * ("Ken Griffey Jr. \"The Kid\"", "Joe Mauer 2024 HOF Class") from poisoning
+ * the shared vocabulary. That floor is per-TOKEN, corpus-wide -- it cannot
+ * see that "Aaron"/"Ken"/"Juan"/"Joe" are about to cross it because a
+ * REBUILD widened the corpus to include vintage error-variation checklist
+ * rows ("PUZ Hank Aaron", "UER Photo Is Joe Pittman") that independently
+ * repeat the same first names another player-named insert already
+ * contributed one occurrence of. Once two occurrences exist, the floor
+ * (correctly, by its own design) admits the token, and titles like "2024
+ * Topps #131 Aaron Judge PSA 10" start losing "Aaron" wherever the shared
+ * player-name vocabulary is read -- cardQueryParser, playerSegmentIsAPerson,
+ * playerSegmentCatalogTitle, the TCA eBay checklist-lookup recovery fixture,
+ * computeHobbyIqCardId's slug minting, titleNamesFinish's finish-token
+ * index, and the CardHedge title-contradiction veto all consume that one
+ * shared vocabulary and all regressed together -- one root cause, many
+ * symptoms.
+ *
+ * These entries ARE real, checklist-backed cards (a genuine Donruss error
+ * variation, a genuine HOF-tribute insert) -- dropping them from the CORPUS
+ * is not a claim they are wrong. It is the same trade this module already
+ * makes for pack odds and channel-exclusivity noise: nobody sells "PUZ Hank
+ * Aaron" and needs its finish spelling adopted from this corpus, so keeping
+ * it out of `checklistSpellingFor`'s and `everyCorpusName`'s shared
+ * vocabulary costs nothing real while the alternative (leaving it in) costs
+ * the first name off every OTHER Aaron/Ken/Juan/Joe sale in the pool.
+ *
+ * Reuses the SAME `drop` list `applyOverride` reads for `parallels[]` --
+ * one override entry says "this exact name is gone from this product",
+ * wherever in the corpus it happened to land.
+ */
+function applyDropInsertSetRoots(insertSets, override) {
+  if (!override?.drop?.length) return insertSets;
+  const dropKeys = new Set(override.drop.map((n) => key(n)));
+  return insertSets.filter((s) => !dropKeys.has(key(s.root)));
 }
 
 /** Root comparison key: case and punctuation are spelling, not identity. */
@@ -1006,12 +1148,22 @@ function main() {
       overridesAdded += addedHere;
     }
     for (const e of finalParallels) names++;
+    // DROP ALSO REMOVES A MATCHING INSERT SET ROOT -- see
+    // applyDropInsertSetRoots's header (the token-leak defence).
+    const insertSetsAfterDrop = applyDropInsertSetRoots(mergedInsertSets, override);
+    // ROOT RENAME -- see applyRootRename's header. Restores a shorter,
+    // already-REGISTERED root label a fuller source widened, without
+    // touching any child's real, fully-spelled name.
+    const insertSetsAfterRename = applyRootRename(insertSetsAfterDrop, override);
+    // INSERT SET ADD -- see applyInsertSetAdd's header. Restores a whole
+    // insert set a two-source merge hid, additive only.
+    const finalInsertSets = applyInsertSetAdd(insertSetsAfterRename, override);
 
     const dirsForProduct = [...(sourceDirsByProduct.get(pk) ?? [])];
     out[pk] = {
       sport, year: Number(year), setKey,
       parallels: finalParallels,
-      ...(mergedInsertSets.length ? { insertSets: mergedInsertSets } : {}),
+      ...(finalInsertSets.length ? { insertSets: finalInsertSets } : {}),
       // The split refused itself for this product (see splitInsertSets): its
       // source labels the base ladder as inserts, so the names stay flat and
       // what WOULD have moved is recorded instead of acted on.
@@ -1070,6 +1222,6 @@ function main() {
   console.log(`\nwritten to ${OUT}`);
 }
 
-module.exports = { cleanName, splitCsv, bareSelfNamedInsertRoots, foldedPhrase, loadOverrides, applyOverride, assertOverrideEntry };
+module.exports = { cleanName, splitCsv, bareSelfNamedInsertRoots, foldedPhrase, loadOverrides, applyOverride, applyRootRename, applyInsertSetAdd, applyDropInsertSetRoots, assertOverrideEntry };
 
 if (require.main === module) main();

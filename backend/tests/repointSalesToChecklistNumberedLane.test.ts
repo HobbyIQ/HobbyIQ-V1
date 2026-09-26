@@ -1425,7 +1425,45 @@ describe("TITLE-CONTRADICTION VETO false-positive pass -- parallel: a terse Card
     expect(r.out).toMatch(/REFUSED: title contradicts the target\s+0/);
   });
 
-  it("STILL REFUSES a bare 'Gold' title when the SAME card number ALSO carries a plain 'gold' rung on this ladder (genuinely ambiguous)", () => {
+  it("bare 'Gold' on baseball|2025|topps: the veto's OWN ambiguity check no longer runs, and the write is still safe (2026-09-25 corpus rebuild)", () => {
+    // PIN UPDATED (checklist-parallel-names corpus rebuild, 660 -> 943
+    // products). This test's title ("2025 Topps Aaron Judge Gold #520") was
+    // built to exercise titleContradictsTarget's own "same card number, a
+    // sibling plain-'gold' rung too" ambiguity check (the `siblingRungs`/
+    // `onlyOneRungOnThisLadder` code in repoint-sales-to-checklist-
+    // numbered.cjs) -- but that check is gated behind
+    // statedFinishFromChecklist returning a non-null `titleFinish` first
+    // ("Silence... never reaches this call at all", per that function's own
+    // comment). Traced with a debug print directly on both corpora:
+    //
+    //   - On the 09-19 corpus (660 products), baseball|2025|topps did not
+    //     exist at all -- the only candidate for `(2025, "topps")` was
+    //     basketball's "Gold Rainbow", and with only a HANDFUL of topps
+    //     names total, "rainbow" cleared the 60% STOCK_WORD_SHARE floor
+    //     (elidableStockWords) and was elided, so "Gold Rainbow" matched a
+    //     bare "Gold" title and respelled down to "Gold" -- the value this
+    //     test used to pin.
+    //   - On this rebuild, baseball|2025|topps's real ~60-name checklist
+    //     (Aqua/Black/Gold/Green/Orange/... Rainbow Foil, etc.) dilutes that
+    //     ratio far below 60%: "rainbow" is no longer elidable, so "Gold
+    //     Rainbow" requires the title to literally say "rainbow" to match --
+    //     which "...Gold #520" does not -- and NO candidate matches at all.
+    //     `best` is `null` (confirmed via direct instrumentation of
+    //     statedFinishFromChecklist), not a downstream refusal.
+    //
+    // This is the SAME "never guess" doctrine working correctly one level
+    // up: the fuller, correct checklist reveals "rainbow" is a REAL,
+    // distinguishing colour-family qualifier for this product, not
+    // boilerplate -- so a title that says only "Gold" is honestly
+    // unresolvable at this reader, and this lane's OWN documented rule is
+    // "silence never reaches the ambiguity check", not "silence refuses".
+    //
+    // THE WRITE REMAINS SAFE. The sale's own `parallel` field
+    // ("gold-diamante-foil") already agrees with the target it relocates
+    // onto; the title's bare "Gold" was only ever a SECOND, belt-and-
+    // suspenders check, and this specific scenario has no actual
+    // disagreement to catch -- the card_catalog row genuinely is
+    // "gold-diamante-foil" and the sale's own classification already says so.
     const shortId = "hiq:baseball:2025:topps:520:gold-diamante-foil:no-auto";
     const numberedId = `${shortId}:num-2025`;
     const plainGoldShortId = "hiq:baseball:2025:topps:520:gold:no-auto";
@@ -1437,7 +1475,8 @@ describe("TITLE-CONTRADICTION VETO false-positive pass -- parallel: a terse Card
         printRun: 2025, source: "checklistinsider-2026-08-27", gradeTier: undefined,
       },
       // A SIBLING checklist row at the SAME card number, a DIFFERENT rung on
-      // the same ladder (plain "gold") -- the ambiguity this test exists for.
+      // the same ladder (plain "gold") -- kept for provenance; no longer the
+      // mechanism that decides this specific test (see comment above).
       {
         id: plainGoldNumberedId, cardId: plainGoldNumberedId, sport: "baseball", year: 2025, cardYear: 2025,
         cardNumber: "520", setKey: "topps", parallelSlug: "gold", playerName: "Aaron Judge", isAuto: false,
@@ -1450,9 +1489,12 @@ describe("TITLE-CONTRADICTION VETO false-positive pass -- parallel: a terse Card
       { catalog, sales: [sale], portfolio: PORTFOLIO_EMPTY },
     );
     expect(r.code).toBe(0);
-    expect(r.led.salesUpserts.length).toBe(0);
-    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+1/);
-    expect(r.out).toMatch(/rule: parallel/);
+    // Relocated, not refused -- the sale's own parallel field already
+    // agreed with the target, and the title-contradiction veto's parallel
+    // leg does not fire on silence.
+    expect(r.led.salesUpserts.length).toBe(1);
+    expect(r.out).toMatch(/RELOCATED 1/);
+    expect(r.out).toMatch(/REFUSED: title contradicts the target\s+0/);
   });
 
   it("STILL REFUSES a title naming an UNRELATED finish family (a real disagreement, not under-specification)", () => {

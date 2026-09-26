@@ -1,5 +1,5 @@
 {
- "builtAt": "2026-09-25T23:25:44.485Z",
+ "builtAt": "2026-09-26T01:05:49.847Z",
  "sources": [
   "C:/tmp/beckett-bulk",
   "C:/tmp/ci/csv2",
@@ -81,9 +81,9 @@
   "data/checklists/tcgdex-ja-sv10"
  ],
  "productCount": 943,
- "parallelNameCount": 20585,
+ "parallelNameCount": 20548,
  "productsNotReproducibleFromRepo": 585,
- "namesFromProductsNotReproducibleFromRepo": 15426,
+ "namesFromProductsNotReproducibleFromRepo": 15425,
  "products": {
  "baseball|1959|fleer": {
   "sport": "baseball",
@@ -183,15 +183,6 @@
     ]
    },
    {
-    "name": "ERR Photo Actuall Is Juan Eichelberger",
-    "printRun": null,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "ERR Photo Actuall Is Juan Eichelberger"
-    ]
-   },
-   {
     "name": "ERR Photo Is Ed Whitson",
     "printRun": null,
     "odds": null,
@@ -207,15 +198,6 @@
     "seen": 1,
     "spellings": [
      "ERR Twins On Front"
-    ]
-   },
-   {
-    "name": "UER Middle Name Is Nolan",
-    "printRun": null,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "UER Middle Name Is Nolan"
     ]
    },
    {
@@ -252,15 +234,6 @@
     "seen": 1,
     "spellings": [
      "UER Named Matt On Front"
-    ]
-   },
-   {
-    "name": "UER Photo Is Joe Pittman",
-    "printRun": null,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "UER Photo Is Joe Pittman"
     ]
    },
    {
@@ -355,24 +328,6 @@
     "seen": 650,
     "spellings": [
      "Base"
-    ]
-   },
-   {
-    "name": "NNO Hank Aaron PUZ",
-    "printRun": null,
-    "odds": null,
-    "seen": 3,
-    "spellings": [
-     "NNO Hank Aaron PUZ"
-    ]
-   },
-   {
-    "name": "PUZ Hank Aaron",
-    "printRun": null,
-    "odds": null,
-    "seen": 3,
-    "spellings": [
-     "PUZ Hank Aaron"
     ]
    },
    {
@@ -641,15 +596,6 @@
     ]
    },
    {
-    "name": "UER Photo Is Juan Samuel",
-    "printRun": null,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "UER Photo Is Juan Samuel"
-    ]
-   },
-   {
     "name": "UER Rob On Front",
     "printRun": null,
     "odds": null,
@@ -784,15 +730,6 @@
     "seen": 1,
     "spellings": [
      "UER: Born In 65"
-    ]
-   },
-   {
-    "name": "UER: Born In San Juan",
-    "printRun": null,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "UER: Born In San Juan"
     ]
    },
    {
@@ -1543,15 +1480,6 @@
     ]
    },
    {
-    "name": "Chicago Collection",
-    "printRun": null,
-    "odds": null,
-    "seen": 220,
-    "spellings": [
-     "Chicago Collection"
-    ]
-   },
-   {
     "name": "National Convention",
     "printRun": null,
     "odds": null,
@@ -1706,15 +1634,6 @@
     "seen": 400,
     "spellings": [
      "Atlantic City National"
-    ]
-   },
-   {
-    "name": "Chicago Collection",
-    "printRun": null,
-    "odds": null,
-    "seen": 400,
-    "spellings": [
-     "Chicago Collection"
     ]
    }
   ],
@@ -3746,15 +3665,6 @@
     ]
    },
    {
-    "name": "ERR: Bio And Stats Are For Ken Giles",
-    "printRun": null,
-    "odds": null,
-    "seen": 3,
-    "spellings": [
-     "ERR: Bio And Stats Are For Ken Giles"
-    ]
-   },
-   {
     "name": "ERR: Incorrect Cuban Stats",
     "printRun": null,
     "odds": null,
@@ -4358,15 +4268,6 @@
     ]
    },
    {
-    "name": "Black ERR: Bio And Stats Are For Ken Giles",
-    "printRun": 10,
-    "odds": null,
-    "seen": 2,
-    "spellings": [
-     "Black ERR: Bio And Stats Are For Ken Giles"
-    ]
-   },
-   {
     "name": "Black ERR: Incorrect Cuban Stats",
     "printRun": 10,
     "odds": null,
@@ -4625,15 +4526,6 @@
     "seen": 2,
     "spellings": [
      "Gold Corbin COR"
-    ]
-   },
-   {
-    "name": "Gold ERR: Bio And Stats Are For Ken Giles",
-    "printRun": 1,
-    "odds": null,
-    "seen": 2,
-    "spellings": [
-     "Gold ERR: Bio And Stats Are For Ken Giles"
     ]
    },
    {
@@ -5393,15 +5285,6 @@
     ]
    },
    {
-    "name": "10\" X 14\" Posters ERR: Bio And Stats Are For Ken Giles",
-    "printRun": null,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "10\" X 14\" Posters ERR: Bio And Stats Are For Ken Giles"
-    ]
-   },
-   {
     "name": "10\" X 14\" Posters ERR: Incorrect Cuban Stats",
     "printRun": null,
     "odds": null,
@@ -5987,15 +5870,6 @@
     ]
    },
    {
-    "name": "Clear ERR: Bio And Stats Are For Ken Giles",
-    "printRun": 10,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "Clear ERR: Bio And Stats Are For Ken Giles"
-    ]
-   },
-   {
     "name": "Clear ERR: Incorrect Cuban Stats",
     "printRun": 10,
     "odds": null,
@@ -6380,15 +6254,6 @@
     "seen": 1,
     "spellings": [
      "Framed Corbin COR"
-    ]
-   },
-   {
-    "name": "Framed ERR: Bio And Stats Are For Ken Giles",
-    "printRun": 20,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "Framed ERR: Bio And Stats Are For Ken Giles"
     ]
    },
    {
@@ -6779,15 +6644,6 @@
     ]
    },
    {
-    "name": "Oversized ERR: Bio And Stats Are For Ken Giles",
-    "printRun": 499,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "Oversized ERR: Bio And Stats Are For Ken Giles"
-    ]
-   },
-   {
     "name": "Oversized ERR: Incorrect Cuban Stats",
     "printRun": 499,
     "odds": null,
@@ -6875,15 +6731,6 @@
     "seen": 1,
     "spellings": [
      "Pink Corbin COR"
-    ]
-   },
-   {
-    "name": "Pink ERR: Bio And Stats Are For Ken Giles",
-    "printRun": 50,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "Pink ERR: Bio And Stats Are For Ken Giles"
     ]
    },
    {
@@ -6977,15 +6824,6 @@
     ]
    },
    {
-    "name": "Platinum ERR: Bio And Stats Are For Ken Giles",
-    "printRun": 1,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "Platinum ERR: Bio And Stats Are For Ken Giles"
-    ]
-   },
-   {
     "name": "Platinum ERR: Incorrect Cuban Stats",
     "printRun": 1,
     "odds": null,
@@ -7073,15 +6911,6 @@
     "seen": 1,
     "spellings": [
      "Purple Corbin COR"
-    ]
-   },
-   {
-    "name": "Purple ERR: Bio And Stats Are For Ken Giles",
-    "printRun": null,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "Purple ERR: Bio And Stats Are For Ken Giles"
     ]
    },
    {
@@ -7175,15 +7004,6 @@
     ]
    },
    {
-    "name": "Rainbow Foil ERR: Bio And Stats Are For Ken Giles",
-    "printRun": null,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "Rainbow Foil ERR: Bio And Stats Are For Ken Giles"
-    ]
-   },
-   {
     "name": "Rainbow Foil ERR: Incorrect Cuban Stats",
     "printRun": null,
     "odds": null,
@@ -7271,15 +7091,6 @@
     "seen": 1,
     "spellings": [
      "Red Corbin COR"
-    ]
-   },
-   {
-    "name": "Red ERR: Bio And Stats Are For Ken Giles",
-    "printRun": 5,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "Red ERR: Bio And Stats Are For Ken Giles"
     ]
    },
    {
@@ -7868,15 +7679,6 @@
     ]
    },
    {
-    "name": "Snow Camo ERR: Bio And Stats Are For Ken Giles",
-    "printRun": 99,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "Snow Camo ERR: Bio And Stats Are For Ken Giles"
-    ]
-   },
-   {
     "name": "Snow Camo ERR: Incorrect Cuban Stats",
     "printRun": 99,
     "odds": null,
@@ -7964,15 +7766,6 @@
     "seen": 1,
     "spellings": [
      "Sparkle Foil Corbin COR"
-    ]
-   },
-   {
-    "name": "Sparkle Foil ERR: Bio And Stats Are For Ken Giles",
-    "printRun": 179,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "Sparkle Foil ERR: Bio And Stats Are For Ken Giles"
     ]
    },
    {
@@ -20094,33 +19887,6 @@
     ]
    },
    {
-    "name": "The Ryan Express Image Variation Blue SP",
-    "printRun": 25,
-    "odds": null,
-    "seen": 2,
-    "spellings": [
-     "The Ryan Express Image Variation Blue SP"
-    ]
-   },
-   {
-    "name": "The Ryan Express Image Variation Red SP",
-    "printRun": null,
-    "odds": null,
-    "seen": 2,
-    "spellings": [
-     "The Ryan Express Image Variation Red SP"
-    ]
-   },
-   {
-    "name": "The Ryan Express Image Variation SP",
-    "printRun": null,
-    "odds": null,
-    "seen": 2,
-    "spellings": [
-     "The Ryan Express Image Variation SP"
-    ]
-   },
-   {
     "name": "The Sultan Of Swat Image Variation Blue SP",
     "printRun": 25,
     "odds": null,
@@ -21342,78 +21108,6 @@
     "seen": 1,
     "spellings": [
      "The Mick Image Variation Masterpiece SP"
-    ]
-   },
-   {
-    "name": "The Ryan Express Image Variation Artist Proof SP",
-    "printRun": 99,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "The Ryan Express Image Variation Artist Proof SP"
-    ]
-   },
-   {
-    "name": "The Ryan Express Image Variation Black SP",
-    "printRun": 1,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "The Ryan Express Image Variation Black SP"
-    ]
-   },
-   {
-    "name": "The Ryan Express Image Variation Brown SP",
-    "printRun": 49,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "The Ryan Express Image Variation Brown SP"
-    ]
-   },
-   {
-    "name": "The Ryan Express Image Variation Framed SP",
-    "printRun": 99,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "The Ryan Express Image Variation Framed SP"
-    ]
-   },
-   {
-    "name": "The Ryan Express Image Variation Gold SP",
-    "printRun": 99,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "The Ryan Express Image Variation Gold SP"
-    ]
-   },
-   {
-    "name": "The Ryan Express Image Variation Gray SP",
-    "printRun": 99,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "The Ryan Express Image Variation Gray SP"
-    ]
-   },
-   {
-    "name": "The Ryan Express Image Variation Green SP",
-    "printRun": 5,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "The Ryan Express Image Variation Green SP"
-    ]
-   },
-   {
-    "name": "The Ryan Express Image Variation Masterpiece SP",
-    "printRun": 1,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "The Ryan Express Image Variation Masterpiece SP"
     ]
    },
    {
@@ -47429,26 +47123,6 @@
     ]
    },
    {
-    "root": "Joe Mauer 2024 HOF Class",
-    "rootKey": "joe mauer 2024 hof class",
-    "children": [
-     "Joe Mauer 2024 HOF Class"
-    ],
-    "categories": [
-     "insert-joe-mauer-2024-hof-class"
-    ]
-   },
-   {
-    "root": "Ken Griffey Jr. \"The Kid\"",
-    "rootKey": "ken griffey jr the kid",
-    "children": [
-     "Ken Griffey Jr. \"The Kid\""
-    ],
-    "categories": [
-     "insert-ken-griffey-jr-the-kid"
-    ]
-   },
-   {
     "root": "Legendary Scripts",
     "rootKey": "legendary",
     "children": [
@@ -54561,15 +54235,6 @@
     "seen": 1,
     "spellings": [
      "With Glove Image Variation SP"
-    ]
-   },
-   {
-    "name": "With Juan Soto Image Variation SP",
-    "printRun": null,
-    "odds": null,
-    "seen": 1,
-    "spellings": [
-     "With Juan Soto Image Variation SP"
     ]
    },
    {
@@ -62119,15 +61784,6 @@
     "seen": 2,
     "spellings": [
      "2024 Platinum"
-    ]
-   },
-   {
-    "name": "Aaron Judge \"All Rise\"",
-    "printRun": 1,
-    "odds": null,
-    "seen": 2,
-    "spellings": [
-     "Aaron Judge \"All Rise\""
     ]
    },
    {
@@ -138587,8 +138243,8 @@
     ]
    },
    {
-    "root": "Fireworks Prizms Black",
-    "rootKey": "fireworks prizms black",
+    "root": "Fireworks",
+    "rootKey": "fireworks",
     "children": [
      "Fireworks Prizms Black"
     ],
@@ -138597,8 +138253,8 @@
     ]
    },
    {
-    "root": "Fireworks Prizms Blue Ice",
-    "rootKey": "fireworks prizms blue ice",
+    "root": "Fireworks",
+    "rootKey": "fireworks",
     "children": [
      "Fireworks Prizms Blue Ice"
     ],
@@ -138607,8 +138263,8 @@
     ]
    },
    {
-    "root": "Fireworks Prizms Blue Wave",
-    "rootKey": "fireworks prizms blue wave",
+    "root": "Fireworks",
+    "rootKey": "fireworks",
     "children": [
      "Fireworks Prizms Blue Wave"
     ],
@@ -138617,8 +138273,8 @@
     ]
    },
    {
-    "root": "Fireworks Prizms Fast Break",
-    "rootKey": "fireworks prizms fast break",
+    "root": "Fireworks",
+    "rootKey": "fireworks",
     "children": [
      "Fireworks Prizms Fast Break"
     ],
@@ -138627,8 +138283,8 @@
     ]
    },
    {
-    "root": "Fireworks Prizms Gold",
-    "rootKey": "fireworks prizms gold",
+    "root": "Fireworks",
+    "rootKey": "fireworks",
     "children": [
      "Fireworks Prizms Gold"
     ],
@@ -138637,8 +138293,8 @@
     ]
    },
    {
-    "root": "Fireworks Prizms Mojo",
-    "rootKey": "fireworks prizms mojo",
+    "root": "Fireworks",
+    "rootKey": "fireworks",
     "children": [
      "Fireworks Prizms Mojo"
     ],
@@ -138647,8 +138303,8 @@
     ]
    },
    {
-    "root": "Fireworks Prizms Orange",
-    "rootKey": "fireworks prizms orange",
+    "root": "Fireworks",
+    "rootKey": "fireworks",
     "children": [
      "Fireworks Prizms Orange"
     ],
@@ -138657,8 +138313,8 @@
     ]
    },
    {
-    "root": "Fireworks Prizms Silver",
-    "rootKey": "fireworks prizms silver",
+    "root": "Fireworks",
+    "rootKey": "fireworks",
     "children": [
      "Fireworks Prizms Silver"
     ],
@@ -138667,8 +138323,8 @@
     ]
    },
    {
-    "root": "Fireworks Prizms White Wave",
-    "rootKey": "fireworks prizms white wave",
+    "root": "Fireworks",
+    "rootKey": "fireworks",
     "children": [
      "Fireworks Prizms White Wave"
     ],
@@ -193753,15 +193409,6 @@
     ]
    },
    {
-    "name": "Purple",
-    "printRun": 150,
-    "odds": null,
-    "seen": 147,
-    "spellings": [
-     "Purple"
-    ]
-   },
-   {
     "name": "Gold",
     "printRun": 25,
     "odds": null,
@@ -218439,6 +218086,23 @@
      "The Shield Gold Ice"
     ],
     "categories": []
+   },
+   {
+    "root": "Z Marquee",
+    "rootKey": "z marquee",
+    "children": [
+     "Z Marquee Blue",
+     "Z Marquee Gold",
+     "Z Marquee Orange",
+     "Z Marquee Red",
+     "Z Marquee White"
+    ],
+    "categories": [],
+    "override": {
+     "ruling": "N/A -- not a spelling ruling. Restores an insert set the builder's own category reader found correctly before this rebuild widened --dirs; see build-parallel-vocabulary.cjs's applyInsertSetAdd for the mechanism.",
+     "rulingDate": "2026-09-25",
+     "reason": "C:/tmp/ci/csv2/2024-panini-zenith-football.csv states \"Z Marquee\"'s colours on SIBLING categories (insert-z-marquee-blue/gold/orange/red/white, each blank on the bare insert-z-marquee row) -- the shape insertSetsFromCategories() is built to read. backend/data/checklists/scraped/acq-2026-09-19-beckett-panini-zenith-fb/2024-panini-zenith-football.csv (committed 09-19, added to this rebuild's --dirs) states the SAME colours directly on the bare insert-z-marquee category's own rows instead. categoryRowsByProduct merges both files' rows for this one product, so the merged 'insert-z-marquee' category is no longer blank on every row, and insertSetsFromCategories's own precondition (its whole point: a bare category that states no parallel of its own) correctly, structurally refuses to fire -- 'Z Marquee' silently vanished from the corpus, taking 5 colour children with it, and breaking insertSetTitleReader.test.ts's own 'coverage gap has closed' pin. Both sources agree on the card; only the merge of their two different shapes produced the gap."
+    }
    },
    {
     "root": "Zoom Blue",
