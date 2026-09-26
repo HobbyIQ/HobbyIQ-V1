@@ -60,6 +60,7 @@ import { isMakerlessCatchAllSetKey, makerlessCatchAllMessage } from "../catalog/
 // The builder and the write door must agree on what a sport IS, so the builder
 // asks the door's table rather than keeping a four-alias copy of it.
 import { normalizeSportStrict } from "./slugGuard.service.js";
+import { isScopedAutoOnlyPrefix } from "./scopedAutoOnlyPrefixes.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -2667,6 +2668,18 @@ function isChromeStockSetKey(setKey: string): boolean {
 // 2026-08-11).
 const AUTO_ONLY_CARDNUMBER_PREFIX = /^(cpa|bcpa|bdcpa|cda|tcpa|cra|bspa|bpa|bda)(?:-|\d)/i;
 
+// CF-SCOPED-AUTO-ONLY-CARDNUMBER-PREFIX (stamp-fix batch 2, 2026-09-26;
+// moved to its own module, review round 2, 2026-09-26). "SS-" is auto-only
+// ONLY on 2025 Panini Prizm baseball (Sensational Signatures) — see
+// scopedAutoOnlyPrefixes.ts for the full provenance, the wrestling-initials
+// negative-scope reasoning ("2020 Panini Prizm Basketball #SS-AEW Base"),
+// and the trace evidence. That module has NO imports of its own, so this
+// file and parseTitleIdentity.service.ts both import the ONE table from it
+// instead of each other (this file cannot import FROM that one — it
+// imports `slugify` FROM this file, so a table defined there would cycle).
+// isScopedAutoOnlyPrefix's contract is additive-only: a miss (unscoped
+// call, or a (sport, year, setKey) not in the table) always reads false.
+
 /**
  * CF-ONE-SETKEY-RESOLVER (Drew, 2026-08-17). THE sport-aware setKey
  * resolution. Exported because callers that GATE computeHobbyIqCardId must be
@@ -3111,8 +3124,12 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // CF-AUTO-ONLY-FORCE (Drew, 2026-08-11). Auto-only prefixes always
   // produce autograph cards — force isAuto=true so vendor label drift
   // (isAuto=false on a CPA- sale, etc.) can't fragment the pool.
+  //
+  // The scoped check (stamp-fix batch 2, 2026-09-26) is consulted ADDITIVELY,
+  // same contract as the unscoped regex above it: it can only add a true.
   const isAuto = components.isAuto === true
-    || AUTO_ONLY_CARDNUMBER_PREFIX.test(cardNumber);
+    || AUTO_ONLY_CARDNUMBER_PREFIX.test(cardNumber)
+    || isScopedAutoOnlyPrefix(cardNumber, { sport, year, setKey });
   let parallelSlug = normalizeParallel(components.parallel);
   // CF-A-FINEST-TIER-IS-THE-NUMBER (Drew, 2026-09-08/09). Applied at this same
   // seam, and for the same reason: this is the one place that holds the
