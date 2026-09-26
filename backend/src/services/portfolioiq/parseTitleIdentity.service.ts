@@ -3233,7 +3233,18 @@ function titleNamesBowmanBrand(t: string): boolean {
   const toks = t.trim().split(/\s+/).filter(Boolean);
   let idx = 0;
   if (/^(?:19|20)\d{2}(?:[/'-]\d{2,4})?$/.test(toks[0] ?? "")) idx = 1;
-  const bowmanTok = (toks[idx] ?? "").replace(/[.,;:]+$/, "");
+  const rawTok = toks[idx] ?? "";
+  // CF-A-TRAILING-COMMA-IS-A-NAME-LIST-NOT-A-BRAND (round 3, per review).
+  // "Bowman, Matt 2015 Topps #481" is the "Lastname, Firstname" eBay listing
+  // convention -- the comma on the RAW token is the tell that this is a
+  // surname heading a name list, not the brand occupying the year-brand
+  // slot. Stripping the comma BEFORE the brand test (as this line used to)
+  // erases exactly the evidence that disqualifies it, so the strip must
+  // happen only for a genuine trailing-punctuation case (a period after an
+  // abbreviation, say) and the comma check must run against the RAW token
+  // first, before any stripping.
+  if (/,$/.test(rawTok)) return false;
+  const bowmanTok = rawTok.replace(/[.,;:]+$/, "");
   if (!/^bowman(?:'?s)?$/i.test(bowmanTok)) return false;
   const next = toks[idx + 1];
   if (!next) return false;

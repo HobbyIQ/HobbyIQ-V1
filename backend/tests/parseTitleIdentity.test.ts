@@ -1846,6 +1846,19 @@ describe("inferSetKeyFromTitle — Topps names Bowman too (defect 2)", () => {
     expect(inferSetKeyFromTitle("2024 Bowman Matt Bowman #481")).toBe("Bowman");
   });
 
+  // REVIEW CORRECTION, ROUND 3 (2026-09-26). Round 2's condition (b) tested
+  // token 0 for "bowman" AFTER stripping trailing punctuation -- which
+  // erases exactly the evidence that disqualifies a "Lastname, Firstname"
+  // eBay listing convention title. "Bowman, Matt 2015 Topps #481" is Matt
+  // Bowman's own listing, comma and all; `main` correctly answers "Topps"
+  // for it, and round 2's strip-then-test order wrongly resolved "Bowman".
+  it.each([
+    ["Bowman, Matt 2015 Topps #481", "Topps"],
+    ["Bowman, Matt 2015 Topps Chrome #481", "Topps Chrome"],
+  ])('a "Lastname, Firstname" listing convention title is never the brand: %s -> %s', (title, want) => {
+    expect(inferSetKeyFromTitle(title)).toBe(want);
+  });
+
   // ROUND-2 RULING: ambiguous titles keep `main`'s "Topps" answer -- a
   // smaller blast radius at the next re-baseline than resolving every
   // Year-Brand-Player-Number ordering by position. This intentionally
