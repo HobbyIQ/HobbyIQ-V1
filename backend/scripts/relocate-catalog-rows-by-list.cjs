@@ -395,6 +395,49 @@ const f = (n) => Number(n).toLocaleString();
  *
  * Returns { ok, action, reason } where a falsy `ok` carries the refusal text.
  */
+/**
+ * Is a human-form text field EXACTLY its own normalized form -- trimmed, with
+ * internal whitespace collapsed to single spaces, non-empty, and cased like a
+ * deliberate human-form name rather than a slug someone forgot to Title-Case?
+ *
+ * "silver crackle foil", "Silver Crackle Foil " and "Silver  Crackle Foil"
+ * all slugify to the identical id segment and would otherwise be stored
+ * verbatim as the row's canonical `parallel` field: sloppy casing or
+ * whitespace silently becoming the text every future reader sees, because
+ * computeHobbyIqCardId lower-cases on its way to a slug and so cannot tell
+ * "silver crackle foil" from "Silver Crackle Foil" -- the id-reproduction
+ * check alone would pass either one. This function never case-folds or
+ * reformats on the caller's behalf -- it only tells the caller exactly what
+ * is wrong, so the LIST gets fixed rather than the lane quietly cleaning up
+ * after it or silently accepting whichever case a list author typed.
+ *
+ * THE CASE RULE, stated precisely because there is no oracle for the "right"
+ * case: a card parallel name in this catalog is always human-form Title Case
+ * (Silver Crackle Foil, X-Fractor, 1st Bowman Rookie, BASE-parallel raw
+ * vendor text is cleaned before it ever reaches a `parallel` field written by
+ * a curated list) -- so a text with letters and NOT ONE UPPERCASE LETTER
+ * anywhere is rejected as the slug-cased shape this guard exists to catch,
+ * without this function inventing what the "correct" capitalization is.
+ *
+ * Returns `{ ok: true, value }` when `raw` is already its exact normalized
+ * form, or `{ ok: false, why }` naming the mismatch (`why` is null when the
+ * text was empty/whitespace-only -- the caller distinguishes "missing" from
+ * "sloppy" for its own message).
+ */
+function normalizedTextOrRefusal(raw) {
+  const rawStr = String(raw ?? "");
+  const trimmed = rawStr.trim();
+  if (!trimmed) return { ok: false, why: null, value: "" };
+  const normalized = trimmed.replace(/\s+/g, " ");
+  if (rawStr !== normalized) {
+    return { ok: false, why: `has leading/trailing or doubled whitespace — the list must give exactly "${normalized.slice(0, 60)}"`, value: normalized };
+  }
+  if (/[a-z]/i.test(normalized) && !/[A-Z]/.test(normalized)) {
+    return { ok: false, why: "is entirely lowercase — this reads like a slug, not the human-form text a checklist or Drew's ruling would give", value: normalized };
+  }
+  return { ok: true, value: normalized };
+}
+
 function classifyEntry(e) {
   const id = String(e?.id ?? "").trim();
   const action = String(e?.action ?? "").trim();
@@ -429,10 +472,16 @@ function classifyEntry(e) {
   // entry besides id/action/reason/evidence/parallel is a typo'd key or a
   // request to patch a field this shape was never reviewed to touch.
   if (action === "patchFields") {
-    const parallel = String(e?.parallel ?? "").trim();
-    if (!parallel) {
-      return { ok: false, why: `patchFields entry has no "parallel" text: ${id.slice(0, 60)}` };
+    const normalized = normalizedTextOrRefusal(e?.parallel);
+    if (!normalized.ok) {
+      return {
+        ok: false,
+        why: normalized.why === null
+          ? `patchFields entry has no "parallel" text: ${id.slice(0, 60)}`
+          : `patchFields entry's "parallel" text ${normalized.why}: ${id.slice(0, 60)}`,
+      };
     }
+    const parallel = normalized.value;
     const KNOWN_KEYS = new Set(["id", "action", "to", "reason", "evidence", "parallel"]);
     const stray = e && typeof e === "object" ? Object.keys(e).filter((k) => !KNOWN_KEYS.has(k)) : [];
     if (stray.length) {
@@ -539,19 +588,42 @@ function crossProductFields(id, to) {
  * rung has different words" -- outside a curated fold's remit, so it is
  * refused here rather than silently accepted.
  *
+ * PARSED WITH THE GRADE-AWARE SPLITTER, NOT THE BARE ONE (2026-09-26 review
+ * finding). `parseId` (`parseHobbyIqCardId`) returns null for EVERY graded
+ * child (`...:no-auto:cgc-10`) because the tier segment is not part of the
+ * card-id grammar -- so a bare call here treated every graded-child reslug as
+ * unparseable and, on the old code path, silently WAIVED the text
+ * requirement for exactly the ids most likely to be a curated fold's
+ * destination (a graded twin of a rung this list is renaming). `parseGrade`
+ * (`parseSlugWithGrade`, catalogRowOps' own splitter -- the same one
+ * moveCatalogRow's buildIncoming uses) is required to parse BOTH `id` and
+ * `to` now; either failing is a REFUSAL ("cannot parse id"), never a silent
+ * pass, and the comparison runs on the PARENT identity while the grade tier
+ * is carried back onto the recomputed id before it is checked against `to`.
+ *
  * Returns `{ ok: true, changedFields }` when the entry may proceed (with
  * `changedFields` extending whatever `crossProductFields` already returned),
  * or `{ ok: false, why }` naming the refusal.
  */
-function rungChangeFields(id, to, entry, oldRow, parseId, computeId) {
+function rungChangeFields(id, to, entry, oldRow, parseId, computeId, parseGrade) {
   const base = crossProductFields(id, to);
-  const from = parseId(id);
-  const dest = parseId(to);
-  if (!from || !dest) {
-    // Not this function's job to police malformed slugs -- moveCatalogRow's
-    // own buildIncoming already throws on one. Nothing extra to add.
-    return { ok: true, changedFields: base };
+  const splitFrom = parseGrade(id);
+  const splitDest = parseGrade(to);
+  if (!splitFrom || !splitDest) {
+    // A GENUINELY MALFORMED ID IS A REFUSAL, NEVER A SILENT PASS. The old
+    // behaviour here waived the whole text requirement on parse failure,
+    // which is exactly wrong for a graded-child id -- parseHobbyIqCardId
+    // alone always fails on one, so every graded-child rung change slipped
+    // through unchecked. moveCatalogRow's own buildIncoming will throw on a
+    // truly malformed newSlug regardless; this refusal just makes the same
+    // fact visible in the REPORT, before any write is attempted.
+    return {
+      ok: false,
+      why: `cannot parse id — "${(!splitFrom ? id : to).slice(0, 70)}" is not a hiq slug (with or without a grade tail)`,
+    };
   }
+  const from = splitFrom.parsed;
+  const dest = splitDest.parsed;
   if (Boolean(from.isAuto) !== Boolean(dest.isAuto)) {
     return {
       ok: false,
@@ -573,22 +645,33 @@ function rungChangeFields(id, to, entry, oldRow, parseId, computeId) {
   // THE RUNG MOVED. A human-form parallel text is REQUIRED, never derived from
   // the slug (a slug segment is lossy -- it cannot say whether the checklist
   // spells it "Silver Crackle Foil" or something else).
-  const parallelText = String(entry?.parallel ?? "").trim();
-  if (!parallelText) {
+  //
+  // NORMALIZED, THEN REQUIRED TO MATCH EXACTLY (2026-09-26 review finding):
+  // "silver crackle foil", "Silver Crackle Foil " and "Silver  Crackle Foil"
+  // all slugify to the SAME segment and would otherwise be stored verbatim --
+  // sloppy casing or whitespace silently becoming the canonical human-form
+  // text on 1,500+ rows. See normalizedTextOrRefusal's own doc.
+  const normalized = normalizedTextOrRefusal(entry?.parallel);
+  if (!normalized.ok) {
     return {
       ok: false,
-      why: 'reslug changes the rung but the list gives no parallel text — add "parallel": "<human form>" to this entry',
+      why: normalized.why === null
+        ? 'reslug changes the rung but the list gives no parallel text — add "parallel": "<human form>" to this entry'
+        : `reslug's parallel text "${String(entry?.parallel ?? "").slice(0, 60)}" ${normalized.why}`,
     };
   }
+  const parallelText = normalized.value;
   // VERIFY: the text the list gives, fed through the REAL id computation off
   // the row's own other fields, must reproduce `to` exactly. This is what
   // stops a typo'd or mismatched parallel text from being trusted blindly --
   // computeHobbyIqCardId is the same function moveCatalogRow's derivation
   // (deriveCatalogEntry) is built on, so a text that does not reproduce the
-  // destination is a text that does not belong on this row.
-  let recomputed;
+  // destination is a text that does not belong on this row. Run on the
+  // PARENT identity -- the grade tier (if any) rides back on afterward, since
+  // computeHobbyIqCardId's grammar has no notion of a grade segment.
+  let recomputedParent;
   try {
-    recomputed = computeId({
+    recomputedParent = computeId({
       sport: String(oldRow?.sport ?? from.sport ?? ""),
       year: dest.year,
       setKey: dest.setKey,
@@ -604,6 +687,7 @@ function rungChangeFields(id, to, entry, oldRow, parseId, computeId) {
       why: `reslug's parallel text "${parallelText.slice(0, 60)}" could not be computed into an id: ${String(err?.message ?? err).slice(0, 100)}`,
     };
   }
+  const recomputed = splitDest.gradeTier ? `${recomputedParent}:${splitDest.gradeTier}` : recomputedParent;
   if (recomputed !== to) {
     return {
       ok: false,
@@ -860,12 +944,16 @@ async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const {
-    moveCatalogRow, retireCatalogRow, patchCatalogRowFields, rebuildSearchFields,
+    moveCatalogRow, retireCatalogRow, patchCatalogRowFields, rebuildSearchFields, parseSlugWithGrade,
   } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { marketVerdict } = require(path.join(__dirname, "lib", "market-guard.cjs"));
   // CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT (2026-09-26).
-  // Both loaded from the built tree, the same way moveCatalogRow itself is --
-  // this lane never re-implements the id grammar.
+  // All three loaded from the built tree, the same way moveCatalogRow itself
+  // is -- this lane never re-implements the id grammar. parseSlugWithGrade is
+  // the GRADE-AWARE splitter (catalogRowOps' own, the one buildIncoming uses)
+  // -- the bare parseHobbyIqCardId returns null for every graded-child id, so
+  // rungChangeFields is given the grade-aware one to avoid waiving the text
+  // requirement on exactly the ids most likely to be a curated fold's target.
   const { parseHobbyIqCardId, computeHobbyIqCardId } = require(
     path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"),
   );
@@ -1061,6 +1149,9 @@ async function main() {
       if (action === "verify") {
         console.error("      a verify needs a row to stamp — this entry's premise is gone; re-measure the list");
       }
+      if (action === "patchFields") {
+        console.error("      a patchFields heal needs a row to patch — this entry's premise is gone; re-measure the list");
+      }
       continue;
     }
 
@@ -1208,15 +1299,20 @@ async function main() {
       console.log(`      ${String(row.playerName ?? "(no player)")} — ${String(row.setName ?? "")}`.slice(0, 100));
       console.log(`      reason: ${reason.slice(0, 90)}`);
       console.log(`      parallel: "${String(row.parallel ?? "")}" -> "${c.parallel}"`);
-      const parsedOwnId = parseHobbyIqCardId(id);
-      if (!parsedOwnId) {
+      // GRADE-AWARE, so a graded child's own id is not mistaken for
+      // unparseable (parseHobbyIqCardId alone returns null for every graded
+      // child -- see rungChangeFields's own doc for the same fix, 2026-09-26
+      // review finding).
+      const splitOwnId = parseSlugWithGrade(id);
+      if (!splitOwnId) {
         failed++;
-        console.error(`      FAILED: id is not a parseable hiq slug: ${id.slice(0, 70)}`);
+        console.error(`      FAILED: id is not a parseable hiq slug (with or without a grade tail): ${id.slice(0, 70)}`);
         continue;
       }
+      const parsedOwnId = splitOwnId.parsed;
       let recomputedOwnId;
       try {
-        recomputedOwnId = computeHobbyIqCardId({
+        const recomputedParent = computeHobbyIqCardId({
           sport: String(row.sport ?? parsedOwnId.sport ?? ""),
           year: parsedOwnId.year,
           setKey: parsedOwnId.setKey,
@@ -1226,6 +1322,7 @@ async function main() {
           printRun: parsedOwnId.printRun ?? null,
           ...(parsedOwnId.subsetName ? { subsetName: parsedOwnId.subsetName, subsetInId: true } : {}),
         });
+        recomputedOwnId = splitOwnId.gradeTier ? `${recomputedParent}:${splitOwnId.gradeTier}` : recomputedParent;
       } catch (err) {
         failed++;
         console.error(`      FAILED: parallel text could not be computed into an id: ${String(err?.message ?? err).slice(0, 90)}`);
@@ -1333,7 +1430,7 @@ async function main() {
     // list entry that changes the rung with no `parallel` text, or whose text
     // does not reproduce `to`, is refused here rather than silently writing
     // stale English onto a moved row.
-    const rung = rungChangeFields(id, to, e, row, parseHobbyIqCardId, computeHobbyIqCardId);
+    const rung = rungChangeFields(id, to, e, row, parseHobbyIqCardId, computeHobbyIqCardId, parseSlugWithGrade);
     if (!rung.ok) {
       refusedRungTextMissing++;
       console.error(`  REFUSED (rung text)  ${id.slice(0, 62)}`);
@@ -1552,5 +1649,5 @@ if (require.main === module) {
 
 module.exports = {
   SCOPE, APPLY, classifyEntry, occupiedByDifferentCard, occupancyRefusal, crossProductFields, idSetKey, keepsSales,
-  confirmRetired, RETIRE_READ_BACK_ATTEMPTS, rungChangeFields,
+  confirmRetired, RETIRE_READ_BACK_ATTEMPTS, rungChangeFields, normalizedTextOrRefusal,
 };

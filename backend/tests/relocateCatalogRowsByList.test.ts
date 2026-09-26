@@ -392,7 +392,7 @@ describe("a report that cannot predict its apply is the defect", () => {
     // which also asks for the rung's own text when the parallel segment
     // moves -- `changed` is `rung.changedFields`, not a bare crossProductFields
     // call, but it carries the same setKey answer through untouched.
-    expect(laneSrc).toMatch(/const rung = rungChangeFields\(id, to, e, row, parseHobbyIqCardId, computeHobbyIqCardId\);/);
+    expect(laneSrc).toMatch(/const rung = rungChangeFields\(id, to, e, row, parseHobbyIqCardId, computeHobbyIqCardId, parseSlugWithGrade\);/);
     expect(laneSrc).toMatch(/const changed = rung\.changedFields;/);
     expect(laneSrc).toMatch(/await moveCatalogRow\(cat, row, to, changed,/);
     // ...and the guard is asked about the key that is actually being used.

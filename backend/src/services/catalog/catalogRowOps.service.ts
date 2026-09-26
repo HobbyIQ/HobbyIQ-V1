@@ -511,7 +511,7 @@ function fieldExtendsStem(field: string, stem: string): boolean {
  * it, including the matcher's hot path, and a 292-row cleanup does not get to
  * widen the id grammar for all of them.
  */
-function parseSlugWithGrade(slug: string): { parsed: HobbyIqCardIdComponents; parentSlug: string; gradeTier: string | null } | null {
+export function parseSlugWithGrade(slug: string): { parsed: HobbyIqCardIdComponents; parentSlug: string; gradeTier: string | null } | null {
   const direct = parseHobbyIqCardId(slug);
   if (direct) return { parsed: direct, parentSlug: slug, gradeTier: null };
   const cut = slug.lastIndexOf(":");

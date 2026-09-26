@@ -48,6 +48,12 @@ const { parseHobbyIqCardId, computeHobbyIqCardId } = require_(
   computeHobbyIqCardId: (c: Record<string, unknown>) => string;
 };
 
+const { parseSlugWithGrade } = require_(
+  join(__dirname, "..", "dist", "services", "catalog", "catalogRowOps.service.js"),
+) as {
+  parseSlugWithGrade: (slug: string) => { parsed: Record<string, unknown>; parentSlug: string; gradeTier: string | null } | null;
+};
+
 const L = require_(lane) as {
   classifyEntry: (e: unknown) => { ok: boolean; why?: string; action?: string; parallel?: string };
   rungChangeFields: (
@@ -57,8 +63,17 @@ const L = require_(lane) as {
     oldRow: unknown,
     parseId: typeof parseHobbyIqCardId,
     computeId: typeof computeHobbyIqCardId,
+    parseGrade: typeof parseSlugWithGrade,
   ) => { ok: true; changedFields: Record<string, unknown> } | { ok: false; why: string };
+  normalizedTextOrRefusal: (raw: unknown) => { ok: true; value: string } | { ok: false; why: string | null; value: string };
 };
+
+// Every call below passes parseSlugWithGrade explicitly -- the lane's own
+// call site does the same (2026-09-26 review finding: the bare
+// parseHobbyIqCardId returns null for every graded-child id, which used to
+// waive the whole rung-text requirement for exactly those rows).
+const rung = (id: string, to: string, entry: unknown, oldRow: unknown) =>
+  L.rungChangeFields(id, to, entry, oldRow, parseHobbyIqCardId, computeHobbyIqCardId, parseSlugWithGrade);
 
 // The real Silver Crackle Foil shape, from move-01.json.
 const SRC_ID = "hiq:baseball:2026:topps-series-1:161:silver-crackle-foil-super-box-exclusive:no-auto";
@@ -71,7 +86,7 @@ const CANON = "Silver Crackle Foil";
 describe("rungChangeFields requires and verifies the rung's human-form text", () => {
   it("an entry with a parallel change AND correct text is accepted, with the text carried in changedFields", () => {
     const entry = { id: SRC_ID, to: DEST_ID, action: "reslug", reason: "x", parallel: CANON };
-    const r = L.rungChangeFields(SRC_ID, DEST_ID, entry, ROW, parseHobbyIqCardId, computeHobbyIqCardId);
+    const r = rung(SRC_ID, DEST_ID, entry, ROW);
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.changedFields.parallel).toBe(CANON);
@@ -83,7 +98,7 @@ describe("rungChangeFields requires and verifies the rung's human-form text", ()
 
   it("an entry with NO parallel text is REFUSED — the rung moved with nothing to carry", () => {
     const entry = { id: SRC_ID, to: DEST_ID, action: "reslug", reason: "x" };
-    const r = L.rungChangeFields(SRC_ID, DEST_ID, entry, ROW, parseHobbyIqCardId, computeHobbyIqCardId);
+    const r = rung(SRC_ID, DEST_ID, entry, ROW);
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.why).toMatch(/no parallel text/);
@@ -94,14 +109,14 @@ describe("rungChangeFields requires and verifies the rung's human-form text", ()
   it("blank/whitespace-only parallel text is treated as absent, not as a value", () => {
     for (const blank of ["", "   ", undefined, null]) {
       const entry = { id: SRC_ID, to: DEST_ID, action: "reslug", reason: "x", parallel: blank };
-      const r = L.rungChangeFields(SRC_ID, DEST_ID, entry, ROW, parseHobbyIqCardId, computeHobbyIqCardId);
+      const r = rung(SRC_ID, DEST_ID, entry, ROW);
       expect(r.ok, `parallel=${JSON.stringify(blank)} should refuse`).toBe(false);
     }
   });
 
   it("text that does NOT reproduce `to` is REFUSED, naming both the computed id and the destination", () => {
     const entry = { id: SRC_ID, to: DEST_ID, action: "reslug", reason: "x", parallel: "Silver Crackle Foilboard" };
-    const r = L.rungChangeFields(SRC_ID, DEST_ID, entry, ROW, parseHobbyIqCardId, computeHobbyIqCardId);
+    const r = rung(SRC_ID, DEST_ID, entry, ROW);
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.why).toMatch(/does not produce the destination id/);
@@ -116,7 +131,7 @@ describe("rungChangeFields requires and verifies the rung's human-form text", ()
     const id = "hiq:pokemon:2023:151:93:master-ball:no-auto";
     const to = "hiq:pokemon:2023:sv2a:93:master-ball:no-auto";
     const entry = { id, to, action: "reslug", reason: "x" };
-    const r = L.rungChangeFields(id, to, entry, { sport: "pokemon" }, parseHobbyIqCardId, computeHobbyIqCardId);
+    const r = rung(id, to, entry, { sport: "pokemon" });
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.changedFields).toEqual({ setKey: "sv2a" });
@@ -128,7 +143,7 @@ describe("rungChangeFields requires and verifies the rung's human-form text", ()
     const id = "hiq:baseball:1997:bowmans-best:1:base:no-auto";
     const to = "hiq:baseball:1997:bowmans-best:2:base:no-auto";
     const entry = { id, to, action: "reslug", reason: "x" };
-    const r = L.rungChangeFields(id, to, entry, { sport: "baseball" }, parseHobbyIqCardId, computeHobbyIqCardId);
+    const r = rung(id, to, entry, { sport: "baseball" });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.changedFields).toEqual({});
   });
@@ -137,7 +152,7 @@ describe("rungChangeFields requires and verifies the rung's human-form text", ()
     const id = "hiq:baseball:2020:topps:1:base:no-auto";
     const to = "hiq:baseball:2020:topps:1:base:auto";
     const entry = { id, to, action: "reslug", reason: "x", parallel: "Base" };
-    const r = L.rungChangeFields(id, to, entry, { sport: "baseball" }, parseHobbyIqCardId, computeHobbyIqCardId);
+    const r = rung(id, to, entry, { sport: "baseball" });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.why).toMatch(/isAuto segment/);
   });
@@ -146,9 +161,119 @@ describe("rungChangeFields requires and verifies the rung's human-form text", ()
     const id = "hiq:baseball:2020:topps:1:base:no-auto";
     const to = "hiq:baseball:2020:topps:1:base:no-auto:num-99";
     const entry = { id, to, action: "reslug", reason: "x", parallel: "Base" };
-    const r = L.rungChangeFields(id, to, entry, { sport: "baseball" }, parseHobbyIqCardId, computeHobbyIqCardId);
+    const r = rung(id, to, entry, { sport: "baseball" });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.why).toMatch(/printRun segment/);
+  });
+
+  // ── graded children (2026-09-26 review finding) ───────────────────────────
+  //
+  // `parseHobbyIqCardId` returns null for EVERY graded-child id (the grade
+  // tail is not part of the card-id grammar), so the FIRST version of this
+  // fix -- parsing `id`/`to` with the bare parser and treating a parse
+  // failure as "nothing to add" -- silently WAIVED the text requirement for
+  // every graded-child reslug. Fixed by parsing with `parseSlugWithGrade`
+  // (catalogRowOps' own splitter, the same one moveCatalogRow's buildIncoming
+  // uses) and comparing on the PARENT identity while the tier rides along.
+  const GRADED_SRC = "hiq:pokemon:2023:swsh12-5:gg01:full-art:no-auto:cgc-10";
+  const GRADED_DEST = "hiq:pokemon:2023:swsh12-5:gg01:alt-art:no-auto:cgc-10";
+  const GRADED_ROW = { sport: "pokemon" };
+
+  it("a graded child whose rung changes with NO text is REFUSED, not silently waived", () => {
+    const entry = { id: GRADED_SRC, to: GRADED_DEST, action: "reslug", reason: "x" };
+    const r = rung(GRADED_SRC, GRADED_DEST, entry, GRADED_ROW);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.why).toMatch(/no parallel text/);
+      // Must NOT be misread as a malformed-id refusal -- the parser handles
+      // graded ids fine; what's missing is the text.
+      expect(r.why).not.toMatch(/cannot parse id/);
+    }
+  });
+
+  it("a graded child whose rung changes WITH correct text is accepted, and the grade tier is preserved in the verify", () => {
+    const entry = { id: GRADED_SRC, to: GRADED_DEST, action: "reslug", reason: "x", parallel: "Alt Art" };
+    const r = rung(GRADED_SRC, GRADED_DEST, entry, GRADED_ROW);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.changedFields.parallel).toBe("Alt Art");
+  });
+
+  it("a graded child's wrong text is still caught — the grade tail does not defeat the id-reproduction verify", () => {
+    const entry = { id: GRADED_SRC, to: GRADED_DEST, action: "reslug", reason: "x", parallel: "Wrong Text" };
+    const r = rung(GRADED_SRC, GRADED_DEST, entry, GRADED_ROW);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.why).toMatch(/does not produce the destination id/);
+      // The recomputed id must carry the ":cgc-10" tail for the comparison
+      // to be meaningful at all.
+      expect(r.why).toContain(":cgc-10");
+    }
+  });
+
+  it("a MALFORMED id is a REFUSAL naming it as such, never a silent pass", () => {
+    const bad = "not-even-a-hiq-slug";
+    const entry = { id: bad, to: DEST_ID, action: "reslug", reason: "x", parallel: CANON };
+    const r = rung(bad, DEST_ID, entry, ROW);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.why).toMatch(/cannot parse id/);
+      expect(r.why).toContain(bad);
+    }
+  });
+
+  it("a malformed DESTINATION is likewise a REFUSAL, naming the destination", () => {
+    const bad = "hiq:baseball:2026:topps:161"; // too few segments
+    const entry = { id: SRC_ID, to: bad, action: "reslug", reason: "x", parallel: CANON };
+    const r = rung(SRC_ID, bad, entry, ROW);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.why).toMatch(/cannot parse id/);
+      expect(r.why).toContain(bad);
+    }
+  });
+
+  // ── sloppy text (2026-09-26 review finding) ───────────────────────────────
+  //
+  // "silver crackle foil", "Silver Crackle Foil " and "Silver  Crackle Foil"
+  // all slugify to the SAME segment -- computeHobbyIqCardId lower-cases on
+  // its way to a slug, so the id-reproduction check alone cannot tell any of
+  // them from the canonical "Silver Crackle Foil". Each must be rejected
+  // explicitly, never silently case-folded or reformatted into the correct
+  // text on the caller's behalf.
+  it.each([
+    ["silver crackle foil", /entirely lowercase/],
+    ["Silver Crackle Foil ", /leading\/trailing or doubled whitespace/],
+    ["Silver  Crackle Foil", /leading\/trailing or doubled whitespace/],
+    [" Silver Crackle Foil", /leading\/trailing or doubled whitespace/],
+    ["\tSilver Crackle Foil", /leading\/trailing or doubled whitespace/],
+  ])("rejects %j", (sloppy, expected) => {
+    const entry = { id: SRC_ID, to: DEST_ID, action: "reslug", reason: "x", parallel: sloppy };
+    const r = rung(SRC_ID, DEST_ID, entry, ROW);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.why).toMatch(expected);
+  });
+
+  it("the exact canonical text is accepted — the guard rejects sloppiness, not the value itself", () => {
+    const entry = { id: SRC_ID, to: DEST_ID, action: "reslug", reason: "x", parallel: CANON };
+    expect(rung(SRC_ID, DEST_ID, entry, ROW).ok).toBe(true);
+  });
+
+  it("never silently case-folds or reformats — a refusal never rewrites the caller's text", () => {
+    // The guard's job is to say what is wrong, not to fix it. Every refusal
+    // above names the SLOPPY input or the correctly-normalized alternative in
+    // its message, but rungChangeFields itself never returns a "corrected"
+    // parallel on an ok:false result for the caller to use unreviewed.
+    const entry = { id: SRC_ID, to: DEST_ID, action: "reslug", reason: "x", parallel: "silver crackle foil" };
+    const r = rung(SRC_ID, DEST_ID, entry, ROW);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect((r as { changedFields?: unknown }).changedFields).toBeUndefined();
+  });
+
+  it("normalizedTextOrRefusal is the shared helper — classifyEntry's patchFields gate uses the SAME rule", () => {
+    for (const sloppy of ["silver crackle foil", "Silver Crackle Foil ", "Silver  Crackle Foil"]) {
+      expect(L.normalizedTextOrRefusal(sloppy).ok).toBe(false);
+    }
+    expect(L.normalizedTextOrRefusal(CANON)).toEqual({ ok: true, value: CANON });
   });
 
   it("MUTATION: remove the parallel-carry from changedFields -> the write reverts to stale text -> red", () => {
@@ -156,7 +281,7 @@ describe("rungChangeFields requires and verifies the rung's human-form text", ()
     // alone, no parallel requirement. Simulating it directly against the real
     // moveCatalogRow proves what silently omitting the carry would cost.
     const entry = { id: SRC_ID, to: DEST_ID, action: "reslug", reason: "x", parallel: CANON };
-    const r = L.rungChangeFields(SRC_ID, DEST_ID, entry, ROW, parseHobbyIqCardId, computeHobbyIqCardId);
+    const r = rung(SRC_ID, DEST_ID, entry, ROW);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     // THE SHIPPED FIX carries parallel.
@@ -168,8 +293,12 @@ describe("rungChangeFields requires and verifies the rung's human-form text", ()
 
   it("the lane's call site uses rungChangeFields, not a bare crossProductFields, for the reslug path", () => {
     const src = laneSrc();
+    // The grade-aware parser must ride along -- a call site that dropped
+    // back to the bare parseHobbyIqCardId would silently waive the whole
+    // text requirement on every graded-child reslug (2026-09-26 review
+    // finding).
     expect(src).toContain(
-      "const rung = rungChangeFields(id, to, e, row, parseHobbyIqCardId, computeHobbyIqCardId);",
+      "const rung = rungChangeFields(id, to, e, row, parseHobbyIqCardId, computeHobbyIqCardId, parseSlugWithGrade);",
     );
     expect(src).toContain("const changed = rung.changedFields;");
     expect(src).toContain('refusedRungTextMissing++');
@@ -190,7 +319,7 @@ describe("the verify step uses the REAL computeHobbyIqCardId, never a re-impleme
     // the fixture list files (those get their own coverage in
     // silverCrackleFoilFold.test.ts).
     const entry = { id: SRC_ID, to: DEST_ID, action: "reslug", reason: "x", parallel: CANON };
-    const r = L.rungChangeFields(SRC_ID, DEST_ID, entry, ROW, parseHobbyIqCardId, computeHobbyIqCardId);
+    const r = rung(SRC_ID, DEST_ID, entry, ROW);
     expect(r.ok).toBe(true);
     const parsed = parseHobbyIqCardId(DEST_ID)!;
     const recomputed = computeHobbyIqCardId({
