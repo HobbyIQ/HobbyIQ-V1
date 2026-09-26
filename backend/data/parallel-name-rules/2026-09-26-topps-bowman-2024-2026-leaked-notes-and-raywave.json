@@ -1,0 +1,218 @@
+{
+  "_comment": "CF-A-NOTE-IS-NOT-A-RUNG. Rules for rewrite-parallel-names.cjs, first batch, from the 2026-09-26 spelling census (C:/tmp/spellcensus_2152/RESULT.md). Scope: baseball, 2024-2026, the same 15 Topps flagship + Bowman family setKeys the census paged across its 24 (setKey,year) pairs. Every setKeyPrefix rule below carries an explicit scope.setKeys array naming every literal setKey it scans (review finding 2026-09-26: a prefix alone is a MATCH SHAPE, not a scan scope -- this lane never discovers setKeys from Cosmos, so a prefix rule with no scope.setKeys is refused at load). SuperFractor is DELIBERATELY excluded (ruling pending -- sources disagree by year and 2 of 4 target sources were unreachable; see the census Step 4). Every rule below carries its own ruling, rulingDate and verbatim source quotes; a rule missing any of the three is refused by the lane at load, before any row is read.",
+  "rules": [
+    {
+      "id": "strip-retailer-channel-word",
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps", "setKeys": ["topps","topps-series-1","topps-series-2","topps-update-series","topps-chrome","topps-chrome-update-series","topps-holiday"] },
+      "kind": "strip-note",
+      "pattern": [
+        "(?i)^(.*?)\\s*[-–—:]\\s*(?:Retail|Hobby|Blaster|Mega\\s*Box|Super\\s*Box|Jumbo)(?:\\s+(?:only|exclusive))?\\.?\\s*$"
+      ],
+      "ruling": "A retail/hobby/blaster/mega/super-box channel word glued onto the end of `parallel` is a checklistinsider-style page footnote about WHERE the card is sold, never part of the rung's own name -- clean rung is the text before the dash/colon.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "checklistinsider.com 2026 Topps Series 1: 'Purple Tinsel' and 'Yellow Tinsel' are the card names; '(Meijer exclusive)'/'(Walgreens exclusive)' is a separate parenthetical channel note on the same list line, using the site's uniform 'Name (channel exclusive)' convention for every parallel on the page -- not evidence the retailer text was meant to be part of the name.",
+        "Census Step 2 representative case: \"Silver Crackle Foil - Super Box exclusive\" (topps-update-series 2025 and siblings) -> name 'Silver Crackle Foil' (checklistinsider verbatim), no printRun stated on the one page reached."
+      ],
+      "reason": "retail/hobby/blaster/mega/super-box channel word (census: 100,380 rows)"
+    },
+    {
+      "id": "strip-retailer-channel-word-bowman",
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "bowman", "setKeys": ["bowman","bowman-chrome","bowman-draft","bowman-chrome-draft","bowman-mega","bowmans-best","bowman-draft-sapphire","bowman-chrome-sapphire"] },
+      "kind": "strip-note",
+      "pattern": [
+        "(?i)^(.*?)\\s*[-–—:]\\s*(?:Retail|Hobby|Blaster|Mega\\s*Box|Super\\s*Box|Jumbo)(?:\\s+(?:only|exclusive))?\\.?\\s*$"
+      ],
+      "ruling": "Same shape as strip-retailer-channel-word, on the Bowman family: a trailing channel word is a distribution footnote, never a rung name.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "checklistinsider.com 2026 Topps Series 1: 'Purple Tinsel' and 'Yellow Tinsel' are the card names; the retailer text is a separate parenthetical channel note on the same list line, the site's uniform convention -- generalised here to the sibling Bowman family pages using the identical list layout."
+      ],
+      "reason": "retail/hobby/blaster/mega/super-box channel word, Bowman family"
+    },
+    {
+      "id": "strip-parenthetical-channel-note",
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps", "setKeys": ["topps","topps-series-1","topps-series-2","topps-update-series","topps-chrome","topps-chrome-update-series","topps-holiday"] },
+      "kind": "strip-note",
+      "pattern": [
+        "(?i)^(.*?)\\s*\\((?:[^()]*(?:exclusive|retail|hobby|blaster|mega\\s*box|super\\s*box|jumbo|odds|sku)[^()]*)\\)\\s*$"
+      ],
+      "ruling": "A parenthetical naming a channel, an exclusivity claim, pack odds or a SKU is the same checklistinsider list-line convention documented for Purple/Yellow Tinsel -- a note ABOUT the card, appended on the source page, never the checklist's name for the rung.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "checklistinsider.com 2026 Topps Series 1: 'Purple Tinsel' / 'Yellow Tinsel' are the card names; '(Meijer exclusive)' / '(Walgreens exclusive)' is a separate parenthetical channel note on the same list line, using the site's uniform 'Name (channel exclusive)' convention for every parallel on the page.",
+        "Census Step 2: representative parenthetical-note shapes counted 28,772 rows corpus-wide across this family."
+      ],
+      "reason": "parenthetical channel/exclusive/odds/SKU note (census: 28,772 rows)"
+    },
+    {
+      "id": "strip-parenthetical-channel-note-bowman",
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "bowman", "setKeys": ["bowman","bowman-chrome","bowman-draft","bowman-chrome-draft","bowman-mega","bowmans-best","bowman-draft-sapphire","bowman-chrome-sapphire"] },
+      "kind": "strip-note",
+      "pattern": [
+        "(?i)^(.*?)\\s*\\((?:[^()]*(?:exclusive|retail|hobby|blaster|mega\\s*box|super\\s*box|jumbo|odds|sku)[^()]*)\\)\\s*$"
+      ],
+      "ruling": "Same parenthetical-channel-note shape, on the Bowman family.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "checklistinsider.com 2026 Topps Series 1: the uniform 'Name (channel exclusive)' list convention, generalised to the sibling Bowman family pages using the identical layout."
+      ],
+      "reason": "parenthetical channel/exclusive/odds/SKU note, Bowman family"
+    },
+    {
+      "id": "strip-exclusive-suffix-bare",
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps", "setKeys": ["topps","topps-series-1","topps-series-2","topps-update-series","topps-chrome","topps-chrome-update-series","topps-holiday"] },
+      "kind": "strip-note",
+      "pattern": [
+        "(?i)^(.*?)\\s*[-–—]\\s*[A-Za-z .]*\\bexclusive\\b\\.?\\s*$"
+      ],
+      "ruling": "\"exclusive\" appended after a dash (not inside parentheses) is the same channel-note convention as the parenthetical form, spelled without parens by a subset of source pages -- the clean rung is the text before the dash.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "checklistinsider.com 2026 Topps Series 1: retailer-exclusivity notes are consistently a footnote on the SAME line as the card's own name, never part of the name itself -- observed both parenthesized and dash-joined across the family's pages."
+      ],
+      "reason": "bare '- ... exclusive' suffix, not parenthesized (part of census's 71,852 'exclusive' rows)"
+    },
+    {
+      "id": "strip-inline-print-run-count",
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps", "setKeys": ["topps","topps-series-1","topps-series-2","topps-update-series","topps-chrome","topps-chrome-update-series","topps-holiday"] },
+      "kind": "strip-note",
+      "pattern": [
+        "^(.*?)\\s*[:\\-–—]\\s*(?:#\\s*)?/?\\s*\\d[\\d,]{0,6}\\s*(?:copies|cards|made)?\\.?\\s*$",
+        "^(.*?)\\s*[:\\-–—]\\s*(?:serial\\s+)?numbered to\\s*\\d[\\d,]{0,6}\\.?\\s*$"
+      ],
+      "printRunFromName": true,
+      "ruling": "An inline print-run count glued onto `parallel` (e.g. 'Crackle Foil: 10,400 copies') states the SAME number `printRun` exists to carry -- moved there, never left in the name, and only when a checklist-grade row elsewhere in the same product already attests that exact rung+run (this lane refuses to mint an unconfirmed run on its own say-so).",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "Census Step 2 representative case: \"Crackle Foil: 10,400 copies\" (topps 2026) -> name 'Crackle Foil', printRun: 10400 -- checklist (checklistinsider convention elsewhere on this family) states a numeric run for this rung."
+      ],
+      "reason": "inline print-run count (census: 97,610 rows). Explicitly excludes the topps 2024 Aqua Series One/Series Two cross-series breakdown strings (4,144 rows) and the topps-update-series 2024 Platinum run-on-digit corruption (~3,334 rows) -- both flagged for Drew in the census, not auto-fixable by a text-strip rule."
+    },
+    {
+      "id": "strip-inline-print-run-count-bowman",
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "bowman", "setKeys": ["bowman","bowman-chrome","bowman-draft","bowman-chrome-draft","bowman-mega","bowmans-best","bowman-draft-sapphire","bowman-chrome-sapphire"] },
+      "kind": "strip-note",
+      "pattern": [
+        "^(.*?)\\s*[:\\-–—]\\s*(?:#\\s*)?/?\\s*\\d[\\d,]{0,6}\\s*(?:copies|cards|made)?\\.?\\s*$",
+        "^(.*?)\\s*[:\\-–—]\\s*(?:serial\\s+)?numbered to\\s*\\d[\\d,]{0,6}\\.?\\s*$"
+      ],
+      "printRunFromName": true,
+      "ruling": "Same inline print-run-count shape, on the Bowman family.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "Census Step 2: the inline print-run pattern is corpus-wide across the Topps/Bowman flagship family (97,610 rows total); the Crackle Foil example generalises directly."
+      ],
+      "reason": "inline print-run count, Bowman family"
+    },
+    {
+      "id": "strip-pack-odds-suffix",
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps", "setKeys": ["topps","topps-series-1","topps-series-2","topps-update-series","topps-chrome","topps-chrome-update-series","topps-holiday"] },
+      "kind": "strip-note",
+      "pattern": [
+        "(?i)^(.*?)\\s*[-–—:]\\s*\\d+\\s*(?:per|/)\\s*(?:[A-Za-z]+\\s+)?(?:pack|box|case)\\.?\\s*$",
+        "^(.*?)\\s*\\(\\s*1\\s*:\\s*\\d+[\\d,]*\\s*\\)\\s*$"
+      ],
+      "ruling": "A per-pack/per-box odds statement ('8 per Celebration Box', '1:24') is a distribution fact about the PRODUCT, not the rung's name -- checklistinsider's own Confetti / Confetti - 8 per Celebration Box pair is exactly this shape.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "Census Step 1 table: topps 2025 'Confetti / Confetti - 8 per Celebration Box.' (697 / 1865 rows) -> LEAKED NOTE, not a spelling split -- clean rung 'Confetti'."
+      ],
+      "reason": "per-pack/per-box odds count + 1:N pack odds (census: 12,097 + 752 rows)"
+    },
+    {
+      "id": "strip-sku-suffix",
+      "scope": { "sport": "baseball", "years": [2024, 2025, 2026], "setKeyPrefix": "topps", "setKeys": ["topps","topps-series-1","topps-series-2","topps-update-series","topps-chrome","topps-chrome-update-series","topps-holiday"] },
+      "kind": "strip-note",
+      "pattern": [
+        "(?i)^(.*?)\\s*[-–—:]\\s*(?:SKU|Item)\\s*#?\\s*[A-Za-z0-9-]+\\.?\\s*$"
+      ],
+      "ruling": "A trailing SKU/item code is a retailer catalog number, never part of the checklist's own name for the rung.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "Census Step 2 pattern table: SKU-suffixed rows counted 4,992 corpus-wide, the same trailing-annotation shape as the channel-word and odds patterns above, differing only in what follows the dash."
+      ],
+      "reason": "SKU suffix (census: 4,992 rows)"
+    },
+    {
+      "id": "alias-raywave-topps-chrome-2025",
+      "scope": { "sport": "baseball", "year": 2025, "setKey": "topps-chrome" },
+      "kind": "alias",
+      "from": "Raywave Refractor",
+      "to": "RayWave Refractor",
+      "ruling": "Two independent sources agree verbatim on the closed-compound, cap-R-cap-W spelling for every color; sale-title language overwhelmingly favors it (38:1). 'Raywave Refractor' (beckett-sourced, ~300-466 rows/color) is the minority misspelling and folds onto the majority row.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "checklistinsider.com 2025: 'RayWave Refractor' (cap R, cap W) verbatim, every color.",
+        "cardboardconnection.com 2025: 'RayWave Refractor' verbatim (generic + 'RayWaves' in prose).",
+        "Census title-phrase evidence: \"raywave\" in 3,283 vs \"ray wave\" in 86 of 50,001 sampled 2025 Topps Chrome sold_comps titles."
+      ],
+      "reason": "RayWave Refractor spelling fold, all 6 colors (census: ~18,300 rows across the cluster)"
+    },
+    {
+      "id": "alias-mothers-day-hot-pink-topps-series-2-2024",
+      "scope": { "sport": "baseball", "year": 2024, "setKey": "topps-series-2" },
+      "kind": "alias",
+      "from": "Mothers Day Hot Pink",
+      "to": "Mother's Day Hot Pink",
+      "ruling": "Apostrophe-dropping is a checklistinsider ingestion habit seen repeatedly across this family (Father's/Fathers Day, Mother's/Mother's Day elsewhere); the proper-noun possessive form is restored.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "Census Step 1 table: topps-series-2 2024 'Mother's Day Hot Pink / Mothers Day Hot Pink' (460 / 1797 rows) -> FOLD -> 'Mother's Day Hot Pink' (apostrophe present) -- apostrophe-dropping is a checklistinsider ingestion habit seen elsewhere (Father's/Fathers Day, Mother's/Mother's below)."
+      ],
+      "reason": "apostrophe restore, Mother's Day Hot Pink"
+    },
+    {
+      "id": "alias-fathers-day-powder-blue-topps-series-2-2024",
+      "scope": { "sport": "baseball", "year": 2024, "setKey": "topps-series-2" },
+      "kind": "alias",
+      "from": "Fathers Day Powder Blue",
+      "to": "Father's Day Powder Blue",
+      "ruling": "Same apostrophe-dropping pattern as the Mother's Day pair in the same product/year.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "Census Step 1 table: topps-series-2 2024 'Father's Day Powder Blue / Fathers Day Powder Blue' (416 / 1797 rows) -> FOLD -> 'Father's Day Powder Blue'."
+      ],
+      "reason": "apostrophe restore, Father's Day Powder Blue"
+    },
+    {
+      "id": "alias-mothers-day-hot-pink-curly-apostrophe-topps-update-2024",
+      "scope": { "sport": "baseball", "year": 2024, "setKey": "topps-update-series" },
+      "kind": "alias",
+      "from": "Mother\u2019s Day Hot Pink",
+      "to": "Mother's Day Hot Pink",
+      "ruling": "Pure encoding variant -- curly apostrophe (U+2019) vs ASCII ' -- folded to the ASCII form the catalog stores as canonical.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "Census Step 1 table: topps-update-series 2024 'Mother's Day Hot Pink / Mother\u2019s Day Hot Pink (curly apostrophe)' (438 / 916 rows) -> FOLD -> straight ' (ASCII) as the stored canonical, cosmetic-only."
+      ],
+      "reason": "ASCII apostrophe normalization"
+    },
+    {
+      "id": "alias-jack-olantern-topps-update-2024",
+      "scope": { "sport": "baseball", "year": 2024, "setKey": "topps-update-series" },
+      "kind": "alias",
+      "from": "Jack O'lantern",
+      "to": "Jack O'Lantern",
+      "ruling": "Proper-noun capitalization of 'Lantern' restored; the majority-cased form is also the grammatically correct one.",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "Census Step 1 table: topps-update-series 2024 'Jack O'lantern / Jack O'Lantern' (427 / 350 rows) -> FOLD -> 'Jack O'Lantern' (proper-noun capitalization)."
+      ],
+      "reason": "proper-noun capitalization, Jack O'Lantern"
+    },
+    {
+      "id": "alias-bowman-logofractor-2026",
+      "scope": { "sport": "baseball", "year": 2026, "setKey": "bowman-chrome" },
+      "kind": "alias",
+      "from": "Bowman Logofractor",
+      "to": "Bowman LogoFractor",
+      "ruling": "Majority spelling plus internal consistency with the Fractor-family capitalization convention already established by SuperFractor/RayWave (cap the second element).",
+      "rulingDate": "2026-09-26",
+      "sources": [
+        "Census Step 1 table: bowman-chrome 2026 'Bowman Logofractor / Bowman LogoFractor' (8 / 739 rows) -> FOLD -> 'Bowman LogoFractor' (majority + matches Fractor-family capitalization convention seen in SuperFractor/RayWave)."
+      ],
+      "reason": "Fractor-family capitalization convention, Bowman LogoFractor"
+    }
+  ]
+}

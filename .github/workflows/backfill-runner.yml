@@ -182,6 +182,21 @@ on:
           - emit-staging-to-pool
           - retire-autoseed-window
           - clean-parallel-annotations
+          # CF-A-NOTE-IS-NOT-A-RUNG (2026-09-26). Rewrites card_catalog
+          # `parallel` names by REVIEWED rules under
+          # backend/data/parallel-name-rules/ -- strips a leaked
+          # retailer/print-run/odds/SKU note out of the name (251,043 rows,
+          # 2026-09-26 census) and folds a genuine spelling split (RayWave,
+          # apostrophe/case pairs) onto its checklist-attested rung. SCOPE is
+          # the rules file (REQUIRED, no default, same "the list is the
+          # scope" doctrine as relocate-catalog-rows-by-list); TITLES filters
+          # to one or more rule ids for a canary. Never touches isAuto; only
+          # ever fills printRun under the explicit printRunFromName gate, and
+          # only when a checklist-grade twin elsewhere attests the exact
+          # (parallel, printRun). Retires a duplicate source only when
+          # sold_comps sales at it are ZERO; a derived twin at the clean
+          # address is HELD, never overwritten.
+          - rewrite-parallel-names
           - retire-exploded-checklist-rows
           - purge-unaddressable-catalog-rows
 
@@ -2297,7 +2312,7 @@ jobs:
           # feature has no dispatch path at all: the script only ever reads
           # process.env.TITLES, which this workflow never set for this
           # script before now.
-          TITLES: ${{ inputs.script == 'resolve-split-identity-parks' && inputs.titles || inputs.script == 'fold-catalog-duplicate-rungs' && inputs.titles || inputs.script == 'resolve-disagreeing-sale-twins' && inputs.titles || '' }}
+          TITLES: ${{ inputs.script == 'resolve-split-identity-parks' && inputs.titles || inputs.script == 'fold-catalog-duplicate-rungs' && inputs.titles || inputs.script == 'resolve-disagreeing-sale-twins' && inputs.titles || inputs.script == 'rewrite-parallel-names' && inputs.titles || '' }}
           # route-backing-gaps (2026-09-20). The GAP ROUTER reads `titles` as
           # an OPTIONAL comma-separated setKey filter (SET_KEYS) -- NOT a
           # from>to pair list like the sibling repoint lanes above: this lane
@@ -3639,6 +3654,30 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moved=${N:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=clean-parallel-annotations -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}"
+
+      - name: Self-relaunch the parallel-name rewrite until the slot is clean
+        # CF-RELAUNCH-ONLY-ON-BUDGET (#1361): gated on the MARKER
+        # runLane/main prints via runner-budget.cjs's own
+        # `stoppedAtBudget()` phrase, never on a count. `scope` carries the
+        # rules file (REQUIRED, no default -- this lane refuses without it,
+        # same doctrine as relocate-catalog-rows-by-list), `titles` an
+        # optional rule-id filter for a canary dispatch.
+        if: ${{ !cancelled() && inputs.script == 'rewrite-parallel-names' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: rewrite-parallel-names
+          preamble: |
+            N=$(grep -aoE "reconciled: matched +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "matched=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (matched=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (matched=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rewrite-parallel-names -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}" -f limit="${{ inputs.limit }}"
 
       - name: Self-relaunch the trailing-comma name repair until the slot is clean
         # Stops at its own 140-minute budget and PRINTS its summary; a run killed
