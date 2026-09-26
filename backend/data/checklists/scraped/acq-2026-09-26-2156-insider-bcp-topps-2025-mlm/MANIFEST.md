@@ -1,10 +1,10 @@
 # 2025 Topps Baseball -- Major League Material single-signer relics (MLM-/MLM2-), 2026-09-26
 
-Source: baseballcardpedia.com (same fetch-tooling note as the T90R package in
-this PR: checklistinsider.com names the insert but did not surface the
-card-by-card roster to this session; source tag kept as
-`checklistinsider-2026-09-26` per the task's naming instruction, sourceUrl
-reflects the page actually read).
+Source: baseballcardpedia.com, `source=baseballcardpedia-2026-09-26` --
+every staged row's card number, player name, rung name and print run was
+read directly off that page (same reconnaissance note as the T90R package
+in this PR: checklistinsider.com named the insert but did not surface its
+roster).
 
 ## What this package covers
 

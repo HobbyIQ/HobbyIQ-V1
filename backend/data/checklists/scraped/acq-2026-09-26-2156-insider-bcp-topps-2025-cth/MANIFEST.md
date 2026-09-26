@@ -1,10 +1,11 @@
 # 2025 Topps Baseball -- Call to the Hall (CTH-), 2026-09-26
 
-Source: baseballcardpedia.com (checklistinsider.com names the insert in its
-own overview prose but did not surface this section's card-by-card roster to
-this session's fetch tooling; sourceUrl in the manifest reflects the page
-actually read, source tag kept as `checklistinsider-2026-09-26` per the
-task's naming instruction).
+Source: baseballcardpedia.com, `source=baseballcardpedia-2026-09-26` --
+every staged row's card number, player name, rung name and print run was
+read directly off that page. checklistinsider.com was consulted only for
+reconnaissance (its own overview prose names the insert) but did not
+surface this section's card-by-card roster to this session's fetch tooling,
+and no staged row's text came from it.
 
 ## What this package covers
 

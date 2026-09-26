@@ -1,7 +1,9 @@
 # 2025 Topps Baseball -- 2024 First Pitch (FP-/FP2-), 2026-09-26
 
-Source: baseballcardpedia.com (same fetch-tooling note as the CTH package in
-this PR).
+Source: baseballcardpedia.com, `source=baseballcardpedia-2026-09-26` --
+every staged row's text was read directly off that page (same reconnaissance
+note as the CTH package in this PR: checklistinsider.com named the insert
+but did not surface its roster).
 
 ## What this package covers
 
