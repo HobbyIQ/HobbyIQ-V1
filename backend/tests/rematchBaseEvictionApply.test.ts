@@ -248,6 +248,12 @@ describe("the eviction never loses a sale", () => {
     const out = await R.relocateSoldComp(pool, {
       keep: buildEvictionKeep(fresh, { storedSlugParallel: "refractor", storedParallelField: "Base", titleQuoted: "t", baseDestSlug: BASE_DEST, baseDestChecklistBacked: true }),
       drop: [{ id: fresh.id, cardId: fresh.cardId }], verifyFields: ["cardId"],
+      // The upsert stub above throws a 429 on EVERY call, forever -- this
+      // test is pinning the immediate-failure shape (nothing deleted, sale
+      // stays put), not cosmos-backoff.cjs's retry/backoff behavior (that
+      // lives in cosmosBackoff.test.ts), so it supplies a no-op retry rather
+      // than exercising the real default's multi-attempt wait.
+      retry: (fn: () => Promise<any>) => fn(),
     });
 
     expect(out.ok).toBe(false);

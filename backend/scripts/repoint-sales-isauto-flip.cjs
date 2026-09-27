@@ -88,22 +88,30 @@
  *
  * RECONCILE: candidates = repointed + movedByAutoOnlyOverride +
  * collapsedOntoResident + refusedNoChecklistAtFlip + refusedChecklistAtBoth +
- * refusedPossibleTwinAtDestination + refusedEtagChanged + failed +
- * notReached. Exits non-zero when the counters do not add up.
+ * refusedPossibleTwinAtDestination + refusedEtagChanged + failed.
+ * Exits non-zero when the counters do not add up.
  * `movedByAutoOnlyOverride` is drawn from the SAME `candidates` population as
  * every other outcome (a checklist-at-both row was already a candidate
- * before the R-0927d gate ever runs), so -- unlike `refusedGradedParse`
- * below -- it belongs in this formula and must never be excluded from it.
+ * before the R-0927d gate ever runs), so -- unlike `refusedGradedParse` and
+ * `notReached` below -- it belongs in this formula and must never be
+ * excluded from it.
  *
- * `refusedGradedParse` is DELIBERATELY NOT part of this formula, and is
- * DELIBERATELY NOT folded into the `refused` count reportWrites() sees
- * either: a row whose id (grade-aware) does not parse at all never becomes a
- * candidate in the first place (`candidates` only increments after
- * `flippedId()` succeeds), so it is counted against `scanned`, reported on
- * its own line, and left out of both reconciliations -- folding it into
- * either would count it against a population it was never drawn from,
- * producing a false RECONCILE MISMATCH / reportWrites over-account on any
- * real run that meets even one malformed id alongside a real outcome.
+ * `refusedGradedParse` and `notReached` are BOTH DELIBERATELY NOT part of
+ * this formula, and DELIBERATELY NOT folded into the `refused`/`skipped`
+ * counts reportWrites() sees as anything but their own named bucket: a row
+ * whose id (grade-aware) does not parse at all never becomes a candidate
+ * (`candidates` only increments after `flippedId()` succeeds), and a row the
+ * budget stops before `processSale` classifies it never reaches that same
+ * line either (the budget check is the FIRST thing `processSale` does, atop
+ * of `s.candidates++`). Both are counted against `scanned`, reported on
+ * their own line, and left out of the candidate reconciliation -- folding
+ * either into it would count it against a population it was never drawn
+ * from, producing a false RECONCILE MISMATCH / reportWrites over-account:
+ * `refusedGradedParse` on any real run that meets even one malformed id
+ * alongside a real outcome, and `notReached` (R-0927f, 2026-09-27: run
+ * 36301171656) on ANY run the budget stops mid-scan -- not rare at all,
+ * since every whole-sport-year scan over 100k+ rows routinely hits its own
+ * budget, and that run exited 4 on a REPORT that had done nothing wrong.
  *
  * SCAN SHAPE. Point reads only for the destination check (item(id,
  * pk=/cardId)); the source scan is paginated {maxItemCount:500,
@@ -120,6 +128,49 @@
  *      comma-separated setKey filter; SLOT/SLOTS; CONCURRENCY=8;
  *      RUN_MINUTES=110; LIMIT=0; PLAN_OUT.
  * Requires dist/ (hobbyIqCardId, catalogAuthority, writeReconciliation).
+ *
+ * R-0927e BACKOFF + HONEST EXIT (Drew, 2026-09-27, incident: run 36297136135,
+ * SCOPE baseball:2026, APPLY -- gh run view 36297136135 --log,
+ * C:/tmp/isauto-0926-runs.txt 05:26Z-06:2xZ entries).
+ *
+ * DEFECT 1: a Cosmos 429 inside a per-candidate `catalogRowAt()` point read
+ * (`cat.item(id, id).read()`, no retry at all) outlived the @azure/cosmos
+ * SDK's own internal retry budget and threw all the way out of `main()`
+ * after 3,244 verified moves had already landed -- read-back afterwards
+ * (11/11 sampled move rows) proved the writes DID land; only the SCAN died.
+ * Fixed by wrapping every Cosmos call this lane makes (the two `catalogRowAt`
+ * point reads, the `residentAt` point read, the source scan's `fetchNext`,
+ * and -- via relocate-sold-comp.cjs's own new default -- the mover's
+ * upsert/read-back/delete) in `withBackoff` (lib/cosmos-backoff.cjs):
+ * bounded exponential backoff + jitter, honouring the server's own
+ * `retryAfterInMs`, logging one `[backoff] ... 429 attempt k/N` line per
+ * retry, rethrowing (labeled) after the budget exhausts. This does not
+ * change what a move IS: create -> read-back -> delete, unchanged; a delete
+ * whose OWN retries exhaust after a successful create+verify still leaves a
+ * `duplicatesLeft` row -- a proven duplicate, never a lost sale.
+ *
+ * DEFECT 2: the workflow's own relaunch preamble
+ * (`R=$(grep -aoE "(REPOINTED|WOULD REPOINT) +[0-9,]+" ...)`) reads the LAST
+ * such banner line in the teed log -- and prints `repointed=0` when the
+ * process died before ever reaching that banner, which reads as "zero writes
+ * happened" when in fact 3,244 had. Fixed on both sides: this script now
+ * writes its own counters to a small JSON ledger
+ * (`<PLAN_OUT>/repoint-sales-isauto-flip-counters.json`,
+ * or the OS temp dir when PLAN_OUT is unset) on EVERY exit path
+ * (`process.on("exit")`, both the success path and an uncaught throw), and
+ * the workflow's `preamble` for this lane (backfill-runner.yml, this lane's
+ * own block only -- relaunch-on-marker/action.yml is untouched) now reads
+ * that file instead of grepping a banner line, printing
+ * `ABNORMAL EXIT after <n> confirmed writes -- see plan ledger` when the
+ * ledger's own `abnormalExit` flag is set, rather than defaulting to 0.
+ *
+ * DEFECT 3 (bounded concurrency guard, no new input): if 429s exceed
+ * THROTTLE_TRIP_AT (20) within THROTTLE_WINDOW_MS (60s), in-flight
+ * concurrency is halved for the REST of the run (one-way per halving, can
+ * halve more than once if pressure continues) and the drop is logged --
+ * mirrors resolve-disagreeing-sale-twins.cjs's own one-way throttle-drop
+ * shape, generalised to a sliding window instead of a lifetime count so a
+ * long multi-hour scan does not trip on total throttles alone.
  */
 "use strict";
 const path = require("path");
@@ -133,6 +184,130 @@ const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dir
 const { parseSlugWithGrade } = require(path.join(__dirname, "lib", "graded-id.cjs"));
 const { autoOnlyOverride, autoOnlyOverrideDisabledReason } = require(path.join(__dirname, "lib", "auto-only-override.cjs"));
 const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
+const { withBackoff } = require(path.join(__dirname, "lib", "cosmos-backoff.cjs"));
+
+const REQUESTED_CONCURRENCY = Math.min(32, Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 8)));
+// Mutable: the throttle-window guard below halves `.effective` in place;
+// every reader of concurrency (runPool) re-reads it per dispatch so a
+// mid-run halving takes hold on the very next batch, not just the next page.
+const CONCURRENCY_STATE = { effective: REQUESTED_CONCURRENCY };
+
+// ── R-0927e THROTTLE WINDOW (defect 3, header above). A sliding window of
+// 429 timestamps, not a lifetime count -- resolve-disagreeing-sale-twins.cjs
+// trips once on a lifetime total; this lane instead asks "how many 429s in
+// the last THROTTLE_WINDOW_MS", so a long multi-hour scan across many pages
+// does not trip on accumulated-but-long-resolved pressure from an hour ago.
+// `throttleStats` is a white-box export (mirrors the sibling lane's own
+// convention) so a test can drive the drop without paying real backoff
+// waits. Each halving is one-way for the rest of the run; pressure that
+// continues past a first halving can trip again and halve again.
+const THROTTLE_TRIP_AT = 20;
+const THROTTLE_WINDOW_MS = 60 * 1000;
+const throttleStats = { count: 0, timestamps: [], halvings: 0 };
+function recordThrottle() {
+  const now = Date.now();
+  throttleStats.count++;
+  throttleStats.timestamps.push(now);
+  const cutoff = now - THROTTLE_WINDOW_MS;
+  while (throttleStats.timestamps.length && throttleStats.timestamps[0] < cutoff) throttleStats.timestamps.shift();
+  if (throttleStats.timestamps.length > THROTTLE_TRIP_AT) {
+    throttleStats.halvings++;
+    throttleStats.timestamps.length = 0; // this halving's own trip window is spent; start counting fresh
+    const before = CONCURRENCY_STATE.effective;
+    CONCURRENCY_STATE.effective = Math.max(1, Math.floor(before / 2));
+    console.log(`\n  THROTTLED: more than ${THROTTLE_TRIP_AT} Cosmos 429s in the last ${Math.round(THROTTLE_WINDOW_MS / 1000)}s -- halving in-flight concurrency ${before} -> ${CONCURRENCY_STATE.effective} for the rest of this run (halving #${throttleStats.halvings}). sold_comps is shared with production pricing; this lane backs off rather than compete for it.`);
+  }
+}
+// Test-only tuning for withBackoff's own bounds, so a test proving
+// exhaustion (a 429 that outlives every retry) does not have to pay real
+// multi-second backoff waits 8 times over. Absent in every real dispatch --
+// no workflow input sets these, and the defaults (8 attempts, 500ms base)
+// are what ships. `_TEST_BACKOFF_MAX_ATTEMPTS`/`_TEST_BACKOFF_BASE_MS`,
+// leading underscore, deliberately outside the documented env list above.
+const BACKOFF_OPTS = {
+  label: "repoint-sales-isauto-flip",
+  onThrottle: recordThrottle,
+  ...(process.env._TEST_BACKOFF_MAX_ATTEMPTS ? { maxAttempts: Number(process.env._TEST_BACKOFF_MAX_ATTEMPTS) } : {}),
+  ...(process.env._TEST_BACKOFF_BASE_MS ? { baseMs: Number(process.env._TEST_BACKOFF_BASE_MS) } : {}),
+};
+/** The one retrier every Cosmos call in this lane goes through -- passed
+ *  explicitly to relocateSoldComp too, so the mover's own upsert/read-back/
+ *  delete count toward the SAME throttle window as this lane's reads. */
+const retry = (fn) => withBackoff(fn, BACKOFF_OPTS);
+
+// ── R-0927e HONEST EXIT (defect 2, header above). The workflow's relaunch
+// preamble greps the LAST "REPOINTED"/"WOULD REPOINT" banner line out of the
+// teed log -- a line this script only ever prints AFTER every setKey has
+// finished, at the very end of main(). A crash mid-scan (run 36297136135's
+// 429) means that line never gets printed at all, and the preamble's own
+// shell default (`${R:-0}`) then reads as "zero writes happened" when in
+// fact `s.repointed` (a live counter, updated the instant each move commits)
+// was already 3,244. So the counters this script is SURE of, at the moment
+// it is exiting -- however it is exiting -- are written to a small JSON file
+// next to PLAN_OUT, on every exit path, and the workflow's own preamble for
+// this lane (backfill-runner.yml) reads THAT file instead of the banner text.
+//
+// LEDGER_STATE is populated by main() the instant `s` and PLAN_OUT are both
+// known (before any row is scanned, so even a crash on the very first
+// candidate still has somewhere to write real, if all-zero, counters).
+// `finalWritten` distinguishes the clean end-of-run write (main()'s own last
+// line, everything reconciled) from the safety-net write below, which fires
+// ONLY when nothing else already wrote a final ledger for this process.
+const LEDGER_STATE = { s: null, dir: "", finalWritten: false };
+
+function countersLedgerPath(dir) {
+  // A directory next to PLAN_OUT when one was given (every real dispatch sets
+  // PLAN_OUT -- see backfill-runner.yml's per-lane wiring); os.tmpdir() as a
+  // fallback so a bare local run (no PLAN_OUT) still gets a ledger rather
+  // than throwing trying to mkdir an empty path.
+  const base = dir || require("node:os").tmpdir();
+  return path.join(base, "repoint-sales-isauto-flip-counters.json");
+}
+
+/** Writes the counters ledger SYNCHRONOUSLY (never console.log/async -- see
+ *  finishLane's own header on why a wedged pipe or an unresolved promise
+ *  must never be trusted to run before process.exit()). Never throws: a
+ *  ledger write failing must not be what turns a real outcome into a second,
+ *  different crash. `abnormalExit` is the ONLY thing the workflow preamble
+ *  keys off of -- true means the run did NOT reach its own clean ending. */
+function writeCountersLedger(abnormalExit, extra = {}) {
+  if (!LEDGER_STATE.s) return; // main() never got far enough to have counters
+  const s = LEDGER_STATE.s;
+  const record = {
+    at: new Date().toISOString(),
+    apply: APPLY,
+    abnormalExit: !!abnormalExit,
+    repointed: s.repointed ?? 0,
+    movedByAutoOnlyOverride: s.movedByAutoOnlyOverride ?? 0,
+    collapsedOntoResident: s.collapsedOntoResident ?? 0,
+    refused: (s.refusedNoChecklistAtFlip ?? 0) + (s.refusedChecklistAtBoth ?? 0)
+      + (s.refusedPossibleTwinAtDestination ?? 0) + (s.refusedEtagChanged ?? 0),
+    failed: s.failed ?? 0,
+    notReached: s.notReached ?? 0,
+    candidates: s.candidates ?? 0,
+    scanned: s.scanned ?? 0,
+    confirmedWrites: (s.repointed ?? 0) + (s.movedByAutoOnlyOverride ?? 0) + (s.collapsedOntoResident ?? 0),
+    ...extra,
+  };
+  try {
+    fs.writeFileSync(countersLedgerPath(LEDGER_STATE.dir), JSON.stringify(record));
+  } catch (e) {
+    // Never let a ledger-write failure become the reason the process exits
+    // abnormally -- the console banner (when reached) is still the fallback
+    // record, this is a BEST-EFFORT second copy for the crash case.
+    console.log(`\n::warning::could not write counters ledger: ${e?.message}`);
+  }
+}
+
+// Safety net: covers a synchronous throw or an exit path this file's own
+// main()/.catch() below did not anticipate. Guarded by `finalWritten` so it
+// never overwrites a clean, deliberate final write with a redundant (but
+// identical, since LEDGER_STATE.s is the same live object) one -- the guard
+// matters only in that it makes the intent legible in the ledger's own
+// `abnormalExit` flag: a `finalWritten` run already stamped its OWN verdict.
+process.on("exit", () => {
+  if (!LEDGER_STATE.finalWritten) writeCountersLedger(true, { exitHandler: true });
+});
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const str = (v) => String(v ?? "").trim();
@@ -142,7 +317,6 @@ const csv = (v) => String(v ?? "").split(",").map((x) => x.trim()).filter(Boolea
 
 const STARTED = Date.now();
 const CLOCK = budget({ minutes: 110, reserveMs: 90 * 1000, verifyMs: 5 * 60 * 1000, startedAt: STARTED });
-const CONCURRENCY = Math.min(32, Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 8)));
 const LIMIT = Number(process.env.LIMIT || 0);
 
 const SHARD_SCOPE = runnerShardScope({ label: "repoint-sales-isauto-flip" });
@@ -189,7 +363,7 @@ const REQUESTED_SET_KEYS = RAW_SET_KEYS.filter((k) => !WILDCARDS.has(k) && k !==
 async function forEachPage(container, spec, onPage, pageSize = 500) {
   const iter = container.items.query(spec, { maxItemCount: pageSize, maxDegreeOfParallelism: -1 });
   while (iter.hasMoreResults()) {
-    const page = await iter.fetchNext();
+    const page = await retry(() => iter.fetchNext());
     if ((await onPage(page.resources ?? [])) === false) return;
   }
 }
@@ -273,6 +447,10 @@ async function main() {
     refusedPossibleTwinAtDestination: 0, refusedEtagChanged: 0,
     failed: 0, notReached: 0,
   };
+  // From this line on, the module-scope exit safety net (process.on("exit"),
+  // registered above) can see LIVE counters -- a crash one line below this
+  // still has an all-zero-but-real ledger to write, rather than nothing.
+  LEDGER_STATE.s = s;
   let stoppedAtBudget = false;
   // Per-setKey counters, for the report-lane incident's own per-setKey table.
   const perSetKey = new Map();
@@ -292,6 +470,7 @@ async function main() {
   const failures = [];
 
   const PLAN_OUT = str(process.env.PLAN_OUT);
+  LEDGER_STATE.dir = PLAN_OUT;
   let planFd = null;
   if (PLAN_OUT) {
     try {
@@ -317,12 +496,12 @@ async function main() {
   }
 
   async function residentAt(saleId, cardId) {
-    try { return (await pool.item(saleId, cardId).read()).resource ?? null; }
+    try { return (await retry(() => pool.item(saleId, cardId).read())).resource ?? null; }
     catch (e) { if (e?.code === 404 || e?.statusCode === 404) return null; throw e; }
   }
 
   async function catalogRowAt(id) {
-    try { return (await cat.item(id, id).read()).resource ?? null; }
+    try { return (await retry(() => cat.item(id, id).read())).resource ?? null; }
     catch (e) { if (e?.code === 404 || e?.statusCode === 404) return null; throw e; }
   }
 
@@ -364,6 +543,10 @@ async function main() {
         keep, drop: [{ id: sale.id, cardId: sale.cardId }],
         verifyFields: ["cardId", "hobbyiqCardId"],
         dryRun: !APPLY,
+        // Same retrier this lane's own reads use, so a 429 anywhere inside
+        // the mover's upsert/read-back/delete counts toward the SAME
+        // throttle window (recordThrottle) that halves CONCURRENCY_STATE.
+        retry,
       });
       if (result?.ok) {
         if (viaOverride) { s.movedByAutoOnlyOverride++; st.movedByAutoOnlyOverride++; }
@@ -502,7 +685,10 @@ async function main() {
   async function runPool(items, worker) {
     let idx = 0;
     const runner = async () => { while (idx < items.length) { const my = idx++; await worker(items[my]); } };
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, Math.max(items.length, 1)) }, runner));
+    // Read CONCURRENCY_STATE.effective HERE, not once at module scope -- a
+    // halving mid-scan (recordThrottle) takes hold on the very next page's
+    // runPool call, since each page's worker count is decided fresh.
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY_STATE.effective, Math.max(items.length, 1)) }, runner));
   }
 
   for (const { cell, sport, year } of SCOPE_CELLS) {
@@ -597,25 +783,42 @@ async function main() {
   console.log(`  REFUSED: stale since the read            ${f(s.refusedEtagChanged)}`);
   console.log(`  failed                                  ${f(s.failed)}`);
   console.log(`  not reached (budget)                     ${f(s.notReached)}`);
+  console.log(`  Cosmos 429 retries (this run)           ${f(throttleStats.count)}${throttleStats.halvings ? `   <- concurrency halved ${throttleStats.halvings}x, now ${f(CONCURRENCY_STATE.effective)} (started at ${f(REQUESTED_CONCURRENCY)})` : ""}`);
   if (stoppedAtBudget || CLOCK.outOfClock()) {
     console.log(`  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- the slot has more to do`);
   }
   if (!APPLY) console.log(`\nREPORT ONLY -- nothing was written. Re-run with BACKFILL_APPLY=true to apply.`);
 
-  // RECONCILE. Every candidate is repointed, collapsed onto a proven
-  // duplicate, refused (named), failed, or not reached before the budget --
-  // never silently dropped. Denominators must match: `candidates` is the
-  // SAME population every outcome below is drawn from. `refusedGradedParse`
-  // is counted against `scanned`, not `candidates` (a row that does not
-  // parse never became a candidate), so it is added to both sides of the
-  // ledger identically and cancels out of the candidate reconcile below.
+  // RECONCILE (R-0927f fix, 2026-09-27, incident: run 36301171656, SCOPE
+  // baseball:2026 REPORT concurrency=4, budget hit mid-scan). That run
+  // printed `candidates 880,871` but `accounted-for 988,758` -- accounted-for
+  // exceeded candidates by EXACTLY `notReached` (107,887), and exited 4
+  // ("RECONCILE MISMATCH") on a run that had done nothing wrong; every
+  // whole-sport-year scan over 100k+ rows routinely hits its own budget, so
+  // this was not a rare edge case.
+  //
+  // THE BUG. `s.notReached++` fires at the TOP of `processSale`, BEFORE
+  // `flippedId()` ever runs and BEFORE `s.candidates++` -- see the guard at
+  // that function's own top. So a not-reached row was NEVER a candidate,
+  // exactly the same shape `refusedGradedParse` (documented and excluded
+  // below) already is. The formula used to ADD `notReached` on top of
+  // `candidateOutcomes` while comparing that sum against `s.candidates` --
+  // two different populations on the two sides of one `!==`, guaranteed to
+  // mismatch by exactly `notReached` on any run the budget actually stops.
+  // The fix is the one `refusedGradedParse` already models: `notReached` is
+  // EXCLUDED from this formula, denominators on both sides of the `!==`
+  // stay `candidates`-only, and a clean budget stop reconciles instead of
+  // exiting 4. `notReached` is still reported on its own line (the banner
+  // above) -- never silently dropped, just never folded into a population
+  // it was never drawn from (see the `reportWrites` call below, where it is
+  // excluded from `skipped` for the identical reason).
   const candidateOutcomes = s.repointed + s.movedByAutoOnlyOverride + s.collapsedOntoResident
     + s.refusedNoChecklistAtFlip + s.refusedChecklistAtBoth
     + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged
-    + s.failed + s.notReached;
+    + s.failed;
   console.log(`\n  reconciled: candidates ${f(s.candidates)} = accounted-for ${f(candidateOutcomes)}`);
   if (candidateOutcomes !== s.candidates) {
-    console.error("  !! RECONCILE MISMATCH -- a candidate was neither repointed, collapsed, refused, failed nor left unreached");
+    console.error("  !! RECONCILE MISMATCH -- a candidate was neither repointed, collapsed, refused nor failed");
     process.exitCode = 4;
   }
 
@@ -633,6 +836,20 @@ async function main() {
   // will meet malformed ids. It is reported on its own line (below and in the
   // per-setKey table) instead, exactly as `scanned`'s own non-candidate rows
   // already are.
+  //
+  // `notReached` is EXCLUDED from `skipped` for the SAME reason (R-0927f,
+  // 2026-09-27, run 36301171656). `reportWrites` (backend/src/services/ops/
+  // writeReconciliation.ts, off-limits to this fix -- src/ is untouched)
+  // computes `accounted = written + skipped + refused + failed` and compares
+  // it against `intended: s.candidates`. A not-reached row never became a
+  // candidate (the budget check at the top of `processSale` returns before
+  // `flippedId()` ever runs), so passing it as `skipped` against an
+  // `intended` that never counted it produces the exact "COUNTERS DO NOT ADD
+  // UP" / overAccounted false red this run hit on ANY budget stop under
+  // APPLY -- not a rare malformed-id edge case, but the ordinary outcome of
+  // a whole-sport-year scan over 100k+ rows. Omitted here entirely (the
+  // field is optional and defaults to 0), matching `refusedGradedParse`'s
+  // own omission from `refusedTotal` immediately above.
   const refusedTotal = s.refusedNoChecklistAtFlip + s.refusedChecklistAtBoth
     + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged;
   if (APPLY) {
@@ -641,20 +858,45 @@ async function main() {
       intended: s.candidates,
       written: s.repointed + s.movedByAutoOnlyOverride + s.collapsedOntoResident,
       refused: refusedTotal,
-      skipped: s.notReached,
       failed: s.failed,
     });
   }
 
   if (s.failed) { console.error(`::error::${f(s.failed)} sale(s) failed.`); process.exitCode = 4; }
+
+  // THE CLEAN LEDGER WRITE. main() reached its own end -- every setKey was
+  // scanned (or the budget stopped it on purpose, `s.notReached` says so),
+  // the reconcile ran, and whatever exitCode was set above (0, 4, or the
+  // scope-refusal 2 never reaches here at all) is final. `abnormalExit:
+  // false` is the ONLY signal the workflow preamble needs to print the
+  // ordinary repointed=N line instead of ABNORMAL EXIT.
+  writeCountersLedger(false);
+  LEDGER_STATE.finalWritten = true;
 }
 
 module.exports = {
   flippedId, INHERITED_SCOPES, WILDCARDS, CELL_RE, AUTO_ONLY_OVERRIDE_SENTINEL,
+  // White-box exports for the backoff/honest-exit tests only -- mirrors
+  // resolve-disagreeing-sale-twins.cjs's own `throttleStats` export
+  // convention, so a test can drive the halving and the ledger write
+  // without paying real backoff waits or a real Cosmos 429.
+  throttleStats, recordThrottle, CONCURRENCY_STATE, REQUESTED_CONCURRENCY,
+  LEDGER_STATE, writeCountersLedger, countersLedgerPath,
 };
 
 if (require.main === module) {
   main()
     .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
-    .catch(async (e) => { console.error("::error::" + (e?.stack ?? e)); finishLane(1, { budget: CLOCK }); });
+    .catch(async (e) => {
+      console.error("::error::" + (e?.stack ?? e));
+      // ABNORMAL EXIT (defect 2, header above). main() threw before reaching
+      // its own clean ending -- the counters LEDGER_STATE.s already carries
+      // (updated live as each move committed, never only at the end) are
+      // written here, `abnormalExit: true`, so the workflow's preamble can
+      // print an honest "ABNORMAL EXIT after <n> confirmed writes" instead of
+      // defaulting to repointed=0 on a run that in fact wrote 3,244 rows.
+      writeCountersLedger(true, { error: String(e?.message ?? e) });
+      LEDGER_STATE.finalWritten = true;
+      finishLane(1, { budget: CLOCK });
+    });
 }

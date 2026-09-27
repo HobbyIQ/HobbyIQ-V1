@@ -39,6 +39,22 @@
 "use strict";
 const crypto = require("crypto");
 const path = require("path");
+const { withBackoff } = require("./cosmos-backoff.cjs");
+
+/**
+ * DEFAULT_RETRY (2026-09-27, incident: run 36297136135 -- see cosmos-backoff.cjs's
+ * own header for the full trace). Every existing caller of `relocateSoldComp`/
+ * `readBackKeptRow` that does not pass its own `retry` used to get a bare
+ * `(fn) => fn()` passthrough -- so a 429 that outlived the @azure/cosmos SDK's
+ * own internal retry budget threw straight out of the upsert/read-back/delete
+ * chain with NO application-level backoff underneath any of the 22 other
+ * callers grepped in this file's own header, not just the isAuto-flip lane
+ * that surfaced it. The default is now a bounded, logged backoff instead of a
+ * no-op passthrough -- ANY caller that already supplies its own `retry`
+ * (rematch-sold-comps, rekey-product-setkey, ...) is COMPLETELY UNCHANGED,
+ * because a supplied argument always wins over a default parameter; this only
+ * changes the callers that had NOTHING wrapping their Cosmos calls before. */
+const defaultRetry = (fn) => withBackoff(fn, { label: "relocate-sold-comp" });
 
 /**
  * CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). The mover is SANCTIONED --
@@ -235,7 +251,7 @@ function readBackShowsWrite(doc, keep, verifyFields = []) {
   return verifyFields.every((f) => JSON.stringify(doc[f] ?? null) === JSON.stringify(keep[f] ?? null));
 }
 
-async function readBackKeptRow(pool, keep, retry = (fn) => fn(), wait = sleep, verifyFields = []) {
+async function readBackKeptRow(pool, keep, retry = defaultRetry, wait = sleep, verifyFields = []) {
   const shows = (doc) => readBackShowsWrite(doc, keep, verifyFields);
   for (let attempt = 0; attempt < READ_BACK_ATTEMPTS; attempt++) {
     let doc = null;
@@ -325,7 +341,7 @@ function is412(e) {
  *   readBackVia   how the write was confirmed: "point-read", a retry, or the
  *                 (id, cardId) query that defeats replica lag
  */
-async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verifyFields = [], dryRun = false, wait = sleep, guard = undefined }) {
+async function relocateSoldComp(pool, { keep, drop, retry = defaultRetry, verifyFields = [], dryRun = false, wait = sleep, guard = undefined }) {
   const drops = (drop ?? []).filter((d) => d && d.id && d.cardId && !sameRef(d, keep));
   if (!keep || !keep.id || !keep.cardId) throw new Error("relocateSoldComp: keep needs id and cardId");
 
