@@ -16,14 +16,17 @@
  * helper (already covered by its own suites) is exercised through a
  * minimal sold_comps fake for the write path.
  */
-import { describe, it, expect } from "vitest";
-import { readFileSync, existsSync } from "node:fs";
+import { describe, it, expect, afterAll, beforeAll } from "vitest";
+import { readFileSync, existsSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
+import { spawnSync } from "node:child_process";
+import * as os from "node:os";
 
 const require_ = createRequire(__filename);
 
 const lane = join(__dirname, "..", "scripts", "repoint-sales-by-list.cjs");
+const backend = join(__dirname, "..");
 const runner = join(__dirname, "..", "..", ".github", "workflows", "backfill-runner.yml");
 const firstList = join(__dirname, "..", "data", "sales-repoints", "2026-09-27-tcus-2025-usc143-raywave.json");
 
@@ -343,12 +346,30 @@ describe("the gates, driven directly against the shared libraries", () => {
 // ── REPORT writes nothing; a thrown read-back is FAILED not clean ───────
 
 describe("REPORT computes the same gates APPLY would, and writes nothing", () => {
-  it("APPLY is gated on BACKFILL_APPLY/APPLY, dryRun follows !APPLY through relocateSoldComp", () => {
+  it("relocateSoldComp is called EXACTLY once, dryRun tied to !APPLY — no parallel branch that skips it in REPORT", () => {
     const src = readFileSync(lane, "utf8");
-    // The one call site that writes must pass dryRun tied to !APPLY, never a
-    // parallel branch that skips the derivation in REPORT mode.
-    expect(src).toContain("if (!APPLY) {");
-    expect(src).toContain("relocateSoldComp(pool, {");
+    // Review round 1 (PR #2461): the shipped version short-circuited with
+    // `if (!APPLY) { movedSales++; continue; }` BEFORE relocateSoldComp was
+    // ever called, so guardSoldCompDoc never ran in REPORT mode at all. The
+    // fix is the same one-derivation shape relocate-catalog-rows-by-list.cjs
+    // (moveCatalogRow, dryRun: !APPLY) and repoint-sales-isauto-flip.cjs
+    // (performMove) already use: ONE call, for both modes.
+    expect((src.match(/await relocateSoldComp\(pool, \{/g) ?? []).length).toBe(1);
+    expect(src).toContain("dryRun: !APPLY,");
+    expect(src).not.toContain("if (!APPLY) {\n        movedSales++;");
+    expect(src).not.toMatch(/if \(!APPLY\) \{\s*movedSales\+\+/);
+  });
+
+  it("a destination that fails splitIdentityWriteGuard is REFUSED, named 'guard', counted the same in both modes", () => {
+    const src = readFileSync(lane, "utf8");
+    // relocateSoldComp consults guardSoldCompDoc BEFORE its own `if (dryRun)
+    // return {...}` short-circuit (lib/relocate-sold-comp.cjs), so calling it
+    // unconditionally with dryRun:!APPLY is what makes the guard run in
+    // REPORT too — this pins the CALL SITE reads that verdict, not just that
+    // the shared helper itself does (already covered by that helper's own
+    // suite).
+    expect(src).toContain('res.stage === "guard"');
+    expect(src).toContain("refusedGuard++");
   });
 
   it("a thrown relocateSoldComp call is counted FAILED, never a clean move", () => {
@@ -379,5 +400,317 @@ describe("the reconcile identity fails the run on mismatch", () => {
   it("the budget marker is a literal string, not assembled from variables", () => {
     const src = readFileSync(lane, "utf8");
     expect(src).toContain("stopped at the ${CLOCK.RUN_MINUTES}-minute budget");
+  });
+});
+
+// ── end-to-end against an in-memory Cosmos fake, driven as the committed
+// file via execFileSync -- modeled on repointSalesTiffanyTitleGatedLane.
+// test.ts's own shim (etag-aware upsert/read/delete via relocate-sold-comp
+// .cjs's real relocateSoldComp, @azure/cosmos replaced through Module._load,
+// every other require -- catalogAuthority, writeReconciliation,
+// splitIdentityWriteGuard -- loading the REAL compiled dist/). Review
+// round 1 on PR #2461 asked for three fixes verified end-to-end: the guard
+// runs identically in REPORT and APPLY; a budget stop mid-entry reconciles
+// exactly; expectedSales is enforced. All three need the lane actually
+// running against fake containers, which is what this harness drives. ────
+
+beforeAll(() => {
+  const built = existsSync(join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+  if (!built) throw new Error("backend/dist is not built -- run `npm run build` in backend/ before this suite");
+});
+
+const tmp = mkdtempSync(join(os.tmpdir(), "repoint-sales-by-list-lane-"));
+afterAll(() => { try { rmSync(tmp, { recursive: true, force: true }); } catch { /* best effort */ } });
+
+const SPORT = "baseball";
+const YEAR = 2025;
+const SETKEY = "topps-chrome-update-series";
+const FROM_ID = `hiq:${SPORT}:${YEAR}:${SETKEY}:usc143:raywave-refractor:no-auto`;
+const TO_ID = `hiq:${SPORT}:${YEAR}:${SETKEY}:usc143:ray-wave-refractor:no-auto`;
+
+const FROM_ROW = { id: FROM_ID, cardId: FROM_ID, sport: SPORT, year: YEAR, setKey: SETKEY, cardNumber: "usc143", source: "checklistinsider-2026-08-27", playerName: "Adael Amador" };
+const TO_ROW = { id: TO_ID, cardId: TO_ID, sport: SPORT, year: YEAR, setKey: SETKEY, cardNumber: "usc143", source: "checklistinsider-2026-08-27", playerName: "Adael Amador" };
+
+function writeList(entries: Entry[], tag: string): string {
+  const p = join(tmp, `list-${tag}-${Math.random().toString(36).slice(2)}.json`);
+  writeFileSync(p, JSON.stringify({ forLane: "repoint-sales-by-list", entries }));
+  return p;
+}
+
+function shim(opts: {
+  sales?: Array<Record<string, unknown>>;
+  catalog?: Array<Record<string, unknown>>;
+  /** Artificial delay (ms) on EVERY sold_comps point read, used to drive the
+   *  runner-budget.cjs clock (BUDGET_MS/RESERVE_MS env, both overridable) to
+   *  expire deterministically mid-entry, after a known number of per-sale
+   *  reads have already completed. */
+  saleReadDelayMs?: number;
+} = {}): { requirePath: string; ledger: string } {
+  const ledger = join(tmp, `ledger-${Math.random().toString(36).slice(2)}.json`);
+  const p = join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
+  const sales = opts.sales ?? [];
+  const catalog = opts.catalog ?? [];
+  const saleReadDelayMs = opts.saleReadDelayMs ?? 0;
+
+  writeFileSync(p, `
+const Module = require("node:module");
+const fs = require("node:fs");
+const LEDGER = ${JSON.stringify(ledger)};
+const SALE_READ_DELAY_MS = ${JSON.stringify(saleReadDelayMs)};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const salesKey = (id, cardId) => id + "::" + cardId;
+
+let etagCounter = 0;
+const stampEtag = (d) => { d._etag = "etag-" + (++etagCounter); return d; };
+const SALES_SEED = ${JSON.stringify(sales)}.map(stampEtag);
+
+const state = {
+  sales: new Map(SALES_SEED.map((d) => [salesKey(d.id, d.cardId), d])),
+  catalog: new Map(${JSON.stringify(catalog)}.map((d) => [d.id, d])),
+};
+const led = { salesUpserts: [], salesDeletes: [] };
+const save = () => fs.writeFileSync(LEDGER, JSON.stringify(led));
+save();
+
+function notFound() { return Object.assign(new Error("not found"), { code: 404 }); }
+
+const catalogContainer = {
+  item: (id, pk) => ({
+    read: async () => {
+      const d = state.catalog.get(id);
+      if (!d) throw notFound();
+      return { resource: structuredClone(d) };
+    },
+  }),
+};
+
+const salesContainer = {
+  item: (id, pk) => ({
+    read: async () => {
+      if (SALE_READ_DELAY_MS > 0) await sleep(SALE_READ_DELAY_MS);
+      const d = state.sales.get(salesKey(id, pk));
+      if (!d) throw notFound();
+      return { resource: structuredClone(d) };
+    },
+    delete: async () => {
+      if (!state.sales.has(salesKey(id, pk))) throw notFound();
+      state.sales.delete(salesKey(id, pk));
+      led.salesDeletes.push(id);
+      save();
+      return {};
+    },
+  }),
+  items: {
+    upsert: async (doc) => {
+      const stored = structuredClone(doc);
+      stampEtag(stored);
+      state.sales.set(salesKey(doc.id, doc.cardId), stored);
+      led.salesUpserts.push(doc.id);
+      save();
+      return { resource: structuredClone(stored) };
+    },
+    // sales-at-id.cjs's dual check: the SAME query text, once cross-
+    // partition and once scoped with partitionKey -- both are answered from
+    // the same in-memory set here, since a fake has no real partitioning.
+    query: (spec, feedOpts) => {
+      const q = typeof spec === "string" ? spec : spec.query;
+      const params = Object.fromEntries((spec.parameters ?? []).map((x) => [x.name, x.value]));
+      const all = [...state.sales.values()];
+      let resources;
+      if (q.includes("c.hobbyiqCardId = @id OR c.cardId = @id")) {
+        const id = params["@id"];
+        resources = all.filter((d) => d.hobbyiqCardId === id || d.cardId === id);
+        if (feedOpts && feedOpts.partitionKey) {
+          resources = resources.filter((d) => d.cardId === feedOpts.partitionKey);
+        }
+      } else {
+        throw new Error("fake sold_comps: unsupported query " + q);
+      }
+      let done = false;
+      return {
+        hasMoreResults: () => !done,
+        fetchNext: async () => { done = true; return { resources: resources.map((r) => structuredClone(r)), continuationToken: undefined }; },
+        fetchAll: async () => ({ resources: resources.map((r) => structuredClone(r)) }),
+      };
+    },
+  },
+};
+
+const stub = {
+  CosmosClient: class {
+    dispose() {}
+    database() {
+      return {
+        container: (name) => {
+          if (name === "sold_comps") return salesContainer;
+          if (name === "card_catalog") return catalogContainer;
+          throw new Error("unknown container " + name);
+        },
+      };
+    }
+  },
+};
+
+const realLoad = Module._load;
+Module._load = function (request) {
+  const r = String(request);
+  if (r === "@azure/cosmos") return stub;
+  // catalogAuthority, writeReconciliation and splitIdentityWriteGuard are
+  // left to load the REAL compiled dist/ so this end-to-end suite exercises
+  // the actual guard and reconciliation, not a no-op.
+  return realLoad.apply(this, arguments);
+};
+`);
+  return { requirePath: p, ledger };
+}
+
+function drive(env: Record<string, string>, opts: Parameters<typeof shim>[0] = {}) {
+  const { requirePath, ledger } = shim(opts);
+  // spawnSync, not execFileSync: execFileSync returns ONLY stdout on a clean
+  // exit and only merges stderr into the thrown error's fields on a NONZERO
+  // exit. This lane's REFUSED/FAILED lines are console.error (stderr) and a
+  // REPORT run legitimately exits 0, so execFileSync would silently drop
+  // every one of them on the success path this suite most needs to read.
+  const res = spawnSync(process.execPath, [lane], {
+    cwd: backend,
+    env: {
+      PATH: process.env.PATH ?? "",
+      SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\\Windows",
+      NODE_OPTIONS: `--require ${JSON.stringify(requirePath)}`,
+      COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
+      ...env,
+    },
+    encoding: "utf8",
+    timeout: 60_000,
+  });
+  const code = res.status ?? -1;
+  const out = String(res.stdout ?? "") + String(res.stderr ?? "");
+  const led = JSON.parse(readFileSync(ledger, "utf8"));
+  return { code, out, led };
+}
+
+describe("end-to-end: the guard runs identically in REPORT and APPLY", () => {
+  // A destination address with too few colon segments trips
+  // splitIdentityWriteGuard's malformed-key park BEFORE relocateSoldComp's
+  // own `if (dryRun) return` -- so calling it unconditionally with
+  // dryRun:!APPLY (the fix) makes the refusal fire the same way in both
+  // modes. A destination this short still passes classifyEntry's own
+  // `toId.startsWith("hiq:")` check, so the malformed shape is caught by the
+  // shared guard, not by this lane's own list-schema validation.
+  const MALFORMED_TO = "hiq:x:y";
+
+  it("REPORT refuses the malformed destination and counts it as guard, same as APPLY", () => {
+    // allowCrossProduct bypasses GATE 3 (sameProductAddress) deliberately --
+    // this test's whole point is to reach the per-sale relocateSoldComp
+    // call so the SHARED GUARD is what refuses, not this lane's own product
+    // gate (which a 3-segment id would also fail, for an unrelated reason).
+    const list = writeList([{
+      fromId: FROM_ID, toId: MALFORMED_TO, reason: "why",
+      allowCrossProduct: true, crossProductRuling: "test: reach the guard",
+    }], "guard-report");
+    const catalog = [FROM_ROW, {
+      id: MALFORMED_TO, cardId: MALFORMED_TO, source: "checklistinsider-2026-08-27",
+      sport: "baseball", year: 2025, setKey: "topps-chrome-update-series", cardNumber: "usc143", playerName: "Adael Amador",
+    }];
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
+
+    const reportRun = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    expect(reportRun.out).toMatch(/REFUSED \(guard\)/);
+    expect(reportRun.out).toMatch(/REFUSED: guard \(malformed key\)\s+1/);
+    expect(reportRun.led.salesUpserts.length).toBe(0);
+    expect(reportRun.led.salesDeletes.length).toBe(0);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    expect(applyRun.out).toMatch(/REFUSED \(guard\)/);
+    expect(applyRun.out).toMatch(/REFUSED: guard \(malformed key\)\s+1/);
+    // The count is IDENTICAL in both modes, and APPLY still wrote nothing --
+    // a guard refusal never reaches relocateSoldComp's own upsert.
+    expect(applyRun.led.salesUpserts.length).toBe(0);
+    expect(applyRun.led.salesDeletes.length).toBe(0);
+  });
+});
+
+describe("end-to-end: a well-formed move reconciles in both modes", () => {
+  it("REPORT computes the move and writes nothing; APPLY writes it", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "spelling drift", expectedSales: 1 }], "clean-move");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
+
+    const reportRun = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    expect(reportRun.code).toBe(0);
+    expect(reportRun.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+    expect(reportRun.led.salesUpserts.length).toBe(0);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    expect(applyRun.code).toBe(0);
+    expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
+    expect(applyRun.led.salesUpserts).toEqual([FROM_ID.replace(FROM_ID, "src::1")].map(() => "src::1"));
+    expect(applyRun.led.salesDeletes).toEqual(["src::1"]);
+  });
+});
+
+describe("end-to-end: expectedSales is enforced", () => {
+  it("refuses expected-sales-mismatch when the live dual count disagrees with the list", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why", expectedSales: 2 }], "expected-mismatch");
+    const catalog = [FROM_ROW, TO_ROW];
+    // Only ONE sale actually present, but the list claims 2.
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    expect(r.out).toMatch(/REFUSED \(expected-sales-mismatch\)/);
+    expect(r.out).toMatch(/REFUSED: expected-sales-mismatch\s+1/);
+    // Never enumerated a single sale under a stale census.
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("passes when expectedSales matches, and skips the gate entirely when omitted", () => {
+    const listMatches = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why", expectedSales: 1 }], "expected-match");
+    const listOmitted = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why" }], "expected-omitted");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
+
+    // The banner ALWAYS prints the "REFUSED: expected-sales-mismatch" label,
+    // with a trailing count -- what must be absent is a NONZERO count and
+    // the per-entry "REFUSED (expected-sales-mismatch)" decision line, not
+    // the label text itself.
+    const matches = drive({ SCOPE: listMatches, BACKFILL_APPLY: "false" }, { sales, catalog });
+    expect(matches.out).not.toMatch(/REFUSED \(expected-sales-mismatch\)/);
+    expect(matches.out).toMatch(/REFUSED: expected-sales-mismatch\s+0/);
+    expect(matches.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+
+    const omitted = drive({ SCOPE: listOmitted, BACKFILL_APPLY: "false" }, { sales: sales.map((s) => ({ ...s, id: "src::2" })), catalog });
+    expect(omitted.out).not.toMatch(/REFUSED \(expected-sales-mismatch\)/);
+    expect(omitted.out).toMatch(/REFUSED: expected-sales-mismatch\s+0/);
+    expect(omitted.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+  });
+});
+
+describe("end-to-end: a budget stop mid-entry reconciles exactly, never double-counted", () => {
+  it("an entry with multiple sales, stopped partway, counts moved + not-reached-sales without a mismatch", () => {
+    // Two sales at the SAME fromId/toId pair -- one entry, so its gates run
+    // ONCE and both sales share the same catalog reads. The budget is
+    // configured (via RUN_MINUTES/RESERVE_MS/BUDGET_MS env, all already
+    // overridable per lib/runner-budget.cjs) to expire between the two
+    // per-sale iterations: a delay on every sold_comps point read plus a
+    // tiny BUDGET_MS make the SECOND sale's read observe outOfClock()==true.
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why" }], "budget-straddle");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [
+      { id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" },
+      { id: "src::2", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 20, soldAt: "2026-01-02", playerName: "Adael Amador", parallel: "RayWave Refractor" },
+    ];
+
+    const r = drive(
+      { SCOPE: list, BACKFILL_APPLY: "false", RUN_MINUTES: "1", BUDGET_MS: "150", RESERVE_MS: "100" },
+      { sales, catalog, saleReadDelayMs: 200 },
+    );
+    // The first sale's read (200ms) already exceeds the 150ms budget by the
+    // time the SECOND sale's outOfClock() check runs, so exactly one sale is
+    // processed and one is left not-reached -- never both double-counted
+    // against the entry AND their own sale outcome.
+    expect(r.out).toMatch(/not reached \(budget, sales\)\s+1/);
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+    expect(r.code).not.toBe(4);
   });
 });

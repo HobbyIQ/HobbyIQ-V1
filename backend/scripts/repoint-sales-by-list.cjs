@@ -279,12 +279,37 @@ async function main() {
   let movedSales = 0;
   let refusedNoFromRow = 0, refusedNoToRow = 0, refusedNotChecklistGrade = 0;
   let refusedProductMismatch = 0, refusedSameId = 0, refusedZeroSales = 0;
+  let refusedExpectedSalesMismatch = 0;
   let refusedNameDisagreement = 0;
+  // A sale whose destination guardSoldCompDoc refuses as a malformed key --
+  // consulted by relocateSoldComp BEFORE its own dryRun short-circuit, so
+  // this fires identically in REPORT and APPLY (see the per-sale move block).
+  let refusedGuard = 0;
   let failedSales = 0;
+  // An entry-level Cosmos read threw before any sale was ever enumerated
+  // (the catalog reads in GATE 1, or the sales lookup in GATE 4) -- its own
+  // ENTRY-side bucket, never folded into `failedSales` (a per-SALE outcome
+  // whose denominator is `intendedSalesTotal`, a total this entry never
+  // contributed to).
+  let entryLevelFailed = 0;
   let skippedEntries = 0; // an entry whose gates all pass but has 0 sales -- refusedZeroSales counts it too, kept separate as the entry-level tally
   let entriesFailedToClassify = 0;
+  // Sales an entry's OWN per-sale loop could not reach because the budget
+  // ran out mid-entry -- see the loop's own comment. Folded into the
+  // sale-level side of the reconcile, never into `notReached` (which is
+  // whole ENTRIES the outer loop never started at all).
+  let notReachedSales = 0;
+  // Running total of sales EVERY entry that passed all five entry-level
+  // gates actually enumerated (salesRows.length, added once per entry, right
+  // before that entry's per-sale loop starts) -- the sale-side denominator
+  // the reconcile checks `saleLevelOutcomes` against. An entry refused at
+  // any entry-level gate (no-from-row, no-to-row, not-checklist-grade,
+  // product-mismatch, same-id, zero-sales, expected-sales-mismatch) never
+  // adds anything here, because it never enumerated a single sale -- it is
+  // its own unit on the ENTRY side of the reconcile instead (see
+  // `entryLevelRefusals` below).
+  let intendedSalesTotal = 0;
 
-  const intendedSales = { count: 0 }; // running total of sales this run INTENDED to move once an entry passes its gates -- filled per entry below
   let stoppedAt = null;
   let considered = 0;
 
@@ -316,7 +341,7 @@ async function main() {
       console.error(`  MALFORMED — ${c.why}`);
       continue;
     }
-    const { fromId, toId, player, cardNumber, reason, allowCrossProduct, crossProductRuling } = c;
+    const { fromId, toId, player, cardNumber, reason, allowCrossProduct, crossProductRuling, expectedSales } = c;
 
     console.log(`\n  ENTRY  ${fromId.slice(0, 66)}`);
     console.log(`      -> ${toId.slice(0, 66)}`);
@@ -338,7 +363,12 @@ async function main() {
     try {
       [fromRow, toRow] = await Promise.all([catalogRowAt(fromId), catalogRowAt(toId)]);
     } catch (err) {
-      failedSales++;
+      // An ENTRY-level failure -- no sale was ever enumerated, so this is
+      // tallied on the entry side of the reconcile (entryLevelFailed), never
+      // folded into `failedSales` (which counts per-SALE outcomes only, and
+      // whose denominator is `intendedSalesTotal` -- a total this entry
+      // never contributed to).
+      entryLevelFailed++;
       console.error(`      FAILED: catalog read threw — ${String(err?.message ?? err).slice(0, 100)}`);
       continue;
     }
@@ -378,7 +408,9 @@ async function main() {
       const drained = await drainSalesIdsAtId(pool, fromId, { retry });
       salesRows = drained.rows;
     } catch (err) {
-      failedSales++;
+      // Same reasoning as GATE 1's own catch: no sale was enumerated yet, so
+      // this is an entry-level failure, not a per-sale one.
+      entryLevelFailed++;
       console.error(`      FAILED: sales lookup threw — ${String(err?.message ?? err).slice(0, 100)}`);
       continue;
     }
@@ -391,9 +423,46 @@ async function main() {
 
     console.log(`      sales at fromId: ${f(salesRows.length)}`);
 
+    // ── GATE 5: expectedSales, when the list author gave one, must match ──
+    // the DUAL count exactly. A list is a reviewed census (#2454's own list
+    // states "canonicalSales: 1, staleSales: 1" per entry); a live count
+    // that disagrees means the census is stale — more (or fewer) sales have
+    // landed at fromId since the list was written than the reviewer saw —
+    // and moving blind against a changed population is exactly the kind of
+    // silent widening this lane exists to refuse. `expectedSales` is
+    // OPTIONAL: an entry that omits it (as thousands of #2453-shaped
+    // entries reasonably might) skips this gate entirely.
+    if (expectedSales !== null && salesRows.length !== expectedSales) {
+      refusedExpectedSalesMismatch++;
+      console.error(`      REFUSED (expected-sales-mismatch): list says expectedSales=${f(expectedSales)}, live dual count is ${f(salesRows.length)}`);
+      continue;
+    }
+
+    // This entry has cleared every entry-level gate and is about to
+    // enumerate its sales -- exactly the point `intendedSalesTotal` counts
+    // from, so a gate-5 refusal just above never adds its (uninspected)
+    // sales to the sale-side denominator.
+    intendedSalesTotal += salesRows.length;
+
     // ── PER-SALE: read the full document, gate on namesAgree, then move ──
+    //
+    // A budget stop HERE, mid-entry, must not double-count. This entry was
+    // already considered (the outer loop's `considered++` already ran, its
+    // gates already passed, and zero or more of its sales already produced
+    // a real moved/refused/failed outcome above) -- it is NOT "not reached",
+    // and `stoppedAt` (which governs the OUTER loop's own reconcile, i.e.
+    // whole entries never started) is never touched here. The sales this
+    // entry could not get to are counted in `notReachedSales`, a SEPARATE
+    // per-sale tally folded into the sale-level side of the reconcile, so an
+    // entry straddling the boundary contributes exactly once to each of its
+    // own sales -- moved/refused/failed for the ones processed, not-reached
+    // for the remainder -- rather than the whole entry being re-counted as
+    // not-reached on top of the outcomes it already produced.
     for (const ref of salesRows) {
-      if (CLOCK.outOfClock()) { stoppedAt = considered - 1; break; }
+      if (CLOCK.outOfClock()) {
+        notReachedSales += salesRows.length - salesRows.indexOf(ref);
+        break;
+      }
       let sale = null;
       try {
         sale = (await retry(() => pool.item(ref.id, ref.cardId ?? fromId).read())).resource ?? null;
@@ -414,12 +483,15 @@ async function main() {
         continue;
       }
 
-      if (!APPLY) {
-        movedSales++;
-        emitPlanRow({ action: "would-move", reason: "report-only", fromId, toId, saleId: sale.id, before: sale.cardId, after: toId });
-        continue;
-      }
-
+      // ONE DERIVATION FOR BOTH MODES (matching relocate-catalog-rows-by-
+      // list.cjs's own moveCatalogRow call and repoint-sales-isauto-flip.cjs's
+      // own performMove): REPORT must not count a success it never computed.
+      // relocateSoldComp is called EXACTLY once, with `dryRun: !APPLY`, so
+      // splitIdentityWriteGuard/guardSoldCompDoc — which relocateSoldComp
+      // consults BEFORE its own dryRun short-circuit — runs in REPORT too.
+      // A destination that fails that guard (a malformed key) is therefore
+      // REFUSED in both modes, with the same count, rather than REPORT
+      // silently skipping a check APPLY would have hit.
       const keep = stripSystem(sale);
       keep.cardId = toId;
       keep.hobbyiqCardId = toId;
@@ -428,10 +500,15 @@ async function main() {
         const res = await relocateSoldComp(pool, {
           keep, drop: [{ id: sale.id, cardId: sale.cardId ?? fromId }], retry,
           verifyFields: ["cardId", "hobbyiqCardId", "price", "soldAt", "contentHash"],
+          dryRun: !APPLY,
         });
-        if (res.ok) {
+        if (res.stage === "guard") {
+          refusedGuard++;
+          console.error(`      REFUSED (guard): ${String(res.error ?? "").slice(0, 100)}`);
+          emitPlanRow({ action: "refused", reason: "guard", fromId, toId, saleId: sale.id, error: String(res.error ?? "") });
+        } else if (res.ok) {
           movedSales++;
-          emitPlanRow({ action: "moved", reason: "repoint-sales-by-list", fromId, toId, saleId: sale.id, before: sale.cardId, after: toId });
+          emitPlanRow({ action: APPLY ? "moved" : "would-move", reason: "repoint-sales-by-list", fromId, toId, saleId: sale.id, before: sale.cardId, after: toId });
         } else {
           failedSales++;
           console.error(`      FAILED at ${res.stage}: ${String(res.error ?? "").slice(0, 100)}`);
@@ -454,7 +531,8 @@ async function main() {
   }
 
   const totalRefused = refusedNoFromRow + refusedNoToRow + refusedNotChecklistGrade
-    + refusedProductMismatch + refusedSameId + refusedZeroSales + refusedNameDisagreement;
+    + refusedProductMismatch + refusedSameId + refusedZeroSales + refusedExpectedSalesMismatch
+    + refusedNameDisagreement + refusedGuard;
 
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
   console.log(`  entries in scope             ${f(entries.length)}`);
@@ -467,43 +545,99 @@ async function main() {
   console.log(`  REFUSED: product-mismatch     ${f(refusedProductMismatch)}`);
   console.log(`  REFUSED: same-id              ${f(refusedSameId)}`);
   console.log(`  REFUSED: zero-sales           ${f(refusedZeroSales)}`);
+  console.log(`  REFUSED: expected-sales-mismatch ${f(refusedExpectedSalesMismatch)}`);
   console.log(`  REFUSED: name-disagreement    ${f(refusedNameDisagreement)}`);
-  console.log(`  failed                        ${f(failedSales)}`);
+  console.log(`  REFUSED: guard (malformed key) ${f(refusedGuard)}`);
+  console.log(`  failed (per-sale)             ${f(failedSales)}`);
+  console.log(`  failed (entry-level read)     ${f(entryLevelFailed)}`);
 
+  // `notReached` is whole ENTRIES the outer loop never STARTED at all --
+  // `stoppedAt` is set only at the top of the outer loop, never adjusted for
+  // an entry whose per-sale loop ran out of budget partway through (that
+  // entry was considered, its gates ran, and it already produced its own
+  // moved/refused/failed sale outcomes above -- see the per-sale loop's own
+  // comment). `notReachedSales` is the SEPARATE per-sale tally for exactly
+  // that straddling case, so a straddled entry's own unprocessed sales are
+  // never double-counted against both an entry-level "not reached" AND
+  // their own sale-level outcome.
   const notReached = stoppedAt === null ? 0 : entries.length - stoppedAt - entriesFailedToClassify;
-  console.log(`  not reached (budget)          ${f(notReached)}   <- the relaunch settles these`);
+  console.log(`  not reached (budget, entries) ${f(notReached)}   <- the relaunch settles these`);
+  console.log(`  not reached (budget, sales)   ${f(notReachedSales)}   <- unprocessed sales of an entry the budget stopped mid-way`);
 
   // RECONCILE. `intended` is defined per SALE the same way the sibling
   // repoint lanes define their `candidates`: every sale this run actually
   // classified (moved, refused for a reason attached to the SALE, or
-  // failed) plus every entry-level refusal that never got to enumerate a
-  // sale (no-from-row, no-to-row, not-checklist-grade, product-mismatch,
-  // same-id, zero-sales) plus malformed entries plus not-reached entries.
-  // Two different units (sales vs entries) sit in one formula because a
-  // per-entry refusal never produces a sale-level outcome at all -- it is
-  // its own unit, exactly once, the same way relocate-catalog-rows-by-
-  // list's own `park`/`verify` are their own reconciled unit alongside
-  // per-row retires.
+  // failed), plus every unprocessed sale of an entry the budget stopped
+  // mid-way (`notReachedSales`), plus every entry-level refusal that never
+  // got to enumerate a sale (no-from-row, no-to-row, not-checklist-grade,
+  // product-mismatch, same-id, zero-sales), plus malformed entries, plus
+  // whole entries the budget never started (`notReached`). Two different
+  // units (sales vs entries) sit in one formula because a per-entry refusal
+  // never produces a sale-level outcome at all -- it is its own unit,
+  // exactly once, the same way relocate-catalog-rows-by-list's own
+  // `park`/`verify` are their own reconciled unit alongside per-row retires.
+  //
+  // TWO SEPARATE IDENTITIES, ONE PER UNIT -- an entry can carry MANY sales
+  // (the whole point of this lane's list format, sized for thousands), so a
+  // single formula comparing entry-shaped counts against `entries.length`
+  // would be dimensionally wrong the moment any entry has more than one
+  // sale: `saleLevelOutcomes` legitimately EXCEEDS 1 per entry, while
+  // `entries.length` counts the entry itself exactly once. Each identity is
+  // reconciled against its OWN denominator instead:
+  //
+  //   ENTRY side:  every entry is exactly one of { gated-through-to-its-
+  //                sales, entry-level-refused, malformed, not-reached }.
+  //   SALE side:   every sale an entry-level-gated-through entry actually
+  //                enumerated (`intendedSalesTotal`, accumulated the instant
+  //                gate 5 passes) is exactly one of { moved, refused
+  //                (name-disagreement / guard), failed, not-reached-mid-
+  //                entry }.
   const entryLevelRefusals = refusedNoFromRow + refusedNoToRow + refusedNotChecklistGrade
-    + refusedProductMismatch + refusedSameId + refusedZeroSales;
-  const saleLevelOutcomes = movedSales + refusedNameDisagreement + failedSales;
-  const accounted = entryLevelRefusals + saleLevelOutcomes + entriesFailedToClassify + notReached;
-  const intended = entries.length;
-  console.log(`\n  reconciled: intended ${f(intended)} = entry-refusals ${f(entryLevelRefusals)} `
-    + `+ sale-outcomes ${f(saleLevelOutcomes)} + malformed ${f(entriesFailedToClassify)} + not-reached ${f(notReached)}`);
-  if (accounted !== intended) {
-    console.error("  !! RECONCILE MISMATCH -- an entry was neither gated, moved, refused, failed, malformed nor deferred");
+    + refusedProductMismatch + refusedSameId + refusedZeroSales + refusedExpectedSalesMismatch;
+  // Entries that passed every entry-level gate and enumerated their sales --
+  // the ENTRY-side count matching `intendedSalesTotal`'s sale-side total.
+  const entriesGatedThrough = considered - entryLevelRefusals - entryLevelFailed - entriesFailedToClassify;
+  const entryAccounted = entryLevelRefusals + entryLevelFailed + entriesGatedThrough + entriesFailedToClassify + notReached;
+  const intendedEntries = entries.length;
+
+  const saleLevelOutcomes = movedSales + refusedNameDisagreement + refusedGuard + failedSales + notReachedSales;
+  const saleAccounted = saleLevelOutcomes;
+  const intendedSales = intendedSalesTotal;
+
+  console.log(`\n  reconciled (entries): intended ${f(intendedEntries)} = gated-through ${f(entriesGatedThrough)} `
+    + `+ entry-refusals ${f(entryLevelRefusals)} + entry-failed ${f(entryLevelFailed)} + malformed ${f(entriesFailedToClassify)} + not-reached ${f(notReached)}`);
+  console.log(`  reconciled (sales):   intended ${f(intendedSales)} = moved/would-move ${f(movedSales)} `
+    + `+ refused ${f(refusedNameDisagreement + refusedGuard)} + failed ${f(failedSales)} + not-reached ${f(notReachedSales)}`);
+  if (entryAccounted !== intendedEntries || saleAccounted !== intendedSales) {
+    console.error("  !! RECONCILE MISMATCH -- an entry or a sale was neither gated, moved, refused, failed, malformed nor deferred");
     process.exitCode = 4;
   }
 
   if (APPLY) {
+    // ONE FLAT UNIT SET for reportWrites, built from the two reconciled
+    // identities above rather than re-mixing entries and sales: `intended`
+    // is every unit ever considered a candidate for a write -- every
+    // enumerated sale (`intendedSales`) PLUS every entry that was skipped,
+    // failed or not-reached before it ever got to enumerate one (each of
+    // those entries is a unit that produced NO sale-side outcome at all, so
+    // it is added here exactly once, never folded into a sale count it
+    // never contributed to).
+    //
+    // `skipped` ("we could not use this row") carries every entry-level
+    // GATE refusal (no-from-row, no-to-row, not-checklist-grade, product-
+    // mismatch, same-id, zero-sales, expected-sales-mismatch), malformed
+    // entries, and whole entries the budget never started -- none of these
+    // are the guard/namesAgree DECISIONS `refused` exists for.
+    // `refused` ("we understood this row and declined to write it") is the
+    // sale-level namesAgree and splitIdentityWriteGuard refusals only.
+    // `failed` is genuine errors on either side of the entry/sale split.
     reportWrites({
       job: "repoint-sales-by-list",
-      intended,
+      intended: intendedSales + entryLevelRefusals + entryLevelFailed + entriesFailedToClassify + notReached,
       written: movedSales,
-      skipped: entryLevelRefusals + entriesFailedToClassify + notReached,
-      refused: refusedNameDisagreement,
-      failed: failedSales,
+      skipped: entryLevelRefusals + entriesFailedToClassify + notReached + notReachedSales,
+      refused: refusedNameDisagreement + refusedGuard,
+      failed: failedSales + entryLevelFailed,
     });
   }
 
@@ -513,9 +647,16 @@ async function main() {
   //
   // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). Written as a source literal, not
   // assembled from variables, exactly matching every sibling list lane.
-  if (stoppedAt !== null) {
+  //
+  // `notReachedSales > 0` is ALSO a budget stop, even when `stoppedAt` is
+  // still null: that happens when the very LAST entry in the list is the one
+  // whose per-sale loop straddled the boundary -- the outer loop's own
+  // top-of-loop check (which sets `stoppedAt`) never runs again because there
+  // is no next entry to reach it. Without this the banner would print
+  // "finished within budget" over a run that in fact left sales unprocessed.
+  if (stoppedAt !== null || notReachedSales > 0) {
     console.log(`\n  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
-      + `stopped at ${f(stoppedAt)} of ${f(intended)}; the relaunch continues from here`);
+      + `stopped at ${f(stoppedAt ?? considered)} of ${f(intended)}; the relaunch continues from here`);
     console.log("  the list is IDEMPOTENT: a finished move re-reads as zero sales left at fromId,"
       + " so the continuation re-derives cheaply and writes only what is left.");
   } else {
