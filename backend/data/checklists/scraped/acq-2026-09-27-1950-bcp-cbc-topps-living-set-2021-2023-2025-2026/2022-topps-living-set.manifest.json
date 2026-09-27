@@ -1,0 +1,37 @@
+{
+  "scrapedAt": "2026-09-27T00:00:00.000Z",
+  "sourceUrls": [
+    "https://baseballcardpedia.com/index.php/Topps_Living_Set"
+  ],
+  "source": "baseballcardpedia-2026-09-27",
+  "sport": "baseball",
+  "year": 2022,
+  "setName": "2022 Topps Living Set",
+  "productKey": "2022-topps-living-set",
+  "setKey": "topps-living-set",
+  "rowCount": 104,
+  "cardNumberRange": "481-584",
+  "singleSourceCaveat": "SINGLE-SOURCE year for row data. topps.com and tcdb.com both returned HTTP 403 on every attempted URL (one attempt each, not retried). cardboardconnection.com's combined page's 2022 coverage was not independently re-verified verbatim in this pass; baseballcardpedia.com's continuous wiki page is used verbatim for every field.",
+  "mintedBy": "Acquisition builder (2026-09-27), follow-on package to PR #2443. Card numbers continue immediately after 2021's last row (#480 Ty France, 29-Dec) with no gap: #481 James McCann is dated 5-Jan 2022 on the same single source page.",
+  "rungsMinted": [
+    { "parallel": "(none -- single-rung product, no stated parallel ladder)", "printRun": null }
+  ],
+  "cardNumbersFilled": 104,
+  "notMinted": {
+    "parallelLadder": {
+      "reason": "No parallel/color ladder is stated for 2022 on the source. Parallel column left BLANK, never 'Base'."
+    },
+    "checklistCards": {
+      "reason": "CL-05 (Checklist #401-500), bundled with the 9-Mar-2022 release week, is Topps' own unnumbered index insert. No player, not staged."
+    },
+    "teamColumn": {
+      "reason": "baseballcardpedia's 2022 section carries no team field. Team left BLANK for all 104 rows."
+    }
+  },
+  "spellingAudit": "Card numbers, player names, and release dates taken verbatim from baseballcardpedia.com's 'Topps Living Set' wiki page, 2022 subsection (cardNumber 481 James McCann through 584 Hideki Matsui). Section boundary self-consistent: 2021's own last row (#480 Ty France, 29-Dec) and 2023's own first row (#585 Kyle Wright, 4-Jan) both agree with this package's stated range. Source notes 'Card #495 (Wander Franco) smashed the all-time sales record' and 'Card #584 (Hideki Matsui) would be the final card produced by Mayumi Seto' -- both consistent with this range being complete and correctly bounded.",
+  "provenance": {
+    "cardsFrom": "baseballcardpedia.com only.",
+    "rungsFrom": "n/a -- no parallel ladder sourced",
+    "dedup": "checked against this package's own sibling files and against PR #2443's ranges (1-376, 689-792) -- zero overlap, zero duplicate cardNumbers across all eight files (897 total, 897 distinct)."
+  }
+}

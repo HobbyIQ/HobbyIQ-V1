@@ -1,0 +1,949 @@
+{
+  "summary": {
+    "csv": "C:/tmp/living2_1950/backend/data/checklists/scraped/acq-2026-09-27-1950-bcp-cbc-topps-living-set-2021-2023-2025-2026/2023-topps-living-set.csv",
+    "ranAt": "2026-09-27T00:19:30.792Z",
+    "totalRows": 104,
+    "presentChecklist": 0,
+    "presentDerived": 0,
+    "absent": 104,
+    "reconciled": true
+  },
+  "results": [
+    {
+      "id": "hiq:baseball:2023:topps-living-set:585:base:no-auto",
+      "cardNumber": "585",
+      "parallel": "",
+      "printRun": null,
+      "player": "Kyle Wright",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:586:base:no-auto",
+      "cardNumber": "586",
+      "parallel": "",
+      "printRun": null,
+      "player": "Albert Pujols",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:587:base:no-auto",
+      "cardNumber": "587",
+      "parallel": "",
+      "printRun": null,
+      "player": "Orlando Cepeda",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:588:base:no-auto",
+      "cardNumber": "588",
+      "parallel": "",
+      "printRun": null,
+      "player": "Emmanuel Clase",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:589:base:no-auto",
+      "cardNumber": "589",
+      "parallel": "",
+      "printRun": null,
+      "player": "Tom Glavine",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:590:base:no-auto",
+      "cardNumber": "590",
+      "parallel": "",
+      "printRun": null,
+      "player": "Robbie Ray",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:591:base:no-auto",
+      "cardNumber": "591",
+      "parallel": "",
+      "printRun": null,
+      "player": "Corey Seager",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:592:base:no-auto",
+      "cardNumber": "592",
+      "parallel": "",
+      "printRun": null,
+      "player": "Josh Rojas",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:593:base:no-auto",
+      "cardNumber": "593",
+      "parallel": "",
+      "printRun": null,
+      "player": "Scott Rolen",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:594:base:no-auto",
+      "cardNumber": "594",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jordan Romano",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:595:base:no-auto",
+      "cardNumber": "595",
+      "parallel": "",
+      "printRun": null,
+      "player": "Willie Randolph",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:596:base:no-auto",
+      "cardNumber": "596",
+      "parallel": "",
+      "printRun": null,
+      "player": "Brandon Nimmo",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:597:base:no-auto",
+      "cardNumber": "597",
+      "parallel": "",
+      "printRun": null,
+      "player": "Maury Wills",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:598:base:no-auto",
+      "cardNumber": "598",
+      "parallel": "",
+      "printRun": null,
+      "player": "Alex Verdugo",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:599:base:no-auto",
+      "cardNumber": "599",
+      "parallel": "",
+      "printRun": null,
+      "player": "Michael Harris II",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:600:base:no-auto",
+      "cardNumber": "600",
+      "parallel": "",
+      "printRun": null,
+      "player": "Lou Gehrig",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:601:base:no-auto",
+      "cardNumber": "601",
+      "parallel": "",
+      "printRun": null,
+      "player": "Nick Castellanos",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:602:base:no-auto",
+      "cardNumber": "602",
+      "parallel": "",
+      "printRun": null,
+      "player": "Coco Crisp",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:603:base:no-auto",
+      "cardNumber": "603",
+      "parallel": "",
+      "printRun": null,
+      "player": "Lee Smith",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:604:base:no-auto",
+      "cardNumber": "604",
+      "parallel": "",
+      "printRun": null,
+      "player": "Felipe Alou",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:605:base:no-auto",
+      "cardNumber": "605",
+      "parallel": "",
+      "printRun": null,
+      "player": "Shea Langeliers",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:606:base:no-auto",
+      "cardNumber": "606",
+      "parallel": "",
+      "printRun": null,
+      "player": "Willson Contreras",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:607:base:no-auto",
+      "cardNumber": "607",
+      "parallel": "",
+      "printRun": null,
+      "player": "Brady Singer",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:608:base:no-auto",
+      "cardNumber": "608",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jacob deGrom",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:609:base:no-auto",
+      "cardNumber": "609",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jack Suwinski",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:610:base:no-auto",
+      "cardNumber": "610",
+      "parallel": "",
+      "printRun": null,
+      "player": "Adley Rutschman",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:611:base:no-auto",
+      "cardNumber": "611",
+      "parallel": "",
+      "printRun": null,
+      "player": "Francisco Lindor",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:612:base:no-auto",
+      "cardNumber": "612",
+      "parallel": "",
+      "printRun": null,
+      "player": "Oscar Gonzalez",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:613:base:no-auto",
+      "cardNumber": "613",
+      "parallel": "",
+      "printRun": null,
+      "player": "Luis Arraez",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:614:base:no-auto",
+      "cardNumber": "614",
+      "parallel": "",
+      "printRun": null,
+      "player": "Nolan Jones",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:615:base:no-auto",
+      "cardNumber": "615",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jim Abbott",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:616:base:no-auto",
+      "cardNumber": "616",
+      "parallel": "",
+      "printRun": null,
+      "player": "Nolan Gorman",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:617:base:no-auto",
+      "cardNumber": "617",
+      "parallel": "",
+      "printRun": null,
+      "player": "Justin Verlander",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:618:base:no-auto",
+      "cardNumber": "618",
+      "parallel": "",
+      "printRun": null,
+      "player": "Hunter Brown",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:619:base:no-auto",
+      "cardNumber": "619",
+      "parallel": "",
+      "printRun": null,
+      "player": "Ron Guidry",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:620:base:no-auto",
+      "cardNumber": "620",
+      "parallel": "",
+      "printRun": null,
+      "player": "Gunnar Henderson",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:621:base:no-auto",
+      "cardNumber": "621",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jean Segura",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:622:base:no-auto",
+      "cardNumber": "622",
+      "parallel": "",
+      "printRun": null,
+      "player": "Triston Casas",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:623:base:no-auto",
+      "cardNumber": "623",
+      "parallel": "",
+      "printRun": null,
+      "player": "Hunter Renfroe",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:624:base:no-auto",
+      "cardNumber": "624",
+      "parallel": "",
+      "printRun": null,
+      "player": "Rafael Palmeiro",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:625:base:no-auto",
+      "cardNumber": "625",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jorge Mateo",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:626:base:no-auto",
+      "cardNumber": "626",
+      "parallel": "",
+      "printRun": null,
+      "player": "Corbin Carroll",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:627:base:no-auto",
+      "cardNumber": "627",
+      "parallel": "",
+      "printRun": null,
+      "player": "Mark Teixeira",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:628:base:no-auto",
+      "cardNumber": "628",
+      "parallel": "",
+      "printRun": null,
+      "player": "Miguel Vargas",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:629:base:no-auto",
+      "cardNumber": "629",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jason Varitek",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:630:base:no-auto",
+      "cardNumber": "630",
+      "parallel": "",
+      "printRun": null,
+      "player": "Gabriel Moreno",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:631:base:no-auto",
+      "cardNumber": "631",
+      "parallel": "",
+      "printRun": null,
+      "player": "Andrew McCutchen",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:632:base:no-auto",
+      "cardNumber": "632",
+      "parallel": "",
+      "printRun": null,
+      "player": "Trevor Hoffman",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:633:base:no-auto",
+      "cardNumber": "633",
+      "parallel": "",
+      "printRun": null,
+      "player": "Anthony Volpe",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:634:base:no-auto",
+      "cardNumber": "634",
+      "parallel": "",
+      "printRun": null,
+      "player": "Keith Hernandez",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:635:base:no-auto",
+      "cardNumber": "635",
+      "parallel": "",
+      "printRun": null,
+      "player": "Josh Jung",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:636:base:no-auto",
+      "cardNumber": "636",
+      "parallel": "",
+      "printRun": null,
+      "player": "Lars Nootbaar",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:637:base:no-auto",
+      "cardNumber": "637",
+      "parallel": "",
+      "printRun": null,
+      "player": "Riley Greene",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:638:base:no-auto",
+      "cardNumber": "638",
+      "parallel": "",
+      "printRun": null,
+      "player": "Rick Monday",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:639:base:no-auto",
+      "cardNumber": "639",
+      "parallel": "",
+      "printRun": null,
+      "player": "James Outman",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:640:base:no-auto",
+      "cardNumber": "640",
+      "parallel": "",
+      "printRun": null,
+      "player": "Moises Alou",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:641:base:no-auto",
+      "cardNumber": "641",
+      "parallel": "",
+      "printRun": null,
+      "player": "Christopher Morel",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:642:base:no-auto",
+      "cardNumber": "642",
+      "parallel": "",
+      "printRun": null,
+      "player": "Juan Marichal",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:643:base:no-auto",
+      "cardNumber": "643",
+      "parallel": "",
+      "printRun": null,
+      "player": "Ron Santo",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:644:base:no-auto",
+      "cardNumber": "644",
+      "parallel": "",
+      "printRun": null,
+      "player": "Vinnie Pasquantino",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:645:base:no-auto",
+      "cardNumber": "645",
+      "parallel": "",
+      "printRun": null,
+      "player": "Vida Blue",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:646:base:no-auto",
+      "cardNumber": "646",
+      "parallel": "",
+      "printRun": null,
+      "player": "Kodai Senga",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:647:base:no-auto",
+      "cardNumber": "647",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jordan Walker",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:648:base:no-auto",
+      "cardNumber": "648",
+      "parallel": "",
+      "printRun": null,
+      "player": "Tony Pérez",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:649:base:no-auto",
+      "cardNumber": "649",
+      "parallel": "",
+      "printRun": null,
+      "player": "Spencer Steer",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:650:base:no-auto",
+      "cardNumber": "650",
+      "parallel": "",
+      "printRun": null,
+      "player": "Bill Mazeroski",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:651:base:no-auto",
+      "cardNumber": "651",
+      "parallel": "",
+      "printRun": null,
+      "player": "Joey Wiemer",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:652:base:no-auto",
+      "cardNumber": "652",
+      "parallel": "",
+      "printRun": null,
+      "player": "Elvis Andrus",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:653:base:no-auto",
+      "cardNumber": "653",
+      "parallel": "",
+      "printRun": null,
+      "player": "Masataka Yoshida",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:654:base:no-auto",
+      "cardNumber": "654",
+      "parallel": "",
+      "printRun": null,
+      "player": "Masanori Murakami",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:655:base:no-auto",
+      "cardNumber": "655",
+      "parallel": "",
+      "printRun": null,
+      "player": "Yandy Diaz",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:656:base:no-auto",
+      "cardNumber": "656",
+      "parallel": "",
+      "printRun": null,
+      "player": "Grayson Rodriguez",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:657:base:no-auto",
+      "cardNumber": "657",
+      "parallel": "",
+      "printRun": null,
+      "player": "Xander Bogaerts",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:658:base:no-auto",
+      "cardNumber": "658",
+      "parallel": "",
+      "printRun": null,
+      "player": "Esteury Ruiz",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:659:base:no-auto",
+      "cardNumber": "659",
+      "parallel": "",
+      "printRun": null,
+      "player": "Zack Greinke",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:660:base:no-auto",
+      "cardNumber": "660",
+      "parallel": "",
+      "printRun": null,
+      "player": "Tanner Bibee",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:661:base:no-auto",
+      "cardNumber": "661",
+      "parallel": "",
+      "printRun": null,
+      "player": "Francisco Alvarez",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:662:base:no-auto",
+      "cardNumber": "662",
+      "parallel": "",
+      "printRun": null,
+      "player": "Barry Larkin",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:663:base:no-auto",
+      "cardNumber": "663",
+      "parallel": "",
+      "printRun": null,
+      "player": "Shintaro Fujinami",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:664:base:no-auto",
+      "cardNumber": "664",
+      "parallel": "",
+      "printRun": null,
+      "player": "Taijuan Walker",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:665:base:no-auto",
+      "cardNumber": "665",
+      "parallel": "",
+      "printRun": null,
+      "player": "Matt McLain",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:666:base:no-auto",
+      "cardNumber": "666",
+      "parallel": "",
+      "printRun": null,
+      "player": "Christy Mathewson",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:667:base:no-auto",
+      "cardNumber": "667",
+      "parallel": "",
+      "printRun": null,
+      "player": "Dansby Swanson",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:668:base:no-auto",
+      "cardNumber": "668",
+      "parallel": "",
+      "printRun": null,
+      "player": "Logan O'Hoppe",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:669:base:no-auto",
+      "cardNumber": "669",
+      "parallel": "",
+      "printRun": null,
+      "player": "Wade Boggs",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:670:base:no-auto",
+      "cardNumber": "670",
+      "parallel": "",
+      "printRun": null,
+      "player": "Mark Vientos",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:671:base:no-auto",
+      "cardNumber": "671",
+      "parallel": "",
+      "printRun": null,
+      "player": "Roger Clemens",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:672:base:no-auto",
+      "cardNumber": "672",
+      "parallel": "",
+      "printRun": null,
+      "player": "Bryce Miller",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:673:base:no-auto",
+      "cardNumber": "673",
+      "parallel": "",
+      "printRun": null,
+      "player": "Jose Reyes",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:674:base:no-auto",
+      "cardNumber": "674",
+      "parallel": "",
+      "printRun": null,
+      "player": "Óscar Colás",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:675:base:no-auto",
+      "cardNumber": "675",
+      "parallel": "",
+      "printRun": null,
+      "player": "Orlando Arcia",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:676:base:no-auto",
+      "cardNumber": "676",
+      "parallel": "",
+      "printRun": null,
+      "player": "Justin Steele",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:677:base:no-auto",
+      "cardNumber": "677",
+      "parallel": "",
+      "printRun": null,
+      "player": "Steve Garvey",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:678:base:no-auto",
+      "cardNumber": "678",
+      "parallel": "",
+      "printRun": null,
+      "player": "Brice Turang",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:679:base:no-auto",
+      "cardNumber": "679",
+      "parallel": "",
+      "printRun": null,
+      "player": "Josh Lowe",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:680:base:no-auto",
+      "cardNumber": "680",
+      "parallel": "",
+      "printRun": null,
+      "player": "Bobby Miller",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:681:base:no-auto",
+      "cardNumber": "681",
+      "parallel": "",
+      "printRun": null,
+      "player": "Juan Gonzalez",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:682:base:no-auto",
+      "cardNumber": "682",
+      "parallel": "",
+      "printRun": null,
+      "player": "Yainer Diaz",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:683:base:no-auto",
+      "cardNumber": "683",
+      "parallel": "",
+      "printRun": null,
+      "player": "Ryan Howard",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:684:base:no-auto",
+      "cardNumber": "684",
+      "parallel": "",
+      "printRun": null,
+      "player": "Eury Pérez",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:685:base:no-auto",
+      "cardNumber": "685",
+      "parallel": "",
+      "printRun": null,
+      "player": "Miguel Tejada",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:686:base:no-auto",
+      "cardNumber": "686",
+      "parallel": "",
+      "printRun": null,
+      "player": "Kerry Carpenter",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:687:base:no-auto",
+      "cardNumber": "687",
+      "parallel": "",
+      "printRun": null,
+      "player": "Frank Howard",
+      "present": false,
+      "presentSource": null
+    },
+    {
+      "id": "hiq:baseball:2023:topps-living-set:688:base:no-auto",
+      "cardNumber": "688",
+      "parallel": "",
+      "printRun": null,
+      "player": "Edouard Julien",
+      "present": false,
+      "presentSource": null
+    }
+  ]
+}

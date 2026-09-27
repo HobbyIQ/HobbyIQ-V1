@@ -1,0 +1,37 @@
+{
+  "scrapedAt": "2026-09-27T00:00:00.000Z",
+  "sourceUrls": [
+    "https://baseballcardpedia.com/index.php/Topps_Living_Set"
+  ],
+  "source": "baseballcardpedia-2026-09-27",
+  "sport": "baseball",
+  "year": 2021,
+  "setName": "2021 Topps Living Set",
+  "productKey": "2021-topps-living-set",
+  "setKey": "topps-living-set",
+  "rowCount": 104,
+  "cardNumberRange": "377-480",
+  "singleSourceCaveat": "SINGLE-SOURCE year for row data. cardboardconnection.com's combined 2018-2023 checklist page has a 2021 tab but returns only a model-summarized tail for most of it in this pass (not re-verified verbatim in this package); baseballcardpedia.com's own continuous wiki page (which PR #2443 already established as the primary source) is used verbatim for every field here. topps.com and tcdb.com both returned HTTP 403 on every attempted URL (one attempt each, not retried, per task instruction).",
+  "mintedBy": "Acquisition builder (2026-09-27), follow-on package to PR #2443. Card numbers continue immediately after 2020's last row (#376 Tony Gonsolin, 30-Dec) with no gap: #377 Gerrit Cole is dated Jan 6 2021 on the same single source page.",
+  "rungsMinted": [
+    { "parallel": "(none -- single-rung product, no stated parallel ladder)", "printRun": null }
+  ],
+  "cardNumbersFilled": 104,
+  "notMinted": {
+    "parallelLadder": {
+      "reason": "No parallel/color ladder is stated for 2021 on the source. Parallel column left BLANK, never 'Base', consistent with PR #2443's four years."
+    },
+    "checklistCards": {
+      "reason": "CL-04 (Checklist #301-400), bundled with the 24-Mar-2021 release week, is Topps' own unnumbered index insert. No player, not staged, per doctrine."
+    },
+    "teamColumn": {
+      "reason": "baseballcardpedia's 2021 section carries no team field (same as every year on this page except 2018, which cardboardconnection separately corroborated). Team left BLANK for all 104 rows rather than filled from unsourced general knowledge."
+    }
+  },
+  "spellingAudit": "Card numbers, player names, and release dates taken verbatim from baseballcardpedia.com's 'Topps Living Set' wiki page, 2021 subsection (cardNumber 377 Gerrit Cole through 480 Ty France). Section boundary self-consistent within the same single page: 2020's own last row (#376 Tony Gonsolin, 30-Dec) and 2022's own first row (#481 James McCann, 5-Jan) both agree with this package's stated range. Names reproduced verbatim including the source's own inconsistent date-abbreviation style (e.g. both 'Jan 6' and later 'Sept 1' / 'Sep 8' forms appear on the source page for this year; normalized here to ISO date only, spelling of player names kept verbatim).",
+  "provenance": {
+    "cardsFrom": "baseballcardpedia.com only.",
+    "rungsFrom": "n/a -- no parallel ladder sourced",
+    "dedup": "checked against this package's own sibling files and against PR #2443's 2018/2019/2020/2024 ranges (1-376, 689-792) -- zero overlap, zero duplicate cardNumbers across all eight files (897 total, 897 distinct)."
+  }
+}
