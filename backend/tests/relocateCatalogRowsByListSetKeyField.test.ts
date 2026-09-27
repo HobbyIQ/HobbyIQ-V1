@@ -2,13 +2,26 @@
 //
 // The 2026-09-27 unsigned-twins census (backend/data/sales-repoints/
 // 2026-09-27-baseball-unsigned-twins-r0927d.json, repoint-sales-by-list REPORT
-// run 36351266066) found 892 of that list's product-mismatch refusals were
-// caused by a stored card_catalog `setKey` field disagreeing with the setKey
-// segment already baked into the row's own id -- e.g. an id addressed
-// `hiq:baseball:2024:bowman-chrome:...` whose stored `setKey` field reads
-// "bowman" (760 rows, ingested by checklistcenter-2026-08-29 /
-// checklistinsider-2026-08-27). The address is right; the field an ingest
-// wrote into it drifted.
+// run 36351266066) found 892 pairs where a stored card_catalog `setKey` field
+// disagreed with the setKey segment already baked into the row's own id.
+//
+// THIS FILE TESTS THE MECHANISM ONLY, NOT ANY PARTICULAR ROW'S DIRECTION.
+// PR #2467's first pass assumed every one of the 892 was a wrong FIELD (patch
+// the field to match the id) and was corrected on review: full per-row census
+// (sourceUrl, setName, catalogBatch) showed 838 of the 892 -- the CPA-/90AU-/
+// FPA-/BPA- groups -- are the OPPOSITE shape: the row's own setName/setKey/
+// displayName are internally self-consistent with EACH OTHER and disagree
+// only with the id, which is the signature of a sibling-checklist product
+// collision (CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; see the 2026-09-12
+// CPA-MG/CPA-VF corrections in backend/data/pool-relocations/
+// 2026-09-12-cpa-mg-bowman-chrome-to-bowman.json) -- there the ID is what
+// should move, never the field. Only 31 rows (CRA- checklist-batch-fill,
+// where the field was simply never written and the row's own product already
+// agrees with its id) are the safe field-patch shape, and those are the only
+// entries backend/data/catalog-relocations/2026-09-27-unsigned-twins-setkey-
+// field-repair.json now carries; the CPA-BM fixture below is a representative
+// SHAPE for the mechanism's tests, not a claim that this specific row's field
+// (rather than its id) is what's wrong.
 //
 // This is a DIFFERENT gap from the `parallel` heal
 // (relocateCatalogRowsByListRungText.test.ts): that heal's correct value has
@@ -17,9 +30,10 @@
 // grammar. Here there is nothing to supply and nothing to round-trip -- the
 // setKey segment IS already sitting in the id, unambiguous and immutable, so
 // the fix is "make the stored field agree with the address it is already
-// living at." An entry that DID try to supply a `setKey` value is refused:
-// the only legal value is idSetKey(id), so a caller naming one is a sign the
-// entry was built for a different row.
+// living at" -- WHEN that premise holds, which the census must establish
+// per-row before any entry is written. An entry that DID try to supply a
+// `setKey` value is refused: the only legal value is idSetKey(id), so a
+// caller naming one is a sign the entry was built for a different row.
 //
 // classifyEntry gains a `field` discriminator on the patchFields shape,
 // defaulting to "parallel" so every existing list (none of which name it)
