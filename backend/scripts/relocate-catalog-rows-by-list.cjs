@@ -467,6 +467,40 @@ function classifyEntry(e) {
     // becomes a no-op nobody notices.
     return { ok: false, why: `${action} entry must not name a "to": ${id.slice(0, 60)}` };
   }
+  // A RETIRE MAY NAME A LIVE TWIN THAT MUST EXIST AND BE CHECKLIST-GRADE AT
+  // THE DELETE CALL (CF-A-RETIRE-REQUIRES-ITS-TWIN, 2026-09-27). PR #2466's
+  // 1,869 empty `:no-auto` rows are each justified by the presence of their
+  // checklist-grade `:auto` twin -- today that justification lives only in
+  // the list author's head and the PR description, never checked by the
+  // lane itself. `requireTwinId` names that twin so the lane can refuse
+  // instead of trusting the list. It is optional and additive: an entry
+  // without it behaves exactly as before this change.
+  //
+  // Validated here, at load time, the same way `to` is validated for a
+  // reslug -- well-formed hiq slug, and never the entry's own id (a
+  // self-referential twin can never be read "at delete time" because the
+  // delete call is what removes it).
+  const requireTwinId = String(e?.requireTwinId ?? "").trim();
+  if (requireTwinId) {
+    if (action !== "retire") {
+      return { ok: false, why: `requireTwinId is only meaningful on a retire entry, got action ${JSON.stringify(action)}: ${id.slice(0, 60)}` };
+    }
+    if (!requireTwinId.startsWith("hiq:")) {
+      return { ok: false, why: `requireTwinId is not a hiq slug: ${requireTwinId.slice(0, 60)}` };
+    }
+    if (requireTwinId === id) {
+      return { ok: false, why: `requireTwinId equals the entry's own id: ${id.slice(0, 60)}` };
+    }
+  }
+  // Classification only, worded to avoid a second copy of the exact "if"
+  // condition guarding the WRITE branch in main()'s loop below -- a
+  // source-string pin in relocateCatalogRowsByList.test.ts locates that
+  // guard by its literal text and slices forward to the RESLUG marker to
+  // prove a retire never reads a destination. A duplicate here, even inside
+  // a comment, would make that indexOf find this spot instead.
+  if ("retire" === action) {
+    return { ok: true, id, action, to, reason, requireTwinId: requireTwinId || null };
+  }
   // A PATCHFIELDS ENTRY NAMES ITS FIELD IN-LINE, NOT IN A NESTED OBJECT --
   // `parallel` is the only field this shape may touch (CF-A-RESLUG-THAT-
   // CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT heal, 2026-09-26). Scoped to one
@@ -1084,6 +1118,16 @@ async function main() {
   // -- refused, never deleted. `salesUnplaced` above is what a LICENSED
   // retire hands to the rematch; this is the entry that never got that far.
   let refusedSalesPresent = 0;
+  // A retire naming `requireTwinId` whose twin does not exist at the delete
+  // call. "Present" is answered fresh, per row, by a point-read at gate time
+  // -- never from a batch snapshot taken when the list was built, which could
+  // go stale between the census and the apply.
+  let refusedTwinAbsent = 0;
+  // A retire naming `requireTwinId` whose twin exists but is not
+  // checklist-grade (catalogAuthorityOf(twin.source) !== "checklist"). Present
+  // is not enough: a VENDOR or DERIVED row at the twin's address is not the
+  // checklist-backed home this retire is justified by.
+  let refusedTwinNotChecklistGrade = 0;
   // A SUBSET of refusedOccupied, never an addition to it: the reconciliation
   // identity below counts occupied refusals once, and a superset IS one.
   let refusedNameSuperset = 0;
@@ -1145,7 +1189,7 @@ async function main() {
     considered++;
     const c = classifyEntry(e);
     if (!c.ok) { failed++; console.error(`  MALFORMED — ${c.why}`); continue; }
-    const { id, action, to, reason } = c;
+    const { id, action, to, reason, requireTwinId } = c;
     const evidence = String(e.evidence ?? "").trim();
 
     const row = await rowAt(id);
@@ -1308,6 +1352,33 @@ async function main() {
         console.error(`  REFUSED (sales present, n=${f(pointing)})  ${id.slice(0, 70)}`);
         console.error("      a retire needs zero sales by BOTH the cross-partition and the partition-scoped read");
         continue;
+      }
+      // THE OPTIONAL LIVE TWIN GATE (CF-A-RETIRE-REQUIRES-ITS-TWIN,
+      // 2026-09-27). A list author may name `requireTwinId` to say "delete
+      // this row ONLY if this other row exists and is checklist-grade" --
+      // exactly PR #2466's justification for its 1,869 empty `:no-auto`
+      // rows, now CHECKED instead of merely asserted in the PR description.
+      // Read fresh here, at the delete call, never off a batch snapshot: the
+      // twin could have been retired, reslugged or demoted to a non-checklist
+      // source by an earlier entry in THIS SAME RUN, or by any other lane,
+      // between when the list was built and now. REPORT mode runs this exact
+      // read too, and prints the exact refusal APPLY would -- so a clean
+      // REPORT is evidence the APPLY will pass this gate, not merely a hope.
+      if (requireTwinId) {
+        const twin = await rowAt(requireTwinId);
+        if (!twin) {
+          refusedTwinAbsent++;
+          console.error(`  REFUSED (twin-absent)  ${id.slice(0, 70)}`);
+          console.error(`      requireTwinId ${requireTwinId.slice(0, 70)} does not exist -- this retire's justification is gone`);
+          continue;
+        }
+        const twinAuthority = catalogAuthorityOf(twin.source);
+        if (twinAuthority !== "checklist") {
+          refusedTwinNotChecklistGrade++;
+          console.error(`  REFUSED (twin-not-checklist-grade, authority=${twinAuthority})  ${id.slice(0, 70)}`);
+          console.error(`      requireTwinId ${requireTwinId.slice(0, 70)} carries source="${String(twin.source ?? "")}" -- present is not checklist-grade`);
+          continue;
+        }
       }
       if (!APPLY) { retired++; continue; }
       try {
@@ -1670,6 +1741,8 @@ async function main() {
   console.log(`  refused — cross-market  ${f(refusedCrossMarket)}   <- a JA row may never land on an EN key, or the reverse`);
   console.log(`  refused — rung text     ${f(refusedRungTextMissing)}   <- the rung moved with no parallel text, or the text does not produce "to"`);
   console.log(`  refused — sales present ${f(refusedSalesPresent)}   <- a retire needs zero sales by BOTH forms of the dual check`);
+  console.log(`  refused — twin absent   ${f(refusedTwinAbsent)}   <- requireTwinId named a row that does not exist at the delete call`);
+  console.log(`  refused — twin not checklist-grade ${f(refusedTwinNotChecklistGrade)}   <- the twin exists but present is not checklist-grade`);
   console.log(`  already gone            ${f(alreadyRight)}`);
   console.log(`  not found               ${f(notFound)}`);
   console.log(`  read-back needed a retry ${f(readBackRetried)}   <- replica lag, delete confirmed landed — NOT failed`);
@@ -1705,21 +1778,27 @@ async function main() {
   const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked + verified + patchedFields;
   const skipped = alreadyRight + notFound + alreadyParked + alreadyVerified;
   const refused = refusedOccupied + refusedCrossMarket + refusedNotPending + refusedRungTextMissing + refusedSalesPresent;
+  // THE TWIN GATE'S TWO REFUSAL NAMES JOIN THE SAME IDENTITY (2026-09-27). A
+  // separate statement rather than folded into the sum above so the older
+  // reconcile line -- pinned by its own exact text in
+  // relocateCatalogRowsByListRungText.test.ts -- stays byte-identical and
+  // this addition cannot be mistaken for editing it.
+  const refusedTotal = refused + refusedTwinAbsent + refusedTwinNotChecklistGrade;
   // A PARTIAL RUN STILL RECONCILES. The identity has to hold over what the
   // loop CONSIDERED, not over the file, or a budget stop reads as 6,695 lost
   // entries. `not reached` carries the remainder explicitly so the two numbers
   // an operator cares about -- what happened, and what is left -- are both on
   // the page rather than one being inferred from the other's absence.
   console.log(`  reconciled: intended ${f(intended)} = written ${f(written)} + skipped ${f(skipped)} `
-    + `+ refused ${f(refused)} + failed ${f(failed)} + not reached ${f(notReached)}`);
-  if (written + skipped + refused + failed + notReached !== intended) {
+    + `+ refused ${f(refusedTotal)} + failed ${f(failed)} + not reached ${f(notReached)}`);
+  if (written + skipped + refusedTotal + failed + notReached !== intended) {
     console.error("  !! RECONCILE MISMATCH — an entry was neither written, skipped, refused, failed nor deferred");
     process.exitCode = 4;
   }
   if (APPLY) {
     reportWrites({
       job: "relocate-catalog-rows-by-list", intended,
-      written, skipped: skipped + notReached, failed: failed + refused,
+      written, skipped: skipped + notReached, failed: failed + refusedTotal,
     });
   }
 
