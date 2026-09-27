@@ -30,7 +30,7 @@ const listPath = join(
   "2026-09-27-baseball-unsigned-twins-empty-retire.json",
 );
 
-type Entry = { id: string; action: string; to?: string; reason?: string };
+type Entry = { id: string; action: string; to?: string; reason?: string; requireTwinId?: string };
 type ListDoc = {
   forLane: string;
   reportOnlyUntil?: string;
@@ -42,7 +42,13 @@ const readList = (p: string): ListDoc => JSON.parse(readFileSync(p, "utf8")) as 
 
 // The lane is required WITHOUT a built tree, exactly as relocateCatalogRowsByList.test.ts does it.
 const L = require_(lane) as {
-  classifyEntry: (e: unknown) => { ok: boolean; why?: string; action?: string; to?: string };
+  classifyEntry: (e: unknown) => {
+    ok: boolean;
+    why?: string;
+    action?: string;
+    to?: string;
+    requireTwinId?: string | null;
+  };
 };
 
 const doc = readList(listPath);
@@ -57,6 +63,43 @@ describe("the R-0927d empty unsigned-twin retire list", () => {
     for (const e of doc.entries) {
       const c = L.classifyEntry(e);
       expect(c.ok, `${e.id}: ${c.why ?? ""}`).toBe(true);
+    }
+  });
+
+  /**
+   * CF-A-RETIRE-REQUIRES-ITS-TWIN (#2468, merged main 47912c5b). The lane's
+   * plain `retire` has no live twin-presence gate on its own -- this list's
+   * whole justification ("checklist-grade :auto twin present") was, before
+   * #2468, only asserted in the PR description and never checked at the
+   * delete call. Every entry now names its own :auto twin via `requireTwinId`
+   * so relocate-catalog-rows-by-list refuses (twin-absent /
+   * twin-not-checklist-grade) instead of trusting this list on faith.
+   */
+  it("every entry names requireTwinId, and the loader accepts it (not just tolerates it)", () => {
+    for (const e of doc.entries) {
+      expect(typeof e.requireTwinId, e.id).toBe("string");
+      expect((e.requireTwinId ?? "").length, e.id).toBeGreaterThan(0);
+      const c = L.classifyEntry(e);
+      expect(c.ok, `${e.id}: ${c.why ?? ""}`).toBe(true);
+      // The loader must actually carry the field through classification --
+      // an entry that merely passed validation while the field was silently
+      // dropped would leave the gate with nothing to check at delete time.
+      expect(c.requireTwinId, e.id).toBe(e.requireTwinId);
+    }
+  });
+
+  it("requireTwinId is a well-formed hiq slug and never equals the entry's own id", () => {
+    for (const e of doc.entries) {
+      expect(e.requireTwinId, e.id).toMatch(/^hiq:/);
+      expect(e.requireTwinId, e.id).not.toBe(e.id);
+    }
+  });
+
+  it("requireTwinId names the :auto twin, never another :no-auto row", () => {
+    for (const e of doc.entries) {
+      const segments = String(e.requireTwinId).split(":");
+      expect(segments.includes("auto"), e.id).toBe(true);
+      expect(segments.includes("no-auto"), e.id).toBe(false);
     }
   });
 
@@ -98,6 +141,19 @@ describe("the R-0927d empty unsigned-twin retire list", () => {
     for (const e of doc.entries) {
       expect(fromIds.has(e.id), `${e.id} must be a fromId in the sales-repoints list`).toBe(true);
       expect(toIds.has(e.id), `${e.id} must never be a toId in the sales-repoints list`).toBe(false);
+    }
+  });
+
+  it("requireTwinId equals the source sales-repoints list's toId for that same fromId", () => {
+    const scopeList = readList(
+      join(__dirname, "..", "data", "sales-repoints", "2026-09-27-baseball-unsigned-twins-r0927d.json"),
+    ) as unknown as { entries: Array<{ fromId: string; toId: string }> };
+    const toIdByFromId = new Map(scopeList.entries.map((e) => [e.fromId, e.toId]));
+    expect(toIdByFromId.size).toBeGreaterThan(0);
+    for (const e of doc.entries) {
+      const expectedToId = toIdByFromId.get(e.id);
+      expect(expectedToId, `${e.id} must exist as a fromId in the sales-repoints list`).toBeTruthy();
+      expect(e.requireTwinId, e.id).toBe(expectedToId);
     }
   });
 
