@@ -131,7 +131,7 @@ const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-s
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 const { parseSlugWithGrade } = require(path.join(__dirname, "lib", "graded-id.cjs"));
-const { autoOnlyOverride } = require(path.join(__dirname, "lib", "auto-only-override.cjs"));
+const { autoOnlyOverride, autoOnlyOverrideDisabledReason } = require(path.join(__dirname, "lib", "auto-only-override.cjs"));
 const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
@@ -252,7 +252,16 @@ async function main() {
 
   console.log(`  scope (${SCOPE_CELLS.length} cell${SCOPE_CELLS.length === 1 ? "" : "s"})    ${SCOPE_CELLS.map((c) => c.cell).join(", ")}`);
   console.log(`  titles (setKey filter)   ${REQUESTED_SET_KEYS.length ? REQUESTED_SET_KEYS.join(", ") : "(none -- every setKey found)"}`);
-  console.log(`  R-0927d auto-only override  ${AUTO_ONLY_OVERRIDE_ARMED ? "ARMED (titles carried the auto-only-override sentinel)" : "off (default -- checklist-at-both refuses unconditionally)"}`);
+  // The allowlist is loaded (and, on failure, its warning printed) HERE, at
+  // startup, before any sale is scanned -- never lazily on the first
+  // checklist-at-both hit. A missing/malformed allowlist file must never be
+  // able to sit latent through an entire run and only surface mid-batch.
+  const autoOnlyOverrideDisabled = AUTO_ONLY_OVERRIDE_ARMED ? autoOnlyOverrideDisabledReason() : null;
+  if (AUTO_ONLY_OVERRIDE_ARMED && autoOnlyOverrideDisabled) {
+    console.log(`  R-0927d auto-only override  DISABLED for this run -- autoOnlyOverrideDisabled: ${autoOnlyOverrideDisabled} (every checklist-at-both stays refused; nothing thrown, run continues)`);
+  } else {
+    console.log(`  R-0927d auto-only override  ${AUTO_ONLY_OVERRIDE_ARMED ? "ARMED (titles carried the auto-only-override sentinel)" : "off (default -- checklist-at-both refuses unconditionally)"}`);
+  }
   console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  ${CLOCK.describe()}`);
   console.log("");

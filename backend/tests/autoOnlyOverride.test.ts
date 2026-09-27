@@ -4,8 +4,9 @@
  * isolation from the lane's own end-to-end suite
  * (repointSalesIsAutoFlip.test.ts covers the wired-in behavior).
  */
-import { describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,8 +14,14 @@ const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
   autoOnlyOverride, isAutoOnlyPrefix, isKnownUnsignedMintingSource,
-  defectiveSourcePrefixes, AUTO_ONLY_CARDNUMBER_PREFIX,
+  defectiveSourcePrefixes, autoOnlyOverrideDisabledReason, AUTO_ONLY_CARDNUMBER_PREFIX,
+  _resetCacheForTests, _setPathForTests,
 } = require(path.join(backend, "scripts", "lib", "auto-only-override.cjs"));
+
+// Every scenario below mutates the module's own load-once cache and/or its
+// active path -- reset to a clean slate (real path, no cache) after EACH
+// test so no scenario can leak into the next one, in either direction.
+afterEach(() => { _resetCacheForTests(); });
 
 // Real namesAgree, not a stub -- the gate's own contract names the REAL
 // function as what production wires in.
@@ -53,6 +60,85 @@ describe("auto-only-override -- the allowlist file", () => {
       "utf8",
     );
     expect(raw).toMatch(/R-0927D/i);
+  });
+});
+
+// ── COORDINATOR FIX (review of #2458): the allowlist load must NEVER throw.
+// Before this fix, `defectiveSourcePrefixes()` was a bare readFileSync +
+// JSON.parse -- a missing or malformed allowlist file threw uncaught,
+// propagating out of processSale's Promise.all into main()'s top-level
+// .catch and killing the WHOLE lane run mid-batch, latent until an armed run
+// actually hit a checklist-at-both sale.
+describe("auto-only-override -- allowlist load failures never throw (fail closed)", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "auto-only-override-allowlist-"));
+  afterAll(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* best effort */ } });
+
+  it("a MISSING allowlist file disables the override, without throwing, and gate 3 fails closed (refused)", () => {
+    _setPathForTests(path.join(tmp, "does-not-exist.json"));
+    expect(() => defectiveSourcePrefixes()).not.toThrow();
+    expect(defectiveSourcePrefixes()).toEqual([]);
+    expect(autoOnlyOverrideDisabledReason()).toMatch(/ENOENT|no such file/i);
+    // isKnownUnsignedMintingSource must return false (fail closed), even for
+    // a source that WOULD have matched had the real allowlist loaded.
+    expect(isKnownUnsignedMintingSource("checklistinsider-2026-08-27")).toBe(false);
+  });
+
+  it("MALFORMED JSON disables the override, without throwing, and gate 3 fails closed", () => {
+    const badFile = path.join(tmp, "malformed.json");
+    fs.writeFileSync(badFile, "{ this is not valid JSON ");
+    _setPathForTests(badFile);
+    expect(() => defectiveSourcePrefixes()).not.toThrow();
+    expect(defectiveSourcePrefixes()).toEqual([]);
+    expect(autoOnlyOverrideDisabledReason()).toBeTruthy();
+    expect(isKnownUnsignedMintingSource("checklistinsider-2026-08-27")).toBe(false);
+  });
+
+  it("a WRONG SHAPE (no `sources` array) disables the override the same way", () => {
+    const badFile = path.join(tmp, "wrong-shape.json");
+    fs.writeFileSync(badFile, JSON.stringify({ notSources: [] }));
+    _setPathForTests(badFile);
+    expect(() => defectiveSourcePrefixes()).not.toThrow();
+    expect(defectiveSourcePrefixes()).toEqual([]);
+    expect(autoOnlyOverrideDisabledReason()).toMatch(/sources/i);
+  });
+
+  it("a `sources` entry with an empty/missing prefix disables the override the same way", () => {
+    const badFile = path.join(tmp, "empty-prefix.json");
+    fs.writeFileSync(badFile, JSON.stringify({ sources: [{ prefix: "" }] }));
+    _setPathForTests(badFile);
+    expect(() => defectiveSourcePrefixes()).not.toThrow();
+    expect(defectiveSourcePrefixes()).toEqual([]);
+    expect(autoOnlyOverrideDisabledReason()).toMatch(/prefix/i);
+  });
+
+  it("the full autoOnlyOverride() gate refuses (never throws, never moves) when the allowlist is missing", () => {
+    _setPathForTests(path.join(tmp, "does-not-exist.json"));
+    let result: { move: boolean; reason: string } | undefined;
+    expect(() => { result = autoOnlyOverride(baseArgs()); }).not.toThrow();
+    expect(result!.move).toBe(false);
+    expect(result!.reason).toBe("source-not-in-allowlist");
+  });
+
+  it("a GOOD file loads normally after a prior failure, once the path is corrected and the cache reset", () => {
+    _setPathForTests(path.join(tmp, "does-not-exist.json"));
+    expect(defectiveSourcePrefixes()).toEqual([]);
+    expect(autoOnlyOverrideDisabledReason()).toBeTruthy();
+
+    _resetCacheForTests(); // back to the real, on-disk allowlist
+    expect(defectiveSourcePrefixes()).toContain("checklistinsider-2026-08-27");
+    expect(autoOnlyOverrideDisabledReason()).toBeNull();
+  });
+
+  // ── MUTATION CHECK: removing the try/catch reproduces the exact defect
+  // (an uncaught throw) on the same missing-file input the real, fixed
+  // loader already handles cleanly above.
+  it("MUTATION: a bare readFileSync + JSON.parse (no try/catch) throws on the same missing file", () => {
+    const missing = path.join(tmp, "does-not-exist.json");
+    const regressedLoad = () => JSON.parse(fs.readFileSync(missing, "utf8"));
+    expect(regressedLoad, "the OLD (regressed) loader throws uncaught on a missing file").toThrow();
+
+    _setPathForTests(missing);
+    expect(() => defectiveSourcePrefixes(), "the REAL (fixed) loader must never throw on the same input").not.toThrow();
   });
 });
 

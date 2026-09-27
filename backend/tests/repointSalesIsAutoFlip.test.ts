@@ -484,6 +484,68 @@ describe("repoint-sales-isauto-flip -- R-0927d REPORT == APPLY counters", () => 
   });
 });
 
+// ── COORDINATOR FIX (review of #2458): the allowlist load must never kill
+// the run. Drives the REAL, on-disk allowlist file out from under the lane
+// (renamed away for the duration of the test, restored in a `finally` no
+// matter what happens inside it) to reproduce the exact latent failure mode
+// the fix closes -- armed, checklist-at-both hit, allowlist unreadable.
+describe("repoint-sales-isauto-flip -- allowlist unreadable: the run continues, never throws", () => {
+  const REAL_ALLOWLIST = path.join(backend, "data", "auto-only-override-defective-sources.json");
+  const MOVED_ASIDE = `${REAL_ALLOWLIST}.moved-aside-for-test`;
+
+  function withAllowlistMissing<T>(fn: () => T): T {
+    fs.renameSync(REAL_ALLOWLIST, MOVED_ASIDE);
+    try { return fn(); }
+    finally { fs.renameSync(MOVED_ASIDE, REAL_ALLOWLIST); }
+  }
+
+  it("a MISSING allowlist file: the armed run does NOT throw / exit non-zero, and the checklist-at-both sale is refused (not moved, not lost)", () => {
+    const r = withAllowlistMissing(() =>
+      drive(
+        { ...CPA_ENV, SET_KEYS: "auto-only-override", BACKFILL_APPLY: "true" },
+        { sales: [CPA_SALE()], catalog: [CPA_NO_AUTO_ROW(), CPA_AUTO_ROW()] },
+      ),
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.out).toMatch(/DISABLED for this run -- autoOnlyOverrideDisabled:/);
+    expect(r.out).toMatch(/movedByAutoOnlyOverride \(R-0927d\)\s+0/);
+    expect(r.out).toMatch(/REFUSED: checklist-at-both \(ambiguous\)\s+1/);
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+  });
+
+  it("a MALFORMED allowlist file: the same -- disabled, refused, no throw", () => {
+    fs.renameSync(REAL_ALLOWLIST, MOVED_ASIDE);
+    try {
+      fs.writeFileSync(REAL_ALLOWLIST, "{ not valid json ");
+      const r = drive(
+        { ...CPA_ENV, SET_KEYS: "auto-only-override", BACKFILL_APPLY: "true" },
+        { sales: [CPA_SALE()], catalog: [CPA_NO_AUTO_ROW(), CPA_AUTO_ROW()] },
+      );
+      expect(r.code).toBe(0);
+      expect(r.led.salesUpserts.length).toBe(0);
+      expect(r.out).toMatch(/DISABLED for this run -- autoOnlyOverrideDisabled:/);
+      expect(r.out).toMatch(/REFUSED: checklist-at-both \(ambiguous\)\s+1/);
+    } finally {
+      fs.rmSync(REAL_ALLOWLIST, { force: true });
+      fs.renameSync(MOVED_ASIDE, REAL_ALLOWLIST);
+    }
+  });
+
+  it("NOT armed + allowlist missing: unaffected -- the sentinel is absent so the allowlist is never even consulted", () => {
+    const r = withAllowlistMissing(() =>
+      drive(
+        { ...CPA_ENV, BACKFILL_APPLY: "true" }, // no auto-only-override sentinel
+        { sales: [CPA_SALE()], catalog: [CPA_NO_AUTO_ROW(), CPA_AUTO_ROW()] },
+      ),
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/off \(default -- checklist-at-both refuses unconditionally\)/);
+    expect(r.out).not.toMatch(/DISABLED for this run/);
+  });
+});
+
 describe("repoint-sales-isauto-flip -- REFUSAL: no checklist at the flip", () => {
   it("does not move when neither address has a checklist row (acquisition gap, not this lane's defect)", () => {
     const sale = SALE({ cardId: NO_AUTO_ID, hobbyiqCardId: NO_AUTO_ID, isAuto: false });

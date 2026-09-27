@@ -30,27 +30,92 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const DEFECTIVE_SOURCES_PATH = path.join(__dirname, "..", "..", "data", "auto-only-override-defective-sources.json");
+// A mutable copy `loadDefectiveSourcePrefixesOnce` actually reads, so a test
+// can point it at a temp fixture (missing file / malformed JSON / bad shape)
+// via `_setPathForTests` without touching the real on-disk allowlist or
+// needing a Module._load shim -- this module is loaded in-process by both
+// the lane script and its own unit tests, unlike the lane script itself
+// (which the end-to-end suite drives out-of-process via execFileSync).
+let _activePath = DEFECTIVE_SOURCES_PATH;
+function _setPathForTests(p) { _activePath = p; }
 
-let _cachedPrefixes = null;
-function defectiveSourcePrefixes() {
-  if (_cachedPrefixes) return _cachedPrefixes;
-  const raw = JSON.parse(fs.readFileSync(DEFECTIVE_SOURCES_PATH, "utf8"));
-  const entries = Array.isArray(raw.sources) ? raw.sources : [];
-  _cachedPrefixes = entries
-    .map((e) => String(e?.prefix ?? "").toLowerCase().trim())
-    .filter(Boolean);
-  return _cachedPrefixes;
+// ── ALLOWLIST LOADING NEVER THROWS (coordinator review of #2458, R-0927d).
+// `defectiveSourcePrefixes()` used to do a bare readFileSync + JSON.parse: a
+// missing or malformed backend/data/auto-only-override-defective-sources.json
+// threw (ENOENT / SyntaxError) uncaught, straight through processSale's
+// Promise.all and runPool into main()'s top-level .catch -- the WHOLE lane
+// run died with exit 1 mid-batch, and only when armed AND a checklist-at-both
+// sale was actually hit, so the defect could sit latent through an entire
+// REPORT dry run and only surface on a real, armed APPLY. Loaded ONCE at
+// module init, inside try/catch, with the JSON SHAPE validated (an array of
+// non-empty strings under `.sources[].prefix`) the same way a parse failure
+// is: any failure DISABLES the override for the whole run (never partially --
+// an empty prefix set makes `isKnownUnsignedMintingSource` return false for
+// everything, so gate 3 fails closed and every checklist-at-both sale stays
+// refused, exactly the pre-override behavior) and is reported ONCE, loudly,
+// never re-thrown.
+let _prefixesCache = null; // string[] | null -- null means "not loaded yet"
+let _disabledReason = null; // string | null -- set iff loading failed
+let _warned = false;
+
+function validateShape(raw) {
+  if (!raw || typeof raw !== "object" || !Array.isArray(raw.sources)) {
+    throw new Error("expected an object with a `sources` array");
+  }
+  const prefixes = [];
+  for (const entry of raw.sources) {
+    const prefix = entry && typeof entry.prefix === "string" ? entry.prefix.toLowerCase().trim() : "";
+    if (!prefix) throw new Error("every `sources[]` entry needs a non-empty string `prefix`");
+    prefixes.push(prefix);
+  }
+  return prefixes;
 }
 
-/** Exposed for tests that want to assert the allowlist loaded, or to force a
- *  reload after a test mutates the on-disk file. Never called by the gate
- *  itself outside of `defectiveSourcePrefixes()`'s own cache. */
-function _resetCacheForTests() { _cachedPrefixes = null; }
+function loadDefectiveSourcePrefixesOnce() {
+  if (_prefixesCache !== null || _disabledReason !== null) return; // already loaded (ok or failed)
+  try {
+    const raw = JSON.parse(fs.readFileSync(_activePath, "utf8"));
+    _prefixesCache = validateShape(raw);
+  } catch (e) {
+    _disabledReason = e?.message || String(e);
+    _prefixesCache = [];
+    if (!_warned) {
+      _warned = true;
+      console.log(`\n::warning::[auto-only-override] allowlist unreadable (${_disabledReason}) -- override DISABLED for this run (every checklist-at-both stays refused, unchanged from before R-0927d)`);
+    }
+  }
+}
+
+function defectiveSourcePrefixes() {
+  loadDefectiveSourcePrefixesOnce();
+  return _prefixesCache;
+}
+
+/** `null` when the allowlist loaded fine; the failure reason string when it
+ *  did not (missing file, malformed JSON, or a bad shape) -- for the run's
+ *  own startup banner (`autoOnlyOverrideDisabled: <reason>`). Triggers the
+ *  load on first call, same as `defectiveSourcePrefixes()`. */
+function autoOnlyOverrideDisabledReason() {
+  loadDefectiveSourcePrefixesOnce();
+  return _disabledReason;
+}
+
+/** Exposed for tests that want to force a reload (e.g. after pointing
+ *  `_setPathForTests` at a temp fixture), or to assert the allowlist
+ *  loaded/failed from a clean slate. Also resets the active path back to the
+ *  real on-disk allowlist, so a test that redirected it cannot leak that
+ *  redirect into a later test. Never called by the gate itself outside of
+ *  test setup. */
+function _resetCacheForTests() {
+  _prefixesCache = null; _disabledReason = null; _warned = false; _activePath = DEFECTIVE_SOURCES_PATH;
+}
 
 /** Gate 3 alone: is this catalog row's source one the census identified as
  *  the unsigned-minting layout? Prefix match, case-insensitive, mirrors the
  *  `-graded` suffix convention elsewhere in this codebase (a graded twin
- *  inherits its parent's provenance). */
+ *  inherits its parent's provenance). Returns false (fails closed) whenever
+ *  the allowlist could not be loaded -- see loadDefectiveSourcePrefixesOnce
+ *  above; an empty prefix set makes `.some(...)` false for every source. */
 function isKnownUnsignedMintingSource(source) {
   const s = String(source ?? "").toLowerCase().trim();
   if (!s) return false;
@@ -148,6 +213,6 @@ function autoOnlyOverride(args) {
 
 module.exports = {
   autoOnlyOverride, isAutoOnlyPrefix, isKnownUnsignedMintingSource,
-  defectiveSourcePrefixes, AUTO_ONLY_CARDNUMBER_PREFIX,
-  _resetCacheForTests, DEFECTIVE_SOURCES_PATH,
+  defectiveSourcePrefixes, autoOnlyOverrideDisabledReason, AUTO_ONLY_CARDNUMBER_PREFIX,
+  _resetCacheForTests, _setPathForTests, DEFECTIVE_SOURCES_PATH,
 };
