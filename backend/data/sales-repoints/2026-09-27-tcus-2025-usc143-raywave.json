@@ -1,0 +1,20 @@
+{
+ "generatedAt": "2026-09-27T18:43:00Z",
+ "forLane": "repoint-sales-by-list",
+ "finding": "PR #2454 census (2026-09-27): USC143 (Adael Amador, 2025 Topps Chrome Update Series) is the ONE entry in the 200-pair RayWave Refractor family where BOTH the canonical (ray-wave-refractor) and stale (raywave-refractor) ids carry exactly 1 sold_comps sale each. Every other RayWave pair has zero sales at the stale id and is retired directly by relocate-catalog-rows-by-list; this pair needs the sale moved FIRST (this list) before the now-empty stale row can be retired by a follow-up relocate-catalog-rows-by-list entry. See backend/data/catalog-relocations/2026-09-27-tcus-2025-spelling-dupes-repoint-sales.json for the full census this list resolves.",
+ "census": {
+  "totalRowsUnderPrefix": 68911,
+  "rayWaveRefractorPairs": 200,
+  "pairsNeedingARepoint": 1
+ },
+ "entries": [
+  {
+   "fromId": "hiq:baseball:2025:topps-chrome-update-series:usc143:raywave-refractor:no-auto",
+   "toId": "hiq:baseball:2025:topps-chrome-update-series:usc143:ray-wave-refractor:no-auto",
+   "player": "Adael Amador",
+   "cardNumber": "USC143",
+   "reason": "Both rows carry the identical parallel text \"RayWave Refractor\" -- the id drift (raywave-refractor vs ray-wave-refractor) is normalizeParallel mint-time drift, not two different cards. Moving the sale onto the canonical id lets a follow-up relocate-catalog-rows-by-list entry retire the now-empty stale row. See merged PR #2454.",
+   "expectedSales": 1
+  }
+ ]
+}

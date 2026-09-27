@@ -799,6 +799,17 @@ on:
           # because no catalog field excludes a row from the MATCH paths; see
           # the script's header for the measurement behind that.
           - relocate-catalog-rows-by-list
+          # CF-THE-LIST-IS-THE-SCOPE, for a single sold_comps re-key (Drew,
+          # 2026-09-27 widget ruling: "Build repoint-sales-by-list lane").
+          # Moves sales from a listed SOURCE hobbyiqCardId to a listed
+          # DESTINATION hobbyiqCardId; retire of the emptied source catalog
+          # row is a SEPARATE follow-up via relocate-catalog-rows-by-list,
+          # never this lane -- one axis, sales only. `scope` carries the
+          # list path and is REQUIRED, same convention as the catalog lane
+          # immediately above: no default, an empty scope is fatal. First
+          # use: USC143 (Adael Amador, 2025 Topps Chrome Update Series
+          # RayWave Refractor spelling drift, PR #2454).
+          - repoint-sales-by-list
           # CF-THE-ACQUISITION-QUEUE-MUST-ONLY-CARRY-CELLS-A-SOURCE-CAN-SERVE
           # (2026-09-07). The WRITE half of audit-seed-queue-sport-hygiene,
           # which is report-only by construction and emitted the 2,080-entry
@@ -2413,7 +2424,11 @@ jobs:
           # fixed-path-guarded-on-script convention (no new input; the
           # runner's dispatch form is at 24 of GitHub's 25). Uploaded by the
           # SAME step that already uploads this lane's backfill.log, below.
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'repoint-sales-isauto-flip' && '/tmp/repoint-sales-isauto-flip-plan' || inputs.script == 'reconcile-split-identity' && '/tmp/reconcile-split-identity-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
+          # repoint-sales-by-list (2026-09-27): one NDJSON record per sale
+          # moved/would-move/refused/failed -- same fixed-path-guarded-on-
+          # script convention, no new input (Drew's widget ruling: "Build
+          # repoint-sales-by-list lane").
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'repoint-sales-isauto-flip' && '/tmp/repoint-sales-isauto-flip-plan' || inputs.script == 'reconcile-split-identity' && '/tmp/reconcile-split-identity-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || inputs.script == 'repoint-sales-by-list' && '/tmp/repoint-sales-by-list-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -5009,6 +5024,53 @@ jobs:
             echo "::notice::${{ inputs.scope }} finished within budget (considered=${N:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=relocate-catalog-rows-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
+
+      - name: Upload the repoint-sales-by-list plan
+        if: ${{ always() && inputs.script == 'repoint-sales-by-list' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: repoint-sales-by-list-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/repoint-sales-by-list-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the sales-by-list repoint until the list is drained
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, modeled EXACTLY on the
+        # relocate-catalog-rows-by-list block immediately above -- this
+        # lane's own sibling on the sold_comps side (Drew, 2026-09-27 widget
+        # ruling: "Build repoint-sales-by-list lane"). A unit here is one
+        # SALE MOVED rather than one list entry, but the shape is the same:
+        # budget, stop, print the marker, exit; this step continues it.
+        #
+        # THE SCOPE IS RE-DISPATCHED VERBATIM, and it must be: `scope` names
+        # the committed list file, the lane has no default, and a relaunch
+        # that dropped it would be fatal at entry 0 rather than merely
+        # wrong. There is no cursor input and none is wanted -- the
+        # continuation re-reads the same file from the top.
+        #
+        # THAT RE-READ IS SAFE BECAUSE THE LIST IS IDEMPOTENT. A move whose
+        # source has already been repointed reads back as zero sales at
+        # fromId and is refused (zero-sales), never re-moved and never
+        # counted as written. So a continuation pays one cheap dual-check
+        # per finished entry and writes only the remainder.
+        if: ${{ !cancelled() && inputs.script == 'repoint-sales-by-list' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: repoint-sales-by-list
+          preamble: |
+            N=$(grep -aoE "^  entries considered +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "entries_considered=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (considered=${N:-0}) — re-dispatching ${{ inputs.scope }} to continue"
+          finished-notice: |
+            echo "::notice::${{ inputs.scope }} finished within budget (considered=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
 
       - name: Self-relaunch a newly budgeted write lane until its scope is drained
         # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, for the lanes #1944's ratchet
