@@ -96,6 +96,60 @@
  * fail-safe `player-evidence.cjs` documents for its own gathering: this module
  * only ever turns a refusal INTO an agreement, never the other way.
  *
+ * ── THE SURNAME FLOOR (review round 1, PR #2463) ────────────────────────────
+ *
+ * `opts.stripTrailingTokens` (rule (b)'s caller-supplied extension, below)
+ * opened a real hole once a real caller's vocabulary was used: 2025
+ * topps-chrome-update-series's own checklist lists bare colour parallel words
+ * -- "Green", "Gold", "Black", "Orange", "Red", "Blue" -- and a SURNAME that
+ * is also one of those colours ("Nick Green") stripped down to a bare first
+ * name, which then "agreed" with ANY other bare "Nick" (or "Nick RC" after
+ * rule (b)'s own strip), a false merge with zero relation to the actual
+ * different-player question this file exists to answer. Three guards close
+ * it, none of them undoing rules (a)-(d) above -- they only ever narrow what
+ * a STRIP is allowed to remove, the same one-directional safety the rest of
+ * this file already holds to:
+ *
+ *   FLOOR 1 -- NEVER STRIP BELOW TWO TOKENS. A trailing marker (fixed OR
+ *   caller-supplied) is stripped only when the side has at least THREE
+ *   whitespace tokens before the strip (so at least two remain after it) --
+ *   "Jonah Tong RC" (3 tokens) safely strips to "Jonah Tong" (2), but "Nick
+ *   Green" (2 tokens) never strips "Green" down to the bare "Nick" (1) no
+ *   matter which list names it. A first name alone proves nothing about
+ *   which player a card is.
+ *
+ *   FLOOR 2 -- A COLOUR THAT IS THE OTHER SIDE'S OWN SURNAME IS A SURNAME,
+ *   NOT A COLOUR, ON THIS PAIR. Before stripping a trailing token from side
+ *   A, this file checks side B's own trailing token (after B's fixed-marker
+ *   strip, so a marker on B does not hide B's real surname): if the two are
+ *   the same word, side A's trailing word is refused as a strip candidate
+ *   for THIS COMPARISON, because the other side just proved that exact word
+ *   names a real surname a card in this pool actually carries ("Nick Green"
+ *   vs "Chris Green" -- "Green" is not a stray colour here, it is the
+ *   surname BOTH sides in this comparison could plausibly be using).
+ *
+ *   FLOOR 3 -- A STRIP-PRODUCED SINGLE TOKEN NEVER AGREES. Floors 1-2 already
+ *   refuse any strip that would leave fewer than two tokens, so this floor is
+ *   the fail-safe of last resort, the same posture rule (d) closes with: if a
+ *   side somehow still reads as one bare word AFTER a strip actually removed
+ *   something from it, that side never agrees, even against an identical
+ *   bare word on the other side -- a lone word this file manufactured by
+ *   stripping proves nothing. This draws a DELIBERATE line at NATIVE single
+ *   tokens: a side that was already one bare word BEFORE any stripping ran
+ *   (a mononym, a placeholder, a sparse field -- real fixtures elsewhere in
+ *   this codebase compare bare single names this way) is not a stripped
+ *   artefact and is left to the ordinary fold/compare like any other pair,
+ *   so two identical native single words still agree and two different ones
+ *   still refuse.
+ *
+ * These floors apply to EVERY strip this file performs -- rule (b)'s own
+ * fixed vocabulary included -- because the hole is in what a STRIP can leave
+ * behind, not in which list supplied the word. Measured against the existing
+ * 127-pair fixture set: every fixed-marker strip already leaves >= 2 tokens
+ * (`stripMarkers`'s own test asserts this), so the floors change nothing
+ * about rule (b)'s pre-existing behaviour and exist purely to bound the new
+ * option.
+ *
  * ── WHERE THIS IS WIRED, AND WHERE IT IS NOT ────────────────────────────────
  *
  * ONLY the different-player decision in `rekey-product-setkey` (MODE=catalog,
@@ -207,6 +261,23 @@ function trailingTokenRe(phrase) {
   return new RegExp(`\\s+${escaped}$`, "i");
 }
 
+/** Whitespace-token count -- the unit FLOOR 1 counts in. "Nick Green" is 2
+ *  tokens, "Jonah Tong RC" is 3. Empty/blank counts as 0. */
+function tokenCount(name) {
+  const s = String(name ?? "").trim();
+  return s ? s.split(/\s+/).filter(Boolean).length : 0;
+}
+
+/** The LAST whitespace token of a name, lowercased for a case-insensitive
+ *  comparison -- what FLOOR 2 checks the OTHER side's own trailing word
+ *  against. Empty/blank returns "". */
+function lastToken(name) {
+  const s = String(name ?? "").trim();
+  if (!s) return "";
+  const parts = s.split(/\s+/).filter(Boolean);
+  return parts.length ? parts[parts.length - 1].toLowerCase() : "";
+}
+
 /**
  * Strip every rule-(b) trailing marker from one name, repeatedly (a name can
  * carry more than one, e.g. two subset tags), THEN strip any caller-supplied
@@ -219,20 +290,39 @@ function trailingTokenRe(phrase) {
  * NOT stripped here -- it is pulled off separately by
  * `extractGenerationalSuffix` so its own token can be compared by
  * `suffixesCompatible` instead of being discarded.
+ *
+ * `otherSideLastToken` (see the header's "THE SURNAME FLOOR") is the OTHER
+ * side's own trailing word (already reduced past ITS fixed markers, by the
+ * caller) -- FLOOR 2. A candidate strip is refused, this call and no other,
+ * when removing it would either (FLOOR 1) leave fewer than two tokens on
+ * THIS side, or (FLOOR 2) remove exactly the word the other side is using as
+ * its own surname. Both floors apply to every marker in the loop below,
+ * fixed or caller-supplied -- the hole is in what a strip can leave behind,
+ * not in which list named the word.
  */
-function stripMarkers(name, extraTrailingTokens) {
+function stripMarkers(name, extraTrailingTokens, otherSideLastToken) {
   const extraRes = Array.isArray(extraTrailingTokens)
     ? extraTrailingTokens.map(trailingTokenRe).filter(Boolean)
     : [];
+  const guardWord = String(otherSideLastToken ?? "").toLowerCase();
   let out = String(name ?? "").trim();
   let changed = true;
   while (changed) {
     changed = false;
     for (const re of [QUOTED_SUBSET_RE, LEAGUE_LEADER_SUFFIX, ...TRAILING_SUBSET_MARKERS, ...extraRes]) {
-      if (re.test(out)) {
-        out = out.replace(re, "").trim();
-        changed = true;
-      }
+      const m = out.match(re);
+      if (!m) continue;
+      const candidate = out.slice(0, m.index).trim();
+      // FLOOR 1: never strip below two tokens.
+      if (tokenCount(candidate) < 2) continue;
+      // FLOOR 2: never strip the exact word the OTHER side is using as its
+      // own trailing token (its surname on this pair) -- compare the STRIPPED
+      // TEXT itself (m[0], trimmed), not the marker pattern, so this floor
+      // reads what was actually about to be removed.
+      const strippedText = m[0].trim().toLowerCase();
+      if (guardWord && strippedText === guardWord) continue;
+      out = candidate;
+      changed = true;
     }
   }
   return out;
@@ -328,8 +418,32 @@ function namesAgree(nameA, nameB, opts) {
   const { base: baseB, suffix: suffixB } = extractGenerationalSuffix(rightName);
   if (!suffixesCompatible(suffixA, suffixB)) return false;
 
-  const strippedA = stripMarkers(baseA, extraTrailingTokens);
-  const strippedB = stripMarkers(baseB, extraTrailingTokens);
+  // FLOOR 2 (see the header's "THE SURNAME FLOOR"): each side's strip is
+  // guarded against removing the exact word the OTHER side is using as its
+  // own trailing token. Read off the PRE-STRIP base (post generational-suffix
+  // extraction only) so this is never circular -- A's guard word is B's own
+  // surname as B was actually given, not whatever B happens to reduce to
+  // after its own strip runs.
+  const strippedA = stripMarkers(baseA, extraTrailingTokens, lastToken(baseB));
+  const strippedB = stripMarkers(baseB, extraTrailingTokens, lastToken(baseA));
+
+  // FLOOR 3: a side that a STRIP reduced to a single token never agrees --
+  // even against an identical single token on the other side, and even
+  // though the plain fold below would say they match. Floors 1-2 already
+  // refuse any strip that would leave fewer than two tokens (see
+  // `stripMarkers`), so this side can only be a bare single token here if it
+  // WAS ALREADY one before any stripping ran -- a name this file was simply
+  // handed as one bare word (a mononym, a placeholder, a sparse field), never
+  // a name this file manufactured by stripping something off. That is the
+  // line this floor draws: refuse the STRIPPED-DOWN case (there is no
+  // vocabulary word this file could have removed from a two-token name and
+  // ended up here, by construction of floors 1-2), leave the NATIVE
+  // single-token case exactly as every other rule in this file already
+  // treats it -- fold and compare, same as any other pair.
+  const aWasStripped = tokenCount(strippedA) < tokenCount(baseA);
+  const bWasStripped = tokenCount(strippedB) < tokenCount(baseB);
+  if ((tokenCount(strippedA) < 2 && aWasStripped) || (tokenCount(strippedB) < 2 && bWasStripped)) return false;
+
   return foldForCompare(strippedA) === foldForCompare(strippedB);
 }
 

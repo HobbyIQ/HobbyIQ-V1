@@ -327,6 +327,95 @@ describe("namesAgree -- opts.stripTrailingTokens (caller-supplied, product-scope
   });
 });
 
+// ── THE SURNAME FLOOR (review round 1, PR #2463) ────────────────────────────
+//
+// https://github.com/HobbyIQ/HobbyIQ-V1/pull/2463#issuecomment-5859674530.
+// The REAL GATE-6 vocabulary for 2025 topps-chrome-update-series emits bare
+// colour parallel words -- Green, Gold, Black, Orange, Red, Blue -- and a
+// SURNAME that is also one of those colours ("Nick Green") stripped down to
+// a bare first name, which then "agreed" with any other bare "Nick" (or
+// "Nick RC"): a false merge with zero relation to whether the two sides are
+// really the same player. Three floors close it -- see name-agreement.cjs's
+// own header, "THE SURNAME FLOOR" -- and this block pins exactly the
+// reviewer's three repro cases plus the four cases the fix must NOT break.
+const COLOUR_STRIP = ["Green", "Gold", "Black", "Orange", "Red", "Blue"];
+
+describe("namesAgree -- the surname floor (review round 1, PR #2463)", () => {
+  it("REVIEWER CASE 1: \"Nick Green\" vs \"Nick\" REFUSES -- Green is Nick's surname, not a stray colour", () => {
+    expect(cjs.namesAgree("Nick Green", "Nick", { stripTrailingTokens: COLOUR_STRIP })).toBe(false);
+  });
+
+  it("REVIEWER CASE 2: \"Nick Green\" vs \"Nick RC\" REFUSES -- same hole, with rule (b)'s own RC marker on the other side", () => {
+    expect(cjs.namesAgree("Nick Green", "Nick RC", { stripTrailingTokens: COLOUR_STRIP })).toBe(false);
+  });
+
+  it("REVIEWER CASE 3 (must still work): \"Adael Amador Teal\" vs \"Adael Amador RC\" still agrees", () => {
+    expect(
+      cjs.namesAgree("Adael Amador Teal", "Adael Amador RC", {
+        stripTrailingTokens: ["Teal Refractor", "Teal", "Refractor", ...COLOUR_STRIP],
+      }),
+    ).toBe(true);
+  });
+
+  it("FLOOR 1 (never strip below two tokens): a two-token side never loses its trailing word to the caller's list", () => {
+    // "Chris Green" is 2 tokens; stripping "Green" would leave the bare
+    // "Chris" (1 token) -- FLOOR 1 refuses the strip outright, whatever the
+    // other side reads.
+    expect(cjs.namesAgree("Chris Green", "Chris", { stripTrailingTokens: COLOUR_STRIP })).toBe(false);
+    expect(cjs.namesAgree("Chris Green", "Chris RC", { stripTrailingTokens: COLOUR_STRIP })).toBe(false);
+  });
+
+  it("FLOOR 2 (a colour that is the OTHER side's surname is a surname): \"Chris Green\" vs \"Chris Green Refractor\" still agrees, keeping Green", () => {
+    // Green is NOT stripped from either side (floor 1 blocks the 2-token
+    // side outright; floor 2 backs it up), but "Refractor" strips cleanly
+    // off the 3-token side via rule (b)'s own extension -- both reduce to
+    // "Chris Green" and agree.
+    expect(
+      cjs.namesAgree("Chris Green", "Chris Green Refractor", { stripTrailingTokens: [...COLOUR_STRIP, "Refractor"] }),
+    ).toBe(true);
+  });
+
+  it("a genuinely different player is never swept in by the colour vocabulary: \"Chris Green\" vs \"Chris Taylor\" refuses", () => {
+    expect(
+      cjs.namesAgree("Chris Green", "Chris Taylor", { stripTrailingTokens: [...COLOUR_STRIP, "Refractor"] }),
+    ).toBe(false);
+  });
+
+  it("a multi-word colour phrase strips as ONE unit, not word-by-word", () => {
+    // "Sky Blue Refractor" is listed as a whole phrase (the same shape
+    // repoint-sales-by-list.cjs's own vocabulary builder emits for a listed
+    // checklist name) -- it strips in one match, leaving a genuine 2-token
+    // base behind, never landing on the single bare colour word "Blue".
+    expect(
+      cjs.namesAgree("Chris Amador Sky Blue Refractor", "Chris Amador", {
+        stripTrailingTokens: ["Sky Blue Refractor", "Sky Blue", "Refractor", ...COLOUR_STRIP],
+      }),
+    ).toBe(true);
+  });
+
+  it("FLOOR 3 (a STRIP-produced single token never agrees) draws the line at NATIVE single tokens, which are unchanged", () => {
+    // Floors 1-2 already refuse any strip that would leave fewer than two
+    // tokens (see stripMarkers), so a side can only read as ONE token here
+    // if it was already one bare word BEFORE any stripping ran -- never a
+    // name this file manufactured by removing something. A native single
+    // token (a mononym, a placeholder, a sparse field -- siblingRungTwinGuard
+    // .test.ts's own fixtures compare bare "Alpha" this way) is treated
+    // exactly like any other pair: fold and compare. This is what keeps a
+    // pre-existing single-word-name fixture (identical single words agree)
+    // working unchanged while still refusing a genuinely different pair.
+    expect(cjs.namesAgree("Ohtani", "Ohtani")).toBe(true);
+    expect(cjs.namesAgree("Ohtani", "Judge")).toBe(false);
+  });
+
+  it("FLOOR 1/2 do not touch the FIXED marker vocabulary's own pre-existing behaviour", () => {
+    // Every rule-(b) fixed-marker fixture already leaves >= 2 tokens after
+    // its own strip (RCup/FS/RC, quoted subset names, league-leader), so the
+    // new floors change nothing about them.
+    expect(cjs.namesAgree("Joey Ortiz", "Joey Ortiz RCup")).toBe(true);
+    expect(cjs.namesAgree("Jonah Tong", "Jonah Tong RC")).toBe(true);
+  });
+});
+
 describe("mutation check -- rule (c), Jr./Sr./II/III equivalence", () => {
   it("DROP THE GENERATIONAL-SUFFIX RULE -> red: \"Vladimir Guerrero Jr.\" would still disagree with \"Vladimir Guerrero\"", () => {
     const oldCompare = (x: string, y: string) =>
