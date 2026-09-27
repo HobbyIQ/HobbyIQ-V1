@@ -255,7 +255,11 @@ describe("this lane reuses the shared namesAgree, never a bespoke compare", () =
   it("requires lib/name-agreement.cjs at module scope", () => {
     const src = readFileSync(lane, "utf8");
     expect(src).toContain('require(path.join(__dirname, "lib", "name-agreement.cjs"))');
-    expect(src).toContain("namesAgree(saleName, destName)");
+    // GATE 6 now passes the destination product's own checklist parallel
+    // vocabulary as opts.stripTrailingTokens (this PR, run 36346769892) --
+    // namesAgree(a, b) with no third argument is unchanged, but this call
+    // site always supplies one, built from the real corpus.
+    expect(src).toContain("namesAgree(saleName, destName, { stripTrailingTokens: strip.tokens })");
   });
 
   it("requires the dual sales-at-id check, never a bare cross-partition query", () => {
@@ -774,6 +778,70 @@ describe("end-to-end: a sale gone since the drain is counted, never a false reco
   });
 });
 
+// ── end-to-end: GATE 6's caller-supplied stripTrailingTokens (run
+// 36346769892, USC143). The lane REFUSED `sale "Adael Amador Teal" vs
+// destination "Adael Amador RC"` in REPORT -- same player, two name-shape
+// artefacts (a trailing "RC" on the destination's checklist playerName, a
+// parallel colour word left in the sale's own player string). This suite
+// drives the REAL committed checklist-parallel-names.json corpus (not a
+// fake) through checklistParallelNamesFor(2025, "topps-chrome-update-series"),
+// which lists "Teal Refractor" for this exact product -- confirmed present
+// in the corpus before writing this test. ──────────────────────────────────
+
+describe("end-to-end: GATE 6 strips the destination product's own parallel vocabulary (USC143, run 36346769892)", () => {
+  it("REPORT: sale \"Adael Amador Teal\" vs destination \"Adael Amador RC\" -> would-move 1, not a name-disagreement refusal", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "USC143 name-shape repoint", expectedSales: 1 }], "rc-teal-move");
+    const catalog = [
+      { ...FROM_ROW, playerName: "Adael Amador Teal" },
+      { ...TO_ROW, playerName: "Adael Amador RC" },
+    ];
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador Teal", parallel: "Teal Refractor" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/REFUSED: name-disagreement\s+0/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+    // The banner names the vocabulary it used for this entry's destination.
+    expect(r.out).toMatch(/namesAgree vocabulary: \d+ checklist parallel name\(s\) for setKey="topps-chrome-update-series"/);
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("APPLY: the same pair actually moves the sale", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "USC143 name-shape repoint", expectedSales: 1 }], "rc-teal-apply");
+    const catalog = [
+      { ...FROM_ROW, playerName: "Adael Amador Teal" },
+      { ...TO_ROW, playerName: "Adael Amador RC" },
+    ];
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador Teal", parallel: "Teal Refractor" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/MOVED \(sales\)\s+1/);
+    expect(r.led.salesUpserts).toEqual(["src::1"]);
+    expect(r.led.salesDeletes).toEqual(["src::1"]);
+  });
+
+  it("control: a genuinely different player at the destination still REFUSES (name-disagreement), even with the same vocabulary in play", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "control: different player", expectedSales: 1 }], "rc-teal-control");
+    const catalog = [
+      { ...FROM_ROW, playerName: "Adael Amador Teal" },
+      { ...TO_ROW, playerName: "Julio Rodriguez RC" },
+    ];
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador Teal", parallel: "Teal Refractor" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED \(name-disagreement\) src::1: sale "Adael Amador Teal" vs destination "Julio Rodriguez RC"/);
+    expect(r.out).toMatch(/REFUSED: name-disagreement\s+1/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+0/);
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+});
+
 describe("end-to-end: a budget stop mid-entry reconciles exactly, never double-counted", () => {
   it("an entry with multiple sales, stopped partway, counts moved + not-reached-sales without a mismatch", () => {
     // Two sales at the SAME fromId/toId pair -- one entry, so its gates run
@@ -782,6 +850,19 @@ describe("end-to-end: a budget stop mid-entry reconciles exactly, never double-c
     // overridable per lib/runner-budget.cjs) to expire between the two
     // per-sale iterations: a delay on every sold_comps point read plus a
     // tiny BUDGET_MS make the SECOND sale's read observe outOfClock()==true.
+    //
+    // BUDGET_MS/RESERVE_MS/saleReadDelayMs are widened from this test's
+    // original 150/100/200 (this PR): GATE 6 now builds the destination's
+    // namesAgree stripTrailingTokens vocabulary from the real
+    // checklist-parallel-names.json corpus once per entry, and the FIRST such
+    // build in a freshly spawned process costs ~350ms parsing that corpus
+    // (memoised after, but this harness spawns one process per drive() call)
+    // -- a fixed cost the clock (started before the entry loop) now pays
+    // before the per-sale loop's own first outOfClock() check. The margins
+    // below are sized generously past that measured cost so the test's own
+    // race (sale 1 finishes inside budget, sale 2 does not) stays
+    // deterministic rather than becoming a second, tighter race against the
+    // corpus parse.
     const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why" }], "budget-straddle");
     const catalog = [FROM_ROW, TO_ROW];
     const sales = [
@@ -790,13 +871,18 @@ describe("end-to-end: a budget stop mid-entry reconciles exactly, never double-c
     ];
 
     const r = drive(
-      { SCOPE: list, BACKFILL_APPLY: "false", RUN_MINUTES: "1", BUDGET_MS: "150", RESERVE_MS: "100" },
-      { sales, catalog, saleReadDelayMs: 200 },
+      { SCOPE: list, BACKFILL_APPLY: "false", RUN_MINUTES: "1", BUDGET_MS: "1000", RESERVE_MS: "500" },
+      { sales, catalog, saleReadDelayMs: 600 },
     );
-    // The first sale's read (200ms) already exceeds the 150ms budget by the
-    // time the SECOND sale's outOfClock() check runs, so exactly one sale is
+    // outOfClock() is `left() < RESERVE_MS`, checked BEFORE each sale. The
+    // ~350ms fixed vocabulary-build cost leaves ~650ms on the clock, still
+    // >= the 500ms reserve, so sale 1's check passes and its 600ms read
+    // runs -- landing at ~950ms elapsed, leaving ~50ms < the 500ms reserve,
+    // so sale 2's check fails before it ever reads. Exactly one sale is
     // processed and one is left not-reached -- never both double-counted
-    // against the entry AND their own sale outcome.
+    // against the entry AND their own sale outcome. Margins are wide (a
+    // whole RESERVE_MS window, not a few ms) so this stays deterministic
+    // under CI scheduling noise, not a second race against the corpus parse.
     expect(r.out).toMatch(/not reached \(budget, sales\)\s+1/);
     expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
     // Review round 2 (PR #2461): line 659's budget-marker log line referenced
