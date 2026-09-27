@@ -41,6 +41,15 @@ const { reportWrites } = require(path.join(ROOT, "dist/services/ops/writeReconci
 // CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS + CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE.
 // The clock and the exit are the SHARED helper, never a local copy.
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+// LANE-SAFETY (2026-09-27). `orphaned` (below) is derived from THIS RUN'S OWN
+// scan of sales stamped by STAMP -- a sale that points at the same
+// hobbyiqCardId but was never stamped by this batch (a different ingest, a
+// re-point that happened after the scan) is invisible to that in-memory set
+// and would be silently orphaned. salesAtId re-checks the LIVE pool, by both
+// read forms, immediately before each delete -- the same "checked at delete
+// time, not assumed from an earlier computation" doctrine every other retire
+// gate in this program follows.
+const { salesAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || "") === "true";
 const BATCH = process.env.BATCH || "unnumbered-by-player-2026-08-24";
@@ -160,7 +169,7 @@ async function main() {
   // THE POPULATION IS KNOWN UP FRONT. Both write loops iterate lists this run
   // already fetched in full, so a budget stop CAN name exactly what it did not
   // reach -- unlike a lane that discovers its rows page by page.
-  let unset = 0, deleted = 0, failed = 0, notReached = 0;
+  let unset = 0, deleted = 0, failed = 0, notReached = 0, keptLiveSales = 0;
   for (let i = 0; i < retract.length; i++) {
     // THE PRE-CHECK: before this row's read+replace, never after it.
     if (CLOCK.outOfClock()) {
@@ -198,11 +207,22 @@ async function main() {
     try {
       const row = (await cat.item(id, id).read()).resource;
       if (!row || row.catalogBatch !== BATCH) continue;   // never touch another batch's row
+      // LANE-SAFETY (2026-09-27) re-check, at delete time, against the LIVE
+      // pool -- `orphaned` was computed from this run's own in-memory scan of
+      // sales stamped by STAMP, which cannot see a sale that points at this
+      // id but was never stamped by this batch. Dual read (cross-partition +
+      // partition-scoped), same as every other retire gate.
+      const { total: livePointing } = await salesAtId(sold, id, { retry: (fn) => fn() });
+      if (livePointing > 0) {
+        keptLiveSales++;
+        continue;
+      }
       await cat.item(id, id).delete();
       deleted++;
     } catch { failed++; }
   }
   console.log("\nsales retracted " + unset + "   catalog rows deleted " + deleted + "   failed " + failed);
+  if (keptLiveSales) console.log("  kept — live sales the scan missed  " + f(keptLiveSales) + "   <- salesAtId re-check caught these at delete time");
   if (notReached) console.log("  not reached (budget)  " + f(notReached));
 
   // RECONCILIATION, through the one helper. `intended` is both write lists
@@ -211,16 +231,18 @@ async function main() {
   // as loss. A shortfall sets process.exitCode = 4 -- red, not green.
   const intended = retract.length + orphanList.length;
   const written = unset + deleted;
+  const skipped = notReached + keptLiveSales;
   console.log("  reconciled: intended " + f(intended) + " = written " + f(written)
-    + " + skipped " + f(notReached) + " + failed " + f(failed));
-  if (written + notReached + failed !== intended) {
+    + " + skipped " + f(skipped) + " + failed " + f(failed));
+  if (written + skipped + failed !== intended) {
     console.error("  !! RECONCILE MISMATCH -- an entry was neither written, skipped nor failed");
     process.exitCode = 4;
   }
   reportWrites({
     job: "retire-flattened-attestations " + STAMP,
-    intended, written, skipped: notReached, failed,
-    notes: "sales retracted " + unset + "; catalog rows deleted " + deleted,
+    intended, written, skipped, failed,
+    notes: "sales retracted " + unset + "; catalog rows deleted " + deleted
+      + "; kept (live sales the scan missed) " + keptLiveSales,
   });
 
   // -- THE MARKER THE RELAUNCH GREPS ---------------------------------------

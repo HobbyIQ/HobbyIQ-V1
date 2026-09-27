@@ -93,4 +93,46 @@ async function salesAtId(container, id, opts = {}) {
   return { xp: xpIds.size, pk: pkIds.size, total: union.size, ids: [...union] };
 }
 
-module.exports = { salesAtId, CROSS_PARTITION_QUERY, PARTITION_SCOPED_QUERY };
+/**
+ * drainSalesIdsAtId(container, id, opts?) -- like salesAtId, but returns the
+ * (id, cardId) pair for every sale found rather than just a count, for the
+ * rare caller that needs to ADDRESS each sale afterward (patch it, as
+ * retire-autoseed-window.cjs does) rather than merely refuse on a nonzero
+ * count. Runs the SAME dual cross-partition + partition-scoped union
+ * salesAtId does -- see this file's header for why neither form alone is
+ * trusted -- just selecting `c.cardId` too so the result is addressable.
+ *
+ * @returns {Promise<{total:number, rows:{id:string, cardId:string|null}[]}>}
+ */
+async function drainSalesIdsAtId(container, id, opts = {}) {
+  const retry = opts.retry ?? ((fn) => fn());
+  const query = "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @id OR c.cardId = @id";
+
+  const drainRows = async (iterator) => {
+    const byId = new Map();
+    while (iterator.hasMoreResults()) {
+      const { resources } = await retry(() => iterator.fetchNext());
+      for (const r of resources ?? []) {
+        if (r && r.id != null) byId.set(String(r.id), { id: String(r.id), cardId: r.cardId ?? null });
+      }
+    }
+    return byId;
+  };
+
+  const xpIter = container.items.query(
+    { query, parameters: [{ name: "@id", value: id }] },
+    { maxItemCount: 500, maxDegreeOfParallelism: -1 },
+  );
+  const pkIter = container.items.query(
+    { query, parameters: [{ name: "@id", value: id }] },
+    { maxItemCount: 500, maxDegreeOfParallelism: -1, partitionKey: id },
+  );
+
+  const xpRows = await drainRows(xpIter);
+  const pkRows = await drainRows(pkIter);
+
+  const union = new Map([...xpRows, ...pkRows]);
+  return { total: union.size, rows: [...union.values()] };
+}
+
+module.exports = { salesAtId, drainSalesIdsAtId, CROSS_PARTITION_QUERY, PARTITION_SCOPED_QUERY };

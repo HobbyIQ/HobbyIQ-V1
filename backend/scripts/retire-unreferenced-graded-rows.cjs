@@ -147,20 +147,37 @@ const TARGET =
   // ---- the protected set: every graded slug a sale actually points at -------
   console.log("loading graded slugs referenced by sales...");
   const protectedSlugs = new Set();
+  // LANE-SAFETY (2026-09-27). This used to scan `hobbyiqCardId` alone --
+  // exactly the single-form read lib/sales-at-id.cjs's own header documents
+  // missing a real row 0.6% of the time (a sale RE-POINTED so hobbyiqCardId
+  // was rewritten but cardId, the partition key, was not). At 16.3M
+  // candidate deletes a 0.6% miss on the protected-set side is thousands of
+  // graded rows a live sale still addresses. Both fields are unioned in the
+  // SAME scan (still one full pass, not one query per row -- this container
+  // is too large for a per-row salesAtId call) rather than adding a second
+  // scan, so the cost stays a single page walk.
   {
     let token;
     do {
       const page = await queryWithRetry(sc, {
-        query: `SELECT c.hobbyiqCardId AS s FROM c WHERE IS_DEFINED(c.hobbyiqCardId) AND c.hobbyiqCardId != null
-                AND (CONTAINS(c.hobbyiqCardId,':psa-') OR CONTAINS(c.hobbyiqCardId,':bgs-')
-                  OR CONTAINS(c.hobbyiqCardId,':sgc-') OR CONTAINS(c.hobbyiqCardId,':cgc-')
-                  OR CONTAINS(c.hobbyiqCardId,':raw'))`,
+        query: `SELECT c.hobbyiqCardId AS s1, c.cardId AS s2 FROM c
+                WHERE ((IS_DEFINED(c.hobbyiqCardId) AND c.hobbyiqCardId != null
+                    AND (CONTAINS(c.hobbyiqCardId,':psa-') OR CONTAINS(c.hobbyiqCardId,':bgs-')
+                      OR CONTAINS(c.hobbyiqCardId,':sgc-') OR CONTAINS(c.hobbyiqCardId,':cgc-')
+                      OR CONTAINS(c.hobbyiqCardId,':raw')))
+                  OR (IS_DEFINED(c.cardId) AND c.cardId != null
+                    AND (CONTAINS(c.cardId,':psa-') OR CONTAINS(c.cardId,':bgs-')
+                      OR CONTAINS(c.cardId,':sgc-') OR CONTAINS(c.cardId,':cgc-')
+                      OR CONTAINS(c.cardId,':raw'))))`,
       }, { maxItemCount: 1000, continuationToken: token });
       token = page.continuationToken;
-      for (const r of page.resources) if (r.s) protectedSlugs.add(r.s);
+      for (const r of page.resources) {
+        if (r.s1) protectedSlugs.add(r.s1);
+        if (r.s2) protectedSlugs.add(r.s2);
+      }
     } while (token);
   }
-  console.log(`  ${f(protectedSlugs.size)} graded slugs are referenced by at least one sale — these will be SKIPPED\n`);
+  console.log(`  ${f(protectedSlugs.size)} graded slugs are referenced by at least one sale (hobbyiqCardId OR cardId) — these will be SKIPPED\n`);
 
   let scanned = 0, attempted = 0, deleted = 0, failed = 0, gone = 0, kept = 0;
   let hitBudget = false;

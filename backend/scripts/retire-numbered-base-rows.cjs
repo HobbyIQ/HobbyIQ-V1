@@ -48,6 +48,11 @@ const LIMIT = Number(process.env.LIMIT || 0);
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
 const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+// LANE-SAFETY (2026-09-27). The sales gate was a single cross-partition COUNT
+// on `hobbyiqCardId` alone -- exactly the read form lib/sales-at-id.cjs's own
+// header measured missing a real sale 0.6% of the time. salesAtId unions it
+// with the same predicate scoped to `partitionKey: id`.
+const { salesAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "retire-numbered-base-rows" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 
@@ -112,13 +117,10 @@ async function main() {
             keptOddRun++;
             return;
           }
-          const { resources: s } = await retry(() => comps.items.query({
-            query: "SELECT VALUE COUNT(1) FROM c WHERE c.hobbyiqCardId = @s",
-            parameters: [{ name: "@s", value: d.id }],
-          }).fetchAll());
-          if (s[0] > 0) {
+          const { total } = await salesAtId(comps, d.id, { retry });
+          if (total > 0) {
             keptHasSales++;
-            if (salesEx.length < 6) salesEx.push(`${f(s[0]).padStart(5)} sales  ${String(d.id).slice(0, 76)}`);
+            if (salesEx.length < 6) salesEx.push(`${f(total).padStart(5)} sales  ${String(d.id).slice(0, 76)}`);
             return;
           }
           if (!APPLY) { retired++; return; }

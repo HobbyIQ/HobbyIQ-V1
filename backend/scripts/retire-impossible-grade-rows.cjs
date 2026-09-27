@@ -49,6 +49,13 @@ const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReco
 // private capped() is what #1859 cost (an unref'd cap that never fired, four
 // runs killed at the ceiling having already reconciled clean).
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+// LANE-SAFETY (2026-09-27). The guard's own re-count (this file's header,
+// lines 14-19) ran a single cross-partition CONTAINS(c.hobbyiqCardId, ...)
+// -- exactly the read form lib/sales-at-id.cjs's own header measured missing
+// a real sale 0.6% of the time (a re-pointed sale whose cardId, the
+// partition key, still names the suffix but whose hobbyiqCardId does not).
+// The guard now unions BOTH fields in the same aggregate scan.
+
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Number(process.env.CONCURRENCY || 32);
@@ -119,7 +126,9 @@ async function main() {
   console.log("\nchecking whether any SALE references these slugs...");
   let referenced = 0;
   for (const p of pairs) {
-    const n = (await one(sc, `SELECT VALUE COUNT(1) FROM c WHERE CONTAINS(c.hobbyiqCardId, ':${p.suffix}')`))[0] || 0;
+    const n = (await one(sc, `SELECT VALUE COUNT(1) FROM c
+        WHERE (IS_DEFINED(c.hobbyiqCardId) AND CONTAINS(c.hobbyiqCardId, ':${p.suffix}'))
+           OR (IS_DEFINED(c.cardId) AND CONTAINS(c.cardId, ':${p.suffix}'))`))[0] || 0;
     console.log(`  :${p.suffix}  ->  ${f(n)} sales`);
     referenced += n;
   }
