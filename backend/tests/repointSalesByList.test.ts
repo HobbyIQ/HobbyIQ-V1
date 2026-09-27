@@ -445,18 +445,27 @@ function shim(opts: {
    *  expire deterministically mid-entry, after a known number of per-sale
    *  reads have already completed. */
   saleReadDelayMs?: number;
+  /** Sale ids (from `sales`) to delete from the fake container the INSTANT
+   *  the drain query (drainSalesIdsAtId, GATE 4) has already returned them
+   *  -- simulating another lane's concurrent, benign mutation between the
+   *  drain and this lane's own per-sale point read, which is exactly the
+   *  `goneSinceRead` shape (review round 2). */
+  goneAfterDrain?: string[];
 } = {}): { requirePath: string; ledger: string } {
   const ledger = join(tmp, `ledger-${Math.random().toString(36).slice(2)}.json`);
   const p = join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
   const sales = opts.sales ?? [];
   const catalog = opts.catalog ?? [];
   const saleReadDelayMs = opts.saleReadDelayMs ?? 0;
+  const goneAfterDrain = opts.goneAfterDrain ?? [];
 
   writeFileSync(p, `
 const Module = require("node:module");
 const fs = require("node:fs");
 const LEDGER = ${JSON.stringify(ledger)};
 const SALE_READ_DELAY_MS = ${JSON.stringify(saleReadDelayMs)};
+const GONE_AFTER_DRAIN = new Set(${JSON.stringify(goneAfterDrain)});
+let drainedOnce = false;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const salesKey = (id, cardId) => id + "::" + cardId;
@@ -528,10 +537,31 @@ const salesContainer = {
         throw new Error("fake sold_comps: unsupported query " + q);
       }
       let done = false;
+      const maybeGoneAfterDrain = () => {
+        // Fires once, after the FIRST drain result set is handed back --
+        // simulating another lane's concurrent delete landing in the window
+        // between drainSalesIdsAtId's own read and this lane's later
+        // per-sale point read. GONE_AFTER_DRAIN is empty on every test that
+        // does not opt in, so this is a no-op for all of them.
+        if (drainedOnce || GONE_AFTER_DRAIN.size === 0) return;
+        drainedOnce = true;
+        for (const [key, d] of [...state.sales.entries()]) {
+          if (GONE_AFTER_DRAIN.has(d.id)) state.sales.delete(key);
+        }
+      };
       return {
         hasMoreResults: () => !done,
-        fetchNext: async () => { done = true; return { resources: resources.map((r) => structuredClone(r)), continuationToken: undefined }; },
-        fetchAll: async () => ({ resources: resources.map((r) => structuredClone(r)) }),
+        fetchNext: async () => {
+          done = true;
+          const out = resources.map((r) => structuredClone(r));
+          maybeGoneAfterDrain();
+          return { resources: out, continuationToken: undefined };
+        },
+        fetchAll: async () => {
+          const out = resources.map((r) => structuredClone(r));
+          maybeGoneAfterDrain();
+          return { resources: out };
+        },
       };
     },
   },
@@ -590,6 +620,24 @@ function drive(env: Record<string, string>, opts: Parameters<typeof shim>[0] = {
   return { code, out, led };
 }
 
+/**
+ * Review round 2 (PR #2461): a stale identifier from round 1's reconcile
+ * rewrite (`intended`, renamed to intendedEntries/intendedSales) survived in
+ * the budget-marker log line, reachable ONLY on a budget-stop run -- a
+ * ReferenceError there is swallowed by main().catch(), printed as "FATAL:",
+ * and exits 3 BEFORE the budget marker relaunch-on-marker greps for, so the
+ * relaunch never re-dispatches. Every end-to-end test in this file now
+ * calls this after `drive()`, not just the ones already asserting on the
+ * banner text, because a thrown error can otherwise hide behind an
+ * assertion that only checked "no RECONCILE MISMATCH" or "code !== 4" (round
+ * 1's own straddle test did exactly that and passed anyway).
+ */
+function assertNoUncaughtError(r: { code: number; out: string }) {
+  expect(r.out).not.toMatch(/FATAL:/);
+  expect(r.out).not.toMatch(/ReferenceError/);
+  expect(r.out).not.toMatch(/TypeError/);
+}
+
 describe("end-to-end: the guard runs identically in REPORT and APPLY", () => {
   // A destination address with too few colon segments trips
   // splitIdentityWriteGuard's malformed-key park BEFORE relocateSoldComp's
@@ -616,12 +664,16 @@ describe("end-to-end: the guard runs identically in REPORT and APPLY", () => {
     const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
 
     const reportRun = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(reportRun);
+    expect(reportRun.code).toBe(0);
     expect(reportRun.out).toMatch(/REFUSED \(guard\)/);
     expect(reportRun.out).toMatch(/REFUSED: guard \(malformed key\)\s+1/);
     expect(reportRun.led.salesUpserts.length).toBe(0);
     expect(reportRun.led.salesDeletes.length).toBe(0);
 
     const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
+    expect(applyRun.code).toBe(0);
     expect(applyRun.out).toMatch(/REFUSED \(guard\)/);
     expect(applyRun.out).toMatch(/REFUSED: guard \(malformed key\)\s+1/);
     // The count is IDENTICAL in both modes, and APPLY still wrote nothing --
@@ -638,11 +690,13 @@ describe("end-to-end: a well-formed move reconciles in both modes", () => {
     const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
 
     const reportRun = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(reportRun);
     expect(reportRun.code).toBe(0);
     expect(reportRun.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
     expect(reportRun.led.salesUpserts.length).toBe(0);
 
     const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
     expect(applyRun.code).toBe(0);
     expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
     expect(applyRun.led.salesUpserts).toEqual([FROM_ID.replace(FROM_ID, "src::1")].map(() => "src::1"));
@@ -658,6 +712,8 @@ describe("end-to-end: expectedSales is enforced", () => {
     const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
 
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
     expect(r.out).toMatch(/REFUSED \(expected-sales-mismatch\)/);
     expect(r.out).toMatch(/REFUSED: expected-sales-mismatch\s+1/);
     // Never enumerated a single sale under a stale census.
@@ -675,14 +731,46 @@ describe("end-to-end: expectedSales is enforced", () => {
     // the per-entry "REFUSED (expected-sales-mismatch)" decision line, not
     // the label text itself.
     const matches = drive({ SCOPE: listMatches, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(matches);
+    expect(matches.code).toBe(0);
     expect(matches.out).not.toMatch(/REFUSED \(expected-sales-mismatch\)/);
     expect(matches.out).toMatch(/REFUSED: expected-sales-mismatch\s+0/);
     expect(matches.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
 
     const omitted = drive({ SCOPE: listOmitted, BACKFILL_APPLY: "false" }, { sales: sales.map((s) => ({ ...s, id: "src::2" })), catalog });
+    assertNoUncaughtError(omitted);
+    expect(omitted.code).toBe(0);
     expect(omitted.out).not.toMatch(/REFUSED \(expected-sales-mismatch\)/);
     expect(omitted.out).toMatch(/REFUSED: expected-sales-mismatch\s+0/);
     expect(omitted.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+  });
+});
+
+describe("end-to-end: a sale gone since the drain is counted, never a false reconcile mismatch", () => {
+  it("a ref the drain returned, but whose point read then 404s, lands in goneSinceRead and still reconciles", () => {
+    // Review round 2 (PR #2461): drainSalesIdsAtId (GATE 4) counts this ref
+    // into intendedSalesTotal the instant the entry passes its gates, but
+    // the ref's OWN point read then finds nothing -- a benign concurrent
+    // mutation (another lane, or an idempotent re-run of THIS lane, moved
+    // or deleted it in the window between the drain and this read). Before
+    // this fix that silently `continue`d with no counter at all, so the
+    // sale-side identity (moved + refused + failed + notReachedSales)
+    // undercounted intendedSalesTotal by exactly one and reported a false
+    // RECONCILE MISMATCH on every ordinary race against a live container.
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why" }], "gone-since-read");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
+
+    const r = drive(
+      { SCOPE: list, BACKFILL_APPLY: "false" },
+      { sales, catalog, goneAfterDrain: ["src::1"] },
+    );
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/gone since read \(benign\)\s+1/);
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+0/);
+    expect(r.led.salesUpserts.length).toBe(0);
   });
 });
 
@@ -711,6 +799,16 @@ describe("end-to-end: a budget stop mid-entry reconciles exactly, never double-c
     // against the entry AND their own sale outcome.
     expect(r.out).toMatch(/not reached \(budget, sales\)\s+1/);
     expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
-    expect(r.code).not.toBe(4);
+    // Review round 2 (PR #2461): line 659's budget-marker log line referenced
+    // the stale `intended` variable (renamed to intendedEntries/intendedSales
+    // in round 1's reconcile rewrite), throwing ReferenceError on EVERY
+    // budget-stop run -- caught by the reviewer, not by this test, because
+    // the old assertions here stopped at "not 4" and never looked at the
+    // actual exit code or scanned for a thrown error. A real ReferenceError
+    // makes main().catch() print "FATAL:" and exit 3, well before the
+    // budget marker this test also now requires to be present.
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/stopped at the 1-minute budget/);
   });
 });

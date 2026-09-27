@@ -286,13 +286,20 @@ async function main() {
   // this fires identically in REPORT and APPLY (see the per-sale move block).
   let refusedGuard = 0;
   let failedSales = 0;
+  // A sale ref the drain (GATE 4) counted, but whose own point read then
+  // found nothing -- a 404 or a null resource, gone since drainSalesIdsAtId
+  // ran. A BENIGN concurrent mutation (another lane, or this one's own
+  // idempotent re-run, moved or deleted it in between), never a failure --
+  // but it still consumed one unit of `intendedSalesTotal`, so it must have
+  // its own bucket or the strict sale-side reconcile below reports a false
+  // RECONCILE MISMATCH on every ordinary race against a live container.
+  let goneSinceRead = 0;
   // An entry-level Cosmos read threw before any sale was ever enumerated
   // (the catalog reads in GATE 1, or the sales lookup in GATE 4) -- its own
   // ENTRY-side bucket, never folded into `failedSales` (a per-SALE outcome
   // whose denominator is `intendedSalesTotal`, a total this entry never
   // contributed to).
   let entryLevelFailed = 0;
-  let skippedEntries = 0; // an entry whose gates all pass but has 0 sales -- refusedZeroSales counts it too, kept separate as the entry-level tally
   let entriesFailedToClassify = 0;
   // Sales an entry's OWN per-sale loop could not reach because the budget
   // ran out mid-entry -- see the loop's own comment. Folded into the
@@ -416,7 +423,6 @@ async function main() {
     }
     if (salesRows.length === 0) {
       refusedZeroSales++;
-      skippedEntries++;
       console.error("      REFUSED (zero-sales): fromId has no sold_comps rows — nothing to do");
       continue;
     }
@@ -467,12 +473,31 @@ async function main() {
       try {
         sale = (await retry(() => pool.item(ref.id, ref.cardId ?? fromId).read())).resource ?? null;
       } catch (err) {
-        if (err?.code === 404 || err?.statusCode === 404) { continue; } // gone since the drain; not a failure
+        if (err?.code === 404 || err?.statusCode === 404) {
+          // Gone since the drain -- a benign concurrent mutation (another
+          // lane moved or deleted it between drainSalesIdsAtId's read and
+          // this one), never a failure. Counted here, not silently dropped:
+          // `intendedSalesTotal` already added this ref to the sale-side
+          // denominator the instant the entry passed GATE 5, so a read that
+          // finds nothing MUST still land in exactly one bucket or the
+          // strict sale-side reconcile below reports a false mismatch on
+          // every ordinary concurrent-write race.
+          goneSinceRead++;
+          console.log(`      gone since read: ${ref.id} — no longer at this address, not a failure`);
+          continue;
+        }
         failedSales++;
         console.error(`      FAILED: sale read threw for ${ref.id} — ${String(err?.message ?? err).slice(0, 90)}`);
         continue;
       }
-      if (!sale) continue;
+      if (!sale) {
+        // Same reasoning as the 404 branch: the point read resolved with no
+        // resource (some Cosmos SDK paths return `{ resource: undefined }`
+        // rather than throwing 404) -- gone since the drain, not a failure.
+        goneSinceRead++;
+        console.log(`      gone since read: ${ref.id} — no longer at this address, not a failure`);
+        continue;
+      }
 
       const saleName = String(sale.playerName ?? sale.title ?? "");
       const destName = String(toRow.playerName ?? "");
@@ -530,10 +555,6 @@ async function main() {
     }
   }
 
-  const totalRefused = refusedNoFromRow + refusedNoToRow + refusedNotChecklistGrade
-    + refusedProductMismatch + refusedSameId + refusedZeroSales + refusedExpectedSalesMismatch
-    + refusedNameDisagreement + refusedGuard;
-
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
   console.log(`  entries in scope             ${f(entries.length)}`);
   console.log(`  entries considered           ${f(considered)}${stoppedAt === null ? "   <- the whole list" : ""}`);
@@ -550,6 +571,7 @@ async function main() {
   console.log(`  REFUSED: guard (malformed key) ${f(refusedGuard)}`);
   console.log(`  failed (per-sale)             ${f(failedSales)}`);
   console.log(`  failed (entry-level read)     ${f(entryLevelFailed)}`);
+  console.log(`  gone since read (benign)      ${f(goneSinceRead)}`);
 
   // `notReached` is whole ENTRIES the outer loop never STARTED at all --
   // `stoppedAt` is set only at the top of the outer loop, never adjusted for
@@ -600,14 +622,20 @@ async function main() {
   const entryAccounted = entryLevelRefusals + entryLevelFailed + entriesGatedThrough + entriesFailedToClassify + notReached;
   const intendedEntries = entries.length;
 
-  const saleLevelOutcomes = movedSales + refusedNameDisagreement + refusedGuard + failedSales + notReachedSales;
+  // `goneSinceRead` is a THIRD sale-side outcome, alongside refused/failed:
+  // the ref was drained (counted in intendedSalesTotal), but its own point
+  // read found nothing -- a benign concurrent mutation, never a failure. It
+  // must sit in this formula or the strict sale-side identity reports a
+  // false RECONCILE MISMATCH on any ordinary race against a live container.
+  const saleLevelOutcomes = movedSales + refusedNameDisagreement + refusedGuard + failedSales
+    + goneSinceRead + notReachedSales;
   const saleAccounted = saleLevelOutcomes;
   const intendedSales = intendedSalesTotal;
 
   console.log(`\n  reconciled (entries): intended ${f(intendedEntries)} = gated-through ${f(entriesGatedThrough)} `
     + `+ entry-refusals ${f(entryLevelRefusals)} + entry-failed ${f(entryLevelFailed)} + malformed ${f(entriesFailedToClassify)} + not-reached ${f(notReached)}`);
   console.log(`  reconciled (sales):   intended ${f(intendedSales)} = moved/would-move ${f(movedSales)} `
-    + `+ refused ${f(refusedNameDisagreement + refusedGuard)} + failed ${f(failedSales)} + not-reached ${f(notReachedSales)}`);
+    + `+ refused ${f(refusedNameDisagreement + refusedGuard)} + failed ${f(failedSales)} + gone-since-read ${f(goneSinceRead)} + not-reached ${f(notReachedSales)}`);
   if (entryAccounted !== intendedEntries || saleAccounted !== intendedSales) {
     console.error("  !! RECONCILE MISMATCH -- an entry or a sale was neither gated, moved, refused, failed, malformed nor deferred");
     process.exitCode = 4;
@@ -635,7 +663,7 @@ async function main() {
       job: "repoint-sales-by-list",
       intended: intendedSales + entryLevelRefusals + entryLevelFailed + entriesFailedToClassify + notReached,
       written: movedSales,
-      skipped: entryLevelRefusals + entriesFailedToClassify + notReached + notReachedSales,
+      skipped: entryLevelRefusals + entriesFailedToClassify + notReached + notReachedSales + goneSinceRead,
       refused: refusedNameDisagreement + refusedGuard,
       failed: failedSales + entryLevelFailed,
     });
@@ -656,7 +684,7 @@ async function main() {
   // "finished within budget" over a run that in fact left sales unprocessed.
   if (stoppedAt !== null || notReachedSales > 0) {
     console.log(`\n  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
-      + `stopped at ${f(stoppedAt ?? considered)} of ${f(intended)}; the relaunch continues from here`);
+      + `stopped at ${f(stoppedAt ?? considered)} of ${f(intendedEntries)}; the relaunch continues from here`);
     console.log("  the list is IDEMPOTENT: a finished move re-reads as zero sales left at fromId,"
       + " so the continuation re-derives cheaply and writes only what is left.");
   } else {
