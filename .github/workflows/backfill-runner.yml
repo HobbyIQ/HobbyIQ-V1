@@ -336,6 +336,30 @@ on:
           # get these done FAST." The pilot dispatch is scope=baseball:2025
           # titles=bowmans-best.
           - repoint-sales-isauto-flip
+          # CF-A-SPLIT-ROW-POLLUTES-TWO-POOLS -- reconcile-split-identity.cjs
+          # (tonight's census, 2026-09-27 ~00:00Z, SPLIT-IDENTITY diagnostic;
+          # 73,567 such rows in 2026 baseball slot 5 alone). A sold_comps row
+          # whose cardId and hobbyiqCardId are BOTH hiq: slugs and NAME
+          # DIFFERENT CARDS is read into both cards' pools by the exact pool
+          # reader's OR -- lib/split-identity.cjs's own HIQ_SPLIT class, reused
+          # here rather than reimplemented so the census and this repair
+          # decide identically. Point-reads card_catalog at BOTH ids: exactly
+          # ONE checklist-grade (catalogAuthorityOf === "checklist"; DERIVED
+          # and VENDOR never count) sets BOTH fields to that id (a MOVE when
+          # the winner differs from the row's own cardId, a PATCH IN PLACE
+          # when it is already that partition); BOTH checklist-grade REFUSES
+          # ambiguous-both-checklist (a guess between two attested winners
+          # would be ours, never Drew's); NEITHER REFUSES neither-checklist
+          # (the rematch's job). Graded ids preserve the grade segment
+          # (lib/graded-id.cjs). SCOPE is REQUIRED (`scope`, sport:year cells,
+          # no whole-corpus mode); `titles` (BCP_TITLES/SET_KEYS) OPTIONALLY
+          # narrows to one or more setKeys, same convention as every sibling
+          # repoint lane above. Owner Drew, 2026-09-27 ~00:00Z: "Let's get a
+          # lot of agents going in clean up." APPLY needs Drew's own click;
+          # this PR builds and REPORTs only. The pilot dispatch is
+          # scope=baseball:2026 slot=0 slots=2 (and slot=1 for the sibling
+          # half).
+          - reconcile-split-identity
           # CF-INGEST-KEEPS-STORED-IDENTITY repair (Drew, 2026-09-19, PR #2331
           # follow-up). The R66/R67/R70 ingest-time insert re-key only ever
           # fires for a FRESH sale being written today; a sale that landed in
@@ -2383,7 +2407,13 @@ jobs:
           # resolve-disagreeing-sale-twins (2026-09-20): one NDJSON record per
           # twins-disagree pair -- same fixed-path-guarded-on-script
           # convention, no new input.
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'repoint-sales-isauto-flip' && '/tmp/repoint-sales-isauto-flip-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
+          # reconcile-split-identity (2026-09-27): one NDJSON record per
+          # in-scope split row (action, reason, fromId/toId) -- same
+          # auditability doctrine as every sibling PLAN_OUT lane above, same
+          # fixed-path-guarded-on-script convention (no new input; the
+          # runner's dispatch form is at 24 of GitHub's 25). Uploaded by the
+          # SAME step that already uploads this lane's backfill.log, below.
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'repoint-sales-isauto-flip' && '/tmp/repoint-sales-isauto-flip-plan' || inputs.script == 'reconcile-split-identity' && '/tmp/reconcile-split-identity-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -4035,6 +4065,39 @@ jobs:
             fi
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-isauto-flip -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+
+      - name: Upload the reconcile-split-identity log
+        if: ${{ always() && inputs.script == 'reconcile-split-identity' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: reconcile-split-identity-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/reconcile-split-identity-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the split-identity reconcile until the scope is clean
+        # Same discipline as the isAuto-flip sibling immediately above: stops
+        # at its own 110-minute budget and PRINTS its summary; idempotent by
+        # construction (a reconciled row's cardId/hobbyiqCardId no longer
+        # disagree on a re-scan, so it no longer classifies as HIQ-SPLIT).
+        if: ${{ !cancelled() && inputs.script == 'reconcile-split-identity' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: reconcile-split-identity
+          preamble: |
+            R=$(grep -aoE "(RECONCILED|WOULD RECONCILE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "reconciled=${R:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (reconciled=${R:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (reconciled=${R:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reconcile-split-identity -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
       # This lane's whole point is the stored insert sales the R66/R67/R70
       # ingest-time re-key can never reach (CF-INGEST-KEEPS-STORED-IDENTITY),
