@@ -140,4 +140,83 @@ describe("wait-for-doc: waitForDoc core loop", () => {
     expect(code).toBe(1);
     expect(errs.join("\n")).toContain("WAIT_FOR_DOC_ID required");
   });
+
+  // CF-CLEANLINESS-SETTLE-ON-REPORT-DOC (review, 2026-09-27) — STALE-DOC
+  // HAZARD. The report id is date-only (`<scanDate>::anomaly-scan-report`),
+  // and nightly-cleanliness.yml keeps workflow_dispatch enabled, so a
+  // same-day re-dispatch can find an EARLIER run's doc under the SAME id
+  // before the new chain ever finishes. Existence alone is not "found" —
+  // the doc's own `computedAt` (stamped by anomaly-force-scan.cjs at report-
+  // build time) must be >= the caller's `notBefore` (this dispatch's own
+  // start time), or the doc is treated exactly like "not present yet".
+  it("a doc that predates notBefore is treated as not-yet-present — keeps polling, never accepted as found", async () => {
+    let calls = 0;
+    const container = fakeContainer(async () => {
+      calls += 1;
+      // An EARLIER run's doc: computedAt is before this dispatch started.
+      return { resource: { id: "2026-09-26::anomaly-scan-report", computedAt: "2026-09-26T03:10:00Z" } };
+    });
+    const logs: string[] = [];
+    const nowSpy = vi.spyOn(Date, "now");
+    let simulatedNow = 1_000_000;
+    nowSpy.mockImplementation(() => simulatedNow);
+    const pollMs = 5_000;
+    const sleepFn = vi.fn(async () => { simulatedNow += pollMs; });
+
+    const code = await waitForDoc(container, {
+      docId: "2026-09-26::anomaly-scan-report",
+      notBefore: "2026-09-26T03:51:00Z", // this dispatch started AFTER the stale doc's computedAt
+      maxMs: 15_000,
+      pollMs,
+      log: (s: string) => logs.push(s),
+      err: () => {},
+      sleepFn,
+    });
+    nowSpy.mockRestore();
+
+    // Never accepted — the loop runs out its bound rather than returning 0
+    // on the stale doc.
+    expect(code).toBe(2);
+    expect(calls).toBeGreaterThan(1);
+    expect(logs.join("\n")).toContain("stale doc from 2026-09-26T03:10:00Z");
+    expect(logs.join("\n")).toContain("waiting for a newer one");
+  });
+
+  it("a doc at or after notBefore is accepted as found (exit 0)", async () => {
+    const container = fakeContainer(async () => ({
+      resource: { id: "2026-09-26::anomaly-scan-report", computedAt: "2026-09-26T05:22:00Z" },
+    }));
+    const sleepFn = vi.fn(async () => undefined);
+    const code = await waitForDoc(container, {
+      docId: "2026-09-26::anomaly-scan-report",
+      notBefore: "2026-09-26T03:51:00Z", // doc's computedAt is AFTER this bound
+      maxMs: 60_000,
+      pollMs: 5_000,
+      log: () => {},
+      err: () => {},
+      sleepFn,
+    });
+    expect(code).toBe(0);
+    expect(sleepFn).not.toHaveBeenCalled();
+  });
+
+  it("MUTATION CHECK: without a notBefore bound, the same stale doc IS accepted immediately (proves the guard, not a tautology)", async () => {
+    // Same fixture as the stale-doc test above, but with no notBefore passed
+    // -- this is the pre-fix behavior (existence alone = found). If this
+    // ever also returned 2, the stale-doc test above would not be proving
+    // anything about the notBefore guard specifically.
+    const container = fakeContainer(async () => ({
+      resource: { id: "2026-09-26::anomaly-scan-report", computedAt: "2026-09-26T03:10:00Z" },
+    }));
+    const sleepFn = vi.fn(async () => undefined);
+    const code = await waitForDoc(container, {
+      docId: "2026-09-26::anomaly-scan-report",
+      maxMs: 60_000,
+      pollMs: 5_000,
+      log: () => {},
+      err: () => {},
+      sleepFn,
+    });
+    expect(code).toBe(0);
+  });
 });

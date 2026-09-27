@@ -34,17 +34,35 @@
 // still owns the pass/fail semantics on the doc's *contents* -- this script
 // only removes the race on *whether it exists yet*.
 //
+// STALE-DOC HAZARD (found in review, 2026-09-27). The doc id is DATE-only
+// (`<scanDate>::anomaly-scan-report`), and workflow_dispatch is enabled on
+// this workflow, so a same-day re-dispatch (a manual re-run after an earlier
+// failure, or two dispatches landing on the same UTC date) can find an
+// EARLIER run's doc immediately -- it upserts onto the SAME id, but a wait
+// that started only checking existence would treat the OLD doc as "found"
+// before the NEW chain ever writes its own, and check-anomaly-scan-report.cjs
+// would then report last chain's numbers as fresh. Guarded by WAIT_FOR_DOC_
+// NOT_BEFORE: the doc is only accepted once its own `computedAt` (the field
+// anomaly-force-scan.cjs stamps at report-build time, ISO 8601 UTC, directly
+// string-comparable) is >= that bound. A doc older than the bound is logged
+// and treated exactly like "not present yet".
+//
 // Env:
 //   COSMOS_CONNECTION_STRING   required
 //   COSMOS_DATABASE            default hobbyiq
 //   ANOMALY_REPORT_CONTAINER   default anomaly_scan_reports
 //   WAIT_FOR_DOC_ID            required -- the doc id to poll (pk = id)
+//   WAIT_FOR_DOC_NOT_BEFORE    optional -- ISO 8601 UTC; a doc whose own
+//                              `computedAt` is older than this is treated as
+//                              not-yet-present (guards a same-day re-dispatch
+//                              finding an earlier run's doc under the same
+//                              date-only id)
 //   WAIT_FOR_DOC_MAX_MS        default 14400000 (4h)
 //   WAIT_FOR_DOC_POLL_MS       default 300000 (5m)
 //
-// Exit codes: 0 doc found within the bound
+// Exit codes: 0 doc found within the bound (and fresh enough, if bounded)
 //             1 Cosmos not configured / doc id missing / read error
-//             2 bound elapsed with no doc -- names the missing doc
+//             2 bound elapsed with no (sufficiently fresh) doc -- names it
 "use strict";
 
 function sleep(ms) {
@@ -57,7 +75,7 @@ function sleep(ms) {
  * shaped like the @azure/cosmos SDK).
  *
  * @param {{item: (id: string, pk: string) => {read: () => Promise<{resource: any}>}}} container
- * @param {{docId: string, maxMs?: number, pollMs?: number, containerName?: string,
+ * @param {{docId: string, notBefore?: string, maxMs?: number, pollMs?: number, containerName?: string,
  *          log?: (s: string) => void, err?: (s: string) => void, sleepFn?: (ms: number) => Promise<void>}} opts
  * @returns {Promise<0|1|2>}
  */
@@ -65,6 +83,7 @@ async function waitForDoc(container, opts) {
   const docId = opts.docId;
   if (!docId) { (opts.err || console.error)("::error::WAIT_FOR_DOC_ID required"); return 1; }
 
+  const notBefore = opts.notBefore || null;
   const maxMs = Number(opts.maxMs || 4 * 60 * 60 * 1000);
   const pollMs = Number(opts.pollMs || 5 * 60 * 1000);
   const containerName = opts.containerName || "anomaly_scan_reports";
@@ -78,9 +97,17 @@ async function waitForDoc(container, opts) {
     attempt += 1;
     const elapsedMs = Date.now() - t0;
     let found = false;
+    let staleComputedAt = null;
     try {
       const { resource } = await container.item(docId, docId).read();
-      found = !!resource;
+      if (resource) {
+        // ISO 8601 UTC timestamps compare correctly as plain strings.
+        if (notBefore && !(resource.computedAt >= notBefore)) {
+          staleComputedAt = resource.computedAt;
+        } else {
+          found = true;
+        }
+      }
     } catch (e) {
       if (e && e.code !== 404) {
         err(`::error::wait-for-doc read failed for ${docId}: ${e && e.message}`);
@@ -94,11 +121,17 @@ async function waitForDoc(container, opts) {
       return 0;
     }
 
-    log(`[wait-for-doc] attempt=${attempt} elapsed=${elapsedMin}m — ${docId} not present yet`);
+    if (staleComputedAt) {
+      log(`[wait-for-doc] attempt=${attempt} elapsed=${elapsedMin}m — stale doc from ${staleComputedAt}`
+        + ` (before ${notBefore}), waiting for a newer one`);
+    } else {
+      log(`[wait-for-doc] attempt=${attempt} elapsed=${elapsedMin}m — ${docId} not present yet`);
+    }
 
     if (Date.now() - t0 + pollMs > maxMs) {
       err(`::error::timed out waiting for ${docId} in ${containerName} `
-        + `after ${Math.round(maxMs / 60000)}m — the chain that writes this doc never finished settling`);
+        + `after ${Math.round(maxMs / 60000)}m — the chain that writes this doc never finished settling`
+        + (staleComputedAt ? ` (a doc exists but is stale: computedAt=${staleComputedAt}, needed >= ${notBefore})` : ""));
       return 2;
     }
 
@@ -121,6 +154,7 @@ async function main() {
 
   return waitForDoc(container, {
     docId,
+    notBefore: process.env.WAIT_FOR_DOC_NOT_BEFORE || null,
     maxMs: Number(process.env.WAIT_FOR_DOC_MAX_MS || 4 * 60 * 60 * 1000),
     pollMs: Number(process.env.WAIT_FOR_DOC_POLL_MS || 5 * 60 * 1000),
     containerName,

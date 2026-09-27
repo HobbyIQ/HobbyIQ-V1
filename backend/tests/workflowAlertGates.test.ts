@@ -425,6 +425,50 @@ describe("nightly-cleanliness anomaly detection is a budgeted, resumable lane", 
     expect(src).toContain("never finished settling");
   });
 
+  // CF-CLEANLINESS-SETTLE-ON-REPORT-DOC (review, 2026-09-27) — STALE-DOC
+  // HAZARD. The report id is date-only, and workflow_dispatch stays enabled
+  // (no new inputs added for this fix), so a same-day re-dispatch can find
+  // an EARLIER run's doc under the SAME id and read its stale numbers as
+  // fresh. DISPATCHED_AT is stamped in the SAME dispatch step that already
+  // exists (unchanged in shape, just gains this one stamp before it ever
+  // calls `gh workflow run`) and threaded through to both the wait step and
+  // the read step, so neither can be fooled by an older doc under the same
+  // id.
+  it("DISPATCHED_AT is stamped before the dispatch and threaded to both the wait and read steps", () => {
+    const dispatch = yml.slice(
+      yml.indexOf("- name: Dispatch anomaly-force-scan"),
+      yml.indexOf("- name: Wait for anomaly-force-scan"),
+    );
+    expect(dispatch).toMatch(/DISPATCHED_AT=\$\(date -u \+%Y-%m-%dT%H:%M:%SZ\)/);
+    expect(dispatch).toContain('echo "DISPATCHED_AT=$DISPATCHED_AT" >> "$GITHUB_ENV"');
+    // Stamped BEFORE the dispatch call, not after.
+    expect(dispatch.indexOf("DISPATCHED_AT=$(date")).toBeLessThan(dispatch.indexOf("gh workflow run backfill-runner.yml"));
+
+    const waitStep = yml.slice(yml.indexOf("- name: Wait for anomaly-force-scan"), yml.indexOf("- name: Read anomaly scan report"));
+    expect(waitStep).toContain('WAIT_FOR_DOC_NOT_BEFORE="$DISPATCHED_AT"');
+
+    const readStep = yml.slice(yml.indexOf("- name: Read anomaly scan report"));
+    expect(readStep).toContain('ANOMALY_NOT_BEFORE="$DISPATCHED_AT"');
+  });
+
+  it("no new workflow_dispatch input was added to carry the stale-doc guard", () => {
+    expect(yml.slice(0, yml.indexOf("jobs:"))).not.toContain("inputs:");
+  });
+
+  it("check-anomaly-scan-report.cjs rejects a report doc older than ANOMALY_NOT_BEFORE (same hazard, second layer)", () => {
+    const src = read("backend", "scripts", "check-anomaly-scan-report.cjs");
+    expect(src).toContain("ANOMALY_NOT_BEFORE");
+    expect(src).toMatch(/notBefore && !\(doc\.computedAt >= notBefore\)/);
+    expect(src).toContain("is stale");
+  });
+
+  it("train-confidence-weights has a designed timeout margin for the 4h doc wait, not GH's 360m default", () => {
+    // train-confidence-weights is the last job in this workflow file, so the
+    // job body runs to EOF.
+    const job = yml.slice(yml.indexOf("train-confidence-weights:"));
+    expect(job.slice(0, job.indexOf("steps:"))).toMatch(/timeout-minutes:\s*330\b/);
+  });
+
   it("reads the result from the anomaly_scan_reports container, via the dedicated checker script", () => {
     expect(yml).toContain("check-anomaly-scan-report.cjs");
     expect(yml).toContain("COSMOS_CONNECTION_STRING=$(az webapp config appsettings list");

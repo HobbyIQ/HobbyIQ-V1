@@ -118,6 +118,13 @@ jobs:
   train-confidence-weights:
     runs-on: ubuntu-latest
     needs: auto-quarantine-pools
+    # CF-CLEANLINESS-SETTLE-ON-REPORT-DOC (2026-09-27, review). The doc-poll
+    # wait below is bounded to 4h (WAIT_FOR_DOC_MAX_MS) on its own clock, but
+    # that bound only has teeth if the JOB can't be killed by GitHub's
+    # unconfigured default (360 minutes) with no margin for the steps around
+    # it. 330 gives the 4h wait a designed ceiling with margin either side,
+    # rather than relying on the platform default.
+    timeout-minutes: 330
     steps:
       # The anomaly steps below run backend/scripts/check-anomaly-scan-report
       # .cjs from the checkout. First step so it cannot clobber anything a
@@ -188,6 +195,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          # CF-CLEANLINESS-SETTLE-ON-REPORT-DOC (2026-09-27, review): stamped
+          # BEFORE the dispatch so the wait/read steps below can reject a
+          # report doc older than this run's own dispatch -- the report id
+          # is date-only, so a same-day workflow_dispatch re-run could
+          # otherwise find an EARLIER run's doc under the same id and read
+          # its stale numbers as fresh.
+          DISPATCHED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "DISPATCHED_AT=$DISPATCHED_AT" >> "$GITHUB_ENV"
           gh workflow run backfill-runner.yml \
             --repo "$GITHUB_REPOSITORY" \
             --ref main \
@@ -243,6 +258,17 @@ jobs:
       # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS) and exits 2 naming the
       # missing doc on timeout. No gh calls at all in this step now, so the
       # ">= 15s between gh calls" concern doesn't apply here.
+      #
+      # STALE-DOC HAZARD (review, 2026-09-27): the doc id is date-only, and
+      # this workflow keeps workflow_dispatch, so a same-day re-run could
+      # find an EARLIER run's doc under the same id before THIS chain ever
+      # writes its own. WAIT_FOR_DOC_NOT_BEFORE (stamped as DISPATCHED_AT in
+      # the dispatch step above, before that step ever calls `gh workflow
+      # run`) rejects a doc whose own `computedAt` predates this dispatch —
+      # treated exactly like "not present yet" — and check-anomaly-scan-
+      # report.cjs below gets the same bound via ANOMALY_NOT_BEFORE so the
+      # same hazard can't slip through if this step's guard is ever bypassed
+      # (e.g. a manual re-run of just the read step).
       - name: Install backend deps (wait-for-doc.cjs + check-anomaly-scan-report.cjs need @azure/cosmos)
         if: env.ADMIN_API_TOKEN != ''
         working-directory: backend
@@ -263,6 +289,7 @@ jobs:
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           COSMOS_DATABASE=hobbyiq \
           WAIT_FOR_DOC_ID="${SCAN_DATE}::anomaly-scan-report" \
+          WAIT_FOR_DOC_NOT_BEFORE="$DISPATCHED_AT" \
           WAIT_FOR_DOC_MAX_MS=14400000 \
           WAIT_FOR_DOC_POLL_MS=300000 \
           node backend/scripts/wait-for-doc.cjs
@@ -280,4 +307,5 @@ jobs:
           fi
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           COSMOS_DATABASE=hobbyiq \
+          ANOMALY_NOT_BEFORE="$DISPATCHED_AT" \
           node backend/scripts/check-anomaly-scan-report.cjs
