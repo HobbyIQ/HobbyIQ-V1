@@ -458,8 +458,23 @@ describe("nightly-cleanliness anomaly detection is a budgeted, resumable lane", 
   it("check-anomaly-scan-report.cjs rejects a report doc older than ANOMALY_NOT_BEFORE (same hazard, second layer)", () => {
     const src = read("backend", "scripts", "check-anomaly-scan-report.cjs");
     expect(src).toContain("ANOMALY_NOT_BEFORE");
-    expect(src).toMatch(/notBefore && !\(doc\.computedAt >= notBefore\)/);
+    // Numeric epoch-ms compare via the shared helper, not a raw ISO-string
+    // compare (that compared wrong once one side carries milliseconds).
+    expect(src).toContain('require("./lib/not-before.cjs")');
+    expect(src).toMatch(/if \(!isFreshEnough\(doc\.computedAt, notBeforeMs\)\)/);
     expect(src).toContain("is stale");
+    // notBefore is REQUIRED — an empty/malformed bound must fail fast (1),
+    // never silently skip the check.
+    expect(src).toContain("requireNotBefore(process.env.ANOMALY_NOT_BEFORE)");
+    expect(src).toContain("ANOMALY_NOT_BEFORE invalid");
+  });
+
+  it("wait-for-doc.cjs and check-anomaly-scan-report.cjs share ONE stale-doc helper, not two copies of the logic", () => {
+    expect(read("backend", "scripts", "lib", "not-before.cjs")).toContain("CLOCK_SKEW_TOLERANCE_MS");
+    const wait = read("backend", "scripts", "wait-for-doc.cjs");
+    expect(wait).toContain('require("./lib/not-before.cjs")');
+    expect(wait).toContain("requireNotBefore(opts.notBefore)");
+    expect(wait).toContain("WAIT_FOR_DOC_NOT_BEFORE invalid");
   });
 
   it("train-confidence-weights has a designed timeout margin for the 4h doc wait, not GH's 360m default", () => {

@@ -42,28 +42,35 @@
 // that started only checking existence would treat the OLD doc as "found"
 // before the NEW chain ever writes its own, and check-anomaly-scan-report.cjs
 // would then report last chain's numbers as fresh. Guarded by WAIT_FOR_DOC_
-// NOT_BEFORE: the doc is only accepted once its own `computedAt` (the field
-// anomaly-force-scan.cjs stamps at report-build time, ISO 8601 UTC, directly
-// string-comparable) is >= that bound. A doc older than the bound is logged
-// and treated exactly like "not present yet".
+// NOT_BEFORE (REQUIRED, not optional -- see scripts/lib/not-before.cjs for
+// why an empty/malformed bound fails fast instead of silently skipping the
+// check, and why the comparison is on parsed epoch ms with a 5s clock-skew
+// tolerance rather than a raw ISO-string compare). A doc whose own
+// `computedAt` (the field anomaly-force-scan.cjs stamps at report-build
+// time) is older than the bound is logged and treated exactly like "not
+// present yet".
 //
 // Env:
 //   COSMOS_CONNECTION_STRING   required
 //   COSMOS_DATABASE            default hobbyiq
 //   ANOMALY_REPORT_CONTAINER   default anomaly_scan_reports
 //   WAIT_FOR_DOC_ID            required -- the doc id to poll (pk = id)
-//   WAIT_FOR_DOC_NOT_BEFORE    optional -- ISO 8601 UTC; a doc whose own
-//                              `computedAt` is older than this is treated as
-//                              not-yet-present (guards a same-day re-dispatch
-//                              finding an earlier run's doc under the same
-//                              date-only id)
+//   WAIT_FOR_DOC_NOT_BEFORE    required -- ISO 8601 timestamp; a doc whose
+//                              own `computedAt` predates this (beyond a 5s
+//                              clock-skew tolerance) is treated as
+//                              not-yet-present. Missing/empty/unparseable
+//                              is a hard failure (exit 1), never a silent
+//                              skip of the guard.
 //   WAIT_FOR_DOC_MAX_MS        default 14400000 (4h)
 //   WAIT_FOR_DOC_POLL_MS       default 300000 (5m)
 //
 // Exit codes: 0 doc found within the bound (and fresh enough, if bounded)
-//             1 Cosmos not configured / doc id missing / read error
+//             1 Cosmos not configured / doc id missing / notBefore missing
+//               or unparseable / read error
 //             2 bound elapsed with no (sufficiently fresh) doc -- names it
 "use strict";
+
+const { requireNotBefore, isFreshEnough } = require("./lib/not-before.cjs");
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -75,20 +82,30 @@ function sleep(ms) {
  * shaped like the @azure/cosmos SDK).
  *
  * @param {{item: (id: string, pk: string) => {read: () => Promise<{resource: any}>}}} container
- * @param {{docId: string, notBefore?: string, maxMs?: number, pollMs?: number, containerName?: string,
+ * @param {{docId: string, notBefore: string, maxMs?: number, pollMs?: number, containerName?: string,
  *          log?: (s: string) => void, err?: (s: string) => void, sleepFn?: (ms: number) => Promise<void>}} opts
  * @returns {Promise<0|1|2>}
  */
 async function waitForDoc(container, opts) {
-  const docId = opts.docId;
-  if (!docId) { (opts.err || console.error)("::error::WAIT_FOR_DOC_ID required"); return 1; }
+  const err = opts.err || console.error;
+  const log = opts.log || console.log;
 
-  const notBefore = opts.notBefore || null;
+  const docId = opts.docId;
+  if (!docId) { err("::error::WAIT_FOR_DOC_ID required"); return 1; }
+
+  // Required, not optional: an empty/malformed bound is a wiring bug, never
+  // a signal to skip the stale-doc check (see scripts/lib/not-before.cjs).
+  let notBeforeMs;
+  try {
+    notBeforeMs = requireNotBefore(opts.notBefore);
+  } catch (e) {
+    err(`::error::WAIT_FOR_DOC_NOT_BEFORE invalid: ${e.message}`);
+    return 1;
+  }
+
   const maxMs = Number(opts.maxMs || 4 * 60 * 60 * 1000);
   const pollMs = Number(opts.pollMs || 5 * 60 * 1000);
   const containerName = opts.containerName || "anomaly_scan_reports";
-  const log = opts.log || console.log;
-  const err = opts.err || console.error;
   const sleepFn = opts.sleepFn || sleep;
 
   const t0 = Date.now();
@@ -101,11 +118,10 @@ async function waitForDoc(container, opts) {
     try {
       const { resource } = await container.item(docId, docId).read();
       if (resource) {
-        // ISO 8601 UTC timestamps compare correctly as plain strings.
-        if (notBefore && !(resource.computedAt >= notBefore)) {
-          staleComputedAt = resource.computedAt;
-        } else {
+        if (isFreshEnough(resource.computedAt, notBeforeMs)) {
           found = true;
+        } else {
+          staleComputedAt = resource.computedAt;
         }
       }
     } catch (e) {
@@ -123,7 +139,7 @@ async function waitForDoc(container, opts) {
 
     if (staleComputedAt) {
       log(`[wait-for-doc] attempt=${attempt} elapsed=${elapsedMin}m — stale doc from ${staleComputedAt}`
-        + ` (before ${notBefore}), waiting for a newer one`);
+        + ` (before ${opts.notBefore}), waiting for a newer one`);
     } else {
       log(`[wait-for-doc] attempt=${attempt} elapsed=${elapsedMin}m — ${docId} not present yet`);
     }
@@ -131,7 +147,7 @@ async function waitForDoc(container, opts) {
     if (Date.now() - t0 + pollMs > maxMs) {
       err(`::error::timed out waiting for ${docId} in ${containerName} `
         + `after ${Math.round(maxMs / 60000)}m — the chain that writes this doc never finished settling`
-        + (staleComputedAt ? ` (a doc exists but is stale: computedAt=${staleComputedAt}, needed >= ${notBefore})` : ""));
+        + (staleComputedAt ? ` (a doc exists but is stale: computedAt=${staleComputedAt}, needed >= ${opts.notBefore})` : ""));
       return 2;
     }
 
@@ -154,7 +170,7 @@ async function main() {
 
   return waitForDoc(container, {
     docId,
-    notBefore: process.env.WAIT_FOR_DOC_NOT_BEFORE || null,
+    notBefore: process.env.WAIT_FOR_DOC_NOT_BEFORE,
     maxMs: Number(process.env.WAIT_FOR_DOC_MAX_MS || 4 * 60 * 60 * 1000),
     pollMs: Number(process.env.WAIT_FOR_DOC_POLL_MS || 5 * 60 * 1000),
     containerName,
