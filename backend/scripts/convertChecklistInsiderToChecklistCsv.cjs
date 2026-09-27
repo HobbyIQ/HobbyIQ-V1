@@ -146,8 +146,24 @@ function toCsvRows(product) {
   for (const sec of sections.values()) {
     if (sec.rung) parallels++; else anchors++;
     const mine = sec.parallelOf ? [] : ladder.filter((p) => ladderAppliesTo(p.list, sec.category));
+    // R-0927D / CF-UNSIGNED-MINT-DEFECT (Drew ruling, 2026-09-27 ~02:50Z;
+    // census DRAFT PR #2453). isAuto comes from the SECTION'S OWN CATEGORY,
+    // never from the raw per-card `c.isAuto` flag the staged JSONL carries --
+    // exactly the rule convertBeckettChecklistXlsx.cjs already applies at its
+    // own emit site ("isAuto comes from the SECTION's own category, never the
+    // fold target's"). The checklistinsider source's own `isAuto` field is
+    // NOT reliable: the census found 22 (setKey, prefix, year) groups /
+    // 3,265 rows where this converter's OLD behavior (trusting `c.isAuto`)
+    // minted a checklist-grade `:no-auto` row for a cardNumber prefix that is
+    // registered AUTOGRAPH-ONLY -- "the checklistinsider layout mints autos
+    // UNSIGNED". `sec.category` is computed by classifySections from the
+    // section's OWN name/subset (sheetNameFor already routes an "Autographs"
+    // subset, or any subset whose rows carry `isAuto: true`, to the
+    // Autographs sheet before classifySections ever runs) -- the checklist's
+    // own card-number section decides, never a per-row flag or sale-title
+    // text (feedback_isauto_boundary_is_cardnumber_not_text.md).
+    const isAuto = sec.category.startsWith("auto-") ? "true" : "false";
     for (const c of sec.rows) {
-      const isAuto = c.isAuto === true ? "true" : c.isAuto === false ? "false" : "";
       // The plain card. Blank is "unknown", and is never the string "Base".
       rows.push({
         category: sec.category,

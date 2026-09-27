@@ -156,3 +156,66 @@ describe("the six columns, in order", () => {
     expect(pink.every((r: { printRun: number }) => r.printRun === 25)).toBe(true);
   });
 });
+
+/**
+ * R-0927D / CF-UNSIGNED-MINT-DEFECT (Drew ruling, 2026-09-27 ~02:50Z; census
+ * DRAFT PR #2453, C:/tmp/unsigned_1949/RESULT.md -- 22 (setKey, prefix, year)
+ * groups / 3,265 pairs in baseball). The checklistinsider LAYOUT mints
+ * AUTOGRAPH-ONLY inserts as isAuto=false: the staged JSONL's per-card
+ * `isAuto` flag on an autograph-section row is NOT trustworthy. isAuto must
+ * come from the SECTION's own category (sec.category.startsWith("auto-")),
+ * exactly the rule convertBeckettChecklistXlsx.cjs already applies at its own
+ * emit site -- never from the raw per-card flag, and never from sale-title
+ * text (feedback_isauto_boundary_is_cardnumber_not_text.md).
+ *
+ * This fixture is shaped like a REAL checklistinsider product page: an
+ * "Autographs" subset (the source's own section name, exactly as
+ * sheetNameFor's "routes signed runs to Autographs" test above already
+ * exercises) whose staged rows carry the DEFECTIVE `isAuto: false` the
+ * census found at scale, alongside an ordinary "Base" subset with the same
+ * (correct) flag shape.
+ */
+const INSIDER_LAYOUT_PRODUCT = {
+  slug: "2024-bowman-chrome-baseball",
+  parallels: [],
+  cards: [
+    // Autograph section: real checklistinsider rows carry isAuto: false on
+    // every row here (the minting defect) -- the fix must NOT trust this.
+    { subset: "Autographs", cardNumber: "CPA-JS", player: "John Smith", printRun: null, isAuto: false },
+    { subset: "Autographs", cardNumber: "CPA-AB", player: "Ann Baker", printRun: null, isAuto: false },
+    // Base section: ordinary unsigned cards, correctly flagged false.
+    { subset: "Base", cardNumber: "1", player: "P1", printRun: null, isAuto: false },
+    { subset: "Base", cardNumber: "2", player: "P2", printRun: null, isAuto: false },
+  ],
+};
+
+describe("R-0927d: isAuto comes from the section's category, never the raw per-card flag", () => {
+  it("autograph-section rows emit isAuto=true even though the staged flag says false (the minting defect)", () => {
+    const { rows } = toCsvRows(INSIDER_LAYOUT_PRODUCT);
+    const autoRows = rows.filter((r: { cardNumber: string }) => r.cardNumber.startsWith("CPA-"));
+    expect(autoRows).toHaveLength(2);
+    expect(autoRows.every((r: { isAuto: string }) => r.isAuto === "true")).toBe(true);
+  });
+
+  it("base-section rows emit isAuto=false", () => {
+    const { rows } = toCsvRows(INSIDER_LAYOUT_PRODUCT);
+    const baseRows = rows.filter((r: { cardNumber: string }) => !r.cardNumber.startsWith("CPA-"));
+    expect(baseRows).toHaveLength(2);
+    expect(baseRows.every((r: { isAuto: string }) => r.isAuto === "false")).toBe(true);
+  });
+
+  // ── MUTATION CHECK: reverting to the raw `c.isAuto` flag reproduces the
+  // defect on this exact fixture, proving the section-category fix is
+  // load-bearing and not a no-op on real Insider-shaped data.
+  it("MUTATION: trusting the raw per-card isAuto flag instead of the section category reproduces the minting defect", () => {
+    const regressedIsAuto = (c: { isAuto?: boolean | null }) =>
+      c.isAuto === true ? "true" : c.isAuto === false ? "false" : "";
+    const staged = INSIDER_LAYOUT_PRODUCT.cards.filter((c) => c.cardNumber.startsWith("CPA-"));
+    const regressedOutput = staged.map((c) => regressedIsAuto(c));
+    expect(regressedOutput.every((v) => v === "false"), "the OLD (regressed) behavior mints these autograph-section rows as isAuto=false").toBe(true);
+
+    const { rows } = toCsvRows(INSIDER_LAYOUT_PRODUCT);
+    const realOutput = rows.filter((r: { cardNumber: string }) => r.cardNumber.startsWith("CPA-")).map((r: { isAuto: string }) => r.isAuto);
+    expect(realOutput.every((v: string) => v === "true"), "the REAL (fixed) converter must never reproduce the mutation's isAuto=false on an autograph section").toBe(true);
+  });
+});

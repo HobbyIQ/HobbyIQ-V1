@@ -38,7 +38,39 @@
  *   5. BOTH checklist-grade is a REFUSAL, never a move: if the current id
  *      ALSO carries a checklist row, moving would erase an attested card in
  *      favor of a guess about which one the sale actually was -- ambiguous,
- *      logged, left exactly where it is;
+ *      logged, left exactly where it is.
+ *
+ *      R-0927D SCOPED OVERRIDE (Drew, 2026-09-27 ~02:50Z; DRAFT PR #2453,
+ *      C:/tmp/unsigned_1949/RESULT.md -- 22 (setKey, prefix, year) groups /
+ *      3,265 pairs in baseball, e.g. bowman-chrome CPA- 2024 1,863 pairs).
+ *      For AUTOGRAPH-ONLY inserts, a checklist-grade row at the `:no-auto`
+ *      id is a MINTING ERROR -- the checklistinsider layout (and its listed
+ *      siblings) mints autos unsigned. Consulted ONLY when the run is armed
+ *      (`titles` carries the `auto-only-override` sentinel -- see below) and
+ *      turns this refusal into a MOVE, no-auto -> auto, ONLY when the gate
+ *      module (lib/auto-only-override.cjs, `autoOnlyOverride()`) finds ALL
+ *      FOUR conditions true: (1) direction is no-auto->auto, never reversed;
+ *      (2) the cardNumber prefix is registered auto-only for this (sport,
+ *      year, setKey) -- the shared AUTO_ONLY_CARDNUMBER_PREFIX/
+ *      isScopedAutoOnlyPrefix vocabulary, OR the :auto row's own category
+ *      says autograph; (3) the :no-auto row's OWN source is one the census
+ *      identified as the unsigned-minting layout (a data-driven allowlist,
+ *      backend/data/auto-only-override-defective-sources.json -- NOT hard-
+ *      coded); (4) namesAgree(sale.playerName, autoRow.playerName). Any miss
+ *      falls through to the SAME unconditional refusal as before, recorded
+ *      by the SAME `refusedChecklistAtBoth` counter. A successful override
+ *      move is recorded by its OWN counter, `movedByAutoOnlyOverride`,
+ *      NEVER folded into `repointed` -- so the everyday-refused population
+ *      stays legible.
+ *
+ *      SENTINEL, NO NEW WORKFLOW INPUT. The literal token
+ *      `auto-only-override`, anywhere in `titles` (SET_KEYS/BCP_TITLES),
+ *      arms the gate for this run and is stripped from the setKey filter
+ *      before use -- it is never itself a setKey. Dispatch e.g.
+ *      `titles="auto-only-override"` (every setKey in SCOPE) or
+ *      `titles="auto-only-override,bowman-chrome"` (armed + narrowed).
+ *      Default (sentinel absent) is UNCHANGED from before this override
+ *      existed: checklist-at-both refuses unconditionally.
  *   6. REPORT (apply=false) runs every guard APPLY runs and prints intended
  *      moves fromId->toId with up to 10 examples per setKey, writing
  *      nothing; APPLY calls relocateSoldComp (the ONE sanctioned mover --
@@ -54,10 +86,14 @@
  * moved, logged by cardNumber), refused-graded-parse (the id does not parse,
  * grade-aware or otherwise).
  *
- * RECONCILE: candidates = repointed + collapsedOntoResident +
- * refusedNoChecklistAtFlip + refusedChecklistAtBoth +
+ * RECONCILE: candidates = repointed + movedByAutoOnlyOverride +
+ * collapsedOntoResident + refusedNoChecklistAtFlip + refusedChecklistAtBoth +
  * refusedPossibleTwinAtDestination + refusedEtagChanged + failed +
  * notReached. Exits non-zero when the counters do not add up.
+ * `movedByAutoOnlyOverride` is drawn from the SAME `candidates` population as
+ * every other outcome (a checklist-at-both row was already a candidate
+ * before the R-0927d gate ever runs), so -- unlike `refusedGradedParse`
+ * below -- it belongs in this formula and must never be excluded from it.
  *
  * `refusedGradedParse` is DELIBERATELY NOT part of this formula, and is
  * DELIBERATELY NOT folded into the `refused` count reportWrites() sees
@@ -95,6 +131,8 @@ const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-s
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 const { parseSlugWithGrade } = require(path.join(__dirname, "lib", "graded-id.cjs"));
+const { autoOnlyOverride } = require(path.join(__dirname, "lib", "auto-only-override.cjs"));
+const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const str = (v) => String(v ?? "").trim();
@@ -134,7 +172,19 @@ for (const raw of RAW_SCOPE) {
 // addresses) is the same for every product.
 const WILDCARDS = new Set(["", "all", "*"]);
 const RAW_SET_KEYS = csv(process.env.SET_KEYS || process.env.BCP_TITLES).map(lower);
-const REQUESTED_SET_KEYS = RAW_SET_KEYS.filter((k) => !WILDCARDS.has(k));
+
+// ── R-0927D SENTINEL. No new workflow input for this override -- the lane
+// rides the existing `titles` (SET_KEYS/BCP_TITLES) channel. The literal
+// token `auto-only-override`, anywhere in that comma-list, ARMS the gate
+// (autoOnlyOverride, lib/auto-only-override.cjs) for this run and is then
+// stripped OUT of the list before it is read as a setKey filter -- it is
+// never itself a setKey, and its presence/absence never changes what
+// setKeys are in scope. Dispatch e.g. `titles="auto-only-override"` alone
+// (every setKey under SCOPE) or `titles="auto-only-override,bowman-chrome"`
+// (armed AND narrowed to bowman-chrome).
+const AUTO_ONLY_OVERRIDE_SENTINEL = "auto-only-override";
+const AUTO_ONLY_OVERRIDE_ARMED = RAW_SET_KEYS.includes(AUTO_ONLY_OVERRIDE_SENTINEL);
+const REQUESTED_SET_KEYS = RAW_SET_KEYS.filter((k) => !WILDCARDS.has(k) && k !== AUTO_ONLY_OVERRIDE_SENTINEL);
 
 async function forEachPage(container, spec, onPage, pageSize = 500) {
   const iter = container.items.query(spec, { maxItemCount: pageSize, maxDegreeOfParallelism: -1 });
@@ -190,6 +240,7 @@ async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const { parseHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+  const { isScopedAutoOnlyPrefix } = require(path.join(backend, "dist/services/portfolioiq/scopedAutoOnlyPrefixes.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
   const isChecklist = (source) => catalogAuthorityOf(source) === "checklist";
@@ -201,13 +252,14 @@ async function main() {
 
   console.log(`  scope (${SCOPE_CELLS.length} cell${SCOPE_CELLS.length === 1 ? "" : "s"})    ${SCOPE_CELLS.map((c) => c.cell).join(", ")}`);
   console.log(`  titles (setKey filter)   ${REQUESTED_SET_KEYS.length ? REQUESTED_SET_KEYS.join(", ") : "(none -- every setKey found)"}`);
+  console.log(`  R-0927d auto-only override  ${AUTO_ONLY_OVERRIDE_ARMED ? "ARMED (titles carried the auto-only-override sentinel)" : "off (default -- checklist-at-both refuses unconditionally)"}`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  ${CLOCK.describe()}`);
   console.log("");
 
   const s = {
     scanned: 0, otherShard: 0, candidates: 0,
-    repointed: 0, collapsedOntoResident: 0,
+    repointed: 0, collapsedOntoResident: 0, movedByAutoOnlyOverride: 0,
     refusedNoChecklistAtFlip: 0, refusedChecklistAtBoth: 0, refusedGradedParse: 0,
     refusedPossibleTwinAtDestination: 0, refusedEtagChanged: 0,
     failed: 0, notReached: 0,
@@ -218,7 +270,7 @@ async function main() {
   function bucket(setKey) {
     if (!perSetKey.has(setKey)) {
       perSetKey.set(setKey, {
-        candidates: 0, repointed: 0,
+        candidates: 0, repointed: 0, movedByAutoOnlyOverride: 0,
         refusedNoChecklistAtFlip: 0, refusedChecklistAtBoth: 0, refusedGradedParse: 0,
       });
     }
@@ -263,6 +315,75 @@ async function main() {
   async function catalogRowAt(id) {
     try { return (await cat.item(id, id).read()).resource ?? null; }
     catch (e) { if (e?.code === 404 || e?.statusCode === 404) return null; throw e; }
+  }
+
+  // ── THE MOVE (shared body). Used both by the everyday move (current
+  // absent/non-checklist, flip checklist-grade) and by the R-0927d override
+  // move (both checklist-grade, but the gate's four conditions held). The
+  // ONLY difference between the two callers is which counter records the
+  // success -- `repointed` for the everyday case, `movedByAutoOnlyOverride`
+  // for the override, per the ruling's explicit ask for a NEW, separate
+  // counter so `refusedChecklistAtBoth` still prints the everyday-refused
+  // population undiluted.
+  async function performMove(sale, currentId, toId, setKey, st, { viaOverride }) {
+    const exList = examplesBySetKey.get(setKey) ?? [];
+    if (exList.length < 10) {
+      exList.push(`  ${sale.id}: ${currentId} -> ${toId}  ("${String(sale.title ?? "").slice(0, 90)}")${viaOverride ? " [auto-only-override]" : ""}`);
+      examplesBySetKey.set(setKey, exList);
+    }
+    if (examples.length < 10) examples.push(`  ${sale.id}: ${currentId} -> ${toId}  ("${String(sale.title ?? "").slice(0, 90)}")${viaOverride ? " [auto-only-override]" : ""}`);
+
+    // Collision / twin detection runs in BOTH modes -- a REPORT must show
+    // what would happen, mirrors every sibling repoint lane.
+    const resident = await residentAt(sale.id, toId);
+    if (resident) {
+      if (contentHashOf(resident) === contentHashOf({ ...sale, cardId: toId, hobbyiqCardId: toId })) {
+        s.collapsedOntoResident++;
+        if (APPLY) { try { await pool.item(sale.id, sale.cardId).delete(); } catch { /* best effort; proven duplicate either way */ } }
+        emitPlanRow(sale, "collapse", "same-sale-resident", { fromId: currentId, toId });
+        return;
+      }
+      s.refusedPossibleTwinAtDestination++;
+      refusals["possible-twin-at-destination"].push(`  ${sale.id}@${currentId} -> ${toId}: a DIFFERENT document already resides at (${sale.id}, ${toId}) -- refused, neither moved`);
+      emitPlanRow(sale, "refused", "possible-twin-at-destination", { fromId: currentId, toId });
+      return;
+    }
+
+    try {
+      const keep = stripSystem({ ...sale, cardId: toId, hobbyiqCardId: toId });
+      const result = await relocateSoldComp(pool, {
+        keep, drop: [{ id: sale.id, cardId: sale.cardId }],
+        verifyFields: ["cardId", "hobbyiqCardId"],
+        dryRun: !APPLY,
+      });
+      if (result?.ok) {
+        if (viaOverride) { s.movedByAutoOnlyOverride++; st.movedByAutoOnlyOverride++; }
+        else { s.repointed++; st.repointed++; }
+        emitPlanRow(sale, "move", viaOverride ? "auto-only-override" : "isauto-flip", { fromId: currentId, toId });
+      } else if (result?.staleSincePlan?.length) {
+        s.refusedEtagChanged++;
+        emitPlanRow(sale, "refused", "stale-since-plan", { fromId: currentId, toId });
+      } else {
+        s.failed++;
+        const duplicateLeft = Array.isArray(result?.duplicatesLeft) && result.duplicatesLeft.length > 0;
+        const stage = result?.stage ?? "unknown";
+        const errMsg = result?.error ?? "unknown";
+        const state = duplicateLeft
+          ? `DUPLICATE LEFT -- keeper upserted+verified at ${toId}, old row at ${sale.cardId} was NOT deleted; sale now resident at BOTH addresses`
+          : `nothing written -- sale untouched at its old address ${sale.cardId}`;
+        const msg = `FAILED relocate ${sale.id}@${currentId} -> ${toId}: [stage=${stage}] ${errMsg} -- ${state}`;
+        failures.push(`  ${msg}`);
+        emitPlanRow(sale, "failed", "relocate", { fromId: currentId, toId, error: `[stage=${stage}] ${errMsg}` });
+        console.log(`\n::warning::${msg}`);
+      }
+    } catch (e) {
+      s.failed++;
+      const code = e?.code ?? e?.statusCode ?? "unknown";
+      const msg = `FAILED relocate ${sale.id}@${currentId} -> ${toId}: [${code}] ${e?.message || e} -- UNKNOWN whether the write landed before the throw; verify both addresses`;
+      failures.push(`  ${msg}`);
+      emitPlanRow(sale, "failed", "relocate-threw", { fromId: currentId, toId, error: `[${code}] ${e?.message || String(e)}` });
+      console.log(`\n::warning::${msg}`);
+    }
   }
 
   async function processSale(sale, setKey) {
@@ -311,10 +432,38 @@ async function main() {
       // defect, tallied as refusedNoChecklistAtFlip's complement below.
       const flipIsChecklist = flipRow ? isChecklist(flipRow.source) : false;
       if (flipIsChecklist) {
-        s.refusedChecklistAtBoth++;
-        st.refusedChecklistAtBoth++;
+        // ── R-0927D. `currentId` is the SALE's own (:no-auto) address and
+        // `toId` is the flip (:auto) address -- this branch is entered only
+        // when BOTH sides are checklist-grade, i.e. exactly the ambiguous
+        // shape the override exists for. The override NEVER runs the
+        // reverse direction: it is only ever consulted when the CURRENT
+        // (unflipped) row is the `:no-auto` one and the flip is `:auto`
+        // (parsed.isAuto === false on the current row -- checked via the
+        // parsed segments, never a string suffix test).
         const segs = parseSlugWithGrade(currentId, parseHobbyIqCardId);
         const cardNumber = segs?.parsed?.cardNumber ?? "unknown";
+        const currentIsNoAuto = segs?.parsed?.isAuto === false;
+
+        if (AUTO_ONLY_OVERRIDE_ARMED && currentIsNoAuto) {
+          const gate = autoOnlyOverride({
+            direction: "no-auto-to-auto",
+            cardNumber,
+            scope: { sport: segs?.parsed?.sport, year: segs?.parsed?.year, setKey },
+            noAutoSource: currentRow?.source,
+            saleName: sale.playerName,
+            autoRowName: flipRow?.playerName,
+            autoRowCategory: flipRow?.category,
+            isScopedAutoOnlyPrefix,
+            namesAgree,
+          });
+          if (gate.move) {
+            await performMove(sale, currentId, toId, setKey, st, { viaOverride: true });
+            return;
+          }
+        }
+
+        s.refusedChecklistAtBoth++;
+        st.refusedChecklistAtBoth++;
         const key = `${setKey}|${cardNumber}`;
         ambiguousByCardNumber.set(key, (ambiguousByCardNumber.get(key) ?? 0) + 1);
         emitPlanRow(sale, "refused", "checklist-at-both", { fromId: currentId, toId });
@@ -338,64 +487,7 @@ async function main() {
 
     // ── THE MOVE. current = absent/non-checklist, flip = checklist-grade.
     // The checklist attests the flipped isAuto value; the sale's id is wrong.
-    const exList = examplesBySetKey.get(setKey) ?? [];
-    if (exList.length < 10) {
-      exList.push(`  ${sale.id}: ${currentId} -> ${toId}  ("${String(sale.title ?? "").slice(0, 90)}")`);
-      examplesBySetKey.set(setKey, exList);
-    }
-    if (examples.length < 10) examples.push(`  ${sale.id}: ${currentId} -> ${toId}  ("${String(sale.title ?? "").slice(0, 90)}")`);
-
-    // Collision / twin detection runs in BOTH modes -- a REPORT must show
-    // what would happen, mirrors every sibling repoint lane.
-    const resident = await residentAt(sale.id, toId);
-    if (resident) {
-      if (contentHashOf(resident) === contentHashOf({ ...sale, cardId: toId, hobbyiqCardId: toId })) {
-        s.collapsedOntoResident++;
-        if (APPLY) { try { await pool.item(sale.id, sale.cardId).delete(); } catch { /* best effort; proven duplicate either way */ } }
-        emitPlanRow(sale, "collapse", "same-sale-resident", { fromId: currentId, toId });
-        return;
-      }
-      s.refusedPossibleTwinAtDestination++;
-      refusals["possible-twin-at-destination"].push(`  ${sale.id}@${currentId} -> ${toId}: a DIFFERENT document already resides at (${sale.id}, ${toId}) -- refused, neither moved`);
-      emitPlanRow(sale, "refused", "possible-twin-at-destination", { fromId: currentId, toId });
-      return;
-    }
-
-    try {
-      const keep = stripSystem({ ...sale, cardId: toId, hobbyiqCardId: toId });
-      const result = await relocateSoldComp(pool, {
-        keep, drop: [{ id: sale.id, cardId: sale.cardId }],
-        verifyFields: ["cardId", "hobbyiqCardId"],
-        dryRun: !APPLY,
-      });
-      if (result?.ok) {
-        s.repointed++;
-        st.repointed++;
-        emitPlanRow(sale, "move", "isauto-flip", { fromId: currentId, toId });
-      } else if (result?.staleSincePlan?.length) {
-        s.refusedEtagChanged++;
-        emitPlanRow(sale, "refused", "stale-since-plan", { fromId: currentId, toId });
-      } else {
-        s.failed++;
-        const duplicateLeft = Array.isArray(result?.duplicatesLeft) && result.duplicatesLeft.length > 0;
-        const stage = result?.stage ?? "unknown";
-        const errMsg = result?.error ?? "unknown";
-        const state = duplicateLeft
-          ? `DUPLICATE LEFT -- keeper upserted+verified at ${toId}, old row at ${sale.cardId} was NOT deleted; sale now resident at BOTH addresses`
-          : `nothing written -- sale untouched at its old address ${sale.cardId}`;
-        const msg = `FAILED relocate ${sale.id}@${currentId} -> ${toId}: [stage=${stage}] ${errMsg} -- ${state}`;
-        failures.push(`  ${msg}`);
-        emitPlanRow(sale, "failed", "relocate", { fromId: currentId, toId, error: `[stage=${stage}] ${errMsg}` });
-        console.log(`\n::warning::${msg}`);
-      }
-    } catch (e) {
-      s.failed++;
-      const code = e?.code ?? e?.statusCode ?? "unknown";
-      const msg = `FAILED relocate ${sale.id}@${currentId} -> ${toId}: [${code}] ${e?.message || e} -- UNKNOWN whether the write landed before the throw; verify both addresses`;
-      failures.push(`  ${msg}`);
-      emitPlanRow(sale, "failed", "relocate-threw", { fromId: currentId, toId, error: `[${code}] ${e?.message || String(e)}` });
-      console.log(`\n::warning::${msg}`);
-    }
+    await performMove(sale, currentId, toId, setKey, st, { viaOverride: false });
   }
 
   async function runPool(items, worker) {
@@ -456,6 +548,7 @@ async function main() {
     console.log(`\n  setKey: ${setKey}`);
     console.log(`    candidates                    ${f(st.candidates)}`);
     console.log(`    ${APPLY ? "repointed" : "would-repoint"}                  ${f(st.repointed)}`);
+    console.log(`    ${APPLY ? "movedByAutoOnlyOverride" : "wouldMoveByAutoOnlyOverride"}  ${f(st.movedByAutoOnlyOverride)}`);
     console.log(`    refused-no-checklist-at-flip   ${f(st.refusedNoChecklistAtFlip)}`);
     console.log(`    refused-checklist-at-both      ${f(st.refusedChecklistAtBoth)}`);
     console.log(`    refused-graded-parse           ${f(st.refusedGradedParse)}`);
@@ -486,6 +579,7 @@ async function main() {
   console.log(`sales scanned                          ${f(s.scanned)}${SHARD_SCOPE.SHARDED ? `  (${f(s.otherShard)} in other shards)` : ""}`);
   console.log(`  candidates (isAuto-flip shape)        ${f(s.candidates)}`);
   console.log(`  ${APPLY ? "REPOINTED" : "WOULD REPOINT"}                       ${f(s.repointed)}`);
+  console.log(`  ${APPLY ? "movedByAutoOnlyOverride" : "wouldMoveByAutoOnlyOverride"} (R-0927d)  ${f(s.movedByAutoOnlyOverride)}`);
   console.log(`  COLLAPSED onto a resident (same sale)  ${f(s.collapsedOntoResident)}`);
   console.log(`  REFUSED: no-checklist-at-flip           ${f(s.refusedNoChecklistAtFlip)}`);
   console.log(`  REFUSED: checklist-at-both (ambiguous)  ${f(s.refusedChecklistAtBoth)}`);
@@ -506,7 +600,7 @@ async function main() {
   // is counted against `scanned`, not `candidates` (a row that does not
   // parse never became a candidate), so it is added to both sides of the
   // ledger identically and cancels out of the candidate reconcile below.
-  const candidateOutcomes = s.repointed + s.collapsedOntoResident
+  const candidateOutcomes = s.repointed + s.movedByAutoOnlyOverride + s.collapsedOntoResident
     + s.refusedNoChecklistAtFlip + s.refusedChecklistAtBoth
     + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged
     + s.failed + s.notReached;
@@ -536,7 +630,7 @@ async function main() {
     reportWrites({
       job: "repoint-sales-isauto-flip",
       intended: s.candidates,
-      written: s.repointed + s.collapsedOntoResident,
+      written: s.repointed + s.movedByAutoOnlyOverride + s.collapsedOntoResident,
       refused: refusedTotal,
       skipped: s.notReached,
       failed: s.failed,
@@ -547,7 +641,7 @@ async function main() {
 }
 
 module.exports = {
-  flippedId, INHERITED_SCOPES, WILDCARDS, CELL_RE,
+  flippedId, INHERITED_SCOPES, WILDCARDS, CELL_RE, AUTO_ONLY_OVERRIDE_SENTINEL,
 };
 
 if (require.main === module) {

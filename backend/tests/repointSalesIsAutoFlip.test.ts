@@ -312,6 +312,178 @@ describe("repoint-sales-isauto-flip -- REFUSAL: checklist at both (ambiguous)", 
   });
 });
 
+// ── R-0927D: the scoped auto-only override (Drew, 2026-09-27 ~02:50Z).
+// checklist-at-both is a REFUSAL by default (proven above); ARMED (titles
+// carries the `auto-only-override` sentinel) and all four gates true, it
+// becomes a MOVE, no-auto -> auto ONLY, counted by its OWN counter
+// (movedByAutoOnlyOverride), never folded into `repointed`.
+const CPA_SETKEY = "bowman-chrome";
+const CPA_YEAR = 2024;
+const CPA_PREFIX = `hiq:baseball:${CPA_YEAR}:${CPA_SETKEY}:`;
+const CPA_NO_AUTO_ID = `${CPA_PREFIX}cpa-js:base:no-auto`;
+const CPA_AUTO_ID = `${CPA_PREFIX}cpa-js:base:auto`;
+const CPA_SALE = (over: Record<string, unknown> = {}) => ({
+  id: "cpa1", cardId: CPA_NO_AUTO_ID, hobbyiqCardId: CPA_NO_AUTO_ID,
+  title: "2024 Bowman Chrome #CPA-JS Base Auto", sport: "baseball", cardYear: CPA_YEAR,
+  price: 40, isAuto: false, playerName: "John Smith",
+  soldAt: "2026-07-06T18:23:27.000Z", source: "cardhedge",
+  ...over,
+});
+const CPA_NO_AUTO_ROW = (over: Record<string, unknown> = {}) => ({
+  id: CPA_NO_AUTO_ID, cardId: CPA_NO_AUTO_ID,
+  sport: "baseball", year: CPA_YEAR, cardYear: CPA_YEAR,
+  setKey: CPA_SETKEY, cardNumber: "CPA-JS", parallelSlug: "Base", isAuto: false,
+  playerName: "John Smith", source: "checklistinsider-2026-08-27",
+  ...over,
+});
+const CPA_AUTO_ROW = (over: Record<string, unknown> = {}) => ({
+  id: CPA_AUTO_ID, cardId: CPA_AUTO_ID,
+  sport: "baseball", year: CPA_YEAR, cardYear: CPA_YEAR,
+  setKey: CPA_SETKEY, cardNumber: "CPA-JS", parallelSlug: "Base", isAuto: true,
+  playerName: "John Smith", source: "baseballcardpedia-ladders-2026-09-04",
+  ...over,
+});
+const CPA_ENV = { SCOPE: `baseball:${CPA_YEAR}` };
+
+describe("repoint-sales-isauto-flip -- R-0927d auto-only override, ARMED", () => {
+  it("the CPA- 2024 fixture (PR #2453's biggest group) MOVES when armed via the titles sentinel", () => {
+    const r = drive(
+      { ...CPA_ENV, SET_KEYS: "auto-only-override", BACKFILL_APPLY: "true" },
+      { sales: [CPA_SALE()], catalog: [CPA_NO_AUTO_ROW(), CPA_AUTO_ROW()] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts).toContain("cpa1");
+    expect(r.led.salesDeletes).toContain("cpa1");
+    expect(r.out).toMatch(/movedByAutoOnlyOverride \(R-0927d\)\s+1/);
+    // NOT folded into the everyday counter, and NOT left in the everyday
+    // refusal count -- its own line, and only its own line.
+    expect(r.out).toMatch(/REPOINTED\s+0/);
+    expect(r.out).toMatch(/REFUSED: checklist-at-both \(ambiguous\)\s+0/);
+  });
+
+  it("REPORT mode (armed, apply=false) finds the same override candidate and writes nothing", () => {
+    const r = drive(
+      { ...CPA_ENV, SET_KEYS: "auto-only-override" },
+      { sales: [CPA_SALE()], catalog: [CPA_NO_AUTO_ROW(), CPA_AUTO_ROW()] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/wouldMoveByAutoOnlyOverride \(R-0927d\)\s+1/);
+  });
+
+  it("the auto-only-override sentinel is stripped and never read as a setKey filter", () => {
+    const r = drive(
+      { ...CPA_ENV, SET_KEYS: `auto-only-override,${CPA_SETKEY}`, BACKFILL_APPLY: "true" },
+      { sales: [CPA_SALE()], catalog: [CPA_NO_AUTO_ROW(), CPA_AUTO_ROW()] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts).toContain("cpa1");
+    expect(r.out).toMatch(new RegExp(`setKey: ${CPA_SETKEY}`));
+    expect(r.out).not.toMatch(/setKey: auto-only-override/);
+  });
+
+  it("reconciled: candidates == accounted-for with an override move in the mix, no MISMATCH", () => {
+    const r = drive(
+      { ...CPA_ENV, SET_KEYS: "auto-only-override", BACKFILL_APPLY: "true" },
+      { sales: [CPA_SALE()], catalog: [CPA_NO_AUTO_ROW(), CPA_AUTO_ROW()] },
+    );
+    expect(r.out).toMatch(/reconciled: candidates 1 = accounted-for 1/);
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+  });
+});
+
+describe("repoint-sales-isauto-flip -- R-0927d auto-only override, NOT armed (default, unchanged)", () => {
+  it("the SAME CPA- 2024 fixture is REFUSED when the sentinel is absent -- default behavior is unchanged", () => {
+    const r = drive(
+      { ...CPA_ENV, BACKFILL_APPLY: "true" }, // no auto-only-override in titles
+      { sales: [CPA_SALE()], catalog: [CPA_NO_AUTO_ROW(), CPA_AUTO_ROW()] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: checklist-at-both \(ambiguous\)\s+1/);
+    expect(r.out).toMatch(/movedByAutoOnlyOverride \(R-0927d\)\s+0/);
+  });
+});
+
+describe("repoint-sales-isauto-flip -- R-0927d auto-only override, armed but gated OFF", () => {
+  it("a MIXED insert (base + auto variants both exist, cardNumber NOT auto-only) is still REFUSED even when armed", () => {
+    const mixedNoAutoId = `${CPA_PREFIX}1:base:no-auto`;
+    const mixedAutoId = `${CPA_PREFIX}1:base:auto`;
+    const sale = CPA_SALE({ id: "mixed1", cardId: mixedNoAutoId, hobbyiqCardId: mixedNoAutoId });
+    const noAutoRow = CPA_NO_AUTO_ROW({ id: mixedNoAutoId, cardId: mixedNoAutoId, cardNumber: "1" });
+    const autoRow = CPA_AUTO_ROW({ id: mixedAutoId, cardId: mixedAutoId, cardNumber: "1" });
+    const r = drive(
+      { ...CPA_ENV, SET_KEYS: "auto-only-override", BACKFILL_APPLY: "true" },
+      { sales: [sale], catalog: [noAutoRow, autoRow] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: checklist-at-both \(ambiguous\)\s+1/);
+    expect(r.out).toMatch(/movedByAutoOnlyOverride \(R-0927d\)\s+0/);
+  });
+
+  it("a no-auto row from a NON-listed source is still REFUSED even when armed and the prefix is auto-only", () => {
+    const r = drive(
+      { ...CPA_ENV, SET_KEYS: "auto-only-override", BACKFILL_APPLY: "true" },
+      {
+        sales: [CPA_SALE()],
+        catalog: [CPA_NO_AUTO_ROW({ source: "baseballcardpedia-ladders-2026-09-04" }), CPA_AUTO_ROW()],
+      },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: checklist-at-both \(ambiguous\)\s+1/);
+  });
+
+  it("a disagreeing player name is still REFUSED even when armed, prefix auto-only, and source listed", () => {
+    const r = drive(
+      { ...CPA_ENV, SET_KEYS: "auto-only-override", BACKFILL_APPLY: "true" },
+      {
+        sales: [CPA_SALE({ playerName: "Someone Else" })],
+        catalog: [CPA_NO_AUTO_ROW(), CPA_AUTO_ROW()],
+      },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: checklist-at-both \(ambiguous\)\s+1/);
+  });
+
+  it("NEVER reverses: an auto-sided sale with a no-auto checklist twin is REFUSED even when armed", () => {
+    // Current id is the :auto address (reverse direction) -- the override's
+    // contract is no-auto -> auto ONLY; auto -> no-auto is unconditionally
+    // out of scope for it, regardless of prefix/source/name.
+    const sale = CPA_SALE({ id: "rev1", cardId: CPA_AUTO_ID, hobbyiqCardId: CPA_AUTO_ID, isAuto: true });
+    const r = drive(
+      { ...CPA_ENV, SET_KEYS: "auto-only-override", BACKFILL_APPLY: "true" },
+      { sales: [sale], catalog: [CPA_NO_AUTO_ROW(), CPA_AUTO_ROW()] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: checklist-at-both \(ambiguous\)\s+1/);
+    expect(r.out).toMatch(/movedByAutoOnlyOverride \(R-0927d\)\s+0/);
+  });
+});
+
+describe("repoint-sales-isauto-flip -- R-0927d REPORT == APPLY counters", () => {
+  it("armed run: REPORT and APPLY produce identical movedByAutoOnlyOverride / refused-checklist-at-both counters", () => {
+    const report = drive(
+      { ...CPA_ENV, SET_KEYS: "auto-only-override" },
+      { sales: [CPA_SALE()], catalog: [CPA_NO_AUTO_ROW(), CPA_AUTO_ROW()] },
+    );
+    const apply = drive(
+      { ...CPA_ENV, SET_KEYS: "auto-only-override", BACKFILL_APPLY: "true" },
+      { sales: [CPA_SALE()], catalog: [CPA_NO_AUTO_ROW(), CPA_AUTO_ROW()] },
+    );
+    expect(report.code).toBe(0);
+    expect(apply.code).toBe(0);
+    const extract = (out: string) => ({
+      moved: out.match(/(?:movedByAutoOnlyOverride|wouldMoveByAutoOnlyOverride) \(R-0927d\)\s+([\d,]+)/)?.[1],
+      both: out.match(/REFUSED: checklist-at-both \(ambiguous\)\s+([\d,]+)/)?.[1],
+    });
+    expect(extract(report.out)).toEqual(extract(apply.out));
+  });
+});
+
 describe("repoint-sales-isauto-flip -- REFUSAL: no checklist at the flip", () => {
   it("does not move when neither address has a checklist row (acquisition gap, not this lane's defect)", () => {
     const sale = SALE({ cardId: NO_AUTO_ID, hobbyiqCardId: NO_AUTO_ID, isAuto: false });
