@@ -1,0 +1,218 @@
+{
+ "generatedAt": "2026-09-27T00:21:28.656Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "2026-09-27 census (2025 Topps Chrome Update Series, setKey topps-chrome-update-series, baseball): 28 card_catalog rows under this product carry a PARALLEL COLOUR/RUNG NAME minted as cardNumber (e.g. AQUA, TEAL, GOLD, SUPERFRACTOR, REFRACTOR, X-FRACTOR, RAYWAVE, BLACK, BLUE, GREEN, ORANGE, PURPLE, RED, SEPIA, NEGATIVE, GEOMETRIC, PRISM, FROZENFRACTOR, TOPPSFRACTOR), parallel stored literally as \"Base\", source bare \"baseballcardpedia\" (no date suffix -- distinct from the dated baseballcardpedia-ladders-2026-08-28 / baseballcardpedia-2026-01-01 sources this container also carries). playerName on every row reads as scraped checklist prose (\"Refractor\", \"Wave Refractor\", \"RayWave Refractor\", \"(serial-numbered to 499 copies)\", \"(one-of-one; not available in Mega Boxes or Fanatics Boxes)\", \"(Mega Boxes only)\", \"(Fanatics packs only)\", \"(serial-numbered to five; Hobby only)\") -- a baseballcardpedia page's own parallel-name/print-run/odds footnote lines, misparsed by a scraper reading numbered-looking lines off the page, the identical CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (commit 78aa88bf, 17 rows) and the 2026-09-06 census that found the true population at 3,136 rows across baseball 1949-2025 (retire-wiki-footer-catalog-rows.cjs). These 28 rows are a DIFFERENT vocabulary (parallel-name words, not \"This\"/\"undefined\") and a different container slice (this one product), so they are listed here rather than added to that script's fixed JUNK_NUMBERS -- a parallel colour word is a real card number in some OTHER product/container context and must never become a blanket pattern.",
+ "rulings": [
+  "OWNER PRECEDENT (Drew, 2026-09-01, commit 78aa88bf): \"Delete, but only with zero comps.\" Applied here to a different vocabulary shape found in the 2026-09-26 acquisition sweep (project_wave_2026_09_21.md, ~15:55Z: \"~20 garbage rows with a colour name minted as cardNumber (parallel \\\"Base\\\", source baseballcardpedia no date)\").",
+  "EXPLICIT VOCABULARY, NEVER A PATTERN. Only cardNumber values that are literal, case-insensitive matches to this product's OWN checklist-corpus parallel-name words (data/checklist-parallel-names.json, baseball|2024|topps-chrome-update-series + baseball|2025|topps-chrome-update-series: colour words Aqua/Black/Blue/Gold/Green/Magenta/Orange/Purple/Red/Sepia/Teal, and rung words SuperFractor/Refractor/X-Fractor/FrozenFractor/ToppsFractor/RayWave/Wave/Geometric/Lava/Speckle/Prism/Negative/Printing Plates) are eligible. This product's base numbering is USC1-USC200 and its insert prefixes are letter-dash forms (AC-, CRDA-, RA-, CHRU-, CLA-, etc) -- none of these words is ever a real card number here.",
+  "TWO GATES, BOTH REQUIRED, PER ROW, AT CENSUS TIME. (1) cardNumber (trimmed, uppercased) exactly equals one of the vocabulary words above -- a full-field match, never a substring; (2) parallel === \"Base\" AND source === bare \"baseballcardpedia\" (no date suffix) -- the exact footer-artefact shape distinguishing these from the same product's dated-source checklist rows, which carry real parallel names and real card numbers. All 28 candidates matching gate (1) also matched gate (2) -- zero were excluded as a near-miss (see census.notFooterShapeCount).",
+  "ZERO SALES IS THE GATE, CHECKED PER ROW BY THE DUAL METHOD (scripts/lib/sales-at-id.cjs: cross-partition query OR partition-scoped query, both paginated {500,-1} and fully drained via hasMoreResults() -- never a bare cross-partition read alone, per the 2026-09-26 Cosmos equality-index anomaly finding, PR #2436). All 28 entries measured 0 by both forms on 2026-09-27; none held back."
+ ],
+ "census": {
+  "totalRowsUnderPrefix": 68911,
+  "candidatesMatchingVocabulary": 28,
+  "candidatesMatchingFooterShape": 28,
+  "notFooterShapeCount": 0,
+  "retireCandidates": 28,
+  "reportCases_salesPresent": 0
+ },
+ "entries": [
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:aqua:base:auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"AQUA\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Wave Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:aqua:base:auto cardNumber=\"AQUA\" parallel=\"Base\" playerName=\"Wave Refractor\" source=\"baseballcardpedia\" isAuto=true. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:teal:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"TEAL\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:teal:base:no-auto cardNumber=\"TEAL\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:raywave:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"RAYWAVE\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:raywave:base:no-auto cardNumber=\"RAYWAVE\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:red:base:auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"RED\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:red:base:auto cardNumber=\"RED\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=true. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:black:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"BLACK\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:black:base:no-auto cardNumber=\"BLACK\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:sepia:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"SEPIA\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:sepia:base:no-auto cardNumber=\"SEPIA\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:gold:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"GOLD\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:gold:base:no-auto cardNumber=\"GOLD\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:geometric:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"GEOMETRIC\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:geometric:base:no-auto cardNumber=\"GEOMETRIC\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:refractor:base:auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"REFRACTOR\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"(serial-numbered to 499 copies)\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:refractor:base:auto cardNumber=\"REFRACTOR\" parallel=\"Base\" playerName=\"(serial-numbered to 499 copies)\" source=\"baseballcardpedia\" isAuto=true. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:x-fractor:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"X-FRACTOR\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"(Mega Boxes only)\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:x-fractor:base:no-auto cardNumber=\"X-FRACTOR\" parallel=\"Base\" playerName=\"(Mega Boxes only)\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:negative:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"NEGATIVE\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:negative:base:no-auto cardNumber=\"NEGATIVE\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:orange:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"ORANGE\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:orange:base:no-auto cardNumber=\"ORANGE\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:blue:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"BLUE\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:blue:base:no-auto cardNumber=\"BLUE\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:green:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"GREEN\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Wave Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:green:base:no-auto cardNumber=\"GREEN\" parallel=\"Base\" playerName=\"Wave Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:purple:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"PURPLE\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"RayWave Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:purple:base:no-auto cardNumber=\"PURPLE\" parallel=\"Base\" playerName=\"RayWave Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:aqua:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"AQUA\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:aqua:base:no-auto cardNumber=\"AQUA\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:black:base:auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"BLACK\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:black:base:auto cardNumber=\"BLACK\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=true. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:orange:base:auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"ORANGE\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:orange:base:auto cardNumber=\"ORANGE\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=true. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:gold:base:auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"GOLD\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:gold:base:auto cardNumber=\"GOLD\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=true. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:blue:base:auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"BLUE\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:blue:base:auto cardNumber=\"BLUE\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=true. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:purple:base:auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"PURPLE\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:purple:base:auto cardNumber=\"PURPLE\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=true. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:green:base:auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"GREEN\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:green:base:auto cardNumber=\"GREEN\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=true. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:red:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"RED\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:red:base:no-auto cardNumber=\"RED\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:prism:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"PRISM\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"Refractor\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:prism:base:no-auto cardNumber=\"PRISM\" parallel=\"Base\" playerName=\"Refractor\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:superfractor:base:auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"SUPERFRACTOR\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"(one-of-one; not available in Mega Boxes or Fanatics Boxes))\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:superfractor:base:auto cardNumber=\"SUPERFRACTOR\" parallel=\"Base\" playerName=\"(one-of-one; not available in Mega Boxes or Fanatics Boxes))\" source=\"baseballcardpedia\" isAuto=true. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:frozenfractor:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"FROZENFRACTOR\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"(serial-numbered to five; Hobby only)\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:frozenfractor:base:no-auto cardNumber=\"FROZENFRACTOR\" parallel=\"Base\" playerName=\"(serial-numbered to five; Hobby only)\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:superfractor:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"SUPERFRACTOR\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"(one-of-one; not available in Mega Boxes and Fanatics Boxes)\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:superfractor:base:no-auto cardNumber=\"SUPERFRACTOR\" parallel=\"Base\" playerName=\"(one-of-one; not available in Mega Boxes and Fanatics Boxes)\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  },
+  {
+   "id": "hiq:baseball:2025:topps-chrome-update-series:toppsfractor:base:no-auto",
+   "action": "retire",
+   "reason": "2026-09-27 census: cardNumber \"TOPPSFRACTOR\" is a parallel colour/rung word from this product's own checklist vocabulary (Refractor family), never a real card number in topps-chrome-update-series (base is USC1-200, inserts are letter-dash prefixes like AC-/CRDA-/RA-). parallel is stored as the literal string \"Base\" and playerName reads as scraped page prose (\"(Fanatics packs only)\") -- a baseballcardpedia page footer/print-run footnote line parsed as a card row, the same CF-A-PAGE-FOOTER-IS-NOT-A-CARD shape as the 2026-09-01 o-pee-chee wiki-scrape retire (17 rows, commit 78aa88bf).",
+   "evidence": "id=hiq:baseball:2025:topps-chrome-update-series:toppsfractor:base:no-auto cardNumber=\"TOPPSFRACTOR\" parallel=\"Base\" playerName=\"(Fanatics packs only)\" source=\"baseballcardpedia\" isAuto=false. sold_comps DUAL check (scripts/lib/sales-at-id.cjs, cross-partition OR partition-scoped, both drained) on 2026-09-27: xp=0 pk=0 total=0 -- safe to delete, nothing becomes unplaced.",
+   "salesAtRetireTime": 0
+  }
+ ]
+}
