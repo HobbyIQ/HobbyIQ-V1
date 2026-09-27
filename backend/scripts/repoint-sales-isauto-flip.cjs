@@ -88,22 +88,30 @@
  *
  * RECONCILE: candidates = repointed + movedByAutoOnlyOverride +
  * collapsedOntoResident + refusedNoChecklistAtFlip + refusedChecklistAtBoth +
- * refusedPossibleTwinAtDestination + refusedEtagChanged + failed +
- * notReached. Exits non-zero when the counters do not add up.
+ * refusedPossibleTwinAtDestination + refusedEtagChanged + failed.
+ * Exits non-zero when the counters do not add up.
  * `movedByAutoOnlyOverride` is drawn from the SAME `candidates` population as
  * every other outcome (a checklist-at-both row was already a candidate
- * before the R-0927d gate ever runs), so -- unlike `refusedGradedParse`
- * below -- it belongs in this formula and must never be excluded from it.
+ * before the R-0927d gate ever runs), so -- unlike `refusedGradedParse` and
+ * `notReached` below -- it belongs in this formula and must never be
+ * excluded from it.
  *
- * `refusedGradedParse` is DELIBERATELY NOT part of this formula, and is
- * DELIBERATELY NOT folded into the `refused` count reportWrites() sees
- * either: a row whose id (grade-aware) does not parse at all never becomes a
- * candidate in the first place (`candidates` only increments after
- * `flippedId()` succeeds), so it is counted against `scanned`, reported on
- * its own line, and left out of both reconciliations -- folding it into
- * either would count it against a population it was never drawn from,
- * producing a false RECONCILE MISMATCH / reportWrites over-account on any
- * real run that meets even one malformed id alongside a real outcome.
+ * `refusedGradedParse` and `notReached` are BOTH DELIBERATELY NOT part of
+ * this formula, and DELIBERATELY NOT folded into the `refused`/`skipped`
+ * counts reportWrites() sees as anything but their own named bucket: a row
+ * whose id (grade-aware) does not parse at all never becomes a candidate
+ * (`candidates` only increments after `flippedId()` succeeds), and a row the
+ * budget stops before `processSale` classifies it never reaches that same
+ * line either (the budget check is the FIRST thing `processSale` does, atop
+ * of `s.candidates++`). Both are counted against `scanned`, reported on
+ * their own line, and left out of the candidate reconciliation -- folding
+ * either into it would count it against a population it was never drawn
+ * from, producing a false RECONCILE MISMATCH / reportWrites over-account:
+ * `refusedGradedParse` on any real run that meets even one malformed id
+ * alongside a real outcome, and `notReached` (R-0927f, 2026-09-27: run
+ * 36301171656) on ANY run the budget stops mid-scan -- not rare at all,
+ * since every whole-sport-year scan over 100k+ rows routinely hits its own
+ * budget, and that run exited 4 on a REPORT that had done nothing wrong.
  *
  * SCAN SHAPE. Point reads only for the destination check (item(id,
  * pk=/cardId)); the source scan is paginated {maxItemCount:500,
@@ -781,20 +789,36 @@ async function main() {
   }
   if (!APPLY) console.log(`\nREPORT ONLY -- nothing was written. Re-run with BACKFILL_APPLY=true to apply.`);
 
-  // RECONCILE. Every candidate is repointed, collapsed onto a proven
-  // duplicate, refused (named), failed, or not reached before the budget --
-  // never silently dropped. Denominators must match: `candidates` is the
-  // SAME population every outcome below is drawn from. `refusedGradedParse`
-  // is counted against `scanned`, not `candidates` (a row that does not
-  // parse never became a candidate), so it is added to both sides of the
-  // ledger identically and cancels out of the candidate reconcile below.
+  // RECONCILE (R-0927f fix, 2026-09-27, incident: run 36301171656, SCOPE
+  // baseball:2026 REPORT concurrency=4, budget hit mid-scan). That run
+  // printed `candidates 880,871` but `accounted-for 988,758` -- accounted-for
+  // exceeded candidates by EXACTLY `notReached` (107,887), and exited 4
+  // ("RECONCILE MISMATCH") on a run that had done nothing wrong; every
+  // whole-sport-year scan over 100k+ rows routinely hits its own budget, so
+  // this was not a rare edge case.
+  //
+  // THE BUG. `s.notReached++` fires at the TOP of `processSale`, BEFORE
+  // `flippedId()` ever runs and BEFORE `s.candidates++` -- see the guard at
+  // that function's own top. So a not-reached row was NEVER a candidate,
+  // exactly the same shape `refusedGradedParse` (documented and excluded
+  // below) already is. The formula used to ADD `notReached` on top of
+  // `candidateOutcomes` while comparing that sum against `s.candidates` --
+  // two different populations on the two sides of one `!==`, guaranteed to
+  // mismatch by exactly `notReached` on any run the budget actually stops.
+  // The fix is the one `refusedGradedParse` already models: `notReached` is
+  // EXCLUDED from this formula, denominators on both sides of the `!==`
+  // stay `candidates`-only, and a clean budget stop reconciles instead of
+  // exiting 4. `notReached` is still reported on its own line (the banner
+  // above) -- never silently dropped, just never folded into a population
+  // it was never drawn from (see the `reportWrites` call below, where it is
+  // excluded from `skipped` for the identical reason).
   const candidateOutcomes = s.repointed + s.movedByAutoOnlyOverride + s.collapsedOntoResident
     + s.refusedNoChecklistAtFlip + s.refusedChecklistAtBoth
     + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged
-    + s.failed + s.notReached;
+    + s.failed;
   console.log(`\n  reconciled: candidates ${f(s.candidates)} = accounted-for ${f(candidateOutcomes)}`);
   if (candidateOutcomes !== s.candidates) {
-    console.error("  !! RECONCILE MISMATCH -- a candidate was neither repointed, collapsed, refused, failed nor left unreached");
+    console.error("  !! RECONCILE MISMATCH -- a candidate was neither repointed, collapsed, refused nor failed");
     process.exitCode = 4;
   }
 
@@ -812,6 +836,20 @@ async function main() {
   // will meet malformed ids. It is reported on its own line (below and in the
   // per-setKey table) instead, exactly as `scanned`'s own non-candidate rows
   // already are.
+  //
+  // `notReached` is EXCLUDED from `skipped` for the SAME reason (R-0927f,
+  // 2026-09-27, run 36301171656). `reportWrites` (backend/src/services/ops/
+  // writeReconciliation.ts, off-limits to this fix -- src/ is untouched)
+  // computes `accounted = written + skipped + refused + failed` and compares
+  // it against `intended: s.candidates`. A not-reached row never became a
+  // candidate (the budget check at the top of `processSale` returns before
+  // `flippedId()` ever runs), so passing it as `skipped` against an
+  // `intended` that never counted it produces the exact "COUNTERS DO NOT ADD
+  // UP" / overAccounted false red this run hit on ANY budget stop under
+  // APPLY -- not a rare malformed-id edge case, but the ordinary outcome of
+  // a whole-sport-year scan over 100k+ rows. Omitted here entirely (the
+  // field is optional and defaults to 0), matching `refusedGradedParse`'s
+  // own omission from `refusedTotal` immediately above.
   const refusedTotal = s.refusedNoChecklistAtFlip + s.refusedChecklistAtBoth
     + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged;
   if (APPLY) {
@@ -820,7 +858,6 @@ async function main() {
       intended: s.candidates,
       written: s.repointed + s.movedByAutoOnlyOverride + s.collapsedOntoResident,
       refused: refusedTotal,
-      skipped: s.notReached,
       failed: s.failed,
     });
   }

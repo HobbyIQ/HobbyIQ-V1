@@ -77,11 +77,17 @@ function shim(opts: {
   // incident's OTHER real shape: a per-candidate point read that escapes
   // runPool's Promise.all and kills main() after some rows already moved.
   throwSalesReadAfter?: number;
+  // A fixed artificial delay (ms) on EVERY catalog read, so a test can drive
+  // the runner-budget.cjs clock (BUDGET_MS/RESERVE_MS env, both already
+  // overridable) to expire deterministically after a known number of rows
+  // have been fully classified, with CONCURRENCY=1 (strictly sequential).
+  catalogReadDelayMs?: number;
 } = {}): { requirePath: string; ledger: string } {
   const ledger = path.join(tmp, `ledger-${Math.random().toString(36).slice(2)}.json`);
   const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
   const sales = opts.sales ?? [];
   const catalog = opts.catalog ?? [];
+  const catalogReadDelayMs = opts.catalogReadDelayMs ?? 0;
   // -1 (default) means "never throw"; 0 means "throw from the very first
   // read"; N > 0 means "throw once N reads have already SUCCEEDED".
   const throwCatalogReadAfter = opts.throwCatalogReadAfter ?? -1;
@@ -104,6 +110,8 @@ const THROW_FETCHNEXT_AT_PAGE = ${JSON.stringify(throwFetchNextAtPage)};
 const PAGE_SIZE = ${JSON.stringify(pageSize)};
 const THROW_SALES_READ_AFTER = ${JSON.stringify(throwSalesReadAfter)};
 let salesReadCount = 0;
+const CATALOG_READ_DELAY_MS = ${JSON.stringify(catalogReadDelayMs)};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const salesKey = (id, cardId) => id + "::" + cardId;
 
@@ -131,6 +139,7 @@ function throttled() {
 const catalogContainer = {
   item: (id, pk) => ({
     read: async () => {
+      if (CATALOG_READ_DELAY_MS > 0) await sleep(CATALOG_READ_DELAY_MS);
       if (THROW_CATALOG_READ_AFTER >= 0 && led.catalogReads.length >= THROW_CATALOG_READ_AFTER) {
         throw throttled();
       }
@@ -788,6 +797,155 @@ describe("repoint-sales-isauto-flip -- reconcile", () => {
     // The malformed row was never touched.
     expect(r.led.salesUpserts).not.toContain("s2");
     expect(r.led.salesDeletes).not.toContain("s2");
+  });
+});
+
+// ── R-0927f: a budget stop must reconcile, not exit 4 ──────────────────────
+// Incident: run 36301171656 (SCOPE baseball:2026 REPORT concurrency=4) hit
+// its own 110-minute budget mid-scan and printed
+// "reconciled: candidates 880,871 = accounted-for 988,758" -- accounted-for
+// exceeded candidates by EXACTLY the notReached count (107,887), because the
+// old formula added `notReached` on top of `candidateOutcomes` while
+// comparing that sum against `s.candidates`, a population `notReached` rows
+// were never drawn from (the budget check at the top of `processSale`
+// returns BEFORE `flippedId()` ever runs). Same shape `refusedGradedParse`
+// is already, correctly, excluded for.
+describe("repoint-sales-isauto-flip -- a budget stop reconciles cleanly (R-0927f)", () => {
+  // 6 candidates, each backed by its own checklist flip row. CONCURRENCY=1
+  // (strictly sequential) + a fixed artificial delay on every catalog read
+  // (2 reads per candidate: current address + flip address) lets BUDGET_MS/
+  // RESERVE_MS (both already env-overridable in lib/runner-budget.cjs) stop
+  // the clock deterministically after SOME but not all candidates have been
+  // fully classified and moved.
+  const N = 6;
+  function fixture() {
+    const sales = Array.from({ length: N }, (_, i) => {
+      const no = `${PREFIX}bud${i}:base:no-auto`;
+      return SALE({ id: `bud${i}`, cardId: no, hobbyiqCardId: no, isAuto: false });
+    });
+    const catalog = Array.from({ length: N }, (_, i) => CATALOG_ROW({ id: `${PREFIX}bud${i}:base:auto`, cardId: `${PREFIX}bud${i}:base:auto` }));
+    return { sales, catalog };
+  }
+
+  it("candidates < scanned rows once the budget stops mid-scan -- some rows are notReached, never candidates", () => {
+    const { sales, catalog } = fixture();
+    const r = drive(
+      {
+        ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1",
+        BUDGET_MS: "120", RESERVE_MS: "20",
+      },
+      { sales, catalog, catalogReadDelayMs: 25 },
+    );
+    // The budget genuinely stopped this run before every row was reached --
+    // otherwise the test fixture's timing needs re-tuning, not the lane.
+    expect(r.out).toMatch(/stopped at the .*budget/);
+    expect(r.out).toMatch(/not reached \(budget\)\s+[1-9]/);
+    const notReachedMatch = r.out.match(/not reached \(budget\)\s+([\d,]+)/);
+    const notReached = Number(notReachedMatch![1].replace(/,/g, ""));
+    expect(notReached).toBeGreaterThan(0);
+    expect(notReached).toBeLessThan(N);
+  });
+
+  it("reconciles cleanly (no RECONCILE MISMATCH) and exits 0 -- the relaunch path, not exit 4", () => {
+    const { sales, catalog } = fixture();
+    const r = drive(
+      {
+        ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1",
+        BUDGET_MS: "120", RESERVE_MS: "20",
+      },
+      { sales, catalog, catalogReadDelayMs: 25 },
+    );
+    expect(r.out).toMatch(/stopped at the .*budget/); // confirms the fixture actually exercised the budget stop
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+    expect(r.out).toMatch(/reconciled: candidates \d+ = accounted-for \d+/);
+    const m = r.out.match(/reconciled: candidates ([\d,]+) = accounted-for ([\d,]+)/);
+    expect(Number(m![1].replace(/,/g, ""))).toBe(Number(m![2].replace(/,/g, "")));
+    // THE relaunch path: relaunch-on-marker/action.yml checks the
+    // "stopped at the .*budget" LOG LINE first, unconditionally, before ever
+    // looking at the exit code -- so exit 0 here (a clean budget stop, no
+    // real defect) is what reaches that branch instead of the "FINISHED WITH
+    // VERDICT" / re-dispatch-withheld branch a nonzero exit would trigger.
+    expect(r.code).toBe(0);
+  });
+
+  it("every candidate that WAS reached before the stop is still repointed -- the fix changes only the reconcile arithmetic, never the moves", () => {
+    const { sales, catalog } = fixture();
+    const r = drive(
+      {
+        ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1",
+        BUDGET_MS: "120", RESERVE_MS: "20",
+      },
+      { sales, catalog, catalogReadDelayMs: 25 },
+    );
+    const repointedMatch = r.out.match(/REPOINTED\s+([\d,]+)/);
+    const repointed = Number(repointedMatch![1].replace(/,/g, ""));
+    expect(repointed).toBeGreaterThan(0);
+    expect(r.led.salesUpserts.length).toBe(repointed);
+  });
+});
+
+// ── MUTATION CHECK: reintroducing `notReached` into the candidate reconcile
+// formula must reproduce the incident's own false RECONCILE MISMATCH on a
+// budget stop. Same TEMP-COPY-of-the-committed-lane technique as the guard
+// mutation checks above.
+describe("repoint-sales-isauto-flip -- MUTATION: notReached back in the candidate reconcile is caught", () => {
+  const LANE_SRC = fs.readFileSync(LANE, "utf8");
+  const REGRESSED_LANE = path.join(backend, "scripts", `.repoint-sales-isauto-flip.NOTREACHED-IN-RECONCILE.${process.pid}.cjs`);
+  afterAll(() => { try { fs.rmSync(REGRESSED_LANE, { force: true }); } catch { /* best effort */ } });
+
+  function notReachedInReconcileSrc() {
+    const patched = LANE_SRC.replace(
+      `    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged
+    + s.failed;
+  console.log(\`\\n  reconciled: candidates \${f(s.candidates)} = accounted-for \${f(candidateOutcomes)}\`);`,
+      `    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged
+    + s.failed + s.notReached; // MUTATED: the R-0927f fix is reverted
+  console.log(\`\\n  reconciled: candidates \${f(s.candidates)} = accounted-for \${f(candidateOutcomes)}\`);`,
+    );
+    expect(patched, "candidateOutcomes formula patch point not found").not.toBe(LANE_SRC);
+    return patched;
+  }
+
+  function driveRegressed(env: Record<string, string>, opts: Parameters<typeof shim>[0]) {
+    fs.writeFileSync(REGRESSED_LANE, notReachedInReconcileSrc());
+    const { requirePath, ledger } = shim(opts);
+    let code = 0; let out = "";
+    try {
+      out = execFileSync(process.execPath, [REGRESSED_LANE], {
+        cwd: backend,
+        env: {
+          PATH: process.env.PATH ?? "",
+          SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\\Windows",
+          NODE_OPTIONS: `--require ${JSON.stringify(requirePath)}`,
+          COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
+          ...env,
+        },
+        encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 120_000,
+      });
+    } catch (e: any) {
+      code = e.status; out = String(e.stdout ?? "") + String(e.stderr ?? "");
+    }
+    const led = JSON.parse(fs.readFileSync(ledger, "utf8"));
+    return { code, out, led };
+  }
+
+  it("with notReached folded back into the formula, the SAME budget-stop fixture WOULD false-red -- proving the fix is what stops it on the real lane", () => {
+    const sales = Array.from({ length: 6 }, (_, i) => {
+      const no = `${PREFIX}mut${i}:base:no-auto`;
+      return SALE({ id: `mut${i}`, cardId: no, hobbyiqCardId: no, isAuto: false });
+    });
+    const catalog = Array.from({ length: 6 }, (_, i) => CATALOG_ROW({ id: `${PREFIX}mut${i}:base:auto`, cardId: `${PREFIX}mut${i}:base:auto` }));
+    const env = { ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1", BUDGET_MS: "120", RESERVE_MS: "20" };
+
+    const regressed = driveRegressed(env, { sales, catalog, catalogReadDelayMs: 25 });
+    expect(regressed.out).toMatch(/stopped at the .*budget/); // the mutation's own run must ALSO hit the budget stop
+    expect(regressed.out).toMatch(/RECONCILE MISMATCH/); // the mutation: false red on a clean budget stop
+    expect(regressed.code).toBe(4);
+
+    // The REAL, committed lane on the SAME input must reconcile cleanly.
+    const real = drive(env, { sales, catalog, catalogReadDelayMs: 25 });
+    expect(real.out).not.toMatch(/RECONCILE MISMATCH/);
+    expect(real.code).toBe(0);
   });
 });
 
