@@ -1,0 +1,37 @@
+{
+  "scrapedAt": "2026-09-27T00:00:00.000Z",
+  "sourceUrls": [
+    "https://baseballcardpedia.com/index.php/Topps_Living_Set"
+  ],
+  "source": "baseballcardpedia-2026-09-27",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Topps Living Set",
+  "productKey": "2023-topps-living-set",
+  "setKey": "topps-living-set",
+  "rowCount": 104,
+  "cardNumberRange": "585-688",
+  "singleSourceCaveat": "SINGLE-SOURCE year for row data. topps.com and tcdb.com both returned HTTP 403 on every attempted URL (one attempt each, not retried). cardboardconnection.com's page was cited by PR #2443 for a partial 2020 team cross-check but its 2023 coverage was not independently re-verified verbatim here; baseballcardpedia.com's continuous wiki page is used verbatim for every field.",
+  "mintedBy": "Acquisition builder (2026-09-27), follow-on package to PR #2443. Card numbers continue immediately after 2022's last row (#584 Hideki Matsui, 28-Dec) with no gap: #585 Kyle Wright is dated 4-Jan 2023 on the same single source page.",
+  "rungsMinted": [
+    { "parallel": "(none -- single-rung product, no stated parallel ladder)", "printRun": null }
+  ],
+  "cardNumbersFilled": 104,
+  "notMinted": {
+    "parallelLadder": {
+      "reason": "Source's 'Black Text' sub-heading for 2023 documents a first-ten-copies, not-serial-numbered micro-variant beginning at #595, explicitly NOT a stated parallel/color ladder (a print-order curiosity, per the source's own framing). Parallel column left BLANK, never 'Base', consistent with PR #2443's treatment of the same note for 2024."
+    },
+    "checklistCards": {
+      "reason": "CL-06 (Checklist #6), bundled with the 22-Feb-2023 release week, is Topps' own unnumbered index insert; source states its production population 'was never revealed by Topps'. No player, not staged."
+    },
+    "teamColumn": {
+      "reason": "baseballcardpedia's 2023 section carries no team field. Team left BLANK for all 104 rows."
+    }
+  },
+  "spellingAudit": "Card numbers, player names, and release dates taken verbatim from baseballcardpedia.com's 'Topps Living Set' wiki page, 2023 subsection (cardNumber 585 Kyle Wright through 688 Edouard Julien). Section boundary self-consistent: 2022's own last row (#584 Hideki Matsui, 28-Dec) and 2024's own first row (#689 Sean Murphy, 3-Jan, already staged in PR #2443) both agree with this package's stated range.",
+  "provenance": {
+    "cardsFrom": "baseballcardpedia.com only.",
+    "rungsFrom": "n/a -- no parallel ladder sourced",
+    "dedup": "checked against this package's own sibling files and against PR #2443's ranges (1-376, 689-792) -- zero overlap, zero duplicate cardNumbers across all eight files (897 total, 897 distinct)."
+  }
+}

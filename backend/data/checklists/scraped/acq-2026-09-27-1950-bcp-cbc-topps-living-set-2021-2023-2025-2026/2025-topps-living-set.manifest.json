@@ -1,0 +1,37 @@
+{
+  "scrapedAt": "2026-09-27T00:00:00.000Z",
+  "sourceUrls": [
+    "https://baseballcardpedia.com/index.php/Topps_Living_Set"
+  ],
+  "source": "baseballcardpedia-2026-09-27",
+  "sport": "baseball",
+  "year": 2025,
+  "setName": "2025 Topps Living Set",
+  "productKey": "2025-topps-living-set",
+  "setKey": "topps-living-set",
+  "rowCount": 105,
+  "cardNumberRange": "793-897",
+  "singleSourceCaveat": "SINGLE-SOURCE year for row data. topps.com and tcdb.com both returned HTTP 403 on every attempted URL (one attempt each, not retried). baseballcardpedia.com's continuous wiki page is used verbatim for every field; this is also the LAST year currently on the page -- there is no 2026 heading as of this scrape (see the 2026 exclusion note in MANIFEST.md).",
+  "mintedBy": "Acquisition builder (2026-09-27), follow-on package to PR #2443 and this PR's own 2021-2023 files. Card numbers continue immediately after 2024's last row (#792 Yuki Matsui, 25-Dec, staged in PR #2443) with no gap: #793 Rogers Hornsby is dated 1-Jan 2025 on the same single source page. #897 Chase Meidroth (31-Dec) is the last row on the entire source page -- no #898+ content exists there.",
+  "rungsMinted": [
+    { "parallel": "(none -- single-rung product, no stated parallel ladder)", "printRun": null }
+  ],
+  "cardNumbersFilled": 105,
+  "notMinted": {
+    "parallelLadder": {
+      "reason": "No new parallel/color ladder is stated for 2025 beyond the pre-existing 'Black Text' micro-variant note (see 2023/2024 manifests); not a stated named parallel. Parallel column left BLANK, never 'Base'."
+    },
+    "checklistCards": {
+      "reason": "CL-08 (Checklist #8), bundled with the 29-Jan-2025 release week, is Topps' own unnumbered index insert; source states its production population was never revealed, matching the CL-06/CL-07 pattern. No player, not staged."
+    },
+    "teamColumn": {
+      "reason": "baseballcardpedia's 2025 section carries no team field. Team left BLANK for all 105 rows."
+    }
+  },
+  "spellingAudit": "Card numbers, player names, and release dates taken verbatim from baseballcardpedia.com's 'Topps Living Set' wiki page, 2025 subsection (cardNumber 793 Rogers Hornsby through 897 Chase Meidroth). Section boundary self-consistent: 2024's own last row (#792 Yuki Matsui, 25-Dec, PR #2443) agrees with this package's stated starting boundary. TWO source anomalies reproduced verbatim, not corrected: (1) row #887 Luke Keaschall is dated '16-Nov' on the source despite following #886's '26-Nov' in sequence -- likely a source typo, kept as-is per doctrine (only-improve; not staged as a guessed correction); (2) rows #896 (Dalton Rushing) and #897 (Chase Meidroth) show no population/print-run figure on the source (both dated 31-Dec, the page's two newest/final entries) -- immaterial to this package since printRun is not staged for this product regardless.",
+  "provenance": {
+    "cardsFrom": "baseballcardpedia.com only.",
+    "rungsFrom": "n/a -- no parallel ladder sourced",
+    "dedup": "checked against this package's own sibling files and against PR #2443's ranges (1-376, 689-792) -- zero overlap, zero duplicate cardNumbers across all eight files (897 total, 897 distinct)."
+  }
+}
