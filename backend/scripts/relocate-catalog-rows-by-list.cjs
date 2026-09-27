@@ -993,6 +993,12 @@ async function main() {
   // nor a twin-authority check on the destination it is completing onto.
   // catalogAuthorityOf answers the twin half; the sales half reuses `salesAt`.
   const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+  // CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES (2026-09-14).
+  // `pkOf` is used here only for its None-partition sentinel -- a row with no
+  // `cardId` lives at Cosmos's own None partition key, not at (id, id) -- the
+  // same fallback repoint-sales-by-list.cjs's own `catalogRowAt` already
+  // reads a blind id through (2.53M live rows carry no cardId).
+  const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
   const { marketVerdict } = require(path.join(__dirname, "lib", "market-guard.cjs"));
   // CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT (2026-09-26).
   // Loaded from the built tree, the same way moveCatalogRow itself is -- this
@@ -1060,6 +1066,25 @@ async function main() {
   };
   const rowAt = async (slug) => {
     try { return (await retry(() => cat.item(slug, slug).read())).resource ?? null; }
+    catch (err) { if (err?.code === 404 || err?.statusCode === 404) return null; throw err; }
+  };
+  // NONE-PARTITION-AWARE, for a BLIND id -- unlike `rowAt` above, this is for
+  // reading a row we do not yet hold (so we cannot ask `pkOf(row)`, which
+  // needs the row's own `cardId` to decide). Tries (id, id) first, exactly
+  // like `rowAt`; on a 404 there, retries once at the SDK's None sentinel
+  // (`pkOf({})`, since a row with no `cardId` lives there, never at a
+  // partition keyed by its own id) before calling the row absent. Mirrors
+  // repoint-sales-by-list.cjs's own `catalogRowAt` exactly, for the same
+  // reason: a bare (id, id) guess 404s on every one of the 2.53M live rows
+  // that carry no `cardId`, which would otherwise misreport a live twin as
+  // absent. THROWS PROPAGATE from both attempts -- an unanswered read must
+  // never be read as "gone", the same rule `salesAt` already enforces.
+  const rowAtNonePkAware = async (slug) => {
+    try { return (await retry(() => cat.item(slug, slug).read())).resource ?? null; }
+    catch (err) {
+      if (err?.code !== 404 && err?.statusCode !== 404) throw err;
+    }
+    try { return (await retry(() => cat.item(slug, pkOf({})).read())).resource ?? null; }
     catch (err) { if (err?.code === 404 || err?.statusCode === 404) return null; throw err; }
   };
   // How many sales point at a slug. Printed for a retire so the size of the
@@ -1365,7 +1390,18 @@ async function main() {
       // read too, and prints the exact refusal APPLY would -- so a clean
       // REPORT is evidence the APPLY will pass this gate, not merely a hope.
       if (requireTwinId) {
-        const twin = await rowAt(requireTwinId);
+        // NONE-PARTITION-AWARE, and a THROW here is FAILED, never "absent" --
+        // the same rule the sales check above already enforces. An unanswered
+        // read must never be treated as a green light (nor a red one it did
+        // not actually establish) to decide the row's whole justification.
+        let twin;
+        try {
+          twin = await rowAtNonePkAware(requireTwinId);
+        } catch (err) {
+          failed++;
+          console.error(`      FAILED: twin read threw — ${String(err?.message ?? err).slice(0, 80)}`);
+          continue;
+        }
         if (!twin) {
           refusedTwinAbsent++;
           console.error(`  REFUSED (twin-absent)  ${id.slice(0, 70)}`);

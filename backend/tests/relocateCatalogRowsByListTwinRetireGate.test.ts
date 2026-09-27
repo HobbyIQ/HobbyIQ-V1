@@ -27,6 +27,13 @@
  *         called either way).
  *   (vi)  an entry with no requireTwinId behaves exactly as before this
  *         change -- twin present or absent is never even read.
+ *   (vii) twin lives under Cosmos's own None partition key (no `cardId`,
+ *         2.53M live rows) -- a bare (id, id) read must 404 there and the
+ *         gate must retry at the None sentinel (lib/catalog-none-pk.cjs)
+ *         before calling the twin absent -> RETIRED, found by the retry.
+ *   (viii) the twin read THROWS (an unanswered check) -> FAILED, never
+ *         reported as twin-absent, retireCatalogRow never called -- the same
+ *         rule the pre-existing sales check already enforces.
  *
  * classifyEntry-level pins (loader validation): requireTwinId must be a
  * well-formed hiq id, must not equal the entry's own id, and is refused on a
@@ -104,16 +111,31 @@ function makeList(dir: string, entries: Array<Record<string, unknown>>): string 
 }
 
 /**
- * `twinShape` controls what a point-read of TWIN_ID answers:
- *   - "absent": 404 (no row)
- *   - "checklist": row present, source is a checklist source
- *   - "derived": row present, source is a DERIVED source
- *   - "vendor": row present, source is a VENDOR source
- * RETIRE_ID itself always resolves (the row being considered for retire) and
- * always shows zero sales by both forms of the dual check, so every case
- * here isolates the twin gate, never the sales gate.
+ * `twinShape` controls what a point-read of TWIN_ID answers, and now HONOURS
+ * the `pk` argument the way a real card_catalog container does -- this is
+ * the fix for the finding that the original fake ignored `pk` entirely, so
+ * it could never have caught a bare `(id, id)` read misreporting a live
+ * None-partition twin as absent:
+ *   - "absent": 404 at every pk (no row anywhere)
+ *   - "checklist": row lives at (TWIN_ID, TWIN_ID) -- an ordinary cardId'd row
+ *   - "derived": as "checklist", but source is a DERIVED source
+ *   - "vendor": as "checklist", but source is a VENDOR source
+ *   - "none-partition": row does NOT exist at (TWIN_ID, TWIN_ID) -- it 404s
+ *     there, exactly like a real cardId-less row -- and exists ONLY at the
+ *     SDK's None sentinel pk, checklist-grade. This is the 2.53M-row live
+ *     population the finding named: a bare (id, id) guess must fail here,
+ *     and the None-pk retry must be what finds it.
+ *   - "throws": the FIRST read (at (TWIN_ID, TWIN_ID)) throws a non-404
+ *     error -- an unanswered check, which must surface as FAILED, never as
+ *     a false "absent".
+ * RETIRE_ID itself always resolves at (id, id) (the row being considered for
+ * retire) and always shows zero sales by both forms of the dual check, so
+ * every case here isolates the twin gate, never the sales gate.
  */
-function preload(dir: string, twinShape: "absent" | "checklist" | "derived" | "vendor" | "not-read"): { preloadFile: string; callLog: string; twinReadLog: string } {
+function preload(
+  dir: string,
+  twinShape: "absent" | "checklist" | "derived" | "vendor" | "not-read" | "none-partition" | "throws",
+): { preloadFile: string; callLog: string; twinReadLog: string } {
   const callLog = path.join(dir, "retire-calls.json");
   const twinReadLog = path.join(dir, "twin-reads.json");
   fs.writeFileSync(callLog, "[]");
@@ -129,26 +151,59 @@ const TWIN_READ_LOG = ${JSON.stringify(twinReadLog)};
 const TWIN_SHAPE = ${JSON.stringify(twinShape)};
 const RETIRE_ID = ${JSON.stringify(RETIRE_ID)};
 const TWIN_ID = ${JSON.stringify(TWIN_ID)};
+// The lane's own None sentinel -- loaded for real (pure logic, no Cosmos
+// dependency) so the fake agrees with the lane on exactly which pk value
+// means "None partition", the same way a real card_catalog container would.
+const { pkOf } = require(${JSON.stringify(path.join(backend, "scripts", "lib", "catalog-none-pk.cjs"))});
+const NONE_PK = pkOf({});
+function isNonePk(pk) {
+  return JSON.stringify(pk) === JSON.stringify(NONE_PK);
+}
 
 const twinSource = {
   checklist: "checklistinsider",
   derived: "sold-comps-stub",
   vendor: "cardhedge",
+  "none-partition": "checklistinsider",
   absent: null,
   "not-read": null,
+  throws: null,
 }[TWIN_SHAPE];
 
 const gone = new Set();
+
+function logTwinRead(id) {
+  const reads = JSON.parse(fs.readFileSync(TWIN_READ_LOG, "utf8"));
+  reads.push(id);
+  fs.writeFileSync(TWIN_READ_LOG, JSON.stringify(reads));
+}
 
 const container = (name) => ({
   item(id, pk) {
     return {
       read: async () => {
         if (id === TWIN_ID) {
-          const reads = JSON.parse(fs.readFileSync(TWIN_READ_LOG, "utf8"));
-          reads.push(id);
-          fs.writeFileSync(TWIN_READ_LOG, JSON.stringify(reads));
+          logTwinRead(id);
+          if (TWIN_SHAPE === "throws") {
+            throw new Error("probe: twin read threw (simulated Cosmos failure)");
+          }
           if (TWIN_SHAPE === "absent" || TWIN_SHAPE === "not-read") {
+            const err = new Error("404: not found");
+            err.code = 404;
+            throw err;
+          }
+          if (TWIN_SHAPE === "none-partition") {
+            // Lives ONLY at the None sentinel -- a bare (id, id) guess (any
+            // pk that is NOT the sentinel, including id === pk) must 404.
+            if (!isNonePk(pk)) {
+              const err = new Error("404: not found");
+              err.code = 404;
+              throw err;
+            }
+            return { resource: { id, playerName: "Twin Player", setName: "Twin Set", sport: "baseball", source: twinSource } };
+          }
+          // Ordinary cardId'd row: lives at (TWIN_ID, TWIN_ID) only.
+          if (isNonePk(pk)) {
             const err = new Error("404: not found");
             err.code = 404;
             throw err;
@@ -236,7 +291,7 @@ Module._load = function (request, ...rest) {
 
 function runLane(
   entries: Array<Record<string, unknown>>,
-  twinShape: "absent" | "checklist" | "derived" | "vendor" | "not-read",
+  twinShape: "absent" | "checklist" | "derived" | "vendor" | "not-read" | "none-partition" | "throws",
   apply: boolean,
 ) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "relocate-twingate-"));
@@ -316,9 +371,11 @@ describe("the retire twin gate is a GATE, not a caveat", () => {
     expect(report.retireCalls).toHaveLength(0);
     expect(apply.retireCalls).toHaveLength(0);
     // The twin point-read happened in BOTH modes -- REPORT is not a no-op on
-    // the read side, only on the write side.
-    expect(report.twinReads).toEqual([TWIN_ID]);
-    expect(apply.twinReads).toEqual([TWIN_ID]);
+    // the read side, only on the write side. Two entries each: the (id, id)
+    // guess 404s, then the gate retries once at the None sentinel before
+    // calling the twin genuinely absent -- both attempts are logged.
+    expect(report.twinReads).toEqual([TWIN_ID, TWIN_ID]);
+    expect(apply.twinReads).toEqual([TWIN_ID, TWIN_ID]);
     expect(report.output).toMatch(/REFUSED \(twin-absent\)/);
     expect(apply.output).toMatch(/REFUSED \(twin-absent\)/);
     expect(report.stdout).toMatch(/reconciled: intended 1 = written 0 \+ skipped 0 \+ refused 1 \+ failed 0 \+ not reached 0/);
@@ -335,6 +392,45 @@ describe("the retire twin gate is a GATE, not a caveat", () => {
     expect(res.retireCalls).toEqual([RETIRE_ID]);
     expect(res.output).not.toMatch(/twin-absent|twin-not-checklist-grade/);
     expect(res.stdout).toMatch(/reconciled: intended 1 = written 1 \+ skipped 0 \+ refused 0 \+ failed 0 \+ not reached 0/);
+    expect(res.output).not.toContain("RECONCILE MISMATCH");
+    expect(res.output).not.toContain("FATAL");
+    expect(res.status).toBe(0);
+  });
+
+  /**
+   * (vii) THE FINDING THIS FILE WAS EXTENDED TO CLOSE. A bare `(id, id)`
+   * point-read 404s on every one of the 2.53M live card_catalog rows that
+   * carry no `cardId` -- they live at Cosmos's own None partition key
+   * instead (lib/catalog-none-pk.cjs). A twin belonging to that population
+   * must still be found: the gate retries at the None sentinel before
+   * calling the twin absent, exactly the way repoint-sales-by-list.cjs's own
+   * `catalogRowAt` already does for a blind id.
+   */
+  it("(vii) twin lives under the None partition (no cardId) -> RETIRED, found by the None-pk retry", () => {
+    const res = runLane([entry(TWIN_ID)], "none-partition", true);
+    expect(res.retireCalls).toEqual([RETIRE_ID]);
+    // Both attempts are visible in the read log: the (id, id) guess that
+    // 404'd, then the None-pk retry that found it.
+    expect(res.twinReads).toEqual([TWIN_ID, TWIN_ID]);
+    expect(res.output).not.toMatch(/twin-absent|twin-not-checklist-grade/);
+    expect(res.stdout).toMatch(/reconciled: intended 1 = written 1 \+ skipped 0 \+ refused 0 \+ failed 0 \+ not reached 0/);
+    expect(res.output).not.toContain("RECONCILE MISMATCH");
+    expect(res.output).not.toContain("FATAL");
+    expect(res.status).toBe(0);
+  });
+
+  /**
+   * (viii) An unanswered twin read must never be read as "absent" -- the
+   * same rule the pre-existing sales check enforces. `retireCatalogRow` must
+   * never be reached on a check that never actually answered.
+   */
+  it("(viii) the twin read THROWS -> FAILED, retireCatalogRow never called, never reported as twin-absent", () => {
+    const res = runLane([entry(TWIN_ID)], "throws", true);
+    expect(res.retireCalls, "an unanswered twin read must never be a green light to delete").toHaveLength(0);
+    expect(res.output).toMatch(/FAILED: twin read threw/);
+    expect(res.output).not.toMatch(/REFUSED \(twin-absent\)/);
+    expect(res.output).not.toMatch(/REFUSED \(twin-not-checklist-grade/);
+    expect(res.stdout).toMatch(/reconciled: intended 1 = written 0 \+ skipped 0 \+ refused 0 \+ failed 1 \+ not reached 0/);
     expect(res.output).not.toContain("RECONCILE MISMATCH");
     expect(res.output).not.toContain("FATAL");
     expect(res.status).toBe(0);
