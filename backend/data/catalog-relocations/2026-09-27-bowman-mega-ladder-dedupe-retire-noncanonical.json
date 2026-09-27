@@ -1,0 +1,20 @@
+{
+ "generatedAt": "2026-09-27T00:04:16.000Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's review -- no apply is authorized by this PR",
+ "finding": "2026-09-27 census for R75 cleanup: retire list for non-canonical bowman twins of checklist-grade bowman-mega/bowman-chrome-mega-box rows. MEASURED ZERO ELIGIBLE ENTRIES -- see rulings. Committed with an empty entries array so the census result (and the reason it is empty) is on record rather than silently omitted.",
+ "rulings": [
+  "RETIRE IS LEGAL ONLY WITH (a) a checklist-grade twin at the CANONICAL id AND (b) zero sales by both read forms at the NON-CANONICAL id being retired (sales-at-id.cjs dual check: cross-partition OR plus partitionKey-scoped, both drained to hasMoreResults()===false). Never retire a checklist row in favour of a derived one (catalogAuthority.service.js doctrine, mirrored from the 2026-09-25 Silver Crackle Foil lane's own retire-derived-occupants list).",
+  "THE CENSUS FOUND NO PAIR WHERE bowman AND bowman-mega SHARE AN ADDRESS AT ALL, canonical or not -- see the sibling list file's rulings for the full measurement (64,987 bowman rows / 7,235 bowman-mega rows, zero exact-key overlap, zero loose-key overlap specifically against bowman-mega). bowman-mega's own checklist population (BCP-/BMA-/BST-/plain numbering, its own Mojo-Refractor-color parallel vocabulary) never collides with bowman's Mega-Chrome-rung rows at the slug level, so there is no bowman-mega-side row to prefer and no bowman-side row to retire in its favour.",
+  "THE ONLY OVERLAP FOUND IS bowman <-> bowman-chrome-mega-box, AND EVERY SUCH PAIR IS EITHER (a) two different real players at a coincidentally shared number -- 71 of 75, namesAgree=false, e.g. #78 Cole Young (bowman) vs #78 Bryce Eldridge (bowman-chrome-mega-box) -- which is the documented R75 case for KEEPING both rows distinct, never a duplicate to fold; or (b) checklist-vs-checklist same-player pairs (4 of 75: Francisco Lindor #17, Bryce Eldridge CRA-BE, Roman Anthony CRA-RA) where BOTH sides are checklist-grade (catalogAuthorityOf===\"checklist\") and BOTH carry zero sales. Retiring a checklist row to make room for another checklist row is not this lane's call -- catalogAuthority doctrine settles derived-vs-checklist, not checklist-vs-checklist -- so these 4 are reported to Drew as 'needs ruling' in the PR body rather than retired here. All 4 have salesAtRetireTime: 0 on both sides if a ruling does choose a canonical side, so whichever way it goes there is nothing to repoint first.",
+  "CONSEQUENTLY: the sales-repoint list (2026-09-27-bowman-mega-ladder-dedupe-repoint-sales.json) and this retire list are BOTH empty by measurement, not by omission. The actual defect this census surfaced -- sales stored at bowman:N:<mega-chrome-rung> addresses that predate R75's router and have no checklist row backing them there -- is a SALES problem, not a catalog-row-duplication problem, and its remedy is the existing repoint-sales-to-sibling-product.cjs MODE=by-player discovery lane (dispatch command in the PR body), never a relocate-catalog-rows-by-list retire."
+ ],
+ "census": {
+  "entries": 0,
+  "candidatePairsExamined": 75,
+  "eligibleForRetire": 0,
+  "heldForRuling": 4,
+  "recheckedAt": "2026-09-27T00:04:16.000Z"
+ },
+ "entries": []
+}
