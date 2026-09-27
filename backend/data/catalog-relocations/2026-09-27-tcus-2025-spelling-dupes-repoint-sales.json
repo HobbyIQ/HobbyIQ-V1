@@ -1,0 +1,26 @@
+{
+ "generatedAt": "2026-09-27T00:30:35.966Z",
+ "forLane": "repoint-sales-then-relocate-catalog-rows-by-list (two-step; see PR body)",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR. This list NAMES the case; it does not itself move a sale -- sold_comps repoint is a separate write this PR does not authorize.",
+ "finding": "2026-09-27 census: USC143 (Adael Amador, 2025 Topps Chrome Update Series RayWave Refractor) has the SAME 1-sale-per-side shape the 199 other RayWave pairs do not: both the canonical ray-wave-refractor id and the stale raywave-refractor id carry exactly 1 sold_comps sale. The stale row cannot retire while it holds a sale (retire-catalog-rows-by-list's own doctrine: a retire is licensed only when total===0) -- the sale sitting at the stale id must be repointed onto the canonical id FIRST, by a sales-repoint lane (not this list), before a follow-up retire list can remove the stale catalog row.",
+ "rulings": [
+  "This is the ONE entry in the whole 200-pair RayWave family requiring a two-step sequence. It is separated from the retire-noncanonical list specifically because listing it there would be a retire attempted against a row relocate-catalog-rows-by-list's own zero-sales gate refuses."
+ ],
+ "census": {
+  "totalRowsUnderPrefix": 68911,
+  "rayWaveRefractorPairs": 200,
+  "repointNeededCount": 1
+ },
+ "entries": [
+  {
+   "cardNumber": "USC143",
+   "canonicalId": "hiq:baseball:2025:topps-chrome-update-series:usc143:ray-wave-refractor:no-auto",
+   "canonicalSales": 1,
+   "staleId": "hiq:baseball:2025:topps-chrome-update-series:usc143:raywave-refractor:no-auto",
+   "staleSales": 1,
+   "player": "Adael Amador RC",
+   "action": "repoint-sales-then-retire",
+   "reason": "Both the canonical and stale RayWave Refractor addresses hold 1 sale each. Repoint the sale at staleId onto canonicalId (hobbyiqCardId/cardId rewrite), then retire the now-empty staleId catalog row via a follow-up relocate-catalog-rows-by-list entry."
+  }
+ ]
+}
