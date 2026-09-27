@@ -845,24 +845,35 @@ describe("end-to-end: GATE 6 strips the destination product's own parallel vocab
 describe("end-to-end: a budget stop mid-entry reconciles exactly, never double-counted", () => {
   it("an entry with multiple sales, stopped partway, counts moved + not-reached-sales without a mismatch", () => {
     // Two sales at the SAME fromId/toId pair -- one entry, so its gates run
-    // ONCE and both sales share the same catalog reads. The budget is
-    // configured (via RUN_MINUTES/RESERVE_MS/BUDGET_MS env, all already
-    // overridable per lib/runner-budget.cjs) to expire between the two
-    // per-sale iterations: a delay on every sold_comps point read plus a
-    // tiny BUDGET_MS make the SECOND sale's read observe outOfClock()==true.
+    // ONCE and both sales share the same catalog reads.
     //
-    // BUDGET_MS/RESERVE_MS/saleReadDelayMs are widened from this test's
-    // original 150/100/200 (this PR): GATE 6 now builds the destination's
-    // namesAgree stripTrailingTokens vocabulary from the real
-    // checklist-parallel-names.json corpus once per entry, and the FIRST such
-    // build in a freshly spawned process costs ~350ms parsing that corpus
-    // (memoised after, but this harness spawns one process per drive() call)
-    // -- a fixed cost the clock (started before the entry loop) now pays
-    // before the per-sale loop's own first outOfClock() check. The margins
-    // below are sized generously past that measured cost so the test's own
-    // race (sale 1 finishes inside budget, sale 2 does not) stays
-    // deterministic rather than becoming a second, tighter race against the
-    // corpus parse.
+    // CI flake (run 36353024102, PR #2464): this straddle used to be driven
+    // by WALL-CLOCK timing alone -- a delay on every sold_comps point read
+    // sized against BUDGET_MS/RESERVE_MS, racing the budget's own
+    // Date.now()-based outOfClock() to land the stop between the two
+    // per-sale reads. That race has two failure directions on a loaded CI
+    // runner, and widening the margins (#2463, from 150/100/200 to
+    // 1000/500/600) narrowed it but could not remove it: the child's own
+    // ~350ms fixed startup cost (GATE 6's checklist-parallel-names.json
+    // corpus parse) can eat MORE of the budget than measured before the
+    // first sale even starts, or the second sale's 600ms read can finish
+    // before its own check runs, so the straddle sometimes lands on 0 or 2
+    // sales instead of exactly 1.
+    //
+    // The fix: HIQ_TEST_FAKE_CLOCK_STEP_MS (lib/runner-budget.cjs) replaces
+    // Date.now() inside the budget's own left()/outOfClock() with a virtual
+    // clock that advances a FIXED amount on every call, so the Nth call to
+    // outOfClock() always reports the same elapsed time no matter how long
+    // the process actually took to get there. outOfClock() is called once
+    // per entry (outer loop) and once per sale (inner loop) -- three calls
+    // total for a two-sale entry: entry check (call 1, elapsed 0ms), sale-1
+    // check (call 2, elapsed 400ms), sale-2 check (call 3, elapsed 800ms).
+    // outOfClock() is `left() < RESERVE_MS`: against a 1000ms budget with a
+    // 500ms reserve, call 1 leaves 1000ms (>= 500, entry proceeds), call 2
+    // leaves 600ms (>= 500, sale 1 proceeds), call 3 leaves 200ms (< 500,
+    // sale 2 does NOT proceed) -- deterministic by call count, not by wall
+    // time. saleReadDelayMs is dropped entirely: with the clock fixed, no
+    // real delay is needed to make sale 2 land after the stop.
     const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why" }], "budget-straddle");
     const catalog = [FROM_ROW, TO_ROW];
     const sales = [
@@ -871,18 +882,15 @@ describe("end-to-end: a budget stop mid-entry reconciles exactly, never double-c
     ];
 
     const r = drive(
-      { SCOPE: list, BACKFILL_APPLY: "false", RUN_MINUTES: "1", BUDGET_MS: "1000", RESERVE_MS: "500" },
-      { sales, catalog, saleReadDelayMs: 600 },
+      {
+        SCOPE: list, BACKFILL_APPLY: "false",
+        RUN_MINUTES: "1", BUDGET_MS: "1000", RESERVE_MS: "500",
+        HIQ_TEST_FAKE_CLOCK_STEP_MS: "400",
+      },
+      { sales, catalog },
     );
-    // outOfClock() is `left() < RESERVE_MS`, checked BEFORE each sale. The
-    // ~350ms fixed vocabulary-build cost leaves ~650ms on the clock, still
-    // >= the 500ms reserve, so sale 1's check passes and its 600ms read
-    // runs -- landing at ~950ms elapsed, leaving ~50ms < the 500ms reserve,
-    // so sale 2's check fails before it ever reads. Exactly one sale is
-    // processed and one is left not-reached -- never both double-counted
-    // against the entry AND their own sale outcome. Margins are wide (a
-    // whole RESERVE_MS window, not a few ms) so this stays deterministic
-    // under CI scheduling noise, not a second race against the corpus parse.
+    // Exactly one sale is processed and one is left not-reached -- never
+    // both double-counted against the entry AND their own sale outcome.
     expect(r.out).toMatch(/not reached \(budget, sales\)\s+1/);
     expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
     // Review round 2 (PR #2461): line 659's budget-marker log line referenced
@@ -896,5 +904,64 @@ describe("end-to-end: a budget stop mid-entry reconciles exactly, never double-c
     assertNoUncaughtError(r);
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/stopped at the 1-minute budget/);
+  });
+
+  it("still straddles under artificial slowness — the fake clock, not luck, is what lands it", () => {
+    // Same shape as above, but with a real per-sale read delay layered on
+    // top (the OLD mechanism, now redundant with the fake clock rather than
+    // load-bearing). If the fake-clock hook were silently ignored and this
+    // still passed only because of the delay, that would mean the hook does
+    // nothing -- this proves the straddle is governed by HIQ_TEST_FAKE_CLOCK
+    // _STEP_MS's call-counted steps even when real wall-clock slowness is
+    // also present.
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why" }], "budget-straddle-slow");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [
+      { id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" },
+      { id: "src::2", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 20, soldAt: "2026-01-02", playerName: "Adael Amador", parallel: "RayWave Refractor" },
+    ];
+
+    const r = drive(
+      {
+        SCOPE: list, BACKFILL_APPLY: "false",
+        RUN_MINUTES: "1", BUDGET_MS: "1000", RESERVE_MS: "500",
+        HIQ_TEST_FAKE_CLOCK_STEP_MS: "400",
+      },
+      { sales, catalog, saleReadDelayMs: 250 },
+    );
+    expect(r.out).toMatch(/not reached \(budget, sales\)\s+1/);
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/stopped at the 1-minute budget/);
+  });
+});
+
+describe("HIQ_TEST_FAKE_CLOCK_STEP_MS is inert when unset — production timing is untouched", () => {
+  it("unset: the SAME two-sale entry does NOT straddle under a real, generous budget", () => {
+    // Proves the hook changes nothing when the env var is absent: a budget
+    // wide enough for both sales' real (undelayed, near-instant) reads must
+    // let BOTH complete, exactly as it did before this PR touched
+    // runner-budget.cjs. If the fake clock were somehow active by default,
+    // this would falsely straddle or stop early.
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why" }], "fake-clock-unset");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [
+      { id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" },
+      { id: "src::2", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 20, soldAt: "2026-01-02", playerName: "Adael Amador", parallel: "RayWave Refractor" },
+    ];
+
+    const r = drive(
+      { SCOPE: list, BACKFILL_APPLY: "false", RUN_MINUTES: "110" },
+      { sales, catalog },
+    );
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+2/);
+    // The summary banner always PRINTS this label with a trailing count --
+    // what must be absent is a NONZERO count, not the label text itself
+    // (same convention the expected-sales-mismatch tests above already use).
+    expect(r.out).toMatch(/not reached \(budget, sales\)\s+0/);
+    expect(r.out).not.toMatch(/stopped at the \d+-minute budget/);
   });
 });

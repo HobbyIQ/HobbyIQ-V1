@@ -114,8 +114,37 @@ function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Dat
    *  in flight holding a handle. `finishLane()` reports it. */
   let capFired = false;
 
+  // ── TEST-ONLY FAKE CLOCK (CI flake, run 36353024102) ──────────────────
+  //
+  // repointSalesByList.test.ts's budget-straddle case drove `outOfClock()`
+  // with real wall-clock timing (a per-sale read delay sized against
+  // BUDGET_MS/RESERVE_MS) so the budget would expire between two sales of
+  // one entry. On a slow CI runner the child process's own ~350ms corpus
+  // read (GATE 6's checklist-parallel-names.json parse) eats into the
+  // budget by a variable amount before the per-sale loop's first check, so
+  // the straddle point drifts with machine speed and the race is flaky by
+  // construction -- widening the margins (#2463) narrowed the flake but
+  // could not remove it.
+  //
+  // HIQ_TEST_FAKE_CLOCK_STEP_MS, when set to a positive finite number,
+  // replaces `Date.now()` inside this budget's own `left()` with a virtual
+  // clock that starts at the real `startedAt` and advances by that many
+  // milliseconds on every call `left()` makes to it -- so the Nth call
+  // always reports the same elapsed time regardless of how long the
+  // process actually took to get there. A test can then make the budget
+  // expire on an exact call count (e.g. the 2nd per-sale `outOfClock()`
+  // check) instead of racing a wall clock. UNSET, this is `Date.now`
+  // itself -- zero behaviour change for every real lane run, proved by the
+  // unit test below.
+  const fakeStepMs = Number(process.env.HIQ_TEST_FAKE_CLOCK_STEP_MS);
+  const useFakeClock = Number.isFinite(fakeStepMs) && fakeStepMs > 0;
+  let fakeCalls = 0;
+  const now = useFakeClock
+    ? () => startedAt + (fakeCalls++) * fakeStepMs
+    : () => Date.now();
+
   /** Milliseconds left before the budget expires. Negative once it has. */
-  const left = () => BUDGET_MS - (Date.now() - startedAt);
+  const left = () => BUDGET_MS - (now() - startedAt);
 
   /**
    * THE PRE-CHECK. True when there is not enough clock left to start another
