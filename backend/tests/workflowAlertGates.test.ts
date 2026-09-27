@@ -396,10 +396,33 @@ describe("nightly-cleanliness anomaly detection is a budgeted, resumable lane", 
     expect(yml).not.toMatch(/curl[^\n]*--max-time/);
   });
 
-  it("waits for the dispatched run (and any budget-stop relaunches) with a bounded number of attempts, never an unbounded loop", () => {
-    const step = yml.slice(yml.indexOf("- name: Wait for anomaly-force-scan"));
-    expect(step).toMatch(/for i in \$\(seq 1 \d+\); do/);
-    expect(step).toContain("sleep 60");
+  it("waits for the SETTLE OUTCOME (the report doc), not a gh run list sample of the shared dispatcher, and is still bounded", () => {
+    // CF-CLEANLINESS-SETTLE-ON-REPORT-DOC (2026-09-27). backfill-runner.yml
+    // is one shared workflow name for every lane, so "the newest
+    // backfill-runner run" can be any lane's run, not this dispatch's own
+    // chain — on 2026-09-26 it sampled an unrelated hourly lane
+    // (run-ebay-order-poll) mid-sweep and called the real chain "settled"
+    // while it was still running 805 units. The fix polls the doc the chain
+    // itself writes only on completion, which has no such ambiguity.
+    const step = yml.slice(yml.indexOf("- name: Wait for anomaly-force-scan"), yml.indexOf("- name: Read anomaly scan report"));
+    expect(step).toContain("node backend/scripts/wait-for-doc.cjs");
+    expect(step).toContain("WAIT_FOR_DOC_ID=");
+    expect(step).toContain("::anomaly-scan-report");
+    // No more sampling gh run list / gh run view to infer "done".
+    expect(step).not.toMatch(/gh run list/);
+    expect(step).not.toMatch(/gh run view/);
+    // Still bounded, never an unbounded loop — CF-A-KILLED-JOB-CANNOT-
+    // REPORT-PROGRESS — just bounded inside the script now rather than the
+    // workflow's own shell loop.
+    expect(step).toContain("WAIT_FOR_DOC_MAX_MS=");
+    expect(step).toContain("WAIT_FOR_DOC_POLL_MS=");
+  });
+
+  it("wait-for-doc.cjs itself enforces the bound and never spins unboundedly", () => {
+    const src = read("backend", "scripts", "wait-for-doc.cjs");
+    expect(src).toMatch(/maxMs/);
+    expect(src).toMatch(/if \(Date\.now\(\) - t0 \+ pollMs > maxMs\)/);
+    expect(src).toContain("never finished settling");
   });
 
   it("reads the result from the anomaly_scan_reports container, via the dedicated checker script", () => {
