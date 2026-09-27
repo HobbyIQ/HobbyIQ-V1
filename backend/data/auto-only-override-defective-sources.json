@@ -1,0 +1,17 @@
+{
+  "_comment": "CF-R-0927D-AUTO-ONLY-OVERRIDE-SOURCES (Drew ruling R-0927d, 2026-09-27 ~02:50Z). checklist-at-both is an unconditional refusal in repoint-sales-isauto-flip.cjs UNLESS the :no-auto row's own source is one of the tags below -- the layouts the census (DRAFT PR #2453, C:/tmp/unsigned_1949/RESULT.md) proved mint AUTOGRAPH-ONLY inserts as isAuto=false. Data-driven so a newly-discovered defective tag is a one-line add here, never a code change to the gate. Matched case-insensitively as a PREFIX against the row's own `source` (mirrors the -graded suffix convention: a `<tag>-graded` row inherits its parent's provenance and is covered by the same prefix). Do not add a tag here on suspicion alone -- each entry needs its own census evidence the way the three below do.",
+  "sources": [
+    {
+      "prefix": "checklistinsider-2026-08-27",
+      "evidence": "PR #2453 census, 2026-09-26/27: 22 (setKey, prefix, year) groups / 3,265 BOTH-checklist pairs in baseball 2024-2026, no-auto twins overwhelmingly sourced checklistinsider-2026-08-27. Confirmed against 2026-09-21's earlier retire lists (2026-09-21-unsigned-mint-baseball-2025-topps-chrome-update-series.json, 2026-09-21-unsigned-mint-baseball-2026-bowman-mega.json), which independently verified the same tag as the unsigned-minting layout."
+    },
+    {
+      "prefix": "bccp",
+      "evidence": "PR #2453 census, 2026-09-26/27: contributes to the same 22-group / 3,265-pair no-auto side, cited alongside checklistinsider-2026-08-27 and checklist-batch-fill."
+    },
+    {
+      "prefix": "checklist-batch-fill",
+      "evidence": "PR #2453 census, 2026-09-26/27: contributes to the same 22-group / 3,265-pair no-auto side, cited alongside checklistinsider-2026-08-27 and bccp."
+    }
+  ]
+}
