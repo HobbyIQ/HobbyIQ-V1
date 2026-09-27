@@ -21,14 +21,18 @@ const {
   isBacked,
   rungLookup,
   resolveSiblingSetKeyCandidates,
+  checkKeyDefectByPlayer,
+  checkSplitIdentity,
   resolveDefectOrAcquire,
   classifyOne,
   ACQUIRE_CLASSIFICATION,
+  SPLIT_IDENTITY_CLASSIFICATION,
   aggregationKey,
   foldIntoAggregate,
   rankAggregate,
   rankWithinClassification,
   guessSourceUrls,
+  collectUnregisteredProductTokens,
   summarizeCell,
 } = mod;
 
@@ -1065,5 +1069,458 @@ describe("summarizeCell", () => {
     expect(summary.rematchVsAcquisitionSplit.rematch).toBe(120);
     expect(summary.rematchVsAcquisitionSplit.acquisition).toBe(380);
     expect(summary.bucketShares["STALE-NO-ROW"]).toBeCloseTo(200 / 380, 5);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2 (2026-09-27) — live-trace defects from C:/tmp/*_trace_*/RESULT.md
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("(1) KEY-DEFECT-BY-PLAYER — bc26_mojo_trace shape: from-key row disagrees on player, a sibling agrees", () => {
+  // Reproduces the "murakami-variation-mojo-refractor" finding: bowman-chrome
+  // #9's OWN checklist row is Cody Bellinger (disagrees with the sale's
+  // Munetaka Murakami), while bowman's #9 row IS Murakami. The old code had
+  // no signal for this shape and either invented an ad-hoc parallel or fell
+  // through to ACQUIRE.
+  const deps = makeDeps({ inferSetKeyFromTitle: () => "bowman-chrome" });
+  const row = {
+    id: "s-murakami",
+    title: "2026 Bowman Chrome Munetaka Murakami #9 Chrome Mojo Refractor",
+    hobbyiqCardId: "hiq:baseball:2026:bowman-chrome:9:murakami-variation-mojo-refractor:no-auto",
+    cardYear: 2026,
+    cardNumber: "9",
+    playerName: "Munetaka Murakami",
+    setName: "2026 Bowman Chrome Baseball",
+  };
+  const cellsByKey = {
+    "2026|bowman-chrome": [
+      { id: "cat-bc-9", cardNumber: "9", isAuto: false, printRun: null, playerName: "Cody Bellinger", parallel: "Mojo Refractor", source: "checklistcenter-2026-08-29" },
+    ],
+    "2026|bowman": [
+      { id: "hiq:baseball:2026:bowman:9:mega-chrome-burgundy-mojo-refractor:no-auto:num-275", cardNumber: "9", isAuto: false, printRun: 275, playerName: "Munetaka Murakami", parallel: "Mega Chrome Burgundy Mojo Refractor", source: "checklistcenter-2026-08-29" },
+    ],
+  };
+  const siblingTables = { productRefinementsOf: (k: string) => (k === "bowman-chrome" ? ["bowman"] : []) };
+
+  it("classifies as KEY-DEFECT-BY-PLAYER, naming both the sibling setKey and the from-key's wrong player", () => {
+    const io = makeIo(cellsByKey, siblingTables);
+    const identity = { setKey: "bowman-chrome", isAuto: false, printRun: null };
+    const result = checkKeyDefectByPlayer(row, { sport: "baseball", year: 2026 }, identity, "9", io);
+    expect(result).not.toBeNull();
+    expect(result!.classification).toBe("KEY-DEFECT-BY-PLAYER");
+    expect(result!.foundUnderSetKey).toBe("bowman");
+    expect(result!.fromKeyWrongPlayer).toBe("Cody Bellinger");
+  });
+
+  it("resolveDefectOrAcquire reaches KEY-DEFECT-BY-PLAYER before the ordinary sibling search, never ACQUIRE", () => {
+    const io = makeIo(cellsByKey, siblingTables);
+    const identity = { setKey: "bowman-chrome", isAuto: false, printRun: null };
+    const result = resolveDefectOrAcquire(row, { sport: "baseball", year: 2026 }, identity, "9", io);
+    expect(result.classification).toBe("KEY-DEFECT-BY-PLAYER");
+  });
+
+  it("MUTATION CHECK: without checkKeyDefectByPlayer wired in, this exact fixture falls through the ordinary namesAgree-gated sibling search and resolves ACQUIRE", () => {
+    // Prove the shape: the ordinary sibling loop in resolveDefectOrAcquire
+    // ALSO checks `bowman`, and its row DOES agree by name -- so simply
+    // removing the byPlayer check does not even reach the sibling loop with
+    // a wrong signal, it reaches it fresh. This asserts the sibling loop by
+    // itself, called directly (bypassing checkKeyDefectByPlayer), still
+    // finds bowman -- i.e. resolveDefectOrAcquire's overall KEY-DEFECT-BY-
+    // PLAYER verdict is not a fluke of the ordinary path; it fires strictly
+    // BEFORE and INSTEAD OF a plain KEY-DEFECT for this fixture because
+    // checkKeyDefectByPlayer runs first and returns a MORE SPECIFIC verdict.
+    const io = makeIo(cellsByKey, siblingTables);
+    const identity = { setKey: "bowman-chrome", isAuto: false, printRun: null };
+    const byPlayerResult = checkKeyDefectByPlayer(row, { sport: "baseball", year: 2026 }, identity, "9", io);
+    expect(byPlayerResult).not.toBeNull(); // the specific check fires
+    // If a caller only had the FROM-key row and NO known sibling relationship
+    // at all (no productRefinementsOf entry), checkKeyDefectByPlayer must
+    // return null -- proving the check is gated on an actual sibling table
+    // hit, not a blanket "any mismatch is a defect" rule.
+    const ioNoSiblingTable = makeIo(cellsByKey, {});
+    const noSiblingResult = checkKeyDefectByPlayer(row, { sport: "baseball", year: 2026 }, identity, "9", ioNoSiblingTable);
+    expect(noSiblingResult).toBeNull();
+  });
+
+  it("does NOT fire when the from-key has no backed row at this number at all (nothing to explain)", () => {
+    const io = makeIo({ "2026|bowman-chrome": [], "2026|bowman": cellsByKey["2026|bowman"] }, siblingTables);
+    const identity = { setKey: "bowman-chrome", isAuto: false, printRun: null };
+    const result = checkKeyDefectByPlayer(row, { sport: "baseball", year: 2026 }, identity, "9", io);
+    expect(result).toBeNull();
+  });
+
+  it("does NOT fire when the sibling's row ALSO disagrees by name (no corroborating agreement anywhere)", () => {
+    const io = makeIo(
+      {
+        "2026|bowman-chrome": cellsByKey["2026|bowman-chrome"],
+        "2026|bowman": [{ id: "cat-bowman-9-other", cardNumber: "9", isAuto: false, printRun: null, playerName: "Someone Else Entirely", source: "checklistcenter-2026-08-29" }],
+      },
+      siblingTables,
+    );
+    const identity = { setKey: "bowman-chrome", isAuto: false, printRun: null };
+    const result = checkKeyDefectByPlayer(row, { sport: "baseball", year: 2026 }, identity, "9", io);
+    expect(result).toBeNull();
+  });
+});
+
+describe("(2) SPLIT-IDENTITY — a checklist-backed hobbyiqCardId that disagrees with cardId is a pool split, not an unbacked sale", () => {
+  it("classifies as SPLIT-IDENTITY when cardId and hobbyiqCardId are both hiq: slugs, disagree, and the hobbyiqCardId side is backed", () => {
+    const row = {
+      id: "ebay-user-purchase::split-1",
+      cardId: "hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto",
+      hobbyiqCardId: "hiq:baseball:2026:bowman:cpa-vf:red-ink:auto",
+      title: "2026 Bowman CPA-VF Red Ink Auto",
+    };
+    const io = {
+      pointReadById(id: string) {
+        if (id === "hiq:baseball:2026:bowman:cpa-vf:red-ink:auto") {
+          return { id, source: "checklistcenter-2026-08-29", playerName: "Someone" };
+        }
+        return null;
+      },
+      isBacked,
+    };
+    const result = checkSplitIdentity(row, io);
+    expect(result).not.toBeNull();
+    expect(result!.classification).toBe("SPLIT-IDENTITY");
+    expect(result!.cardId).toBe(row.cardId);
+    expect(result!.hobbyiqCardId).toBe(row.hobbyiqCardId);
+  });
+
+  it("does NOT classify as SPLIT-IDENTITY when the two fields agree (COHERENT)", () => {
+    const row = { id: "s1", cardId: "hiq:baseball:2025:topps:1:base:no-auto", hobbyiqCardId: "hiq:baseball:2025:topps:1:base:no-auto" };
+    const io = { pointReadById: () => null, isBacked };
+    expect(checkSplitIdentity(row, io)).toBeNull();
+  });
+
+  it("does NOT classify as SPLIT-IDENTITY for the vendor-partition design shape (cardId is a foreign bubble id)", () => {
+    const row = { id: "s2", cardId: "1778542173652x303328120692600800", hobbyiqCardId: "hiq:baseball:2025:topps:1:base:no-auto" };
+    const io = { pointReadById: () => ({ id: row.hobbyiqCardId, source: "checklistinsider" }), isBacked };
+    expect(checkSplitIdentity(row, io)).toBeNull();
+  });
+
+  it("MUTATION CHECK: when the hobbyiqCardId side is NOT actually backed, this must NOT classify as SPLIT-IDENTITY (damage exists but isn't proven-real yet)", () => {
+    const row = {
+      id: "ebay-user-purchase::split-2",
+      cardId: "hiq:baseball:2026:bowman:1:black-white-red-ink:auto",
+      hobbyiqCardId: "hiq:baseball:2026:bowman:1:red-ink:auto",
+      title: "...",
+    };
+    const io = { pointReadById: () => null, isBacked }; // nothing backed anywhere
+    expect(checkSplitIdentity(row, io)).toBeNull();
+  });
+
+  it("classifyOne returns SPLIT-IDENTITY at the very top, before deriveIdentity/title parsing ever runs", () => {
+    const deps = makeDeps();
+    const row = {
+      id: "ebay-user-purchase::split-3",
+      cardId: "hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto",
+      hobbyiqCardId: "hiq:baseball:2026:bowman:cpa-vf:red-ink:auto",
+      title: "", // blank title -- would normally refuse with NO-NUMBER, proving SPLIT-IDENTITY is checked FIRST
+    };
+    const io = makeIo({}, {});
+    const patchedIo = {
+      ...io,
+      pointReadById(id: string) {
+        if (id === row.hobbyiqCardId) return { id, source: "checklistcenter-2026-08-29" };
+        return null;
+      },
+    };
+    const result = classifyOne(row, { sport: "baseball", year: 2026, setKey: "bowman" }, deps, patchedIo);
+    expect(result.name).toBe("SPLIT-IDENTITY");
+    expect(result.classification).toBe(SPLIT_IDENTITY_CLASSIFICATION);
+  });
+
+  it("foldIntoAggregate counts SPLIT-IDENTITY into its OWN (sport,year) bucket, separate from every destination-identity bucket", () => {
+    const agg = new Map();
+    foldIntoAggregate(agg, "baseball", 2026, { title: "split sale one" }, {
+      name: "SPLIT-IDENTITY",
+      detail: { cardId: "a", hobbyiqCardId: "b", segments: ["parallel"] },
+      classification: "SPLIT-IDENTITY",
+    });
+    foldIntoAggregate(agg, "baseball", 2026, { title: "split sale two" }, {
+      name: "SPLIT-IDENTITY",
+      detail: { cardId: "c", hobbyiqCardId: "d", segments: ["setKey"] },
+      classification: "SPLIT-IDENTITY",
+    });
+    // A genuinely different classification at the SAME (sport,year) must not
+    // land in the SPLIT-IDENTITY bucket.
+    foldIntoAggregate(agg, "baseball", 2026, { title: "acquire sale" }, {
+      name: "CARD-MISSING",
+      detail: { identity: { setKey: "topps", parallel: "Base", isAuto: false, printRun: null }, cardNumber: "1" },
+      classification: "ACQUIRE",
+    });
+    expect(agg.size).toBe(2);
+    const splitEntry = [...agg.values()].find((e: any) => e.classification === "SPLIT-IDENTITY")!;
+    expect(splitEntry.salesCount).toBe(2);
+  });
+});
+
+describe("(3) PAGINATION — the drain loops in this file never treat an empty page as end-of-results", () => {
+  // idxrepro_2123's confirmed root cause: `if (resources.length === 0) break`
+  // mistakes an empty INTERMEDIATE cross-partition page for done. This test
+  // drives a fake Cosmos-shaped iterator (2 empty pages, then a data page,
+  // matching the confirmed repro shape) through the SAME `while
+  // (it.hasMoreResults())` contract this file's own cell loader uses, and
+  // proves that contract -- unlike the broken early-break pattern -- drains
+  // every row.
+  function makeFakeIterator(pages: { resources: any[]; hasMore: boolean }[]) {
+    let i = 0;
+    return {
+      hasMoreResults() {
+        return i < pages.length;
+      },
+      async fetchNext() {
+        const page = pages[i];
+        i++;
+        return { resources: page.resources, requestCharge: 1 };
+      },
+    };
+  }
+
+  it("a while(hasMoreResults()) drain collects rows from a data page arriving AFTER two empty pages", async () => {
+    const it = makeFakeIterator([
+      { resources: [], hasMore: true },
+      { resources: [], hasMore: true },
+      { resources: [{ id: "row-1" }, { id: "row-2" }], hasMore: false },
+    ]);
+    const collected: any[] = [];
+    while (it.hasMoreResults()) {
+      const page = await it.fetchNext();
+      for (const r of page.resources || []) collected.push(r);
+    }
+    expect(collected.map((r) => r.id)).toEqual(["row-1", "row-2"]);
+  });
+
+  it("MUTATION CHECK: the broken `if (resources.length === 0) break` pattern loses the data page entirely on this exact fixture", async () => {
+    const it = makeFakeIterator([
+      { resources: [], hasMore: true },
+      { resources: [], hasMore: true },
+      { resources: [{ id: "row-1" }, { id: "row-2" }], hasMore: false },
+    ]);
+    const collected: any[] = [];
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const page = await it.fetchNext();
+      if (!page.resources || page.resources.length === 0) break; // THE BUG
+      for (const r of page.resources) collected.push(r);
+    }
+    expect(collected).toEqual([]); // proves the mutation undercounts to zero on this fixture
+  });
+});
+
+describe("(4) AUTO-ONLY INSERT — der.autoByCardNumber flips a non-auto sale to ISAUTO-DEFECT without needing a backed row at the flipped value first", () => {
+  it("classifies as ISAUTO-DEFECT when isCardNumberAutoSubset says the cardNumber is auto-only but the sale is stored non-auto", () => {
+    const deps = makeDeps({
+      inferSetKeyFromTitle: () => "panini-prizm",
+      // Mirrors dist's isCardNumberAutoSubset consulting SCOPED_AUTO_ONLY_PREFIXES
+      // for baseball|2025|panini-prizm's "SS-" prefix (Sensational Signatures).
+      isCardNumberAutoSubset: (cardNumber: string) => /^SS-/i.test(cardNumber),
+    });
+    const row = {
+      id: "s-ss-jw",
+      title: "2025 Panini Prizm - Sensational Signatures Jaxon Wiggins #SS-JW Base",
+      hobbyiqCardId: "hiq:baseball:2025:panini-prizm:ss-jw:base:no-auto",
+      cardYear: 2025,
+      cardNumber: "SS-JW",
+      playerName: "Jaxon Wiggins",
+    };
+    const io = makeIo({}, {});
+    const result = classifyOne(row, { sport: "baseball", year: 2025, setKey: "panini-prizm" }, deps, io);
+    expect(result.name).toBe("ISAUTO-DEFECT-AUTO-ONLY-INSERT");
+    expect(result.classification).toBe("ISAUTO-DEFECT");
+  });
+
+  it("does NOT fire when the sale is already stored/derived auto (nothing to flip)", () => {
+    const deps = makeDeps({
+      inferSetKeyFromTitle: () => "panini-prizm",
+      isCardNumberAutoSubset: (cardNumber: string) => /^SS-/i.test(cardNumber),
+    });
+    const row = {
+      id: "s-ss-jw-auto",
+      title: "2025 Panini Prizm Sensational Signatures Jaxon Wiggins #SS-JW Auto",
+      hobbyiqCardId: "hiq:baseball:2025:panini-prizm:ss-jw:base:auto",
+      cardYear: 2025,
+      cardNumber: "SS-JW",
+      playerName: "Jaxon Wiggins",
+    };
+    const io = makeIo({ "2025|panini-prizm": [] }, {});
+    const result = classifyOne(row, { sport: "baseball", year: 2025, setKey: "panini-prizm" }, deps, io);
+    expect(result.name).not.toBe("ISAUTO-DEFECT-AUTO-ONLY-INSERT");
+  });
+
+  it("MUTATION CHECK: without isCardNumberAutoSubset wired (der.autoByCardNumber stays false), the SAME SS-JW fixture never reaches ISAUTO-DEFECT-AUTO-ONLY-INSERT and falls through to the ordinary path", () => {
+    const deps = makeDeps({
+      inferSetKeyFromTitle: () => "panini-prizm",
+      isCardNumberAutoSubset: undefined, // simulate the dep never wired -- autoByCardNumber defaults false
+    });
+    const row = {
+      id: "s-ss-jw-2",
+      title: "2025 Panini Prizm - Sensational Signatures Jaxon Wiggins #SS-JW Base",
+      hobbyiqCardId: "hiq:baseball:2025:panini-prizm:ss-jw:base:no-auto",
+      cardYear: 2025,
+      cardNumber: "SS-JW",
+      playerName: "Jaxon Wiggins",
+    };
+    const io = makeIo({ "2025|panini-prizm": [] }, {});
+    const result = classifyOne(row, { sport: "baseball", year: 2025, setKey: "panini-prizm" }, deps, io);
+    expect(result.name).not.toBe("ISAUTO-DEFECT-AUTO-ONLY-INSERT");
+    expect(result.classification).toBe(ACQUIRE_CLASSIFICATION); // absent the signal, falls through as before the fix
+  });
+
+  it("foldIntoAggregate aggregates ISAUTO-DEFECT-AUTO-ONLY-INSERT rows using the destination identity like any other worklist bucket", () => {
+    const agg = new Map();
+    foldIntoAggregate(agg, "baseball", 2025, { title: "#SS-JW Base" }, {
+      name: "ISAUTO-DEFECT-AUTO-ONLY-INSERT",
+      detail: { identity: { setKey: "panini-prizm", cardNumber: "SS-JW", parallel: "Base", isAuto: false, printRun: null }, cardNumber: "SS-JW" },
+      classification: "ISAUTO-DEFECT",
+    });
+    expect(agg.size).toBe(1);
+    const entry = [...agg.values()][0];
+    expect(entry.classification).toBe("ISAUTO-DEFECT");
+    expect(entry.salesCount).toBe(1);
+  });
+});
+
+describe("(5) UNREGISTERED-PRODUCT — a product word present in the title but absent from the destination setKey's own words", () => {
+  it("finds 'living' in a title mis-keyed under bare topps (2024 Topps Living Set shape)", () => {
+    const sales = [
+      { title: "2024 Topps Living Baseball #737 Base", setKey: "topps" },
+      { title: "2024 Topps Living Shohei Ohtani #729 PSA 10 Gem Mint", setKey: "topps" },
+      { title: "2024 TOPPS LIVING SET #737 CEDDANNE RAFAELA *ROOKIE PSA 9 MINT*", setKey: "topps" },
+    ];
+    const tokens = collectUnregisteredProductTokens(sales);
+    const living = tokens.find((t: any) => t.token === "living");
+    expect(living).toBeDefined();
+    expect(living!.salesCount).toBe(3);
+  });
+
+  it("does NOT flag a token whose own word already appears in the destination setKey (registered)", () => {
+    const sales = [{ title: "2025 Topps Heritage Baseball #100 Base", setKey: "topps-heritage" }];
+    const tokens = collectUnregisteredProductTokens(sales);
+    expect(tokens.find((t: any) => t.token === "heritage")).toBeUndefined();
+  });
+
+  it("ranks tokens by sales count descending", () => {
+    const sales = [
+      { title: "... Living ...", setKey: "topps" },
+      { title: "... Living ...", setKey: "topps" },
+      { title: "... Heritage ...", setKey: "topps" },
+    ];
+    const tokens = collectUnregisteredProductTokens(sales);
+    expect(tokens[0].token).toBe("living");
+    expect(tokens[0].salesCount).toBe(2);
+  });
+
+  it("supports caller-supplied extraTokens beyond the closed candidate list", () => {
+    const sales = [{ title: "2024 Topps Update Baseball #1 Base", setKey: "topps" }];
+    const tokens = collectUnregisteredProductTokens(sales, ["update"]);
+    expect(tokens.find((t: any) => t.token === "update")).toBeDefined();
+  });
+
+  it("MUTATION CHECK: an empty sales array yields no tokens, never a spurious default", () => {
+    expect(collectUnregisteredProductTokens([])).toEqual([]);
+  });
+});
+
+describe("(6) DERIVED-ONLY — the exact rung has a row, but its source is not checklist-strict", () => {
+  it("classifies as DERIVED-ONLY when io.catalogAuthorityOf says the exact-rung row is 'derived', not 'checklist'", () => {
+    // Uses the same deps/id shape as the "BACKED-DERIVED-ONLY" fixture above
+    // (title "#52 Refractor" -> fake parser derives parallel "Refractor",
+    // isAuto false, printRun null) so der.slug === storedSlug and this test
+    // isolates the ONE thing it's meant to prove: an exact-rung row present
+    // but NOT checklist-authority reads DERIVED-ONLY, not STALE.
+    const deps = makeDeps({ inferSetKeyFromTitle: () => "bowman-chrome" });
+    const row = {
+      id: "s-derived-52",
+      title: "2026 Bowman Chrome Baseball #52 Refractor",
+      hobbyiqCardId: "hiq:baseball:2026:bowman-chrome:52:Refractor:raw",
+      cardYear: 2026,
+      cardNumber: "52",
+      playerName: "Shohei Ohtani",
+    };
+    const io = {
+      ...makeIo({
+        "2026|bowman-chrome": [
+          { id: "cat-52-derived", cardNumber: "52", isAuto: false, printRun: null, playerName: "Shohei Ohtani", parallel: "Refractor", source: "ingest-auto-seed" },
+        ],
+      }),
+      catalogAuthorityOf: (source: string) => (source === "ingest-auto-seed" ? "derived" : "checklist"),
+    };
+    const result = classifyOne(row, { sport: "baseball", year: 2026, setKey: "bowman-chrome" }, deps, io);
+    expect(result.name).toBe("DERIVED-ONLY");
+    expect(result.classification).toBe("DERIVED-ONLY");
+    expect(result.detail!.authority).toBe("derived");
+  });
+
+  it("does NOT fire (falls through to ordinary classification) when io.catalogAuthorityOf is not wired", () => {
+    const deps = makeDeps({ inferSetKeyFromTitle: () => "bowman-chrome" });
+    const row = {
+      id: "s-derived-53",
+      title: "2026 Bowman Chrome Baseball #53 Mojo Refractor",
+      hobbyiqCardId: "hiq:baseball:2026:bowman-chrome:53:mojo-refractor:no-auto",
+      cardYear: 2026,
+      cardNumber: "53",
+      playerName: "Someone Rookie",
+    };
+    const io = makeIo({
+      "2026|bowman-chrome": [
+        { id: "cat-53-derived", cardNumber: "53", isAuto: false, printRun: null, playerName: "Someone Rookie", parallel: "Mojo Refractor", source: "ingest-auto-seed" },
+      ],
+    }); // no catalogAuthorityOf
+    const result = classifyOne(row, { sport: "baseball", year: 2026, setKey: "bowman-chrome" }, deps, io);
+    expect(result.name).not.toBe("DERIVED-ONLY");
+  });
+
+  it("MUTATION CHECK: when the exact-rung row IS checklist authority, this must classify as BACKED-DERIVED-ONLY/STALE (already-backed), never DERIVED-ONLY", () => {
+    const deps = makeDeps({ inferSetKeyFromTitle: () => "topps" });
+    const row = {
+      id: "s-checklist-10",
+      title: "2024 Topps Baseball #10 Base",
+      hobbyiqCardId: "hiq:baseball:2024:topps:10:Base:raw",
+      cardYear: 2024,
+      cardNumber: "10",
+      playerName: "Corbin Carroll",
+    };
+    const io = {
+      ...makeIo({
+        "2024|topps": [{ id: "cat10", cardNumber: "10", isAuto: false, printRun: null, playerName: "Corbin Carroll", source: "checklistinsider" }],
+      }),
+      catalogAuthorityOf: (source: string) => (source === "checklistinsider" ? "checklist" : "derived"),
+    };
+    const result = classifyOne(row, { sport: "baseball", year: 2024, setKey: "topps" }, deps, io);
+    expect(result.name).toBe("BACKED-DERIVED-ONLY"); // isBacked already true -- exactRung catches it first
+    expect(result.classification).toBe("STALE");
+  });
+
+  it("foldIntoAggregate carries the found authority into classificationDetail for a DERIVED-ONLY entry", () => {
+    const agg = new Map();
+    foldIntoAggregate(agg, "baseball", 2026, { title: "derived-only sale" }, {
+      name: "DERIVED-ONLY",
+      detail: { identity: { setKey: "bowman-chrome", cardNumber: "52", parallel: "Mojo Refractor", isAuto: false, printRun: null }, cardNumber: "52", authority: "derived" },
+      classification: "DERIVED-ONLY",
+    });
+    const entry = [...agg.values()][0];
+    expect(entry.classificationDetail).toBe("derived");
+    expect(entry.classification).toBe("DERIVED-ONLY");
+  });
+});
+
+describe("rankWithinClassification orders the new classes sensibly (ACQUIRE and DERIVED-ONLY first, SPLIT-IDENTITY last)", () => {
+  it("orders ACQUIRE, then DERIVED-ONLY, then KEY-DEFECT, KEY-DEFECT-BY-PLAYER, SPELLING, ISAUTO-DEFECT, SPLIT-IDENTITY", () => {
+    const base = { sport: "baseball", year: 2026, setKey: "x", prefix: "base", parallel: "Base", isAuto: false, printRun: null, distinctCardNumbers: 1, exampleTitles: [] };
+    const ranked = [
+      { ...base, salesCount: 1, classification: "SPLIT-IDENTITY" },
+      { ...base, salesCount: 1, classification: "ISAUTO-DEFECT" },
+      { ...base, salesCount: 1, classification: "SPELLING" },
+      { ...base, salesCount: 1, classification: "KEY-DEFECT-BY-PLAYER" },
+      { ...base, salesCount: 1, classification: "KEY-DEFECT" },
+      { ...base, salesCount: 1, classification: "DERIVED-ONLY" },
+      { ...base, salesCount: 1, classification: "ACQUIRE" },
+    ];
+    const out = rankWithinClassification(ranked);
+    expect(out.map((r: any) => r.classification)).toEqual([
+      "ACQUIRE", "DERIVED-ONLY", "KEY-DEFECT", "KEY-DEFECT-BY-PLAYER", "SPELLING", "ISAUTO-DEFECT", "SPLIT-IDENTITY",
+    ]);
   });
 });

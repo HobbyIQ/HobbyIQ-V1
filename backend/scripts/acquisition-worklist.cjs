@@ -47,7 +47,58 @@
  * (default cap; override with SOLD_COMPS_RU_CAP) because a census may be
  * running concurrently. card_catalog reads are not throttled — same
  * reasoning gap2024-classify.cjs documents: it is provisioned with its own
- * separate headroom and is not the container under RU pressure.
+ * separate headroom and is not the container under RU pressure. Any
+ * exact-id EXISTENCE check goes through `item(id, pk).read()` (a true
+ * Cosmos point read, pk=/cardId), never a cross-partition query stopped on
+ * the first empty page — see PAGINATION below.
+ *
+ * ── v2 FIXES (2026-09-27, live-trace evidence in C:/tmp/[name]_trace_[time]/RESULT.md) ─
+ *
+ * (1) KEY-DEFECT-BY-PLAYER. bc26_mojo_trace: a sale's FROM-product checklist
+ *     row at the same cardNumber names a DIFFERENT player than the sale
+ *     title (namesAgree false) while a SIBLING key's row at that number
+ *     agrees. The old code either invented an ad-hoc parallel slug
+ *     ("murakami-variation-mojo-refractor") or silently fell through the
+ *     namesAgree gate to ACQUIRE. Now: `checkKeyDefectByPlayer` runs BEFORE
+ *     resolveDefectOrAcquire's ordinary sibling search and reports
+ *     KEY-DEFECT-BY-PLAYER explicitly whenever this exact shape fires — the
+ *     from-key's own row for this number disagrees on player, a sibling's
+ *     agrees — never inventing a parallel, never staying ACQUIRE.
+ * (2) SPLIT-IDENTITY. prizm_ss/bc26 traces: `sale.hobbyiqCardId !== cardId`
+ *     and the hobbyiqCardId side IS checklist-backed is a pool-split, not an
+ *     unbacked sale — `lib/split-identity.cjs`'s `classifyIdentity` decides,
+ *     reused (not re-derived), and counted in its own class/bucket, never
+ *     folded into ACQUIRE or any DEFECT bucket.
+ * (3) PAGINATION. idxrepro_2123: a manual `if (resources.length===0) break`
+ *     loop undercounts 91% of cross-partition queries (empty intermediate
+ *     pages are normal, NOT end-of-results). This file's own loops already
+ *     drove entirely off `while(it.hasMoreResults())`, never item-count —
+ *     `crossSetKeyProbeAsync` also switched to `.fetchAll()` (bounded TOP-N
+ *     query) to make the contract explicit rather than implicit in a
+ *     hand-rolled loop. `pointReadExact` below adds a TRUE point read
+ *     (`item(id, pk).read()`, pk=/cardId) for exact-id existence checks —
+ *     the only correct tool for "does this ONE id exist", never a query.
+ * (4) AUTO-ONLY INSERT. prizm_ss_trace: `der.autoByCardNumber` (computed by
+ *     deriveIdentity via `isCardNumberAutoSubset`, which already consults
+ *     dist's scoped `isScopedAutoOnlyPrefix` table AND the always-auto
+ *     cardNumber-prefix regex) was computed and then silently discarded —
+ *     classifyOne never read it. A non-auto sale whose cardNumber is
+ *     auto-only now reports ISAUTO-DEFECT immediately, without needing a
+ *     backed row at the flipped auto value first (the number's own
+ *     provenance is the evidence, not a lucky catalog hit).
+ * (5) UNREGISTERED-PRODUCT. topps24_trace: "Topps Living[ Set]" sales mis-key
+ *     under bare `topps` because `inferSetKeyFromTitle` has no token for it.
+ *     `collectUnregisteredProductTokens` scans ACQUIRE-bound titles for a
+ *     product-name word with zero setKey resolution and reports the top 20
+ *     by sales count in WORKLIST.md — this is where real acquisition gaps
+ *     live, per the coordinator's own framing.
+ * (6) DERIVED-ONLY. bc26_mojo_trace: the exact id has a row, but its source
+ *     is `derived` (catalogAuthorityOf(row.source) !== "checklist"), not a
+ *     genuine checklist backing — a real card the parser filled in with a
+ *     guess, not proof it is on the books. Reported as DERIVED-ONLY
+ *     (acquisition ADOPTS/upgrades it with a real checklist source) rather
+ *     than merged into either PRESENT (would hide the gap) or ACQUIRE-no-row
+ *     (would ignore that a placeholder already exists).
  */
 const fs = require("fs");
 const path = require("path");
@@ -55,6 +106,7 @@ const path = require("path");
 const { storedIdentity, deriveIdentity } = require(path.join(__dirname, "lib", "rematch-derive-identity.cjs"));
 const K = require(path.join(__dirname, "lib", "rematch-classify.cjs"));
 const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
+const { classifyIdentity, HIQ_SPLIT } = require(path.join(__dirname, "lib", "split-identity.cjs"));
 
 const norm = (s) => String(s ?? "").trim().toLowerCase();
 const f = (n) => Number(n || 0).toLocaleString("en-US");
@@ -231,8 +283,73 @@ function resolveSiblingSetKeyCandidates(sale, cell, identity, io) {
   return deduped;
 }
 
+/**
+ * (1) KEY-DEFECT-BY-PLAYER (bc26_mojo_trace, C:/tmp/bc26_mojo_trace_1530/
+ * RESULT.md, 2026-09-27). The bowman-chrome "murakami-variation-mojo-
+ * refractor" shape: bowman-chrome #9's OWN checklist row names Cody
+ * Bellinger, not the sale's Munetaka Murakami -- rungLookup's namesAgree
+ * gate correctly refuses that pairing (`agree: false`), so it is never
+ * mistaken for a same-product BACKED-DERIVED-ONLY/RUNG-MISSING rung. But
+ * the OLD code then fell straight through the same-key checks (none of
+ * which can fire without namesAgree) into the sibling search and the
+ * cross-probe with NO SIGNAL that a from-key mismatch was ever seen -- and
+ * when the parser had already minted an ad-hoc parallel segment for the
+ * title ("murakami-variation-mojo-refractor") to keep the wrong-product
+ * number from colliding with Bellinger's real row, that ad-hoc slug never
+ * matched anything and the sale landed on ACQUIRE, laundering a real
+ * cross-product misfile as a fresh checklist gap.
+ *
+ * THE CHECK: does the FROM-key (identity.setKey, the product this sale is
+ * currently filed under) have a checklist-authority row at this exact
+ * cardNumber whose player DISAGREES with the sale (namesAgree false) --
+ * and does some OTHER, already-known-sibling setKey have a checklist row
+ * at the SAME cardNumber whose player AGREES? That pairing is the proof:
+ * the number is real and taken by someone else in THIS product, and the
+ * sale's own card lives one product over. Reported as its own
+ * classification (never invents a parallel, never silently falls to
+ * ACQUIRE) so the repoint lane can redirect it directly, exactly like
+ * ordinary KEY-DEFECT but flagged with WHY the same-key rung didn't match.
+ *
+ * Deliberately narrow: only fires when the from-key mismatch AND the
+ * sibling agreement are BOTH true. A from-key row that simply doesn't
+ * exist (no mismatch to explain) is left to the ordinary CARD-MISSING /
+ * sibling-search path; a sibling row that also disagrees never qualifies
+ * either -- see the namesAgree gate at the end of the sibling-loop filter
+ * two lines below.
+ */
+function checkKeyDefectByPlayer(sale, cell, identity, cardNumber, io) {
+  const playerName = sale.playerName || "";
+  const { byNumber: fromByNumber } = io.getCellIndex(cell.year, identity.setKey);
+  const fromHits = rungLookup(fromByNumber, cardNumber, identity.isAuto, identity.printRun, playerName);
+  const fromKeyBackedDisagreeing = fromHits.filter((h) => io.isBacked(h.row) && !h.agree);
+  if (!fromKeyBackedDisagreeing.length) return null;
+
+  const siblingCandidates = resolveSiblingSetKeyCandidates(sale, cell, identity, io);
+  for (const siblingKey of siblingCandidates) {
+    if (siblingKey === identity.setKey) continue;
+    const { byNumber } = io.getCellIndex(cell.year, siblingKey);
+    const hits = rungLookup(byNumber, cardNumber, identity.isAuto, identity.printRun, playerName);
+    const agreeing = hits.find((h) => io.isBacked(h.row) && h.agree);
+    if (agreeing) {
+      return {
+        classification: "KEY-DEFECT-BY-PLAYER",
+        foundUnderSetKey: siblingKey,
+        foundRowId: agreeing.row.id,
+        fromKeyWrongPlayer: fromKeyBackedDisagreeing[0].row.playerName || null,
+      };
+    }
+  }
+  return null;
+}
+
 function resolveDefectOrAcquire(sale, cell, identity, cardNumber, io) {
   const playerName = sale.playerName || "";
+
+  // (1) KEY-DEFECT-BY-PLAYER runs FIRST, before the ordinary namesAgree-gated
+  // sibling search below (which would simply find nothing and fall through
+  // to ACQUIRE for this exact shape) -- see the function's own header.
+  const byPlayer = checkKeyDefectByPlayer(sale, cell, identity, cardNumber, io);
+  if (byPlayer) return byPlayer;
 
   // (a) SIBLING SETKEYS, in priority order: the year+setName-aware corrector
   // first (it is the one place R75-shaped splits like Mega Box actually
@@ -379,7 +496,40 @@ function resolveDefectOrAcquire(sale, cell, identity, cardNumber, io) {
  * because those three are exactly the buckets that used to go straight into
  * the worklist without ever checking a sibling key/spelling/isAuto value.
  */
+/**
+ * (2) SPLIT-IDENTITY (prizm_ss_trace / bc26_mojo_trace, 2026-09-27). A sale
+ * whose stored `cardId` and `hobbyiqCardId` name DIFFERENT hiq: slugs, where
+ * the hobbyiqCardId side IS checklist-backed, is not an unbacked sale at
+ * all -- it is `lib/split-identity.cjs`'s HIQ_SPLIT shape: the row is read
+ * into TWO cards' pools (exactPoolReader.ts matches on either field), and
+ * the fix is a pool-split repair, never a checklist acquisition. Reusing
+ * `classifyIdentity` (not re-deriving the predicate) keeps this worklist's
+ * reading identical to the census/rematch/invariant-auditor's own verdict
+ * on the SAME row. Checked FIRST, before deriveIdentity even runs, because
+ * the split is a property of the row's OWN two stored fields -- it needs no
+ * title re-parse to detect, and a re-derivation could otherwise mask it by
+ * quietly landing on yet a third slug.
+ */
+function checkSplitIdentity(row, io) {
+  const c = classifyIdentity(row);
+  if (c.klass !== HIQ_SPLIT) return null;
+  const hiqRow = io.pointReadById ? io.pointReadById(row.hobbyiqCardId) : null;
+  if (!isBacked(hiqRow)) return null; // damage exists, but not "the true card is backed" -- let ordinary classification proceed
+  return {
+    classification: "SPLIT-IDENTITY",
+    cardId: c.cardId,
+    hobbyiqCardId: c.hobbyiqCardId,
+    segments: c.segments,
+    foundRowId: hiqRow.id,
+  };
+}
+
 function classifyOne(row, cell, deps, io) {
+  const split = checkSplitIdentity(row, io);
+  if (split) {
+    return { name: "SPLIT-IDENTITY", detail: split, classification: "SPLIT-IDENTITY" };
+  }
+
   const stored = storedIdentity(row, deps);
   let der;
   try {
@@ -390,6 +540,25 @@ function classifyOne(row, cell, deps, io) {
 
   if (!der.ok) {
     return { name: "NO-NUMBER", detail: { reasons: der.reasons }, classification: "NO-NUMBER" };
+  }
+
+  // (4) AUTO-ONLY INSERT. `der.autoByCardNumber` is computed by
+  // deriveIdentity (via deps.isCardNumberAutoSubset, which already consults
+  // dist's SCOPED_AUTO_ONLY_PREFIXES table -- e.g. 2025 panini-prizm's
+  // "SS-" Sensational Signatures rows -- AND the always-auto cardNumber
+  // regex), but the field was silently discarded here before this fix. A
+  // sale whose OWN cardNumber is auto-only by that provenance, yet is
+  // stored/derived as non-auto, is a mislabel the number itself proves --
+  // no backed row at the flipped auto value is required first (unlike the
+  // ordinary (c) ISAUTO-DEFECT check in resolveDefectOrAcquire, which needs
+  // a catalog hit to confirm). Checked right after der.ok so it fires
+  // before the STALE/slug-redirect branch below ever runs.
+  if (der.autoByCardNumber === true && der.identity.isAuto !== true) {
+    return {
+      name: "ISAUTO-DEFECT-AUTO-ONLY-INSERT",
+      detail: { identity: der.identity, cardNumber: der.identity.cardNumber, reason: "cardNumber prefix is auto-only" },
+      classification: "ISAUTO-DEFECT",
+    };
   }
 
   // CF-THE-SLUG-IS-THE-DESTINATION, NOT identity.setKey (second review round,
@@ -477,6 +646,38 @@ function classifyOne(row, cell, deps, io) {
     };
   }
 
+  // (6) DERIVED-ONLY (bc26_mojo_trace, C:/tmp/bc26_mojo_trace_1530/RESULT.md,
+  // 2026-09-27). A row can exist at the EXACT rung (same cardNumber/auto/
+  // printRun/parallel) and still not be `isBacked` -- `isBacked` requires a
+  // STRICT checklist source, and a row minted by `ingest-auto-seed` or any
+  // other non-checklist writer is a real card the parser filled in with a
+  // guess, not proof it is on the books. The OLD code had no way to tell
+  // "a placeholder row is here" from "nothing is here at all" -- both fell
+  // through to the SAME sibling/spelling/isAuto search and, on that
+  // search's own failure, both landed on plain ACQUIRE, discarding the
+  // fact that SOME row (however weakly sourced) already occupies this
+  // exact address. `io.catalogAuthorityOf` (dist's catalogAuthority.service,
+  // the SAME function every other authority-rank decision in this repo
+  // uses) draws the checklist/derived/vendor/unknown line; "derived" here
+  // means acquisition ADOPTS/upgrades this row with a real checklist
+  // source, rather than treating it as either present (hides the gap) or
+  // absent (ignores the placeholder). OPTIONAL: a caller without
+  // `io.catalogAuthorityOf` wired just never reaches this branch (the same
+  // hits array falls through to RUNG-MISSING/ACQUIRE exactly as before).
+  const exactRungAnySource = hits.find(
+    (h) => h.autoMatch && h.prMatch && normParallel(h.row.parallel) === normParallel(destinationIdentity.parallel),
+  );
+  if (exactRungAnySource && io.catalogAuthorityOf) {
+    const authority = io.catalogAuthorityOf(exactRungAnySource.row.source);
+    if (authority !== "checklist") {
+      return {
+        name: "DERIVED-ONLY",
+        detail: { identity: destinationIdentity, cardNumber, id: exactRungAnySource.row.id, authority },
+        classification: "DERIVED-ONLY",
+      };
+    }
+  }
+
   const anyNumberPresent = hits.length > 0;
   if (anyNumberPresent) {
     const resolution = resolveDefectOrAcquire(row, cell, destinationIdentity, cardNumber, io);
@@ -497,13 +698,24 @@ function classifyOne(row, cell, deps, io) {
 }
 
 /** The task's worklist-bound bucket set — everything else (STALE, NO-NUMBER,
- *  BACKED-DERIVED-ONLY) is reported but excluded from the acquisition rows. */
-const WORKLIST_BUCKETS = new Set(["STALE-NO-ROW", "RUNG-MISSING", "CARD-MISSING"]);
+ *  BACKED-DERIVED-ONLY) is reported but excluded from the acquisition rows.
+ *  ISAUTO-DEFECT-AUTO-ONLY-INSERT (v2 defect 4) carries a destination
+ *  identity exactly like RUNG-MISSING/CARD-MISSING, so it aggregates the
+ *  same way. SPLIT-IDENTITY (v2 defect 2) is intentionally NOT in this set —
+ *  it is a per-ROW pool-split finding, not a destination-identity bucket,
+ *  and is counted separately by foldIntoAggregate below. */
+const WORKLIST_BUCKETS = new Set(["STALE-NO-ROW", "RUNG-MISSING", "CARD-MISSING", "ISAUTO-DEFECT-AUTO-ONLY-INSERT", "DERIVED-ONLY"]);
 
 /** Of the worklist-bound buckets, only classification ACQUIRE should ever
- *  reach a builder's ranked worklist — KEY-DEFECT/SPELLING/ISAUTO-DEFECT are
- *  routing/spelling/flag defects the rematch/repoint lanes fix, not a gap. */
+ *  reach a builder's ranked worklist — KEY-DEFECT/SPELLING/ISAUTO-DEFECT/
+ *  KEY-DEFECT-BY-PLAYER/DERIVED-ONLY are routing/spelling/flag/upgrade
+ *  defects the rematch/repoint/adoption lanes fix, not a gap. */
 const ACQUIRE_CLASSIFICATION = "ACQUIRE";
+
+/** SPLIT-IDENTITY findings (v2 defect 2) counted separately from every
+ *  destination-identity bucket — see foldIntoAggregate's own branch and
+ *  WORKLIST_BUCKETS' header comment for why. */
+const SPLIT_IDENTITY_CLASSIFICATION = "SPLIT-IDENTITY";
 
 /**
  * Aggregation key for one worklist-bound classification: destination
@@ -534,6 +746,35 @@ function aggregationKey(sport, year, setKey, prefix, parallel, isAuto, printRun,
  * exampleTitles:[]}>. Mutates and returns `agg`.
  */
 function foldIntoAggregate(agg, sport, year, sale, classification) {
+  // SPLIT-IDENTITY (v2 defect 2): a per-ROW pool-split finding, not a
+  // destination-identity bucket -- counted into its OWN dedicated key
+  // (sport|year|SPLIT-IDENTITY) rather than aggregationKey's normal
+  // (setKey, prefix, parallel, isAuto, printRun) shape, which this
+  // classification's detail object never carries (it names cardId/
+  // hobbyiqCardId/segments, not a destination rung). Kept in the SAME `agg`
+  // map (not a separate structure) so rankAggregate/rankWithinClassification
+  // need no new code path -- it just ranks alongside everything else under
+  // its own classification group.
+  if (classification.name === "SPLIT-IDENTITY") {
+    const key = `split-identity|${String(sport || "").toLowerCase()}|${Number(year)}`;
+    if (!agg.has(key)) {
+      agg.set(key, {
+        sport, year, setKey: null, prefix: "base", parallel: "Base", isAuto: false, printRun: null,
+        classification: SPLIT_IDENTITY_CLASSIFICATION,
+        classificationDetail: null,
+        salesCount: 0,
+        cardNumbers: new Set(),
+        exampleTitles: [],
+        buckets: {},
+      });
+    }
+    const entry = agg.get(key);
+    entry.salesCount += 1;
+    if (entry.exampleTitles.length < 5 && sale && sale.title) entry.exampleTitles.push(sale.title);
+    entry.buckets["SPLIT-IDENTITY"] = (entry.buckets["SPLIT-IDENTITY"] || 0) + 1;
+    return agg;
+  }
+
   if (!WORKLIST_BUCKETS.has(classification.name)) return agg;
   const identity = (classification.detail && classification.detail.identity) || {};
   const setKey = identity.setKey || null;
@@ -553,13 +794,20 @@ function foldIntoAggregate(agg, sport, year, sale, classification) {
   const isAuto = identity.isAuto === true;
   const printRun = identity.printRun ?? null;
   const cls = classification.classification || ACQUIRE_CLASSIFICATION;
-  // Human-readable qualifier for KEY-DEFECT(<setKey>) / SPELLING(<spelling>);
-  // ISAUTO-DEFECT / ACQUIRE / STALE carry none.
+  // Human-readable qualifier for KEY-DEFECT(<setKey>) / SPELLING(<spelling>) /
+  // KEY-DEFECT-BY-PLAYER(<setKey> + wrong-player name) / DERIVED-ONLY
+  // (<authority>); ISAUTO-DEFECT / ACQUIRE / STALE carry none.
   const classificationDetail = cls === "KEY-DEFECT"
     ? (classification.detail && classification.detail.foundUnderSetKey) || null
     : cls === "SPELLING"
       ? (classification.detail && classification.detail.foundSpelling) || null
-      : null;
+      : cls === "KEY-DEFECT-BY-PLAYER"
+        ? (classification.detail
+            ? `${classification.detail.foundUnderSetKey || "?"} (from-key row: ${classification.detail.fromKeyWrongPlayer || "?"})`
+            : null)
+        : cls === "DERIVED-ONLY"
+          ? (classification.detail && classification.detail.authority) || null
+          : null;
 
   const key = aggregationKey(sport, year, setKey, prefix, parallel, isAuto, printRun, cls);
   if (!agg.has(key)) {
@@ -646,6 +894,63 @@ function guessSourceUrls(sport, year, setKey) {
   return urls;
 }
 
+/**
+ * (5) UNREGISTERED-PRODUCT (topps24_trace, C:/tmp/topps24_trace_1530/
+ * RESULT.md, 2026-09-27): "titles containing a product word with no setKey
+ * -- e.g. 'Living' before #2444 -- report the top 20 tokens with sales
+ * counts. This is where real acquisition gaps live." Pure, testable: a
+ * caller supplies the ACQUIRE-bound sales this run already classified plus
+ * the destination setKey each one landed on, and this function finds every
+ * title WORD from a closed, product-name-shaped candidate list that is
+ * PRESENT in the title but ABSENT from the destination setKey's own words
+ * -- i.e. the parser filed the sale under a setKey whose name never
+ * mentions this word, so whatever product the word names never got its own
+ * key. "Living Set" is the exact motivating case: `inferSetKeyFromTitle`
+ * resolves it to bare `topps`, but "living"/"set" appear nowhere in
+ * "topps"'s own word set.
+ *
+ * The candidate word list is intentionally NOT "any word in the title" --
+ * common words (Baseball, Card, PSA, grade numbers, player names) would
+ * drown a real signal in noise. It is the closed set of product-shaped
+ * words this program has actual evidence for (extended by any caller via
+ * `extraTokens`), mirroring name-agreement.cjs's own closed-vocabulary
+ * discipline rather than a generic NLP heuristic.
+ */
+const PRODUCT_TOKEN_CANDIDATES = [
+  "living", "living set", "heritage", "archives", "stadium club", "gallery",
+  "gypsy queen", "allen & ginter", "big league", "fire", "opening day",
+  "chrome update", "chrome black", "chrome sapphire", "finest", "museum",
+  "definitive", "diamond kings", "national treasures", "flawless", "immaculate",
+  "obsidian", "select", "spectra", "mosaic", "donruss", "contenders",
+  "chronicles", "phoenix", "absolute", "playbook", "leaf",
+];
+
+function collectUnregisteredProductTokens(acquireSales, extraTokens = []) {
+  const candidates = [...PRODUCT_TOKEN_CANDIDATES, ...extraTokens].map((t) => t.toLowerCase());
+  const byToken = new Map(); // token -> { salesCount, exampleTitle }
+  for (const sale of acquireSales || []) {
+    const title = String(sale.title || "");
+    const titleLower = title.toLowerCase();
+    const setKeyWords = new Set(String(sale.setKey || "").toLowerCase().split(/[-\s]+/).filter(Boolean));
+    for (const token of candidates) {
+      const tokenWords = token.split(/\s+/).filter(Boolean);
+      // The token itself must appear as a substring/phrase in the title...
+      if (!titleLower.includes(token)) continue;
+      // ...AND none of the token's own words appear in the destination
+      // setKey's own words -- if even one does, the product already has a
+      // key that names this word (e.g. "chrome" in "topps-chrome"), so it
+      // is registered, not a gap.
+      if (tokenWords.some((w) => setKeyWords.has(w))) continue;
+      if (!byToken.has(token)) byToken.set(token, { salesCount: 0, exampleTitle: title });
+      const entry = byToken.get(token);
+      entry.salesCount += 1;
+    }
+  }
+  return [...byToken.entries()]
+    .map(([token, v]) => ({ token, salesCount: v.salesCount, exampleTitle: v.exampleTitle }))
+    .sort((a, b) => b.salesCount - a.salesCount);
+}
+
 /** Per-cell summary: sampled fraction, bucket shares, the STALE-with-row
  *  count (the rematch lever) reported SEPARATELY from the acquisition lever,
  *  and — PR #2439 review — the acquisition lever's OWN breakdown into
@@ -697,15 +1002,20 @@ module.exports = {
   isBacked,
   rungLookup,
   resolveSiblingSetKeyCandidates,
+  checkKeyDefectByPlayer,
+  checkSplitIdentity,
   resolveDefectOrAcquire,
   classifyOne,
   WORKLIST_BUCKETS,
   ACQUIRE_CLASSIFICATION,
+  SPLIT_IDENTITY_CLASSIFICATION,
   aggregationKey,
   foldIntoAggregate,
   rankAggregate,
   rankWithinClassification,
   guessSourceUrls,
+  collectUnregisteredProductTokens,
+  PRODUCT_TOKEN_CANDIDATES,
   summarizeCell,
   writeOutputs,
 };
@@ -770,6 +1080,10 @@ async function main() {
   const guard = d(["portfolioiq", "slugGuard.service.js"]);
   const pvs = d(["portfolioiq", "persistVendorSalesToPool.service.js"]);
   const slugRe = d(["portfolioiq", "slugRederivation.service.js"]);
+  // v2 defect 6 (DERIVED-ONLY): the SAME authority classifier every other
+  // checklist/derived/vendor/unknown decision in this repo uses, never a
+  // re-guessed rule -- see classifyOne's own DERIVED-ONLY branch.
+  const catAuth = d(["catalog", "catalogAuthority.service.js"]);
 
   const deps = {
     parseListingIdentity: pti.parseListingIdentity,
@@ -881,6 +1195,35 @@ async function main() {
     return byId ? (byId.get(id) || null) : null;
   }
 
+  // v2 defect 3 (PAGINATION, C:/tmp/idxrepro_2123/support-package/
+  // SUPPORT-PACKAGE.md): the confirmed root cause elsewhere in this repo was
+  // a manual `if (resources.length === 0) break` loop mistaking an empty
+  // INTERMEDIATE page of a cross-partition query for end-of-results (Cosmos
+  // routinely returns several empty pages before a data-bearing one; only
+  // `hasMoreResults() === false` means done). This script's own cell loads
+  // already drive off `while (it.hasMoreResults())` (never item-count), and
+  // `pointReadById` above is an in-memory CACHE lookup, not a live query, so
+  // neither had this bug. `pointReadExact` is the CORRECT tool this repo's
+  // fixed investigation names for "does this ONE id exist": a true Cosmos
+  // point read (`item(id, pk).read()`, pk=/cardId, cost ~1 RU, no fan-out,
+  // no pagination loop of any kind to get wrong) rather than a query. Used
+  // as a live-verification fallback when the in-memory cache has not (yet)
+  // loaded this id's cell -- e.g. a cross-sport/cross-cell id the driver
+  // never warmed -- so an absent cache entry is never silently read as
+  // "does not exist" when a single point read would answer for certain.
+  async function pointReadExact(id) {
+    if (!id || !String(id).startsWith("hiq:")) return null;
+    try {
+      const { resource } = await retry(() => cat.item(id, id).read());
+      return resource || null;
+    } catch (e) {
+      // 404 is a real, expected "does not exist" answer, not a failure to
+      // retry away -- @azure/cosmos throws with e.code === 404 for a miss.
+      if (e && (e.code === 404 || e.statusCode === 404)) return null;
+      throw e;
+    }
+  }
+
   // PR #2439 review, part (a)'s widest net: a bounded cross-setKey search by
   // (sport, year, cardNumber) across EVERY setKey in the sport — not just the
   // cell's own known siblings — for a product rename the vocabulary tables
@@ -923,6 +1266,7 @@ async function main() {
 
   const io = {
     pointReadById,
+    pointReadExact,
     getCellIndex,
     isBacked,
     resolveSetKeyForSlug: resolveSetKeyForSlugDep,
@@ -930,6 +1274,9 @@ async function main() {
     productAncestry: productAncestryDep,
     productRefinementsOf: productRefinementsOfDep,
     crossSetKeyProbe: crossSetKeyProbeSync,
+    // v2 defect 6 (DERIVED-ONLY): the same checklist/derived/vendor/unknown
+    // classifier every other authority decision in this repo uses.
+    catalogAuthorityOf: catAuth.catalogAuthorityOf,
   };
 
   // PR #2439 review, defect 1 (2026-09-26): getCellIndex only ever reads the
@@ -980,6 +1327,7 @@ async function main() {
 
   const perCellSummaries = {};
   const aggregate = new Map();
+  const acquireSalesForTokenScan = []; // v2 defect 5: {title, setKey}[] for collectUnregisteredProductTokens
 
   for (const cell of cells) {
     console.log(`\n=== ${cell.sport} ${cell.year} ${cell.setKey} ===`);
@@ -1087,6 +1435,15 @@ async function main() {
         const cls = classification.classification || "ACQUIRE";
         cellStats.classificationCounts[cls] = (cellStats.classificationCounts[cls] || 0) + 1;
         foldIntoAggregate(aggregate, cell.sport, cell.year, row, classification);
+        // v2 defect 5 (UNREGISTERED-PRODUCT): collect every ACQUIRE-bound
+        // sale's title + destination setKey for collectUnregisteredProductTokens
+        // below -- see that function's own header for why this is scoped to
+        // ACQUIRE only (a KEY-DEFECT/SPELLING/etc. sale already has a home,
+        // it is not evidence of an unregistered product).
+        if (cls === "ACQUIRE" && row.title) {
+          const dest = (classification.detail && classification.detail.identity) || {};
+          acquireSalesForTokenScan.push({ title: row.title, setKey: dest.setKey || cell.setKey });
+        }
       }
       console.log(`  page ${pageNum} (RU ${Math.round(page.requestCharge || 0)}): sampled=${f(sampled)} unbacked=${f(cellStats.unbacked)}`);
     }
@@ -1095,8 +1452,9 @@ async function main() {
   }
 
   const ranked = rankAggregate(aggregate).map((r) => ({ ...r, sourceUrls: guessSourceUrls(r.sport, r.year, r.setKey) }));
+  const unregisteredTokens = collectUnregisteredProductTokens(acquireSalesForTokenScan);
 
-  writeOutputs(OUT_DIR, ranked, perCellSummaries, { sport: SPORT, cells, sample: SAMPLE });
+  writeOutputs(OUT_DIR, ranked, perCellSummaries, { sport: SPORT, cells, sample: SAMPLE, unregisteredTokens });
   console.log(`\nWrote worklist.csv + WORKLIST.md to ${OUT_DIR}`);
 }
 
@@ -1147,7 +1505,16 @@ function writeOutputs(outDir, ranked, perCellSummaries, meta) {
   fs.writeFileSync(path.join(outDir, "worklist.csv"), csvLines.join("\n") + "\n");
 
   const acquireRows = withRanks.filter((r) => r.classification === ACQUIRE_CLASSIFICATION);
+  const derivedOnlyRows = withRanks.filter((r) => r.classification === "DERIVED-ONLY");
   const defectRows = withRanks.filter((r) => r.classification !== ACQUIRE_CLASSIFICATION);
+
+  // Class totals (v2: "class totals incl. the new classes" -- every
+  // classification this run produced, by sales count, computed straight off
+  // `withRanks` so it can never drift from what the CSV/tables above show.
+  const classTotals = new Map();
+  for (const r of withRanks) {
+    classTotals.set(r.classification, (classTotals.get(r.classification) || 0) + r.salesCount);
+  }
 
   // WORKLIST.md
   const md = [];
@@ -1157,9 +1524,50 @@ function writeOutputs(outDir, ranked, perCellSummaries, meta) {
   md.push("");
   md.push("Every source URL below is a GUESS from a naming pattern (checklistinsider `/<year>-<product>-<sport>-checklist`, baseballcardpedia `index.php/<Year>_<Product>`, cardboardconnection `/<year>-<product>-<sport>-cards`) — **verify before acting**, none of these were fetched by this script.");
   md.push("");
-  md.push("**Builders: only chase the ACQUIRE table below.** KEY-DEFECT / SPELLING / ISAUTO-DEFECT rows are cards that already exist in the catalog under a sibling key, a different parallel spelling, or the other auto flag — those are a rematch/repoint job, not an acquisition (PR #2439 review).");
+  md.push("**Builders: only chase the ACQUIRE table below.** KEY-DEFECT / KEY-DEFECT-BY-PLAYER / SPELLING / ISAUTO-DEFECT / SPLIT-IDENTITY rows are cards that already exist in the catalog under a sibling key, a different parallel spelling, the other auto flag, or a split pool — those are a rematch/repoint job, not an acquisition. DERIVED-ONLY rows already have a row at the exact address but it is not checklist-backed — acquisition ADOPTS/upgrades those, distinct from a genuine no-row gap (v2 fixes, 2026-09-27).");
   md.push("");
   const MD_TOP_N = Number(process.env.WORKLIST_MD_TOP_N || 200);
+
+  md.push("## Class totals (sales, every classification this run produced)");
+  md.push("");
+  md.push("| Classification | Sales |");
+  md.push("|---|---|");
+  for (const [cls, sales] of [...classTotals.entries()].sort((a, b) => b[1] - a[1])) {
+    md.push(`| ${cls} | ${f(sales)} |`);
+  }
+  md.push("");
+
+  md.push(`## Top 5 ACQUIRE rows`);
+  md.push("");
+  md.push("| Rank | Destination | Sales | Example title |");
+  md.push("|---|---|---|---|");
+  acquireRows.slice(0, 5).forEach((r) => {
+    const dest = `${r.sport}/${r.year}/${r.setKey}/${r.prefix}/${r.parallel}/${r.isAuto ? "auto" : "non-auto"}/${r.printRun ?? "-"}`;
+    md.push(`| ${r.rankWithinClassification} | ${dest} | ${f(r.salesCount)} | ${mdEscape(r.exampleTitles[0] || "")} |`);
+  });
+  md.push("");
+
+  md.push(`## Top 5 DERIVED-ONLY rows (row exists at the exact address, but not checklist-backed — acquisition ADOPTS these)`);
+  md.push("");
+  md.push("| Rank | Destination | Sales | Found authority | Example title |");
+  md.push("|---|---|---|---|---|");
+  derivedOnlyRows.slice(0, 5).forEach((r) => {
+    const dest = `${r.sport}/${r.year}/${r.setKey}/${r.prefix}/${r.parallel}/${r.isAuto ? "auto" : "non-auto"}/${r.printRun ?? "-"}`;
+    md.push(`| ${r.rankWithinClassification} | ${dest} | ${f(r.salesCount)} | ${mdEscape(r.classificationDetail || "-")} | ${mdEscape(r.exampleTitles[0] || "")} |`);
+  });
+  if (!derivedOnlyRows.length) md.push("| - | (none found this run) | - | - | - |");
+  md.push("");
+
+  if (meta.unregisteredTokens && meta.unregisteredTokens.length) {
+    md.push(`## Top 20 UNREGISTERED-PRODUCT tokens (title carries a product word with NO setKey resolution — v2 defect 5; this is where real acquisition gaps live)`);
+    md.push("");
+    md.push("| Rank | Token | Sales | Example title |");
+    md.push("|---|---|---|---|");
+    meta.unregisteredTokens.slice(0, 20).forEach((t, i) => {
+      md.push(`| ${i + 1} | ${mdEscape(t.token)} | ${f(t.salesCount)} | ${mdEscape(t.exampleTitle || "")} |`);
+    });
+    md.push("");
+  }
 
   const shownAcquire = acquireRows.slice(0, MD_TOP_N);
   md.push(`## ACQUIRE — ranked worklist (top ${f(shownAcquire.length)} of ${f(acquireRows.length)} genuinely-absent destination buckets, by sales count, cumulative share within ACQUIRE)`);
@@ -1235,7 +1643,15 @@ function rankWithinClassification(ranked) {
   }
   // Stable overall ordering: ACQUIRE first, then by rank within its group,
   // then the defect classifications in a fixed order.
-  const order = { ACQUIRE: 0, "KEY-DEFECT": 1, SPELLING: 2, "ISAUTO-DEFECT": 3 };
+  const order = {
+    ACQUIRE: 0,
+    "DERIVED-ONLY": 1,
+    "KEY-DEFECT": 2,
+    "KEY-DEFECT-BY-PLAYER": 3,
+    SPELLING: 4,
+    "ISAUTO-DEFECT": 5,
+    "SPLIT-IDENTITY": 6,
+  };
   out.sort((a, b) => {
     const ao = order[a.classification] ?? 9;
     const bo = order[b.classification] ?? 9;
