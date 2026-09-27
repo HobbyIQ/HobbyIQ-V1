@@ -1,0 +1,145 @@
+{
+  "_comment": "DRAFT -- CF-A-NOTE-IS-NOT-A-RUNG, extended lane. Census: PANINI baseball 2023-2026 (panini-prizm, panini-select, panini-donruss core; panini-optic/panini-mosaic/panini-chronicles/panini-contenders checked but nearly empty of checklist-grade rows in this year range -- see RESULT.md 'checklist gaps' note) + SuperFractor spelling across the whole topps-chrome family, ALL years found in Cosmos (2001-2026), baseball only. THIS FILE PROPOSES NOTHING FINAL. Every rule below carries `ruling: PENDING`, `rulingDate: null` -- Drew rules each one, not the census. `sources` lists evidence (verbatim site quotes, census row counts, sold_comps dual-checks) -- never a ruling. Twin/duplicate-pool findings that need MOVE/RETIRE machinery (not a simple text-strip) are called out explicitly in each rule's `reason` and in RESULT.md; this lane's schema does not have a 'merge' kind, so those are recorded here as `alias` proposals with a note that the destination id already exists as a separate row (verified by point read) -- Drew's ruling decides whether this becomes a merge/retire dispatch, not a straight alias apply.",
+  "rules": [
+    {
+      "id": "strip-leading-bullet-dash-panini-select-2025",
+      "scope": { "sport": "baseball", "year": 2025, "setKey": "panini-select" },
+      "kind": "strip-note",
+      "pattern": [
+        "^-\\s+(.*)$"
+      ],
+      "ruling": "PENDING",
+      "rulingDate": null,
+      "sources": [
+        "Census: 37 fold-groups, 8,948 rows in panini-select|2025 carry a leading '- ' (bullet-dash) glued onto the front of `parallel`, all and only from source `checklistcenter-2026-08-29` -- e.g. '- Gold Prizms' (300 rows) vs 'Gold Prizms' (98 rows) under the SAME id slug `gold-prizms` (the id already normalizes correctly; only the `parallel` text field carries the artifact -- a HEAL case, not a MOVE, per rewrite-parallel-names.cjs's four-outcome model).",
+        "WebSearch 2026-09-27 (checklistinsider.com/cardboardconnection.com titles returned by search, not independently refetched this round): 2025 Panini Select Baseball parallel list includes 'Gold Prizms', 'Red Prizms', 'Tiger Prizms', 'Tie-Dye Prizms', 'Silver Wave Prizms', 'Orange Pulsar Prizms', 'Ice Prizms', 'Gold Flash Prizms', 'Gold Pulsar Prizms', 'Gold Ice Prizms' -- none with a leading dash, consistent with the dash being a checklistcenter list-scrape artifact (a markdown/HTML bullet character), not part of the stated name.",
+        "sold_comps dual-check on 2 sample ids (hiq:baseball:2025:panini-select:66:red-prizms:no-auto:num-149, hiq:baseball:2025:panini-select:1:tiger-prizms:no-auto): salesCount=0 for both -- low blast radius on the sampled ids."
+      ],
+      "reason": "leading bullet-dash artifact, single source (checklistcenter-2026-08-29), 37 fold-groups / 8,948 rows, panini-select 2025 only"
+    },
+    {
+      "id": "strip-trailing-empty-parens-panini-prizm-2024",
+      "scope": { "sport": "baseball", "year": 2024, "setKey": "panini-prizm" },
+      "kind": "strip-note",
+      "pattern": [
+        "^(.*?)\\s*\\(\\)\\s*$"
+      ],
+      "ruling": "PENDING",
+      "rulingDate": null,
+      "sources": [
+        "Census: 176 rows across 2 fold-groups (Gold Vinyl Prizm, Black Finite Prizm) carry a trailing empty parenthetical '()' -- same shape as the 09-26 census's SuperFractor '()' artifact (C:/tmp/spellcensus_2152/RESULT.md Step 1, topps-chrome 2025 SuperFractor () cluster, 583 rows). Sourced from `baseballcardpedia-ladders-*` and `bccp`/`bccp-graded` scrapes -- a 'ladders' page-render pattern that leaves an empty trailing paren when no print-run text was captured for the slot.",
+        "Both '()'-suffixed and clean spellings share the SAME id slug (gold-vinyl-prizm, black-finite-prizm) -- HEAL case, id already correct."
+      ],
+      "reason": "trailing empty-parens render artifact, baseballcardpedia-ladders/bccp sources, 176 rows, panini-prizm 2024"
+    },
+    {
+      "id": "alias-die-cut-hyphenation-panini-donruss-2025",
+      "scope": { "sport": "baseball", "year": 2025, "setKey": "panini-donruss" },
+      "kind": "alias",
+      "from": "Gold Die Cut",
+      "to": "Gold Die-Cut",
+      "ruling": "PENDING",
+      "rulingDate": null,
+      "sources": [
+        "Census: panini-donruss 2025 has BOTH 'Silver Die-Cut' (100 rows, hyphenated) and 'Silver Die Cut' (100 rows, spaced) under the fold-key silverdiecut; AND both 'Gold Die Cut' (100 rows) and 'Gold Die-Cut' (100 rows) under golddiecut -- same source (checklistinsider-2026-08-27) disagreeing on hyphenation between the two colors within the SAME product/year, which is itself suspicious (a single source should be internally consistent).",
+        "2026 panini-donruss (same product, next year) shows ONLY the spaced form 'Gold Die Cut' (200 rows) / 'Silver Die Cut' (200 rows) -- no hyphenated variant at all -- weak evidence the spaced form may be the more stable spelling, but this is a YEAR-OVER-YEAR comparison, not an independent source confirmation for 2025 specifically; not independently verified against cardboardconnection/checklistinsider live pages this round (time-boxed)."
+      ],
+      "reason": "Die-Cut hyphenation disagreement within one source, one product/year, 200 rows across 2 colors; 2026 same product uses only the spaced form (400 rows, not counted toward this rule's scope)"
+    },
+    {
+      "id": "alias-black-snakeskin-pulsar-prizms-panini-select-2023",
+      "scope": { "sport": "baseball", "year": 2023, "setKey": "panini-select" },
+      "kind": "alias",
+      "from": "Black Snake Skin Pulsar Prizms",
+      "to": "Black Snakeskin Pulsar Prizms",
+      "ruling": "PENDING",
+      "rulingDate": null,
+      "sources": [
+        "Census + twin-check (point read): 'Black Snake Skin Pulsar Prizms' (300 rows, source checklistcenter-2026-08-29, id slug black-snake-skin-pulsar-prizms) and 'Black Snakeskin Pulsar Prizms' (300 rows, source beckett-scraped-2026-09-04, id slug black-snakeskin-pulsar-prizm, singular) are CONFIRMED SEPARATE catalog rows (point read verified both ids exist independently) for what appears to be the SAME rung on the SAME cards -- e.g. card 34 (checklistcenter id) and card 5 (beckett id) both carry printRun:1 in this product. THIS IS A TWIN/DUPLICATE-POOL CANDIDATE, not a simple text fix -- a fold here needs the MOVE/RETIRE machinery (dual sold_comps check per id) before any merge, per 'one card, one row, one pool' doctrine. Flagged for Drew's ruling on which spelling is canonical AND on the merge mechanics, not just the spelling."
+      ],
+      "reason": "TWIN CANDIDATE: two separate catalog rows (300 + 300 = up to 600 rows if the whole product mirrors this split) for what may be the same rung, verified by point read; needs Drew's ruling + a full per-card twin audit before any merge dispatch"
+    },
+    {
+      "id": "alias-green-white-purple-prizms-panini-select-2023",
+      "scope": { "sport": "baseball", "year": 2023, "setKey": "panini-select" },
+      "kind": "alias",
+      "from": "Green White Purple Prizms",
+      "to": "Green/White/Purple Prizms",
+      "ruling": "PENDING",
+      "rulingDate": null,
+      "sources": [
+        "Census + twin-check (point read): 'Green White Purple Prizms' (300 rows, checklistcenter-2026-08-29, id slug green-white-purple-prizms) and 'Green/White/Purple Prizms' (300 rows, beckett-scraped-2026-09-04, id slug greenwhitepurple-prizm, singular) are CONFIRMED SEPARATE catalog rows -- e.g. card 5 (checklistcenter id, printRun 199) and card 36 (beckett id, printRun 199) both carry the same printRun for what looks like the same rung. TWIN/DUPLICATE-POOL CANDIDATE, same shape as Black Snakeskin above and the textid census's flagged 'Red/Yellow' vs 'redyellow' mismatch (C:/tmp/textid_2200_out/RESULT.md, donruss-optic 2018).",
+        "TCA memory doctrine 'Ratio similarity is not identity' and 'Collision is not a duplicate' apply here -- this census only confirms the TWO ROWS EXIST with matching printRun; it does not itself confirm every card number pairs up 1:1 across the whole product, which Drew's ruling should require before any merge."
+      ],
+      "reason": "TWIN CANDIDATE: slash-form vs spelled-out-with-spaces compound color name, two separate catalog rows verified by point read, 600 rows total in the cluster"
+    },
+    {
+      "id": "alias-teal-white-pink-prizms-panini-select-2023",
+      "scope": { "sport": "baseball", "year": 2023, "setKey": "panini-select" },
+      "kind": "alias",
+      "from": "Teal White Pink Prizms",
+      "to": "Teal/White/Pink Prizms",
+      "ruling": "PENDING",
+      "rulingDate": null,
+      "sources": [
+        "Census + twin-check (point read): 'Teal White Pink Prizms' (200 rows, checklistcenter-2026-08-29, id teal-white-pink-prizms) and 'Teal/White/Pink Prizms' (200 rows, beckett-scraped-2026-09-04, id tealwhitepink-prizm) both carry printRun:49 -- same shape as Green/White/Purple and Black Snakeskin above, all three colour-compound TWIN candidates in the SAME product/year (panini-select 2023), strongly suggesting a systemic checklistcenter-vs-beckett naming-convention split across this whole product rather than three independent coincidences."
+      ],
+      "reason": "TWIN CANDIDATE, same systemic pattern as the other two 2023 panini-select colour-compound pairs; 400 rows"
+    },
+    {
+      "id": "flag-n-cards-ambiguous-print-run-panini-2023-2024",
+      "scope": { "sport": "baseball", "years": [2023, 2024], "setKeyPrefix": "panini", "setKeys": ["panini-prizm", "panini-select", "panini-donruss"] },
+      "kind": "strip-note",
+      "pattern": [
+        "^(\\d[\\d,]{0,4})\\s+Cards?\\.?$"
+      ],
+      "ruling": "PENDING",
+      "rulingDate": null,
+      "sources": [
+        "Census: 2,394 rows across panini-prizm|2023 (913), panini-select|2023 (423), panini-select|2024 (75), panini-donruss|2023 (883), panini-donruss|2024 (100) carry a `parallel` value that is ENTIRELY a bare count + 'Cards' (e.g. '77 Cards', '63 Cards', '10 Cards') with NOTHING else in the string -- unlike every other print-run leak in this lane's prior rules, stripping the count here leaves NO rung name at all (rung-name-hygiene.cjs's own PRINT_RUN_WORDS_RE matches these and returns suggestedName: null).",
+        "NOT RESOLVED THIS ROUND: WebSearch for the 2023 Donruss 'Rated Rookies' / subset-size hypothesis did not confirm or deny what these rows actually represent -- panini-donruss and this exact shape are ABSENT from backend/data/checklist-parallel-names.json entirely (baseball|2023|panini-donruss is not a corpus key), so there is no cached checklist ground truth to check against locally. This may be a subset/insert-set card-count caption that got written into the parallel field instead of an insert name, or a genuinely un-named numbered parallel whose real name a scraper failed to capture -- either way this lane refuses to invent a name with nothing stated, matching the 09-26 census's handling of the topps 2024 Aqua Series One/Two breakdown-string case (flagged for Drew, not auto-fixable)."
+      ],
+      "reason": "AMBIGUOUS -- 2,394 rows where the entire parallel value is a bare count+'Cards' with no rung name at all; needs Drew's source lookup before any rule, not a text-strip candidate as currently understood"
+    },
+    {
+      "id": "alias-superfractor-singular-vs-plural-topps-chrome-family",
+      "scope": { "sport": "baseball", "setKeyPrefix": "topps-chrome", "setKeys": ["topps-chrome", "bowman-chrome", "bowman-chrome-mega-box", "bowman-chrome-nscc", "bowman-chrome-sapphire", "topps-allen-ginter-chrome", "topps-chrome-black", "topps-chrome-platinum-anniversary", "topps-stadium-club-chrome", "topps-chrome-platinum", "topps-cosmic-chrome", "topps-chrome-update"] },
+      "kind": "alias",
+      "from": "Superfractors",
+      "to": "SuperFractor",
+      "ruling": "PENDING",
+      "rulingDate": null,
+      "sources": [
+        "Census: SuperFractor-shaped rows across topps-chrome + 11 sibling chrome-family setKeys, 2001-2026 (partial: topps-chrome-logofractor, topps-chrome-update-sapphire, topps-chrome-update-series, topps-chrome-sapphire NOT scanned before the run stopped -- see RESULT.md). Fold-key totals: 'superfractor' (singular, any case) = 36,090 rows across 4 raw spellings (SuperFractor 31,472; Superfractor 3,516; 'SuperFractor 1' 662; 'SuperFractor ()' 440); 'superfractors' (plural, any case) = 22,982 rows across 3 raw spellings (SuperFractors 17,662; Superfractors 4,913; 'SuperFractors ()' 407). Both forms coexist EVERY year 2019-2023 checked individually (e.g. 2023: singular 1,127 vs plural 1,974) -- not a one-off, a systemic split.",
+        "Point-read twin-check, topps-chrome 2024 card #20: id ...20:superfractor:no-auto:num-1 EXISTS (parallel='SuperFractor', source=checklistcenter-2026-08-29); id ...20:superfractors:no-auto:num-1 DOES NOT EXIST. Sampled card numbers differ between the singular bucket (20, 46, 141, 253, cea-tt) and the plural bucket (s-25, 112, lgc-47, ac-juf, 34) -- this is NOT the same card duplicated under two ids; different cards in the same product/year carry different spellings, which is a genuine catalog-wide spelling INCONSISTENCY (one rung, split naming across the checklist) rather than a per-card duplicate-pool case like the Panini colour-compound twins above. Direction of the fold (singular vs plural as canonical) is NOT decided here -- 'to' is a placeholder pending Drew's ruling; sources have not been independently checked for which form Topps' own printed packaging/checklist pages use.",
+        "WebSearch 2026-09-27 corroborates the 09-26 census's own finding for 2025 specifically: checklistinsider.com and cardboardconnection.com both surfaced in search results for '2025 Topps Chrome SuperFractor'; cardboardconnection's own indexed prose contains the typo 'SuperFractrors' (confirms the prior census's note that this source is not typo-free), while checklistinsider search snippet uses 'SuperFractor' (singular, cap F) -- consistent with, not independently re-verified beyond, the 09-26 census's RULING-NEEDED status for 2024-2025 specifically; this rule extends the same open question corpus-wide across the whole chrome family and all years, which the 09-26 census did not attempt."
+      ],
+      "reason": "LARGEST FINDING THIS ROUND: 59,072 rows (36,090 singular + 22,982 plural) split across a singular/plural spelling fork, present in every year checked 2019-2023 and likely earlier/later too; direction of fold NOT determined this round -- flagged as the single highest-priority item for Drew's ruling"
+    },
+    {
+      "id": "flag-superfractor-compound-rung-family-not-a-fold-target",
+      "scope": { "sport": "baseball", "setKeyPrefix": "topps-chrome", "setKeys": ["topps-chrome", "bowman-chrome-sapphire", "topps-chrome-black"] },
+      "kind": "strip-note",
+      "pattern": ["^NEVER-MATCHES$"],
+      "ruling": "PENDING",
+      "rulingDate": null,
+      "sources": [
+        "Census: several SuperFractor-containing strings are almost certainly REAL, DISTINCT printed rung names, not spelling variants of the base SuperFractor rung, matching this repo's own CF-A-CHANNEL-WORD-CAN-BE-THE-WHOLE-STATED-NAME doctrine (rung-name-hygiene.cjs) applied to compound insert names: 'Gold SuperFractor' (1,219 rows), 'Mini SuperFractor' (900), 'Padparadscha SuperFractor' + 'Padparadscha SuperFractor 1' (414 combined), 'Minis SuperFractor' (300), 'Autographs SuperFractor' (183), 'Image Variation(s) SuperFractor' (397+162), 'WBC Flag SuperFractor Variation' (100), 'Rookie Design Variations SuperFractor' (71), 'Champions Autograph SuperFractor' (17), 'Chrome Champion Refractors SuperFractor' (16), 'Legends Autographs SuperFractor' (14) -- each names a DIFFERENT insert/parallel family that happens to have its own 1/1 SuperFractor tier, not a misspelling of the base rung. This rule is a DOCUMENTATION-ONLY placeholder (pattern never matches) so the exclusion is recorded in the same file as the fold rule above and Drew's ruling on the singular/plural fold does not accidentally get read as covering these too.",
+        "One entry needs separate handling, NOT documentation: 'Superfractors Refractor' (3,604) + 'Superfractors 11 Refractor' (1,892) + 'Superfractor Refractor' (933) + 'Superfractor 1 Refractor' (327) + 'Superfractors 11 Hobby And Jumbo Only Refractor' (129) -- the '11' and '1' tokens glued into several of these look like a run-on-digit corruption (a stray '1/1' notation losing its slash) rather than a stated rung word, but this was NOT independently confirmed against a live source this round; flagged for Drew, not resolved."
+      ],
+      "reason": "DOCUMENTATION ONLY -- records which SuperFractor-containing strings are excluded from the singular/plural fold above because they are distinct compound rung names, and separately flags the 'Superfractors 11 Refractor' family (6,885 rows) as a possible run-on-digit corruption needing its own look"
+    },
+    {
+      "id": "flag-wiki-paragraph-scraped-into-parallel-topps-chrome-update-2020",
+      "scope": { "sport": "baseball", "year": 2020, "setKey": "topps-chrome-update" },
+      "kind": "strip-note",
+      "pattern": ["^NEVER-MATCHES$"],
+      "ruling": "PENDING",
+      "rulingDate": null,
+      "sources": [
+        "Census: 40 rows (source: baseballcardpedia) have an ENTIRE wiki-page prose paragraph scraped verbatim into `parallel`, which then became the row's own id slug -- e.g. id 'hiq:baseball:2020:topps-chrome-update:refractor:all-100-base-cards-are-available-in-the-following-refractor-parallels.-refractor-(serial-numbered-to-250-copies)-pink-refractor-...-superfractor-(one-of-one)-printing-plate-(set-of-four-for-each)-note:-all-100-cards-...-https:-twitter.com-kburleypdx-status:no-auto:num-1368310399850795000'. The trailing printRun (1368310399850795000) is a corrupted Twitter status-ID number misread as a print run, not a real print run. This is the SAME defect class as the 2026-09-26 commit 78aa88bf ('a page footer is not a card -- 17 wiki-scrape rows retired') and the topps-update-series 2024 Platinum run-on-digit corruption flagged in the prior spelling census (C:/tmp/spellcensus_2152/RESULT.md Step 2) -- a wholesale re-scrape/retire candidate, not a text-strip rule. sold_comps dual-check on one sample id: salesCount=0."
+      ],
+      "reason": "DOCUMENTATION ONLY -- 40 rows need a re-scrape or retire, same defect class as prior wiki-scrape-pollution incidents; explicitly NOT a text-strip candidate for this lane"
+    }
+  ]
+}
