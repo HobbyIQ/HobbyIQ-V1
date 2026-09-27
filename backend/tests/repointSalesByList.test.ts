@@ -885,7 +885,13 @@ describe("end-to-end: a budget stop mid-entry reconciles exactly, never double-c
       {
         SCOPE: list, BACKFILL_APPLY: "false",
         RUN_MINUTES: "1", BUDGET_MS: "1000", RESERVE_MS: "500",
-        HIQ_TEST_FAKE_CLOCK_STEP_MS: "400",
+        // VITEST=1 is required (review round 1, PR #2465): runner-budget.cjs
+        // self-defends against a leaked HIQ_TEST_FAKE_CLOCK_STEP_MS reaching
+        // a real lane run by refusing to honour it unless VITEST is also
+        // set -- and drive()'s child env is a minimal explicit allowlist,
+        // not inherited, so this must be passed here just like every other
+        // env var the lane reads.
+        HIQ_TEST_FAKE_CLOCK_STEP_MS: "400", VITEST: "1",
       },
       { sales, catalog },
     );
@@ -925,7 +931,7 @@ describe("end-to-end: a budget stop mid-entry reconciles exactly, never double-c
       {
         SCOPE: list, BACKFILL_APPLY: "false",
         RUN_MINUTES: "1", BUDGET_MS: "1000", RESERVE_MS: "500",
-        HIQ_TEST_FAKE_CLOCK_STEP_MS: "400",
+        HIQ_TEST_FAKE_CLOCK_STEP_MS: "400", VITEST: "1",
       },
       { sales, catalog, saleReadDelayMs: 250 },
     );
@@ -963,5 +969,55 @@ describe("HIQ_TEST_FAKE_CLOCK_STEP_MS is inert when unset — production timing 
     // (same convention the expected-sales-mismatch tests above already use).
     expect(r.out).toMatch(/not reached \(budget, sales\)\s+0/);
     expect(r.out).not.toMatch(/stopped at the \d+-minute budget/);
+  });
+});
+
+describe("HIQ_TEST_FAKE_CLOCK_STEP_MS self-defends against leaking into a real run", () => {
+  // Review round 1 (PR #2465): honouring the var on isFinite && > 0 alone
+  // means a leaked value in a real dispatch's env would silently misbudget
+  // a lane with no operator-visible symptom until it stopped mid-run for
+  // the wrong reason. The fix requires process.env.VITEST alongside it --
+  // set here explicitly, since drive()'s child env is a minimal allowlist,
+  // never inherited from the test runner's own environment.
+
+  it("set without VITEST: FATAL naming the var, non-zero exit, BEFORE any budget line prints", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why" }], "fake-clock-no-vitest");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
+
+    const r = drive(
+      {
+        SCOPE: list, BACKFILL_APPLY: "false",
+        HIQ_TEST_FAKE_CLOCK_STEP_MS: "400",
+        // VITEST deliberately OMITTED -- drive()'s env is not inherited, so
+        // this reproduces a leaked var reaching a real dispatch exactly.
+      },
+      { sales, catalog },
+    );
+    expect(r.code).not.toBe(0);
+    expect(r.out).toContain("FATAL: HIQ_TEST_FAKE_CLOCK_STEP_MS is set but VITEST is not");
+    // Refused before computing a budget at all -- the describe() banner
+    // line ("budget ...m loop + ...") never printed.
+    expect(r.out).not.toMatch(/budget \d+m loop/);
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("set WITH VITEST: the fake clock activates normally, no FATAL", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why" }], "fake-clock-with-vitest");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
+
+    const r = drive(
+      {
+        SCOPE: list, BACKFILL_APPLY: "false",
+        RUN_MINUTES: "1", BUDGET_MS: "1000", RESERVE_MS: "500",
+        HIQ_TEST_FAKE_CLOCK_STEP_MS: "400", VITEST: "1",
+      },
+      { sales, catalog },
+    );
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/budget 1m loop/);
+    expect(r.out).not.toContain("FATAL:");
   });
 });

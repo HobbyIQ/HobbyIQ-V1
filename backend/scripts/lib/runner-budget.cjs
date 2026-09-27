@@ -99,6 +99,25 @@ function narrator(narrateTo) {
  *                                   data channel passes stderr.
  */
 function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Date.now(), narrateTo }) {
+  // ── SELF-DEFENCE: a leaked HIQ_TEST_FAKE_CLOCK_STEP_MS must never reach a
+  // real lane run (review round 1, PR #2465). HIQ_TEST_FAKE_CLOCK_STEP_MS is
+  // honoured ONLY when process.env.VITEST is also set -- the marker vitest
+  // itself sets in every worker, which the test's own drive() must pass
+  // explicitly since its child env is otherwise a minimal allowlist, not an
+  // inherited one. If the var is set outside a vitest run, this is a
+  // misconfigured environment (a leaked test var in a real dispatch) that
+  // could otherwise silently misbudget a lane with no operator-visible
+  // symptom until it stops mid-run for the wrong reason -- so it FAILS LOUD,
+  // before RUN_MINUTES/BUDGET_MS or anything else is computed, rather than
+  // silently falling back to the real clock or silently activating the fake
+  // one.
+  if (process.env.HIQ_TEST_FAKE_CLOCK_STEP_MS && !process.env.VITEST) {
+    const msg = "FATAL: HIQ_TEST_FAKE_CLOCK_STEP_MS is set but VITEST is not -- "
+      + "this test-only clock override must never reach a real lane run. Refusing to compute a budget.";
+    try { require("node:fs").writeSync(2, `${msg}\n`); } catch { /* best effort */ }
+    process.exit(3);
+  }
+
   const RUN_MINUTES = runMinutes(minutes);
   const BUDGET_MS = Number(process.env.BUDGET_MS || RUN_MINUTES * 60 * 1000);
   const RESERVE_MS = Number(process.env.RESERVE_MS || reserveMs);
@@ -126,16 +145,19 @@ function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Dat
   // construction -- widening the margins (#2463) narrowed the flake but
   // could not remove it.
   //
-  // HIQ_TEST_FAKE_CLOCK_STEP_MS, when set to a positive finite number,
-  // replaces `Date.now()` inside this budget's own `left()` with a virtual
-  // clock that starts at the real `startedAt` and advances by that many
-  // milliseconds on every call `left()` makes to it -- so the Nth call
+  // HIQ_TEST_FAKE_CLOCK_STEP_MS, when set to a positive finite number (and,
+  // per the self-defence check above, only ever reachable here alongside
+  // VITEST), replaces `Date.now()` inside this budget's own `left()` with a
+  // virtual clock that starts at the real `startedAt` and advances by that
+  // many milliseconds on every call `left()` makes to it -- so the Nth call
   // always reports the same elapsed time regardless of how long the
   // process actually took to get there. A test can then make the budget
   // expire on an exact call count (e.g. the 2nd per-sale `outOfClock()`
   // check) instead of racing a wall clock. UNSET, this is `Date.now`
   // itself -- zero behaviour change for every real lane run, proved by the
-  // unit test below.
+  // unit test below. `now()` is exported below so every OTHER place this
+  // file reads the clock (the keepalive heartbeat) stays consistent with
+  // `left()` rather than silently reading real time under a faked budget.
   const fakeStepMs = Number(process.env.HIQ_TEST_FAKE_CLOCK_STEP_MS);
   const useFakeClock = Number.isFinite(fakeStepMs) && fakeStepMs > 0;
   let fakeCalls = 0;
@@ -360,7 +382,11 @@ function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Dat
     if (keepaliveTimer) return keepaliveTimer;
     keepaliveTimer = setInterval(() => {
       beats++;
-      const mins = Math.round((Date.now() - startedAt) / 60000);
+      // now(), not a bare Date.now(): under a faked clock (test-only, see
+      // above) left() already reports elapsed time via now(), and this line
+      // must agree with it rather than mixing a real elapsed-minutes figure
+      // into the same narration as a faked budget-left figure.
+      const mins = Math.round((now() - startedAt) / 60000);
       narrate(`narrate: heartbeat ${beats} — ${label || "lane"} alive at ${mins}m, ${fmtMs(Math.max(0, left()))} of budget left`);
     }, KEEPALIVE_MS);
     // REF'D ON PURPOSE. An unref'd interval is exactly the defect above: it
