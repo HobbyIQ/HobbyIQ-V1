@@ -55,7 +55,19 @@ const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budge
 // a real sale 0.6% of the time (a re-pointed sale whose cardId, the
 // partition key, still names the suffix but whose hobbyiqCardId does not).
 // The guard now unions BOTH fields in the same aggregate scan.
-
+//
+// TOCTOU (review finding, 2026-09-27): that aggregate guard runs ONCE, up
+// front, before ANY delete. The delete loop below then runs for the rest of
+// the budget -- up to 110 minutes, across a population measured at 1.46M
+// rows -- as a long paginated sweep with no re-check per row. A sale minted
+// or re-pointed onto one of these slugs AFTER the guard ran and BEFORE that
+// row's own delete is reached would be deleted-from-under with no check
+// having ever looked at it: the guard answered a question about the past,
+// not about the row this iteration is about to remove. salesAtId (dual
+// cross-partition + partition-scoped) is now called PER ROW, immediately
+// before its delete, exactly as retire-flattened-attestations.cjs and
+// retire-prose-parallel-rows.cjs do in this same program.
+const { salesAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Number(process.env.CONCURRENCY || 32);
@@ -110,6 +122,16 @@ async function main() {
   console.log(`  ${CLOCK.describe()}`);
   const one = async (c, query) => (await c.items.query({ query }, { enableCrossPartitionQuery: true }).fetchAll()).resources;
   const f = (n) => Number(n).toLocaleString();
+  const retry = async (fn, tries = 10) => {
+    let wait = 800;
+    for (let a = 0; ; a++) {
+      try { return await fn(); }
+      catch (e) {
+        if (!/request rate is too large|429|ETIMEDOUT|ECONNRESET/i.test(String(e?.message)) || a >= tries) throw e;
+        await new Promise((r) => setTimeout(r, wait)); wait = Math.min(wait * 2, 20000);
+      }
+    }
+  };
 
   // 1. Which (company, grade) pairs are impossible, and how many rows each.
   const pairs = (await one(cat, `SELECT c.gradeCompany AS co, c.gradeValue AS v, COUNT(1) AS n FROM c
@@ -142,6 +164,8 @@ async function main() {
 
   // 3. Retire.
   let scanned = 0, attempted = 0, deleted = 0, failed = 0, skipped = 0;
+  let keptLiveSales = 0;
+  const keptLiveSalesEx = [];
   // Set when the budget stopped the page walk. There is NO `not reached` count
   // to print here and inventing one would be a lie: the GROUP BY above gives a
   // population per (company, grade), but the loop DISCOVERS the rows themselves
@@ -171,6 +195,19 @@ async function main() {
         await Promise.all(page.resources.slice(i, i + CONCURRENCY).map(async (r) => {
           attempted++;
           try {
+            // TOCTOU RE-CHECK (review finding, 2026-09-27), LIVE, PER ROW,
+            // IMMEDIATELY BEFORE THE DELETE. The aggregate guard above ran
+            // once, before this whole sweep started; this row's delete may
+            // land minutes or hours later. salesAtId's dual cross-partition
+            // + partition-scoped read is re-run against THIS row's own id
+            // right here, so a sale minted or re-pointed onto it since the
+            // guard ran is caught rather than deleted out from under.
+            const { total: livePointing } = await salesAtId(sc, r.id, { retry });
+            if (livePointing > 0) {
+              keptLiveSales++;
+              if (keptLiveSalesEx.length < 6) keptLiveSalesEx.push(`${f(livePointing).padStart(5)} sales  ${String(r.id).slice(0, 76)}`);
+              return;
+            }
             // A row with no partition key is addressable as (id, undefined) --
             // see CF-A-MISSING-PARTITION-KEY-IS-STILL-A-KEY.
             await cat.item(r.id, r.cardId === undefined || r.cardId === null ? undefined : r.cardId).delete();
@@ -196,18 +233,26 @@ async function main() {
   console.log(`  rows matching an impossible grade  ${f(scanned)}`);
   console.log(`  retired                            ${f(deleted)}`);
   console.log(`  already gone (404)                 ${f(skipped)}`);
+  console.log(`  kept — live sales (TOCTOU re-check) ${f(keptLiveSales)}   <- a sale landed after the up-front guard; caught per-row, immediately before this delete`);
   console.log(`  failed                             ${f(failed)}`);
+  if (keptLiveSalesEx.length) {
+    console.log("\n  kept for review — a live sale re-check caught these after the up-front guard:");
+    for (const e of keptLiveSalesEx) console.log(`    ${e}`);
+  }
   // RECONCILE OVER WHAT WAS SEEN. `attempted` counts only the rows this run
   // actually handed to a delete, so the identity below holds whether the loop
   // finished or the budget stopped it -- a budget stop shrinks BOTH sides
-  // rather than opening a gap that reads as loss.
+  // rather than opening a gap that reads as loss. `keptLiveSales` folds into
+  // the skip side: nothing failed, a live sale simply means this row is not
+  // this run's to remove.
   if (APPLY) {
-    console.log(`  reconciled: attempted ${f(attempted)} = deleted ${f(deleted)} + already gone ${f(skipped)} + failed ${f(failed)}`);
-    if (deleted + skipped + failed !== attempted) {
-      console.error("  !! RECONCILE MISMATCH -- a row was neither deleted, already gone nor failed");
+    const skippedTotal = skipped + keptLiveSales;
+    console.log(`  reconciled: attempted ${f(attempted)} = deleted ${f(deleted)} + already gone/live-sales ${f(skippedTotal)} + failed ${f(failed)}`);
+    if (deleted + skippedTotal + failed !== attempted) {
+      console.error("  !! RECONCILE MISMATCH -- a row was neither deleted, already gone, kept for live sales nor failed");
       process.exitCode = 4;
     }
-    reportWrites({ job: "retire-impossible-grade-rows", intended: attempted, written: deleted, skipped, failed });
+    reportWrites({ job: "retire-impossible-grade-rows", intended: attempted, written: deleted, skipped: skippedTotal, failed });
   }
 
   // -- THE MARKER THE RELAUNCH GREPS ---------------------------------------

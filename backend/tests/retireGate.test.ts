@@ -24,6 +24,22 @@
  * MUTATION CHECKS (last describe in each half): re-run the same fixture with
  * the new gate short-circuited, and assert the row is retired anyway -- i.e.
  * each pin fails against the code as it was before this PR.
+ *
+ * TWO MORE (review round, 2026-09-27) -- TOCTOU holes in two of the nine
+ * one-off scripts this PR already touched:
+ *
+ *   3. retire-impossible-grade-rows.cjs: the sales guard was a ONE-TIME
+ *      aggregate COUNT per (company, grade) suffix, run once before the
+ *      whole sweep; the per-row delete loop that follows has no re-check.
+ *      A sale minted between the guard and a given row's own delete is
+ *      deleted-from-under. Fixed by a live salesAtId (dual) re-check
+ *      immediately before the delete, per row.
+ *
+ *   4. retire-unreferenced-graded-rows.cjs: `protectedSlugs` is a ONE-TIME
+ *      in-memory snapshot of every graded slug a sale references, taken
+ *      before a sweep measured at 16.3M rows and multiple hours. A sale
+ *      written after the snapshot is invisible to it. Fixed the same way:
+ *      a live salesAtId re-check immediately before the delete, per row.
  */
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
@@ -403,5 +419,311 @@ describe("MUTATION: the pre-fix COMPLETE MOVE branch (no gate) retires despite l
     expect(res.retireCalls).toEqual([SOURCE_ID]);
     expect(res.output).not.toMatch(/REFUSED \(sales present/);
     expect(res.output).not.toMatch(/REFUSED \(destination not checklist-grade/);
+  });
+});
+
+// ── PART 3: retire-impossible-grade-rows.cjs -- the TOCTOU hole ────────────
+//
+// The up-front aggregate CONTAINS guard answers "zero sales" once, before the
+// sweep starts. The fixture below makes the per-ROW live check (salesAtId,
+// called immediately before this row's own delete) find a sale that the
+// aggregate guard, run earlier, did not see -- exactly the race the review
+// flagged. `legacyNoLiveCheck` reproduces the pre-fix branch by forcing
+// salesAtId's result to zero for every call, i.e. "the guard ran once and
+// nothing since then re-asked".
+
+const IMPOSSIBLE_SCRIPT = path.join(backend, "scripts", "retire-impossible-grade-rows.cjs");
+const IMPOSSIBLE_ROW_ID = "hiq:baseball:2020:topps:base:no-auto:psa-9-5";
+const IMPOSSIBLE_LATE_SALE_ID = "ebay-late-sale-1";
+
+function preloadImpossibleGrade(dir: string, legacyNoLiveCheck: boolean) {
+  const deleteLog = path.join(dir, "delete-calls.json");
+  fs.writeFileSync(deleteLog, "[]");
+  const file = path.join(dir, "preload-impossible.cjs");
+  fs.writeFileSync(file, `
+const Module = require("node:module");
+const fs = require("node:fs");
+const realResolve = Module._resolveFilename;
+
+const DELETE_LOG = ${JSON.stringify(deleteLog)};
+const ROW_ID = ${JSON.stringify(IMPOSSIBLE_ROW_ID)};
+const LATE_SALE_ID = ${JSON.stringify(IMPOSSIBLE_LATE_SALE_ID)};
+
+// sold_comps: the up-front aggregate CONTAINS guard answers ZERO (it ran
+// "before" the late sale existed); the per-row salesAtId dual query answers
+// ONE for ROW_ID specifically -- the sale that landed AFTER the guard.
+const soldComps = {
+  items: {
+    query: (spec, feedOptions) => {
+      const q = String((spec && spec.query) || "");
+      const isAggregateGuard = /COUNT\\(1\\) FROM c\\s*$|SELECT VALUE COUNT\\(1\\) FROM c\\s+WHERE \\(IS_DEFINED/.test(q);
+      const params = (spec && spec.parameters) || [];
+      const idParam = (params.find((p) => p.name === "@id") || {}).value;
+      let done = false;
+      return {
+        hasMoreResults: () => !done,
+        fetchNext: async () => {
+          done = true;
+          if (isAggregateGuard) return { resources: [] };
+          // salesAtId's dual query, keyed on @id -- answer ONE hit for the
+          // doomed row, on EITHER form (this fixture puts it in both).
+          if (idParam === ROW_ID) return { resources: [{ id: LATE_SALE_ID }] };
+          return { resources: [] };
+        },
+        fetchAll: async () => {
+          if (isAggregateGuard) return { resources: [0] };
+          return { resources: [] };
+        },
+      };
+    },
+  },
+};
+const catalog = {
+  item(id, pk) {
+    return { read: async () => ({ resource: { id, cardId: pk } }) };
+  },
+  items: {
+    query: (spec) => {
+      const q = String((spec && spec.query) || "");
+      let done = false;
+      // The GROUP BY that finds impossible (company, grade) pairs.
+      if (/GROUP BY c\\.gradeCompany, c\\.gradeValue/.test(q)) {
+        return {
+          hasMoreResults: () => !done,
+          fetchNext: async () => { done = true; return { resources: [] }; },
+          fetchAll: async () => ({ resources: [{ co: "PSA", v: 9.5, n: 1 }] }),
+        };
+      }
+      // The per-pair page walk that finds the actual rows to delete.
+      return {
+        hasMoreResults: () => !done,
+        fetchNext: async () => {
+          if (done) return { resources: [] };
+          done = true;
+          return { resources: [{ id: ROW_ID, cardId: ROW_ID }] };
+        },
+      };
+    },
+  },
+  delete: undefined,
+};
+// item(id, pk).delete() on the catalog container -- logged, not executed.
+const realItem = catalog.item;
+catalog.item = (id, pk) => {
+  const h = realItem(id, pk);
+  return { ...h, delete: async () => {
+    const calls = JSON.parse(fs.readFileSync(DELETE_LOG, "utf8"));
+    calls.push(id);
+    fs.writeFileSync(DELETE_LOG, JSON.stringify(calls));
+    return {};
+  } };
+};
+
+const fakeCosmos = {
+  CosmosClient: class {
+    constructor() {}
+    database() { return { container: (n) => (n === "sold_comps" ? soldComps : catalog) }; }
+  },
+};
+const fakeGradeLadder = {
+  isImpossibleGrade: (co, v) => String(co).toUpperCase() === "PSA" && Number(v) === 9.5,
+  canonicalGradeCompany: (co) => String(co).toUpperCase(),
+};
+const fakeReconcile = { reportWrites: () => {} };
+
+${legacyNoLiveCheck ? `
+// ── THE MUTATION: pre-fix behaviour ─────────────────────────────────────
+// Reproduces "the guard ran once, up front, and nothing re-asks per row" by
+// forcing salesAtId to answer zero for every call, regardless of what the
+// container actually holds.
+const salesAtIdLib = require(require("node:path").join(${JSON.stringify(backend)}, "scripts", "lib", "sales-at-id.cjs"));
+salesAtIdLib.salesAtId = async () => ({ xp: 0, pk: 0, total: 0, ids: [] });
+` : ""}
+
+Module._resolveFilename = function (request, ...rest) {
+  if (request === "@azure/cosmos") return "FAKE_COSMOS_IMPOSSIBLE";
+  if (request.includes("gradeLadder.service")) return "FAKE_GRADE_LADDER";
+  if (request.includes("writeReconciliation")) return "FAKE_RECONCILE_IMPOSSIBLE";
+  return realResolve.call(this, request, ...rest);
+};
+const realLoad = Module._load;
+Module._load = function (request, ...rest) {
+  if (request === "@azure/cosmos") return fakeCosmos;
+  if (request.includes("gradeLadder.service")) return fakeGradeLadder;
+  if (request.includes("writeReconciliation")) return fakeReconcile;
+  return realLoad.call(this, request, ...rest);
+};
+`);
+  return { preloadFile: file, deleteLog };
+}
+
+function runImpossibleGrade(legacyNoLiveCheck = false) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "impossible-grade-toctou-"));
+  const { preloadFile, deleteLog } = preloadImpossibleGrade(dir, legacyNoLiveCheck);
+  const r = spawnSync(process.execPath, ["--require", preloadFile, IMPOSSIBLE_SCRIPT], {
+    encoding: "utf8",
+    timeout: 30000,
+    killSignal: "SIGKILL",
+    cwd: backend,
+    env: {
+      ...process.env,
+      BACKFILL_APPLY: "true",
+      COSMOS_CONNECTION_STRING: "AccountEndpoint=https://probe/;AccountKey=probe==;",
+    },
+  });
+  const deleteCalls: string[] = JSON.parse(fs.readFileSync(deleteLog, "utf8"));
+  const output = `${r.stdout ?? ""}\n${r.stderr ?? ""}`;
+  return { output, status: r.status, deleteCalls };
+}
+
+describe("retire-impossible-grade-rows.cjs -- TOCTOU: a live re-check runs immediately before each row's delete", () => {
+  it("a sale that lands AFTER the up-front aggregate guard is caught by the per-row re-check, and the row is NOT deleted", () => {
+    const res = runImpossibleGrade();
+    expect(res.deleteCalls, "the delete must never run once the live per-row check finds a sale").toHaveLength(0);
+    expect(res.output).toMatch(/live sales.*1|kept.*live/i);
+  });
+
+  it("MUTATION: reverting to a one-time guard (no per-row re-check) deletes the row despite the late sale", () => {
+    const res = runImpossibleGrade(/* legacyNoLiveCheck */ true);
+    expect(res.deleteCalls).toEqual([IMPOSSIBLE_ROW_ID]);
+  });
+});
+
+// ── PART 4: retire-unreferenced-graded-rows.cjs -- the TOCTOU hole ─────────
+//
+// `protectedSlugs` is a one-time snapshot built before the sweep starts. The
+// fixture below makes the snapshot-time scan see NOTHING (so the row is not
+// in protectedSlugs and reaches the delete branch), while the per-row LIVE
+// salesAtId re-check -- run immediately before the delete -- finds a sale
+// that arrived after the snapshot.
+
+const UNREF_SCRIPT = path.join(backend, "scripts", "retire-unreferenced-graded-rows.cjs");
+const UNREF_ROW_ID = "hiq:baseball:2020:topps:base:no-auto:psa-10";
+const UNREF_LATE_SALE_ID = "ebay-late-sale-2";
+
+function preloadUnreferencedGraded(dir: string, legacyNoLiveCheck: boolean) {
+  const deleteLog = path.join(dir, "delete-calls.json");
+  fs.writeFileSync(deleteLog, "[]");
+  const file = path.join(dir, "preload-unref.cjs");
+  fs.writeFileSync(file, `
+const Module = require("node:module");
+const fs = require("node:fs");
+const realResolve = Module._resolveFilename;
+
+const DELETE_LOG = ${JSON.stringify(deleteLog)};
+const ROW_ID = ${JSON.stringify(UNREF_ROW_ID)};
+const LATE_SALE_ID = ${JSON.stringify(UNREF_LATE_SALE_ID)};
+
+const soldComps = {
+  items: {
+    query: (spec, feedOptions) => {
+      const q = String((spec && spec.query) || "");
+      const params = (spec && spec.parameters) || [];
+      const idParam = (params.find((p) => p.name === "@id") || {}).value;
+      let done = false;
+      // The protectedSlugs snapshot scan (SELECT ... AS s1, ... AS s2):
+      // answers EMPTY -- the late sale had not landed yet when this ran.
+      if (/AS s1, c\\.cardId AS s2/.test(q)) {
+        return {
+          hasMoreResults: () => !done,
+          fetchNext: async () => { done = true; return { resources: [] }; },
+        };
+      }
+      // salesAtId's per-row dual query: finds the late sale for ROW_ID.
+      return {
+        hasMoreResults: () => !done,
+        fetchNext: async () => {
+          done = true;
+          if (idParam === ROW_ID) return { resources: [{ id: LATE_SALE_ID }] };
+          return { resources: [] };
+        },
+      };
+    },
+  },
+};
+const catalog = {
+  items: {
+    query: (spec) => {
+      const q = String((spec && spec.query) || "");
+      let done = false;
+      return {
+        hasMoreResults: () => !done,
+        fetchNext: async () => {
+          if (done) return { resources: [] };
+          done = true;
+          return { resources: [{ id: ROW_ID, cardId: ROW_ID, gradeTier: "psa-10", source: "baseballcardpedia-graded" }] };
+        },
+      };
+    },
+  },
+};
+catalog.item = (id, pk) => ({
+  delete: async () => {
+    const calls = JSON.parse(fs.readFileSync(DELETE_LOG, "utf8"));
+    calls.push(id);
+    fs.writeFileSync(DELETE_LOG, JSON.stringify(calls));
+    return {};
+  },
+});
+
+const fakeCosmos = {
+  CosmosClient: class {
+    constructor() {}
+    database() { return { container: (n) => (n === "sold_comps" ? soldComps : catalog) }; }
+  },
+};
+const fakeReconcile = { reportWrites: () => {} };
+
+${legacyNoLiveCheck ? `
+// ── THE MUTATION: pre-fix behaviour ─────────────────────────────────────
+// Reproduces "protectedSlugs, taken once, is the only check" by forcing
+// salesAtId to answer zero for every call.
+const salesAtIdLib = require(require("node:path").join(${JSON.stringify(backend)}, "scripts", "lib", "sales-at-id.cjs"));
+salesAtIdLib.salesAtId = async () => ({ xp: 0, pk: 0, total: 0, ids: [] });
+` : ""}
+
+Module._resolveFilename = function (request, ...rest) {
+  if (request === "@azure/cosmos") return "FAKE_COSMOS_UNREF";
+  if (request.includes("writeReconciliation")) return "FAKE_RECONCILE_UNREF";
+  return realResolve.call(this, request, ...rest);
+};
+const realLoad = Module._load;
+Module._load = function (request, ...rest) {
+  if (request === "@azure/cosmos") return fakeCosmos;
+  if (request.includes("writeReconciliation")) return fakeReconcile;
+  return realLoad.call(this, request, ...rest);
+};
+`);
+  return { preloadFile: file, deleteLog };
+}
+
+function runUnreferencedGraded(legacyNoLiveCheck = false) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "unref-graded-toctou-"));
+  const { preloadFile, deleteLog } = preloadUnreferencedGraded(dir, legacyNoLiveCheck);
+  const r = spawnSync(process.execPath, ["--require", preloadFile, UNREF_SCRIPT], {
+    encoding: "utf8",
+    timeout: 30000,
+    killSignal: "SIGKILL",
+    cwd: backend,
+    env: {
+      ...process.env,
+      BACKFILL_APPLY: "true",
+      COSMOS_CONNECTION_STRING: "AccountEndpoint=https://probe/;AccountKey=probe==;",
+    },
+  });
+  const deleteCalls: string[] = JSON.parse(fs.readFileSync(deleteLog, "utf8"));
+  const output = `${r.stdout ?? ""}\n${r.stderr ?? ""}`;
+  return { output, status: r.status, deleteCalls };
+}
+
+describe("retire-unreferenced-graded-rows.cjs -- TOCTOU: a live re-check runs immediately before each row's delete", () => {
+  it("a sale that lands AFTER the protectedSlugs snapshot is caught by the per-row live re-check, and the row is NOT deleted", () => {
+    const res = runUnreferencedGraded();
+    expect(res.deleteCalls, "the delete must never run once the live per-row check finds a sale the snapshot missed").toHaveLength(0);
+  });
+
+  it("MUTATION: reverting to the one-time snapshot alone (no per-row re-check) deletes the row despite the late sale", () => {
+    const res = runUnreferencedGraded(/* legacyNoLiveCheck */ true);
+    expect(res.deleteCalls).toEqual([UNREF_ROW_ID]);
   });
 });
