@@ -129,9 +129,83 @@ const { salesAtId, drainSalesIdsAtId } = require(path.join(__dirname, "lib", "sa
 const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
 const { withBackoff } = require(path.join(__dirname, "lib", "cosmos-backoff.cjs"));
 const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
+// checklistParallelNamesFor is a scripts/lib module (reads the checklist
+// corpus JSON directly, no dist/ and no Cosmos), same load-without-a-build
+// contract as name-agreement.cjs itself -- required at top level, not lazily
+// inside main(), for the same reason.
+const { checklistParallelNamesFor } = require(path.join(__dirname, "lib", "rematch-finish-vocab.cjs"));
 // The dist/ and Cosmos requires live inside main(), as every sibling list
 // lane does it: loading this module must not need a built tree, so a test
 // can require it and drive the list/gate logic without a compile step.
+
+// ── GATE 6's own vocabulary: the destination product's checklist parallel
+//    names, turned into a namesAgree() stripTrailingTokens list ────────────
+//
+// CF-A-PARALLEL-WORD-IS-NOT-A-PLAYER-NAME (USC143, run 36346769892). Gate 6
+// refused `sale "Adael Amador Teal" vs destination "Adael Amador RC"` --
+// same player, two name-SHAPE artefacts: the destination's checklist
+// playerName carries a trailing "RC" (closed by name-agreement.cjs's own
+// rule (b), extended this PR), and the SALE's own player string carries the
+// parallel colour word "Teal" that its extraction left in. `namesAgree`
+// itself stays product-blind on purpose (see its header, "no hardcoded
+// colours") -- so THIS caller builds the strip list from the DESTINATION
+// product's own checklist vocabulary and passes it through
+// `opts.stripTrailingTokens`.
+//
+// Built once per (year, setKey) and cached -- an entry-level list can repeat
+// the same destination across many sales, and the corpus read + colour scan
+// is wasted work to repeat per sale.
+const _stripVocabCache = new Map();
+
+/** "<Colour> Refractor" / "<Colour> Prizm" -- the colour word alone is also
+ *  strippable, so "Teal" folds even though the sale never wrote "Refractor".
+ *  Matched against the CHECKLIST's own listed names, never a fixed colour
+ *  list of our own -- a word only earns strip eligibility by being the FIRST
+ *  word of one of THIS product's own "<Colour> <Family>" rungs. */
+const COLOUR_PREFIX_FAMILY_RE = /^([a-z][a-z'-]*)\s+(refractor|prizm)s?$/i;
+
+/** Bare family words, for this product family, that a sale's extraction can
+ *  leave dangling even with no colour in front of them ("Adael Amador
+ *  Refractor"). Not a colour list -- these are the finish/format WORDS
+ *  themselves, always strippable once the destination is checklist-grade
+ *  (gate 2 already proved that), the same three the brief names. */
+const BARE_FAMILY_WORDS = ["Refractor", "Prizm", "Parallel"];
+
+/**
+ * The `stripTrailingTokens` list for GATE 6's `namesAgree` call against this
+ * destination row, plus a `{ size, setKey }` detail for the one-per-entry
+ * banner line. Returns `{ tokens: [], size: 0, setKey }` when the product has
+ * no checklist parallel vocabulary (corpus miss, or a setKey/year the corpus
+ * does not cover) -- namesAgree with an empty list behaves exactly as it did
+ * before this PR, so a corpus miss never widens or narrows GATE 6 on its own.
+ */
+function stripVocabularyForDestination(toRow) {
+  const year = toRow?.year ?? toRow?.cardYear ?? null;
+  const setKey = String(toRow?.setKey ?? "").trim();
+  const cacheKey = `${year}|${setKey.toLowerCase()}`;
+  if (_stripVocabCache.has(cacheKey)) return _stripVocabCache.get(cacheKey);
+
+  const names = setKey ? checklistParallelNamesFor(year, setKey) : null;
+  const tokens = new Set();
+  if (names) {
+    for (const name of names) {
+      const trimmed = String(name ?? "").trim();
+      if (!trimmed) continue;
+      // The whole listed name ("Teal Refractor") strips as one phrase...
+      tokens.add(trimmed);
+      // ...and, when it is a "<Colour> Refractor"/"<Colour> Prizm" rung, the
+      // colour word ALONE also strips -- this is what lets "Teal" fold when
+      // the sale's own extraction dropped "Refractor" but kept the colour.
+      const m = trimmed.match(COLOUR_PREFIX_FAMILY_RE);
+      if (m) tokens.add(m[1]);
+    }
+  }
+  for (const w of BARE_FAMILY_WORDS) tokens.add(w);
+
+  const result = { tokens: [...tokens], size: names ? names.size : 0, setKey };
+  _stripVocabCache.set(cacheKey, result);
+  return result;
+}
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
@@ -450,6 +524,13 @@ async function main() {
     // sales to the sale-side denominator.
     intendedSalesTotal += salesRows.length;
 
+    // GATE 6's own vocabulary for THIS entry's destination, built/cached once
+    // per (year, setKey) and logged ONCE per entry (not once per sale) --
+    // the banner names the vocabulary size and setKey so a REPORT/APPLY log
+    // states exactly what namesAgree was allowed to strip.
+    const strip = stripVocabularyForDestination(toRow);
+    console.log(`      namesAgree vocabulary: ${f(strip.size)} checklist parallel name(s) for setKey="${strip.setKey}" (+ bare Refractor/Prizm/Parallel)`);
+
     // ── PER-SALE: read the full document, gate on namesAgree, then move ──
     //
     // A budget stop HERE, mid-entry, must not double-count. This entry was
@@ -501,7 +582,7 @@ async function main() {
 
       const saleName = String(sale.playerName ?? sale.title ?? "");
       const destName = String(toRow.playerName ?? "");
-      if (!namesAgree(saleName, destName)) {
+      if (!namesAgree(saleName, destName, { stripTrailingTokens: strip.tokens })) {
         refusedNameDisagreement++;
         console.error(`      REFUSED (name-disagreement) ${sale.id}: sale "${saleName.slice(0, 60)}" vs destination "${destName.slice(0, 60)}"`);
         emitPlanRow({ action: "refused", reason: "name-disagreement", fromId, toId, saleId: sale.id, saleName, destName });

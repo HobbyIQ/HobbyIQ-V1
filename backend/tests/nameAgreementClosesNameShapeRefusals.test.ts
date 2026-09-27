@@ -198,6 +198,135 @@ describe("mutation check -- rule (b), the subset-tag strip", () => {
   });
 });
 
+// ── CF-A-TRAILING-RC-IS-NOT-A-DIFFERENT-PLAYER (run 36346769892, 2026-09-27,
+//    repoint-sales-by-list REPORT). USC143: `REFUSED (name-disagreement)
+//    tca-ebay::336715972267: sale "Adael Amador Teal" vs destination "Adael
+//    Amador RC"`. Two artefacts closed by this PR:
+//      1. the destination's checklist playerName carries a BARE trailing "RC"
+//         -- this file's OWN header already says "Jonah Tong RC" ==
+//         "Jonah Tong" is the right answer, and the closed
+//         TRAILING_SUBSET_MARKERS list only had RCup/FS until now.
+//      2. the sale's player string carries a parallel colour word ("Teal")
+//         its own extraction left in -- closed by the NEW caller-supplied
+//         `opts.stripTrailingTokens`, exercised here directly against the
+//         .cjs (repoint-sales-by-list.cjs is the only caller that builds this
+//         list; see repointSalesByList.test.ts for the end-to-end wiring).
+//
+// Scoped to `cjs.namesAgree` ONLY, and deliberately NOT folded into
+// REAL_PAIRS/SUFFIX_VS_SUFFIX_PAIRS/ALL_PAIRS above: the .ts mirror
+// (nameAgreement.ts, catalogRowOps.service.ts's arbitratePlayer gate) is
+// untouched by this PR on purpose -- a src/ change forces a redeploy this fix
+// does not need, and the header there already flags the divergence risk this
+// carve-out exists to avoid until a follow-up ports rule (A) and the (opt-in,
+// still-unused-by-arbitratePlayer) option there too. ──
+describe("namesAgree -- bare trailing RC marker (USC143, run 36346769892)", () => {
+  it("the run's own pair, base names only: \"Adael Amador\" vs \"Adael Amador RC\" agree", () => {
+    expect(cjs.namesAgree("Adael Amador", "Adael Amador RC")).toBe(true);
+  });
+
+  it("RC on EITHER side agrees (presence-vs-absence, same shape as RCup/FS)", () => {
+    expect(cjs.namesAgree("Adael Amador RC", "Adael Amador")).toBe(true);
+    expect(cjs.namesAgree("Adael Amador", "Adael Amador RC")).toBe(true);
+  });
+
+  it("RC on BOTH sides still agrees", () => {
+    expect(cjs.namesAgree("Adael Amador RC", "Adael Amador RC")).toBe(true);
+  });
+
+  it("this file's own header example -- \"Jonah Tong RC\" == \"Jonah Tong\"", () => {
+    expect(cjs.namesAgree("Jonah Tong RC", "Jonah Tong")).toBe(true);
+  });
+
+  it("RC vs a DIFFERENT surname still refuses -- RC never widens past the same player", () => {
+    expect(cjs.namesAgree("Adael Amador RC", "Julio Rodriguez RC")).toBe(false);
+    expect(cjs.namesAgree("Adael Amador RC", "Julio Rodriguez")).toBe(false);
+  });
+
+  it("RCup is untouched by the new bare-RC marker (RCup already matched its own rule)", () => {
+    expect(cjs.namesAgree("Joey Ortiz", "Joey Ortiz RCup")).toBe(true);
+  });
+
+  it("DROP THE BARE-RC MARKER -> red: without it \"Adael Amador\" would still disagree with \"Adael Amador RC\"", () => {
+    const oldCompare = (x: string, y: string) =>
+      x.trim().toLowerCase().replace(/[^a-z0-9]/g, "") === y.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    expect(oldCompare("Adael Amador", "Adael Amador RC")).toBe(false); // the old defect (run 36346769892)
+    expect(cjs.namesAgree("Adael Amador", "Adael Amador RC")).toBe(true); // the fix
+  });
+
+  it("the unattested shapes stay OUT -- \"(RC)\" and \"RC SP\"/\"RC SSP\" are not on the closed list", () => {
+    // Measured on the committed checklist corpus (backend/data/checklists/**/*.csv,
+    // playerName column): 8,072 rows carry a bare trailing " RC", ZERO carry
+    // "(RC)" or "RC SP"/"RC SSP" -- so only the bare shape is in the list.
+    expect(cjs.namesAgree("Adael Amador", "Adael Amador (RC)")).toBe(false);
+    expect(cjs.namesAgree("Adael Amador", "Adael Amador RC SP")).toBe(false);
+    expect(cjs.namesAgree("Adael Amador", "Adael Amador RC SSP")).toBe(false);
+  });
+});
+
+// ── opts.stripTrailingTokens: the CALLER-SUPPLIED closed list ──────────────
+describe("namesAgree -- opts.stripTrailingTokens (caller-supplied, product-scoped)", () => {
+  it("the run's own pair, full shape: \"Adael Amador Teal\" vs \"Adael Amador RC\" agree when the caller supplies the product's parallel vocabulary", () => {
+    expect(
+      cjs.namesAgree("Adael Amador Teal", "Adael Amador RC", {
+        stripTrailingTokens: ["Teal Refractor", "Teal", "Refractor"],
+      }),
+    ).toBe(true);
+  });
+
+  it("with NO opts, the same pair still disagrees -- the third argument is opt-in, never ambient", () => {
+    expect(cjs.namesAgree("Adael Amador Teal", "Adael Amador RC")).toBe(false);
+  });
+
+  it("strips ONLY the listed phrases, and only at the trailing END of the string", () => {
+    // "Teal Adael Amador" -- Teal is LEADING, not trailing, so it is NOT stripped.
+    expect(
+      cjs.namesAgree("Teal Adael Amador", "Adael Amador", { stripTrailingTokens: ["Teal"] }),
+    ).toBe(false);
+    // A phrase not on the caller's list is left alone.
+    expect(
+      cjs.namesAgree("Adael Amador Teal", "Adael Amador", { stripTrailingTokens: ["Aqua"] }),
+    ).toBe(false);
+  });
+
+  it("refusals still name-disagree when the remaining names differ after stripping", () => {
+    // "Adael Amador Teal" vs "Julio Rodriguez RC" -> REFUSED (brief's own control).
+    expect(
+      cjs.namesAgree("Adael Amador Teal", "Julio Rodriguez RC", {
+        stripTrailingTokens: ["Teal Refractor", "Teal", "Refractor"],
+      }),
+    ).toBe(false);
+  });
+
+  it("Jr./Sr. (rule c) still wins AFTER stripTrailingTokens -- a real suffix disagreement is never laundered by the caller's list", () => {
+    // Rule (c) extracts the generational suffix from the TRUE end of the
+    // string, BEFORE rule (b)/stripTrailingTokens ever run (see namesAgree's
+    // own rule order) -- so the suffix must be the trailing token for either
+    // rule to see it, exactly as it already is for the FIXED markers
+    // (RCup/FS/RC): "Vladimir Guerrero Jr. Teal" ends in "Teal", not "Jr.",
+    // and the pre-existing "opts.stripTrailingTokens is applied AFTER rule
+    // (b), BEFORE rule (d)" ordering documented on namesAgree means a
+    // trailing opts word placed AFTER the suffix hides the suffix from rule
+    // (c) entirely -- the same limitation the fixed markers already have,
+    // not a new one this PR introduces. So this fixture puts the suffix
+    // where a real card title would: at the true end.
+    expect(
+      cjs.namesAgree("Vladimir Guerrero Teal Jr.", "Vladimir Guerrero Teal Sr.", {
+        stripTrailingTokens: ["Teal"],
+      }),
+    ).toBe(false);
+    // Presence-vs-absence still agrees once the colour word is stripped too.
+    expect(
+      cjs.namesAgree("Vladimir Guerrero Teal Jr.", "Vladimir Guerrero Teal", {
+        stripTrailingTokens: ["Teal"],
+      }),
+    ).toBe(true);
+  });
+
+  it("an empty/absent stripTrailingTokens list behaves exactly as no opts at all", () => {
+    expect(cjs.namesAgree("Adael Amador Teal", "Adael Amador RC", { stripTrailingTokens: [] })).toBe(false);
+  });
+});
+
 describe("mutation check -- rule (c), Jr./Sr./II/III equivalence", () => {
   it("DROP THE GENERATIONAL-SUFFIX RULE -> red: \"Vladimir Guerrero Jr.\" would still disagree with \"Vladimir Guerrero\"", () => {
     const oldCompare = (x: string, y: string) =>

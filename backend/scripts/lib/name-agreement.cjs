@@ -57,6 +57,19 @@
  *     printed -- "Juan Soto" does not become "Juan" because "Soto" is not on
  *     the list.
  *
+ *     Also the BARE trailing rookie marker "RC" (run
+ *     https://github.com/HobbyIQ/HobbyIQ-V1/actions/runs/36346769892,
+ *     repoint-sales-by-list REPORT, USC143: `sale "Adael Amador Teal" vs
+ *     destination "Adael Amador RC"`). This module's own header above already
+ *     states "Jonah Tong RC" == "Jonah Tong" is the right answer -- the
+ *     original TRAILING_SUBSET_MARKERS list just never carried the bare `RC`
+ *     token, only its RCup/FS cousins. Measured on the committed checklist
+ *     corpus (`backend/data/checklists/**\/*.csv`, `playerName` column):
+ *     8,072 rows carry a bare trailing " RC" (e.g. "Jonah Tong RC", "Chase
+ *     Burns RC"), zero carry "(RC)" or "RC SP"/"RC SSP" -- so only the bare
+ *     shape is added; the parenthesised and SP/SSP-suffixed shapes stay out
+ *     until a real row proves them.
+ *
  * (c) GENERATIONAL SUFFIX: PRESENCE-VS-ABSENCE ONLY, NEVER SUFFIX-VS-SUFFIX.
  *     A generational suffix present on ONE side and absent on the other is
  *     not a different person: "Bobby Witt Jr." and "Bobby Witt" (this run's
@@ -104,8 +117,14 @@
  */
 
 /** Trailing subset/rookie markers seen in the diagnosed run, closed list.
- *  Matched case-insensitively at the END of the (already trimmed) name. */
-const TRAILING_SUBSET_MARKERS = [/\s+RCup$/i, /\s+FS$/i];
+ *  Matched case-insensitively at the END of the (already trimmed) name.
+ *  `\s+RC$` (bare, no "up") is the USC143 addition -- see the header note
+ *  on rule (b) for the 8,072-row measurement that licenses it and the two
+ *  unattested shapes ("(RC)", "RC SP"/"RC SSP") that are deliberately left
+ *  out. Order matters here only in that longer/more specific markers should
+ *  not be shadowed by this one -- RCup already ends in "up" so `\s+RC$`
+ *  cannot fire on it first (the regex anchors at the true end of string). */
+const TRAILING_SUBSET_MARKERS = [/\s+RCup$/i, /\s+FS$/i, /\s+RC$/i];
 
 /** League-leader suffix: "LL AL HR", "LL NL ERA", etc. -- league then stat. */
 const LEAGUE_LEADER_SUFFIX = /\s+LL\s+(?:AL|NL)\s+(?:HR|RBI|ERA|W|AVG)$/i;
@@ -174,19 +193,42 @@ function suffixesCompatible(suffixA, suffixB) {
 }
 
 /**
- * Strip every rule-(b) trailing marker from one name, repeatedly (a name can
- * carry more than one, e.g. two subset tags). Order: quoted subset name, then
- * league-leader suffix, then a bare RCup/FS marker -- repeated until nothing
- * more strips. The generational suffix is NOT stripped here -- it is pulled
- * off separately by `extractGenerationalSuffix` so its own token can be
- * compared by `suffixesCompatible` instead of being discarded.
+ * Build a trailing-whole-word matcher for a caller-supplied phrase, matched
+ * case-insensitively at the END of the (already trimmed) name only -- never
+ * mid-string. "Teal" strips the trailing word "Teal" off "Adael Amador Teal"
+ * but must NOT touch "Teal Adael Amador" (the phrase is not trailing there)
+ * or fire on a mere substring ("Tealson" does not lose "son"). Built fresh
+ * per call rather than cached: `opts.stripTrailingTokens` is caller-supplied
+ * and product-scoped, so it is expected to differ call to call.
  */
-function stripMarkers(name) {
+function trailingTokenRe(phrase) {
+  const escaped = String(phrase ?? "").trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (!escaped) return null;
+  return new RegExp(`\\s+${escaped}$`, "i");
+}
+
+/**
+ * Strip every rule-(b) trailing marker from one name, repeatedly (a name can
+ * carry more than one, e.g. two subset tags), THEN strip any caller-supplied
+ * `extraTrailingTokens` (opts.stripTrailingTokens -- see `namesAgree`'s own
+ * doc) the same way, repeatedly. Order: quoted subset name, then
+ * league-leader suffix, then a bare RCup/FS/RC marker, then the caller's own
+ * closed list -- repeated until nothing more strips, so a name carrying both
+ * a fixed marker and a caller-supplied one ("Adael Amador Teal RC", not seen
+ * yet but the same shape) still reduces fully. The generational suffix is
+ * NOT stripped here -- it is pulled off separately by
+ * `extractGenerationalSuffix` so its own token can be compared by
+ * `suffixesCompatible` instead of being discarded.
+ */
+function stripMarkers(name, extraTrailingTokens) {
+  const extraRes = Array.isArray(extraTrailingTokens)
+    ? extraTrailingTokens.map(trailingTokenRe).filter(Boolean)
+    : [];
   let out = String(name ?? "").trim();
   let changed = true;
   while (changed) {
     changed = false;
-    for (const re of [QUOTED_SUBSET_RE, LEAGUE_LEADER_SUFFIX, ...TRAILING_SUBSET_MARKERS]) {
+    for (const re of [QUOTED_SUBSET_RE, LEAGUE_LEADER_SUFFIX, ...TRAILING_SUBSET_MARKERS, ...extraRes]) {
       if (re.test(out)) {
         out = out.replace(re, "").trim();
         changed = true;
@@ -238,11 +280,30 @@ function firstListedName(name) {
  * on (the multi-name side is reduced to its first-listed name before the tag
  * stripping and folding below ever see it). If neither side is multi-name,
  * (a) is a no-op and (b)-(d) run on the names as given.
+ *
+ * `opts.stripTrailingTokens` (optional, default `[]`) is a CALLER-SUPPLIED
+ * closed list of phrases to strip from the END of EITHER side, matched
+ * case-insensitively as whole trailing words, applied AFTER rule (b)'s own
+ * fixed vocabulary and BEFORE rule (d)'s fold. It exists for
+ * `repoint-sales-by-list.cjs`'s USC143 shape -- a sale's player string
+ * carrying a parallel colour word the extraction left in ("Adael Amador
+ * Teal") compared against a checklist row carrying its own trailing marker
+ * ("Adael Amador RC") -- where the phrase to strip is a PRODUCT'S OWN
+ * checklist vocabulary, not something this pair-level, product-blind module
+ * can know on its own. This module never hardcodes a colour or any other
+ * product-specific word; the caller decides what is strippable for the
+ * product it is comparing, and `namesAgree(a, b)` with no third argument
+ * behaves exactly as it did before this option existed. As with rule (b), a
+ * phrase not on the caller's list is left exactly as printed -- "Julio
+ * Rodriguez RC" does not fold onto "Adael Amador Teal" just because the
+ * caller also supplied "Teal": stripping "Teal" from a name that does not
+ * end in it is a no-op, and the two base names still disagree.
  */
-function namesAgree(nameA, nameB) {
+function namesAgree(nameA, nameB, opts) {
   const a = String(nameA ?? "").trim();
   const b = String(nameB ?? "").trim();
   if (!a || !b) return false;
+  const extraTrailingTokens = Array.isArray(opts?.stripTrailingTokens) ? opts.stripTrailingTokens : [];
 
   // Rule (a): a multi-name side compares by its FIRST-listed name only, and
   // only against a genuinely single-name other side -- two multi-name sides
@@ -267,8 +328,8 @@ function namesAgree(nameA, nameB) {
   const { base: baseB, suffix: suffixB } = extractGenerationalSuffix(rightName);
   if (!suffixesCompatible(suffixA, suffixB)) return false;
 
-  const strippedA = stripMarkers(baseA);
-  const strippedB = stripMarkers(baseB);
+  const strippedA = stripMarkers(baseA, extraTrailingTokens);
+  const strippedB = stripMarkers(baseB, extraTrailingTokens);
   return foldForCompare(strippedA) === foldForCompare(strippedB);
 }
 
