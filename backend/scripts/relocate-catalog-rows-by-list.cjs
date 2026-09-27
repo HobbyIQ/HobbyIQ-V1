@@ -501,15 +501,49 @@ function classifyEntry(e) {
   if ("retire" === action) {
     return { ok: true, id, action, to, reason, requireTwinId: requireTwinId || null };
   }
-  // A PATCHFIELDS ENTRY NAMES ITS FIELD IN-LINE, NOT IN A NESTED OBJECT --
-  // `parallel` is the only field this shape may touch (CF-A-RESLUG-THAT-
-  // CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT heal, 2026-09-26). Scoped to one
-  // field deliberately: this action exists to heal the ONE gap the reslug fix
-  // closed going forward -- rows already moved with stale parallel text --
-  // never as a general-purpose raw-field escape hatch. Anything else in the
-  // entry besides id/action/reason/evidence/parallel is a typo'd key or a
-  // request to patch a field this shape was never reviewed to touch.
+  // A PATCHFIELDS ENTRY NAMES ITS FIELD IN-LINE, NOT IN A NESTED OBJECT.
+  // Two fields are supported, each its own heal, and an entry touches
+  // exactly one of them -- never a general-purpose raw-field escape hatch:
+  //
+  //   parallel (default, CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-
+  //     RUNG'S-TEXT heal, 2026-09-26): rows a PRIOR reslug already moved
+  //     onto their correct id while leaving stale human-form parallel text.
+  //     Carries its own value (the entry's `parallel`), because the correct
+  //     text cannot be read off the id -- computeHobbyIqCardId is lossy from
+  //     slug back to human form.
+  //
+  //   setKey (CF-A-STORED-SETKEY-MAY-DISAGREE-WITH-ITS-OWN-ID, 2026-09-27
+  //     unsigned-twins census, run 36351266066): rows whose stored `setKey`
+  //     field disagrees with the setKey segment already baked into their own
+  //     id -- a wrong INGEST-WRITTEN field, not a wrong address. Unlike
+  //     `parallel`, no value is given in the entry: the id is the
+  //     authoritative source of the correct setKey (`idSetKey(id)`), because
+  //     that segment is exactly what already-existing catalog matchers keyed
+  //     off elsewhere (catalogMatcher, resolveSetKey) read as truth. An entry
+  //     naming `field: "setKey"` that also carries a `setKey` value is
+  //     refused, not merged — the value would only ever have to equal
+  //     idSetKey(id) to be legal, so a caller supplying one is a sign the
+  //     entry was meant for a different row.
+  //
+  // `field` is optional and defaults to "parallel" so every existing list
+  // (none of which name it) keeps its current meaning unchanged.
   if (action === "patchFields") {
+    const field = e && typeof e === "object" && "field" in e ? String(e.field ?? "").trim() : "parallel";
+    if (field !== "parallel" && field !== "setKey") {
+      return { ok: false, why: `patchFields "field" must be "parallel" or "setKey", got ${JSON.stringify(e?.field ?? null)}: ${id.slice(0, 60)}` };
+    }
+    if (field === "setKey") {
+      const KNOWN_KEYS = new Set(["id", "action", "to", "reason", "evidence", "field"]);
+      const stray = e && typeof e === "object" ? Object.keys(e).filter((k) => !KNOWN_KEYS.has(k)) : [];
+      if (stray.length) {
+        return { ok: false, why: `patchFields (field: "setKey") entry carries unsupported field(s) ${stray.join(", ")} — the correct value is read off the id, never supplied: ${id.slice(0, 60)}` };
+      }
+      const correctSetKey = idSetKey(id);
+      if (!correctSetKey) {
+        return { ok: false, why: `patchFields (field: "setKey") entry's own id has no setKey segment to read: ${id.slice(0, 60)}` };
+      }
+      return { ok: true, id, action, to, reason, field, setKey: correctSetKey };
+    }
     const normalized = normalizedTextOrRefusal(e?.parallel);
     if (!normalized.ok) {
       return {
@@ -520,12 +554,12 @@ function classifyEntry(e) {
       };
     }
     const parallel = normalized.value;
-    const KNOWN_KEYS = new Set(["id", "action", "to", "reason", "evidence", "parallel"]);
+    const KNOWN_KEYS = new Set(["id", "action", "to", "reason", "evidence", "parallel", "field"]);
     const stray = e && typeof e === "object" ? Object.keys(e).filter((k) => !KNOWN_KEYS.has(k)) : [];
     if (stray.length) {
       return { ok: false, why: `patchFields entry carries unsupported field(s) ${stray.join(", ")} — this shape only patches "parallel": ${id.slice(0, 60)}` };
     }
-    return { ok: true, id, action, to, reason, parallel };
+    return { ok: true, id, action, to, reason, field: "parallel", parallel };
   }
   // A VERIFY MUST CITE ITS EVIDENCE, BOTH FIELDS, BEFORE ANY ROW IS EVEN READ.
   // Doctrine: "verified" means checklist-backed or ruled by Drew WITH A
@@ -1460,6 +1494,45 @@ async function main() {
     // reproduce under the new text is not this gap -- it needs a reslug, not
     // a field patch, and is refused rather than silently patched into a
     // parallel field that disagrees with its own address.
+    if (action === "patchFields" && c.field === "setKey") {
+      // CF-A-STORED-SETKEY-MAY-DISAGREE-WITH-ITS-OWN-ID (2026-09-27). Unlike
+      // the `parallel` heal below, the correct value is never supplied by the
+      // entry and never round-tripped through computeHobbyIqCardId: the
+      // setKey segment already baked into this row's OWN id (idSetKey(id),
+      // verified equal to `c.setKey` at classify time) IS the correct value,
+      // because that segment is what the address already commits to. There
+      // is no "does this text reproduce the id" question to ask -- the id
+      // is not changing, only a stored field that had drifted from it.
+      console.log(`  PATCH FIELDS  ${id.slice(0, 62)}`);
+      console.log(`      ${String(row.playerName ?? "(no player)")} — ${String(row.setName ?? "")}`.slice(0, 100));
+      console.log(`      reason: ${reason.slice(0, 90)}`);
+      console.log(`      setKey: "${String(row.setKey ?? "")}" -> "${c.setKey}"`);
+      // Belt-and-suspenders: classify already required idSetKey(id) to be
+      // non-empty and equal to c.setKey, but a row is only ever patched
+      // through the id it was actually read at -- re-derive from THIS id,
+      // not from the classified copy, so a future refactor that hands this
+      // branch a different id cannot silently patch the wrong value.
+      const liveCorrectSetKey = idSetKey(id);
+      if (!liveCorrectSetKey || liveCorrectSetKey !== c.setKey) {
+        failed++;
+        console.error(`      FAILED: id's own setKey segment (${JSON.stringify(liveCorrectSetKey)}) no longer matches the classified value — refusing rather than patching a stale target`);
+        continue;
+      }
+      try {
+        const res = await patchCatalogRowFields(
+          cat, id, row.cardId ?? id,
+          { setKey: c.setKey },
+          { retry, dryRun: !APPLY },
+        );
+        if (res?.action === "noop") { alreadyRight++; continue; }
+        patchedFields++;
+      } catch (err) {
+        failed++;
+        console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
+      }
+      continue;
+    }
+
     if (action === "patchFields") {
       console.log(`  PATCH FIELDS  ${id.slice(0, 62)}`);
       console.log(`      ${String(row.playerName ?? "(no player)")} — ${String(row.setName ?? "")}`.slice(0, 100));
