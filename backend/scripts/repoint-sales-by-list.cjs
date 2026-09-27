@@ -603,6 +603,24 @@ async function main() {
       keep.hobbyiqCardId = toId;
       keep.contentHash = contentHashOf(keep);
       try {
+        // CF-CROSS-PARTITION-VERIFY-IS-PER-ENTRY-NOT-PER-SALE (run
+        // 36353646453, reviewed while fixing it). relocateSoldComp's own
+        // OPTIONAL verifyNoDuplicatesAcrossPartitions checks the pool
+        // immediately after ITS OWN delete -- and this loop can process
+        // several physical documents that share one `id` (the exact
+        // incident shape) one at a time, in sequence. Passing the option
+        // HERE, per sale, made the first sale's own move see the SECOND
+        // sale's not-yet-processed twin and report it as a false
+        // `duplicatesLeft`, even though the very next loop iteration was
+        // about to resolve it. This lane's own dual-count reconcile
+        // (GATE 5's expectedSales, and the drain fix in lib/sales-at-id.cjs
+        // this same PR ships) is the correct place for that check: it
+        // already reads the TRUE physical count via drainSalesIdsAtId
+        // BEFORE any sale in this entry moves, so every physical document
+        // sharing this id is enumerated and processed in this same loop --
+        // never silently left for a per-call verify to (wrongly) flag mid-
+        // entry. relocateSoldComp's own opt-in stays available for a caller
+        // whose loop shape is one physical document per relocate call.
         const res = await relocateSoldComp(pool, {
           keep, drop: [{ id: sale.id, cardId: sale.cardId ?? fromId }], retry,
           verifyFields: ["cardId", "hobbyiqCardId", "price", "soldAt", "contentHash"],

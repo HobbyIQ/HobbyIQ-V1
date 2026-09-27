@@ -57,6 +57,36 @@ async function drainIds(iterator, retry) {
 }
 
 /**
+ * CF-AN-ID-IS-UNIQUE-ONLY-WITHIN-A-PARTITION (2026-09-27, incident: run
+ * 36353646453 / #2454 repoint-sales-by-list). sold_comps ids
+ * (`${source}::${externalId}`) are unique only WITHIN a partition -- this
+ * file's own header, and repoint-sales-by-list.cjs's, both say so. Two
+ * DIFFERENT Cosmos documents (different `cardId`, i.e. different partitions)
+ * can legally carry the identical `id` string: a vendor-keyed sale still
+ * resident at its raw source cardId (or a malformed legacy slug) whose
+ * `hobbyiqCardId` was already rewritten to `fromId`, sitting alongside its
+ * own already-moved twin.
+ *
+ * `drainSalesIdsAtId` used to collapse its result into a `Map` keyed by `id`
+ * ALONE (`byId.set(String(r.id), ...)`, and the same shape again in the
+ * xp/pk union) -- so when both of those documents matched the dual
+ * predicate, the SECOND one written into the Map silently overwrote the
+ * first: one whole physical document vanished from the result before any
+ * caller ever saw it. repoint-sales-by-list.cjs iterates exactly the rows
+ * this function returns and moves nothing it was never handed, so the
+ * discarded twin was never read, never deleted, and never counted --
+ * `duplicatesLeft` stayed empty and the run's own banner reported clean.
+ *
+ * The fix: dedupe on the REAL Cosmos identity, `(id, cardId)` together, not
+ * `id` alone. Two documents that share an `id` but differ in `cardId` are
+ * two rows and both survive into the result; only a genuine repeat of the
+ * exact same (id, cardId) pair -- the xp and pk forms both finding the same
+ * physical document -- collapses to one entry, which is the union this
+ * function has always promised.
+ */
+const rowKey = (r) => `${r.id}|${r.cardId ?? ""}`;
+
+/**
  * salesAtId(container, id, opts?) -- the dual check.
  *
  * Runs (a) a cross-partition query with no partitionKey, and (b) the same
@@ -109,14 +139,21 @@ async function drainSalesIdsAtId(container, id, opts = {}) {
   const query = "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @id OR c.cardId = @id";
 
   const drainRows = async (iterator) => {
-    const byId = new Map();
+    // Keyed by (id, cardId) -- the REAL Cosmos document identity -- never by
+    // `id` alone. See the header note above `rowKey`: an id string is unique
+    // only within a partition, so two documents with different `cardId` can
+    // share one, and keying on `id` alone silently drops one of them.
+    const byKey = new Map();
     while (iterator.hasMoreResults()) {
       const { resources } = await retry(() => iterator.fetchNext());
       for (const r of resources ?? []) {
-        if (r && r.id != null) byId.set(String(r.id), { id: String(r.id), cardId: r.cardId ?? null });
+        if (r && r.id != null) {
+          const row = { id: String(r.id), cardId: r.cardId ?? null };
+          byKey.set(rowKey(row), row);
+        }
       }
     }
-    return byId;
+    return byKey;
   };
 
   const xpIter = container.items.query(

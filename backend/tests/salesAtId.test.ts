@@ -36,6 +36,11 @@ type Lib = {
     id: string,
     opts?: { retry?: (fn: () => unknown) => unknown },
   ) => Promise<{ xp: number; pk: number; total: number; ids: string[] }>;
+  drainSalesIdsAtId: (
+    container: { items: { query: (spec: QuerySpec, feedOptions?: FeedOptions) => unknown } },
+    id: string,
+    opts?: { retry?: (fn: () => unknown) => unknown },
+  ) => Promise<{ total: number; rows: Array<{ id: string; cardId: string | null }> }>;
 };
 const lib = require_(path.join(backend, "scripts", "lib", "sales-at-id.cjs")) as Lib;
 
@@ -237,5 +242,114 @@ describe("salesAtId -- a query failure is never swallowed", () => {
     const retry = () => { throw new Error("probe: retry wrapper threw"); };
     await expect(lib.salesAtId(container, ANOMALY_ID, { retry }))
       .rejects.toThrow(/retry wrapper threw/);
+  });
+});
+
+/**
+ * drainSalesIdsAtId -- CF-AN-ID-IS-UNIQUE-ONLY-WITHIN-A-PARTITION (2026-09-27,
+ * incident: run 36353646453 / #2454 repoint-sales-by-list). sold_comps ids
+ * (`${source}::${externalId}`) are unique only WITHIN a partition -- this
+ * file's own header, and repoint-sales-by-list.cjs's own header, both say so
+ * directly. Two DIFFERENT Cosmos documents (different cardId, i.e. different
+ * partitions) legally share one id string: a vendor-keyed sale still
+ * resident at its raw source cardId (or a malformed legacy slug) whose
+ * hobbyiqCardId was already rewritten to fromId, sitting alongside its own
+ * already-moved twin.
+ *
+ * The regression: `drainSalesIdsAtId` used to dedupe its result by `id`
+ * ALONE, so when the cross-partition query matched both documents, the
+ * second one written into the Map silently overwrote the first -- one whole
+ * physical document vanished from the returned `rows` before
+ * repoint-sales-by-list.cjs's own per-sale loop ever saw it. That lane
+ * iterates exactly the rows this function hands it, so the discarded twin
+ * was never read, never moved, never deleted, and never counted as a
+ * duplicate -- the run's own banner reported clean.
+ *
+ * These pins construct a fake container with TWO distinct row objects
+ * sharing one `id`, both answering the dual predicate (one lives only in the
+ * partition named by `id`, exercising the partition-scoped form; the other
+ * lives elsewhere but carries the matching hobbyiqCardId, exercising the
+ * cross-partition form) and require BOTH to survive into `rows`.
+ */
+describe("drainSalesIdsAtId -- two documents sharing an id must both survive", () => {
+  const SHARED_ID = "ebay-user-purchase::AAA";
+  const RAW_VENDOR_CARD_ID = "1765857544536x502800993546556500";
+
+  /** Like `fakeContainer` above, but the query selects `c.id, c.cardId` (the
+   *  shape drainSalesIdsAtId actually issues), and pages by whole rows. */
+  function fakeRowContainer(opts: { crossPartitionVisible: Row[]; partitionScopedVisible: Row[] }) {
+    const query = (spec: QuerySpec, feedOptions?: FeedOptions) => {
+      const p = Object.fromEntries((spec.parameters ?? []).map((x) => [x.name, x.value]));
+      const target = p["@id"];
+      const source = feedOptions && feedOptions.partitionKey !== undefined
+        ? opts.partitionScopedVisible
+        : opts.crossPartitionVisible;
+      const rows = source.filter((r) => r.hobbyiqCardId === target || r.cardId === target);
+      let done = false;
+      return {
+        hasMoreResults: () => !done,
+        fetchNext: async () => { done = true; return { resources: rows.map((r) => ({ id: r.id, cardId: r.cardId ?? null })) }; },
+      };
+    };
+    return { items: { query } };
+  }
+
+  it("REPRODUCES the incident: two physically distinct docs sharing an id both survive into `rows`", async () => {
+    // docNew: already at fromId's own partition, hobbyiqCardId=fromId --
+    // visible to BOTH the cross-partition form (matches hobbyiqCardId) AND
+    // the partition-scoped form (its cardId IS the scoped partition).
+    const docNew: Row = { id: SHARED_ID, cardId: ANOMALY_ID, hobbyiqCardId: ANOMALY_ID };
+    // docOldRaw: still resident at its raw vendor cardId, hobbyiqCardId
+    // already rewritten to fromId -- visible ONLY to the cross-partition
+    // form (its cardId is not the scoped partition).
+    const docOldRaw: Row = { id: SHARED_ID, cardId: RAW_VENDOR_CARD_ID, hobbyiqCardId: ANOMALY_ID };
+
+    const container = fakeRowContainer({
+      crossPartitionVisible: [docNew, docOldRaw],
+      partitionScopedVisible: [docNew],
+    });
+
+    const res = await lib.drainSalesIdsAtId(container, ANOMALY_ID);
+
+    expect(res.total).toBe(2);
+    const byCardId = new Map(res.rows.map((r) => [r.cardId, r]));
+    expect(byCardId.has(ANOMALY_ID)).toBe(true);
+    expect(byCardId.has(RAW_VENDOR_CARD_ID)).toBe(true);
+  });
+
+  it("a genuine repeat -- the SAME physical document found by both forms -- still collapses to one row", async () => {
+    // Not every shared `id` across xp/pk is two documents: the ordinary case
+    // is the cross-partition and partition-scoped queries both finding the
+    // SAME document (identical id AND cardId). That must still collapse to
+    // exactly one row, or every ordinary drain would double-count.
+    const doc: Row = { id: SHARED_ID, cardId: ANOMALY_ID, hobbyiqCardId: ANOMALY_ID };
+    const container = fakeRowContainer({ crossPartitionVisible: [doc], partitionScopedVisible: [doc] });
+
+    const res = await lib.drainSalesIdsAtId(container, ANOMALY_ID);
+
+    expect(res.total).toBe(1);
+    expect(res.rows).toEqual([{ id: SHARED_ID, cardId: ANOMALY_ID }]);
+  });
+
+  it("MUTATION CHECK: an id-only dedup (the pre-fix shape) collapses the two documents to one", async () => {
+    // A stand-in for "the fix reverted to keying the Map by `id` alone" --
+    // proves the fixture above genuinely distinguishes the two documents,
+    // i.e. this is not a fixture that would pass either way.
+    const docNew: Row = { id: SHARED_ID, cardId: ANOMALY_ID, hobbyiqCardId: ANOMALY_ID };
+    const docOldRaw: Row = { id: SHARED_ID, cardId: RAW_VENDOR_CARD_ID, hobbyiqCardId: ANOMALY_ID };
+    const rows = [docNew, docOldRaw];
+
+    const idOnlyDedup = (drained: Row[]) => {
+      const byId = new Map<string, Row>();
+      for (const r of drained) byId.set(r.id, r);
+      return byId;
+    };
+    const regressed = idOnlyDedup(rows);
+    expect(regressed.size).toBe(1); // the pre-fix shape loses one document
+
+    const container = fakeRowContainer({ crossPartitionVisible: rows, partitionScopedVisible: [docNew] });
+    const res = await lib.drainSalesIdsAtId(container, ANOMALY_ID);
+    expect(res.total).toBe(2);
+    expect(res.total).not.toBe(regressed.size);
   });
 });

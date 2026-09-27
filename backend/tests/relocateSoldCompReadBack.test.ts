@@ -379,3 +379,117 @@ describe("CF-BOTH-ADDRESSES-MOVE-TOGETHER (fold-checklist-numbered-twins.cjs's o
     expect(patchOpsBlock).not.toContain('path: "/cardId"');
   });
 });
+
+describe("verifyNoDuplicatesAcrossPartitions -- OPTIONAL cross-partition backstop (run 36353646453)", () => {
+  // Default OFF: no existing caller's fake pool answers this query shape, so
+  // omitting the option must never issue it -- every one of the other 22+
+  // callers is byte-for-byte unaffected.
+  it("OFF by default: pool.items.query is never called for the extra verify", async () => {
+    let queryCalls = 0;
+    const written: Array<Record<string, unknown>> = [];
+    const pool = {
+      item: (id: string, pk: string) => ({
+        read: async () => ({ resource: written.find((w) => w.id === id && w.cardId === pk) ?? null }),
+        delete: async () => {},
+      }),
+      items: {
+        upsert: async (d: Record<string, unknown>) => { written.push({ ...d }); },
+        query: () => { queryCalls++; return { fetchAll: async () => ({ resources: [] }) }; },
+      },
+    };
+    const keep = { id: "s::1", cardId: "hiq:a:1:b:1:base:no-auto", hobbyiqCardId: "hiq:a:1:b:1:base:no-auto" };
+    const res = await relocateSoldComp(pool as never, {
+      keep, drop: [], verifyFields: [], guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(true);
+    // The read-back's OWN query fallback only fires when the point-read
+    // never shows the write -- here the point-read finds `keep` on attempt 0
+    // (upsert pushed it into `written` first), so queryCalls being 0 proves
+    // NEITHER the read-back fallback NOR the new verify ran.
+    expect(queryCalls).toBe(0);
+  });
+
+  it("ON, and the pool is clean: reports ok:true, no extra duplicatesLeft", async () => {
+    const written: Array<Record<string, unknown>> = [];
+    const deleted: string[] = [];
+    const keep = { id: "s::1", cardId: "hiq:a:1:b:1:base:no-auto", hobbyiqCardId: "hiq:a:1:b:1:base:no-auto" };
+    const drop = { id: "s::1", cardId: "hiq:a:1:b:1:base:no-auto:legacy" };
+    const pool = {
+      item: (id: string, pk: string) => ({
+        read: async () => ({ resource: written.find((w) => w.id === id && w.cardId === pk) ?? null }),
+        delete: async () => { deleted.push(`${id}@${pk}`); },
+      }),
+      items: {
+        upsert: async (d: Record<string, unknown>) => { written.push({ ...d }); },
+        query: (spec: { query: string; parameters: Array<{ name: string; value: string }> }) => {
+          expect(spec.query).toContain("SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE c.id = @id");
+          const id = spec.parameters.find((p) => p.name === "@id")!.value;
+          // The clean pool: only the keeper answers to this id, at keep.cardId.
+          const resources = written.filter((w) => w.id === id).map((w) => ({ id: w.id, cardId: w.cardId, hobbyiqCardId: w.hobbyiqCardId }));
+          return { fetchAll: async () => ({ resources }) };
+        },
+      },
+    };
+    const res = await relocateSoldComp(pool as never, {
+      keep, drop: [drop], verifyFields: [], guard: () => ({ verdict: "ok" }),
+      verifyNoDuplicatesAcrossPartitions: true,
+    });
+    expect(res.ok).toBe(true);
+    expect(res.duplicatesLeft).toEqual([]);
+    expect(deleted).toEqual([`${drop.id}@${drop.cardId}`]);
+  });
+
+  it("ON, and a leftover this call was never told about is still resident: reported in duplicatesLeft, ok:false", async () => {
+    const keep = { id: "s::1", cardId: "hiq:a:1:b:1:base:no-auto", hobbyiqCardId: "hiq:a:1:b:1:base:no-auto" };
+    const leftover = { id: "s::1", cardId: "1765857544536x502800993546556500", hobbyiqCardId: "hiq:a:1:b:1:base:no-auto" };
+    const written: Array<Record<string, unknown>> = [];
+    const pool = {
+      item: (id: string, pk: string) => ({
+        read: async () => ({ resource: written.find((w) => w.id === id && w.cardId === pk) ?? null }),
+        delete: async () => {},
+      }),
+      items: {
+        upsert: async (d: Record<string, unknown>) => { written.push({ ...d }); },
+        // The caller's OWN drop list never named `leftover` -- this is the
+        // exact shape an upstream scan bug (the old id-only dedup in
+        // sales-at-id.cjs) produces: a real document the delete loop was
+        // never told to touch.
+        query: () => ({ fetchAll: async () => ({ resources: [{ ...keep }, { ...leftover }] }) }),
+      },
+    };
+    const res = await relocateSoldComp(pool as never, {
+      keep, drop: [], verifyFields: [], guard: () => ({ verdict: "ok" }),
+      verifyNoDuplicatesAcrossPartitions: true,
+    });
+    expect(res.ok).toBe(false);
+    expect(res.duplicatesLeft).toHaveLength(1);
+    expect(res.duplicatesLeft[0]).toMatchObject({
+      id: "s::1",
+      cardId: "1765857544536x502800993546556500",
+      hobbyiqCardId: "hiq:a:1:b:1:base:no-auto",
+      viaCrossPartitionVerify: true,
+    });
+  });
+
+  it("ON, and the verify query itself throws: FAILED, never a clean ok:true", async () => {
+    const keep = { id: "s::1", cardId: "hiq:a:1:b:1:base:no-auto", hobbyiqCardId: "hiq:a:1:b:1:base:no-auto" };
+    const written: Array<Record<string, unknown>> = [];
+    const pool = {
+      item: (id: string, pk: string) => ({
+        read: async () => ({ resource: written.find((w) => w.id === id && w.cardId === pk) ?? null }),
+        delete: async () => {},
+      }),
+      items: {
+        upsert: async (d: Record<string, unknown>) => { written.push({ ...d }); },
+        query: () => ({ fetchAll: async () => { throw new Error("probe: verify query threw"); } }),
+      },
+    };
+    const res = await relocateSoldComp(pool as never, {
+      keep, drop: [], verifyFields: [], guard: () => ({ verdict: "ok" }),
+      verifyNoDuplicatesAcrossPartitions: true,
+    });
+    expect(res.ok).toBe(false);
+    expect(res.stage).toBe("verify");
+    expect(res.error).toMatch(/cross-partition duplicate verify threw/);
+  });
+});
