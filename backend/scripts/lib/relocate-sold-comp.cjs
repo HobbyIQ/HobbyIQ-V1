@@ -340,8 +340,35 @@ function is412(e) {
  *                 that still matched; a 412 means it did not match at all)
  *   readBackVia   how the write was confirmed: "point-read", a retry, or the
  *                 (id, cardId) query that defeats replica lag
+ *
+ * CROSS-PARTITION DUPLICATE VERIFY (2026-09-27, incident: run 36353646453,
+ * OPTIONAL, additive, default OFF). Pass `verifyNoDuplicatesAcrossPartitions:
+ * true` to run one extra query after the delete loop: cross-partition,
+ * `SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE c.id = @id`, asking
+ * the pool itself whether any OTHER document still answers to this id. Every
+ * per-drop delete above can only address what it was HANDED in `drop` --
+ * it cannot see a physical duplicate the caller's own scan never told it
+ * about (exactly what happened here: drainSalesIdsAtId's id-only dedup
+ * silently dropped one of two documents sharing an id before this function
+ * was ever called, so its `drop` list never named the leftover, and no
+ * per-drop delete could have reached it). This verify is the backstop for
+ * that upstream class of miss, not a replacement for the drop-list fix
+ * (sales-at-id.cjs's own fix keys on (id, cardId), so the leftover should
+ * never reach `relocateSoldComp` un-named in the first place -- this is
+ * defense in depth for callers that opt in).
+ *
+ * OFF by default because `pool.items.query` is a real Cosmos SDK call this
+ * function did not make before, and the 22+ existing callers' own test
+ * fakes are not shaped to answer it -- opting in is the caller's choice, not
+ * a silent behavior change for everyone who already calls this helper.
+ * When on, a leftover this verify finds is appended to `duplicatesLeft`
+ * (each carrying its own `cardId`/`hobbyiqCardId` and
+ * `viaCrossPartitionVerify: true`, disjoint from a per-drop delete failure);
+ * a THROW from the verify query itself is reported as `ok: false, stage:
+ * "verify"` -- never silently read as "found nothing, therefore clean" --
+ * mirroring how a thrown read-back is already handled above.
  */
-async function relocateSoldComp(pool, { keep, drop, retry = defaultRetry, verifyFields = [], dryRun = false, wait = sleep, guard = undefined }) {
+async function relocateSoldComp(pool, { keep, drop, retry = defaultRetry, verifyFields = [], dryRun = false, wait = sleep, guard = undefined, verifyNoDuplicatesAcrossPartitions = false }) {
   const drops = (drop ?? []).filter((d) => d && d.id && d.cardId && !sameRef(d, keep));
   if (!keep || !keep.id || !keep.cardId) throw new Error("relocateSoldComp: keep needs id and cardId");
 
@@ -427,6 +454,15 @@ async function relocateSoldComp(pool, { keep, drop, retry = defaultRetry, verify
     const options = d.ifMatchEtag
       ? { accessCondition: { type: "IfMatch", condition: d.ifMatchEtag } }
       : undefined;
+    // The delete is addressed at THIS drop's OWN (id, cardId) -- whatever
+    // partition key the CALLER attached to it. relocateSoldComp never
+    // second-guesses that address; a caller that hands it the wrong pk for
+    // a drop (the #2454 incident: repoint-sales-by-list.cjs handed a `drop`
+    // whose cardId was never the doc's own, because the SCAN upstream
+    // (drainSalesIdsAtId) had already lost the row -- see sales-at-id.cjs's
+    // own fix) leaves the real document untouched and this delete 404s or
+    // hits an unrelated row. The cross-partition verify below is what
+    // catches that regardless of which layer mis-addressed it.
     try {
       await retry(() => pool.item(d.id, d.cardId).delete(options));
       deleted.push(d);
@@ -436,6 +472,64 @@ async function relocateSoldComp(pool, { keep, drop, retry = defaultRetry, verify
       else duplicatesLeft.push({ ...d, error: String(e?.message ?? e) });
     }
   }
+
+  // ── CROSS-PARTITION VERIFY (2026-09-27, incident: run 36353646453). ──────
+  //
+  // Every delete above can report success (`deleted`) or an expected miss
+  // (`alreadyGone`) while a THIRD physical document -- one this call was
+  // never TOLD about, because whatever scanned for drops upstream missed it
+  // -- still sits in the pool under this same `id`. A per-drop delete can
+  // only ever address what it was handed; it cannot see what it wasn't.
+  //
+  // So after the drop loop, ask the pool itself, cross-partition, by `id`
+  // alone: how many documents answer to this id, and where do they sit? A
+  // clean move leaves EXACTLY ONE -- the keeper, at `keep.cardId`. Anything
+  // else (zero, or more than one, or one sitting at the wrong address) is a
+  // real duplicate/loss this call did not fully resolve, reported here with
+  // each leftover's own cardId/hobbyiqCardId so an operator can address it
+  // directly rather than re-deriving it from a census.
+  //
+  // This is a SEPARATE query from `duplicatesLeft` above (which reports a
+  // drop THIS call attempted and failed to delete) -- a leftover found only
+  // here was never attempted at all. Both lists feed the same `ok` verdict;
+  // neither is folded into the other, so an operator reading `duplicatesLeft`
+  // sees which leftovers were attempted-and-failed vs found-only-by-verify
+  // (the latter carry `viaCrossPartitionVerify: true`).
+  //
+  // OFF unless the caller opts in (see this function's own doc comment) --
+  // every one of the other 22+ callers, and their own test fakes, get
+  // byte-for-byte the same behavior as before this option existed.
+  if (verifyNoDuplicatesAcrossPartitions) {
+    let crossPartitionExtras = [];
+    try {
+      const res = await retry(() => pool.items.query({
+        query: "SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE c.id = @id",
+        parameters: [{ name: "@id", value: keep.id }],
+      }).fetchAll());
+      const resources = res?.resources ?? [];
+      crossPartitionExtras = resources.filter((r) => r && r.cardId !== keep.cardId);
+    } catch (e) {
+      // A THROWN verify query is reported the same way a thrown read-back is
+      // (CF-A-THROWN-VERIFY-IS-FAILED-NOT-CLEAN): we do not know the true
+      // state of the pool, so this is never silently treated as "verify
+      // found nothing, therefore clean".
+      return {
+        ok: false, stage: "verify",
+        error: `cross-partition duplicate verify threw: ${String(e?.message ?? e)}`,
+        existedBefore, deleted, alreadyGone, duplicatesLeft, staleSincePlan, readBackVia,
+      };
+    }
+    for (const extra of crossPartitionExtras) {
+      duplicatesLeft.push({
+        id: extra.id,
+        cardId: extra.cardId ?? null,
+        hobbyiqCardId: extra.hobbyiqCardId ?? null,
+        error: "cross-partition verify found a leftover document at this id that this call was never told to delete",
+        viaCrossPartitionVerify: true,
+      });
+    }
+  }
+
   return { ok: duplicatesLeft.length === 0 && staleSincePlan.length === 0, stage: "done", existedBefore, deleted, alreadyGone, duplicatesLeft, staleSincePlan, readBackVia };
 }
 

@@ -483,7 +483,12 @@ const state = {
   catalog: new Map(${JSON.stringify(catalog)}.map((d) => [d.id, d])),
 };
 const led = { salesUpserts: [], salesDeletes: [] };
-const save = () => fs.writeFileSync(LEDGER, JSON.stringify(led));
+// finalSales is recomputed from live pool state on every save() -- a test
+// that wants to assert "exactly one document remains for this id" (the
+// #2454/run-36353646453 regression) reads this from the ledger file rather
+// than the upsert/delete lists, which only show WHAT WAS ATTEMPTED, not
+// what a stray un-deleted duplicate leaves standing.
+const save = () => fs.writeFileSync(LEDGER, JSON.stringify({ ...led, finalSales: [...state.sales.values()] }));
 save();
 
 function notFound() { return Object.assign(new Error("not found"), { code: 404 }); }
@@ -537,6 +542,14 @@ const salesContainer = {
         if (feedOpts && feedOpts.partitionKey) {
           resources = resources.filter((d) => d.cardId === feedOpts.partitionKey);
         }
+      } else if (q.includes("WHERE c.id = @id") && q.includes("c.hobbyiqCardId")) {
+        // relocateSoldComp's OPTIONAL cross-partition duplicate verify
+        // (verifyNoDuplicatesAcrossPartitions, lib/relocate-sold-comp.cjs) --
+        // this lane opts in. Cross-partition by id ALONE, mirroring how the
+        // real container answers it: every document, in every partition,
+        // whose id matches.
+        const id = params["@id"];
+        resources = all.filter((d) => d.id === id).map((d) => ({ id: d.id, cardId: d.cardId ?? null, hobbyiqCardId: d.hobbyiqCardId ?? null }));
       } else {
         throw new Error("fake sold_comps: unsupported query " + q);
       }
@@ -1019,5 +1032,73 @@ describe("HIQ_TEST_FAKE_CLOCK_STEP_MS self-defends against leaking into a real r
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/budget 1m loop/);
     expect(r.out).not.toContain("FATAL:");
+  });
+});
+
+describe("regression: run 36353646453 -- a physical duplicate sharing an id must not survive a move", () => {
+  // sold_comps ids (`${source}::${externalId}`) are unique only WITHIN a
+  // partition (lib/sales-at-id.cjs's own header). The incident: TWO real
+  // Cosmos documents shared one id -- one at cardId=fromId (or already on
+  // its way there) and one at the sale's raw vendor cardId / a malformed
+  // legacy slug, BOTH carrying hobbyiqCardId=fromId. drainSalesIdsAtId's old
+  // id-only dedup silently discarded one of the two before this lane's own
+  // per-sale loop ever saw it, so it was never read, moved or deleted --
+  // banner clean, failed 0, no "DUPLICATE LEFT IN POOL" line, and the
+  // leftover stood in the pool forever after.
+  //
+  // Fixed at two layers: (1) lib/sales-at-id.cjs now dedupes on the REAL
+  // Cosmos identity (id, cardId), so BOTH documents are handed to the
+  // per-sale loop; (2) relocateSoldComp's optional
+  // verifyNoDuplicatesAcrossPartitions (which this lane now passes) is the
+  // backstop -- a cross-partition `WHERE c.id = @id` after the delete loop
+  // that catches anything still standing regardless of layer (1).
+  it("APPLY deletes BOTH old-address copies and leaves exactly one document, at toId", () => {
+    const RAW_VENDOR_CARD_ID = "1765857544536x502800993546556500";
+    // expectedSales: 2, not 1 -- this IS the fix showing up one gate early.
+    // Before the sales-at-id.cjs fix, the drain's id-only dedup would have
+    // reported total=1 for this fixture (the second document silently
+    // folded away), so a census taken against the UNFIXED code would have
+    // written expectedSales:1 into a list like this one and GATE 5 would
+    // have waved it through -- exactly how the incident's own list passed
+    // review. Post-fix, the drain correctly reports both, so the true count
+    // the list must carry is 2.
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "duplicate-left regression", expectedSales: 2 }], "dupleft-regression");
+    const catalog = [FROM_ROW, TO_ROW];
+    // Two PHYSICALLY DISTINCT documents, same id, different cardId partitions,
+    // both pointing at fromId via hobbyiqCardId -- exactly the incident shape.
+    const properlyAddressed = { id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" };
+    const leftoverAtRawVendorId = { id: "src::1", cardId: RAW_VENDOR_CARD_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" };
+    const sales = [properlyAddressed, leftoverAtRawVendorId];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code, r.out).toBe(0);
+    expect(r.out).not.toMatch(/DUPLICATE LEFT IN POOL/);
+
+    const finalSales = r.led.finalSales as Array<{ id: string; cardId: string }>;
+    const atThisId = finalSales.filter((d) => d.id === "src::1");
+    // The whole point: exactly ONE document survives for this id, across
+    // every partition, and it sits at toId -- neither old address (fromId
+    // nor the raw vendor cardId) still holds a copy.
+    expect(atThisId.length, JSON.stringify(atThisId)).toBe(1);
+    expect(atThisId[0].cardId).toBe(TO_ID);
+  });
+
+  it("MUTATION CHECK: with only the properly-addressed copy present (no leftover), the same list still moves cleanly", () => {
+    // Proves the regression test above is actually pinned on the SECOND
+    // document existing, not on some other property of the fixture: drop
+    // the leftover and the outcome is the unremarkable single-copy move
+    // every other end-to-end test in this file already covers.
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "control", expectedSales: 1 }], "dupleft-control");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code, r.out).toBe(0);
+    const finalSales = r.led.finalSales as Array<{ id: string; cardId: string }>;
+    const atThisId = finalSales.filter((d) => d.id === "src::1");
+    expect(atThisId.length).toBe(1);
+    expect(atThisId[0].cardId).toBe(TO_ID);
   });
 });
