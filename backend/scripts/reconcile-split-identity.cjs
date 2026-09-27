@@ -31,10 +31,22 @@
  *      never Drew's;
  *   4. NEITHER id is checklist-grade -> REFUSE "neither-checklist" -- an
  *      acquisition gap, the rematch's job, not this lane's;
- *   5. graded ids preserve the grade segment verbatim
+ *   5. THE PLAYER GATE (coordinator review, 2026-09-27). Checklist authority
+ *      proves a CARD is at the winning address; it does not prove THIS SALE
+ *      is that card. The winning catalog row's playerName must `namesAgree`
+ *      (scripts/lib/name-agreement.cjs -- the SAME check
+ *      repoint-sales-to-sibling-product.cjs's MODE=by-player already uses
+ *      for this identical question) with the sale's own playerName, falling
+ *      back to its title when playerName is blank -> disagreement REFUSES
+ *      "player-disagrees" (a Trout sale must never move onto an Ohtani
+ *      catalog row just because the checklist attests Ohtani exists at that
+ *      slug); a sale with NEITHER a playerName NOR a title REFUSES
+ *      "no-sale-player", its own class, because "we could not check" is not
+ *      the same finding as "we checked and it disagreed";
+ *   6. graded ids preserve the grade segment verbatim
  *      (scripts/lib/graded-id.cjs's parseSlugWithGrade -- a graded child's
  *      tier is carried through untouched on whichever side wins);
- *   6. REPORT (apply=false) runs every guard APPLY runs and writes nothing.
+ *   7. REPORT (apply=false) runs every guard APPLY runs and writes nothing.
  *
  * TWIN / RESIDENT HANDLING is identical to #2441
  * (repoint-sales-isauto-flip.cjs): a document already resident at (id,
@@ -42,15 +54,29 @@
  * (the old row is deleted, nothing new is written); a resident that differs
  * is a possible twin and is REFUSED, neither side moved.
  *
- * SCAN SHAPE. `STARTSWITH(c.hobbyiqCardId, 'hiq:<sport>:<year>:')` (+ setKey
- * prefix when `titles` narrows it), paginated {maxItemCount:500,
- * maxDegreeOfParallelism:-1}, `while (iter.hasMoreResults())`. The
+ * SCAN SHAPE, TWO PASSES (coordinator review, #2449, 2026-09-27). PASS 1:
+ * `STARTSWITH(c.hobbyiqCardId, 'hiq:<sport>:<year>:')` (+ setKey prefix when
+ * `titles` narrows it) -- the common case, a split whose canonical slug
+ * names the in-scope cell. PASS 2, over the SAME cell/setKey prefix: the
+ * identical STARTSWITH against `c.cardId` instead. Without it, a HIQ-SPLIT
+ * row whose hobbyiqCardId points OFF-scope (a wrong sport/year segment --
+ * the exact damage this lane exists to close) but whose cardId partition
+ * IS in-scope is invisible to a hobbyiqCardId-only scan and never becomes a
+ * candidate. Pass 2's rows are deduped against pass 1 by their own (id,
+ * cardId) pair -- the same pair sold_comps' point-read key is built from --
+ * so a row is processed at most once regardless of which field's prefix
+ * caught it. Both passes use the identical pagination discipline
+ * {maxItemCount:500, maxDegreeOfParallelism:-1}, `while
+ * (iter.hasMoreResults())`, and both pass counts print in the banner. The
  * client-side filter `cardId !== hobbyiqCardId` (and both sides isHiq) is
  * exactly classifyIdentity's HIQ_SPLIT predicate -- reused from
  * lib/split-identity.cjs rather than re-implemented, so the census and this
- * repair decide identically. Never a cross-partition COUNT or GROUP BY.
- * CardHedge rows carry no top-level sport/year fields at all -- this lane
- * never filters on them, and a CardHedge row's cardId is a vendor id, not an
+ * repair decide identically (that comparison is EXACT-STRING; a case-only
+ * difference between the two fields reads as HIQ-SPLIT too -- see the
+ * CASE-ONLY DIFFERENCE note beside `seenIds` in the scan loop). Never a
+ * cross-partition COUNT or GROUP BY. CardHedge rows carry no top-level
+ * sport/year fields at all -- this lane never filters on them, and a
+ * CardHedge row's cardId is a vendor id, not an
  * hiq: slug, so it is COHERENT or VENDOR-DESIGN under classifyIdentity and
  * never reaches this lane's candidate population in the first place.
  *
@@ -63,6 +89,7 @@
  *
  * RECONCILE: candidates = reconciled + collapsedOntoResident +
  * refusedAmbiguousBothChecklist + refusedNeitherChecklist +
+ * refusedNoSalePlayer + refusedPlayerDisagrees +
  * refusedPossibleTwinAtDestination + refusedEtagChanged + failed +
  * notReached. Exits non-zero when the counters do not add up.
  *
@@ -84,6 +111,7 @@ const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budge
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 const { parseSlugWithGrade } = require(path.join(__dirname, "lib", "graded-id.cjs"));
 const splitIdentity = require(path.join(__dirname, "lib", "split-identity.cjs"));
+const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const str = (v) => String(v ?? "").trim();
@@ -176,9 +204,11 @@ async function main() {
   console.log("");
 
   const s = {
+    pass1Rows: 0, pass2Rows: 0, dedupedAcrossPasses: 0,
     scanned: 0, otherShard: 0, notHiqSplit: 0, candidates: 0,
     reconciledToHobbyiqCardId: 0, reconciledToCardId: 0, collapsedOntoResident: 0,
     refusedAmbiguousBothChecklist: 0, refusedNeitherChecklist: 0,
+    refusedNoSalePlayer: 0, refusedPlayerDisagrees: 0,
     refusedPossibleTwinAtDestination: 0, refusedEtagChanged: 0,
     failed: 0, notReached: 0,
   };
@@ -191,6 +221,7 @@ async function main() {
       perSetKey.set(setKey, {
         candidates: 0, reconciledToHobbyiqCardId: 0, reconciledToCardId: 0,
         refusedAmbiguousBothChecklist: 0, refusedNeitherChecklist: 0,
+        refusedNoSalePlayer: 0, refusedPlayerDisagrees: 0,
         refusedPossibleTwinAtDestination: 0, gradedParse: 0,
       });
     }
@@ -299,8 +330,44 @@ async function main() {
     // (splitIdentityWriteGuard) every other write on this container does;
     // `drop: []` makes it a pure upsert with nothing to delete.
     const winningId = hobbyiqCardIdIsChecklist ? hobbyiqCardId : cardId;
+    const winningRow = hobbyiqCardIdIsChecklist ? hobbyiqCardIdRow : cardIdRow;
     const toHobbyiqCardId = hobbyiqCardIdIsChecklist;
     const isPatchInPlace = winningId === cardId;
+
+    // ── THE PLAYER GATE (coordinator review, #2449, 2026-09-27). Checklist
+    // authority says a CARD lives at the winning address; it says nothing
+    // about whether THIS SALE is that card. A sale of "2026 Topps Mike Trout
+    // #1" whose hobbyiqCardId happens to be #2 -- and #2's only catalog row
+    // is checklist-grade Shohei Ohtani -- is not evidence the sale is
+    // Ohtani's; it is evidence the sale's OWN slug was mis-derived. Moving it
+    // onto the winning row's identity without checking the player would move
+    // a real Trout sale into Ohtani's price pool -- the exact defect this
+    // whole lane exists to close, committed on purpose.
+    //
+    // `namesAgree` (lib/name-agreement.cjs) is the SAME pair-level check
+    // repoint-sales-to-sibling-product.cjs's MODE=by-player already uses for
+    // this identical question ("does an attested catalog row's player agree
+    // with the sale") -- reused rather than reimplemented so a future
+    // Witt-Jr./Witt-Sr.-shaped false refusal is fixed in one place. The name
+    // source is the sale's own playerName, falling back to its title when
+    // playerName is blank (namesAgree needs a non-empty string on both sides
+    // to have anything to compare); a sale that carries NEITHER is refused
+    // under its own class (refused-no-sale-player), separate from a real
+    // disagreement, so an operator reading the banner can tell "we could not
+    // check" from "we checked and it failed".
+    const saleNameSource = str(sale.playerName) || str(sale.title);
+    if (!saleNameSource) {
+      s.refusedNoSalePlayer++;
+      st.refusedNoSalePlayer++;
+      emitPlanRow(sale, "refused", "no-sale-player", { fromId: cardId, toId: winningId });
+      return;
+    }
+    if (!namesAgree(winningRow?.playerName, saleNameSource)) {
+      s.refusedPlayerDisagrees++;
+      st.refusedPlayerDisagrees++;
+      emitPlanRow(sale, "refused", "player-disagrees", { fromId: cardId, toId: winningId });
+      return;
+    }
 
     const exList = examplesBySetKey.get(setKey) ?? [];
     if (exList.length < 10) {
@@ -401,6 +468,37 @@ async function main() {
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, Math.max(items.length, 1)) }, runner));
   }
 
+  // ── SEEN, ACROSS BOTH PASSES. Coordinator review (#2449): a HIQ-SPLIT row
+  // whose hobbyiqCardId is OFF-SCOPE (wrong sport/year -- the exact damage
+  // this lane exists to close) but whose cardId IS in-scope is invisible to
+  // a hobbyiqCardId-only STARTSWITH scan. So the source scan runs TWO
+  // passes per cell/setKey -- pass 1 on hobbyiqCardId (as before), pass 2 on
+  // cardId -- and a row the second pass rediscovers is deduped against the
+  // first.
+  //
+  // DEDUPED BY THE SALE'S OWN `id` ALONE, NOT BY (id, cardId). A sale's `id`
+  // is unique within this lane's run regardless of which partition it
+  // currently lives in, and in APPLY mode pass 1 can already have RELOCATED
+  // a row (upsert-then-delete, `relocateSoldComp`) by the time pass 2's
+  // query runs against the SAME live container -- so a row pass 1 just
+  // fixed can resurface in pass 2 under its NEW cardId, a pair
+  // (id, cardId) never saw before. Deduping on the pair alone would treat
+  // that resurfacing as a genuinely new row and reprocess it a second time
+  // (harmlessly reclassified as COHERENT, since pass 1 already fixed it,
+  // but it would inflate `scanned` and double-count the sale). Deduping on
+  // `id` alone closes that: pass 1 already decided this sale's fate, full
+  // stop, however its cardId reads by the time pass 2 gets to it.
+  //
+  // CASE-ONLY DIFFERENCE CAVEAT: classifyIdentity (lib/split-identity.cjs)
+  // compares cardId and hobbyiqCardId as EXACT strings. A row whose two
+  // fields differ ONLY in case (e.g. a stray uppercase segment) reads as
+  // HIQ-SPLIT here exactly as a genuine cross-card split does, and this
+  // lane's player gate would then compare the SAME catalog row against
+  // itself -- harmless (namesAgree trivially agrees with itself) but worth
+  // naming: this lane repairs case-only splits as a side effect, it does
+  // not detect them as their own class.
+  const seenIds = new Set();
+
   for (const { cell, sport, year } of SCOPE_CELLS) {
     if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
     // One query per cell when `titles` is empty -- GROUP BY / cross-
@@ -410,30 +508,47 @@ async function main() {
     for (const setKeyFilter of setKeysToScan) {
       if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
       const prefix = setKeyFilter ? `hiq:${sport}:${year}:${setKeyFilter}:` : `hiq:${sport}:${year}:`;
-      const rows = [];
-      await forEachPage(pool, {
-        query: "SELECT * FROM c WHERE STARTSWITH(c.hobbyiqCardId, @prefix)",
-        parameters: [{ name: "@prefix", value: prefix }],
-      }, async (page) => {
-        for (const r of page) {
-          if (SHARD_SCOPE.SHARDED && shardOf(String(r.id)) !== SHARD_SCOPE.SLOT) { s.otherShard++; continue; }
-          rows.push(r);
-        }
-        if (LIMIT > 0 && rows.length >= LIMIT) return false;
-        return true;
-      });
-      await runPool(rows, async (row) => {
-        const setKey = slugSetKey(String(row.hobbyiqCardId || row.cardId || ""), parseHobbyIqCardId);
-        if (!setKey) {
-          const st = bucket(setKeyFilter || "(unparsed)");
-          st.gradedParse++;
-          s.scanned++;
-          emitPlanRow(row, "refused", "graded-parse", { fromId: String(row.cardId || ""), toId: String(row.hobbyiqCardId || "") });
-          return;
-        }
-        if (setKeyFilter && setKey !== setKeyFilter) return; // defensive; STARTSWITH already scoped this
-        await processSale(row, setKey);
-      });
+
+      const runPass = async (field, counterKey) => {
+        const rows = [];
+        await forEachPage(pool, {
+          query: `SELECT * FROM c WHERE STARTSWITH(c.${field}, @prefix)`,
+          parameters: [{ name: "@prefix", value: prefix }],
+        }, async (page) => {
+          for (const r of page) {
+            if (SHARD_SCOPE.SHARDED && shardOf(String(r.id)) !== SHARD_SCOPE.SLOT) { s.otherShard++; continue; }
+            const id = String(r.id ?? "");
+            if (seenIds.has(id)) { s.dedupedAcrossPasses++; continue; }
+            seenIds.add(id);
+            s[counterKey]++;
+            rows.push(r);
+          }
+          if (LIMIT > 0 && rows.length >= LIMIT) return false;
+          return true;
+        });
+        await runPool(rows, async (row) => {
+          const setKey = slugSetKey(String(row.hobbyiqCardId || row.cardId || ""), parseHobbyIqCardId);
+          if (!setKey) {
+            const st = bucket(setKeyFilter || "(unparsed)");
+            st.gradedParse++;
+            s.scanned++;
+            emitPlanRow(row, "refused", "graded-parse", { fromId: String(row.cardId || ""), toId: String(row.hobbyiqCardId || "") });
+            return;
+          }
+          if (setKeyFilter && setKey !== setKeyFilter) return; // defensive; STARTSWITH already scoped this
+          await processSale(row, setKey);
+        });
+      };
+
+      // PASS 1: hobbyiqCardId prefix -- the row's OWN canonical slug names
+      // the in-scope cell (the common case: a split whose canonical side is
+      // right and whose cardId partition is the stale one).
+      await runPass("hobbyiqCardId", "pass1Rows");
+      if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
+      // PASS 2: cardId prefix -- catches the coordinator's blind spot, a
+      // split whose hobbyiqCardId points OFF-scope but whose cardId
+      // partition IS this cell. Deduped against pass 1 by (id, cardId).
+      await runPass("cardId", "pass2Rows");
     }
   }
 
@@ -447,6 +562,8 @@ async function main() {
     console.log(`    ${APPLY ? "reconciled-to-cardId       " : "would-reconcile-to-cardId       "}  ${f(st.reconciledToCardId)}`);
     console.log(`    refused-ambiguous-both-checklist  ${f(st.refusedAmbiguousBothChecklist)}`);
     console.log(`    refused-neither-checklist         ${f(st.refusedNeitherChecklist)}`);
+    console.log(`    refused-no-sale-player            ${f(st.refusedNoSalePlayer)}`);
+    console.log(`    refused-player-disagrees          ${f(st.refusedPlayerDisagrees)}`);
     console.log(`    refused-possible-twin             ${f(st.refusedPossibleTwinAtDestination)}`);
     console.log(`    graded-parse                      ${f(st.gradedParse)}`);
     const ex = examplesBySetKey.get(setKey);
@@ -469,6 +586,9 @@ async function main() {
 
   const reconciledTotal = s.reconciledToHobbyiqCardId + s.reconciledToCardId;
   console.log("");
+  console.log(`scan pass 1 (STARTSWITH hobbyiqCardId)    ${f(s.pass1Rows)} row(s), net-new`);
+  console.log(`scan pass 2 (STARTSWITH cardId)            ${f(s.pass2Rows)} row(s), net-new  <- catches an off-scope hobbyiqCardId whose cardId is in-scope`);
+  console.log(`  deduped across passes (same sale id)    ${f(s.dedupedAcrossPasses)}  (found again by the other pass; a sale pass 1 already decided is not reprocessed by pass 2, even if it moved partitions in between)`);
   console.log(`sales scanned                             ${f(s.scanned)}${SHARD_SCOPE.SHARDED ? `  (${f(s.otherShard)} in other shards)` : ""}`);
   console.log(`  not-hiq-split (not this lane's shape)   ${f(s.notHiqSplit)}`);
   console.log(`  candidates (HIQ-SPLIT rows)             ${f(s.candidates)}`);
@@ -478,6 +598,8 @@ async function main() {
   console.log(`  COLLAPSED onto a resident (same sale)   ${f(s.collapsedOntoResident)}`);
   console.log(`  REFUSED: ambiguous-both-checklist       ${f(s.refusedAmbiguousBothChecklist)}`);
   console.log(`  REFUSED: neither-checklist              ${f(s.refusedNeitherChecklist)}`);
+  console.log(`  REFUSED: no-sale-player                 ${f(s.refusedNoSalePlayer)}`);
+  console.log(`  REFUSED: player-disagrees               ${f(s.refusedPlayerDisagrees)}`);
   console.log(`  REFUSED: possible-twin-at-destination   ${f(s.refusedPossibleTwinAtDestination)}`);
   console.log(`  REFUSED: stale since the read            ${f(s.refusedEtagChanged)}`);
   console.log(`  failed                                  ${f(s.failed)}`);
@@ -496,6 +618,7 @@ async function main() {
   // MISMATCH the instant scanning meets even one non-candidate row).
   const candidateOutcomes = reconciledTotal + s.collapsedOntoResident
     + s.refusedAmbiguousBothChecklist + s.refusedNeitherChecklist
+    + s.refusedNoSalePlayer + s.refusedPlayerDisagrees
     + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged
     + s.failed + s.notReached;
   console.log(`\n  reconciled: candidates ${f(s.candidates)} = accounted-for ${f(candidateOutcomes)}`);
@@ -505,6 +628,7 @@ async function main() {
   }
 
   const refusedTotal = s.refusedAmbiguousBothChecklist + s.refusedNeitherChecklist
+    + s.refusedNoSalePlayer + s.refusedPlayerDisagrees
     + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged;
   if (APPLY) {
     reportWrites({

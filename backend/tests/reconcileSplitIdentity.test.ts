@@ -124,6 +124,8 @@ const salesContainer = {
       let resources;
       if (q.includes("STARTSWITH(c.hobbyiqCardId, @prefix)")) {
         resources = all.filter((d) => String(d.hobbyiqCardId ?? "").startsWith(params["@prefix"]));
+      } else if (q.includes("STARTSWITH(c.cardId, @prefix)")) {
+        resources = all.filter((d) => String(d.cardId ?? "").startsWith(params["@prefix"]));
       } else {
         throw new Error("fake sold_comps: unsupported query " + q);
       }
@@ -488,5 +490,160 @@ describe("reconcile-split-identity -- pre-candidate rows are not reconciled agai
     expect(r.out).not.toMatch(/COUNTERS DO NOT ADD UP/i);
     expect(r.out).toMatch(/reconciled: candidates 1 = accounted-for 1/);
     expect(r.led.salesUpserts).toContain("s1");
+  });
+});
+
+// COORDINATOR REVIEW (#2449, 2026-09-27), item 1: CONFIRMED DEFECT -- no
+// player gate. A sale of "2026 Topps Mike Trout #1" whose hobbyiqCardId is
+// ID_B (checklist-grade Shohei Ohtani, no other evidence) must NEVER move
+// onto Ohtani's identity just because the checklist attests Ohtani exists
+// at that slug -- the checklist proves a CARD lives there, not that THIS
+// SALE is that card.
+describe("reconcile-split-identity -- THE PLAYER GATE (coordinator fixture: Trout sale, Ohtani catalog row)", () => {
+  const TROUT_SALE = () => SPLIT_SALE({
+    id: "s1", cardId: ID_A, hobbyiqCardId: ID_B,
+    title: "2026 Topps Mike Trout #1", playerName: "Mike Trout",
+  });
+  const OHTANI_ROW = () => CATALOG_ROW({ id: ID_B, cardId: ID_B, cardNumber: "2", playerName: "Shohei Ohtani" });
+
+  it("REFUSES player-disagrees rather than moving the Trout sale onto the Ohtani row", () => {
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [TROUT_SALE()], catalog: [OHTANI_ROW()] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: player-disagrees\s+1/);
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+  });
+
+  it("REPORT mode runs the SAME player gate and refuses identically", () => {
+    const r = drive(DEFAULT_ENV, { sales: [TROUT_SALE()], catalog: [OHTANI_ROW()] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: player-disagrees\s+1/);
+  });
+
+  it("MOVES when the winning row's player agrees with the sale (Trout catalog row, Trout sale)", () => {
+    const troutRow = CATALOG_ROW({ id: ID_B, cardId: ID_B, cardNumber: "2", playerName: "Mike Trout" });
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [TROUT_SALE()], catalog: [troutRow] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.out).toMatch(/-> to hobbyiqCardId\s+1/);
+  });
+
+  it("falls back to the sale's TITLE when playerName is blank, and still refuses on disagreement", () => {
+    const blankPlayerTrout = SPLIT_SALE({
+      id: "s1", cardId: ID_A, hobbyiqCardId: ID_B,
+      title: "2026 Topps Mike Trout #1", playerName: "",
+    });
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [blankPlayerTrout], catalog: [OHTANI_ROW()] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: player-disagrees\s+1/);
+  });
+
+  it("REFUSES no-sale-player (its OWN class, distinct from player-disagrees) when the sale has neither a playerName nor a title", () => {
+    const blankEverything = SPLIT_SALE({ id: "s1", cardId: ID_A, hobbyiqCardId: ID_B, title: "", playerName: "" });
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [blankEverything], catalog: [OHTANI_ROW()] });
+    expect(r.code).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: no-sale-player\s+1/);
+    expect(r.out).not.toMatch(/REFUSED: player-disagrees\s+1/);
+  });
+
+  it("MUTATION: removing the player gate would move the Trout sale onto Ohtani's identity -- this pins that it does not", () => {
+    // Direct proof against the shipped lane's own behavior: the destination
+    // catalog row's playerName ("Shohei Ohtani") never matches the sale's
+    // player ("Mike Trout") under namesAgree, and the fixture drives the
+    // COMMITTED file -- so this red/green boundary is the gate itself, not
+    // a mock of it.
+    const { namesAgree } = require(path.join(backend, "scripts", "lib", "name-agreement.cjs"));
+    expect(namesAgree("Shohei Ohtani", "Mike Trout")).toBe(false);
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [TROUT_SALE()], catalog: [OHTANI_ROW()] });
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+  });
+});
+
+// COORDINATOR REVIEW (#2449, 2026-09-27), item 2: the scan was STARTSWITH on
+// hobbyiqCardId only, so a split row whose hobbyiqCardId is OFF-SCOPE (wrong
+// sport/year -- the exact damage class this lane exists for) but whose
+// cardId IS in-scope was never a candidate. Fixed with a second STARTSWITH
+// pass on cardId, deduped against the first by the sale's own `id`.
+describe("reconcile-split-identity -- SECOND PASS closes the off-scope-hobbyiqCardId blind spot", () => {
+  const OFF_SCOPE_HOBBYIQ_ID = `hiq:football:2019:panini:1:base:no-auto`; // wrong sport AND wrong year
+  const IN_SCOPE_CARD_ID = ID_B; // in-scope: baseball:2026:topps
+
+  it("a split row whose hobbyiqCardId is OFF-SCOPE but whose cardId IS in-scope is found and reconciled", () => {
+    // hobbyiqCardId names a football:2019 card (off this lane's dispatched
+    // scope=baseball:2026); cardId names an in-scope baseball:2026:topps
+    // card that IS checklist-grade. A hobbyiqCardId-only scan would never
+    // see this row at all -- it has to be caught by the cardId pass.
+    const sale = SPLIT_SALE({
+      id: "s1", cardId: IN_SCOPE_CARD_ID, hobbyiqCardId: OFF_SCOPE_HOBBYIQ_ID,
+      title: "2026 Topps Test Player #2", playerName: "Test Player",
+    });
+    const winningRow = CATALOG_ROW({ id: IN_SCOPE_CARD_ID, cardId: IN_SCOPE_CARD_ID, cardNumber: "2" });
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [winningRow] });
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+    expect(r.out).toMatch(/scan pass 2 \(STARTSWITH cardId\)\s+1 row/);
+    expect(r.out).toMatch(/candidates \(HIQ-SPLIT rows\)\s+1/);
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.out).toMatch(/-> to cardId\s+1/);
+  });
+
+  it("prints both pass counts in the banner, and a row seen by BOTH passes is counted once, not twice", () => {
+    // An ordinary in-scope split: hobbyiqCardId=ID_A and cardId=ID_B share
+    // the SAME baseball:2026:topps: prefix, so both passes' STARTSWITH
+    // queries match it -- pass 1 claims it (net-new), and pass 2's own query
+    // finds the SAME sale id again (its cardId now reads ID_A, since pass 1
+    // already reconciled it under APPLY) and dedupes it rather than
+    // reprocessing it, so pass 2's net-new count is 0 and the dedup counter
+    // is 1.
+    const sale = SPLIT_SALE({ id: "s1", cardId: ID_B, hobbyiqCardId: ID_A });
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [CATALOG_ROW({ id: ID_A, cardId: ID_A })] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/scan pass 1 \(STARTSWITH hobbyiqCardId\)\s+1 row/);
+    expect(r.out).toMatch(/scan pass 2 \(STARTSWITH cardId\)\s+0 row/);
+    expect(r.out).toMatch(/deduped across passes \(same sale id\)\s+1/);
+    expect(r.out).toMatch(/candidates \(HIQ-SPLIT rows\)\s+1/);
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.led.salesUpserts.length).toBe(1);
+  });
+
+  it("REPORT mode: both passes independently match the SAME row (nothing moved, no write to observe) -- pass 2 still dedupes it", () => {
+    // Cleaner evidence of the dedup than the APPLY case above: in REPORT
+    // mode nothing is written between the two passes, so pass 2's own
+    // STARTSWITH(cardId) query genuinely re-finds the identical, unchanged
+    // row pass 1 already claimed -- and it is still counted once.
+    const sale = SPLIT_SALE({ id: "s1", cardId: ID_B, hobbyiqCardId: ID_A });
+    const r = drive(DEFAULT_ENV, { sales: [sale], catalog: [CATALOG_ROW({ id: ID_A, cardId: ID_A })] });
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/scan pass 1 \(STARTSWITH hobbyiqCardId\)\s+1 row/);
+    expect(r.out).toMatch(/scan pass 2 \(STARTSWITH cardId\)\s+0 row/);
+    expect(r.out).toMatch(/deduped across passes \(same sale id\)\s+1/);
+    expect(r.out).toMatch(/candidates \(HIQ-SPLIT rows\)\s+1/);
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("a row RELOCATED by pass 1 (APPLY) is not double-counted when pass 2 re-reads it at its NEW address", () => {
+    // Regression pin for the sequencing hazard the two-pass design
+    // introduces: in APPLY mode, pass 1 can already have MOVED a row by the
+    // time pass 2's own STARTSWITH(cardId) query runs against the same live
+    // container. Deduping by (id, cardId) alone would miss this -- the row
+    // resurfaces under a NEW cardId pass 1 never recorded -- so this lane
+    // dedupes by the sale's own `id` alone. A coherent decoy plus one real
+    // split candidate must reconcile cleanly with no double write.
+    const coherentDecoy = SPLIT_SALE({ id: "s0", cardId: ID_A, hobbyiqCardId: ID_A });
+    const splitSale = SPLIT_SALE({ id: "s1", cardId: ID_B, hobbyiqCardId: ID_A });
+    const r = drive(
+      { ...DEFAULT_ENV, BACKFILL_APPLY: "true" },
+      { sales: [coherentDecoy, splitSale], catalog: [CATALOG_ROW({ id: ID_A, cardId: ID_A })] },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+    expect(r.out).toMatch(/candidates \(HIQ-SPLIT rows\)\s+1/);
+    expect(r.led.salesUpserts).toEqual(["s1"]);
+    expect(r.led.salesUpserts.length).toBe(1);
   });
 });
