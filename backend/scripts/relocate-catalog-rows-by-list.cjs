@@ -953,6 +953,12 @@ async function main() {
   const {
     moveCatalogRow, retireCatalogRow, patchCatalogRowFields, rebuildSearchFields,
   } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  // LANE-SAFETY (2026-09-27): the COMPLETE MOVE retire below deletes the
+  // source row of an already-landed move, and until now did so with NO gate
+  // at all -- neither the sales dual-check the `retire` action above runs,
+  // nor a twin-authority check on the destination it is completing onto.
+  // catalogAuthorityOf answers the twin half; the sales half reuses `salesAt`.
+  const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
   const { marketVerdict } = require(path.join(__dirname, "lib", "market-guard.cjs"));
   // CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT (2026-09-26).
   // Loaded from the built tree, the same way moveCatalogRow itself is -- this
@@ -1425,6 +1431,37 @@ async function main() {
     if (incumbent && String(incumbent.movedFrom ?? "") === id) {
       console.log(`  COMPLETE MOVE  ${id.slice(0, 62)}`);
       console.log(`      ->  ${to.slice(0, 70)}   <- destination already holds this row; retiring the source`);
+      // THE SAME GATE THE `retire` ACTION RUNS, NEVER SKIPPED FOR THIS BRANCH
+      // (2026-09-27 lane-safety fix). Two halves, both refusals rather than
+      // caveats: (1) the destination must be a CHECKLIST-GRADE twin -- a
+      // derived row at `to` is not a twin, and completing the move by
+      // deleting the source would leave the card with no checklist-backed
+      // address at all; (2) zero sales may point at `id` by BOTH the
+      // cross-partition and the partition-scoped read (salesAtId's dual
+      // check) -- a sale still pointing at the source is a sale this retire
+      // would silently orphan.
+      const twinAuthority = catalogAuthorityOf(incumbent.source);
+      if (twinAuthority !== "checklist") {
+        failed++;
+        console.error(`  REFUSED (destination not checklist-grade, authority=${twinAuthority})  ${id.slice(0, 62)}`);
+        console.error(`      -> ${to.slice(0, 70)} carries source="${String(incumbent.source ?? "")}" -- completing the move would retire the checklist row's only remaining home`);
+        continue;
+      }
+      let completePointing;
+      try {
+        completePointing = await salesAt(id);
+      } catch (err) {
+        failed++;
+        console.error(`      FAILED: sales check threw — ${String(err?.message ?? err).slice(0, 80)}`);
+        continue;
+      }
+      console.log(`      sales pointing at the source: ${f(completePointing)}`);
+      if (completePointing > 0) {
+        refusedSalesPresent++;
+        console.error(`  REFUSED (sales present, n=${f(completePointing)})  ${id.slice(0, 62)}`);
+        console.error("      a COMPLETE MOVE retire needs zero sales at the source by BOTH forms of the dual check");
+        continue;
+      }
       if (!APPLY) { movesCompleted++; continue; }
       try {
         const res = await retireCatalogRow(cat, id, row.cardId ?? id, `complete a half-applied move to ${to}: ${reason}`, { retry });

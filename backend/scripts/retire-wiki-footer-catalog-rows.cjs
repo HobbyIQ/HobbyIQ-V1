@@ -74,6 +74,14 @@ const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReco
 // what a private copy of capped() costs (an unref'd cap that never fired, four
 // runs killed at the ceiling having already reconciled clean).
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+// LANE-SAFETY (2026-09-27). The gate below re-checked comps with a single
+// cross-partition `COUNT(1) WHERE c.hobbyiqCardId = @s` -- exactly the read
+// form lib/sales-at-id.cjs's own header measured missing a real sale 0.6% of
+// the time (a re-pointed sale whose cardId, the partition key, still names
+// this slug but whose hobbyiqCardId does not). salesAtId unions that query
+// with the same predicate scoped to `partitionKey: id`, and also checks
+// `cardId`, not `hobbyiqCardId` alone.
+const { salesAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -171,11 +179,7 @@ async function main() {
       break;
     }
     for (const r of byKey.get(pending[k])) {
-      const { resources: n } = await sold.items.query({
-        query: `SELECT VALUE COUNT(1) FROM c WHERE c.hobbyiqCardId = @s`,
-        parameters: [{ name: "@s", value: r.hobbyiqCardId }],
-      }, { enableCrossPartitionQuery: true }).fetchAll();
-      const comps = n[0] ?? 0;
+      const { total: comps } = await salesAtId(sold, r.hobbyiqCardId, { retry: (fn) => fn() });
       const looksLikeFooter = FOOTER_PLAYER.test(String(r.playerName || ""));
       if (comps > 0) { kept.push({ r, why: `${comps} comps` }); continue; }
       if (!looksLikeFooter) { kept.push({ r, why: "player is not footer text" }); continue; }

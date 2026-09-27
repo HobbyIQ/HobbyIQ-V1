@@ -102,6 +102,16 @@ const CARD_LINE = /^\d+[a-z]?\s+[A-Za-z]/;
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
 const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+// LANE-SAFETY (2026-09-27). Like retire-autoseed-window.cjs, this lane's own
+// doctrine is NOT "zero sales" -- it deliberately unplaces every sale
+// pointing at an exploded/mis-parsed row before deleting the row (see
+// retireRow below). The gap was the read form deciding WHICH sales get that
+// stamp: `hobbyiqCardId` alone, the single cross-partition query
+// lib/sales-at-id.cjs's own header measured missing a real sale 0.6% of the
+// time. A sale that query missed was never unplaced and was then silently
+// orphaned by the delete that follows -- drainSalesIdsAtId unions both read
+// forms so the unplace set is complete.
+const { drainSalesIdsAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "retire-exploded-checklist-rows" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 32));
@@ -227,19 +237,15 @@ async function main() {
     scanned++;
     try {
       if (!APPLY) { retired++; return; }
-      let sToken;
-      do {
-        const sp = await retry(() => pool.items.query({ query: "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @s", parameters: [{ name: "@s", value: d.id }] }, { maxItemCount: 200, continuationToken: sToken }).fetchNext());
-        sToken = sp.continuationToken;
-        for (const x of sp.resources) {
-          await retry(() => pool.item(x.id, x.cardId).patch([
-            { op: "set", path: "/catalogMatched", value: false },
-            { op: "set", path: "/catalogUnplacedReason", value: reason },
-            { op: "set", path: "/catalogUnplacedAt", value: new Date().toISOString() },
-          ]));
-          salesUnplaced++;
-        }
-      } while (sToken);
+      const { rows: pointing } = await drainSalesIdsAtId(pool, d.id, { retry });
+      for (const x of pointing) {
+        await retry(() => pool.item(x.id, x.cardId).patch([
+          { op: "set", path: "/catalogMatched", value: false },
+          { op: "set", path: "/catalogUnplacedReason", value: reason },
+          { op: "set", path: "/catalogUnplacedAt", value: new Date().toISOString() },
+        ]));
+        salesUnplaced++;
+      }
       let gToken;
       do {
         const gp = await retry(() => cat.items.query({ query: "SELECT c.id, c.cardId FROM c WHERE STARTSWITH(c.id, @p) AND IS_DEFINED(c.gradeTier)", parameters: [{ name: "@p", value: d.id + ":" }] }, { maxItemCount: 200, continuationToken: gToken }).fetchNext());

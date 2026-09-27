@@ -71,6 +71,18 @@ const LIMIT = Number(process.env.LIMIT || 0);
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
 const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+// LANE-SAFETY (2026-09-27). This lane's "safe on comps" claim above (line 38)
+// was a ONE-TIME measurement, never a per-row runtime check -- exactly the
+// gap retire-wiki-footer-catalog-rows.cjs's own header calls out as wrong
+// ("CHECKED PER ROW AT RUN TIME -- not assumed from an earlier measurement").
+// salesAtId re-checks it, per row, at delete time, with the dual
+// cross-partition + partition-scoped read. And the "clean sibling" the
+// header calls the survival check was never checked for CHECKLIST authority
+// -- a derived sibling is not a twin (doctrine: never retire a checklist row
+// in favour of a derived one; here the row being retired IS the risk, so the
+// twin the CARD survives on must itself be checklist-grade or this retire
+// trades a real card for nothing).
+const { salesAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "retire-prose-parallel-rows" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 
@@ -105,10 +117,13 @@ function assertNoParallelWrite(ops) {
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
-  const cat = new CosmosClient({
+  const db = new CosmosClient({
     connectionString: conn,
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
-  }).database("hobbyiq").container("card_catalog");
+  }).database("hobbyiq");
+  const cat = db.container("card_catalog");
+  const comps = db.container("sold_comps");
+  const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 
   const retry = async (fn, tries = 12) => {
     let wait = 1000;
@@ -126,7 +141,9 @@ async function main() {
   console.log(`  ${SHARD_SCOPE.banner()}`);
 
   let scanned = 0, retired = 0, keptNoSibling = 0, keptNotProse = 0, malformed = 0, failed = 0, notReached = 0;
+  let keptHasSales = 0;
   const keptEx = [];
+  const salesEx = [];
   let stopReason = null;
   let token;
 
@@ -151,17 +168,33 @@ async function main() {
             malformed++;
             return;
           }
+          // THE TWIN CHECK. Fetching `source` (not just a count) so the
+          // survival check can require a CHECKLIST-GRADE sibling, not merely
+          // a clean-looking one -- a derived row with a short parallel field
+          // is not a twin, and this card would have no checklist-backed
+          // address left if the prose row were retired in its favour.
           const { resources: sib } = await retry(() => cat.items.query({
-            query: `SELECT VALUE COUNT(1) FROM c
+            query: `SELECT c.source FROM c
                     WHERE c.sport=@s AND c.year=@y AND c.setKey=@k AND c.cardNumber=@c
                       AND LENGTH(c.parallel) <= @n`,
             parameters: [{ name: "@s", value: d.sport }, { name: "@y", value: d.year },
               { name: "@k", value: d.setKey }, { name: "@c", value: d.cardNumber },
               { name: "@n", value: MIN_LEN }],
           }).fetchAll());
-          if (!(sib[0] > 0)) {
+          const checklistSibling = sib.some((r) => catalogAuthorityOf(r.source) === "checklist");
+          if (!checklistSibling) {
             keptNoSibling++;
             if (keptEx.length < 6) keptEx.push(`${d.year} ${d.setKey} #${d.cardNumber}  ${d.playerName ?? ""}`);
+            return;
+          }
+          // THE SALES CHECK, re-verified at delete time rather than trusted
+          // from this file's one-time "safe on comps" measurement (see the
+          // 2026-09-27 note above). Dual read: cross-partition + partition-
+          // scoped, unioned by salesAtId.
+          const { total: pointing } = await salesAtId(comps, d.id, { retry });
+          if (pointing > 0) {
+            keptHasSales++;
+            if (salesEx.length < 6) salesEx.push(`${f(pointing).padStart(5)} sales  ${String(d.id).slice(0, 76)}`);
             return;
           }
           if (!APPLY) { retired++; return; }
@@ -192,14 +225,19 @@ async function main() {
   console.log(`  rows scanned                 ${f(scanned)}`);
   console.log(`  RETIRED (card survives)      ${f(retired)}`);
   console.log(`  kept — long but not prose    ${f(keptNotProse)}`);
-  console.log(`  kept — no clean sibling      ${f(keptNoSibling)}   <- would lose the card; left alone`);
+  console.log(`  kept — no checklist-grade sibling ${f(keptNoSibling)}   <- would lose the card; left alone`);
   console.log(`  kept — missing identity      ${f(malformed)}   <- no year/setKey/cardNumber to check against`);
+  console.log(`  kept — sales present         ${f(keptHasSales)}   <- a retire needs zero sales by BOTH forms of the dual check`);
   console.log(`  failed                       ${f(failed)}`);
   console.log(`\n  NOTE: no row was assigned a parallel. A ladder paragraph is not a`);
   console.log(`  Base card, and calling it one would merge the ladder into the base pool.`);
   if (keptEx.length) {
     console.log(`\n  kept for review — prose is the only row for the card:`);
     for (const e of keptEx) console.log(`    ${e}`);
+  }
+  if (salesEx.length) {
+    console.log(`\n  kept for review — sales point at the prose row:`);
+    for (const e of salesEx) console.log(`    ${e}`);
   }
   if (APPLY) {
     reportWrites({

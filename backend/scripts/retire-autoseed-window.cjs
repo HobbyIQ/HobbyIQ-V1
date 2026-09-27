@@ -56,6 +56,17 @@ const crypto = require("crypto");
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
 const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+// LANE-SAFETY (2026-09-27). This lane's own doctrine is NOT "zero sales" --
+// it deliberately deletes a sale-minted row WHILE sales point at it, stamping
+// each one catalogUnplacedReason and handing it to the rematch (see the
+// header above the delete site). What it needs closed is narrower: the ONE
+// query that decides which sales get that stamp read `hobbyiqCardId` alone,
+// so a sale re-pointed after mint (cardId unchanged, hobbyiqCardId rewritten)
+// could be MISSED -- not deliberately left, just never seen -- and then
+// silently orphaned by the delete with no unplace stamp at all. drainIds
+// unions both read forms in one call per row, same shape as salesAtId but
+// returning the ids (needed here to patch each one), not just a count.
+const { drainSalesIdsAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "retire-autoseed-window" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
@@ -115,10 +126,14 @@ async function main() {
           // UNPLACED -- catalogMatched=false -- and the rematch re-resolves it
           // when its checklist lands. So the pointing sales are stamped, then
           // the sale-minted row is retired.
-          const { resources: sales } = await retry(() => comps.items.query({
-            query: "SELECT c.id, c.cardId FROM c WHERE c.hobbyiqCardId = @s",
-            parameters: [{ name: "@s", value: d.id }],
-          }).fetchAll());
+          //
+          // DUAL READ (2026-09-27 lane-safety fix). This used to query
+          // `hobbyiqCardId` alone -- a single cross-partition read that
+          // lib/sales-at-id.cjs's own header measured missing a real sale
+          // 0.6% of the time. A sale this query missed was never stamped
+          // unplaced and was then silently orphaned by the delete below,
+          // exactly the harm this lane's whole design exists to avoid.
+          const { rows: sales } = await drainSalesIdsAtId(comps, d.id, { retry });
           if (sales.length) keptHasSales++;   // counted as "had sales", not kept
           if (!APPLY) { retired++; return; }
           for (const s of sales) {

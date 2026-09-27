@@ -99,6 +99,18 @@ const STARTED = Date.now();
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
 const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+// TOCTOU (review finding, 2026-09-27). `protectedSlugs` (below) is a
+// ONE-TIME snapshot taken before the sweep starts. The sweep itself is a
+// multi-hour, 16.3M-row paginated walk -- a sale minted or re-pointed onto
+// one of these slugs AFTER the snapshot and BEFORE that row's own delete is
+// reached would be invisible to the snapshot and deleted-from-under. salesAtId
+// (dual cross-partition + partition-scoped) is now re-run PER ROW,
+// immediately before its delete, exactly as retire-flattened-attestations
+// .cjs and retire-prose-parallel-rows.cjs do in this same program -- the
+// snapshot remains as a cheap first-pass filter (it still skips the
+// overwhelming majority of rows for free), but it is no longer the last
+// word on any row that reaches the delete.
+const { salesAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "retire-unreferenced-graded-rows" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 
@@ -119,6 +131,23 @@ const TARGET =
   const f = (n) => Number(n).toLocaleString();
 
   const isThrottle = (e) => /request rate is too large|429/i.test(String(e?.message));
+
+  // Generic retry, for salesAtId's per-row TOCTOU re-check (opts.retry) --
+  // the same backoff shape as fetchAllWithRetry/queryWithRetry below, just
+  // wrapping an arbitrary async fn rather than a fixed container.items.query
+  // call, since salesAtId issues two queries (cross-partition + partition-
+  // scoped) per invocation.
+  const retry = async (fn) => {
+    let wait = 1000;
+    for (let attempt = 0; ; attempt++) {
+      try { return await fn(); }
+      catch (e) {
+        if (!isThrottle(e) || attempt >= 12) throw e;
+        await new Promise((r) => setTimeout(r, wait));
+        wait = Math.min(wait * 2, 30000);
+      }
+    }
+  };
 
   const fetchAllWithRetry = async (container, spec) => {
     let wait = 1000;
@@ -147,22 +176,40 @@ const TARGET =
   // ---- the protected set: every graded slug a sale actually points at -------
   console.log("loading graded slugs referenced by sales...");
   const protectedSlugs = new Set();
+  // LANE-SAFETY (2026-09-27). This used to scan `hobbyiqCardId` alone --
+  // exactly the single-form read lib/sales-at-id.cjs's own header documents
+  // missing a real row 0.6% of the time (a sale RE-POINTED so hobbyiqCardId
+  // was rewritten but cardId, the partition key, was not). At 16.3M
+  // candidate deletes a 0.6% miss on the protected-set side is thousands of
+  // graded rows a live sale still addresses. Both fields are unioned in the
+  // SAME scan (still one full pass, not one query per row -- this container
+  // is too large for a per-row salesAtId call) rather than adding a second
+  // scan, so the cost stays a single page walk.
   {
     let token;
     do {
       const page = await queryWithRetry(sc, {
-        query: `SELECT c.hobbyiqCardId AS s FROM c WHERE IS_DEFINED(c.hobbyiqCardId) AND c.hobbyiqCardId != null
-                AND (CONTAINS(c.hobbyiqCardId,':psa-') OR CONTAINS(c.hobbyiqCardId,':bgs-')
-                  OR CONTAINS(c.hobbyiqCardId,':sgc-') OR CONTAINS(c.hobbyiqCardId,':cgc-')
-                  OR CONTAINS(c.hobbyiqCardId,':raw'))`,
+        query: `SELECT c.hobbyiqCardId AS s1, c.cardId AS s2 FROM c
+                WHERE ((IS_DEFINED(c.hobbyiqCardId) AND c.hobbyiqCardId != null
+                    AND (CONTAINS(c.hobbyiqCardId,':psa-') OR CONTAINS(c.hobbyiqCardId,':bgs-')
+                      OR CONTAINS(c.hobbyiqCardId,':sgc-') OR CONTAINS(c.hobbyiqCardId,':cgc-')
+                      OR CONTAINS(c.hobbyiqCardId,':raw')))
+                  OR (IS_DEFINED(c.cardId) AND c.cardId != null
+                    AND (CONTAINS(c.cardId,':psa-') OR CONTAINS(c.cardId,':bgs-')
+                      OR CONTAINS(c.cardId,':sgc-') OR CONTAINS(c.cardId,':cgc-')
+                      OR CONTAINS(c.cardId,':raw'))))`,
       }, { maxItemCount: 1000, continuationToken: token });
       token = page.continuationToken;
-      for (const r of page.resources) if (r.s) protectedSlugs.add(r.s);
+      for (const r of page.resources) {
+        if (r.s1) protectedSlugs.add(r.s1);
+        if (r.s2) protectedSlugs.add(r.s2);
+      }
     } while (token);
   }
-  console.log(`  ${f(protectedSlugs.size)} graded slugs are referenced by at least one sale — these will be SKIPPED\n`);
+  console.log(`  ${f(protectedSlugs.size)} graded slugs are referenced by at least one sale (hobbyiqCardId OR cardId) — these will be SKIPPED\n`);
 
   let scanned = 0, attempted = 0, deleted = 0, failed = 0, gone = 0, kept = 0;
+  let keptLiveSales = 0;
   let hitBudget = false;
   const out = APPLY ? null : fs.createWriteStream(MANIFEST, { flags: "w" });
 
@@ -225,7 +272,21 @@ const TARGET =
     for (let i = 0; i < work.length; i += CONCURRENCY) {
       await Promise.all(work.slice(i, i + CONCURRENCY).map(async (r) => {
         attempted++;
-        try { await cat.item(r.id, r.cardId).delete(); deleted++; }
+        try {
+          // TOCTOU RE-CHECK (review finding, 2026-09-27), LIVE, PER ROW,
+          // IMMEDIATELY BEFORE THE DELETE. `protectedSlugs` was a snapshot
+          // taken once before this multi-hour sweep began; this re-checks
+          // THIS row's own id against the live pool, right here, by both
+          // read forms, so a sale minted or re-pointed onto it since the
+          // snapshot is caught rather than deleted out from under.
+          const { total: livePointing } = await salesAtId(sc, r.id, { retry });
+          if (livePointing > 0) {
+            keptLiveSales++;
+            return;
+          }
+          await cat.item(r.id, r.cardId).delete();
+          deleted++;
+        }
         catch (e) {
           if (e.code === 404) { gone++; return; }
           failed++;
@@ -234,7 +295,7 @@ const TARGET =
       }));
       if (LIMIT && deleted >= LIMIT) { token = undefined; break; }
     }
-    if (++pages % 20 === 0) process.stderr.write(`\r  scanned ${f(scanned)}  deleted ${f(deleted)}  kept ${f(kept)}   `);
+    if (++pages % 20 === 0) process.stderr.write(`\r  scanned ${f(scanned)}  deleted ${f(deleted)}  kept ${f(kept)}  live-sales ${f(keptLiveSales)}   `);
     if (Date.now() - STARTED > RUN_MS - RESERVE_MS) { hitBudget = true; token = undefined; }
   } while (token);
   process.stderr.write("\n");
@@ -247,9 +308,10 @@ stopped at the ${RUN_MS / 60000}-minute budget with work left — the relaunch c
   console.log(`  protected (a sale uses it) ${f(kept)}`);
   console.log(`  deleted                   ${f(deleted)}`);
   console.log(`  already gone (404)        ${f(gone)}`);
+  console.log(`  kept — live sale (TOCTOU) ${f(keptLiveSales)}   <- protectedSlugs was a one-time snapshot; caught per-row, immediately before this delete`);
   console.log(`  failed                    ${f(failed)}`);
   if (!APPLY) console.log(`\n  manifest written to ${MANIFEST}  — read it before running with APPLY=true`);
-  if (APPLY) reportWrites({ job: "retire-unreferenced-graded-rows", intended: attempted, written: deleted, skipped: gone, failed });
+  if (APPLY) reportWrites({ job: "retire-unreferenced-graded-rows", intended: attempted, written: deleted, skipped: gone + keptLiveSales, failed });
 })()
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
 // that lets the loop drain is betting every library released every handle.
