@@ -36,13 +36,20 @@
  *      is that card. The winning catalog row's playerName must `namesAgree`
  *      (scripts/lib/name-agreement.cjs -- the SAME check
  *      repoint-sales-to-sibling-product.cjs's MODE=by-player already uses
- *      for this identical question) with the sale's own playerName, falling
- *      back to its title when playerName is blank -> disagreement REFUSES
- *      "player-disagrees" (a Trout sale must never move onto an Ohtani
- *      catalog row just because the checklist attests Ohtani exists at that
- *      slug); a sale with NEITHER a playerName NOR a title REFUSES
+ *      for this identical question) with the sale's own playerName ->
+ *      disagreement REFUSES "player-disagrees" (a Trout sale must never
+ *      move onto an Ohtani catalog row just because the checklist attests
+ *      Ohtani exists at that slug); a sale with a BLANK playerName REFUSES
  *      "no-sale-player", its own class, because "we could not check" is not
- *      the same finding as "we checked and it disagreed";
+ *      the same finding as "we checked and it disagreed". NO TITLE
+ *      FALLBACK (second-round review): namesAgree compares NAME-shaped
+ *      strings, and a whole sale title never folds down to equal a bare
+ *      playerName, so a title fallback would have refused every
+ *      blank-playerName sale as player-disagrees regardless of whether the
+ *      title actually corroborated the winning row -- strictly worse than
+ *      no-sale-player's honest "could not check". Extracting a player from
+ *      a title (parseTitleIdentity.service.js exists for this) is left for
+ *      a future PR;
  *   6. graded ids preserve the grade segment verbatim
  *      (scripts/lib/graded-id.cjs's parseSlugWithGrade -- a graded child's
  *      tier is carried through untouched on whichever side wins);
@@ -64,8 +71,12 @@
  * IS in-scope is invisible to a hobbyiqCardId-only scan and never becomes a
  * candidate. Pass 2's rows are deduped against pass 1 by their own (id,
  * cardId) pair -- the same pair sold_comps' point-read key is built from --
- * so a row is processed at most once regardless of which field's prefix
- * caught it. Both passes use the identical pagination discipline
+ * so THE SAME document is processed at most once regardless of which
+ * field's prefix caught it, and a DIFFERENT document that merely shares an
+ * `id` (sold_comps ids are `${source}::${externalId}`, unique only WITHIN a
+ * partition -- CF-COLLISION-IS-NOT-A-DUPLICATE, lib/duplicate-sale-ids.cjs)
+ * is still processed as its own candidate rather than dropped. Both passes
+ * use the identical pagination discipline
  * {maxItemCount:500, maxDegreeOfParallelism:-1}, `while
  * (iter.hasMoreResults())`, and both pass counts print in the banner. The
  * client-side filter `cardId !== hobbyiqCardId` (and both sides isHiq) is
@@ -73,7 +84,7 @@
  * lib/split-identity.cjs rather than re-implemented, so the census and this
  * repair decide identically (that comparison is EXACT-STRING; a case-only
  * difference between the two fields reads as HIQ-SPLIT too -- see the
- * CASE-ONLY DIFFERENCE note beside `seenIds` in the scan loop). Never a
+ * CASE-ONLY DIFFERENCE note beside `seenPairs` in the scan loop). Never a
  * cross-partition COUNT or GROUP BY. CardHedge rows carry no top-level
  * sport/year fields at all -- this lane never filters on them, and a
  * CardHedge row's cardId is a vendor id, not an
@@ -204,7 +215,7 @@ async function main() {
   console.log("");
 
   const s = {
-    pass1Rows: 0, pass2Rows: 0, dedupedAcrossPasses: 0,
+    pass1Rows: 0, pass2Rows: 0, sameDocRediscovered: 0, distinctDocsSharingId: 0,
     scanned: 0, otherShard: 0, notHiqSplit: 0, candidates: 0,
     reconciledToHobbyiqCardId: 0, reconciledToCardId: 0, collapsedOntoResident: 0,
     refusedAmbiguousBothChecklist: 0, refusedNeitherChecklist: 0,
@@ -256,6 +267,19 @@ async function main() {
     try { fs.appendFileSync(planFd, JSON.stringify(record) + "\n"); }
     catch (e) { console.log(`\n::warning::PLAN_OUT write failed for ${sale?.id}: ${e?.message}`); }
   }
+
+  // ── PASS-1 OUTCOMES, keyed by sale `id` (coordinator review, #2449,
+  // second round). Recorded whenever `processSale` successfully WRITES a
+  // document to a new address (patch-in-place, move, or collapse-onto-
+  // resident) so pass 2's own scan can recognise "this is the SAME document
+  // pass 1 already decided, now living at its new address" and skip it,
+  // WITHOUT conflating that with a genuinely different document that
+  // happens to share the same `id` string under a DIFFERENT, never-written
+  // cardId (CF-COLLISION-IS-NOT-A-DUPLICATE, lib/duplicate-sale-ids.cjs --
+  // sold_comps ids are `${source}::${externalId}` and are NOT unique across
+  // partitions; two documents sharing an id are, by construction, the SAME
+  // SALE ingested twice, never a single document re-read).
+  const relocatedTo = new Map(); // id -> the cardId processSale just wrote it to
 
   async function residentAt(saleId, cardId) {
     try { return (await pool.item(saleId, cardId).read()).resource ?? null; }
@@ -348,14 +372,23 @@ async function main() {
     // repoint-sales-to-sibling-product.cjs's MODE=by-player already uses for
     // this identical question ("does an attested catalog row's player agree
     // with the sale") -- reused rather than reimplemented so a future
-    // Witt-Jr./Witt-Sr.-shaped false refusal is fixed in one place. The name
-    // source is the sale's own playerName, falling back to its title when
-    // playerName is blank (namesAgree needs a non-empty string on both sides
-    // to have anything to compare); a sale that carries NEITHER is refused
-    // under its own class (refused-no-sale-player), separate from a real
-    // disagreement, so an operator reading the banner can tell "we could not
-    // check" from "we checked and it failed".
-    const saleNameSource = str(sale.playerName) || str(sale.title);
+    // Witt-Jr./Witt-Sr.-shaped false refusal is fixed in one place.
+    //
+    // NO TITLE FALLBACK (coordinator review, second round, 2026-09-27: the
+    // fallback this lane shipped with was dead weight). `namesAgree` folds
+    // and compares two NAME-shaped strings; a whole sale TITLE ("2026 Topps
+    // Mike Trout #1") is not name-shaped, and namesAgree's own fold-and-
+    // compare never equates it to a bare playerName ("Mike Trout") -- so
+    // every blank-playerName sale would have refused as player-disagrees
+    // regardless of whether the title actually named the winning row's
+    // player, which is a WORSE signal than simply saying "could not check".
+    // Extracting a player name FROM a title is a real capability
+    // (dist/services/portfolioiq/parseTitleIdentity.service.js exists for
+    // exactly this) but wiring it in is new scope this fix round does not
+    // take on -- so a blank playerName is refused under its own class,
+    // no-sale-player, and namesAgree only ever sees the sale's OWN
+    // playerName field.
+    const saleNameSource = str(sale.playerName);
     if (!saleNameSource) {
       s.refusedNoSalePlayer++;
       st.refusedNoSalePlayer++;
@@ -387,6 +420,7 @@ async function main() {
         if (result?.ok) {
           if (toHobbyiqCardId) { s.reconciledToHobbyiqCardId++; st.reconciledToHobbyiqCardId++; }
           else { s.reconciledToCardId++; st.reconciledToCardId++; }
+          relocatedTo.set(sale.id, winningId);
           emitPlanRow(sale, "patch", "checklist-attested-in-place", { fromId: cardId, toId: winningId });
         } else {
           s.failed++;
@@ -415,6 +449,7 @@ async function main() {
       if (contentHashOf(resident) === contentHashOf({ ...sale, cardId: winningId, hobbyiqCardId: winningId })) {
         s.collapsedOntoResident++;
         if (APPLY) { try { await pool.item(sale.id, sale.cardId).delete(); } catch { /* best effort; proven duplicate either way */ } }
+        relocatedTo.set(sale.id, winningId);
         emitPlanRow(sale, "collapse", "same-sale-resident", { fromId: cardId, toId: winningId });
         return;
       }
@@ -435,6 +470,7 @@ async function main() {
       if (result?.ok) {
         if (toHobbyiqCardId) { s.reconciledToHobbyiqCardId++; st.reconciledToHobbyiqCardId++; }
         else { s.reconciledToCardId++; st.reconciledToCardId++; }
+        relocatedTo.set(sale.id, winningId);
         emitPlanRow(sale, "move", "checklist-attested", { fromId: cardId, toId: winningId });
       } else if (result?.staleSincePlan?.length) {
         s.refusedEtagChanged++;
@@ -476,18 +512,38 @@ async function main() {
   // cardId -- and a row the second pass rediscovers is deduped against the
   // first.
   //
-  // DEDUPED BY THE SALE'S OWN `id` ALONE, NOT BY (id, cardId). A sale's `id`
-  // is unique within this lane's run regardless of which partition it
-  // currently lives in, and in APPLY mode pass 1 can already have RELOCATED
-  // a row (upsert-then-delete, `relocateSoldComp`) by the time pass 2's
-  // query runs against the SAME live container -- so a row pass 1 just
-  // fixed can resurface in pass 2 under its NEW cardId, a pair
-  // (id, cardId) never saw before. Deduping on the pair alone would treat
-  // that resurfacing as a genuinely new row and reprocess it a second time
-  // (harmlessly reclassified as COHERENT, since pass 1 already fixed it,
-  // but it would inflate `scanned` and double-count the sale). Deduping on
-  // `id` alone closes that: pass 1 already decided this sale's fate, full
-  // stop, however its cardId reads by the time pass 2 gets to it.
+  // DEDUPED BY THE (id, cardId) PAIR -- THE CONTAINER'S OWN POINT-READ KEY
+  // -- NEVER BY `id` ALONE (coordinator review, second round, 2026-09-27:
+  // BLOCKING). sold_comps ids are `${source}::${externalId}`
+  // (soldCompsStore.service.ts's makeId) and Cosmos guarantees uniqueness
+  // only WITHIN a partition -- an id is NOT globally unique across
+  // partitions. lib/duplicate-sale-ids.cjs's own census measured this shape
+  // live: two DIFFERENT documents, the SAME sale ingested twice, sharing one
+  // id under two different cardId partitions (CF-COLLISION-IS-NOT-A-
+  // DUPLICATE, D31 -- a repeated id across partitions is one ingest
+  // identity written twice, never "a collision to resolve by picking a
+  // winner"). Deduping on `id` alone would read docY (a genuinely distinct
+  // document that happens to share docX's id) as "already seen" the moment
+  // pass 1 has touched ANY document with that id, and silently drop it --
+  // a MISS, not a wrong move, but it defeats pass 2's whole purpose and
+  // there would be no way for the banner to tell "the same document twice"
+  // apart from "two distinct documents that share an id".
+  //
+  // So `seenPairs` is keyed by the pair itself, and a SEPARATE map,
+  // `relocatedTo` (declared beside `processSale` above), tracks pass 1's
+  // own WRITE outcomes by id: when pass 2's query finds a document at (id,
+  // cardId) that is not yet in `seenPairs`, the two remaining
+  // possibilities are told apart by asking whether `cardId` IS the address
+  // `relocatedTo` recorded for that id --
+  //
+  //   relocatedTo.get(id) === cardId   the SAME document pass 1 already
+  //                                    wrote, resurfacing at its OWN new
+  //                                    address -- sameDocRediscovered,
+  //                                    skipped (never reprocessed);
+  //   otherwise                        a DIFFERENT document that merely
+  //                                    shares this id -- distinctDocsSharingId,
+  //                                    and it IS processed, exactly as a
+  //                                    genuinely new candidate.
   //
   // CASE-ONLY DIFFERENCE CAVEAT: classifyIdentity (lib/split-identity.cjs)
   // compares cardId and hobbyiqCardId as EXACT strings. A row whose two
@@ -497,7 +553,9 @@ async function main() {
   // itself -- harmless (namesAgree trivially agrees with itself) but worth
   // naming: this lane repairs case-only splits as a side effect, it does
   // not detect them as their own class.
-  const seenIds = new Set();
+  const seenPairs = new Set(); // "id::cardId"
+  const seenIdsAnyPair = new Set(); // every id claimed by ANY pair so far, O(1) membership
+  const pairKey = (id, cardId) => `${id}::${cardId}`;
 
   for (const { cell, sport, year } of SCOPE_CELLS) {
     if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
@@ -518,8 +576,38 @@ async function main() {
           for (const r of page) {
             if (SHARD_SCOPE.SHARDED && shardOf(String(r.id)) !== SHARD_SCOPE.SLOT) { s.otherShard++; continue; }
             const id = String(r.id ?? "");
-            if (seenIds.has(id)) { s.dedupedAcrossPasses++; continue; }
-            seenIds.add(id);
+            const rowCardId = String(r.cardId ?? "");
+            const key = pairKey(id, rowCardId);
+            if (seenPairs.has(key)) {
+              // The EXACT (id, cardId) pair was already claimed by an
+              // earlier pass -- the same document, found again. Never
+              // reprocessed.
+              s.sameDocRediscovered++;
+              continue;
+            }
+            if (relocatedTo.get(id) === rowCardId) {
+              // Not yet in `seenPairs` (this exact pair was never queued),
+              // but it IS the address pass 1's own write just landed this
+              // id at -- the SAME document, resurfacing at its NEW
+              // partition. Recorded so a THIRD pass (or this same pass,
+              // were it to re-page) still recognises it, but not
+              // reprocessed here either.
+              seenPairs.add(key);
+              s.sameDocRediscovered++;
+              continue;
+            }
+            if (seenIdsAnyPair.has(id)) {
+              // This id WAS seen before (some earlier pair with this id was
+              // already queued), but this pair's own cardId is neither
+              // already-seen NOR the recorded relocation target -- a
+              // genuinely DISTINCT document that merely shares the id
+              // string (CF-COLLISION-IS-NOT-A-DUPLICATE). Counted
+              // separately from sameDocRediscovered, and PROCESSED, exactly
+              // as a fresh candidate.
+              s.distinctDocsSharingId++;
+            }
+            seenPairs.add(key);
+            seenIdsAnyPair.add(id);
             s[counterKey]++;
             rows.push(r);
           }
@@ -588,7 +676,8 @@ async function main() {
   console.log("");
   console.log(`scan pass 1 (STARTSWITH hobbyiqCardId)    ${f(s.pass1Rows)} row(s), net-new`);
   console.log(`scan pass 2 (STARTSWITH cardId)            ${f(s.pass2Rows)} row(s), net-new  <- catches an off-scope hobbyiqCardId whose cardId is in-scope`);
-  console.log(`  deduped across passes (same sale id)    ${f(s.dedupedAcrossPasses)}  (found again by the other pass; a sale pass 1 already decided is not reprocessed by pass 2, even if it moved partitions in between)`);
+  console.log(`  same doc rediscovered (own address)     ${f(s.sameDocRediscovered)}  (the identical (id,cardId) pair, or the SAME doc at the new address pass 1 just wrote it to -- never reprocessed)`);
+  console.log(`  distinct docs sharing an id             ${f(s.distinctDocsSharingId)}  (CF-COLLISION-IS-NOT-A-DUPLICATE -- two different documents, same sale ingested twice under different cardId partitions -- BOTH processed)`);
   console.log(`sales scanned                             ${f(s.scanned)}${SHARD_SCOPE.SHARDED ? `  (${f(s.otherShard)} in other shards)` : ""}`);
   console.log(`  not-hiq-split (not this lane's shape)   ${f(s.notHiqSplit)}`);
   console.log(`  candidates (HIQ-SPLIT rows)             ${f(s.candidates)}`);

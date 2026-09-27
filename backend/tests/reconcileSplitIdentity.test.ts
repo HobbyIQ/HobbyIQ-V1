@@ -530,20 +530,29 @@ describe("reconcile-split-identity -- THE PLAYER GATE (coordinator fixture: Trou
     expect(r.out).toMatch(/-> to hobbyiqCardId\s+1/);
   });
 
-  it("falls back to the sale's TITLE when playerName is blank, and still refuses on disagreement", () => {
-    const blankPlayerTrout = SPLIT_SALE({
+  // SECOND-ROUND COORDINATOR REVIEW (#2449, 2026-09-27): no title fallback.
+  // namesAgree compares NAME-shaped strings; a whole sale TITLE never folds
+  // down to equal a bare playerName, so a title fallback would have
+  // refused EVERY blank-playerName sale as player-disagrees regardless of
+  // whether the title corroborated the winning row -- strictly worse than
+  // the honest no-sale-player refusal. So a blank playerName refuses
+  // no-sale-player EVEN WHEN the title plainly names the winning player.
+  it("a BLANK playerName refuses no-sale-player, even when the title plainly names the winning player (no title fallback)", () => {
+    const troutRow = CATALOG_ROW({ id: ID_B, cardId: ID_B, cardNumber: "2", playerName: "Mike Trout" });
+    const blankPlayerButTroutTitle = SPLIT_SALE({
       id: "s1", cardId: ID_A, hobbyiqCardId: ID_B,
       title: "2026 Topps Mike Trout #1", playerName: "",
     });
-    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [blankPlayerTrout], catalog: [OHTANI_ROW()] });
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [blankPlayerButTroutTitle], catalog: [troutRow] });
     expect(r.code).toBe(0);
     expect(r.led.salesUpserts.length).toBe(0);
-    expect(r.out).toMatch(/REFUSED: player-disagrees\s+1/);
+    expect(r.out).toMatch(/REFUSED: no-sale-player\s+1/);
+    expect(r.out).not.toMatch(/REFUSED: player-disagrees\s+1/);
   });
 
-  it("REFUSES no-sale-player (its OWN class, distinct from player-disagrees) when the sale has neither a playerName nor a title", () => {
-    const blankEverything = SPLIT_SALE({ id: "s1", cardId: ID_A, hobbyiqCardId: ID_B, title: "", playerName: "" });
-    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [blankEverything], catalog: [OHTANI_ROW()] });
+  it("REFUSES no-sale-player (its OWN class, distinct from player-disagrees) when the sale has a blank playerName", () => {
+    const blankPlayer = SPLIT_SALE({ id: "s1", cardId: ID_A, hobbyiqCardId: ID_B, title: "", playerName: "" });
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [blankPlayer], catalog: [OHTANI_ROW()] });
     expect(r.code).toBe(0);
     expect(r.led.salesUpserts.length).toBe(0);
     expect(r.out).toMatch(/REFUSED: no-sale-player\s+1/);
@@ -568,7 +577,12 @@ describe("reconcile-split-identity -- THE PLAYER GATE (coordinator fixture: Trou
 // hobbyiqCardId only, so a split row whose hobbyiqCardId is OFF-SCOPE (wrong
 // sport/year -- the exact damage class this lane exists for) but whose
 // cardId IS in-scope was never a candidate. Fixed with a second STARTSWITH
-// pass on cardId, deduped against the first by the sale's own `id`.
+// pass on cardId, deduped against the first by the (id, cardId) pair --
+// the container's own point-read key, never the sale's own `id` alone
+// (second-round coordinator review: sold_comps ids are NOT unique across
+// partitions, and an id-only dedup would silently drop a genuinely
+// distinct document that merely shares an id -- CF-COLLISION-IS-NOT-A-
+// DUPLICATE).
 describe("reconcile-split-identity -- SECOND PASS closes the off-scope-hobbyiqCardId blind spot", () => {
   const OFF_SCOPE_HOBBYIQ_ID = `hiq:football:2019:panini:1:base:no-auto`; // wrong sport AND wrong year
   const IN_SCOPE_CARD_ID = ID_B; // in-scope: baseball:2026:topps
@@ -605,7 +619,8 @@ describe("reconcile-split-identity -- SECOND PASS closes the off-scope-hobbyiqCa
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/scan pass 1 \(STARTSWITH hobbyiqCardId\)\s+1 row/);
     expect(r.out).toMatch(/scan pass 2 \(STARTSWITH cardId\)\s+0 row/);
-    expect(r.out).toMatch(/deduped across passes \(same sale id\)\s+1/);
+    expect(r.out).toMatch(/same doc rediscovered \(own address\)\s+1/);
+    expect(r.out).toMatch(/distinct docs sharing an id\s+0/);
     expect(r.out).toMatch(/candidates \(HIQ-SPLIT rows\)\s+1/);
     expect(r.led.salesUpserts).toContain("s1");
     expect(r.led.salesUpserts.length).toBe(1);
@@ -615,13 +630,16 @@ describe("reconcile-split-identity -- SECOND PASS closes the off-scope-hobbyiqCa
     // Cleaner evidence of the dedup than the APPLY case above: in REPORT
     // mode nothing is written between the two passes, so pass 2's own
     // STARTSWITH(cardId) query genuinely re-finds the identical, unchanged
-    // row pass 1 already claimed -- and it is still counted once.
+    // row pass 1 already claimed -- and it is still counted once, as
+    // sameDocRediscovered (the exact (id,cardId) pair pass 1 already saw),
+    // never as distinctDocsSharingId.
     const sale = SPLIT_SALE({ id: "s1", cardId: ID_B, hobbyiqCardId: ID_A });
     const r = drive(DEFAULT_ENV, { sales: [sale], catalog: [CATALOG_ROW({ id: ID_A, cardId: ID_A })] });
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/scan pass 1 \(STARTSWITH hobbyiqCardId\)\s+1 row/);
     expect(r.out).toMatch(/scan pass 2 \(STARTSWITH cardId\)\s+0 row/);
-    expect(r.out).toMatch(/deduped across passes \(same sale id\)\s+1/);
+    expect(r.out).toMatch(/same doc rediscovered \(own address\)\s+1/);
+    expect(r.out).toMatch(/distinct docs sharing an id\s+0/);
     expect(r.out).toMatch(/candidates \(HIQ-SPLIT rows\)\s+1/);
     expect(r.led.salesUpserts.length).toBe(0);
   });
@@ -630,10 +648,11 @@ describe("reconcile-split-identity -- SECOND PASS closes the off-scope-hobbyiqCa
     // Regression pin for the sequencing hazard the two-pass design
     // introduces: in APPLY mode, pass 1 can already have MOVED a row by the
     // time pass 2's own STARTSWITH(cardId) query runs against the same live
-    // container. Deduping by (id, cardId) alone would miss this -- the row
-    // resurfaces under a NEW cardId pass 1 never recorded -- so this lane
-    // dedupes by the sale's own `id` alone. A coherent decoy plus one real
-    // split candidate must reconcile cleanly with no double write.
+    // container. The row resurfaces under a NEW cardId pass 1's own
+    // (id, cardId) pair never recorded -- `relocatedTo` is what lets this
+    // lane recognise it as the SAME document at its new address (rather
+    // than reprocessing it as though it were new) without conflating it
+    // with a genuinely distinct document that happens to share the id.
     const coherentDecoy = SPLIT_SALE({ id: "s0", cardId: ID_A, hobbyiqCardId: ID_A });
     const splitSale = SPLIT_SALE({ id: "s1", cardId: ID_B, hobbyiqCardId: ID_A });
     const r = drive(
@@ -645,5 +664,73 @@ describe("reconcile-split-identity -- SECOND PASS closes the off-scope-hobbyiqCa
     expect(r.out).toMatch(/candidates \(HIQ-SPLIT rows\)\s+1/);
     expect(r.led.salesUpserts).toEqual(["s1"]);
     expect(r.led.salesUpserts.length).toBe(1);
+  });
+
+  // COORDINATOR REVIEW (#2449, second round, 2026-09-27): BLOCKING fixture.
+  // docX and docY are TWO DIFFERENT DOCUMENTS that happen to share the same
+  // sale `id` under two different cardId partitions
+  // (CF-COLLISION-IS-NOT-A-DUPLICATE -- sold_comps ids are
+  // `${source}::${externalId}`, unique only WITHIN a partition;
+  // lib/duplicate-sale-ids.cjs's own census measured this shape live). An
+  // id-only dedup would read docY as "already seen" the instant pass 1
+  // touches docX and silently drop it -- a MISS, not a wrong move, but it
+  // defeats pass 2's whole purpose. Both must be found and processed.
+  it("docX and docY share the SAME sale id under DIFFERENT cardId partitions -- BOTH are found and processed, neither is silently dropped", () => {
+    const ID_C = `hiq:${SPORT}:${YEAR}:${SETKEY}:3:base:no-auto`;
+    const ID_D = `hiq:${SPORT}:${YEAR}:${SETKEY}:4:base:no-auto`;
+    // docX: cardId=ID_B (checklist-grade), hobbyiqCardId=ID_A -- pass 1
+    // (hobbyiqCardId STARTSWITH) claims it via ID_A's prefix and reconciles
+    // it onto cardId (patch in place, since ID_B is already docX's own
+    // partition).
+    const docX = SPLIT_SALE({ id: "dup-id-1", cardId: ID_B, hobbyiqCardId: ID_A, title: "2026 Topps Test Player #2" });
+    // docY: SAME id ("dup-id-1"), but cardId=ID_D (checklist-grade),
+    // hobbyiqCardId=ID_C -- a totally different sale/card pair, coincident
+    // only on the id string. Pass 1's own hobbyiqCardId-prefix query never
+    // sees it (ID_C's prefix is the same cell, so it WOULD be found by
+    // pass 1 too under a bare cell scan -- seeded here at a DIFFERENT
+    // cardId than docX's own address or docX's relocation target, so it
+    // must be counted as a distinct document, never deduped away).
+    const docY = SPLIT_SALE({ id: "dup-id-1", cardId: ID_D, hobbyiqCardId: ID_C, title: "2026 Topps Test Player #4" });
+    const catalog = [
+      CATALOG_ROW({ id: ID_B, cardId: ID_B, cardNumber: "2" }),
+      CATALOG_ROW({ id: ID_D, cardId: ID_D, cardNumber: "4" }),
+    ];
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [docX, docY], catalog });
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+    // Both are HIQ-SPLIT candidates -- neither silently dropped.
+    expect(r.out).toMatch(/candidates \(HIQ-SPLIT rows\)\s+2/);
+    expect(r.out).toMatch(/distinct docs sharing an id\s+1/);
+    // Both were reconciled to cardId (patch in place -- each doc's winning
+    // id is already its own cardId).
+    expect(r.out).toMatch(/-> to cardId\s+2/);
+    // The ledger's upsert list has TWO entries for "dup-id-1" -- one per
+    // document -- never collapsed into one.
+    const upsertCountForId = r.led.salesUpserts.filter((id: string) => id === "dup-id-1").length;
+    expect(upsertCountForId).toBe(2);
+  });
+
+  it("MUTATION: deduping by id alone would drop docY -- this pins that the shipped lane dedupes by the (id, cardId) pair instead", () => {
+    // Direct proof against the shipped source: an id-only Set could not
+    // distinguish docX's (dup-id-1, ID_B) from docY's (dup-id-1, ID_D) --
+    // the moment either is added to an id-only seen-set, the other reads
+    // as "already seen" and is dropped without ever being processed. The
+    // committed file must NOT contain that shape.
+    const laneSrc = fs.readFileSync(LANE, "utf8");
+    expect(laneSrc).toContain("seenPairs");
+    expect(laneSrc).not.toMatch(/const\s+seenIds\s*=\s*new Set/);
+    // And the end-to-end behavior: re-run the docX/docY fixture and confirm
+    // BOTH documents survive as two separate upserts, not one.
+    const ID_C = `hiq:${SPORT}:${YEAR}:${SETKEY}:3:base:no-auto`;
+    const ID_D = `hiq:${SPORT}:${YEAR}:${SETKEY}:4:base:no-auto`;
+    const docX = SPLIT_SALE({ id: "dup-id-1", cardId: ID_B, hobbyiqCardId: ID_A, title: "2026 Topps Test Player #2" });
+    const docY = SPLIT_SALE({ id: "dup-id-1", cardId: ID_D, hobbyiqCardId: ID_C, title: "2026 Topps Test Player #4" });
+    const catalog = [
+      CATALOG_ROW({ id: ID_B, cardId: ID_B, cardNumber: "2" }),
+      CATALOG_ROW({ id: ID_D, cardId: ID_D, cardNumber: "4" }),
+    ];
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [docX, docY], catalog });
+    const upsertCountForId = r.led.salesUpserts.filter((id: string) => id === "dup-id-1").length;
+    expect(upsertCountForId).toBe(2);
   });
 });
