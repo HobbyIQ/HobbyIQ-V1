@@ -65,7 +65,12 @@ describe("R64: a Topps Chrome edition is the product, not a parallel", () => {
     expect(setKeyOf("2022 Topps Chrome Bobby Witt Jr. RC Refractor SP #221 Royals Rookie")).toBe("topps-chrome");
     expect(setKeyOf("2022 Topps Chrome MIKE TROUT Variation #200 Angels - Raw 10")).toBe("topps-chrome");
     expect(setKeyOf("2024 Topps Chrome Black #55 Base")).toBe("topps-chrome-black");
-    expect(setKeyOf("2024 Topps Chrome Logofractor Baseball #55 Base")).toBe("topps-chrome-logofractor");
+    // Drew ruling, 2026-09-28 (PR #2478 finding): unlike Topps Chrome Black,
+    // Logofractor is a same-numbered NAMED PARALLEL of the flagship, not a
+    // standalone product -- it was never registered in productSetKeys.ts,
+    // despite this file's comment above once claiming otherwise. See
+    // toppsChromeLogofractorIsAParallel.test.ts for the full pin.
+    expect(setKeyOf("2024 Topps Chrome Logofractor Baseball #55 Base")).toBe("topps-chrome");
     expect(setKeyOf("2023 Topps Chrome Platinum Anniversary #1")).toBe("topps-chrome-platinum");
     expect(setKeyOf("2023 Topps Chrome Update Series #USC1")).toBe("topps-chrome-update-series");
   });

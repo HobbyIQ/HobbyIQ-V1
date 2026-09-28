@@ -32,9 +32,17 @@ const t206 = (playerName: string) =>
 
 describe("CF-PLAYER-IS-THE-NUMBER", () => {
   it("gives each unnumbered card its own identity instead of one shared pool", () => {
+    // AMENDED by CF-T206-NAME-TO-POSITION (2026-09-28). Honus Wagner has
+    // exactly ONE row on the 550-row t206 checklist (#496, "Honus Wagner
+    // Portrait"), so this now resolves to the checklist's own numeric
+    // position instead of falling back to player-<slug> -- that resolution
+    // is this later fix's entire point, not a regression of this one. Ty
+    // Cobb has FOUR checklist rows (#95-98) and this residue states no
+    // pose, so he stays on player-<slug> exactly as before -- still
+    // distinct from Wagner either way.
     const wagner = t206("Honus Wagner");
     const cobb = t206("Ty Cobb");
-    expect(wagner).toBe("hiq:baseball:1909:t206:player-honus-wagner:base:no-auto");
+    expect(wagner).toBe("hiq:baseball:1909:t206:496:base:no-auto");
     expect(cobb).toBe("hiq:baseball:1909:t206:player-ty-cobb:base:no-auto");
     expect(wagner).not.toBe(cobb);
   });
@@ -58,13 +66,20 @@ describe("CF-PLAYER-IS-THE-NUMBER", () => {
     // The first prefix tried was `p-`, and this test rejected it: promo cards
     // really do carry P-1 / P-45, which slugify to p-1 / p-45. `player-` is a
     // segment no card number can produce.
+    //
+    // Uses Ty Cobb rather than Honus Wagner here: Wagner has exactly one
+    // t206 checklist row and (as of CF-T206-NAME-TO-POSITION, 2026-09-28)
+    // now resolves to that row's own numeric position rather than
+    // player-<slug> — see the amended test above. Cobb has four checklist
+    // rows and this bare residue states no pose, so he is still guaranteed
+    // to land on player-<slug>, which is what this assertion needs.
     const numbered = computeHobbyIqCardId({
       sport: "baseball", year: 1909, setKey: "1909-11 T206 Baseball",
       cardNumber: "P-1", parallel: "Base", isAuto: false,
     });
     expect(numbered).toBe("hiq:baseball:1909:t206:p-1:base:no-auto");
-    expect(numbered).not.toBe(t206("Honus Wagner"));
-    expect(t206("Honus Wagner")).toContain(":player-");
+    expect(numbered).not.toBe(t206("Ty Cobb"));
+    expect(t206("Ty Cobb")).toContain(":player-");
   });
 
   // AMENDED by CF-UNPARSED-IS-NOT-UNNUMBERED (Drew, 2026-09-04). The empty
@@ -170,10 +185,16 @@ describe("CF-T206-BACK-BRAND-IS-NOT-THE-PLAYER", () => {
     // "Cy Seymour Batting" (#434), "Cy Seymour Pitching" (#435) are three
     // distinct checklist rows. This fix's back-brand list must never touch
     // a pose word.
+    //
+    // AMENDED by CF-T206-NAME-TO-POSITION (2026-09-28): with the pose word
+    // preserved and stated, Cy Seymour now resolves to his OWN checklist
+    // row's numeric position (#433 Portrait / #434 Batting) rather than
+    // stopping at a player-<slug> string that merely contains the pose word
+    // -- a stronger proof the pose survived the strip, not a weaker one.
     const portrait = unnumberedCardSegment("Sweet Caporal Cy Seymour Portrait", { year: 1909, setKey: "t206" });
     const batting = unnumberedCardSegment("Sweet Caporal Cy Seymour Batting", { year: 1909, setKey: "t206" });
-    expect(portrait).toContain("portrait");
-    expect(batting).toContain("batting");
+    expect(portrait).toBe("433");
+    expect(batting).toBe("434");
     expect(portrait).not.toBe(batting);
   });
 
@@ -229,26 +250,40 @@ describe("CF-T206-BACK-BRAND-IS-NOT-THE-PLAYER", () => {
     // tests/fixtures/sportscardchecklist/1909-11-t206-baseball.trimmed.html:
     //   #95 Ty Cobb Green Portrait   #96 Ty Cobb Red Portrait
     //   #97 Ty Cobb Bat off Shoulder #98 Ty Cobb Bat on Shoulder
+    //
+    // AMENDED by CF-T206-NAME-TO-POSITION (2026-09-28): each pose word here
+    // now picks out exactly ONE of Cobb's four checklist rows, so all four
+    // resolve to their own numeric position instead of stopping at a
+    // player-<slug> string -- FOUR DISTINCT ids either way, which is this
+    // test's actual point; resolving all the way to the checklist's own
+    // address is a strictly stronger form of "never collapsed."
     const redPortrait = unnumberedCardSegment("Ty Cobb Red Portrait", { year: 1909, setKey: "t206" });
     const greenPortrait = unnumberedCardSegment("Ty Cobb Green Portrait", { year: 1909, setKey: "t206" });
     const batOff = unnumberedCardSegment("Ty Cobb Bat Off Shoulder", { year: 1909, setKey: "t206" });
     const batOn = unnumberedCardSegment("Ty Cobb Bat On Shoulder", { year: 1909, setKey: "t206" });
-    expect(redPortrait).toBe("player-ty-cobb-red-portrait");
-    expect(greenPortrait).toBe("player-ty-cobb-green-portrait");
-    expect(batOff).toBe("player-ty-cobb-bat-off-shoulder");
-    expect(batOn).toBe("player-ty-cobb-bat-on-shoulder");
+    expect(redPortrait).toBe("96");
+    expect(greenPortrait).toBe("95");
+    expect(batOff).toBe("97");
+    expect(batOn).toBe("98");
     expect(new Set([redPortrait, greenPortrait, batOff, batOn]).size).toBe(4);
-    // Also true with a leading noise word ahead of the name (the shape the
-    // real defect was found in).
+    // With a leading noise word ahead of the name, the resolver's two-token
+    // name key becomes "t206-ty" instead of "ty-cobb" -- no checklist match,
+    // so this still falls all the way back to player-<slug>, unchanged.
     expect(unnumberedCardSegment("T206 Ty Cobb Red Portrait", { year: 1909, setKey: "t206" }))
       .toBe("player-t206-ty-cobb-red-portrait");
   });
 
   it("'Red Cross' the BRAND still strips as a phrase, even though 'Red' alone must not", () => {
+    // AMENDED by CF-T206-NAME-TO-POSITION (2026-09-28). Harry Niles has
+    // exactly ONE row on the t206 checklist (#359), so once the back-brand
+    // phrase strips cleanly to "Harry Niles" it now resolves to that row's
+    // numeric position instead of falling back to player-<slug> -- proof
+    // the strip and the resolver compose correctly, not a regression.
     expect(unnumberedCardSegment("Red Cross Harry Niles", { year: 1909, setKey: "t206" }))
-      .toBe("player-harry-niles");
+      .toBe("359");
     // Non-adjacent "Red" ... "Cross" is not the phrase and must not strip
-    // either word.
+    // either word. "Red Sox Cross" has no checklist match at all, so it
+    // stays on player-<slug> regardless.
     expect(unnumberedCardSegment("Red Sox Cross", { year: 1909, setKey: "t206" }))
       .toBe("player-red-sox-cross");
   });
@@ -315,8 +350,16 @@ describe("CF-T206-BACK-BRAND-IS-NOT-THE-PLAYER", () => {
 
     // Every overlapping word must survive as a BARE token next to a name --
     // proving the fix strips by phrase, never by bare membership.
+    //
+    // Uses a name absent from the checklist (rather than Ty Cobb, the
+    // original defect's example) so this check is isolated to the
+    // back-brand strip alone: CF-T206-NAME-TO-POSITION (2026-09-28) makes
+    // "Ty Cobb Red" resolve all the way to checklist position #96 (his own
+    // "Red Portrait" row, via loose pose containment), which would make a
+    // `.toContain("red")` assertion fail for a reason that has nothing to do
+    // with the back-brand strip this test is pinning.
     for (const w of overlap) {
-      const title = `Ty Cobb ${w[0].toUpperCase()}${w.slice(1)}`;
+      const title = `Zzyzx Qwerty ${w[0].toUpperCase()}${w.slice(1)}`;
       const seg = unnumberedCardSegment(title, { year: 1909, setKey: "t206" });
       expect(seg, `"${title}" must keep "${w}"`).toContain(w);
     }

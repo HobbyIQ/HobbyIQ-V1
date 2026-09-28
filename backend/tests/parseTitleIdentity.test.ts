@@ -326,11 +326,11 @@ describe("parseListingIdentity — parallel extraction", () => {
   it("Patterned refractor: Orange Wave Refractor", () => {
     expect(parseListingIdentity("Eric Hartman Orange Wave Refractor #CPA-EHA").parallel).toBe("Orange Wave Refractor");
   });
-  it("Patterned refractor: Blue Ray Wave Refractor (space form)", () => {
-    expect(parseListingIdentity("Owen Carey Blue Ray Wave Refractor").parallel).toBe("Blue Ray Wave Refractor");
+  it("Patterned refractor: Blue Ray Wave Refractor (space form → compound)", () => {
+    expect(parseListingIdentity("Owen Carey Blue Ray Wave Refractor").parallel).toBe("Blue RayWave Refractor");
   });
-  it("Patterned refractor: Blue RayWave Refractor (no-space form → space)", () => {
-    expect(parseListingIdentity("Owen Carey Blue RayWave Refractor").parallel).toBe("Blue Ray Wave Refractor");
+  it("Patterned refractor: Blue RayWave Refractor (compound form, unchanged)", () => {
+    expect(parseListingIdentity("Owen Carey Blue RayWave Refractor").parallel).toBe("Blue RayWave Refractor");
   });
   it("Patterned refractor: Green Grass Refractor", () => {
     expect(parseListingIdentity("Eric Hartman Green Grass Refractor #CPA-EHA /99").parallel).toBe("Green Grass Refractor");
@@ -485,8 +485,8 @@ describe("parseListingIdentity — parallel extraction", () => {
   it("Patterned refractor: bare Wave Refractor (no color)", () => {
     expect(parseListingIdentity("2026 Bowman - Eric Hartman Wave Refractor /350 #BCP-102").parallel).toBe("Wave Refractor");
   });
-  it("Patterned refractor: bare Ray Wave Refractor (no color)", () => {
-    expect(parseListingIdentity("Owen Carey Ray Wave Refractor #BCP-99").parallel).toBe("Ray Wave Refractor");
+  it("Patterned refractor: bare RayWave Refractor (no color)", () => {
+    expect(parseListingIdentity("Owen Carey Ray Wave Refractor #BCP-99").parallel).toBe("RayWave Refractor");
   });
   it("Guardrail: 'Blue Wave Refractor' still returns Blue-prefixed (color rule wins)", () => {
     expect(parseListingIdentity("Owen Carey Blue Wave Refractor").parallel).toBe("Blue Wave Refractor");

@@ -737,7 +737,7 @@ const AUTO_NEGATIVE_RE =
 
 /** CF-A-NAMED-PARALLEL-IS-A-DISTINCT-CARD, at the source (audit gate 2026-09-03).
  *
- *  Every pattern-family rule below -- Shimmer, Lava, Wave, Ray Wave, Grass --
+ *  Every pattern-family rule below -- Shimmer, Lava, Wave, RayWave, Grass --
  *  enumerated its own colour list, and every one of those lists was
  *
  *      (orange|red|green|gold|blue|purple|yellow|aqua)
@@ -1697,6 +1697,37 @@ function extractParallel(
   const T = title.replace(/\bref\b\.?(?!ractor)/gi, "Refractor");
   if (/superfractor|super\s+fractor/i.test(T)) return "SuperFractor";
 
+  // CF-COLOUR-LOGOFRACTOR-IS-A-SIBLING (Drew ruling, 2026-09-28). Logofractor
+  // is in FINISH_FAMILY_TOKENS (rematch-finish-vocab.cjs) alongside Wave and
+  // Speckle -- a colour word in front of it names a DIFFERENT, distinct
+  // printed rung, not the same bare Logofractor with a colour mentioned in
+  // passing. Real worklist titles (2026-09-26 baseball acquisition):
+  //
+  //   "... Gold Logofractor 37/50 ..."           -> Gold Logofractor  (not Logofractor)
+  //   "... Purple Logofractor Refractor #/250 ..." -> Purple Logofractor
+  //   "... Blue LOGOFRACTOR /150 ..."             -> Blue Logofractor
+  //
+  // Placed BEFORE the bare fractor-family rule below for the same reason the
+  // colour-prefixed Wave/Grass/Speckle rules sit before their own bare
+  // fallbacks: the generic `\b([a-z]+)fractor\b` capture only ever grabs the
+  // single word immediately before "fractor", so it would read "Gold
+  // Logofractor" and answer bare "Logofractor", silently dropping the colour
+  // and pooling a /50 with the unserialized base-card population. The
+  // canonical spelling ("Logofractor", one word, capital L) is
+  // variationVocabulary.ts:182's; this mirrors it rather than composing a
+  // "<Color> Refractor" suffix, since Logofractor is its own finish word, not
+  // a Refractor compound.
+  const colourLogofractorMatch = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+logofractor\b`, "i"));
+  if (colourLogofractorMatch) return capFirst(colourLogofractorMatch[1]) + " Logofractor";
+  // Bowman's Logofractor is its OWN printed /35 tier (parallelLadders.ts:228,
+  // 266 register it by exactly this name) and is unaffected by the Topps
+  // Chrome ruling above -- but without a rule of its own it falls through to
+  // the bare fractor-family catch-all below, which grabs only the single
+  // word immediately before "fractor" and answers bare "Logofractor",
+  // dropping "Bowman" the same way a colour would be dropped. Checked before
+  // that catch-all for the same reason.
+  if (/\bbowman\s+logofractor\b/i.test(T)) return "Bowman Logofractor";
+
   // CF-THE-FRACTOR-FAMILY-IS-OPEN-ENDED (Drew, 2026-08-25). Mined from the
   // 10,144 sales the refractor repair held back rather than guessed at one
   // title at a time -- which is how Packfractor was found, and how the next
@@ -1817,11 +1848,14 @@ function extractParallel(
   if (m) return capFirst(m[1]) + " Shimmer Refractor";
   m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+lava`, "i"));
   if (m) return capFirst(m[1]) + " Lava Refractor";
-  // Ray Wave — check BEFORE plain Wave so "Ray Wave" doesn't get
+  // RayWave — check BEFORE plain Wave so "RayWave" doesn't get
   // swallowed by the wave-only pattern. Accepts three spellings:
-  // "Ray Wave" (space), "Ray-Wave" (hyphen), "RayWave" (compound).
+  // "Ray Wave" (space), "Ray-Wave" (hyphen), "RayWave" (compound) — all
+  // emit the compound "RayWave", Topps' own printed spelling and the one
+  // every sampled sale title uses (variationVocabulary.ts's
+  // FINISH_SPELLING.raywave agrees).
   m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+ray[\s-]?wave`, "i"));
-  if (m) return capFirst(m[1]) + " Ray Wave Refractor";
+  if (m) return capFirst(m[1]) + " RayWave Refractor";
   m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+wave`, "i"));
   if (m) return capFirst(m[1]) + " Wave Refractor";
   // VAPOR and EQUINOX are pattern families with no rule at all before now, so
@@ -1848,8 +1882,8 @@ function extractParallel(
   // Refractor fallback at the bottom did. Order: after color-prefixed
   // Wave rules so "Blue Wave" still returns "Blue Wave Refractor",
   // before the bare "Refractor" fallback so bare "Wave Refractor"
-  // beats bare "Refractor". Same for Ray Wave.
-  if (/ray[\s-]?wave\s+refractor/i.test(T)) return "Ray Wave Refractor";
+  // beats bare "Refractor". Same for RayWave.
+  if (/ray[\s-]?wave\s+refractor/i.test(T)) return "RayWave Refractor";
   if (/wave\s+refractor/i.test(T)) return "Wave Refractor";
   // BARE SHIMMER, for the same reason bare Wave exists. "2022 Bowman Chrome
   // Shimmer Refractors #BCP-1" carries no colour, so every colour-prefixed
@@ -4145,26 +4179,45 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // CF-A-NAMED-PRODUCT-IS-ITS-OWN-PRODUCT, THE TOPPS CHROME RUNGS (R26,
   // 2026-09-13, from the wave2verify16 sports census).
   //
-  // `topps-chrome-black` and `topps-chrome-logofractor` are BOTH ruled keys
-  // (productSetKeys.ts:479 carries topps-chrome-black with parent
-  // topps-chrome; normalizeSetKey answers both as fixed points) and NEITHER
-  // had a parser rule, so every sale of them fell to the bare
+  // `topps-chrome-black` is a ruled key (productSetKeys.ts:479 carries it
+  // with parent topps-chrome; normalizeSetKey answers it as a fixed point)
+  // and had no parser rule, so every sale of it fell to the bare
   // `/topps\s+chrome/` line below and was priced inside the flagship pool.
   //
   //   "2025 Topps Chrome Black Football #RV-12 Base"      -> topps-chrome
-  //   "2024 Topps Chrome Logofractor Baseball #55 Base"   -> topps-chrome
   //
-  // 130 + 51 CONFLICT samples of exactly this shape. Topps Chrome Black is a
+  // 130 CONFLICT samples of exactly this shape. Topps Chrome Black is a
   // black-bordered, separately-boxed release with its own checklist and its
-  // own price curve -- and the census's own `Black Refractor` answer for the
-  // FIRST title is the same defect twice over: the PRODUCT word was read as a
+  // own price curve -- and the census's own `Black Refractor` answer for that
+  // title is the same defect twice over: the PRODUCT word was read as a
   // PARALLEL of the flagship instead of as the name of the product.
   //
   // Placed with Platinum and Update, above bare `/topps\s+chrome/`, for the
   // ordering doctrine those two already state: a qualifying word must be read
   // before the line that returns a constant and never looks again.
+  //
+  // CF-LOGOFRACTOR-IS-A-PARALLEL-NOT-A-PRODUCT (Drew ruling, 2026-09-28,
+  // reversing the line this comment used to defend). This file previously
+  // claimed `topps-chrome-logofractor` was "BOTH ruled keys" alongside
+  // Topps Chrome Black, citing productSetKeys.ts:479 -- but that file has
+  // no such entry (`grep -n topps-chrome-logofractor
+  // backend/src/services/catalog/productSetKeys.ts` returns zero matches).
+  // It was never registered; the comment asserted a ruling that was never
+  // made. Sourced against baseballcardpedia and checklistinsider (PR #2478):
+  // 2024 Topps Chrome Logofractor is a same-numbered, skip-numbered NAMED
+  // PARALLEL of the 300-card Topps Chrome base set (200/200 checklist rows
+  // cross-referenced identical cardNumber/player pairs against the
+  // already-committed base checklist), not a standalone product -- unlike
+  // Bowman Logofractor, which IS its own printed /35 tier
+  // (parallelLadders.ts:228,266, unaffected by this change). So a Topps
+  // Chrome Logofractor title now falls through to the bare
+  // `/topps\s+chrome/` rule below, exactly like any other named Topps Chrome
+  // parallel (Refractor, Wave, ...); `extractParallel` carries "Logofractor"
+  // (and colour-qualified siblings, e.g. "Gold Logofractor") as the parallel
+  // instead. The ~10,203 sales already stored under the unregistered
+  // `topps-chrome-logofractor` setKey fold to `topps-chrome` on the next
+  // rematch pass, which re-derives through this same parser.
   if (/topps\s+chrome\s+black/i.test(t)) return "Topps Chrome Black";
-  if (/topps\s+chrome\s+logofractor|\blogofractor\b/i.test(t)) return "Topps Chrome Logofractor";
   if (/topps\s+chrome\s+platinum/i.test(t)) return "Topps Chrome Platinum";
   if (/topps\s+chrome\s+update(\s+series)?/i.test(t)) return "Topps Chrome Update Series";
   // CF-CHROME-EDITION-IS-THE-PRODUCT (R64, Drew 2026-09-18). Two more Chrome
@@ -4327,7 +4380,7 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   if (/bowman\s+chrome/.test(t)) return "Bowman Chrome";
   // CF-CHROME-IMPLIED (Drew, 2026-07-29). Some parallels are Chrome-
   // exclusive (they don't exist on Bowman Paper): Speckle, Shimmer,
-  // Lava, Wave, Ray Wave, Grass, X-Fractor, Mojo, Prism, Mini Diamond,
+  // Lava, Wave, RayWave, Grass, X-Fractor, Mojo, Prism, Mini Diamond,
   // and any bare "Refractor". When a title says "Bowman" but omits
   // "Chrome" AND carries one of these chrome-only signals, upgrade to
   // Bowman Chrome. Ordered AFTER bowman-draft/chrome/sapphire so

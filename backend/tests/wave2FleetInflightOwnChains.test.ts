@@ -225,7 +225,19 @@ function runHarness(opts: { binDir: string; body: string; logdir: string }): { r
         LOGDIR: toShellPath(opts.logdir),
         REPO: "HobbyIQ/HobbyIQ-V1",
         WAVE2_DISPATCH: "true",
-        WAVE2_INFLIGHT_BUDGET_GRACE_SECS: "2",
+        // CI-FLAKE (2026-09-27/28): this used to be "2". inflight_refresh_slot's
+        // single call shells out to `gh run view`/`gh run list` (real subprocess
+        // spawns via the fake gh's node helper) BEFORE it ever compares the
+        // grace-window age -- measured 8-13s of real wall time for one call on
+        // a loaded box, sometimes more. A 2s grace meant the window had often
+        // already elapsed by the time the very first check finished evaluating
+        // it, failing "still counts as 1 within the grace window" and "foreign
+        // run never mistaken for successor" nondeterministically (both make
+        // exactly one inflight_census_count call and assert age < grace).
+        // 120s gives headroom no single call should plausibly exceed; the one
+        // test that needs to observe the window ELAPSING no longer sleeps real
+        // time for it -- see the age-injection comment below.
+        WAVE2_INFLIGHT_BUDGET_GRACE_SECS: "120",
         WAVE2_INFLIGHT_POLL_SECS: "1",
       },
     });
@@ -319,8 +331,9 @@ inflight_census_count test; echo
       });
       expect(res.rc).toBe(0);
       // Immediately after the budget-stop, nothing else was dispatched as a
-      // successor, but we are well inside the (test-shortened) grace window --
-      // the chain is one in-flight slot, not zero.
+      // successor, but we are well inside the grace window (120s, comfortably
+      // longer than one inflight_refresh_slot call's real subprocess-spawn
+      // time) -- the chain is one in-flight slot, not zero.
       expect(res.out).toBe("1");
     },
   );
@@ -339,7 +352,14 @@ inflight_census_count test; echo
 inflight_reset_state test
 dispatch census false improve 0 test >&2
 inflight_census_count test >/dev/null   # first read stamps budget_at
-sleep 3                                  # grace is 2s in this test env
+# Age the stamp directly instead of sleeping past the (120s) grace window in
+# real time: inflight_refresh_slot only ever WRITES budget_at with "date +%s"
+# if the file is still empty (see the fleet script's own guard), so
+# overwriting it here with a timestamp already outside the window is
+# indistinguishable, from the code's point of view, from the grace window
+# having genuinely elapsed -- and it is instant and deterministic rather than
+# racing subprocess-spawn latency against a real sleep.
+echo $(( $(date +%s) - WAVE2_INFLIGHT_BUDGET_GRACE_SECS - 5 )) > "$(inflight_state_dir test)/0.budget_at"
 inflight_census_count test; echo
 `,
     });
