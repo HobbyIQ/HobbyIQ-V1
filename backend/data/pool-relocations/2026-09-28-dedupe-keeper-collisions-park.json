@@ -1,0 +1,622 @@
+{
+ "generatedAt": "2026-09-28T15:06:20.248Z",
+ "forLane": "relocate-pool-rows-by-list",
+ "issue": "dedupe-keeper-collision-park-0928",
+ "reportOnlyUntil": "Drew's review -- no apply is authorized by this PR",
+ "finding": "Companion PARK list to backend/data/sales-repoints/2026-09-28-dedupe-keeper-collisions-repoint.json (see that file for the full audit background: 213 dedupe-by-list keeper-collision sales, 204 unique after dedupe, ALL 204 confirmed resident at keepCardId). These 101 sales re-derive (parseListingIdentity + computeHobbyIqCardId) a card number/product from their OWN title that card_catalog carries NO row for at all -- e.g. 2026 Topps Chrome Olympics autograph inserts (Kristi Yamaguchi, Disney Paige O Hara), Leaf Optichrome, Panini Immaculate, 1991 Topps Autograph Insert reprints -- products this catalog has never acquired a checklist for. CF-A-WHOLE-SCOPE-WRITE-REFUSES-WITHOUT-ITS-SCOPE / absent beats wrong: this list PARKS each sale (identityUnverified=true) rather than inventing a card_catalog address from a sale alone or leaving it parked at the WRONG products keeper it currently occupies. This is a CHECKLIST ACQUISITION GAP, not a retire-only cleanup -- each product family named in the evidence needs its own acquisition pass before these sales can resolve to a real address.",
+ "rulings": [
+  "CF-THE-CHECKLIST-DECIDES-THE-PRODUCT, NEVER MINT FROM A SALE. Every entry's own title states a product (Leaf Optichrome, Panini Rookies & Stars, Wild Card, 2026 Topps Chrome Olympics/Disney/UFC inserts, Panini Immaculate, Panini Score Rookie Signatures inserts, 1991 Topps Autograph Insert) that card_catalog has never acquired a checklist for at this card number -- the derived slug (deriveSlug in each entry, preserved for the acquisition queue) names the gap precisely.",
+  "PARK rather than relocate: no hiq: address this repo can point-read backs the sale's own title. The sale leaves its current WRONG-product keeper (identityUnverified=true is the SAME flag retire-self-derived-identities.cjs and the 2026-09-12 bowman-chrome-cpa-phantom-parallels-park.json precedent use) without asserting a destination nothing attests."
+ ],
+ "census": {
+  "parkedInThisList": 101
+ },
+ "entries": [
+  {
+   "id": "tca-ebay::318351387794",
+   "fromCardId": "hiq:football:2025:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Leaf Optichrome Football - 1 of 1 - Tempest - Autograph - Steve Young #1/1\" re-derives to hiq:football:2025:leaf:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:1:base:no-auto (row player \"John Mateer\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::227465309655",
+   "fromCardId": "hiq:football:2025:bowman:8:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Rookies & Stars Dak Prescott Airborne Silver Autograph /99 #8\" re-derives to hiq:football:2025:panini-rookies-and-stars:8:unknown:auto:num-99, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:8:base:no-auto (row player \"Billy Edwards Jr.\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::257509234070",
+   "fromCardId": "hiq:football:2025:bowman:72:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Photogenic Josh Jacobs White FOTL AUTO NUMBERED 7/7 Green Bay Packers #72\" re-derives to hiq:football:2025:panini-photogenic:72:fotl-white:auto:num-7, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:72:base:no-auto (row player \"Zabien Brown\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::377350355673",
+   "fromCardId": "hiq:football:2025:bowman:119:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini PhotoGenic Edgerrin Cooper Auto Horizontal Bronze #119 Packers\" re-derives to hiq:football:2025:panini-photogenic:119:horizontal:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:119:base:no-auto (row player \"Ian Strong\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::389323663072",
+   "fromCardId": "hiq:football:2025:bowman-chrome:11:gold-refractor:no-auto:num-50",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"🔥 Haynes King- 2025 Bowman Chrome U Auto (Gold) #11/50 #GeorgiaTech 🔥\" re-derives to hiq:football:2025:bowman-chrome:11:gold-refractor:auto:num-50, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman-chrome:11:gold-refractor:no-auto:num-50 (row player \"Trebor Peña\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::158082278488",
+   "fromCardId": "hiq:football:2025:topps-chrome:47:gold-refractor:no-auto:num-50",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Topps Chrome TreVeyon Henderson Gold Refractor Auto /50 RC #47/50\" re-derives to hiq:football:2025:topps-chrome:47:gold-refractor:auto:num-50, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:topps-chrome:47:gold-refractor:no-auto:num-50 (row player \"Derrick Brown\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::318704427203",
+   "fromCardId": "hiq:football:2025:topps-chrome:143:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"Topps 2025 Topps Chrome Maxwell Hairston Buffalo Bills RC Auto RRA-MH\" re-derives to hiq:football:2025:topps-chrome:rra-mh:unknown:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:topps-chrome:143:base:no-auto (row player \"Tank Bigsby\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::327296897118",
+   "fromCardId": "hiq:football:2025:topps-chrome:70:purple-lava-refractor:no-auto:num-75",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Topps Chrome Derek Stingley Jr. Auto Purple Lava Refractor # 70/75 Texans\" re-derives to hiq:football:2025:topps-chrome:70:purple-lava-refractor:auto:num-75, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:topps-chrome:70:purple-lava-refractor:no-auto:num-75 (row player \"Myles Garrett\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::168614475026",
+   "fromCardId": "hiq:football:2025:topps-chrome:106:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"Topps Chrome 2025 Jaxson Dart New York Giants RC Auto CG-JDA\" re-derives to hiq:football:2025:topps-chrome:cg-jda:unknown:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:topps-chrome:106:base:no-auto (row player \"Romeo Doubs\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::287255174185",
+   "fromCardId": "hiq:football:2025:bowman:14:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Leaf Electrum Earl Campbell AUTO 1/4 Strange Colors Purple SC-EC1 Saints\" re-derives to hiq:football:2025:leaf:sc-ec1:unknown:auto:num-4, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:14:base:no-auto (row player \"Sedrick Alexander\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::168534238844",
+   "fromCardId": "hiq:football:2025:panini-prizm:24:base:no-auto:num-25",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Prizm Omarion Hampton RC Mojo Auto Chargers Rookie #24/25 PSA 10 ~ POP 1\" re-derives to hiq:football:2025:panini-prizm:24:mojo:auto:num-25, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-prizm:24:base:no-auto:num-25 (row player \"Leroy Kelly\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::287353102838",
+   "fromCardId": "hiq:football:2025:bowman:106:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"ZACK BAUN - 2025 PHOTOGENIC #106 - BLUE AUTO - 49/49 LAST TO PRINT - EAGLES!\" re-derives to hiq:football:2025:panini-photogenic:106:unknown:auto:num-49, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:106:base:no-auto (row player \"Elija Lofton\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::298549630774",
+   "fromCardId": "hiq:football:2025:bowman:173:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"Topps 2025 Signature Class Landon Jackson Bills Rookie Auto #173 123/275\" re-derives to hiq:football:2025:topps-signature-class:173:base:auto:num-275, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:173:base:no-auto (row player \"Josh McCray\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::358888095646",
+   "fromCardId": "hiq:football:2025:bowman:111:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"Panini Photogenic 2025 Gold Autograph Puka Nacua #111 /10 Rams NFL\" re-derives to hiq:football:2025:panini-photogenic:111:unknown:auto:num-10, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:111:base:no-auto (row player \"Peyton Bowen\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::398217792484",
+   "fromCardId": "hiq:football:2025:topps-chrome:22:gold-refractor:no-auto:num-50",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Topps Chrome - Drake London On Card Auto True Gold Refractor #22/50 Falcons\" re-derives to hiq:football:2025:topps-chrome:22:gold-refractor:auto:num-50, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:topps-chrome:22:gold-refractor:no-auto:num-50 (row player \"Zay Flowers\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::327292392429",
+   "fromCardId": "hiq:football:2025:bowman:151:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Rookies & Stars Preferred Kyle McCord RC Auto /349 #151 Eagles\" re-derives to hiq:football:2025:panini-rookies-and-stars:151:preferred:auto:num-349, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:151:base:no-auto (row player \"Ty Simpson\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "cardhedge::ch-daily::1777917666006x193704051233961820::2026-07-14T14:57:00+00:00::3500",
+   "fromCardId": "hiq:football:2025:panini-prizm-draft-picks:67:red-ice:auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Prizm Draft Picks Football #67 Red Ice\" re-derives to hiq:football:2025:panini-prizm-draft-picks:67:unknown:no-auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-prizm-draft-picks:67:red-ice:auto (row player \"Xavier Restrepo\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "cardhedge::ch-daily::1777915425982x491049849774928060::2026-07-15T00:06:00+00:00::50",
+   "fromCardId": "hiq:football:2025:panini-prizm-draft-picks:49:gold-ice:auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Prizm Draft Picks Football #49 Gold Ice\" re-derives to hiq:football:2025:panini-prizm-draft-picks:49:unknown:no-auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-prizm-draft-picks:49:gold-ice:auto (row player \"Jaydon Blue\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::188649729719",
+   "fromCardId": "hiq:football:2025:topps-chrome:45:gold-refractor:no-auto:num-50",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"Jim Kelly 2025 Topps Chrome Chrome Legends Gold Auto #45/50 - Bills No. CLA-JK\" re-derives to hiq:football:2025:topps-chrome:45:gold-refractor:auto:num-50, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:topps-chrome:45:gold-refractor:no-auto:num-50 (row player \"Ja'Tavion Sanders\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::336701239877",
+   "fromCardId": "hiq:football:2025:topps-chrome:1:red-geometric-refractor:no-auto:num-5",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Topps Chrome Javonte Williams Red Geometric #1/5 ON CARD Auto COWBOYS\" re-derives to hiq:football:2025:topps-chrome:1:red-geometric:auto:num-5, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:topps-chrome:1:red-geometric-refractor:no-auto:num-5 (row player \"Marvin Harrison Jr.\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::227356928939",
+   "fromCardId": "hiq:football:2025:bowman:3:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"Leaf 2025 Vivid Neon Autographs Antwann Hill Jr. Auto Serial #3/10 Football\" re-derives to hiq:football:2025:leaf:3:vivid-auto:auto:num-10, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:3:base:no-auto (row player \"Devon Dampier\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::147502977984",
+   "fromCardId": "hiq:football:2025:topps-chrome:10:gold-refractor:no-auto:num-50",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"Topps Chrome Black 2025 Will Howard Super Futures Gold RC Auto Steelers #10/50\" re-derives to hiq:football:2025:topps-chrome-black:10:black-refractor:auto:num-50, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:topps-chrome:10:gold-refractor:no-auto:num-50 (row player \"Josh Sweat\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::336729288853",
+   "fromCardId": "hiq:football:2025:panini-donruss:10:base:no-auto:num-25",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"OMARION HAMPTON 2025 PANINI DONRUSS WHITE HOT ROOKIE RC AUTO #10/25 **CHARGERS**\" re-derives to hiq:football:2025:panini-donruss:10:unknown:auto:num-25, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-donruss:10:base:no-auto:num-25 (row player \"J.J. McCarthy/J.J. McCarthy\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "cardhedge::ch-daily::1790309886535x973875919584638200",
+   "fromCardId": "hiq:football:2025:panini-mosaic:32:choice-fusion-red-and-yellow:auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Mosaic Football #32 Choice Fusion Red and Yellow\" re-derives to hiq:football:2025:panini-mosaic:32:choice-fusion-red-and-yellow-mosaic:no-auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-mosaic:32:choice-fusion-red-and-yellow:auto (row player \"Danielle Hunter\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::267674497199",
+   "fromCardId": "hiq:football:2025:panini-select:79:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Select Drew Dalman Bears Autograph Rookie Prizm Insert SIP-DDN\" re-derives to hiq:football:2025:panini-select:sip-ddn:unknown:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-select:79:base:no-auto (row player \"Stefon Diggs\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::366570541697",
+   "fromCardId": "hiq:football:2025:panini-select:29:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Select Terrance Ferguson Rookie Ticket #29 Rams Auto\" re-derives to hiq:football:2025:panini-select:29:unknown:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-select:29:base:no-auto (row player \"Marcus Allen\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::318704045255",
+   "fromCardId": "hiq:football:2025:panini-donruss:17:base:no-auto:num-99",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"🔥 PSA 9 AUTO 10! SHEDEUR SANDERS 2025 Donruss Elite Series Auto 17/99 ESR-SSS\" re-derives to hiq:football:2025:donruss-elite:esr-sss:unknown:auto:num-99, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-donruss:17:base:no-auto:num-99 (row player \"Jake Bates/Jake Bates\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "cardhedge::ch-daily::1777915459657x868517871882050300::2026-07-13T01:05:00+00:00::120",
+   "fromCardId": "hiq:football:2025:panini-prizm-draft-picks:98:gold-ice:auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Prizm Draft Picks Football #98 Gold Ice\" re-derives to hiq:football:2025:panini-prizm-draft-picks:98:unknown:no-auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-prizm-draft-picks:98:gold-ice:auto (row player \"Abdul Carter\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::800101959132",
+   "fromCardId": "hiq:football:2025:bowman:9:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Leaf In The Game Used Peyton Manning Video Game Stats (VG-PM2) Auto #9/10\" re-derives to hiq:football:2025:leaf:9:unknown:auto:num-10, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:9:base:no-auto (row player \"Tucker Gleason\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::278016224500",
+   "fromCardId": "hiq:football:2025:panini-select:39:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Select Jonnu Smith Patch Auto Silver /249 SME-JSH Steelers\" re-derives to hiq:football:2025:panini-select:sme-jsh:unknown:auto:num-249, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-select:39:base:no-auto (row player \"Ty Law\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::178378154247",
+   "fromCardId": "hiq:football:2025:topps-chrome:84:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"Topps 2025 Topps Chrome - Geno Smith Raiders Auto.    /50 #84\" re-derives to hiq:football:2025:topps-chrome:84:unknown:auto:num-50, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:topps-chrome:84:base:no-auto (row player \"KaVontae Turpin\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::327113738644",
+   "fromCardId": "hiq:football:2025:bowman:23:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"MIKE SAINRISTIL - 2025 PHOTOGENIC #23 - FOTL AUTO SSP /7 - COMMANDERS!\" re-derives to hiq:football:2025:panini-photogenic:23:image-variation-ssp:auto:num-7, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:23:base:no-auto (row player \"Malik Rutherford\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::227454086662",
+   "fromCardId": "hiq:football:2025:panini-optic:218:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Optic Rated Rookie Prizm Auto Ollie Gordon II Dolphins #218 /99\" re-derives to hiq:football:2025:donruss-optic:218:unknown:auto:num-99, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-optic:218:base:no-auto (row player \"Ollie Gordon II\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::327124622489",
+   "fromCardId": "hiq:football:2025:bowman:8:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"🏉2025 Leaf Sports Heroes Davante Adams AUTOGRAPH #8/9🏉\" re-derives to hiq:football:2025:leaf:8:unknown:auto:num-9, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:8:base:no-auto (row player \"Billy Edwards Jr.\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "cardhedge::ch-daily::1777915413398x421651159745021900::2026-07-15T01:10:00+00:00::1050",
+   "fromCardId": "hiq:football:2025:panini-prizm-draft-picks:28:gold-ice:auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Prizm Draft Picks Football #28 Gold Ice\" re-derives to hiq:football:2025:panini-prizm-draft-picks:28:unknown:no-auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-prizm-draft-picks:28:gold-ice:auto (row player \"Lan Larison\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::167782989746",
+   "fromCardId": "hiq:football:2025:bowman:126:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"VINCE FERRAGAMO #126 2025 SCORE AUTOGRAPH FOOTBALL RAMS AUTO NICE\" re-derives to hiq:football:2025:score:126:base:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:126:base:no-auto (row player \"Darius Taylor\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::377404638909",
+   "fromCardId": "hiq:football:2025:topps-chrome:207:refractor:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 TOPPS CHROME FOOTBALL JACKSON HAWES BILLS RC AUTO VARIATION RA-JH /10\" re-derives to hiq:football:2025:topps-chrome:ra-jh:image-variation:auto:num-10, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:topps-chrome:207:refractor:no-auto (row player \"Drake Maye\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::366599499762",
+   "fromCardId": "hiq:football:2025:panini-select:41:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025-26 Select Euroleague David McCormack White Ice Auto #41/49 (KD)\" re-derives to hiq:football:2025:panini-select:41:unknown:auto:num-49, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-select:41:base:no-auto (row player \"Tyler Shough\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "cardhedge::ch-daily::1776706112529x494453656044437500::2026-07-11T01:27:00+00:00::1250",
+   "fromCardId": "hiq:football:2025:panini-prizm-draft-picks:57:silver:auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Prizm Draft Picks Football #57 Silver\" re-derives to hiq:football:2025:panini-prizm-draft-picks:57:unknown:no-auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-prizm-draft-picks:57:silver:auto (row player \"Will Campbell\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "cardhedge::ch-daily::1790329227517x682327701038000600",
+   "fromCardId": "hiq:football:2025:panini-photogenic:28:bronze:auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"Courtland Sutton #/150 2025 Panini Photogenic Bronze #28 Denver Broncos - Raw\" re-derives to hiq:football:2025:panini-photogenic:28:unknown:no-auto:num-150, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-photogenic:28:bronze:auto (row player \"Yancey Thigpen\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::227359346958",
+   "fromCardId": "hiq:football:2025:bowman:41:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Score Dillon Gabriel Cleveland Browns RC Auto Autograph #41\" re-derives to hiq:football:2025:score:41:base:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:41:base:no-auto (row player \"Caden Veltkamp\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::178175951537",
+   "fromCardId": "hiq:football:2025:bowman:89:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Upper Deck Allure SE Malik Nabers #89 Purple Diamond Autographs /10\" re-derives to hiq:football:2025:upper-deck:89:purple-diamond:auto:num-10, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:89:base:no-auto (row player \"Terry Bussey\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::318638237554",
+   "fromCardId": "hiq:football:2025:bowman:3:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Rookies & Stars Jim Harbaugh Auto /299 Chargers #3\" re-derives to hiq:football:2025:panini-rookies-and-stars:3:base:auto:num-299, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:3:base:no-auto (row player \"Devon Dampier\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::236981877234",
+   "fromCardId": "hiq:football:2025:panini-donruss:165:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 National Treasures Tyler Warren RPA Patch Autograph /10 RC #165 - Colts\" re-derives to hiq:football:2025:panini-national-treasures:165:unknown:auto:num-10, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-donruss:165:base:no-auto (row player \"Zay Flowers/Zay Flowers\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::307107776825",
+   "fromCardId": "hiq:football:2025:topps-chrome:16:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"Topps Chrome 2025 Kalel Mullings Rookie Auto #16/25 RA-KMU Tennessee Titans\" re-derives to hiq:football:2025:topps-chrome:16:unknown:auto:num-25, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:topps-chrome:16:base:no-auto (row player \"Bijan Robinson\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::307105109637",
+   "fromCardId": "hiq:football:2025:bowman:76:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"Panini 2025 Rookies & Stars Randy Moss Autograph 7/10 #76\" re-derives to hiq:football:2025:panini-rookies-and-stars:76:base:auto:num-10, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:76:base:no-auto (row player \"Micah Alejado\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::377349861364",
+   "fromCardId": "hiq:football:2025:bowman:52:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Panini Score Aidan O'Connell Signatures Green Auto Autograph #52 Raiders\" re-derives to hiq:football:2025:score:52:unknown:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:bowman:52:base:no-auto (row player \"A.J. Turner\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::188765164867",
+   "fromCardId": "hiq:football:2025:panini-select:37:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Select AFL Seamless WILLEM DREW AFL Badge Signature Auto 27/65 #37\" re-derives to hiq:football:2025:panini-select:37:signature-select:auto:num-65, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:football:2025:panini-select:37:base:no-auto (row player \"Tim Brown\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::336725960099",
+   "fromCardId": "hiq:baseball:2026:panini-immaculate:5:base:auto:num-35",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"Panini 2026 Immaculate Collection Seong-Jun Kim #5 /35 RED RANGERS COLOR MATCH\" re-derives to hiq:baseball:2026:panini-immaculate:5:unknown:no-auto:num-35, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:panini-immaculate:5:base:auto:num-35 (row player \"Robin Yount\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::117361815893",
+   "fromCardId": "hiq:baseball:2026:panini-immaculate:20:base:auto:num-35",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Panini Immaculate Collection Bobby Witt Jr. Red /35 #20 RC\" re-derives to hiq:baseball:2026:panini-immaculate:20:unknown:no-auto:num-35, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:panini-immaculate:20:base:auto:num-35 (row player \"Travis Bazzana\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::377376409769",
+   "fromCardId": "hiq:baseball:2026:topps:110:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"Topps 2026 Chrome UFC Mark Choinski RC Auto Base Card  BAV-MC Purple 1/10\" re-derives to hiq:mma:2026:topps-chrome:bav-mc:base:auto:num-10, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:110:base:no-auto (row player \"Evan Carter\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::236940783850",
+   "fromCardId": "hiq:baseball:2026:topps:ccs-jw:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Tier One - Autographs James Wood On Card Auto  /25 CCS-JW  SP\" re-derives to hiq:baseball:2026:topps-tier-one:ccs-jw:unknown:auto:num-25, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:ccs-jw:base:no-auto (row player \"James Wood\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::327297365649",
+   "fromCardId": "hiq:baseball:2026:topps-finest:126:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Finest Sal Stewart Reds Hard Signed Auto RC FMA-SS # 126/199 🔥🔥\" re-derives to hiq:baseball:2026:topps-finest:126:base:auto:num-199, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps-finest:126:base:no-auto (row player \"Brent Rooker\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::298543135277",
+   "fromCardId": "hiq:baseball:2026:panini-prizm:94:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"Tony Meola 2026 Panini Prizm FIFA World Cup 1994 Team USA Choice Auto #94-TM\" re-derives to hiq:soccer:2026:panini-prizm:94:unknown:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:panini-prizm:94:base:no-auto (row player \"Coleman Borthwick\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::278258800023",
+   "fromCardId": "hiq:baseball:2026:topps-finest:fa-jg:green-refractor:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"Jack Grealish /75 Auto Green Refractor Everton 2026 Topps Finest FA-JG\" re-derives to hiq:baseball:2026:topps-finest:fa-jg:green-refractor:auto:num-75, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps-finest:fa-jg:green-refractor:no-auto (row player \"Jhostynxon Garcia\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::278263900763",
+   "fromCardId": "hiq:baseball:2026:topps-chrome:7:orange-refractor:no-auto:num-25",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Chrome Perspectives Orange Auto Albert Pujols #7/25 Cardinals\" re-derives to hiq:baseball:2026:topps-chrome:7:orange-refractor:auto:num-25, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps-chrome:7:orange-refractor:no-auto:num-25 (row player \"Samuel Basallo\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::800476911903",
+   "fromCardId": "hiq:baseball:2026:topps-tribute:12:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Tribute Jeff Bagwell Pillars of The Game Auto Gold #12/50 J832\" re-derives to hiq:baseball:2026:topps-tribute:12:pillars-of-the-game-gold:auto:num-50, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps-tribute:12:base:no-auto (row player \"Paul Skenes\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::137323278309",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"HAILEY VAN LITH 2026 LEAF PRESIDENT\\'S DAY PRISMATIC OVAL OFFICE #1/1 AUTO -\" re-derives to hiq:baseball:2026:leaf:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::206295099379",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Metal Kayson Cunningham Auto Stainless # 1/1  DA-KC1 Diamondbacks AD\" re-derives to hiq:baseball:2026:leaf-metal:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::198378339394",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Metal Baseball Kash Mayfield Armed & Dangerous Auto #1/7 Padres\" re-derives to hiq:baseball:2026:leaf-metal:1:unknown:auto:num-7, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::127886666599",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Metal Pop Century Alan Ritchson Scripted Auto Crystal Blue #1/1\" re-derives to hiq:baseball:2026:leaf-metal:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::127886036083",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Metal Pop Century Chevy Chase Postmarks Auto Shimmer Gold #1/1\" re-derives to hiq:baseball:2026:leaf-metal:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::127884533307",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Metal Pop Century Austin `Chumlee` Russell Auto Lazer Pink #1/1\" re-derives to hiq:baseball:2026:leaf-metal:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::366591500809",
+   "fromCardId": "hiq:baseball:2026:topps:ardb-zn:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Tier One Relic Die-Cut Book Card Auto /10 #ARDB-ZN Zach Neto\" re-derives to hiq:baseball:2026:topps-tier-one:ardb-zn:unknown:auto:num-10, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:ardb-zn:base:no-auto (row player \"Zach Neto\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::318664434174",
+   "fromCardId": "hiq:baseball:2026:topps:111:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Tier One - James Wood - Nationals - Autograph - ATJR-JW - #111/199\" re-derives to hiq:baseball:2026:topps-tier-one:111:unknown:auto:num-199, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:111:base:no-auto (row player \"Cam Schlittler\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::147489472493",
+   "fromCardId": "hiq:baseball:2026:topps-chrome:wsca-mbu:refractor:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Chrome World Series Champion Autos Mark Buehrle Auto /100 WSCA-MBU\" re-derives to hiq:baseball:2026:topps-chrome:wsca-mbu:unknown:auto:num-100, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps-chrome:wsca-mbu:refractor:no-auto (row player \"Mark Buehrle\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::287516828347",
+   "fromCardId": "hiq:baseball:2026:topps:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"Mason Miller 2026 Topps Tribute Autographs Printing Plates Cyan #TAMMI (#1/1)\" re-derives to hiq:baseball:2026:topps-tribute:1:printing-plates-cyan:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::318722381164",
+   "fromCardId": "hiq:baseball:2026:topps:34:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Tier One Jacob Melton RC Auto #34/49 Autograph Francisco Lindor /125\" re-derives to hiq:baseball:2026:topps-tier-one:34:unknown:auto:num-49, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:34:base:no-auto (row player \"Kansas City Royals\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::128023320890",
+   "fromCardId": "hiq:baseball:2026:topps:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Tribute Chase Burns Auto Printing Plate Magenta Rookie RC #1/1 Reds\" re-derives to hiq:baseball:2026:topps-tribute:1:printing-plate-magenta:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|117351584124|0",
+   "fromCardId": "hiq:baseball:2026:topps:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Tribute Paul Goldschmidt On Card Auto #1/1 Yankees Autograph\" re-derives to hiq:baseball:2026:topps-tribute:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::168581571810",
+   "fromCardId": "hiq:baseball:2026:topps:21:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"Topps Kyle Backhus 2026 Topps Chrome On Card Auto #21 Arizona Diamondbacks MLB\" re-derives to hiq:baseball:2026:topps-chrome:21:unknown:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:21:base:no-auto (row player \"Kyle Backhus\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::127886036020",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Metal Pop Century Tim Curry Nightmares Auto Prismatic Green #1/1\" re-derives to hiq:baseball:2026:leaf-metal:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::137228992602",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Pop Century Margot Robbie Black AND ACTION Auto #1/1 Wolf of Wall St\" re-derives to hiq:baseball:2026:leaf:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::287367897519",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Pop Century Danny Glover BLUE SCOPE Auto #1/1 - Lethal Weapon\" re-derives to hiq:baseball:2026:leaf:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::298536921227",
+   "fromCardId": "hiq:baseball:2026:topps:21:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"Topps Kyle Backhus 2026 Topps Chrome On Card Auto #21 Arizona Diamondbacks MLB\" re-derives to hiq:baseball:2026:topps-chrome:21:unknown:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:21:base:no-auto (row player \"Kyle Backhus\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::407113155695",
+   "fromCardId": "hiq:baseball:2026:topps:46:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Finest Baseball CALEB DURBIN Green Parallel Autograph #46/99\" re-derives to hiq:baseball:2026:topps-finest:46:unknown:auto:num-99, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:46:base:no-auto (row player \"Gunnar Henderson\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::267677068817",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Metal Paul Molitor Auto Hit King DC Black Prism Milwaukee Brewers #1/1\" re-derives to hiq:baseball:2026:leaf-metal:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::127980236903",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Metal Baseball Cooper Pratt Auto Autograph Crystal Purple #1/1\" re-derives to hiq:baseball:2026:leaf-metal:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::377408278807",
+   "fromCardId": "hiq:baseball:2026:topps:22:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Tribute Michael Harris II Gold Auto #22/50 (DB)\" re-derives to hiq:baseball:2026:topps-tribute:22:unknown:auto:num-50, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:22:base:no-auto (row player \"Clayton Kershaw\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::267680804383",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"ANTHONY HOPKINS 2026 LEAF POP CENTURY AUTO SSP CARD #1/1\" re-derives to hiq:baseball:2026:leaf:1:image-variation-ssp:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::127888432977",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Metal Pop Century Ralph Fiennes Pearl Albumen Auto Black Spectrum #1/1\" re-derives to hiq:baseball:2026:leaf-metal:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::278039521457",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Pop Century Nick Castle AUTO NIGHTMARES `HALLOWEEN` #1/1\" re-derives to hiq:baseball:2026:leaf:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::127803346220",
+   "fromCardId": "hiq:baseball:2026:bowman:44:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Upper Deck Allure Golf Paris Hilinski #44 Red Tees Auto RC\" re-derives to hiq:baseball:2026:upper-deck:44:unknown:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:44:base:no-auto (row player \"Elly De La Cruz\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::377210352074",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Metal Presidents Day  Autograph - Hannah Hidalgo #1/1 Notre Dame Auto\" re-derives to hiq:baseball:2026:leaf-metal:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::800038410705",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 LEAF PRESIDENT\\'S DAY TOBY FOURNIER LAZER LYNDON B. JOHNSON GREEN #1/1 AUTO\" re-derives to hiq:baseball:2026:leaf:1:unknown:auto:num-1, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::267680813455",
+   "fromCardId": "hiq:baseball:2026:bowman:14:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"CHEVY CHASE 2026 LEAF POP CENTURY AUTO SP CARD #14/25\" re-derives to hiq:baseball:2026:leaf:14:unknown:auto:num-25, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:14:base:no-auto (row player \"Drake Baldwin\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::318355249085",
+   "fromCardId": "hiq:baseball:2026:bowman:9:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 LEAF METAL AUTOGRAPH OZZIE SMITH CARDINALS HALL OF FAMER  SERIAL  #9/9\" re-derives to hiq:baseball:2026:leaf-metal:9:unknown:auto:num-9, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:9:base:no-auto (row player \"Munetaka Murakami\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::267680808732",
+   "fromCardId": "hiq:baseball:2026:bowman:3:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"SEAN ASTIN 2026 LEAF POP CENTURY AUTO SSP CARD #3/4\" re-derives to hiq:baseball:2026:leaf:3:image-variation-ssp:auto:num-4, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:3:base:no-auto (row player \"Chase Burns\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::168418632917",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:2:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Bowman Chrome Kash Mayfield Auto Insert BMA-KM San Diego Padres\" re-derives to hiq:baseball:2026:bowman-chrome:bma-km:unknown:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman-chrome:2:base:no-auto (row player \"Mookie Betts\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::127980479181",
+   "fromCardId": "hiq:baseball:2026:topps-finest:4:gold-geometric-refractor:no-auto:num-50",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Finest Trey Yesavage Auto Gold Geometric Refractor #4/50 RC On Card\" re-derives to hiq:baseball:2026:topps-finest:4:gold-geometric:auto:num-50, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps-finest:4:gold-geometric-refractor:no-auto:num-50 (row player \"Ketel Marte\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::257575760359",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:2:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Bowman Chrome Kash Mayfield Auto Insert BMA-KM San Diego Padres\" re-derives to hiq:baseball:2026:bowman-chrome:bma-km:unknown:auto, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman-chrome:2:base:no-auto (row player \"Mookie Betts\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::318688996002",
+   "fromCardId": "hiq:baseball:2026:topps:10:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Tier One Roki Sasaki Tier 2 Auto Holo Silver Foil # 10/10 Bookend\" re-derives to hiq:baseball:2026:topps-tier-one:10:unknown:auto:num-10, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:10:base:no-auto (row player \"Jacob Misiorowski\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::158173141032",
+   "fromCardId": "hiq:baseball:2026:topps:7:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Tier 1 James Wood Auto #7/10 Color Match Nationals\" re-derives to hiq:baseball:2026:topps:7:unknown:auto:num-10, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:7:base:no-auto (row player \"Patrick Bailey\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::168578904435",
+   "fromCardId": "hiq:baseball:2026:topps:163:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Resurgence Tyler Shough RC Auto Aqua Surge #163 /250 Rookie Saints\" re-derives to hiq:baseball:2026:topps-resurgence:163:unknown:auto:num-250, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:163:base:no-auto (row player \"Brandyn Garcia\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|366538575264|0",
+   "fromCardId": "hiq:baseball:2026:topps-chrome:17:refractor:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Chrome Nolan Arenado Refractor AUTO /25 Cardinals #17\" re-derives to hiq:baseball:2026:topps-chrome:17:refractor:auto:num-25, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps-chrome:17:refractor:no-auto (row player \"Juan Soto\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::147337853597",
+   "fromCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Metal Pop Century - Auto - Autograph - Amber Rose #1/15\" re-derives to hiq:baseball:2026:leaf-metal:1:unknown:auto:num-15, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:1:base:no-auto (row player \"Aaron Judge\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::278016364261",
+   "fromCardId": "hiq:baseball:2026:bowman:2:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Leaf Pop Century Kelsey Grammer Prismatic Green Auto Frasier Autograph #2/3\" re-derives to hiq:baseball:2026:leaf:2:unknown:auto:num-3, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:bowman:2:base:no-auto (row player \"Yoshinobu Yamamoto\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::318611727814",
+   "fromCardId": "hiq:baseball:2026:topps:15:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"Topps 2026 Finest Baseball Mitch Farris Auto RC 15/25 FA-MF Angels\" re-derives to hiq:baseball:2026:topps-finest:fa-mf:base:auto:num-25, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:15:base:no-auto (row player \"Payton Tolle\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::206476884970",
+   "fromCardId": "hiq:baseball:2026:topps:122:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"Topps 2026 Quinshon Judkins Browns RC Auto #122 Serial Numbered 014/250\" re-derives to hiq:baseball:2026:topps:122:base:auto:num-250, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:122:base:no-auto (row player \"Nick Kurtz CL\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::137602806125",
+   "fromCardId": "hiq:baseball:2026:topps:39:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"Topps 2026 Chrome Auto Teoscar Hernández Los Angeles Dodgers #39 03/50\" re-derives to hiq:baseball:2026:topps-chrome:39:unknown:auto:num-50, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:39:base:no-auto (row player \"Matt Olson\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  },
+  {
+   "id": "tca-ebay::257669906634",
+   "fromCardId": "hiq:baseball:2026:topps:7:base:no-auto",
+   "parkIdentityUnverified": true,
+   "evidence": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"Jacob Melton 2026 Topps  91 Throwback Blue RC Auto #91AMEL NrMt Ser #7/150\" re-derives to hiq:baseball:2026:topps:7:unknown:auto:num-150, a product/number card_catalog carries no checklist row for. The sale currently sits at hiq:baseball:2026:topps:7:base:no-auto (row player \"Patrick Bailey\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check. PARK rather than mint an identity from a sale or leave it at a wrong-product address."
+  }
+ ]
+}
