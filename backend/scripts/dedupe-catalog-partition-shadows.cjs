@@ -49,7 +49,8 @@ const { CosmosClient } = require("@azure/cosmos");
 const path = require("node:path");
 const ROOT = path.resolve(__dirname, "..");
 const { reportWrites } = require(path.join(ROOT, "dist/services/ops/writeReconciliation.js"));
-const { moveCatalogRow } = require(path.join(ROOT, "dist/services/catalog/catalogRowOps.service.js"));
+const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(ROOT, "dist/services/catalog/catalogRowOps.service.js"));
+const LEDGER_LANE = "dedupe-catalog-partition-shadows";
 
 const APPLY = String(process.env.BACKFILL_APPLY || "") === "true";
 const YEARS = String(process.env.YEARS || "2026").split(",").map(Number).filter(Boolean);
@@ -114,7 +115,7 @@ async function main() {
     }
   };
 
-  let intended = 0, merged = 0, retired = 0, failed = 0, skipped = 0;
+  let intended = 0, merged = 0, retired = 0, failed = 0, skipped = 0, ledgerWriteFailed = 0;
 
   // Years the budget never STARTED. YEARS is known up front -- it is an env
   // list, fixed before the first query -- so a partial run says exactly how
@@ -246,10 +247,11 @@ async function main() {
           const r = await moveCatalogRow(cat, full, id, {}, {
             reason: "partition shadow folded onto its own slug (CF-ONE-ROW-PER-CANONICAL-SLUG)",
             retry,
+            ledgerLane: LEDGER_LANE,
           });
           retired++; retiredHere++;
           console.log("      RETIRED " + s.id + "  cardId=" + s.cardId + "  (" + r.action + ")");
-        } catch { failed++; }
+        } catch (e) { failed++; if (isLedgerWriteFailure(e)) ledgerWriteFailed++; }
       }
       if (retiredHere) merged++;
     }
@@ -258,6 +260,7 @@ async function main() {
   console.log("");
   console.log("canonical rows written " + merged + "   shadows retired " + retired +
               "   skipped " + skipped + "   failed " + failed);
+  console.log("  of which ledger-write-failed " + ledgerWriteFailed);
   // -- THE MARKER THE RELAUNCH GREPS ---------------------------------------
   //
   // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). The runner greps stdout for

@@ -30,7 +30,13 @@ const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
-const { moveCatalogRow, rebuildSearchFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { moveCatalogRow, rebuildSearchFields, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+// CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28). This
+// move can retire/replace the year-prefixed row, so LEDGER_LANE names this
+// script for catalogRowOps.service.js's opt-in ledger (see
+// MoveCatalogRowOptions.ledgerLane), the same way relocate-catalog-rows-by-
+// list does.
+const LEDGER_LANE = "map-yearprefixed-setkeys";
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
@@ -94,7 +100,7 @@ async function main() {
   console.log(`slot ${SLOT}/${SLOTS}  ${mine.length} of ${plan.length} twin keys  (${f(noTwin.length)} prefixed keys WITHOUT a twin — reported, untouched)  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
 
-  let scanned = 0, moved = 0, folded = 0, replaced = 0, redundant = 0, salesRepointed = 0, gradedRetired = 0, malformed = 0, failed = 0, notReached = 0;
+  let scanned = 0, moved = 0, folded = 0, replaced = 0, redundant = 0, salesRepointed = 0, gradedRetired = 0, malformed = 0, failed = 0, ledgerWriteFailed = 0, notReached = 0;
   let stopReason = null;
 
   for (const p of mine) {
@@ -133,6 +139,7 @@ async function main() {
             parts[3] = to;
             const r = await moveCatalogRow(cat, d, parts.join(":"), { setKey: to }, {
               reason: "year-prefixed setKey unified onto bare twin", repointNormalizedSetKey: true, dryRun: !APPLY, salesContainer: comps, retry,
+              ledgerLane: LEDGER_LANE,
             });
             salesRepointed += r.salesRepointed; gradedRetired += r.gradedChildrenRetired;
             // fold and replace are slices of MOVED: the old row is gone either way
@@ -141,6 +148,7 @@ async function main() {
             moved++;
           } catch (e) {
             failed++;
+            if (isLedgerWriteFailure(e)) ledgerWriteFailed++;
             if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 58)}: ${String(e.message || e).slice(0, 58)}`);
           }
         }));
@@ -167,6 +175,7 @@ async function main() {
   console.log(`  graded children retired ${f(gradedRetired)}   <- regenerable by materialize-graded-identities`);
   console.log(`  malformed id            ${f(malformed)}`);
   console.log(`  failed                  ${f(failed)}`);
+  console.log(`  of which ledger-write-failed ${f(ledgerWriteFailed)}`);
   if (noTwin.length) {
     console.log(`\n  prefixed keys with NO bare twin (untouched; the naming backlog):`);
     for (const r of noTwin.sort((a, b) => b.n - a.n).slice(0, 10)) console.log(`    ${String(f(r.n)).padStart(8)}  ${r.sport}  ${String(r.setKey).slice(0, 60)}`);

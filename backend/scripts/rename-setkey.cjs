@@ -30,9 +30,10 @@ const path = require("path");
 const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(__dirname, "..", "dist", "services", "ops", "writeReconciliation.js"));
-const { moveCatalogRow } = require(path.join(__dirname, "..", "dist", "services", "catalog", "catalogRowOps.service.js"));
+const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(__dirname, "..", "dist", "services", "catalog", "catalogRowOps.service.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
+const LEDGER_LANE = "rename-setkey";
 // The runner carries the ruling in `scope` as "sport:from>to", e.g.
 // "baseball:topps-allen-ginter>topps-allen-and-ginter"; FROM/TO/SPORT env win if set.
 const ruling = String(process.env.RULING || process.env.SCOPE || "");
@@ -90,7 +91,7 @@ async function main() {
   console.log(`RULING ${SPORT}: ${FROM} -> ${TO}   slot ${SLOT}/${SLOTS}  ${APPLY ? "APPLY" : "REPORT ONLY"}  budget ${RUN_MS / 60000}m\n`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
 
-  let scanned = 0, otherShards = 0, moved = 0, folded = 0, replaced = 0, malformed = 0, salesRepointed = 0, gradedDeleted = 0, failed = 0, notReached = 0;
+  let scanned = 0, otherShards = 0, moved = 0, folded = 0, replaced = 0, malformed = 0, salesRepointed = 0, gradedDeleted = 0, failed = 0, notReached = 0, ledgerWriteFailed = 0;
   let stopReason = null, token;
   const query = { query: "SELECT * FROM c WHERE c.sport = @sp AND c.setKey = @k AND NOT IS_DEFINED(c.gradeTier)", parameters: [{ name: "@sp", value: SPORT }, { name: "@k", value: FROM }] };
 
@@ -108,11 +109,13 @@ async function main() {
           parts[3] = TO;
           const r = await moveCatalogRow(cat, d, parts.join(":"), { setKey: TO }, {
             reason: `ruled setKey rename ${FROM} -> ${TO}`, repointNormalizedSetKey: true, dryRun: !APPLY, salesContainer: pool, retry,
+            ledgerLane: LEDGER_LANE,
           });
           salesRepointed += r.salesRepointed; gradedDeleted += r.gradedChildrenRetired;
           if (r.action === "move") moved++; else if (r.action === "fold") folded++; else if (r.action === "replace") replaced++;
         } catch (e) {
           failed++;
+          if (isLedgerWriteFailure(e)) ledgerWriteFailed++;
           if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 70)}: ${String(e.message || e).slice(0, 70)}`);
         }
       }));
@@ -134,6 +137,7 @@ async function main() {
   console.log(`  graded children deleted    ${f(gradedDeleted)}`);
   console.log(`  malformed id (left)        ${f(malformed)}`);
   console.log(`  failed                     ${f(failed)}`);
+  console.log(`  of which ledger-write-failed ${f(ledgerWriteFailed)}`);
   if (APPLY) reportWrites({ job: "rename-setkey", intended: scanned, written: moved + folded + replaced, skipped: malformed + notReached, failed });
 }
 

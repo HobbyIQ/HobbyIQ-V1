@@ -193,8 +193,9 @@ async function main() {
   }
 
   const { CosmosClient } = require("@azure/cosmos");
-  const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+  const LEDGER_LANE = "repair-select-subbrand-misslug";
 
   const db = new CosmosClient({
     connectionString: conn,
@@ -209,7 +210,7 @@ async function main() {
   console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`whitelisted destinations: ${[...WHITELIST].join(", ")}\n`);
 
-  const stats = { candidates: 0, written: 0, skipped: 0, failed: 0, notReached: 0, otherShard: 0 };
+  const stats = { candidates: 0, written: 0, skipped: 0, failed: 0, ledgerWriteFailed: 0, notReached: 0, otherShard: 0 };
   const reasons = new Map();
   const byDest = new Map();
   const examples = [];
@@ -273,6 +274,7 @@ async function main() {
             salesContainer: sold,
             dryRun,
             retry,
+            ledgerLane: LEDGER_LANE,
           });
           if (res.action === "noop") { stats.skipped++; note("already at the destination slug"); return; }
           stats.written++;
@@ -280,6 +282,7 @@ async function main() {
           example(`${res.action} ${row.id}\n      -> ${newSlug}  (${res.salesRepointed} sale(s))`);
         } catch (e) {
           stats.failed++;
+          if (isLedgerWriteFailure(e)) stats.ledgerWriteFailed++;
           if (stats.failed <= 6) console.log(`  failed ${String(row.id).slice(0, 90)}: ${String(e?.message ?? e).slice(0, 140)}`);
         }
       }));
@@ -294,6 +297,7 @@ async function main() {
   console.log(`  ${APPLY ? "MOVED" : "WOULD MOVE"}                ${f(stats.written)}`);
   console.log(`  left alone               ${f(stats.skipped)}`);
   console.log(`  failed                   ${f(stats.failed)}`);
+  console.log(`  of which ledger-write-failed ${f(stats.ledgerWriteFailed)}`);
   console.log(`  not reached              ${f(stats.notReached)}`);
   if (byDest.size) {
     console.log(`  by destination:`);

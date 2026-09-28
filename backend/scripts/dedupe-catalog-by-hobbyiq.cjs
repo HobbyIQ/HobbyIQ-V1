@@ -38,15 +38,16 @@
 const path = require("node:path");
 const { CosmosClient } = require("@azure/cosmos");
 
-let computeHobbyIqCardId, moveCatalogRow;
+let computeHobbyIqCardId, moveCatalogRow, isLedgerWriteFailure;
 try {
   ({ computeHobbyIqCardId } = require("../dist/services/portfolioiq/hobbyIqCardId.service.js"));
-  ({ moveCatalogRow } = require("../dist/services/catalog/catalogRowOps.service.js"));
+  ({ moveCatalogRow, isLedgerWriteFailure } = require("../dist/services/catalog/catalogRowOps.service.js"));
 } catch (e) {
   console.error("Cannot import from dist — build the backend first (npm run build)");
   console.error(e.message);
   process.exit(2);
 }
+const LEDGER_LANE = "dedupe-catalog-by-hobbyiq";
 
 const { reportWrites } = require("../dist/services/ops/writeReconciliation.js");
 // CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS + CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE.
@@ -301,7 +302,7 @@ async function main() {
 
   // Merge phase — every vendor row moves onto the slug; the first write
   // creates (or lands on) the canonical row, the rest fold onto it.
-  let mergedGroups = 0, canonicalUpserts = 0, vendorDeletes = 0, errors = 0;
+  let mergedGroups = 0, canonicalUpserts = 0, vendorDeletes = 0, errors = 0, ledgerWriteFailed = 0;
   const inFlight = [];
   let mergeStoppedAtBudget = false;
 
@@ -317,11 +318,12 @@ async function main() {
         const res = await moveCatalogRow(cc, r, slug, { ...identityFromVendorRow(r, slug), ...(imageUrl ? { imageUrl } : {}) }, {
           reason: "vendor row folded onto its hobbyiq slug (CF-DEDUPE-CATALOG-BY-HOBBYIQ)",
           retry: withRetry,
+          ledgerLane: LEDGER_LANE,
         });
         if (res.action === "noop") continue;   // already the row at its own slug
         if (!landed) { canonicalUpserts++; landed = true; }
         vendorDeletes++;
-      } catch (e) { errors++; }
+      } catch (e) { errors++; if (isLedgerWriteFailure(e)) ledgerWriteFailed++; }
     }
     if (landed) mergedGroups++;
   }
@@ -355,6 +357,7 @@ async function main() {
   console.log(`  canonical upserts:  ${canonicalUpserts}`);
   console.log(`  vendor rows deleted: ${vendorDeletes}`);
   console.log(`  errors:             ${errors}`);
+  console.log(`    of which ledger-write-failed: ${ledgerWriteFailed}`);
   // RECONCILE OVER THE GROUPS THIS RUN DISPATCHED. The population is KNOWN here
   // -- `dupGroups` was counted from a COMPLETE scan, which the refusal above
   // guarantees -- so `not reached` is a real number rather than an invention

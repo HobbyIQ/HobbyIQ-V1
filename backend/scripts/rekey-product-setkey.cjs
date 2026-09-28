@@ -171,6 +171,7 @@ const { matchesCardNumberScope } = require(path.join(__dirname, "lib", "card-num
 const { buildIdStemSpecs } = require(path.join(__dirname, "lib", "rekey-id-stem-scope.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
+const LEDGER_LANE = "rekey-product-setkey";
 const SPORT = String(process.env.SPORT || "").trim().toLowerCase();
 const FROM = String(process.env.SETKEY || process.env.SET_KEY || "").trim().toLowerCase();
 // The runner has no spare input (24 of GitHub's 25 are used), so the TO key
@@ -553,7 +554,7 @@ async function main() {
 
   const { CosmosClient } = require("@azure/cosmos");
   const backend = path.resolve(__dirname, "..");
-  const { moveCatalogRow, retireCatalogRow, patchCatalogRowFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  const { moveCatalogRow, retireCatalogRow, patchCatalogRowFields, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
@@ -616,7 +617,7 @@ async function main() {
       // move; it was never scanned as a candidate, so counting it as `written`
       // would claim more writes than were intended and reportWrites would flag
       // the arithmetic (CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW).
-      gradedRetiredDirect: 0, gradedRetiredCascade: 0, failed: 0, notReached: 0,
+      gradedRetiredDirect: 0, gradedRetiredCascade: 0, failed: 0, notReached: 0, ledgerWriteFailed: 0,
       // CF-A-CARD-NUMBER-SUBSET-IS-NOT-A-WHOLE-PRODUCT. A row this run's
       // (optional) CARD_NUMBER_SCOPE excludes -- never touched, never a skip
       // this run adjudicated, printed separately from stemMismatch/
@@ -768,7 +769,7 @@ async function main() {
               // what carries the ruling.
               if (!identityParts(id)) {
                 if (str(d.gradeTier)) {
-                  const rr = await retireCatalogRow(cat, id, d.cardId, `${REASON} (graded child of a moved/absent parent; regenerable)`, { dryRun: !APPLY, retry });
+                  const rr = await retireCatalogRow(cat, id, d.cardId, `${REASON} (graded child of a moved/absent parent; regenerable)`, { dryRun: !APPLY, retry, ledgerLane: LEDGER_LANE });
                   if (rr.action === "retire") { s.gradedRetiredDirect += 1; s.gradedRetiredCascade += rr.gradedChildrenRetired; }
                   else s.noop++;
                   if (examples.length < 8) examples.push(`  RETIRE   ${id.slice(0, 82)}  <- graded child, regenerable from its parent`);
@@ -945,6 +946,7 @@ async function main() {
                 // distrusted one: the fold branch read it above.
                 known: twin,
                 ...(evidence ? { playerEvidence: evidence } : {}),
+                ledgerLane: LEDGER_LANE,
               });
               if (contended) {
                 s.contendedPairs++;
@@ -973,6 +975,7 @@ async function main() {
               }
             } catch (e) {
               s.failed++;
+              if (isLedgerWriteFailure(e)) s.ledgerWriteFailed++;
               if (s.failed <= 5) console.log(`  FAILED ${id.slice(0, 70)}: ${String(e?.message ?? e).slice(0, 110)}`);
             }
           }));
@@ -1022,6 +1025,7 @@ async function main() {
     console.log(`  LEFT: card-number out of scope ${f(s.cardNumberOutOfScope)}${HAS_CARD_NUMBER_SCOPE ? "" : "   <- 0 expected: no CARD_NUMBER_SCOPE set"}`);
     console.log(`  malformed id (left)        ${f(s.malformed)}`);
     console.log(`  failed                     ${f(s.failed)}`);
+    console.log(`  of which ledger-write-failed ${f(s.ledgerWriteFailed)}`);
     // A retired graded row is a WRITE: the ruling removed it deliberately. So
     // is a labelled untwinned row -- the ruling marked it deliberately. Its
     // graded children are NOT added: they were never scanned as candidates, so

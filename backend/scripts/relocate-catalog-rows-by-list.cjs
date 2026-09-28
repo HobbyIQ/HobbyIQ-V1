@@ -1019,8 +1019,17 @@ async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const {
-    moveCatalogRow, retireCatalogRow, patchCatalogRowFields, rebuildSearchFields,
+    moveCatalogRow, retireCatalogRow, patchCatalogRowFields, rebuildSearchFields, isLedgerWriteFailure,
   } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28).
+  // relocate-catalog-rows-by-list's retire path is a DELETE with no other
+  // recoverable copy (retireCatalogRow's own docblock: "Nothing is stamped
+  // on the sales that pointed here"). LEDGER_LANE names this script for
+  // catalogRowOps.service.js's opt-in ledger (see MoveCatalogRowOptions.
+  // ledgerLane / RetireCatalogRowOptions.ledgerLane) so every retire and
+  // every half-applied-move completion below writes the full pre-delete
+  // row to a durable ndjson ledger before the Cosmos delete.
+  const LEDGER_LANE = "relocate-catalog-rows-by-list";
   // LANE-SAFETY (2026-09-27): the COMPLETE MOVE retire below deletes the
   // source row of an already-landed move, and until now did so with NO gate
   // at all -- neither the sales dual-check the `retire` action above runs,
@@ -1139,7 +1148,7 @@ async function main() {
     return total;
   };
 
-  let retired = 0, resluged = 0, alreadyRight = 0, notFound = 0, failed = 0;
+  let retired = 0, resluged = 0, alreadyRight = 0, notFound = 0, failed = 0, ledgerWriteFailed = 0;
   // Rows stamped identityUnverified. A park WRITES (it patches a field), so it
   // reconciles on the written side beside retire and reslug -- never as a skip.
   let parked = 0;
@@ -1452,7 +1461,7 @@ async function main() {
       }
       if (!APPLY) { retired++; continue; }
       try {
-        const res = await retireCatalogRow(cat, id, row.cardId ?? id, reason, { retry });
+        const res = await retireCatalogRow(cat, id, row.cardId ?? id, reason, { retry, ledgerLane: LEDGER_LANE });
         gradedRetired += res?.gradedChildrenRetired ?? 0;
         // VERIFY BY READ -- and read PAST a lagging replica before calling it a
         // failure. The delete is still not believed on its own word; a read
@@ -1472,6 +1481,7 @@ async function main() {
         }
       } catch (err) {
         failed++;
+        if (isLedgerWriteFailure(err)) ledgerWriteFailed++;
         console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
       }
       continue;
@@ -1644,7 +1654,7 @@ async function main() {
       }
       if (!APPLY) { movesCompleted++; continue; }
       try {
-        const res = await retireCatalogRow(cat, id, row.cardId ?? id, `complete a half-applied move to ${to}: ${reason}`, { retry });
+        const res = await retireCatalogRow(cat, id, row.cardId ?? id, `complete a half-applied move to ${to}: ${reason}`, { retry, ledgerLane: LEDGER_LANE });
         gradedRetired += res?.gradedChildrenRetired ?? 0;
         const back = await confirmRetired(cat, id, row.cardId ?? id, { retry });
         if (back.gone) {
@@ -1659,6 +1669,7 @@ async function main() {
         }
       } catch (err) {
         failed++;
+        if (isLedgerWriteFailure(err)) ledgerWriteFailed++;
         console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
       }
       continue;
@@ -1769,6 +1780,13 @@ async function main() {
         ...(keepSales ? {} : { salesContainer: pool }),
         known: incumbent,
         retry,
+        // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28,
+        // review finding on this PR). This reslug/replace/fold path can
+        // delete TWO card_catalog documents -- a replaced incumbent's
+        // foreign-pk copy, and the old row once its move is complete -- and
+        // this call had no ledgerLane at all, so both were unledgered. Same
+        // lane name the retire path above already uses.
+        ledgerLane: LEDGER_LANE,
       });
       if (res?.action === "refused") {
         failed++;
@@ -1814,6 +1832,7 @@ async function main() {
       }
     } catch (err) {
       failed++;
+      if (isLedgerWriteFailure(err)) ledgerWriteFailed++;
       console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
     }
   }
@@ -1856,6 +1875,7 @@ async function main() {
   console.log(`  not found               ${f(notFound)}`);
   console.log(`  read-back needed a retry ${f(readBackRetried)}   <- replica lag, delete confirmed landed — NOT failed`);
   console.log(`  failed                  ${f(failed)}`);
+  console.log(`  of which ledger-write-failed ${f(ledgerWriteFailed)}`);
   console.log(`  sales made UNPLACED     ${f(salesUnplaced)}   <- the rematch owns these`);
   console.log(`  sales re-pointed        ${f(salesRepointed)}`);
   console.log(`  sales LEFT BEHIND       ${f(salesLeftBehind)}   <- keepSales: the other card's sales, not carried`);

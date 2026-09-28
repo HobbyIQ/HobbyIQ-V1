@@ -283,6 +283,7 @@ async function main() {
   const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { varianceOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
+  const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(__dirname, "lib", "delete-ledger.cjs"));
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
@@ -350,6 +351,7 @@ async function main() {
   let refusedKeeperNameDisagrees = 0;
   let refusedContentDiffers = 0, refusedSameId = 0;
   let failed = 0;
+  let ledgerWriteFailed = 0;
   let entriesFailedToClassify = 0;
   let stoppedAt = null;
   let considered = 0;
@@ -522,6 +524,25 @@ async function main() {
       continue;
     }
 
+    // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28):
+    // `stray` is the full pre-delete document from GATE (b)'s own read. A
+    // ledger-write failure refuses the delete outright -- counted apart
+    // from an ordinary delete-threw failure, and the Cosmos delete call is
+    // never reached without a durable copy of the row it is about to
+    // remove.
+    try {
+      await recordDeleteOrThrow(stray, {
+        lane: "dedupe-sold-comp-copies-by-list", action: "delete", reason,
+        toId: keepCardId, container: "sold_comps",
+      });
+    } catch (err) {
+      if (isLedgerWriteFailure(err)) ledgerWriteFailed++;
+      failed++;
+      console.error(`      FAILED: ledger write refused the delete — ${String(err?.message ?? err).slice(0, 100)}`);
+      emitPlanRow({ action: "failed", reason: "ledger-write-failed", saleId, keepCardId, deleteCardId, error: String(err?.message ?? err) });
+      continue;
+    }
+
     try {
       await retry(() => pool.item(saleId, deleteCardId).delete());
     } catch (err) {
@@ -589,6 +610,7 @@ async function main() {
   console.log(`  REFUSED: content-differs      ${f(refusedContentDiffers)}`);
   console.log(`  REFUSED: same-id              ${f(refusedSameId)}`);
   console.log(`  FAILED                        ${f(failed)}`);
+  console.log(`  of which ledger-write-failed  ${f(ledgerWriteFailed)}`);
 
   // `notReached` is whole ENTRIES the outer loop never STARTED at all --
   // this lane's unit IS the entry (one stray per entry, by list-schema

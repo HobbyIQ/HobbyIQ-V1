@@ -41,7 +41,12 @@ const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
-const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+// CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28). This
+// move can retire/replace the source row, so LEDGER_LANE names this script
+// for catalogRowOps.service.js's opt-in ledger (see MoveCatalogRowOptions.
+// ledgerLane), the same way relocate-catalog-rows-by-list does.
+const LEDGER_LANE = "map-derived-parallels-to-rungs";
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 // The workflow passes the existing `sports` input as SPORTS; accept both so
@@ -140,7 +145,7 @@ async function main() {
   console.log(`slot ${SLOT}/${SLOTS}  sport=${SPORT}  ${mine.length} products / ${f(mine.reduce((s, p) => s + p.n, 0))} rows  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
 
-  let scanned = 0, moved = 0, redundant = 0, replaced = 0, atRung = 0, unresolved = 0, salesRepointed = 0, gradedRetired = 0, noLadder = 0, failed = 0, notReached = 0;
+  let scanned = 0, moved = 0, redundant = 0, replaced = 0, atRung = 0, unresolved = 0, salesRepointed = 0, gradedRetired = 0, noLadder = 0, failed = 0, ledgerWriteFailed = 0, notReached = 0;
   let stopReason = null;
 
   for (const p of mine) {
@@ -185,6 +190,7 @@ async function main() {
             }
             const r = await moveCatalogRow(cat, d, String(d.id).replace(`:${currentSeg}:`, `:${target}:`), { parallelMapV: MAP_VERSION }, {
               reason: "parallel mapped to checklist rung", dryRun: !APPLY, salesContainer: comps, retry,
+              ledgerLane: LEDGER_LANE,
             });
             salesRepointed += r.salesRepointed; gradedRetired += r.gradedChildrenRetired;
             // the rung row existed: this row folded onto it (redundant) or, outranking it, replaced it -- slices of MOVED
@@ -193,6 +199,7 @@ async function main() {
             moved++;
           } catch (e) {
             failed++;
+            if (isLedgerWriteFailure(e)) ledgerWriteFailed++;
             if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 60)}: ${String(e.message || e).slice(0, 60)}`);
           }
         }));
@@ -220,6 +227,7 @@ async function main() {
   console.log(`  unresolved (stamped)      ${f(unresolved)}   <- the acquisition list`);
   console.log(`  rows in ladder-less products ${f(noLadder)}   <- acquisition, whole products`);
   console.log(`  failed                    ${f(failed)}`);
+  console.log(`  of which ledger-write-failed ${f(ledgerWriteFailed)}`);
   if (APPLY) {
     reportWrites({
       job: "map-derived-parallels-to-rungs", intended: scanned, written: moved,

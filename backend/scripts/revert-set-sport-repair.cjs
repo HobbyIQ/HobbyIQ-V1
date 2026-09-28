@@ -768,6 +768,7 @@ async function main() {
   const { guardSoldCompDoc } = require(path.join(backend, "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+  const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(backend, "scripts", "lib", "delete-ledger.cjs"));
   // MODE=checklist-evidence only. catalogAuthorityOf reads the SAME
   // declaration repoint-sales-to-checklist-numbered.cjs's own `isChecklist`
   // uses; playerIdentityKey reads the SAME reduction catalogRowOps.service's
@@ -817,7 +818,7 @@ async function main() {
   const s = {
     scanned: 0, otherShard: 0, otherCell: 0,
     restoreByPatch: 0, restoreByRelocate: 0, alreadyAtTarget: 0,
-    keep: 0, leave: {}, refused: {}, failed: 0,
+    keep: 0, leave: {}, refused: {}, failed: 0, ledgerWriteFailed: 0,
     collapsedOntoResident: 0,
   };
   const bySetKeyYear = new Map();
@@ -1021,7 +1022,19 @@ async function main() {
       const resident = await residentAt(doc.id, destCardId);
       if (resident) {
         if (isSameSale(resident, { ...keep, cardId: destCardId })) {
-          if (APPLY) await retry(() => pool.item(doc.id, doc.cardId).delete());
+          if (APPLY) {
+            // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+            // (2026-09-28, review finding on this PR): `doc` is the full
+            // pre-delete document (this lane's own scan selects every
+            // field). A ledger-write failure throws and is caught by this
+            // row's own outer try/catch (s.failed++), same as any other
+            // failure inside it.
+            await recordDeleteOrThrow(doc, {
+              lane: "revert-set-sport-repair", action: "collapse", reason: "same-sale-resident",
+              toId: destCardId, container: "sold_comps",
+            });
+            await retry(() => pool.item(doc.id, doc.cardId).delete());
+          }
           s.collapsedOntoResident++;
           bump(bySetKeyYear, cellKey);
           if (restoreExamples.length < 24) restoreExamples.push(`  COLLAPSE ${doc.id}@${doc.cardId} -- same sale already resident at ${destCardId}; wrong-partition copy deleted`);
@@ -1038,6 +1051,10 @@ async function main() {
       const res = await relocateSoldComp(pool, {
         keep, drop: [{ id: doc.id, cardId: doc.cardId }],
         retry, verifyFields: ["cardId", "hobbyiqCardId", "sport"], dryRun: !APPLY,
+        // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+        // (2026-09-28). relocateSoldComp's own drop loop re-reads the full
+        // document and ledgers it before this delete.
+        ledger: { lane: "revert-set-sport-repair", action: "relocate", reason: "sport-restore", toId: destCardId, container: "sold_comps" },
       });
       if (res.guard?.verdict === "park") {
         bumpReason(s.refused, "guard-parked");
@@ -1046,6 +1063,7 @@ async function main() {
       }
       if (!res.ok && res.stage !== "dry-run") {
         s.failed++;
+        if (res.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) s.ledgerWriteFailed = (s.ledgerWriteFailed ?? 0) + 1;
         failures.push(`  FAILED relocate ${doc.id}@${doc.cardId} -> ${destCardId}: ${res.error ?? "unknown"}`);
         return;
       }
@@ -1057,6 +1075,7 @@ async function main() {
       }
     } catch (e) {
       s.failed++;
+      if (isLedgerWriteFailure(e)) s.ledgerWriteFailed = (s.ledgerWriteFailed ?? 0) + 1;
       failures.push(`  FAILED ${plan.action} ${doc.id}@${doc.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
     }
   }
@@ -1099,6 +1118,7 @@ async function main() {
   for (const [reason, n] of Object.entries(s.leave)) console.log(`  LEAVE: ${reason.padEnd(24)} ${f(n)}`);
   for (const [reason, n] of Object.entries(s.refused)) console.log(`  REFUSED: ${reason.padEnd(22)} ${f(n)}`);
   console.log(`  failed                          ${f(s.failed)}`);
+  console.log(`  of which ledger-write-failed    ${f(s.ledgerWriteFailed)}`);
 
   if (bySetKeyYear.size) {
     console.log(`\n  by setKey|year (top 25):`);

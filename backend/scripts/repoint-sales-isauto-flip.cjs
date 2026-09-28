@@ -449,7 +449,7 @@ async function main() {
     patchedInPlace: 0, collapseRefusedSelf: 0,
     refusedNoChecklistAtFlip: 0, refusedChecklistAtBoth: 0, refusedGradedParse: 0,
     refusedPossibleTwinAtDestination: 0, refusedEtagChanged: 0,
-    failed: 0, notReached: 0,
+    failed: 0, notReached: 0, ledgerWriteFailed: 0,
   };
   // From this line on, the module-scope exit safety net (process.on("exit"),
   // registered above) can see LIVE counters -- a crash one line below this
@@ -625,6 +625,12 @@ async function main() {
             verifyFields: ["cardId", "hobbyiqCardId"],
             dryRun: !APPLY,
             retry,
+            // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+            // (2026-09-28). relocateSoldComp's own drop loop re-reads the
+            // full document at (sale.id, sale.cardId) and ledgers it before
+            // this delete -- the same seam every other relocateSoldComp
+            // caller shares.
+            ledger: { lane: "repoint-sales-isauto-flip", action: "collapse", reason: "same-sale-resident", toId, container: "sold_comps" },
           });
           if (result?.ok) {
             s.collapsedOntoResident++;
@@ -632,6 +638,13 @@ async function main() {
           } else if (result?.staleSincePlan?.length) {
             s.refusedEtagChanged++;
             emitPlanRow(sale, "refused", "stale-since-plan", { fromId: currentId, toId });
+          } else if (result?.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+            s.ledgerWriteFailed++;
+            s.failed++;
+            const msg = `FAILED collapse ${sale.id}@${currentId} -> ${toId}: ledger write refused the delete`;
+            failures.push(`  ${msg}`);
+            emitPlanRow(sale, "failed", "ledger-write-failed", { fromId: currentId, toId });
+            console.log(`\n::warning::${msg}`);
           } else {
             s.failed++;
             const stage = result?.stage ?? "unknown";
@@ -920,6 +933,7 @@ async function main() {
   console.log(`  REFUSED: collapse-refused-self           ${f(s.collapseRefusedSelf)}`);
   console.log(`  REFUSED: stale since the read            ${f(s.refusedEtagChanged)}`);
   console.log(`  failed                                  ${f(s.failed)}`);
+  console.log(`  of which ledger-write-failed             ${f(s.ledgerWriteFailed)}`);
   console.log(`  not reached (budget)                     ${f(s.notReached)}`);
   console.log(`  Cosmos 429 retries (this run)           ${f(throttleStats.count)}${throttleStats.halvings ? `   <- concurrency halved ${throttleStats.halvings}x, now ${f(CONCURRENCY_STATE.effective)} (started at ${f(REQUESTED_CONCURRENCY)})` : ""}`);
   if (stoppedAtBudget || CLOCK.outOfClock()) {

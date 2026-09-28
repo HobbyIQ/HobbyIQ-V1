@@ -189,7 +189,8 @@ async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   const { CosmosClient } = require("@azure/cosmos");
-  const { moveCatalogRow } = require("../dist/services/catalog/catalogRowOps.service.js");
+  const { moveCatalogRow, isLedgerWriteFailure } = require("../dist/services/catalog/catalogRowOps.service.js");
+  const LEDGER_LANE = "repair-isauto-from-cardnumber-catalog";
   const { catalogAuthorityOf } = require("../dist/services/catalog/catalogAuthority.service.js");
   const { computeHobbyIqCardId } = require("../dist/services/portfolioiq/hobbyIqCardId.service.js");
   const { reportWrites } = require("../dist/services/ops/writeReconciliation.js");
@@ -224,7 +225,7 @@ async function main() {
   const mine = SLOTS > 1 ? products.filter((p) => shardOf(productKey(p)) === SLOT) : products;
   console.log(`  ${f(products.length)} products in scope (${f(products.reduce((a, p) => a + p.n, 0))} un-graded rows); ${f(mine.length)} in this slot`);
 
-  const stats = { products: 0, prefixes: 0, ruled: 0, noRuling: 0, refusedPrefixes: 0, refusedRows: 0, actionable: 0, healed: 0, moved: 0, folded: 0, replaced: 0, gone: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, notReached: 0 };
+  const stats = { products: 0, prefixes: 0, ruled: 0, noRuling: 0, refusedPrefixes: 0, refusedRows: 0, actionable: 0, healed: 0, moved: 0, folded: 0, replaced: 0, gone: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, ledgerWriteFailed: 0, notReached: 0 };
   const table = [];
   const disagreements = [];
   const examples = [];
@@ -293,7 +294,7 @@ async function main() {
             let full = null;
             try { full = (await retry(() => cat.item(row.id, row.cardId ?? row.id).read())).resource ?? null; } catch (e) { if (e?.code !== 404) throw e; }
             if (!full) { stats.gone++; return; }
-            const res = await moveCatalogRow(cat, full, d.newSlug, { isAuto: d.target }, { reason: reasonFor(r), dryRun: !APPLY, salesContainer: pool, retry });
+            const res = await moveCatalogRow(cat, full, d.newSlug, { isAuto: d.target }, { reason: reasonFor(r), dryRun: !APPLY, salesContainer: pool, retry, ledgerLane: LEDGER_LANE });
             if (res.action === "move") stats.moved++;
             else if (res.action === "fold") stats.folded++;
             else if (res.action === "replace") stats.replaced++;
@@ -303,6 +304,7 @@ async function main() {
             if (examples.length < 20) examples.push(`  ${res.action.padEnd(7)} ${row.id} -> ${d.newSlug}  (${res.decision})`);
           } catch (e) {
             stats.failed++;
+            if (isLedgerWriteFailure(e)) stats.ledgerWriteFailed++;
             if (stats.failed <= 5) console.log(`  failed ${row.id}: ${String(e?.message ?? e).slice(0, 120)}`);
           }
         }));
@@ -317,6 +319,7 @@ async function main() {
   console.log(`  REPAIRED                 ${f(stats.healed + stats.moved + stats.folded + stats.replaced)}   <- healed ${f(stats.healed)} (field -> id), moved ${f(stats.moved)}, folded ${f(stats.folded)}, replaced ${f(stats.replaced)}; sales re-pointed ${f(stats.salesRepointed)}, graded children retired ${f(stats.gradedRetired)}`);
   console.log(`  gone before the move     ${f(stats.gone)}`);
   console.log(`  failed                   ${f(stats.failed)}`);
+  console.log(`    of which ledger-write-failed ${f(stats.ledgerWriteFailed)}`);
   console.log(`  not reached              ${f(stats.notReached)}`);
   if (table.length) {
     const cap = VERBOSE ? table.length : 300;

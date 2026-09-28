@@ -45,7 +45,8 @@ const path = require("path");
 const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(__dirname, "..", "dist", "services", "ops", "writeReconciliation.js"));
-const { moveCatalogRow, rebuildSearchFields } = require(path.join(__dirname, "..", "dist", "services", "catalog", "catalogRowOps.service.js"));
+const { moveCatalogRow, rebuildSearchFields, isLedgerWriteFailure } = require(path.join(__dirname, "..", "dist", "services", "catalog", "catalogRowOps.service.js"));
+const LEDGER_LANE = "clean-parallel-annotations";
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 // CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
@@ -132,7 +133,7 @@ async function main() {
   console.log(`slot ${SLOT}/${SLOTS}  sports=${SPORTS.join(",") || "all"}  ${APPLY ? "APPLY" : "REPORT ONLY"}  budget ${RUN_MS / 60000}m\n`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
   const shapes = {}; const misparsedNames = new Map();
-  let scanned = 0, otherShards = 0, misparsed = 0, emptyName = 0, healed = 0, moved = 0, folded = 0, replaced = 0, salesRepointed = 0, gradedDeleted = 0, failed = 0, notReached = 0, printRunsFilled = 0;
+  let scanned = 0, otherShards = 0, misparsed = 0, emptyName = 0, healed = 0, moved = 0, folded = 0, replaced = 0, salesRepointed = 0, gradedDeleted = 0, failed = 0, notReached = 0, printRunsFilled = 0, ledgerWriteFailed = 0;
   let stopReason = null, token;
   const sportSql = SPORTS.length ? ` AND c.sport IN (${SPORTS.map((_, i) => `@sp${i}`).join(",")})` : "";
   const query = {
@@ -177,6 +178,7 @@ async function main() {
             .then((x) => x.resource ?? null, (e) => { if (e?.code === 404) return null; throw e; });
           const r = await moveCatalogRow(cat, d, newSlug, { parallel: c.name, parallelNote: c.note, printRun }, {
             reason: "parallel annotation moved to parallelNote", dryRun: !APPLY, salesContainer: pool, known: existing, retry,
+            ledgerLane: LEDGER_LANE,
           });
           salesRepointed += r.salesRepointed; gradedDeleted += r.gradedChildrenRetired;
           if (r.action === "fold") {
@@ -189,6 +191,7 @@ async function main() {
           if (r.action === "move") moved++; else if (r.action === "fold") folded++; else if (r.action === "replace") replaced++;
         } catch (e) {
           failed++;
+          if (isLedgerWriteFailure(e)) ledgerWriteFailed++;
           if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 70)}: ${String(e.message || e).slice(0, 70)}`);
         }
       }));
@@ -216,6 +219,7 @@ async function main() {
   console.log(`  mis-parsed (left alone)      ${f(misparsed)}   <- player text / page prose in the parallel column; its own repair`);
   console.log(`  empty after clean (left)     ${f(emptyName)}`);
   console.log(`  failed                       ${f(failed)}`);
+  console.log(`    of which ledger-write-failed  ${f(ledgerWriteFailed)}`);
   if (misparsedNames.size) {
     console.log(`\n  mis-parsed examples (top 8):`);
     for (const [k, n] of [...misparsedNames.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)) console.log(`    ${String(f(n)).padStart(7)}  ${k}`);

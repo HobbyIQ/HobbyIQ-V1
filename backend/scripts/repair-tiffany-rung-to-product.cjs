@@ -402,8 +402,9 @@ async function main() {
 
   const { CosmosClient } = require("@azure/cosmos");
   const backend = path.resolve(__dirname, "..");
-  const { moveCatalogRow, patchCatalogRowFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  const { moveCatalogRow, patchCatalogRowFields, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+  const LEDGER_LANE = "repair-tiffany-rung-to-product";
   const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 
   const db = new CosmosClient({
@@ -476,7 +477,7 @@ async function main() {
   async function repairCatalog() {
     const s = {
       scanned: 0, otherSlot: 0, retired: 0, converted: 0, folded: 0, gradedRetired: 0,
-      noSibling: 0, outOfScope: 0, malformed: 0, noop: 0, failed: 0, notReached: 0,
+      noSibling: 0, outOfScope: 0, malformed: 0, noop: 0, failed: 0, ledgerWriteFailed: 0, notReached: 0,
     };
     let stopReason = null;
 
@@ -595,7 +596,7 @@ async function main() {
               parallelBefore: str(d.parallel),
               tiffanyRepairedAt: new Date().toISOString(),
               tiffanyRepairedReason: REASON,
-            }, { reason: REASON_LONG, repointNormalizedSetKey: true, dryRun: !APPLY, salesContainer: pool, retry });
+            }, { reason: REASON_LONG, repointNormalizedSetKey: true, dryRun: !APPLY, salesContainer: pool, retry, ledgerLane: LEDGER_LANE });
 
             if (r.action === "fold") { s.folded++; bump(g, "FOLDED onto the checklist row"); }
             else if (r.action === "noop") { s.noop++; }
@@ -603,6 +604,7 @@ async function main() {
             if (g.rows.length < 12) g.rows.push(`    ${r.action.toUpperCase().padEnd(8)} ${id}\n            -> ${target}\n               ${r.decision}`);
           } catch (e) {
             s.failed++;
+            if (isLedgerWriteFailure(e)) s.ledgerWriteFailed++;
             if (s.failed <= 5) console.log(`  FAILED ${id.slice(0, 76)}: ${String(e?.message ?? e).slice(0, 120)}`);
           }
         }));
@@ -625,6 +627,7 @@ async function main() {
     console.log(`  malformed slug (left)        ${f(s.malformed)}`);
     console.log(`  noop / already correct       ${f(s.noop)}`);
     console.log(`  failed                       ${f(s.failed)}`);
+    console.log(`  of which ledger-write-failed ${f(s.ledgerWriteFailed)}`);
     reconcile("repair-tiffany-rung-to-product:catalog", s.scanned,
       s.retired + s.converted + s.folded + s.gradedRetired,
       s.noSibling + s.outOfScope + s.malformed + s.noop + s.notReached, s.failed);

@@ -99,6 +99,7 @@ const crypto = require("node:crypto");
 const path = require("node:path");
 
 const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "true";
+const LEDGER_LANE = "repair-bcp-misfiled-parallels";
 const MODE = String(process.env.MODE || "").trim().toLowerCase();
 // CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
 // The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
@@ -358,7 +359,7 @@ async function main() {
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
 
   const { CosmosClient } = require("@azure/cosmos");
-  const { moveCatalogRow, retireCatalogRow, rebuildSearchFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  const { moveCatalogRow, retireCatalogRow, rebuildSearchFields, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { cleanPlayerName } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
   const { slugify } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { decideTwinFold } = require(path.join(backend, "dist/services/catalog/foldTwinRule.js"));
@@ -383,7 +384,7 @@ async function main() {
   console.log("");
 
   const dryRun = !APPLY;
-  const stats = { candidates: 0, otherShard: 0, written: 0, skipped: 0, failed: 0, notReached: 0 };
+  const stats = { candidates: 0, otherShard: 0, written: 0, skipped: 0, failed: 0, notReached: 0, ledgerWriteFailed: 0 };
   const reasons = new Map();
   const byProduct = new Map();
   const examples = [];
@@ -447,7 +448,7 @@ async function main() {
               example(`REFUSED ${row.id} (${refs} sale(s))`);
               return;
             }
-            const res = await retireCatalogRow(cat, row.id, row.cardId, "the page's card list was parsed as the parallel column; this is another card, not a parallel (CF-A-CARD-NUMBER-IS-NOT-A-RUNG, D33)", { dryRun, retry });
+            const res = await retireCatalogRow(cat, row.id, row.cardId, "the page's card list was parsed as the parallel column; this is another card, not a parallel (CF-A-CARD-NUMBER-IS-NOT-A-RUNG, D33)", { dryRun, retry, ledgerLane: LEDGER_LANE });
             if (res.action === "noop") { stats.skipped++; note("already gone"); return; }
             stats.written++; product(row);
             example(`retire ${row.id}  parallel=${JSON.stringify(row.parallel)}  (+${res.gradedChildrenRetired} graded)`);
@@ -487,6 +488,7 @@ async function main() {
             const res = await moveCatalogRow(cat, row, newSlug, { cardNumber: chromeNumber }, {
               reason: "the refractor ladder belongs to the CHROME card number, not the paper one; a colour is never its refractor (D31, D33)",
               salesContainer: sold, dryRun, retry,
+              ledgerLane: LEDGER_LANE,
             });
             if (res.action === "noop") { stats.skipped++; note("already at the chrome number"); return; }
             stats.written++; product(row); note(`${res.action} to the chrome number`);
@@ -511,6 +513,7 @@ async function main() {
             }, {
               reason: "the id carries the product as the checklist names it; 1st Edition is its own product (D23, D33)",
               repointNormalizedSetKey: true, salesContainer: sold, dryRun, retry,
+              ledgerLane: LEDGER_LANE,
             });
             if (res.action === "noop") { stats.skipped++; note("already at the 1st Edition product"); return; }
             stats.written++; product(row); note(`${res.action} to ${target.product}`);
@@ -574,6 +577,7 @@ async function main() {
             }, {
               reason: `the print run was glued into the parallel name ("Black 1" is Black /1); ${decision.reason}`,
               salesContainer: sold, known: twin, dryRun, retry,
+              ledgerLane: LEDGER_LANE,
             });
             if (res.action === "noop") { stats.skipped++; note("already at the numbered slug"); return; }
             stats.written++; product(row); note(`${res.action} onto the numbered twin`);
@@ -582,6 +586,7 @@ async function main() {
           }
         } catch (e) {
           stats.failed++;
+          if (isLedgerWriteFailure(e)) stats.ledgerWriteFailed++;
           if (stats.failed <= 6) console.log(`  failed ${String(row.id).slice(0, 80)}: ${String(e?.message ?? e).slice(0, 140)}`);
         }
       }));
@@ -596,6 +601,7 @@ async function main() {
   console.log(`  ${APPLY ? "CHANGED" : "WOULD CHANGE"}                 ${f(stats.written)}`);
   console.log(`  left alone               ${f(stats.skipped)}`);
   console.log(`  failed                   ${f(stats.failed)}`);
+  console.log(`  of which ledger-write-failed ${f(stats.ledgerWriteFailed)}`);
   console.log(`  not reached              ${f(stats.notReached)}`);
   if (reasons.size) {
     console.log(`  why a row was left alone:`);

@@ -650,9 +650,10 @@ function productCellsOf(rule) {
 async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sharded = false, slot = 0, slots = 1, planEmitter = noopPlanEmitter }) {
   const { emitPlanRow } = planEmitter;
   const {
-    moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow,
+    moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow, isLedgerWriteFailure,
     computeHobbyIqCardId, parseHobbyIqCardId,
   } = deps;
+  const LEDGER_LANE = "rewrite-parallel-names";
 
   const rowAt = async (id) => {
     try { return (await retry(() => cat.item(id, id).read())).resource ?? null; }
@@ -683,7 +684,7 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
   }
   console.log("");
 
-  let considered = 0, stoppedAt = null, failed = 0;
+  let considered = 0, stoppedAt = null, failed = 0, ledgerWriteFailed = 0;
 
   outer:
   for (const rule of rules) {
@@ -804,6 +805,7 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
               const res = await moveCatalogRow(cat, row, newId, changedFields, {
                 reason: `rewrite-parallel-names: ${rule.reason}`,
                 dryRun: false, salesContainer: pool, known: occupant, retry,
+                ledgerLane: LEDGER_LANE,
               });
               if (res?.action === "refused") {
                 st.refused++;
@@ -815,6 +817,7 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
               }
             } catch (e) {
               failed++;
+              if (isLedgerWriteFailure(e)) ledgerWriteFailed++;
               console.error(`      FAILED move ${String(row.id).slice(0, 60)}: ${e.message}`);
             }
             continue;
@@ -856,11 +859,12 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
               continue;
             }
             try {
-              await retireCatalogRow(cat, row.id, row.cardId ?? row.id, `rewrite-parallel-names: duplicate of canonical ${newId} (${rule.reason})`, { retry });
+              await retireCatalogRow(cat, row.id, row.cardId ?? row.id, `rewrite-parallel-names: duplicate of canonical ${newId} (${rule.reason})`, { retry, ledgerLane: LEDGER_LANE });
               st.retired++;
               emitPlanRow({ mode: "apply", action: "retire", id: row.id, twinId: newId, reason: rule.reason, salesXp, salesPk });
             } catch (e) {
               failed++;
+              if (isLedgerWriteFailure(e)) ledgerWriteFailed++;
               console.error(`      FAILED retire ${String(row.id).slice(0, 60)}: ${e.message}`);
             }
             continue;
@@ -905,6 +909,7 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
   const held = totalHeldSales + totalHeldDerived;
   console.log(`\n  reconciled: matched ${f(totalMatched)} = moved ${f(totalMoved)} + retired ${f(totalRetired)} `
     + `+ healed ${f(totalHealed)} + held ${f(held)} + left-canonical ${f(totalLeft)} + refused ${f(totalRefused)} + failed ${f(failed)}`);
+  console.log(`    of which ledger-write-failed ${f(ledgerWriteFailed)}`);
   let exitCode = 0;
   if (totalMoved + totalRetired + totalHealed + held + totalLeft + totalRefused + failed !== totalMatched) {
     console.error("  !! RECONCILE MISMATCH — a matched row was neither moved, retired, healed, held, left, refused nor failed");
@@ -920,7 +925,7 @@ async function runLane({ cat, pool, rules, apply, budget: b, deps, limit = 0, sh
 
   return {
     exitCode, totalMatched, totalMoved, totalRetired, totalHeldSales, totalHeldDerived,
-    totalLeft, totalHealed, totalRefused, failed, written, held, stoppedAt, perRule,
+    totalLeft, totalHealed, totalRefused, failed, ledgerWriteFailed, written, held, stoppedAt, perRule,
   };
 }
 
@@ -930,7 +935,7 @@ async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const {
-    moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow,
+    moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow, isLedgerWriteFailure,
   } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { computeHobbyIqCardId, parseHobbyIqCardId } = require(
     path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"),
@@ -972,7 +977,7 @@ async function main() {
 
   const result = await runLane({
     cat, pool, rules, apply: APPLY, budget: b,
-    deps: { moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow, computeHobbyIqCardId, parseHobbyIqCardId },
+    deps: { moveCatalogRow, patchCatalogRowFields, rebuildSearchFields, retireCatalogRow, isLedgerWriteFailure, computeHobbyIqCardId, parseHobbyIqCardId },
     limit: LIMIT, sharded: SHARDED, slot: SLOT, slots: SLOTS,
     planEmitter: makePlanEmitter(PLAN_OUT, SLOT),
   });

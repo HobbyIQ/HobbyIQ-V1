@@ -56,6 +56,12 @@ import { namesAgree } from "./nameAgreement.js";
 import { playerIdentityKey } from "./playerIdentityKey.js";
 import { productAncestry } from "./productSetKeys.js";
 import { corroborationOf, type CorroborationRow } from "./sourceCorroboration.js";
+import { recordDeleteOrThrow, isLedgerWriteFailure } from "../ops/deleteLedger.js";
+// Re-exported so a script that already requires this module for
+// moveCatalogRow/retireCatalogRow can distinguish a ledger-write refusal
+// from an ordinary delete failure without a second require of ../ops/
+// deleteLedger.js's own compiled path.
+export { isLedgerWriteFailure };
 
 /** A catalog row as it comes back from Cosmos: the typed fields plus whatever
  *  else the writer stamped on it. Extra fields travel with the row. */
@@ -189,6 +195,20 @@ export interface MoveCatalogRowOptions {
    */
   relocateSales?: (oldId: string, newSlug: string, ctx: { dryRun: boolean }) => Promise<{ ok: boolean; failures?: readonly string[] }>;
   retry?: CatalogOpsRetry;
+  /**
+   * CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28,
+   * OPTIONAL, additive, default OFF). Names the caller for the pre-delete
+   * ledger (deleteLedger.ts): when supplied, every delete this function
+   * performs -- the replaced incumbent's foreign-pk copy (fold/replace) and
+   * the old row itself (step 4) -- writes the FULL pre-delete document to a
+   * durable ndjson ledger first, and a ledger-write failure REFUSES that
+   * delete. Omitted (every existing caller of moveCatalogRow today) means
+   * byte-for-byte the same delete behavior as before this option existed --
+   * this is an opt-in for lanes deliberately wired for it
+   * (relocate-catalog-rows-by-list is the first), not a retroactive gate on
+   * the other 30+ scripts that already call this function.
+   */
+  ledgerLane?: string;
 }
 
 export interface MoveCatalogRowResult {
@@ -275,6 +295,12 @@ export interface MoveCatalogRowResult {
 export interface RetireCatalogRowOptions {
   dryRun?: boolean;
   retry?: CatalogOpsRetry;
+  /** CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28,
+   *  OPTIONAL, additive, default OFF) -- see MoveCatalogRowOptions.ledgerLane
+   *  for the full contract. Gates the row's own delete AND every graded
+   *  child's delete when supplied; omitted, this function behaves exactly
+   *  as it always has. */
+  ledgerLane?: string;
 }
 
 export interface RetireCatalogRowResult {
@@ -1070,7 +1096,36 @@ async function forEachPage<T>(
  * bug reached this function: every prior caller passed `cardId ?? id`, a
  * STRING that is wrong for a row with no `cardId` at all.
  */
-async function deleteTolerant(container: Container, id: string, pk: PartitionKey, retry: CatalogOpsRetry): Promise<boolean> {
+/**
+ * `ledger`, when supplied, is CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-
+ * LINE-FIRST's gate: the FULL pre-delete document is written to a durable
+ * ndjson ledger BEFORE the Cosmos delete call, and a ledger-write failure
+ * throws `LedgerWriteFailedError` instead of ever reaching `.delete()`.
+ * Omitted (every call site that predates this option), this function is
+ * byte-for-byte unchanged.
+ */
+async function deleteTolerant(
+  container: Container,
+  id: string,
+  pk: PartitionKey,
+  retry: CatalogOpsRetry,
+  ledger?: { lane: string; doc: Record<string, unknown> | null; action?: string; reason?: string; toId?: string | null },
+): Promise<boolean> {
+  if (ledger) {
+    if (ledger.doc === null) {
+      // The caller's OWN fresh read (immediately before calling this
+      // function) already found nothing at this address -- genuinely
+      // "already gone", not a document this call failed to capture. Skip
+      // straight to "already gone" rather than issue a delete against a
+      // row we just confirmed does not exist, and rather than refuse a
+      // delete that has nothing left to lose.
+      return false;
+    }
+    await recordDeleteOrThrow(ledger.doc, {
+      lane: ledger.lane, action: ledger.action ?? "delete", reason: ledger.reason ?? null,
+      toId: ledger.toId ?? null, container: "card_catalog",
+    });
+  }
   try {
     await retry(() => container.item(id, pk).delete());
     return true;
@@ -1110,8 +1165,14 @@ async function deleteTolerant(container: Container, id: string, pk: PartitionKey
  *      sentinel disagreed with the delete call's, and THAT is reported as a
  *      failure rather than silently counted as a successful retirement.
  */
-async function deleteAndVerifyGone(container: Container, id: string, pk: PartitionKey, retry: CatalogOpsRetry): Promise<{ deleted: boolean; orphaned: boolean }> {
-  const deleted = await deleteTolerant(container, id, pk, retry);
+async function deleteAndVerifyGone(
+  container: Container,
+  id: string,
+  pk: PartitionKey,
+  retry: CatalogOpsRetry,
+  ledger?: { lane: string; doc: Record<string, unknown> | null; action?: string; reason?: string; toId?: string | null },
+): Promise<{ deleted: boolean; orphaned: boolean }> {
+  const deleted = await deleteTolerant(container, id, pk, retry, ledger);
   if (deleted) return { deleted: true, orphaned: false };
   // The delete reported "already gone" (404). Confirm nothing lives at the
   // SAME address it just tried before treating that as the intended state.
@@ -1169,6 +1230,7 @@ async function retireGradedChildren(
   parentId: string,
   retry: CatalogOpsRetry,
   dryRun: boolean,
+  ledgerLane?: string,
 ): Promise<{ retired: number; orphans: string[] }> {
   let n = 0;
   const orphans: string[] = [];
@@ -1184,7 +1246,27 @@ async function retireGradedChildren(
           // `cardId` at all lives at Cosmos's own None partition key, the
           // SAME defect this PR's review found in the parent row's own
           // delete below.
-          const { orphaned } = await deleteAndVerifyGone(container, g.id, pkFor(g.id, g.cardId), retry);
+          const childPk = pkFor(g.id, g.cardId);
+          // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+          // (2026-09-28, opt-in via ledgerLane). GRADED_CHILDREN_QUERY only
+          // projects id/cardId/parentSlug -- not enough to ledger. When a
+          // caller opted in, re-read the full document before the delete;
+          // a row that vanished between the scan and here is genuinely
+          // "already gone" (404 on delete, no ledger needed for a row that
+          // no longer exists to lose).
+          let ledger: { lane: string; doc: Record<string, unknown> | null; action: string; reason: string } | undefined;
+          if (ledgerLane) {
+            let fullDoc: Record<string, unknown> | null = null;
+            try {
+              const { resource } = await retry(() => container.item(g.id, childPk).read<CatalogRowDoc>());
+              fullDoc = (resource as Record<string, unknown> | undefined) ?? null;
+            } catch (err) {
+              if ((err as { code?: number })?.code !== 404) throw err;
+            }
+            if (!fullDoc) { n++; continue; } // already gone -- nothing to ledger or delete
+            ledger = { lane: ledgerLane, doc: fullDoc, action: "retire-graded-child", reason: `graded child of retired parent ${parentId}` };
+          }
+          const { orphaned } = await deleteAndVerifyGone(container, g.id, childPk, retry, ledger);
           if (orphaned) orphans.push(g.id);
         }
         n++;
@@ -1354,7 +1436,9 @@ export async function moveCatalogRow(
     // not overwritten by the upsert at (newSlug, newSlug); remove that copy
     // or the id exists twice.
     if (action === "replace" && incumbent && typeof incumbent.cardId === "string" && incumbent.cardId !== newSlug) {
-      await deleteTolerant(container, newSlug, incumbent.cardId, retry);
+      await deleteTolerant(container, newSlug, incumbent.cardId, retry, opts.ledgerLane
+        ? { lane: opts.ledgerLane, doc: incumbent as unknown as Record<string, unknown>, action: "replace", reason, toId: newSlug }
+        : undefined);
     }
   }
 
@@ -1425,7 +1509,7 @@ export async function moveCatalogRow(
   //    move. A rehomed row keeps its own ladder. Retired regardless of
   //    `salesRelocated`: a graded child is unrelated to the sales hazard
   //    above and is always safe to retire once the survivor exists.
-  const gradedRetire = rehome ? { retired: 0, orphans: [] as string[] } : await retireGradedChildren(container, oldId, retry, dryRun);
+  const gradedRetire = rehome ? { retired: 0, orphans: [] as string[] } : await retireGradedChildren(container, oldId, retry, dryRun, opts.ledgerLane);
   const gradedChildrenRetired = gradedRetire.retired;
 
   // 4. The old row, last -- on a rehome, the copy in the foreign partition.
@@ -1447,7 +1531,9 @@ export async function moveCatalogRow(
   let orphanedOldRow = false;
   if (!dryRun && salesRelocated !== false) {
     const deletePk = pkFor(oldId, oldRow.cardId as string | null | undefined);
-    const { orphaned } = await deleteAndVerifyGone(container, oldId, deletePk, retry);
+    const { orphaned } = await deleteAndVerifyGone(container, oldId, deletePk, retry, opts.ledgerLane
+      ? { lane: opts.ledgerLane, doc: oldRow as unknown as Record<string, unknown>, action: "move", reason, toId: newSlug }
+      : undefined);
     orphanedOldRow = orphaned;
   }
 
@@ -1486,7 +1572,7 @@ export async function retireCatalogRow(
   // already does.
   const pk = pkFor(id, cardId);
 
-  const gradedRetire = await retireGradedChildren(container, id, retry, dryRun);
+  const gradedRetire = await retireGradedChildren(container, id, retry, dryRun, opts.ledgerLane);
   const gradedChildrenRetired = gradedRetire.retired;
   let rowDeleted: boolean;
   let orphaned = false;
@@ -1500,7 +1586,24 @@ export async function retireCatalogRow(
       rowDeleted = false;
     }
   } else {
-    const result = await deleteAndVerifyGone(container, id, pk, retry);
+    // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28,
+    // opt-in via opts.ledgerLane). retireCatalogRow is handed only id/cardId,
+    // never the full document -- so when a caller opted in, read the row
+    // fresh right before the delete (a row already gone by then is a 404
+    // here, which is genuinely "already gone", never a document this call
+    // could have ledgered).
+    let ledger: { lane: string; doc: Record<string, unknown> | null; action: string; reason: string } | undefined;
+    if (opts.ledgerLane) {
+      let fullDoc: Record<string, unknown> | null = null;
+      try {
+        const { resource } = await retry(() => container.item(id, pk).read<CatalogRowDoc>());
+        fullDoc = (resource as Record<string, unknown> | undefined) ?? null;
+      } catch (err) {
+        if ((err as { code?: number })?.code !== 404) throw err;
+      }
+      ledger = { lane: opts.ledgerLane, doc: fullDoc, action: "retire", reason: why };
+    }
+    const result = await deleteAndVerifyGone(container, id, pk, retry, ledger);
     rowDeleted = result.deleted;
     orphaned = result.orphaned;
   }

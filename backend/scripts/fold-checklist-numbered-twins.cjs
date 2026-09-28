@@ -93,7 +93,13 @@ if (!SPORTS.length && !YEARS.length && SCOPE !== "all") {
 
 const { CosmosClient } = require("@azure/cosmos");
 const backend = path.resolve(__dirname, "..");
-const { moveCatalogRow } = require(path.join(backend, "dist", "services", "catalog", "catalogRowOps.service.js"));
+const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist", "services", "catalog", "catalogRowOps.service.js"));
+// CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28).
+// A fold's move can retire the twin's own row, so LEDGER_LANE names this
+// script for catalogRowOps.service.js's opt-in ledger (see
+// MoveCatalogRowOptions.ledgerLane) the same way relocate-catalog-rows-by-list
+// does.
+const LEDGER_LANE = "fold-checklist-numbered-twins";
 const { catalogAuthorityOf } = require(path.join(backend, "dist", "services", "catalog", "catalogAuthority.service.js"));
 const { productFamilyOf } = require(path.join(backend, "dist", "services", "catalog", "productSetKeys.js"));
 const {
@@ -232,7 +238,7 @@ async function main() {
     crossProductNotFolded: 0,
     salesRepointed: 0, salesRelocated: 0, salesRelocateFailed: 0,
     gradedRetired: 0, holdingsRepointed: 0, holdingDocsWalked: 0, holdingsWalked: 0,
-    survivorNotIncumbent: 0, failed: 0, notReached: 0,
+    survivorNotIncumbent: 0, failed: 0, ledgerWriteFailed: 0, notReached: 0,
     // CF-A-FOLD-NEVER-CHANGES-THE-PLAYER. The twin and the target name
     // DIFFERENT PLAYERS and nothing corroborates either, so the fold was
     // refused and NOTHING was written -- not the catalog row, not one sale.
@@ -391,7 +397,7 @@ async function main() {
 
         const probe = await moveCatalogRow(
           cat, twin, target.id, { printRun: printRunOf(target) },
-          { reason: d.reason, dryRun: true, retry, ...(evidence ? { playerEvidence: evidence } : {}) },
+          { reason: d.reason, dryRun: true, retry, ledgerLane: LEDGER_LANE, ...(evidence ? { playerEvidence: evidence } : {}) },
         );
         if (contended) {
           stats.contendedPairs++;
@@ -414,6 +420,7 @@ async function main() {
           cat, twin, target.id, { printRun: printRunOf(target) },
           {
             reason: d.reason, dryRun: !APPLY, salesContainer: pool, retry,
+            ledgerLane: LEDGER_LANE,
             // The SAME evidence the probe saw: a move that re-asked the
             // question with less evidence could refuse after the sales moved.
             ...(evidence ? { playerEvidence: evidence } : {}),
@@ -438,6 +445,7 @@ async function main() {
         await repointHoldings(portfolio, holdingsIndex, twin.id, target.id, stats);
       } catch (e) {
         stats.failed++;
+        if (isLedgerWriteFailure(e)) stats.ledgerWriteFailed++;
         // EVERY FAILURE IS LISTED, never a truncated sample -- a run that
         // failed 632 of 632 folds and printed 5 of them left an operator no
         // way to tell whether the other 627 were the same defect or 627
@@ -475,6 +483,7 @@ async function main() {
   console.log(`  holdings re-pointed        ${f(stats.holdingsRepointed)}   (walked ${f(stats.holdingsWalked)} holdings across ${f(stats.holdingDocsWalked)} portfolio docs)`);
   console.log(`  survivor != incumbent      ${f(stats.survivorNotIncumbent)}   <- must be 0: the checklist row's fields survive`);
   console.log(`  failed                     ${f(stats.failed)}`);
+  console.log(`  of which ledger-write-failed ${f(stats.ledgerWriteFailed)}`);
   console.log(`  not reached                ${f(stats.notReached)}`);
 
   console.log(`\n  by KIND:`);

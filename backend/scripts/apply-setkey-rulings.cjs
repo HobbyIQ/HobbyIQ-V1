@@ -28,7 +28,10 @@ const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
-const { moveCatalogRow, rebuildSearchFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { moveCatalogRow, rebuildSearchFields, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+// CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST: names this script
+// for every ledgered delete moveCatalogRow performs below.
+const LEDGER_LANE = "apply-setkey-rulings";
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
@@ -92,7 +95,7 @@ async function main() {
   console.log(`slot ${SLOT}/${SLOTS}  ${mine.length} of ${plan.length} twin keys  (${f(noTwin.length)} prefixed keys WITHOUT a twin — reported, untouched)  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
 
-  let scanned = 0, moved = 0, folded = 0, replaced = 0, redundant = 0, salesRepointed = 0, gradedRetired = 0, malformed = 0, failed = 0, notReached = 0;
+  let scanned = 0, moved = 0, folded = 0, replaced = 0, redundant = 0, salesRepointed = 0, gradedRetired = 0, malformed = 0, failed = 0, ledgerWriteFailed = 0, notReached = 0;
   let stopReason = null;
 
   for (const p of mine) {
@@ -131,6 +134,7 @@ async function main() {
             parts[3] = to;
             const r = await moveCatalogRow(cat, d, parts.join(":"), { setKey: to }, {
               reason: "setKey ruling applied", repointNormalizedSetKey: true, dryRun: !APPLY, salesContainer: comps, retry,
+              ledgerLane: LEDGER_LANE,
             });
             salesRepointed += r.salesRepointed; gradedRetired += r.gradedChildrenRetired;
             // fold and replace are slices of MOVED: the old row is gone either way
@@ -139,6 +143,7 @@ async function main() {
             moved++;
           } catch (e) {
             failed++;
+            if (isLedgerWriteFailure(e)) ledgerWriteFailed++;
             if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 58)}: ${String(e.message || e).slice(0, 58)}`);
           }
         }));
@@ -165,6 +170,7 @@ async function main() {
   console.log(`  graded children retired ${f(gradedRetired)}   <- regenerable by materialize-graded-identities`);
   console.log(`  malformed id            ${f(malformed)}`);
   console.log(`  failed                  ${f(failed)}`);
+  console.log(`    of which ledger-write-failed ${f(ledgerWriteFailed)}`);
   if (APPLY) {
     reportWrites({
       job: "apply-setkey-rulings", intended: scanned, written: moved,

@@ -129,8 +129,9 @@ async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   const { CosmosClient } = require("@azure/cosmos");
-  const { moveCatalogRow } = require("../dist/services/catalog/catalogRowOps.service.js");
+  const { moveCatalogRow, isLedgerWriteFailure } = require("../dist/services/catalog/catalogRowOps.service.js");
   const { reportWrites } = require("../dist/services/ops/writeReconciliation.js");
+  const LEDGER_LANE = "conform-one-of-one-parallels";
   const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
   const cat = db.container("card_catalog"), pool = db.container("sold_comps");
   console.log(`conform-one-of-one-parallels  ${APPLY ? "APPLY" : "REPORT ONLY"}  slot ${SLOT}/${SLOTS}  budget ${RUN_MINUTES}m${SPORTS.length ? `  sports=${SPORTS.join(",")}` : ""}  limit=${LIMIT || "none"}`);
@@ -146,7 +147,7 @@ async function main() {
   };
   const REASON = "a SuperFractor / printing plate / one-of-one is 1/1; the print run follows the rung (CF-A-SUPERFRACTOR-IS-ONE-OF-ONE)";
 
-  const stats = { scanned: 0, otherShard: 0, prose: 0, fieldIdDisagree: 0, notIdentity: 0, agree: 0, actionable: 0, healed: 0, moved: 0, folded: 0, replaced: 0, gone: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, notReached: 0 };
+  const stats = { scanned: 0, otherShard: 0, prose: 0, fieldIdDisagree: 0, notIdentity: 0, agree: 0, actionable: 0, healed: 0, moved: 0, folded: 0, replaced: 0, gone: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, notReached: 0, ledgerWriteFailed: 0 };
   const breakdown = new Map(); // `${family}  printRun=${before}` -> n
   const examples = [];
   let stopReason = null;
@@ -184,7 +185,7 @@ async function main() {
           let full = null;
           try { full = (await retry(() => cat.item(row.id, row.cardId ?? row.id).read())).resource ?? null; } catch (e) { if (e?.code !== 404) throw e; }
           if (!full) { stats.gone++; return; }
-          const res = await moveCatalogRow(cat, full, d.newSlug, { printRun: 1 }, { reason: REASON, dryRun: !APPLY, salesContainer: pool, retry });
+          const res = await moveCatalogRow(cat, full, d.newSlug, { printRun: 1 }, { reason: REASON, dryRun: !APPLY, salesContainer: pool, retry, ledgerLane: LEDGER_LANE });
           if (res.action === "move") stats.moved++;
           else if (res.action === "fold") stats.folded++;
           else if (res.action === "replace") stats.replaced++;
@@ -194,6 +195,7 @@ async function main() {
           if (examples.length < 20) examples.push(`  ${res.action.padEnd(7)} ${row.id} -> ${d.newSlug}  [${row.source}]  (${res.decision})`);
         } catch (e) {
           stats.failed++;
+          if (isLedgerWriteFailure(e)) stats.ledgerWriteFailed++;
           if (stats.failed <= 5) console.log(`  failed ${row.id}: ${String(e?.message ?? e).slice(0, 120)}`);
         }
       }));
@@ -211,6 +213,7 @@ async function main() {
   console.log(`  already 1/1              ${f(stats.agree)}`);
   console.log(`  gone before the move     ${f(stats.gone)}`);
   console.log(`  failed                   ${f(stats.failed)}`);
+  console.log(`    of which ledger-write-failed ${f(stats.ledgerWriteFailed)}`);
   console.log(`  not reached              ${f(stats.notReached)}`);
   if (breakdown.size) { console.log(`  by family and the print run the row had:`); for (const [k, n] of [...breakdown].sort((a, b) => b[1] - a[1])) console.log(`    ${k.padEnd(40)} ${f(n)}`); }
   if (examples.length) { console.log(`  examples:`); for (const e of examples) console.log(e); }

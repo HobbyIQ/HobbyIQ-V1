@@ -139,6 +139,7 @@ const {
 } = require(path.join(__dirname, "lib", "player-evidence.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
+const LEDGER_LANE = "repair-bowman-product-refile";
 const str = (v) => String(v ?? "").trim();
 const lower = (v) => str(v).toLowerCase();
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
@@ -257,7 +258,7 @@ async function main() {
 
   const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
   const { deriveCatalogEntry } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
-  const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
@@ -271,7 +272,7 @@ async function main() {
   const report = {
     scope: SCOPE_PRODUCTS,
     apply: APPLY,
-    keyMismatch: { scanned: 0, move: 0, moved: 0, failed: 0, refusedDifferentPlayer: 0, skip: {} },
+    keyMismatch: { scanned: 0, move: 0, moved: 0, failed: 0, ledgerWriteFailed: 0, refusedDifferentPlayer: 0, skip: {} },
     byStem: {},
     duplicates: { candidates: 0, consolidated: 0, oneOfOneFirst: 0, skip: {} },
     pool: { scanned: 0, move: 0, moved: 0, skip: {} },
@@ -474,6 +475,7 @@ async function main() {
             retry,
             known: twin,
             ...(evidence ? { playerEvidence: evidence } : {}),
+            ledgerLane: LEDGER_LANE,
           }));
         } catch (e) {
           // FAIL CLOSED, PER ROW. One row the mover refuses is a `failed` row
@@ -481,6 +483,7 @@ async function main() {
           // the other 18,162. The run still goes RED at the end when failed > 0
           // -- a refusal is never absorbed into silence.
           report.keyMismatch.failed++;
+          if (isLedgerWriteFailure(e)) report.keyMismatch.ledgerWriteFailed++;
           bump(report.keyMismatch.skip, `move-refused:${String(e?.message ?? e).slice(0, 90)}`);
           if (report.moveFailures.length < 50) {
             report.moveFailures.push({ id: row.id, dest: plan.dest, error: String(e?.message ?? e).slice(0, 200) });
@@ -672,6 +675,7 @@ async function main() {
     + ` + planned-not-written ${f(intended - written - skipped)}`,
   );
   if (failed) console.log(`  move refusals: ${f(failed)} row(s) the mover declined — listed in moveFailures`);
+  if (report.keyMismatch.ledgerWriteFailed) console.log(`  of which ledger-write-failed: ${f(report.keyMismatch.ledgerWriteFailed)}`);
   if (APPLY) {
     reportWrites({
       job: "repair-bowman-product-refile",

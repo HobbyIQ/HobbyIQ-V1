@@ -1094,6 +1094,7 @@ async function main() {
   const { parseHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf, is412 } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+  const { isLedgerWriteFailure } = require(path.join(backend, "scripts", "lib", "delete-ledger.cjs"));
 
   // TITLE MACHINERY -- every one of these is an ALREADY-SHIPPED reader, called
   // read-only, in the SAME order repoint-sales-to-checklist-numbered.cjs's own
@@ -1381,7 +1382,7 @@ async function main() {
     refusedTitleNamesFromProduct: 0, refusedSplitIdentity: 0, refusedPossibleTwin: 0,
     refusedPinnedOrVerified: 0, refusedFlaggedOrExcluded: 0, refusedAlreadyParked: 0,
     refusedGuardParked: 0, refusedEtagChanged: 0,
-    salesFailed: 0, notReached: 0, throttled: 0,
+    salesFailed: 0, notReached: 0, throttled: 0, ledgerWriteFailed: 0,
     salesQueries: 0, ruCharge: 0,
   };
   const REFUSAL_KEYS = Object.freeze([
@@ -1722,6 +1723,10 @@ async function main() {
                 verifyFields: ["cardId", "hobbyiqCardId"],
                 dryRun: !APPLY,
                 retry,
+                // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+                // (2026-09-28). relocateSoldComp's own drop loop re-reads the
+                // full document and ledgers it before this delete.
+                ledger: { lane: "repoint-sales-to-sibling-product", action: "collapse", reason: "same-sale-at-destination", toId: plan.newCardId, container: "sold_comps" },
               });
               if (result?.ok) {
                 s.collapsedOntoResident++;
@@ -1730,6 +1735,11 @@ async function main() {
               } else if (result?.staleSincePlan?.length) {
                 noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: delete refused (412) -- source changed between the last-line re-read and the delete itself; the keeper is already at ${plan.newCardId}, the from-side copy is left for a later pass`);
                 emitPlanRow(sale, "refused", "stale-since-plan", { from, to, toId: plan.newCardId });
+              } else if (result?.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+                s.salesFailed++;
+                s.ledgerWriteFailed++;
+                failures.push(`  FAILED collapse ${sale.id}@${sale.cardId} -> ${plan.newCardId}: ledger write refused the delete`);
+                emitPlanRow(sale, "failed", "ledger-write-failed", { from, to, toId: plan.newCardId });
               } else {
                 s.salesFailed++;
                 const stage = result?.stage ?? "unknown";
@@ -1790,6 +1800,10 @@ async function main() {
             keep,
             drop: [{ id: sale.id, cardId: sale.cardId, ifMatchEtag: fresh._etag }],
             retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY,
+            // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+            // (2026-09-28). relocateSoldComp's own drop loop re-reads the
+            // full document and ledgers it before this delete.
+            ledger: { lane: "repoint-sales-to-sibling-product", action: "relocate", reason: "checklist-attested-relocate", toId: plan.newCardId, container: "sold_comps" },
           });
           if (res.guard?.verdict === "park" && res.stage === "guard") {
             noteRefusal("guard-parked", `  ${sale.id}@${sale.cardId}: ${res.error ?? res.guard.reason}`);
@@ -1799,6 +1813,13 @@ async function main() {
           if (res.staleSincePlan?.length) {
             noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: delete refused (412) -- source changed between the last-line re-read and the delete itself; the keeper is already at ${plan.newCardId}, the from-side copy is left for a later pass`);
             emitPlanRow(sale, "refused", "stale-since-plan", { from, to, toId: plan.newCardId });
+            continue;
+          }
+          if (res.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+            s.salesFailed++;
+            s.ledgerWriteFailed++;
+            failures.push(`  FAILED relocate ${sale.id}@${sale.cardId} -> ${plan.newCardId}: ledger write refused the delete`);
+            emitPlanRow(sale, "failed", "ledger-write-failed", { from, to, toId: plan.newCardId });
             continue;
           }
           if (!res.ok && res.stage !== "dry-run") {
@@ -1861,6 +1882,7 @@ async function main() {
         emitPlanRow(sale, "patch", null, { from, to, toId: plan.newHiq, destinationRowId: plan.targetRow?.id ?? null, destinationRowPlayer: plan.targetRow?.playerName ?? null, destinationRowSource: plan.targetRow?.source ?? null });
       } catch (e) {
         s.salesFailed++;
+        if (isLedgerWriteFailure(e)) s.ledgerWriteFailed++;
         failures.push(`  FAILED ${plan.action} ${sale.id}@${sale.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
         emitPlanRow(sale, "failed", String(e?.message ?? e), { from, to });
       }
@@ -1910,6 +1932,7 @@ async function main() {
   console.log(`  REFUSED: collapse-refused-self           ${f(s.collapseRefusedSelf)}   <- residentAt self-read reached the collapse branch; refused, never treated as a distinct survivor`);
   console.log(`  REFUSED: stale-since-plan                ${f(s.refusedEtagChanged)}   <- source doc changed or vanished between plan and write`);
   console.log(`  failed                                  ${f(s.salesFailed)}`);
+  console.log(`  of which ledger-write-failed            ${f(s.ledgerWriteFailed)}`);
   console.log(`  not reached (budget / LIMIT)            ${f(s.notReached)}`);
 
   console.log("");
@@ -2029,6 +2052,7 @@ async function runByPlayerMode(io) {
   } = io;
   const deps = { catalogAuthorityOf, namesAgree, withProductSetKey, productParentOf, productSetKeys };
   const { relocateSoldComp, stripSystem, contentHashOf, is412 } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+  const { isLedgerWriteFailure } = require(path.join(backend, "scripts", "lib", "delete-ledger.cjs"));
 
   const client = new CosmosClient(conn);
   const db = client.database(process.env.COSMOS_DATABASE || "hobbyiq");
@@ -2059,7 +2083,7 @@ async function runByPlayerMode(io) {
     refusedPinnedOrVerified: 0, refusedFlaggedOrExcluded: 0, refusedAlreadyParked: 0,
     refusedGuardParked: 0, refusedEtagChanged: 0, refusedGradedParseFailed: 0,
     derivedResidentAtSource: 0,
-    salesFailed: 0, notReached: 0, otherShard: 0,
+    salesFailed: 0, notReached: 0, otherShard: 0, ledgerWriteFailed: 0,
   };
   const REFUSAL_KEYS_BY_PLAYER = Object.freeze([
     "already-checklist-backed", "stale-no-row", "from-row-agrees",
@@ -2331,6 +2355,10 @@ async function runByPlayerMode(io) {
                 verifyFields: ["cardId", "hobbyiqCardId"],
                 dryRun: !APPLY,
                 retry,
+                // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+                // (2026-09-28). relocateSoldComp's own drop loop re-reads the
+                // full document and ledgers it before this delete.
+                ledger: { lane: "repoint-sales-to-sibling-product", action: "collapse", reason: "same-sale-at-destination", toId: plan.newCardId, container: "sold_comps" },
               });
               if (result?.ok) {
                 s.collapsedOntoResident++;
@@ -2339,6 +2367,11 @@ async function runByPlayerMode(io) {
               } else if (result?.staleSincePlan?.length) {
                 noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: delete refused (412)`, fromKey, toKey);
                 emitPlanRow(sale, "refused", "stale-since-plan", { from: fromKey, to: toKey, toId: plan.newCardId });
+              } else if (result?.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+                s.salesFailed++;
+                s.ledgerWriteFailed++;
+                failures.push(`  FAILED collapse ${sale.id}@${sale.cardId} -> ${plan.newCardId}: ledger write refused the delete`);
+                emitPlanRow(sale, "failed", "ledger-write-failed", { from: fromKey, to: toKey, toId: plan.newCardId });
               } else {
                 s.salesFailed++;
                 const stage = result?.stage ?? "unknown";
@@ -2382,10 +2415,21 @@ async function runByPlayerMode(io) {
           const res = await relocateSoldComp(pool, {
             keep, drop: [{ id: sale.id, cardId: sale.cardId, ifMatchEtag: fresh._etag }],
             retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY,
+            // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+            // (2026-09-28). relocateSoldComp's own drop loop re-reads the
+            // full document and ledgers it before this delete.
+            ledger: { lane: "repoint-sales-to-sibling-product", action: "relocate", reason: "checklist-attested-relocate", toId: plan.newCardId, container: "sold_comps" },
           });
           if (res.staleSincePlan?.length) {
             noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: delete refused (412)`, fromKey, toKey);
             emitPlanRow(sale, "refused", "stale-since-plan", { from: fromKey, to: toKey, toId: plan.newCardId });
+            continue;
+          }
+          if (res.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+            s.salesFailed++;
+            s.ledgerWriteFailed++;
+            failures.push(`  FAILED relocate ${sale.id}@${sale.cardId} -> ${plan.newCardId}: ledger write refused the delete`);
+            emitPlanRow(sale, "failed", "ledger-write-failed", { from: fromKey, to: toKey, toId: plan.newCardId });
             continue;
           }
           if (!res.ok && res.stage !== "dry-run") {
@@ -2440,6 +2484,7 @@ async function runByPlayerMode(io) {
         emitPlanRow(sale, "patch", null, { from: fromKey, to: toKey, toId: plan.newHiq, derivedResident: plan.derivedResident ?? false });
       } catch (e) {
         s.salesFailed++;
+        if (isLedgerWriteFailure(e)) s.ledgerWriteFailed++;
         failures.push(`  FAILED ${plan.action} ${sale.id}@${sale.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
         emitPlanRow(sale, "failed", String(e?.message ?? e), { from: fromKey, to: toKey });
       }
@@ -2496,6 +2541,7 @@ async function runByPlayerMode(io) {
   console.log(`  REFUSED: stale-since-plan                   ${f(s.refusedEtagChanged)}`);
   console.log(`  REFUSED: graded-parse-failed (not a candidate) ${f(s.refusedGradedParseFailed)}`);
   console.log(`  failed                                     ${f(s.salesFailed)}`);
+  console.log(`  of which ledger-write-failed                ${f(s.ledgerWriteFailed)}`);
   console.log(`  not reached (budget / LIMIT)                ${f(s.notReached)}`);
 
   if (examples.length) { console.log(`\n  examples:`); for (const e of [...examples].sort()) console.log(e); }
