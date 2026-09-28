@@ -1071,10 +1071,19 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // reason bare `donruss` and `panini-donruss` share one (`family: "donruss"`
   // just above) -- one product line, two owners' eras, still one comp pool
   // for pricing fallbacks. `panini-donruss-the-rookies` is its OWN separate
-  // family (`panini-donruss`) because it is a different, unrelated modern
-  // football insert -- spellForEra bridges the TWO PRE-EXISTING vintage/
-  // modern spellings by year below (PANINI_DONRUSS_FROM_YEAR), the same
-  // mechanism that already bridges bare donruss/panini-donruss.
+  // family (`panini-donruss`) and stays that way -- it is a DIFFERENT,
+  // unrelated modern football/basketball insert (R38), not another era's
+  // spelling of this product. AMENDED after independent review: an earlier
+  // version of this change also had `spellForEra` bridge the two by year,
+  // the same PANINI_DONRUSS_FROM_YEAR boundary as the real donruss/
+  // panini-donruss pair -- that was wrong, a sport-blind fold of two
+  // unrelated products sharing a display-name substring, since every
+  // checklist that has ever staged `panini-donruss-the-rookies` is
+  // football/basketball, never a 2009+ baseball boxed set. There is no
+  // bridge: this key passes through spellForEra untouched in every year,
+  // and a modern "Panini Donruss The Rookies" title reaches its own
+  // product through the existing R38 insert-set registration, never
+  // through this one.
   S("donruss-the-rookies", { family: "donruss", parent: "donruss" }),
   // D31, Drew 2026-08-31: "panini-optic and donruss-optic are ONE product,
   // canonical key donruss-optic" -- the product as every checklist names it.
@@ -3419,20 +3428,30 @@ export function spellForEra(setKey: string, year: number | null | undefined, pol
   const bare = NEVER_ACQUIRED_MAKER_PREFIXES[setKey];
   if (bare !== undefined) return bare;
   // CF-THE-ROOKIES-IS-A-BOXED-SET-NOT-A-PACK-INSERT (Drew, 2026-09-28 ruling
-  // on #2477): the boxed-set sibling takes the SAME era boundary as the
-  // flagship pair below -- 1987 Donruss The Rookies is `donruss-the-rookies`,
-  // and the unrelated modern football insert already registered under
-  // `panini-donruss` is `panini-donruss-the-rookies` from PANINI_DONRUSS_FROM_
-  // YEAR on. `spellForEra` never receives a year for the modern key from any
-  // real caller (it is football-era-only in the checklist data, never staged
-  // against a pre-2009 year), but the pair is bridged symmetrically anyway,
-  // exactly as the flagship pair is, so a mis-dated row corrects instead of
-  // silently mismatching its family.
-  if (setKey === "donruss-the-rookies" || setKey === "panini-donruss-the-rookies") {
-    if (policy === "as-named") return setKey;
-    if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
-    return year >= PANINI_DONRUSS_FROM_YEAR ? "panini-donruss-the-rookies" : "donruss-the-rookies";
-  }
+  // on #2477, AMENDED after independent review). `donruss-the-rookies` and
+  // `panini-donruss-the-rookies` are NOT an era-split spelling of one
+  // product the way bare `donruss`/`panini-donruss` are -- they are TWO
+  // UNRELATED products that happen to share a display-name substring:
+  // `donruss-the-rookies` is the 1987 baseball boxed factory set (this
+  // ruling's own product, pre-2009 only -- no checklist has ever staged a
+  // 2009+ "Donruss The Rookies" baseball boxed set), and
+  // `panini-donruss-the-rookies` is a 2023+ Panini Donruss FOOTBALL/
+  // BASKETBALL pack insert (R38, registered under `panini-donruss` from its
+  // own staged checklists). The original version of this rule bridged the
+  // two by year with NO SPORT GUARD -- a year >= PANINI_DONRUSS_FROM_YEAR
+  // would fold the vintage baseball key onto the modern football/basketball
+  // insert's address, a product-family collapse of two different card sets
+  // exactly like the fold Drew's 2026-09-03 ruling forbids elsewhere in this
+  // module. There is deliberately NO bridge here: `donruss-the-rookies`
+  // passes through untouched in every year (it is scoped to its one real
+  // product, 1987-2008, by the checklist data itself, not by an era rule),
+  // and a modern "Panini Donruss The Rookies" title keeps resolving to
+  // `panini-donruss-the-rookies` through its OWN existing insert-set path
+  // (productSetKeyForName / the R38 registration), never through this
+  // function. A 2009+ "Donruss The Rookies" BASEBALL boxed set is out of
+  // scope -- no such product is known to exist, and this function must not
+  // invent a key or a fold for one if it ever appears; that would need its
+  // own ruling, not a silent fold onto the football insert's address.
   if (setKey !== "donruss" && setKey !== "panini-donruss") return setKey;
   if (policy === "as-named") return setKey;
   if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;

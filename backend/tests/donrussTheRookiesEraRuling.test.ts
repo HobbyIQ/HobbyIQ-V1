@@ -20,14 +20,27 @@
  * THE RULING. Register `donruss-the-rookies` as its own `S()` entry under the
  * bare `donruss` family -- the same shape `donruss-elite` / `donruss-studio`
  * take beside bare `donruss`, and the same `S()` mechanism R38 already uses
- * for the modern Panini-era insert-set siblings. `spellForEra` bridges this
- * pair by the SAME `PANINI_DONRUSS_FROM_YEAR` boundary that already bridges
- * bare `donruss` / `panini-donruss`: 1987-2008 spells `donruss-the-rookies`,
- * 2009+ spells `panini-donruss-the-rookies` (the pre-existing, unrelated
- * modern insert). This is an explicit pair, NOT a generic bridge --
- * `spellForEra` does not fold `panini-donruss-the-rookies` <-> `donruss-the-
- * rookies` for any OTHER key shape, and no other football/basketball
- * `panini-donruss-*` insert gained an era pair by this change.
+ * for the modern Panini-era insert-set siblings.
+ *
+ * NO ERA BRIDGE (AMENDED after independent review of the first version of
+ * this change). `donruss-the-rookies` (the 1987 baseball boxed factory set)
+ * and `panini-donruss-the-rookies` (a 2023+ Panini Donruss FOOTBALL/
+ * BASKETBALL pack insert, R38) are NOT two eras' spellings of one product --
+ * they are TWO UNRELATED products that happen to share a display-name
+ * substring. The first version of this change had `spellForEra` bridge them
+ * by year at the `PANINI_DONRUSS_FROM_YEAR` boundary, the same shape as the
+ * real `donruss`/`panini-donruss` era pair; that was wrong, because it had
+ * no sport guard and would fold a 2009+ "Donruss The Rookies" BASEBALL row
+ * onto the football/basketball insert's address -- exactly the
+ * product-family collapse Drew's 2026-09-03 ruling forbids elsewhere in this
+ * table. There is no known 2009+ "Donruss The Rookies" baseball boxed set
+ * (every staged `panini-donruss-the-rookies` checklist is football/
+ * basketball); that shape is OUT OF SCOPE for this ruling and must not be
+ * invented here if it ever appears -- it would need its own ruling, not a
+ * silent fold. `donruss-the-rookies` therefore passes through `spellForEra`
+ * untouched in EVERY year, and a modern "Panini Donruss The Rookies" title
+ * keeps resolving to `panini-donruss-the-rookies` through its own,
+ * unrelated R38 insert-set registration -- never through this function.
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -60,44 +73,46 @@ describe("donruss-the-rookies is registered under the bare donruss family (Drew,
   });
 });
 
-describe("spellForEra bridges donruss-the-rookies <-> panini-donruss-the-rookies at the SAME boundary as bare donruss", () => {
-  it("1987-2008 spells the vintage key", () => {
+describe("spellForEra does NOT bridge donruss-the-rookies <-> panini-donruss-the-rookies -- they are unrelated products", () => {
+  it("donruss-the-rookies passes through untouched in EVERY year, including 2009+", () => {
+    // No fold in EITHER direction, at or past the boundary that DOES apply
+    // to the real donruss/panini-donruss pair. A 2009+ "Donruss The
+    // Rookies" baseball boxed set is not a known product; if one is ever
+    // found it needs its own ruling, not a silent fold onto the unrelated
+    // football/basketball insert below.
     expect(spellForEra("donruss-the-rookies", 1987)).toBe("donruss-the-rookies");
     expect(spellForEra("donruss-the-rookies", 2008)).toBe("donruss-the-rookies");
-    expect(spellForEra("panini-donruss-the-rookies", 1987)).toBe("donruss-the-rookies");
-    expect(spellForEra("panini-donruss-the-rookies", 2008)).toBe("donruss-the-rookies");
+    expect(spellForEra("donruss-the-rookies", PANINI_DONRUSS_FROM_YEAR)).toBe("donruss-the-rookies");
+    expect(spellForEra("donruss-the-rookies", 2024)).toBe("donruss-the-rookies");
   });
 
-  it(`${PANINI_DONRUSS_FROM_YEAR}+ spells the modern Panini-era key`, () => {
-    expect(spellForEra("donruss-the-rookies", PANINI_DONRUSS_FROM_YEAR)).toBe("panini-donruss-the-rookies");
+  it("panini-donruss-the-rookies passes through untouched in every year too -- no reverse fold", () => {
+    expect(spellForEra("panini-donruss-the-rookies", 1987)).toBe("panini-donruss-the-rookies");
+    expect(spellForEra("panini-donruss-the-rookies", 2008)).toBe("panini-donruss-the-rookies");
     expect(spellForEra("panini-donruss-the-rookies", PANINI_DONRUSS_FROM_YEAR)).toBe("panini-donruss-the-rookies");
-    expect(spellForEra("donruss-the-rookies", 2024)).toBe("panini-donruss-the-rookies");
+    expect(spellForEra("panini-donruss-the-rookies", 2024)).toBe("panini-donruss-the-rookies");
   });
 
-  it("matches the boundary already ruled for bare donruss / panini-donruss", () => {
-    expect(spellForEra("donruss-the-rookies", 1987)).toBe(spellForEra("donruss", 1987) + "-the-rookies");
-    expect(spellForEra("donruss-the-rookies", 2024)).toBe(spellForEra("donruss", 2024) + "-the-rookies");
-  });
-
-  it("an absent/invalid year leaves the key alone -- refuse rather than guess", () => {
+  it("an absent/invalid year still leaves both keys alone", () => {
     for (const y of [null, undefined, 0, NaN]) {
       expect(spellForEra("donruss-the-rookies", y as number | null | undefined)).toBe("donruss-the-rookies");
       expect(spellForEra("panini-donruss-the-rookies", y as number | null | undefined)).toBe("panini-donruss-the-rookies");
     }
   });
 
-  it("the pair is explicit, not a generic 'panini-donruss-*' <-> 'donruss-*' bridge", () => {
-    // No OTHER panini-donruss insert gained an era pair by this change --
-    // only the exact `donruss-the-rookies` / `panini-donruss-the-rookies`
-    // pair is bridged. The bare flagship pair (donruss / panini-donruss)
-    // already had its own era rule before this change and is untouched by
-    // it -- pinned separately in "the era rule touches Donruss only" below
-    // and in thereIsNoFleerTiffany.test.ts's own flagship assertion.
+  it("the real flagship pair (donruss / panini-donruss) still has its own era rule, unaffected", () => {
+    expect(spellForEra("donruss", 1987)).toBe("donruss");
+    expect(spellForEra("donruss", PANINI_DONRUSS_FROM_YEAR)).toBe("panini-donruss");
+    expect(spellForEra("panini-donruss", 1987)).toBe("donruss");
+    expect(spellForEra("panini-donruss", 2024)).toBe("panini-donruss");
+  });
+
+  it("no OTHER panini-donruss insert gained a fold either", () => {
     expect(spellForEra("panini-donruss-rated-rookies", 1987)).toBe("panini-donruss-rated-rookies");
     expect(spellForEra("panini-donruss-threads", 1987)).toBe("panini-donruss-threads");
   });
 
-  it("policy 'as-named' (year-independent) leaves both spellings alone, same as the flagship pair", () => {
+  it("policy 'as-named' is irrelevant here since there is no bridge to disable", () => {
     expect(spellForEra("donruss-the-rookies", 1987, "as-named")).toBe("donruss-the-rookies");
     expect(spellForEra("panini-donruss-the-rookies", 2024, "as-named")).toBe("panini-donruss-the-rookies");
   });
@@ -119,8 +134,24 @@ describe("title -> setKey: '1987 Donruss The Rookies' resolves to donruss-the-ro
     expect(id).not.toBe("hiq:baseball:1987:donruss:14:base:no-auto");
   });
 
-  it("a modern-era title still resolves to the pre-existing football/basketball insert, not the vintage key", () => {
+  it("every vintage-era 'Donruss The Rookies' title resolves to the same registered key (1988, 1990, 1992, 2002)", () => {
+    // normalizeSetKey has no year in hand at all -- productSetKeyForName
+    // answers by NAME, not by era -- so every one of these resolves to the
+    // one registered `donruss-the-rookies` product regardless of year. This
+    // is intentionally NOT an era rule: the key is scoped to its one real
+    // product by the staged checklist data, not by a year boundary in code.
+    expect(normalizeSetKey("1988 Donruss The Rookies")).toBe("donruss-the-rookies");
+    expect(normalizeSetKey("1990 Donruss The Rookies")).toBe("donruss-the-rookies");
+    expect(normalizeSetKey("1992 Donruss The Rookies")).toBe("donruss-the-rookies");
+    expect(normalizeSetKey("2002 Donruss The Rookies")).toBe("donruss-the-rookies");
+  });
+
+  it("a modern football/basketball 'Panini Donruss The Rookies' title is UNCHANGED -- still its own insert, never folded", () => {
     expect(normalizeSetKey("2023 Panini Donruss The Rookies")).toBe("panini-donruss-the-rookies");
+    const id = computeHobbyIqCardId({
+      sport: "football", year: 2023, setKey: "2023 Panini Donruss The Rookies", cardNumber: "5",
+    });
+    expect(id).toBe("hiq:football:2023:panini-donruss-the-rookies:5:base:no-auto");
   });
 
   it("negative: bare 'Rookie'/'RC' language on the FLAGSHIP does not trigger this product", () => {
