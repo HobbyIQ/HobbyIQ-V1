@@ -73,10 +73,13 @@ describe("WAVE2_APPLY_SCOPE is validated at startup, not defaulted silently", ()
   // UPDATED FOR DREW'S 2026-09-14 RULING (R31/R32/R33). The allowlist is a
   // pinned EXACT alternation on purpose -- a scope that can write is a scope a
   // ruling named -- so it moves when a ruling moves it, and only then.
+  // R34-CPA-NAME-RESOLVE (2026-09-28) extended the same allowlist line with
+  // its own token, after r33 -- the same edit rematchSplitScope20260913.test.ts
+  // already pins.
   it("refuses any value outside the allowlist", () => {
     const block = fleetSrc.slice(fleetSrc.indexOf('SCOPE="${WAVE2_APPLY_SCOPE'), fleetSrc.indexOf("SCOPE_COUNT_KEY="));
-    expect(block).toMatch(/improve\|r26\|r27\|r28\|r31\|r32\|r33\)\s*;;/);
-    expect(block).toContain("die \"WAVE2_APPLY_SCOPE='$SCOPE' is not one of improve|r26|r27|r28|r31|r32|r33");
+    expect(block).toMatch(/improve\|r26\|r27\|r28\|r31\|r32\|r33\|r34\)\s*;;/);
+    expect(block).toContain("die \"WAVE2_APPLY_SCOPE='$SCOPE' is not one of improve|r26|r27|r28|r31|r32|r33|r34");
   });
 
   // `split` is folded into r32 (Drew, 2026-09-14): the word that named #2141's
@@ -85,7 +88,7 @@ describe("WAVE2_APPLY_SCOPE is validated at startup, not defaulted silently", ()
   it("accepts `split` as a synonym for r32, ahead of the allowlist", () => {
     const block = fleetSrc.slice(fleetSrc.indexOf('SCOPE="${WAVE2_APPLY_SCOPE'), fleetSrc.indexOf("SCOPE_COUNT_KEY="));
     expect(block).toMatch(/split\)\s*SCOPE=r32\s*;;/);
-    expect(block.indexOf("split) SCOPE=r32")).toBeLessThan(block.indexOf("improve|r26|r27|r28|r31|r32|r33"));
+    expect(block.indexOf("split) SCOPE=r32")).toBeLessThan(block.indexOf("improve|r26|r27|r28|r31|r32|r33|r34"));
     expect(block).not.toContain("has no apply path");
   });
 

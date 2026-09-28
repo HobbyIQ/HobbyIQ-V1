@@ -602,7 +602,10 @@ describe("the I9 re-baseline path is the artifact the workflow already uploads",
     // `counts:` block's own closing `},`) rather than anchored on `byTier:`
     // immediately following, because #2149 inserted `scopeRefusals` and
     // `scopeSamples` blocks between `counts` and `byTier` for the same trio.
-    expect(rematchSrc).toMatch(/counts:\s*\{\s*\.\.\.counts,\s*r26:\s*scopeCounts\.r26,\s*r27:\s*scopeCounts\.r27,\s*r28:\s*scopeCounts\.r28,[\s\S]*?r31:\s*scopeCounts\.r31,\s*r32:\s*scopeCounts\.r32,\s*r33:\s*scopeCounts\.r33,?\s*\},/);
+    // R34-CPA-NAME-RESOLVE (2026-09-28) added its own r34 member after r33,
+    // before the closing brace -- same "field's PRESENCE, not exact spread
+    // syntax" discipline this assertion already states for r26-r33.
+    expect(rematchSrc).toMatch(/counts:\s*\{\s*\.\.\.counts,\s*r26:\s*scopeCounts\.r26,\s*r27:\s*scopeCounts\.r27,\s*r28:\s*scopeCounts\.r28,[\s\S]*?r31:\s*scopeCounts\.r31,\s*r32:\s*scopeCounts\.r32,\s*r33:\s*scopeCounts\.r33,[\s\S]*?r34:\s*scopeCounts\.r34,?\s*\},/);
     expect(rematchSrc).toMatch(/\bbyTier:\s*Object\.fromEntries\(byTier\)/);
     const rb = readFileSync(join(repoRoot, "backend", "scripts", "rebaseline-i9-reference.cjs"), "utf8");
     expect(rb).toContain("if (!classified || j.slot === undefined || !j.counts)");

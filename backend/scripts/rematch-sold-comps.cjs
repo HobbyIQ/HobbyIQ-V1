@@ -612,6 +612,12 @@ const APPLY_KINDS = [
   // discipline as R26/R27/R28 directly above: each needs its own entry here
   // or it is invisible to every reader that walks this list.
   K.TITLE_FILLS_THE_BLANK, K.SPLIT_MOVES_TO_THE_NAMED_SIDE, K.TITLE_CARD_NUMBER_WINS,
+  // R34-CPA-NAME-RESOLVE (2026-09-28, "Fix all of baseball now"). Same
+  // discipline as the trio directly above: this list is what the banner, the
+  // per-class reconcile and the scope-failure guard all walk, so an entry
+  // missing here would make a scope=r34 apply invisible to every one of them
+  // exactly the way R31/R32/R33 were before #2149.
+  K.CPA_NAME_RESOLVE,
 ];
 
 /** The units this slot owns. */
@@ -1320,6 +1326,47 @@ async function main() {
     checklistAutoCache.set(key, out);
     return out;
   };
+  /** R34-CPA-NAME-RESOLVE (Drew, 2026-09-28). Every STRICT checklist row of
+   *  ONE (year, setKey), with the fields the resolver needs to decide a
+   *  candidate: cardNumber, playerName, printRun, parallel. ONE query per
+   *  product, cached, for the same reason `flagshipNumbers`/`checklistNames`/
+   *  `checklistAutos` above all state it: a per-row query over 16.3M rows is
+   *  not a census, it is an outage (CF-FLEET-SCRIPTS-MEASURE-THROUGHPUT-
+   *  BEFORE-DISPATCH). The prefix filter is applied by the CALLER
+   *  (`cpaInputs` below), not here, so every row of a product shares this one
+   *  cached read regardless of which insert prefix its own title names.
+   *
+   *  ONLY A STRICT CHECKLIST SOURCE MAY ANSWER, exactly as `checklistNames`
+   *  and `checklistAutos` both require -- a vendor row's playerName is the
+   *  same field, from the same title parse, this rung exists to repair, and
+   *  citing one would be citing the defect as its own cure. */
+  const checklistCpaCandidatesCache = new Map();
+  const checklistCpaCandidates = async (year, setKey, sport) => {
+    if (!sport) return [];
+    const key = `${year}|${setKey}|${sport}`;
+    if (checklistCpaCandidatesCache.has(key)) return checklistCpaCandidatesCache.get(key);
+    let out = [];
+    try {
+      const { resources } = await retry(() => cat.items.query({
+        query: `SELECT c.cardNumber, c.playerName, c.printRun, c.parallel, c.source, c.sport FROM c WHERE c.setKey = @sk AND ${yearMatch("c")} AND c.playerName > ''`,
+        parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
+      }, { maxItemCount: -1 }).fetchAll());
+      for (const r of resources ?? []) {
+        if (!K.isStrictChecklistSource(r?.source) || !rowIsSport(r, sport)) continue;
+        const cardNumber = String(r?.cardNumber ?? "").trim();
+        const playerName = String(r?.playerName ?? "").trim();
+        if (!cardNumber || !playerName) continue;
+        out.push({
+          cardNumber,
+          playerName,
+          printRun: r?.printRun ?? null,
+          parallel: r?.parallel ?? null,
+        });
+      }
+    } catch { out = []; }
+    checklistCpaCandidatesCache.set(key, out);
+    return out;
+  };
   /** S3 as a tri-state, read off the STORED identity -- the row being repaired,
    *  not a re-derivation of it:
    *    true   a strictly-sourced checklist row says this card is NOT an auto
@@ -1400,7 +1447,7 @@ async function main() {
   // its in-flight map EXACTLY as its implementation keys its value cache, so
   // the two can never disagree about what counts as the same question.
   const inFlightCells = new Map(), inFlightFlagship = new Map(), inFlightNames = new Map();
-  const inFlightAutos = new Map(), inFlightClash = new Map();
+  const inFlightAutos = new Map(), inFlightClash = new Map(), inFlightCpaCandidates = new Map();
   const productKey = (year, setKey, sport) => `${year}|${setKey}|${sport}`;
   const guardProduct = (inFlight, raw) => {
     const once = oncePerKey(inFlight, (_key, year, setKey, sport) => raw(year, setKey, sport));
@@ -1414,6 +1461,7 @@ async function main() {
   const checklistNamesOnce = guardProduct(inFlightNames, checklistNames);
   const checklistAutosOnce = guardProduct(inFlightAutos, checklistAutos);
   const clashMapOnce = guardProduct(inFlightClash, clashMap);
+  const checklistCpaCandidatesOnce = guardProduct(inFlightCpaCandidates, checklistCpaCandidates);
   /**
    * CENSUS BACKING PRELOAD (2026-09-19, corrected 2026-09-19 per review). The
    * RU-safe replacement for a per-row/per-id catalog point read. See
@@ -2268,6 +2316,138 @@ async function main() {
   };
 
   /**
+   * R34-CPA-NAME-RESOLVE's facts (Drew, 2026-09-28, "Fix all of baseball
+   * now").
+   *
+   * RUNS ON THE OPPOSITE GATE FROM EVERY OTHER RULED SCOPE ABOVE. R26/R27/
+   * R28/R31/R32/R33 all short-circuit `if (!der?.ok) return none` -- they
+   * refine a derivation that already succeeded. R34 exists FOR the rows where
+   * `deriveIdentity` failed, specifically on the one guard reason
+   * `guard:cardnumber-unparsed` (CF-UNPARSED-IS-NOT-UNNUMBERED): the title
+   * never states the alphanumeric card number, so the ordinary parser has
+   * nothing to fill `identity.cardNumber` with and the guard refuses the
+   * blank. So this function is the mirror image of `r31Inputs`/`r33Inputs`:
+   * it does its own cheap pre-gate on `der.ok === false` and `der.reasons`,
+   * never on `der.ok === true`.
+   *
+   * THE PREFIX AND THE CANDIDATES. `insertPrefixNamedInTitle` is pure string
+   * work (no catalog read) and runs first -- a title naming no registered
+   * autograph-insert words costs nothing more. Only once it names one is the
+   * checklist asked for every strictly-sourced row of THIS (year, setKey)
+   * (`checklistCpaCandidatesOnce`, one query per product, cached exactly like
+   * `checklistNamesOnce`), filtered here to the rows whose OWN cardNumber
+   * carries the resolved prefix -- so a CRA candidate list can never leak a
+   * CPA row and vice versa. An empty filtered list is the checklist's own
+   * answer that this prefix is not registered for this product/year, and
+   * `cpaNameResolveEvidence`'s P2 leg refuses on exactly that.
+   *
+   * THE RESOLVED DESTINATION'S BACKING is checked the same way every other
+   * ruled subclass's destination is: build the slug from the resolved
+   * candidate's own (year, setKey, cardNumber) and ask `checklistBacked`,
+   * never a shape proxy.
+   */
+  const cpaInputs = async (row, stored, der) => {
+    const none = {
+      titleInsertPrefix: null, cpaCandidates: [], cpaTitleParallel: null, cpaResolvedBacked: false,
+      cpaTitleNamesSiblingProduct: null,
+    };
+    // P1's cheap half, asked here so a row that is not this shape costs
+    // nothing more: `deriveIdentity` must have failed on EXACTLY
+    // `guard:cardnumber-unparsed`, never on a row that derived fine or that
+    // failed for an unrelated reason. `cpaNameResolveEvidence` re-checks this
+    // itself (P1) -- this is the pre-gate that keeps the catalog read off
+    // every row that could not qualify anyway.
+    if (der?.ok) return none;
+    const reasons = Array.isArray(der?.reasons) ? der.reasons : [];
+    if (reasons.length !== 1 || reasons[0] !== "guard:cardnumber-unparsed") return none;
+
+    const sport = deps.normalizeSportStrict(stored?.sport ?? row?.sport);
+    const year = stored?.cardYear ?? null;
+    const setKey = String(stored?.setKey ?? "").toLowerCase();
+    if (!sport || !year || !setKey) return none;
+
+    // R31'S OWN GUARD, REUSED (review finding #1, 2026-09-28). `stored.setKey`
+    // is a FIELD, not a title reading -- and this codebase's own memory
+    // documents the exact hazard by name (Bowman-family setKey mis-filings:
+    // Sapphire/Draft/Mega Box collisions). R31 (T5a) refuses a fill the
+    // instant the title names a SIBLING of the address being written to; R34
+    // fetches its candidate pool from `stored.setKey` with no equivalent
+    // check at all, so a title stating "Sapphire" or "Draft" or "Mega Box"
+    // over a row whose stored setKey is the plain `bowman-chrome` would
+    // silently resolve a Sapphire/Draft/Mega sale onto the FLAGSHIP's own
+    // checklist row -- exactly the flagship-swallows-specialization shape
+    // R26 exists to name, arriving through a door R26 never reaches (R26
+    // needs a real `derived` identity; R34 exists precisely where there is
+    // none). Reusing `titleNamesSiblingOfSetKey` rather than a second
+    // implementation keeps the one definition of "sibling" R31 already
+    // proved out -- family-ancestor aware, so "Bowman" on a `bowman-chrome`
+    // row is NOT a sibling (same family line, less specific) but "Sapphire"
+    // on a `bowman-chrome` row IS (a genuine fork).
+    const cpaTitleNamesSiblingProduct = titleNamesSiblingOfSetKey(row?.title, setKey);
+
+    const titleInsertPrefix = K.insertPrefixNamedInTitle(row?.title);
+    if (!titleInsertPrefix) return { ...none, cpaTitleNamesSiblingProduct };
+
+    const allCandidates = await checklistCpaCandidatesOnce(year, setKey, sport);
+    const prefixUpper = String(titleInsertPrefix).toUpperCase();
+    const cpaCandidates = allCandidates.filter((c) =>
+      String(c.cardNumber ?? "").toUpperCase().replace(/^#/, "").startsWith(`${prefixUpper}-`)
+      || String(c.cardNumber ?? "").toUpperCase().replace(/^#/, "").startsWith(prefixUpper));
+
+    // THE TITLE'S OWN PARALLEL AND PRINT RUN, THE SAME READERS R31 USES.
+    // Never invented: null when the title states neither.
+    const cpaTitleParallel = (() => {
+      const storedParallelBlank = K.GENERIC_PARALLELS.has(String(stored?.parallel ?? "").trim().toLowerCase());
+      if (!storedParallelBlank) return null;
+      // A pure-string best-effort read off the title using the same corpus
+      // reader R31 gates its own parallel fill with, scoped to this cell.
+      return K.VOCAB.checklistParallelForFamily ? K.VOCAB.checklistParallelForFamily(row?.title, year, setKey) : null;
+    })();
+    const titleSerial = K.VOCAB.serialFromTitle(row?.title);
+
+    // Resolve the single candidate NOW (mirroring the pure evidence function's
+    // own P3 leg) so the destination-backing read is charged only when a
+    // resolution is actually possible -- an ambiguous or empty match set costs
+    // no extra catalog read, because `cpaNameResolveEvidence` will refuse it
+    // on P3 regardless of what `cpaResolvedBacked` says.
+    const title = String(row?.title ?? "");
+    const matches = cpaCandidates.filter((c) => c.playerName && K.titleNamesCandidatePlayer(title, c.playerName));
+    let cpaResolvedBacked = false;
+    // The backing/slug read is skipped entirely when the sibling guard has
+    // already decided this row refuses -- the same "costs nothing on a row
+    // that cannot qualify anyway" discipline R31 states for its own legs.
+    if (matches.length === 1 && cpaTitleNamesSiblingProduct !== true) {
+      const resolved = matches[0];
+      // REVIEW FINDING #2 (2026-09-28): route the resolved identity through
+      // the SAME `guardSlugInputs` gate `deriveIdentity` itself calls
+      // (rematch-derive-identity.cjs:118) before EVER building a slug from
+      // it. `computeHobbyIqCardId`'s own internal throws are narrower than
+      // the guard -- they do not re-validate `playerName`/cardNumber shape
+      // the way `guardSlugInputs` does -- and this rung exists precisely
+      // because the guard already refused the row ONCE (cardnumber-unparsed);
+      // the resolved identity carries a materially different cardNumber than
+      // what was refused and deserves the same seam every other writer
+      // trusts, not a narrower one. A guard failure here is a REFUSAL (no
+      // backing lookup, no slug, `cpaResolvedBacked` stays false), never a
+      // thrown exception the caller has to catch.
+      const guard = deps.guardSlugInputs({
+        sport, year, normalizedSetKey: setKey, cardNumber: resolved.cardNumber,
+        playerName: resolved.playerName,
+      });
+      if (guard.ok) {
+        const resolvedSlug = deps.computeHobbyIqCardId({
+          sport, year, setKey, cardNumber: resolved.cardNumber,
+          parallel: resolved.parallel || "Base", isAuto: true, printRun: resolved.printRun ?? null,
+          playerName: resolved.playerName, gradeCompany: stored?.gradeCompany ?? null, gradeValue: stored?.gradeValue ?? null,
+        });
+        cpaResolvedBacked = await checklistBacked(resolvedSlug);
+      }
+    }
+
+    return { titleInsertPrefix, cpaCandidates, cpaTitleParallel, cpaResolvedBacked, titleSerial, cpaTitleNamesSiblingProduct };
+  };
+
+  /**
    * THE PER-SCOPE PREDICATE COUNTS (2026-09-13 follow-on to R26/R27/R28).
    *
    * `mode=census` must answer "how many rows would R26/R27/R28 improve" AS A
@@ -2303,7 +2483,7 @@ async function main() {
    * extra predicate evaluations per row on every apply dispatch would be pure
    * waste for a number the apply banner never prints.
    */
-  const scopeCounts = { r26: 0, r27: 0, r28: 0, r31: 0, r32: 0, r33: 0 };
+  const scopeCounts = { r26: 0, r27: 0, r28: 0, r31: 0, r32: 0, r33: 0, r34: 0 };
   // THE REFUSAL COUNTS AND SAMPLES FOR THE 2026-09-14 TRIO (R31/R32/R33).
   //
   // "Every refusal is counted and sampled" is part of the ruling, not a nicety:
@@ -2323,11 +2503,14 @@ async function main() {
     r31: "no-blank-axis-filled",
     r32: null,  // gated by splitClass at the call site instead
     r33: "title-states-no-literal-card-number",
+    // R34: a row that names no registered autograph insert prefix at all was
+    // never asking this question -- same discipline as R31/R33 above.
+    r34: "title-names-no-registered-autograph-insert",
   };
-  const scopeRefusals = { r31: 0, r32: 0, r33: 0 };
-  const scopeRefusalReasons = { r31: new Map(), r32: new Map(), r33: new Map() };
-  const scopeMoveSamples = { r31: [], r32: [], r33: [] };
-  const scopeRefuseSamples = { r31: [], r32: [], r33: [] };
+  const scopeRefusals = { r31: 0, r32: 0, r33: 0, r34: 0 };
+  const scopeRefusalReasons = { r31: new Map(), r32: new Map(), r33: new Map(), r34: new Map() };
+  const scopeMoveSamples = { r31: [], r32: [], r33: [], r34: [] };
+  const scopeRefuseSamples = { r31: [], r32: [], r33: [], r34: [] };
   const SCOPE_SAMPLE_CAP = 30;
 
   /**
@@ -3015,6 +3198,14 @@ async function main() {
         // in the one trio that had not been wired.
         ...(await r31Inputs(fresh, stored, der)),
         ...(await r33Inputs(fresh, stored, der)),
+        // R34-CPA-NAME-RESOLVE (2026-09-28), at write time -- same reason as
+        // every scope above: a gate that disagrees with itself between the
+        // census and the apply is a gate nobody can audit. Re-read off the
+        // FRESH row and the FRESH `der` (which may have started succeeding
+        // since the census if an unrelated fix landed -- `cpaInputs` itself
+        // returns `none` the moment `der.ok` is true, so that can only ever
+        // make this scope write LESS, never write something new).
+        ...(await cpaInputs(fresh, stored, der)),
         // R32 IS NOT HERE, AND THAT IS NOT AN OMISSION. `r32Inputs(row, res)`
         // needs the classify RESULT (it reads `res.splitIdentity`), so it
         // cannot be spread into the call that produces that result -- the
@@ -3105,8 +3296,50 @@ async function main() {
         continue;
       }
 
-      const target = cand.kind === K.BASE_EVICTION ? der.baseSlug : der.slug;
-      const identity = cand.kind === K.BASE_EVICTION ? der.baseIdentity : der.identity;
+      // R34-CPA-NAME-RESOLVE (2026-09-28): `der.ok` is FALSE for this kind BY
+      // CONSTRUCTION -- see the queue-time comment above `K.CPA_NAME_RESOLVE`
+      // -- so `der.slug`/`der.identity` do not exist for it. The destination
+      // is re-derived HERE, fresh off `res.derived` (the identity the
+      // write-time re-classify of `fresh` just resolved), never off the
+      // queue-time `cand.slug` -- exactly the same "re-read and re-classify
+      // decides every row" discipline every other kind already gets from
+      // `der` being recomputed above on `fresh`.
+      //
+      // REVIEW FINDING #2 (2026-09-28): route the resolved identity through
+      // `guardSlugInputs` -- the SAME gate `deriveIdentity` itself calls
+      // before EVER building a slug -- rather than relying solely on
+      // `computeHobbyIqCardId`'s narrower internal throws. A guard failure
+      // here is a REFUSAL, not a thrown exception: `cpaResolvedSlug` stays
+      // null, `target` falls through to nothing this kind can write, and
+      // the row is skipped and counted rather than crashing the worker.
+      let cpaResolved = null, cpaResolvedSlug = null;
+      if (cand.kind === K.CPA_NAME_RESOLVE) {
+        cpaResolved = res.derived;
+        const cpaGuard = cpaResolved ? deps.guardSlugInputs({
+          sport: cpaResolved.sport, year: cpaResolved.cardYear,
+          normalizedSetKey: cpaResolved.setKey, cardNumber: cpaResolved.cardNumber,
+          playerName: res.cpaNameResolveEvidence?.resolvedPlayerName ?? null,
+        }) : { ok: false, reasons: ["no-resolved-identity"] };
+        if (cpaGuard.ok) {
+          cpaResolvedSlug = deps.computeHobbyIqCardId({
+            sport: cpaResolved.sport, year: cpaResolved.cardYear, setKey: cpaResolved.setKey,
+            cardNumber: cpaResolved.cardNumber, parallel: cpaResolved.parallel, isAuto: cpaResolved.isAuto,
+            printRun: cpaResolved.printRun,
+            playerName: res.cpaNameResolveEvidence?.resolvedPlayerName ?? null,
+            gradeCompany: cpaResolved.gradeCompany, gradeValue: cpaResolved.gradeValue,
+          });
+        } else {
+          stats.skipped++; perClass[cand.kind].skipped++;
+          bump(reasons, `apply  refused:cpa-resolved-identity-failed-guard:${cpaGuard.reasons.join(",")}`);
+          continue;
+        }
+      }
+      const target = cand.kind === K.BASE_EVICTION ? der.baseSlug
+        : cand.kind === K.CPA_NAME_RESOLVE ? cpaResolvedSlug
+        : der.slug;
+      const identity = cand.kind === K.BASE_EVICTION ? der.baseIdentity
+        : cand.kind === K.CPA_NAME_RESOLVE ? cpaResolved
+        : der.identity;
       if (target === fresh.cardId) { stats.skipped++; perClass[cand.kind].skipped++; bump(reasons, "apply  already-at-target"); continue; }
 
       const keep = stripSystem(fresh);
@@ -3185,6 +3418,15 @@ async function main() {
         const e = res.titleCardNumberWinsEvidence ?? {};
         keep.rekeyedReason = `GREAT REMATCH (2026-09-14): R33-TITLE-CARD-NUMBER-WINS -- the title states a literal card number the stored address contradicts; ${e.pair}, the title's number is a row of this checklist, destination checklist-backed. Title "${e.titleQuoted}"`;
         keep.titleCardNumberWinsEvidence = e;
+      } else if (cand.kind === K.CPA_NAME_RESOLVE) {
+        // The evidence travels WITH the row for the same reason every ruled
+        // subclass above carries it: Drew must be able to read, from the row
+        // alone, exactly what was seen -- WHICH insert prefix, WHICH checklist
+        // candidate, and how many other candidates were considered and ruled
+        // out (a matchCount of 1 is what makes this safe rather than a guess).
+        const e = res.cpaNameResolveEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-28): R34-CPA-NAME-RESOLVE -- the title never states the card number; insert prefix ${e.titleInsertPrefix}, resolved to the single checklist row naming "${e.resolvedPlayerName}" (${e.matchCount} of ${e.candidateCount} candidates agreed), destination checklist-backed. Title "${e.titleQuoted}"`;
+        keep.cpaNameResolveEvidence = e;
       } else {
         keep.rekeyedReason = `GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled ${res.axes.filled.join(",")}`;
       }
@@ -3629,6 +3871,12 @@ async function main() {
       // `classifyRow` -- it gates on the split CLASS the classifier computes.
       const r31In = await r31Inputs(row, stored, der);
       const r33In = await r33Inputs(row, stored, der);
+      // R34-CPA-NAME-RESOLVE (2026-09-28). Named here for the same reason
+      // r31In/r33In are: `mode=census` hands the SAME object straight to the
+      // evidence function afterward for the per-scope predicate count, at no
+      // extra catalog-read cost. `cpaInputs` itself is the mirror-image gate
+      // (`der.ok === false` rather than true) -- see its own header.
+      const cpaIn = await cpaInputs(row, stored, der);
       const res = K.classifyRow({
         row, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: row.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
@@ -3672,13 +3920,38 @@ async function main() {
         titleParallelIsARungPhrase: r31In.titleParallelIsARungPhrase,
         titleNamesLongerRung: r31In.titleNamesLongerRung,
         titleNamesSiblingProduct: r31In.titleNamesSiblingProduct,
-        titleSerial: r31In.titleSerial,
+        // titleSerial is set ONCE, below, alongside the R34 facts -- see that
+        // comment for why r31In.titleSerial alone would be wrong here.
         titleNumberIsChecklistRow: r33In.titleNumberIsChecklistRow,
         derivedBackedR33: r33In.derivedBackedR33,
         // §3c. ONE fact, read once, shared by R31 (T5b), R33 (N1c) and the
         // plain-IMPROVE refusal -- the two helpers compute it identically, so
         // either answer is the same answer.
         titleNamesInsertSet: r31In.titleNamesInsertSet ?? r33In.titleNamesInsertSet ?? null,
+        // R34-CPA-NAME-RESOLVE (2026-09-28). Runs on the UNDERIVABLE door
+        // inside `classifyRow`, so it needs its own facts even though this is
+        // the SAME call that supplies R31/R33's -- see `cpaInputs`'s header
+        // for why its own gate is the mirror image of theirs.
+        //
+        // `titleSerial` IS OVERRIDDEN HERE, DELIBERATELY, even though R31 set
+        // it two lines above. `r31Inputs` returns `titleSerial: null` on
+        // EVERY row where `!der.ok` -- its own `none` shape -- because R31
+        // never runs there at all. R34 exists precisely on that `!der.ok`
+        // population, so taking r31In's value would hand R34 a hardcoded
+        // null and silently disable P5 (the print-run agreement leg) for
+        // every row it could ever apply to. `cpaIn.titleSerial` is the SAME
+        // reader (`VOCAB.serialFromTitle`) computed unconditionally inside
+        // `cpaInputs`, so this can never disagree with R31's answer on a row
+        // where both could apply -- they cannot, by construction, both apply
+        // to the same row (R31 requires `der.ok`, R34 requires `!der.ok`).
+        titleSerial: der?.ok ? r31In.titleSerial : cpaIn.titleSerial,
+        titleInsertPrefix: cpaIn.titleInsertPrefix,
+        cpaCandidates: cpaIn.cpaCandidates,
+        cpaTitleParallel: cpaIn.cpaTitleParallel,
+        cpaResolvedBacked: cpaIn.cpaResolvedBacked,
+        // Review finding #1 (2026-09-28): R31's own sibling-product guard,
+        // reused rather than reimplemented. See cpaInputs's own comment.
+        cpaTitleNamesSiblingProduct: cpaIn.cpaTitleNamesSiblingProduct,
       });
       counts[res.klass]++;
       // CENSUS BACKING COUNT (see CENSUS_BACKING above). notPricedFlagged
@@ -3920,6 +4193,27 @@ async function main() {
           () => `${row.id}  [${res.klass}/${res.tier}]  ${quoted}  ${row.cardId}  ->  #${r33Ev.evidence.titleNumber}`,
           () => `${row.id}  [${res.klass}/${res.tier}]  ${quoted}  ${row.cardId}  (${r33Ev.failed.join(",")})`);
 
+        // R34-CPA-NAME-RESOLVE (2026-09-28), counted the same way and for the
+        // same reason as the trio above -- asked DIRECTLY off the SAME
+        // already-gathered `cpaIn` facts, so a per-scope size can be read
+        // without arming a write. `derivationReasons` comes straight off
+        // `der.reasons` (never `res.reasons`, which by this point carries the
+        // classifier's OWN verdict strings) -- the evidence function's P1 leg
+        // needs the deriver's raw refusal, exactly as `cpaInputs`'s pre-gate
+        // reads it.
+        const r34Ev = K.cpaNameResolveEvidence({
+          row, stored, derivationReasons: der.reasons,
+          titleInsertPrefix: cpaIn.titleInsertPrefix,
+          candidates: cpaIn.cpaCandidates,
+          titleSerial: cpaIn.titleSerial,
+          titleParallel: cpaIn.cpaTitleParallel,
+          resolvedBacked: cpaIn.cpaResolvedBacked,
+          titleNamesSiblingProduct: cpaIn.cpaTitleNamesSiblingProduct,
+        });
+        scopeTally("r34", r34Ev,
+          () => `${row.id}  [${res.klass}/${res.tier}]  ${quoted}  ${row.cardId}  ->  ${r34Ev.evidence.resolvedCardNumber}/${r34Ev.evidence.resolvedPlayerName}`,
+          () => `${row.id}  [${res.klass}/${res.tier}]  ${quoted}  ${row.cardId}  (${r34Ev.failed.join(",")})`);
+
         // R32 is asked ONLY for a HIQ-SPLIT row -- its own entry test, applied
         // here rather than through SCOPE_ENTRY_FAILURES because it also gates
         // the two catalog reads its evidence needs.
@@ -4126,6 +4420,43 @@ async function main() {
             // ruling -- so it must fall through to the refusal below rather
             // than be given a destination it was never ruled to have.
             queueCandidate({ kind, row, stored, slug: der.slug, identity: der.identity });
+          } else if (kind === K.CPA_NAME_RESOLVE) {
+            // R34-CPA-NAME-RESOLVE (2026-09-28). UNLIKE every other kind
+            // above, `der.ok` is FALSE for this row by construction -- this
+            // rung exists precisely for the rows `deriveIdentity` could not
+            // derive at all (`guard:cardnumber-unparsed`). So there is no
+            // `der.slug`/`der.identity` to read; the destination is the
+            // identity `classifyRow` itself resolved and attached to the
+            // result as `res.derived` (stored fields with the checklist's
+            // OWN resolved cardNumber substituted in). The slug is built
+            // from that identity the same way `deriveIdentity` builds every
+            // other slug, through the one shared seam.
+            //
+            // REVIEW FINDING #2 (2026-09-28): `guardSlugInputs` first, the
+            // SAME gate `deriveIdentity` calls before ever building a slug --
+            // not just `computeHobbyIqCardId`'s narrower internal throws. A
+            // guard failure here means the candidate is never queued at all
+            // (counted as a refusal, same as any other armed-but-refused
+            // row), never a thrown exception.
+            const resolvedIdentity = res.derived;
+            const cpaQueueGuard = resolvedIdentity ? deps.guardSlugInputs({
+              sport: resolvedIdentity.sport, year: resolvedIdentity.cardYear,
+              normalizedSetKey: resolvedIdentity.setKey, cardNumber: resolvedIdentity.cardNumber,
+              playerName: res.cpaNameResolveEvidence?.resolvedPlayerName ?? null,
+            }) : { ok: false, reasons: ["no-resolved-identity"] };
+            if (cpaQueueGuard.ok) {
+              const resolvedSlug = deps.computeHobbyIqCardId({
+                sport: resolvedIdentity.sport, year: resolvedIdentity.cardYear,
+                setKey: resolvedIdentity.setKey, cardNumber: resolvedIdentity.cardNumber,
+                parallel: resolvedIdentity.parallel, isAuto: resolvedIdentity.isAuto,
+                printRun: resolvedIdentity.printRun,
+                playerName: res.cpaNameResolveEvidence?.resolvedPlayerName ?? null,
+                gradeCompany: resolvedIdentity.gradeCompany, gradeValue: resolvedIdentity.gradeValue,
+              });
+              queueCandidate({ kind, row, stored, slug: resolvedSlug, identity: resolvedIdentity });
+            } else {
+              bump(reasons, `apply  refused:cpa-resolved-identity-failed-guard:${cpaQueueGuard.reasons.join(",")}`);
+            }
           } else if (kind === K.IMPROVE) {
             queueCandidate({ kind: K.IMPROVE, row, stored, slug: der.slug, identity: der.identity });
           } else if (kind === K.BASE_EVICTION) {
@@ -4518,6 +4849,7 @@ async function main() {
     console.warn(`    counts.r31 (R31-TITLE-FILLS-THE-BLANK)             ${f(scopeCounts.r31)}  refused ${f(scopeRefusals.r31)}`);
     console.warn(`    counts.r32 (R32-SPLIT-MOVES-TO-THE-NAMED-SIDE)     ${f(scopeCounts.r32)}  refused ${f(scopeRefusals.r32)}`);
     console.warn(`    counts.r33 (R33-TITLE-CARD-NUMBER-WINS)            ${f(scopeCounts.r33)}  refused ${f(scopeRefusals.r33)}`);
+    console.warn(`    counts.r34 (R34-CPA-NAME-RESOLVE)                  ${f(scopeCounts.r34)}  refused ${f(scopeRefusals.r34)}`);
   }
   // SPLIT-IDENTITY: reported as its own block, not as a class. A split row
   // has already been counted under whichever derivation class it landed in;
@@ -4768,6 +5100,8 @@ async function main() {
       // wave2-fleet.sh reads `counts.<scope>` verbatim for every ruled scope
       // and needs no per-scope special case at all.
       r31: scopeCounts.r31, r32: scopeCounts.r32, r33: scopeCounts.r33,
+      // R34-CPA-NAME-RESOLVE (2026-09-28). Same key shape, same reason.
+      r34: scopeCounts.r34,
     },
     // THE PER-SCOPE REFUSALS FOR THE 2026-09-14 TRIO, beside `counts` rather
     // than inside it: `counts.<scope>` is what the fleet gate reads and it
@@ -4778,11 +5112,13 @@ async function main() {
       r31: { refused: scopeRefusals.r31, byLeg: Object.fromEntries(scopeRefusalReasons.r31) },
       r32: { refused: scopeRefusals.r32, byLeg: Object.fromEntries(scopeRefusalReasons.r32) },
       r33: { refused: scopeRefusals.r33, byLeg: Object.fromEntries(scopeRefusalReasons.r33) },
+      r34: { refused: scopeRefusals.r34, byLeg: Object.fromEntries(scopeRefusalReasons.r34) },
     },
     scopeSamples: {
       r31: { move: scopeMoveSamples.r31, refuse: scopeRefuseSamples.r31 },
       r32: { move: scopeMoveSamples.r32, refuse: scopeRefuseSamples.r32 },
       r33: { move: scopeMoveSamples.r33, refuse: scopeRefuseSamples.r33 },
+      r34: { move: scopeMoveSamples.r34, refuse: scopeRefuseSamples.r34 },
     },
     byTier: Object.fromEntries(byTier), defects: Object.fromEntries(defects),
     // Subclass counts are INCLUDED in `counts` -- BASE-EVICTION is a narrowing

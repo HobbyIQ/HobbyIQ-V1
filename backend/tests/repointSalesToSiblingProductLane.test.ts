@@ -677,16 +677,29 @@ const nextEtag = () => `"etag-${++etagCounter}"`;
 function shim(opts: {
   catalog?: Array<Record<string, unknown>>;
   sales?: Array<Record<string, unknown>>;
+  // Test-only knob (mirrors repointSalesIsAutoFlip.test.ts's own hook): the
+  // FIRST time the sales scan serves the row at this exact key ("id::cardId"),
+  // its `_etag` in the STORE (never the snapshot handed to the scan) is
+  // silently bumped right after being served -- simulating a concurrent
+  // write landing on the OLD address between this lane's own scan and its
+  // later collapse-path re-read (the `freshAtOldAddress` guard). The re-read
+  // then sees a document whose etag no longer matches the `sale` object the
+  // per-row loop is holding, exactly the race `stale-since-plan` exists to
+  // catch.
+  mutateEtagAfterReadOfKey?: string;
 } = {}): { requirePath: string; ledger: string } {
   const ledger = path.join(tmp, `ledger-${Math.random().toString(36).slice(2)}.json`);
   const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
   const catalog = (opts.catalog ?? []).map((d) => ({ ...d }));
   const sales = (opts.sales ?? []).map((d) => ({ ...d, _etag: d._etag ?? nextEtag() }));
+  const mutateEtagAfterReadOfKey = opts.mutateEtagAfterReadOfKey ?? null;
 
   fs.writeFileSync(p, `
 const Module = require("node:module");
 const fs = require("node:fs");
 const LEDGER = ${JSON.stringify(ledger)};
+const MUTATE_ETAG_AFTER_READ_OF_KEY = ${JSON.stringify(mutateEtagAfterReadOfKey)};
+let mutateEtagArmed = MUTATE_ETAG_AFTER_READ_OF_KEY !== null;
 
 const salesKey = (id, cardId) => id + "::" + cardId;
 const state = {
@@ -750,6 +763,7 @@ function makeContainer(name, store, onUpsert, onDelete, onPatch, keyOf) {
         const params = Object.fromEntries((spec.parameters ?? []).map((x) => [x.name, x.value]));
         const all = [...store.values()];
         let resources;
+        let isSalesScan = false;
         if (name === "card_catalog" && q.includes("STARTSWITH(c.id, @prefix)")) {
           const prefix = params["@prefix"];
           resources = all.filter((d) =>
@@ -759,14 +773,35 @@ function makeContainer(name, store, onUpsert, onDelete, onPatch, keyOf) {
         } else if (name === "sold_comps" && q.includes("STARTSWITH(c.hobbyiqCardId, @p)")) {
           const prefix = params["@p"];
           resources = all.filter((d) => String(d.hobbyiqCardId ?? "").startsWith(prefix));
+          isSalesScan = true;
         } else if (name === "sold_comps" && q.includes("c.id = @id AND c.cardId = @pk")) {
           resources = all.filter((d) => d.id === params["@id"] && d.cardId === params["@pk"]);
         } else {
           throw new Error("fake " + name + ": unsupported query " + q);
         }
+        // Snapshot BEFORE any mutation below -- 'resources' holds references
+        // into the live store, so the clone must happen first, or the
+        // "concurrent write" this hook simulates would leak into the very
+        // snapshot the caller goes on to compare against (defeating the
+        // etag-mismatch it exists to prove).
+        const snapshot = resources.map((r) => structuredClone(r));
+        // Mutates the STORE's row -- NOT the snapshot just captured above --
+        // the instant the sales scan serves it, simulating a concurrent
+        // write landing on that address between this lane's own scan and its
+        // later re-read/write of the same row (see mutateEtagAfterReadOfKey).
+        if (isSalesScan && mutateEtagArmed) {
+          for (const r of resources) {
+            if (MUTATE_ETAG_AFTER_READ_OF_KEY === salesKey(r.id, r.cardId)) {
+              mutateEtagArmed = false;
+              const stored = store.get(salesKey(r.id, r.cardId));
+              if (stored) bumpEtag(stored);
+              break;
+            }
+          }
+        }
         return {
-          fetchNext: async () => ({ resources: resources.map((r) => structuredClone(r)), continuationToken: undefined }),
-          fetchAll: async () => ({ resources: resources.map((r) => structuredClone(r)) }),
+          fetchNext: async () => ({ resources: snapshot, continuationToken: undefined }),
+          fetchAll: async () => ({ resources: snapshot }),
         };
       },
     },
@@ -1013,6 +1048,64 @@ describe("repoint-sales-to-sibling-product -- every refusal class, end to end", 
       expect(r.led.salesPatches.length, JSON.stringify(over)).toBe(0);
       expect(num(r.out, re), JSON.stringify(over)).toBe(1);
     }
+  });
+});
+
+// ── SELF-COLLAPSE FIX (2026-09-28 incident, PR #2488): the isauto-flip lane's
+// bare-delete collapse deleted a row's ONLY copy when the row already
+// physically resided at the address `residentAt` was about to read back as
+// "the resident". This lane's own `relocate` shape derives `plan.newCardId`
+// by rewriting `sale.cardId`'s OWN setKey segment (withProductSetKey), and
+// `classifySaleForSiblingMove`'s gate REQUIRES `cardId === fromSlug` for
+// EVERY relocate shape -- so `newCardId` (segment 3 rewritten from `from` to
+// `to`) can never equal `sale.cardId` here, because a sibling pair's `from`
+// and `to` are never equal. The base mode's relocate branch is therefore
+// structurally immune to the self-collapse shape; the guard below is kept as
+// belt-and-suspenders (dead code is cheaper than a live incident), and the
+// GENUINE risk -- MODE=by-player, where the destination is a checklist row's
+// own id, independent of `sale.cardId` -- has its own dedicated describe
+// block further down.
+describe("repoint-sales-to-sibling-product -- self-collapse guard (belt-and-suspenders; base mode's gate already excludes this shape)", () => {
+  it("a GENUINE distinct twin still collapses -- only the non-destination copy is deleted, the destination survivor verified", () => {
+    // Two PHYSICALLY DIFFERENT documents (different cardId => different
+    // partition key): the FROM-side copy at FROM_HIQ, and a proven-same-sale
+    // resident already sitting at TO_HIQ.
+    const resident = { ...SALE(), cardId: TO_HIQ, hobbyiqCardId: TO_HIQ };
+    const r = drive(
+      { SCOPE, SET_KEYS: PAIR, BACKFILL_APPLY: "true" },
+      { catalog: [TO_ROW()], sales: [SALE(), resident] },
+    );
+    expect(r.code, r.out).toBe(0);
+    expect(num(r.out, /COLLAPSED onto a resident \(same sale, by hash\)\s+([\d,]+)/)).toBe(1);
+    // Only the FROM-side copy (id="s1", cardId=FROM_HIQ) is deleted; the
+    // collapse now goes through relocateSoldComp's own upsert-verify-delete
+    // order (never a bare delete), so the destination address is re-upserted
+    // (healed to the same content) before the FROM-side row is removed.
+    expect(r.led.salesDeletes).toContain("s1");
+    expect(r.led.salesUpserts).toContain("s1");
+  });
+
+  it("the OLD address changing (etag) between the scan and the collapse write refuses via stale-since-plan, zero writes", () => {
+    // A genuine distinct twin (the collapse shape), but the FROM-side row's
+    // stored _etag is bumped the instant the sales scan serves it -- so by
+    // the time the collapse branch's own re-read of the OLD address runs,
+    // it disagrees with the `sale` object the per-row loop scanned. The
+    // fix's last-line defence must refuse rather than force-delete on data
+    // that no longer describes the source.
+    const resident = { ...SALE(), cardId: TO_HIQ, hobbyiqCardId: TO_HIQ };
+    const r = drive(
+      { SCOPE, SET_KEYS: PAIR, BACKFILL_APPLY: "true" },
+      {
+        catalog: [TO_ROW()],
+        sales: [SALE(), resident],
+        mutateEtagAfterReadOfKey: `s1::${FROM_HIQ}`,
+      },
+    );
+    expect(r.code, r.out).toBe(0);
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(num(r.out, /COLLAPSED onto a resident \(same sale, by hash\)\s+([\d,]+)/)).toBe(0);
+    expect(num(r.out, /REFUSED: stale-since-plan\s+([\d,]+)/)).toBe(1);
   });
 });
 
@@ -1377,6 +1470,65 @@ describe("repoint-sales-to-sibling-product MODE=by-player -- end to end, the Oht
     expect(apply.code).toBe(0);
     expect(num(report.out, /WOULD RELOCATE\s+([\d,]+)/)).toBe(num(apply.out, /RELOCATED\s+([\d,]+)/));
     expect(num(report.out, /sales scanned\s+([\d,]+)/)).toBe(num(apply.out, /sales scanned\s+([\d,]+)/));
+  });
+});
+
+// ── SELF-COLLAPSE GUARD, MODE=by-player (2026-09-28 incident, PR #2488): the
+// PR body originally flagged this mode's destination (`newHiq`, a checklist
+// row's own id, independent of `sale.cardId`) as an OPEN, unguarded risk --
+// the concern being that a checklist row's slug could coincidentally equal
+// the sale's own current address (`fromSlug`), reproducing the isauto-flip
+// bare-delete shape.
+//
+// Investigating the actual code closes that risk a SECOND, independent way:
+// `card_catalog` is a flat id-keyed store, so if a sibling checklist row's
+// `id` really does equal `fromSlug`, gate 1's OWN point read --
+// `catalogRowAt(fromSlug)` -- resolves to that EXACT SAME document (same id,
+// same store) and, since the row is checklist-authority (a precondition for
+// it ever reaching `siblingRowsBySetKey` at all), fires `already-checklist-
+// backed` and refuses BEFORE the move logic -- and thus this fix's own
+// same-partition guard -- ever runs. The coincidence gate 1 is worried about
+// and the coincidence this guard is worried about are the SAME coincidence,
+// caught earlier by an independent, pre-existing gate. The patch-in-place
+// guard below is kept anyway (belt-and-suspenders; the base mode's own
+// isauto-flip precedent treats "provably unreachable, cheap to guard" as
+// worth guarding), but no fixture in this file can DRIVE it through gate 1 --
+// doing so would require a checklist-authority row sitting at the sale's own
+// address, which gate 1 was already written to catch.
+describe("repoint-sales-to-sibling-product MODE=by-player -- self-collapse guard (belt-and-suspenders; gate 1's own point-read already excludes this shape)", () => {
+  const BP_SCOPE = `${BP_SPORT}:${BP_YEAR}`;
+  // A checklist row whose id COINCIDENTALLY equals the sale's own current
+  // address (fromSlug) -- the exact shape the PR body's open risk described.
+  const collidingSiblingRow = BP_SIBLING_ROW({ id: BP_FROM_HIQ, cardId: BP_FROM_HIQ });
+
+  it("is caught by gate 1 (already-checklist-backed) BEFORE the move logic -- proves the coincidence never reaches the collapse branch", () => {
+    const collidingSale = BP_SALE({ cardId: BP_FROM_HIQ, hobbyiqCardId: BP_FROM_HIQ });
+    const r = drive(
+      { SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: BP_FROM, BACKFILL_APPLY: "true" },
+      { catalog: [BP_FROM_ROW(), collidingSiblingRow], sales: [collidingSale] },
+    );
+    expect(r.code, r.out).toBe(0);
+    // Nothing is ever written -- not a delete, not an upsert, not a patch --
+    // because gate 1 refuses before any write path is reached.
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.led.salesPatches.length).toBe(0);
+    expect(num(r.out, /REFUSED: already-checklist-backed\s+([\d,]+)/)).toBe(1);
+    expect(num(r.out, /RELOCATED\s+([\d,]+)/)).toBe(0);
+    expect(num(r.out, /COLLAPSED onto a resident\s+([\d,]+)/)).toBe(0);
+  });
+
+  it("a GENUINE distinct twin (checklist row id differs from the sale's address) still collapses normally", () => {
+    // The ordinary happy path (BP_SIBLING_ROW at its own BP_SIBLING_HIQ
+    // address) -- confirms the fix did not disturb the everyday move.
+    const r = drive(
+      { SCOPE: BP_SCOPE, MODE: "by-player", SET_KEYS: BP_FROM, BACKFILL_APPLY: "true" },
+      { catalog: [BP_FROM_ROW(), BP_FROM_DERIVED_ROW(), BP_SIBLING_ROW()], sales: [BP_SALE()] },
+    );
+    expect(r.code, r.out).toBe(0);
+    expect(r.led.salesUpserts).toContain("bp1");
+    expect(r.led.salesDeletes).toContain("bp1");
+    expect(num(r.out, /RELOCATED\s+([\d,]+)/)).toBe(1);
   });
 });
 

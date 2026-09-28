@@ -45,6 +45,29 @@
  *       (catalogAuthorityOf(row.source) === "checklist") -- "present is not
  *       checklist-grade", exactly repoint-sales-by-list.cjs's own gate 1/2 --
  *       REFUSED (no-catalog-row) / REFUSED (not-checklist-grade) otherwise.
+ *   (a') KEEPER NAME AGREEMENT (PR #2490 review,
+ *       https://github.com/HobbyIQ/HobbyIQ-V1/pull/2490#issuecomment-5871669672).
+ *       The keeper's OWN stored sale (its `title`, `playerName` field only as
+ *       a fallback) must NAME the keeper's own catalog row's `playerName`
+ *       (`titleNamesPlayer`, lib/name-agreement.cjs -- a containment check
+ *       built for exactly this shape: a free-text listing title against a
+ *       bare checklist playerName, where repoint-sales-by-list.cjs's own
+ *       GATE 6 whole-string `namesAgree` would false-refuse almost every
+ *       genuinely correct keeper, with the SAME stripTrailingTokens
+ *       vocabulary built from the keeper row's own year/setKey checklist
+ *       parallel names). "A checklist row proves the ROW, the player name
+ *       proves the SALE": gate (a) above proves keepCardId is a real,
+ *       settled, checklist-attested address; this gate proves the sale
+ *       actually sitting there is that address's own sale, not a different
+ *       sale a bare #cardNumber collision minted as a false keeper (measured:
+ *       118/190 cross-sport and 3/30 same-sport entries in the reviewed
+ *       hockey:2025 list). REFUSED (keeper-name-disagrees) — a SEPARATE
+ *       bucket from gate (c)'s own content-differs, because this gate
+ *       compares the keeper against ITS OWN catalog row, never against the
+ *       stray. This re-checks the SAME test the generator itself now applies
+ *       (census-sold-comp-copies.cjs) so a stale list committed before that
+ *       fix, or a hand-built one, cannot delete through here either -- the
+ *       reconcile line stays exact either way.
  *   (b) POINT-READ THE STRAY at (saleId, deleteCardId). Absent is not a
  *       failure: another lane (or this one's own earlier pass) may already
  *       have removed it -- SKIPPED (already-gone), counted, never retried
@@ -110,6 +133,15 @@ const backend = path.resolve(__dirname, "..");
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { withBackoff } = require(path.join(__dirname, "lib", "cosmos-backoff.cjs"));
 const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
+const { titleNamesPlayer, firstNonBlank } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
+// checklistParallelNamesFor is a scripts/lib module (reads the checklist
+// corpus JSON directly, no dist/ and no Cosmos) -- the SAME vocabulary
+// repoint-sales-by-list.cjs's own GATE 6 builds for its destination, and
+// census-sold-comp-copies.cjs's own generator now builds for its keeper
+// candidates. Required at top level for the same reason every sibling list
+// lane requires its own dist/-free libs there: this module must load with no
+// built tree.
+const { checklistParallelNamesFor } = require(path.join(__dirname, "lib", "rematch-finish-vocab.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
@@ -173,6 +205,75 @@ const IDENTITY_FIELDS = [
 /** Does an error carry a Cosmos 404? */
 function is404(e) {
   return e?.code === 404 || e?.statusCode === 404;
+}
+
+// ── CF-COLLISION-IS-NOT-A-DUPLICATE, THE PLAYER-NAME GATE AT WRITE TIME ────
+//
+// PR #2490 review (https://github.com/HobbyIQ/HobbyIQ-V1/pull/2490#issuecomment-5871669672):
+// the generator's own "address-coherent + checklist-grade" keeper selection
+// missed a bare #cardNumber collision naming a completely different player
+// than the sale's own title -- 118/190 cross-sport entries and 3/30
+// same-sport entries in the reviewed hockey:2025 list. The generator fix
+// (census-sold-comp-copies.cjs) closes the hole where entries are MINTED; a
+// STALE list committed before that fix (or hand-edited) must not be able to
+// delete through this lane anyway, so the identical check runs again here,
+// at the delete call, gated fresh per row like every other gate in this
+// file -- never trusting the list's own say-so, the same posture GATE (c)'s
+// own content-identity re-derivation already takes.
+//
+// Vocabulary built once per (year, setKey) and cached, mirroring
+// repoint-sales-by-list.cjs's own `stripVocabularyForDestination` (kept as a
+// separate copy, not a shared import: this lane, like that one and the
+// generator, must stay loadable with no built tree).
+const _stripVocabCache = new Map();
+const COLOUR_PREFIX_FAMILY_RE = /^([a-z][a-z'-]*)\s+(refractor|prizm)s?$/i;
+const BARE_FAMILY_WORDS = ["Refractor", "Prizm", "Parallel"];
+
+function stripVocabularyForKeeper(catalogRow) {
+  const year = catalogRow?.year ?? catalogRow?.cardYear ?? null;
+  const setKey = String(catalogRow?.setKey ?? "").trim();
+  const cacheKey = `${year}|${setKey.toLowerCase()}`;
+  if (_stripVocabCache.has(cacheKey)) return _stripVocabCache.get(cacheKey);
+
+  let names = null;
+  try { names = setKey ? checklistParallelNamesFor(year, setKey) : null; }
+  catch { names = null; }
+  const tokens = new Set();
+  if (names) {
+    for (const name of names) {
+      const trimmed = String(name ?? "").trim();
+      if (!trimmed) continue;
+      tokens.add(trimmed);
+      const m = trimmed.match(COLOUR_PREFIX_FAMILY_RE);
+      if (m) tokens.add(m[1]);
+    }
+  }
+  for (const w of BARE_FAMILY_WORDS) tokens.add(w);
+
+  const result = [...tokens];
+  _stripVocabCache.set(cacheKey, result);
+  return result;
+}
+
+/**
+ * Does the KEEPER's own stored sale (its `title`, `playerName` field only as
+ * a fallback) name its OWN catalog row's playerName? `titleNamesPlayer`
+ * (lib/name-agreement.cjs) is the shared containment check built for this
+ * exact shape -- a free-text listing title against a bare checklist
+ * playerName, where a strict `namesAgree` whole-string fold would
+ * false-refuse almost every genuinely correct keeper (a title carries year,
+ * set, parallel and grade text a bare name never does) while still refusing
+ * the real collisions PR #2490 found. The SAME check
+ * census-sold-comp-copies.cjs's own generator runs -- reused here, never
+ * reimplemented: "a checklist row proves the ROW, the player name proves the
+ * SALE".
+ */
+function keeperNameAgreesWithSale(keeperSale, catalogRow) {
+  const saleName = firstNonBlank(keeperSale?.title, keeperSale?.playerName);
+  const keeperName = String(catalogRow?.playerName ?? "");
+  if (!saleName || !keeperName) return false;
+  const strip = stripVocabularyForKeeper(catalogRow);
+  return titleNamesPlayer(saleName, keeperName, { stripTrailingTokens: strip });
 }
 
 async function main() {
@@ -246,6 +347,7 @@ async function main() {
   let deleted = 0;
   let skippedAlreadyGone = 0;
   let refusedNoKeeper = 0, refusedKeeperNotSettled = 0, refusedNoCatalogRow = 0, refusedNotChecklistGrade = 0;
+  let refusedKeeperNameDisagrees = 0;
   let refusedContentDiffers = 0, refusedSameId = 0;
   let failed = 0;
   let entriesFailedToClassify = 0;
@@ -345,6 +447,24 @@ async function main() {
       refusedNotChecklistGrade++;
       console.error(`      REFUSED (not-checklist-grade): keepCardId's row authority is "${keeperAuthority}", not checklist — present is not checklist-grade`);
       emitPlanRow({ action: "refused", reason: "not-checklist-grade", saleId, keepCardId, deleteCardId, authority: keeperAuthority });
+      continue;
+    }
+
+    // ── GATE (a'): CF-COLLISION-IS-NOT-A-DUPLICATE (PR #2490 review). The
+    // keeper's own stored sale (its title, playerName field as fallback)
+    // must NAME the keeper catalog row's player -- "a checklist row proves
+    // the ROW, the player name proves the SALE". A stale list minted by the
+    // generator's own pre-fix defect (or a hand-built one) is refused here
+    // exactly the same way, never allowed to delete through on the list's
+    // say-so alone. This is a SEPARATE refusal bucket from content-differs
+    // (GATE (c) below, which compares the keeper against the STRAY) -- this
+    // one compares the keeper against ITS OWN catalog row.
+    if (!keeperNameAgreesWithSale(keeper, keeperCatalogRow)) {
+      refusedKeeperNameDisagrees++;
+      const saleName = firstNonBlank(keeper.title, keeper.playerName);
+      const keeperName = String(keeperCatalogRow.playerName ?? "");
+      console.error(`      REFUSED (keeper-name-disagrees): keeper's own sale "${saleName.slice(0, 60)}" vs its catalog row's player "${keeperName.slice(0, 60)}" — a #cardNumber collision, not a duplicate`);
+      emitPlanRow({ action: "refused", reason: "keeper-name-disagrees", saleId, keepCardId, deleteCardId, saleName, keeperName });
       continue;
     }
 
@@ -465,6 +585,7 @@ async function main() {
   console.log(`  REFUSED: keeper-not-settled   ${f(refusedKeeperNotSettled)}`);
   console.log(`  REFUSED: no-catalog-row       ${f(refusedNoCatalogRow)}`);
   console.log(`  REFUSED: not-checklist-grade  ${f(refusedNotChecklistGrade)}`);
+  console.log(`  REFUSED: keeper-name-disagrees ${f(refusedKeeperNameDisagrees)}`);
   console.log(`  REFUSED: content-differs      ${f(refusedContentDiffers)}`);
   console.log(`  REFUSED: same-id              ${f(refusedSameId)}`);
   console.log(`  FAILED                        ${f(failed)}`);
@@ -480,7 +601,7 @@ async function main() {
   // skipped(already-gone), refused(by reason), failed, malformed,
   // not-reached }.
   const refused = refusedNoKeeper + refusedKeeperNotSettled + refusedNoCatalogRow
-    + refusedNotChecklistGrade + refusedContentDiffers + refusedSameId;
+    + refusedNotChecklistGrade + refusedKeeperNameDisagrees + refusedContentDiffers + refusedSameId;
   const accounted = deleted + skippedAlreadyGone + refused + failed + entriesFailedToClassify + notReached;
   const intended = entries.length;
 
@@ -521,7 +642,7 @@ async function main() {
   return { client, budget: CLOCK };
 }
 
-module.exports = { classifyEntry, APPLY, SCOPE_ERROR, IDENTITY_FIELDS };
+module.exports = { classifyEntry, APPLY, SCOPE_ERROR, IDENTITY_FIELDS, keeperNameAgreesWithSale, stripVocabularyForKeeper };
 
 if (require.main === module) {
   main()

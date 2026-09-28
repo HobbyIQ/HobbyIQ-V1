@@ -501,6 +501,9 @@ ${line}
     //   9. R28-FINISH-IS-A-PARALLEL (Drew, 2026-09-13) — CONFLICT path.
     //   10. R33-TITLE-CARD-NUMBER-WINS (Drew, 2026-09-14, #2149) — CONFLICT
     //       path, the cardNumber-axis door.
+    //   11. R34-CPA-NAME-RESOLVE (Drew, 2026-09-28) — the UNDERIVABLE path,
+    //       the `!derived` door: a genuinely new branch, exactly like R33's
+    //       CONFLICT-path door, so it adds a call site the same way R33 did.
     //
     // R31-TITLE-FILLS-THE-BLANK and R32-SPLIT-MOVES-TO-THE-NAMED-SIDE (the
     // other two members of the 2026-09-14 trio) are NOT extra call sites, by
@@ -510,9 +513,9 @@ ${line}
     // (see titleFillsTheBlankEvidence's call site), and R32 delegates its
     // whole verdict to lib/split-scope.cjs's classifySplitScope rather than
     // reaching this gate at all (see SPLIT_MOVES_TO_THE_NAMED_SIDE's header:
-    // "R32 CALLS THAT MODULE rather than restating its logic"). Only R33
-    // opens a genuinely new branch on the CONFLICT path, so only R33 adds a
-    // call site.
+    // "R32 CALLS THAT MODULE rather than restating its logic"). R33 and R34
+    // each open a genuinely new branch (CONFLICT and UNDERIVABLE respectively),
+    // so each adds its own call site.
     //
     // The NUMBER is incidental; the invariant is that it equals the number of
     // arms that reach this gate fresh, and that the definition stays
@@ -524,7 +527,7 @@ ${line}
     // `const refusals = ` is what distinguishes a call from the
     // `function allImproveRefusals({` declaration, which contains the same
     // characters.
-    expect(src.split("const refusals = allImproveRefusals({").length - 1).toBe(10);
+    expect(src.split("const refusals = allImproveRefusals({").length - 1).toBe(11);
     expect(src.split("function allImproveRefusals").length - 1).toBe(1);
   });
 
@@ -944,7 +947,13 @@ describe("SLUG CASE — the re-keyed row must land BYTE-EQUAL on the checklist r
     const runner = readFileSync(
       new URL("../scripts/rematch-sold-comps.cjs", import.meta.url), "utf8",
     );
-    expect(runner).toContain("const target = cand.kind === K.BASE_EVICTION ? der.baseSlug : der.slug;");
+    // R34-CPA-NAME-RESOLVE (2026-09-28) extended this to a third branch --
+    // `der.ok` is FALSE for that kind by construction, so its slug is
+    // re-derived from `res.derived` rather than read off `der` -- but the
+    // invariant this test exists to pin is unchanged: ONE `target` binding
+    // feeds BOTH id fields, never two separately-built strings.
+    expect(runner).toMatch(/const target = cand\.kind === K\.BASE_EVICTION \? der\.baseSlug[\s\S]{0,120}: der\.slug;/);
+    expect(runner).toContain("cand.kind === K.CPA_NAME_RESOLVE ? cpaResolvedSlug");
     expect(runner).toContain("keep.cardId = target;");
     expect(runner).toContain("keep.hobbyiqCardId = target;");
     // both fields from ONE binding — never two separately-built strings

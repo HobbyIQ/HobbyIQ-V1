@@ -1,0 +1,72 @@
+{
+ "generatedAt": "2026-09-28T15:05:32.597Z",
+ "forLane": "repoint-sales-by-list",
+ "finding": "Dedupe-by-list keeper audit (2026-09-28, C:/tmp/dedupeaudit_141758/ALL-GENUINE-COLLISIONS.ndjson, 213 rows / 204 unique saleIds after removing 9 exact-duplicate audit rows) found 213 sold_comps sales resident (confirmed by point-read, cardId===keepCardId, all 204/204) at a bare-cardNumber-collision address of an UNRELATED product -- the 09-26/27 isAuto-flip dedupe-by-list lists (fb2025-isauto-strays, bb2026-isauto-strays) picked their keeper by bare card-number match with no player check, and a vendor insert card number (an alphanumeric prefix like RRA-AM, RA-TW, BPA-SH, BSA-IC, or a wholly different-product number like 1991 Topps Autograph Insert #91B2-CB) collided with a plain numeric card slot in an unrelated flagship base/parallel product. Every sale here re-derives from its OWN title via the real deriver (parseListingIdentity + computeHobbyIqCardId, scripts/lib/rematch-derive-identity.cjs -- the identical wiring rematch-sold-comps.cjs itself uses from dist/). Of 204 unique sales: 4 re-derive to an EXISTING checklist-grade card_catalog row whose playerName namesAgree()s with the sale -- this list. The remaining 101 re-derive to a product/number the catalog does not carry at all (PARK, see the companion pool-relocations park list) and 99 either fail to re-derive a card number/setKey from the title at all, or land on an EXISTING checklist-grade row for a DIFFERENT player (a genuine same-product card-number collision inside the derived destination itself, e.g. 2025 Score Rookie Signatures vs 2025 Score base sharing a card number) -- both flagged needsRuling in the sidecar, never guessed.",
+ "rulings": [
+  "CF-A-BARE-CARDNUMBER-COLLISION-IS-NOT-A-DUPLICATE (audit 2026-09-28). The 09-26/27 isAuto-flip dedupe-by-list lists (fb2025-isauto-strays, bb2026-isauto-strays) folded a vendor sale onto whatever card_catalog row shared its bare numeric cardNumber, with no player check at the time. Where the number collided across two UNRELATED products (an insert set number vs a flagship base slot), the fold moved the sale to the WRONG catalog row. This list repoints those 4 sales OFF their current isauto-strays keeper address and ONTO the checklist-grade row their own title actually derives, namesAgree-confirmed.",
+  "allowCrossProduct is true on every entry: fromId and toId disagree on cardNumber (and 3 of 4 on isAuto) by construction -- that disagreement IS the bare-cardNumber collision this list exists to fix. sport/year/setKey (module: the product family) agree on every entry."
+ ],
+ "crossProductRuling": "bare-cardNumber collision carried by the 09-26/27 isAuto flip; audit 2026-09-28",
+ "census": {
+  "auditRowsTotal": 213,
+  "auditRowsAfterDedupe": 204,
+  "exactDuplicateAuditRows": 9,
+  "allResidentAtKeepCardId": 204,
+  "titleDerivable": 117,
+  "titleUnderivable": 87,
+  "derivedAddressHasChecklistCatalogRow": 16,
+  "repointedThisList": 4,
+  "parkedCompanionList": 101,
+  "needsRulingSidecar": 99
+ },
+ "entries": [
+  {
+   "fromId": "hiq:football:2025:topps-chrome:162:orange-refractor:no-auto:num-25",
+   "toId": "hiq:football:2025:topps-chrome:rra-am:orange-refractor:auto:num-25",
+   "player": "Andrew Mukuba",
+   "cardNumber": "RRA-AM",
+   "allowCrossProduct": true,
+   "crossProductRuling": "bare-cardNumber collision carried by the 09-26/27 isAuto flip; audit 2026-09-28",
+   "reason": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Topps Chrome Andrew Mukuba Rookie Autograph Orange /25 Eagles RRA-AM\" re-derives (parseListingIdentity + computeHobbyIqCardId) to hiq:football:2025:topps-chrome:rra-am:orange-refractor:auto:num-25, a checklist-grade card_catalog row (source hobbymonitor-2026-09-04) for \"Andrew Mukuba\", namesAgree-confirmed against the sale. The sale currently sits at hiq:football:2025:topps-chrome:162:orange-refractor:no-auto:num-25 (row player \"Cameron Dicker\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check -- a collision between this card's own insert/alt number and that flagship product's plain numeric slot.",
+   "expectedSales": null,
+   "saleId": "tca-ebay::147381765593",
+   "currentCardId": "hiq:football:2025:topps-chrome:162:orange-refractor:no-auto:num-25"
+  },
+  {
+   "fromId": "hiq:football:2025:topps-chrome:157:pink-refractor:no-auto:num-250",
+   "toId": "hiq:football:2025:topps-chrome:ra-tw:pink-refractor:auto:num-250",
+   "player": "Tyleik Williams",
+   "cardNumber": "RA-TW",
+   "allowCrossProduct": true,
+   "crossProductRuling": "bare-cardNumber collision carried by the 09-26/27 isAuto flip; audit 2026-09-28",
+   "reason": "Dedupe-keeper-collision audit 2026-09-28 (fb2025-isauto-strays): sale title \"2025 Topps Chrome Pink Refractor Auto /250 Tyleik Williams RA-TW RC Lions\" re-derives (parseListingIdentity + computeHobbyIqCardId) to hiq:football:2025:topps-chrome:ra-tw:pink-refractor:auto:num-250, a checklist-grade card_catalog row (source hobbymonitor-2026-09-04) for \"Tyleik Williams\", namesAgree-confirmed against the sale. The sale currently sits at hiq:football:2025:topps-chrome:157:pink-refractor:no-auto:num-250 (row player \"Joe Alt\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check -- a collision between this card's own insert/alt number and that flagship product's plain numeric slot.",
+   "expectedSales": null,
+   "saleId": "tca-ebay::188769097430",
+   "currentCardId": "hiq:football:2025:topps-chrome:157:pink-refractor:no-auto:num-250"
+  },
+  {
+   "fromId": "hiq:baseball:2026:bowman:47:blue-border:no-auto:num-150",
+   "toId": "hiq:baseball:2026:bowman-paper:bpa-sh:blue-border:auto:num-150",
+   "player": "Steele Hall",
+   "cardNumber": "BPA-SH",
+   "allowCrossProduct": true,
+   "crossProductRuling": "bare-cardNumber collision carried by the 09-26/27 isAuto flip; audit 2026-09-28",
+   "reason": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"Bowman 2026 Steele Hall Auto BPA-SH Blue Border /150 Cincinnati Reds RC\" re-derives (parseListingIdentity + computeHobbyIqCardId) to hiq:baseball:2026:bowman-paper:bpa-sh:blue-border:auto:num-150, a checklist-grade card_catalog row (source checklistcenter-2026-08-29) for \"Steele Hall\", namesAgree-confirmed against the sale. The sale currently sits at hiq:baseball:2026:bowman:47:blue-border:no-auto:num-150 (row player \"Fernando Tatis Jr.\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check -- a collision between this card's own insert/alt number and that flagship product's plain numeric slot.",
+   "expectedSales": null,
+   "saleId": "tca-ebay::366472017872",
+   "currentCardId": "hiq:baseball:2026:bowman:47:blue-border:no-auto:num-150"
+  },
+  {
+   "fromId": "hiq:baseball:2026:topps:113:base:no-auto",
+   "toId": "hiq:baseball:2026:topps:bsa-ic:base:auto",
+   "player": "Isaac Collins",
+   "cardNumber": "BSA-IC",
+   "allowCrossProduct": true,
+   "crossProductRuling": "bare-cardNumber collision carried by the 09-26/27 isAuto flip; audit 2026-09-28",
+   "reason": "Dedupe-keeper-collision audit 2026-09-28 (bb2026-isauto-strays): sale title \"2026 Topps Series 1 Isaac Collins Brewers Baseball Stars Auto BSA-IC\" re-derives (parseListingIdentity + computeHobbyIqCardId) to hiq:baseball:2026:topps:bsa-ic:base:auto, a checklist-grade card_catalog row (source beckett-s3-2026-09-19) for \"Isaac Collins\", namesAgree-confirmed against the sale. The sale currently sits at hiq:baseball:2026:topps:113:base:no-auto (row player \"Toronto Blue Jays\") only because the 09-26/27 isauto-strays dedupe-by-list keeper pick matched bare cardNumber with no player check -- a collision between this card's own insert/alt number and that flagship product's plain numeric slot.",
+   "expectedSales": null,
+   "saleId": "tca-ebay::287519646472",
+   "currentCardId": "hiq:baseball:2026:topps:113:base:no-auto"
+  }
+ ]
+}
