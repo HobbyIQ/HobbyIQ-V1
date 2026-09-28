@@ -34,6 +34,7 @@ const LISTS = [
   "2026-09-27-twins-lane-strays.json",
   "2026-09-27-fb2025-isauto-strays.json",
   "2026-09-27-bb2026-isauto-strays.json",
+  "2026-09-28-hockey-2025-copies.json",
 ];
 
 type Entry = { saleId: string; keepCardId: string; deleteCardId: string; reason?: string };
@@ -286,9 +287,45 @@ describe("the three committed lists", () => {
     });
   }
 
-  it("681 entries total across the three lists (165 + 282 + 234)", () => {
+  it("1,051 entries total across the four lists (165 + 282 + 234 + 370)", () => {
     const total = LISTS.reduce((sum, file) => sum + readList(join(LIST_DIR, file)).entries.length, 0);
-    expect(total).toBe(681);
+    expect(total).toBe(1051);
+  });
+});
+
+// ── the census-sold-comp-copies generated list, pinned to its run ────────
+
+describe("the 2026-09-28 hockey:2025 generated list (run 36417136134)", () => {
+  const p = join(LIST_DIR, "2026-09-28-hockey-2025-copies.json");
+
+  it("carries the generating run id and reconciled census counts", () => {
+    const doc = readList(p) as ListDoc & {
+      generatingRunId?: string;
+      census?: {
+        idsScanned?: number;
+        single?: number;
+        grouped?: number;
+        entriesEmitted?: number;
+        needsRulingCount?: number;
+        reconciled?: boolean;
+      };
+    };
+    expect(doc.generatingRunId).toBe("36417136134");
+    expect(doc.census?.reconciled).toBe(true);
+    expect(doc.census?.idsScanned).toBe(10711);
+    expect(doc.census?.single).toBe(9261);
+    expect(doc.census?.grouped).toBe(1450);
+    expect(doc.census?.entriesEmitted).toBe(370);
+    expect(doc.census?.needsRulingCount).toBe(1091);
+  });
+
+  it("has exactly 370 entries, every one classifyEntry-valid", () => {
+    const doc = readList(p);
+    expect(doc.entries.length).toBe(370);
+    for (const e of doc.entries) {
+      const c = L.classifyEntry(e);
+      expect(c.ok, `entry failed classifyEntry: ${JSON.stringify(e)} -- ${c.why}`).toBe(true);
+    }
   });
 });
 
