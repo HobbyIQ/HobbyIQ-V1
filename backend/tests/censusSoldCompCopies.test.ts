@@ -481,6 +481,27 @@ describe("the keeper-name gate refuses a bare #cardNumber collision that names a
     expect(doc.census.needsRuling).toHaveLength(0);
   });
 
+  it("a blank stored title falls through to playerName -- round 1 review items 2/3 -- keeper accepted, not needsRuling", () => {
+    // `title: ""` is a real, valid absence shape (not null/undefined) --
+    // firstNonBlank must fall through to the doc's own playerName field
+    // rather than short-circuiting on the empty string, so a genuinely
+    // correct keeper with a blank title is still accepted.
+    const pass1Docs: Doc[] = [{ id: "sale::BLANKTITLE", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: "", playerName: KEEPER_PLAYER }];
+    const allDocs: Doc[] = [
+      { id: "sale::BLANKTITLE", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: "", playerName: KEEPER_PLAYER },
+      { id: "sale::BLANKTITLE", cardId: STRAY_ID, hobbyiqCardId: KEEP_ID, title: "", playerName: KEEPER_PLAYER },
+    ];
+    const catalog = [{ id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27", playerName: KEEPER_PLAYER }];
+
+    const r = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
+    expect(r.out).not.toMatch(/FATAL|ReferenceError|TypeError/);
+    expect(r.code).toBe(0);
+    const doc = readArtifact(r.planOut);
+    expect(doc.entries).toHaveLength(1);
+    expect(doc.entries[0]).toMatchObject({ saleId: "sale::BLANKTITLE", keepCardId: KEEP_ID, deleteCardId: STRAY_ID });
+    expect(doc.census.needsRuling).toHaveLength(0);
+  });
+
   it("a DIFFERENT copy in the group at a checklist-grade address whose row player agrees IS the keeper", () => {
     // The address that fails the name test is address-coherent + checklist-
     // grade but names the wrong player; a SECOND coherent + checklist-grade

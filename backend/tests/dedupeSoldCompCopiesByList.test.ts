@@ -584,6 +584,28 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
     expect(r.led.deletes).toEqual([SALE_ID]);
   });
 
+  it("a blank stored title on the keeper falls through to playerName -- round 1 review items 2/3 -- DELETES, not a false refusal", () => {
+    // `title: ""` is a real, valid absence shape (not null/undefined) --
+    // firstNonBlank must fall through to the keeper's own playerName field
+    // rather than short-circuiting on the empty string. Before this fix,
+    // `saleDoc.title ?? saleDoc.playerName ?? ""` never fell through on an
+    // empty-string title, so this shape misfired as keeper-name-disagrees
+    // even though the keeper's own playerName agreed exactly with its row.
+    const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "keeper-blank-title-falls-through");
+    const catalog = [KEEPER_CATALOG_ROW]; // playerName: "Victor Hurtado"
+    const blankTitleKeeperSale = { ...KEEPER_SALE, title: "", playerName: "Victor Hurtado" };
+    const sales = [
+      blankTitleKeeperSale,
+      { ...blankTitleKeeperSale, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID },
+    ];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.out).not.toMatch(/REFUSED \(keeper-name-disagrees\)/);
+    expect(r.out).toMatch(/DELETED\s+1/);
+    expect(r.led.deletes).toEqual([SALE_ID]);
+  });
+
   it("SKIPS (already-gone) when the stray is absent -- never a failure, never retried as a delete", () => {
     const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "already-gone");
     const catalog = [KEEPER_CATALOG_ROW];

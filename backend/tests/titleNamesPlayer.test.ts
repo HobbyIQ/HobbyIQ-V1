@@ -3,11 +3,12 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 
 const require_ = createRequire(__filename);
-const { titleNamesPlayer, namesAgree } = require_(
+const { titleNamesPlayer, namesAgree, firstNonBlank } = require_(
   join(__dirname, "..", "scripts", "lib", "name-agreement.cjs"),
 ) as {
   titleNamesPlayer: (title: unknown, playerName: unknown, opts?: { stripTrailingTokens?: string[] }) => boolean;
   namesAgree: (a: unknown, b: unknown, opts?: { stripTrailingTokens?: string[] }) => boolean;
+  firstNonBlank: (title: unknown, playerName: unknown) => string;
 };
 
 /**
@@ -128,5 +129,93 @@ describe("titleNamesPlayer: containment for free-text titles against a bare play
   it("falls through to namesAgree first -- a title that is itself just a bare name behaves identically to namesAgree alone", () => {
     expect(titleNamesPlayer("Derek Jeter", "Todd Hundley")).toBe(namesAgree("Derek Jeter", "Todd Hundley"));
     expect(titleNamesPlayer("Adael Amador", "Adael Amador")).toBe(namesAgree("Adael Amador", "Adael Amador"));
+  });
+});
+
+// ── round 1 review (PR #2500 https://github.com/HobbyIQ/HobbyIQ-V1/pull/2500#issuecomment-5873357117),
+// item 1 (BLOCKING): unbounded substring match had no word boundary ────────
+
+describe("word-boundary containment -- a shorter name must never hide inside a longer one across a word boundary", () => {
+  it("REFUSES Bryan Reynolds vs Ryan Reynolds -- the exact false-keeper shape the review reproduced", () => {
+    // foldForCompare strips ALL whitespace before comparing, so a raw
+    // substring check reads "...bryanreynoldsauto" as containing
+    // "ryanreynolds" -- "Bryan" is never split into "B" + "ryan" by a real
+    // reader, and this function must not either. This is the UNSAFE
+    // direction: a false keeper promotion / false deletion-gate pass, the
+    // exact failure mode this whole PR exists to close.
+    expect(titleNamesPlayer("2025 Topps Chrome Bryan Reynolds Auto", "Ryan Reynolds")).toBe(false);
+    expect(titleNamesPlayer("2025 Topps Chrome Bryan", "Ryan")).toBe(false);
+  });
+
+  it("REFUSES Jose Ramirez (title) vs Jose Ramirez Green (playerName) -- the title is missing a real token, not a coincidental substring hit", () => {
+    // The catalog row's own trailing "Green" is a real surname token (THE
+    // SURNAME FLOOR, #2463: a color word that is the OTHER side's own
+    // surname is a surname, not a color, on this comparison) that the
+    // title never spells at all -- token-subsequence containment correctly
+    // finds no match, where a substring check over the FULL "Green"-less
+    // player string would already have refused this shape too (this test
+    // pins the boundary-safe path stays correct here, not a regression).
+    expect(titleNamesPlayer("Jose Ramirez", "Jose Ramirez Green")).toBe(false);
+  });
+
+  it("REFUSES Nick (title) vs Nick Green (playerName) -- a bare first name never proves the fuller catalog name", () => {
+    expect(titleNamesPlayer("Nick", "Nick Green")).toBe(false);
+  });
+
+  it("control: a title that genuinely contains the full token run still agrees", () => {
+    expect(titleNamesPlayer("2025 Topps Nick Green Auto", "Nick Green")).toBe(true);
+    expect(titleNamesPlayer("2025 Topps Chrome Ryan Reynolds Auto", "Ryan Reynolds")).toBe(true);
+  });
+
+  it("a hyphenated surname still matches as one token (fold applies within a token, never across a boundary)", () => {
+    expect(titleNamesPlayer("2023 Bowman Pete Crow-Armstrong Chrome Auto", "Pete Crow-Armstrong")).toBe(true);
+  });
+});
+
+// ── round 1 review, items 2/3: blank title must fall through to playerName ─
+
+describe("firstNonBlank: a stored title of \"\" falls through to playerName, never short-circuits", () => {
+  it("treats an empty string and a whitespace-only string as absent", () => {
+    expect(firstNonBlank("", "Victor Hurtado")).toBe("Victor Hurtado");
+    expect(firstNonBlank("   ", "Victor Hurtado")).toBe("Victor Hurtado");
+    expect(firstNonBlank(null, "Victor Hurtado")).toBe("Victor Hurtado");
+    expect(firstNonBlank(undefined, "Victor Hurtado")).toBe("Victor Hurtado");
+  });
+
+  it("prefers a non-blank title over playerName", () => {
+    expect(firstNonBlank("2024 Bowman Chrome Victor Hurtado Auto", "Victor Hurtado")).toBe("2024 Bowman Chrome Victor Hurtado Auto");
+  });
+
+  it("returns an empty string when both are blank -- titleNamesPlayer then correctly refuses (nothing to check)", () => {
+    expect(firstNonBlank("", "")).toBe("");
+    expect(titleNamesPlayer(firstNonBlank("", ""), "Victor Hurtado")).toBe(false);
+  });
+});
+
+// ── round 1 review, item 4: multi-name catalog row reduces to its first name
+
+describe("multi-name playerName reduces to its first-listed name, same as namesAgree's own rule (a)", () => {
+  it("agrees when the title names the FIRST-listed player of a league-leader-shaped catalog row", () => {
+    expect(titleNamesPlayer(
+      "2024 Topps Shohei Ohtani League Leaders NL HR",
+      "Shohei Ohtani / Marcell Ozuna / Kyle Schwarber LL NL HR",
+    )).toBe(true);
+  });
+
+  it("still refuses when the title names a player NOT first-listed on the multi-name row", () => {
+    // Being named second or third on the card is not being named first --
+    // this function's multi-name reduction (like namesAgree's own rule (a))
+    // does not search the rest of the list.
+    expect(titleNamesPlayer(
+      "2024 Topps Marcell Ozuna League Leaders NL HR",
+      "Shohei Ohtani / Marcell Ozuna / Kyle Schwarber LL NL HR",
+    )).toBe(false);
+  });
+
+  it("still refuses a genuinely unrelated player against a multi-name row", () => {
+    expect(titleNamesPlayer(
+      "2025 Panini Rookies & Stars Cam Skattebo Crusade Silver #21 Giants Rookie RC",
+      "Shohei Ohtani / Marcell Ozuna / Kyle Schwarber LL NL HR",
+    )).toBe(false);
   });
 });

@@ -133,7 +133,7 @@ const backend = path.resolve(__dirname, "..");
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { withBackoff } = require(path.join(__dirname, "lib", "cosmos-backoff.cjs"));
 const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
-const { titleNamesPlayer } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
+const { titleNamesPlayer, firstNonBlank } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
 // checklistParallelNamesFor is a scripts/lib module (reads the checklist
 // corpus JSON directly, no dist/ and no Cosmos) -- the SAME vocabulary
 // repoint-sales-by-list.cjs's own GATE 6 builds for its destination, and
@@ -269,7 +269,7 @@ function stripVocabularyForKeeper(catalogRow) {
  * SALE".
  */
 function keeperNameAgreesWithSale(keeperSale, catalogRow) {
-  const saleName = String(keeperSale?.title ?? keeperSale?.playerName ?? "");
+  const saleName = firstNonBlank(keeperSale?.title, keeperSale?.playerName);
   const keeperName = String(catalogRow?.playerName ?? "");
   if (!saleName || !keeperName) return false;
   const strip = stripVocabularyForKeeper(catalogRow);
@@ -461,7 +461,7 @@ async function main() {
     // one compares the keeper against ITS OWN catalog row.
     if (!keeperNameAgreesWithSale(keeper, keeperCatalogRow)) {
       refusedKeeperNameDisagrees++;
-      const saleName = String(keeper.title ?? keeper.playerName ?? "");
+      const saleName = firstNonBlank(keeper.title, keeper.playerName);
       const keeperName = String(keeperCatalogRow.playerName ?? "");
       console.error(`      REFUSED (keeper-name-disagrees): keeper's own sale "${saleName.slice(0, 60)}" vs its catalog row's player "${keeperName.slice(0, 60)}" — a #cardNumber collision, not a duplicate`);
       emitPlanRow({ action: "refused", reason: "keeper-name-disagrees", saleId, keepCardId, deleteCardId, saleName, keeperName });

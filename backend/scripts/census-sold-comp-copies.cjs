@@ -157,7 +157,7 @@ const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budge
 const { withBackoff } = require(path.join(__dirname, "lib", "cosmos-backoff.cjs"));
 const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
-const { titleNamesPlayer } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
+const { titleNamesPlayer, firstNonBlank } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
 // checklistParallelNamesFor is a scripts/lib module (reads the checklist
 // corpus JSON directly, no dist/ and no Cosmos), the SAME vocabulary
 // repoint-sales-by-list.cjs builds for its own GATE 6 -- required at top
@@ -294,7 +294,7 @@ function stripVocabularyForKeeper(catalogRow) {
  * checklist row proves the ROW, the player name proves the SALE.
  */
 function keeperNameAgreesWithSale(saleDoc, catalogRow) {
-  const saleName = String(saleDoc?.title ?? saleDoc?.playerName ?? "");
+  const saleName = firstNonBlank(saleDoc?.title, saleDoc?.playerName);
   const keeperName = String(catalogRow?.playerName ?? "");
   if (!saleName || !keeperName) return false;
   const strip = stripVocabularyForKeeper(catalogRow);
@@ -518,7 +518,7 @@ async function main() {
       } else {
         nameDisagreements.push({
           cardId: d.cardId,
-          saleName: String(d.title ?? d.playerName ?? ""),
+          saleName: firstNonBlank(d.title, d.playerName),
           keeperName: String(row.playerName ?? ""),
         });
       }
