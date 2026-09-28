@@ -812,12 +812,36 @@ describe("repoint-sales-isauto-flip -- reconcile", () => {
 // is already, correctly, excluded for.
 describe("repoint-sales-isauto-flip -- a budget stop reconciles cleanly (R-0927f)", () => {
   // 6 candidates, each backed by its own checklist flip row. CONCURRENCY=1
-  // (strictly sequential) + a fixed artificial delay on every catalog read
-  // (2 reads per candidate: current address + flip address) lets BUDGET_MS/
-  // RESERVE_MS (both already env-overridable in lib/runner-budget.cjs) stop
-  // the clock deterministically after SOME but not all candidates have been
-  // fully classified and moved.
+  // (strictly sequential), so CLOCK.outOfClock() is called in one fixed
+  // sequence: once for the (single) scope cell, once for the (single, null)
+  // setKey filter, then once per sale inside processSale -- 8 calls total
+  // for this fixture (2 + 6).
+  //
+  // CI flake (same shape as repointSalesByList.test.ts's own straddle,
+  // #2465): this used to be driven by WALL-CLOCK timing alone -- a fixed
+  // delay on every catalog read (2 reads/candidate) sized against
+  // BUDGET_MS/RESERVE_MS, racing outOfClock()'s own Date.now() to land the
+  // stop after some but not all of the 6 candidates. On a loaded CI runner
+  // the child's own startup cost (module load, dist/ requires) can eat an
+  // unmeasured, variable slice of the budget before the first candidate's
+  // own check even runs, so the straddle point drifted with machine speed.
+  //
+  // The fix: HIQ_TEST_FAKE_CLOCK_STEP_MS (lib/runner-budget.cjs, from
+  // #2465) replaces Date.now() inside the budget's own left()/outOfClock()
+  // with a virtual clock that advances a FIXED amount on every call, so the
+  // Nth call always reports the same elapsed time regardless of how long
+  // the process actually took to get there. With BUDGET_MS=1000,
+  // RESERVE_MS=350, step=100ms: call 1 (cell) elapsed 0 (left 1000, ok),
+  // call 2 (setKey) elapsed 100 (left 900, ok), calls 3-7 (sales 1-5)
+  // elapsed 200-600 (left 800-400, all >= 350, all proceed), call 8 (sale 6)
+  // elapsed 700 (left 300 < 350, STOPS) -- deterministic by call count, not
+  // by wall time. catalogReadDelayMs is dropped: with the clock fixed, no
+  // real delay is needed to make the 6th sale land after the stop.
   const N = 6;
+  const FAKE_CLOCK_ENV = {
+    BUDGET_MS: "1000", RESERVE_MS: "350",
+    HIQ_TEST_FAKE_CLOCK_STEP_MS: "100", VITEST: "1",
+  };
   function fixture() {
     const sales = Array.from({ length: N }, (_, i) => {
       const no = `${PREFIX}bud${i}:base:no-auto`;
@@ -830,30 +854,25 @@ describe("repoint-sales-isauto-flip -- a budget stop reconciles cleanly (R-0927f
   it("candidates < scanned rows once the budget stops mid-scan -- some rows are notReached, never candidates", () => {
     const { sales, catalog } = fixture();
     const r = drive(
-      {
-        ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1",
-        BUDGET_MS: "120", RESERVE_MS: "20",
-      },
-      { sales, catalog, catalogReadDelayMs: 25 },
+      { ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1", ...FAKE_CLOCK_ENV },
+      { sales, catalog },
     );
     // The budget genuinely stopped this run before every row was reached --
-    // otherwise the test fixture's timing needs re-tuning, not the lane.
+    // otherwise the test fixture's call-count arithmetic needs re-tuning,
+    // not the lane.
     expect(r.out).toMatch(/stopped at the .*budget/);
     expect(r.out).toMatch(/not reached \(budget\)\s+[1-9]/);
     const notReachedMatch = r.out.match(/not reached \(budget\)\s+([\d,]+)/);
     const notReached = Number(notReachedMatch![1].replace(/,/g, ""));
-    expect(notReached).toBeGreaterThan(0);
+    expect(notReached).toBe(1);
     expect(notReached).toBeLessThan(N);
   });
 
   it("reconciles cleanly (no RECONCILE MISMATCH) and exits 0 -- the relaunch path, not exit 4", () => {
     const { sales, catalog } = fixture();
     const r = drive(
-      {
-        ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1",
-        BUDGET_MS: "120", RESERVE_MS: "20",
-      },
-      { sales, catalog, catalogReadDelayMs: 25 },
+      { ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1", ...FAKE_CLOCK_ENV },
+      { sales, catalog },
     );
     expect(r.out).toMatch(/stopped at the .*budget/); // confirms the fixture actually exercised the budget stop
     expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
@@ -871,16 +890,71 @@ describe("repoint-sales-isauto-flip -- a budget stop reconciles cleanly (R-0927f
   it("every candidate that WAS reached before the stop is still repointed -- the fix changes only the reconcile arithmetic, never the moves", () => {
     const { sales, catalog } = fixture();
     const r = drive(
-      {
-        ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1",
-        BUDGET_MS: "120", RESERVE_MS: "20",
-      },
-      { sales, catalog, catalogReadDelayMs: 25 },
+      { ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1", ...FAKE_CLOCK_ENV },
+      { sales, catalog },
     );
     const repointedMatch = r.out.match(/REPOINTED\s+([\d,]+)/);
     const repointed = Number(repointedMatch![1].replace(/,/g, ""));
-    expect(repointed).toBeGreaterThan(0);
+    expect(repointed).toBe(N - 1);
     expect(r.led.salesUpserts.length).toBe(repointed);
+  });
+
+  it("still straddles under artificial slowness -- the fake clock, not luck, is what lands it", () => {
+    // Same shape as above, but with a real per-catalog-read delay layered on
+    // top (the OLD mechanism, now redundant with the fake clock rather than
+    // load-bearing). If the fake-clock hook were silently ignored and this
+    // still passed only because of the delay, that would mean the hook does
+    // nothing -- this proves the straddle is governed by
+    // HIQ_TEST_FAKE_CLOCK_STEP_MS's call-counted steps even when real
+    // wall-clock slowness is also present.
+    const { sales, catalog } = fixture();
+    const r = drive(
+      { ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1", ...FAKE_CLOCK_ENV },
+      { sales, catalog, catalogReadDelayMs: 5 },
+    );
+    expect(r.out).toMatch(/stopped at the .*budget/);
+    expect(r.out).toMatch(/not reached \(budget\)\s+1/);
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+    expect(r.code).toBe(0);
+  });
+});
+
+describe("HIQ_TEST_FAKE_CLOCK_STEP_MS is inert when unset -- production timing is untouched (repoint-sales-isauto-flip)", () => {
+  it("unset: the SAME six-candidate fixture does NOT straddle under a real, generous budget", () => {
+    const N = 6;
+    const sales = Array.from({ length: N }, (_, i) => {
+      const no = `${PREFIX}noclock${i}:base:no-auto`;
+      return SALE({ id: `noclock${i}`, cardId: no, hobbyiqCardId: no, isAuto: false });
+    });
+    const catalog = Array.from({ length: N }, (_, i) => CATALOG_ROW({ id: `${PREFIX}noclock${i}:base:auto`, cardId: `${PREFIX}noclock${i}:base:auto` }));
+    const r = drive(
+      { ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1", RUN_MINUTES: "110" },
+      { sales, catalog },
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(new RegExp(`REPOINTED\\s+${N}`));
+    expect(r.out).toMatch(/not reached \(budget\)\s+0/);
+    expect(r.out).not.toMatch(/stopped at the \d+-minute budget/);
+  });
+});
+
+describe("HIQ_TEST_FAKE_CLOCK_STEP_MS self-defends against leaking into a real run (repoint-sales-isauto-flip)", () => {
+  it("set without VITEST: FATAL naming the var, non-zero exit, before any budget line prints", () => {
+    const sale = SALE({ cardId: NO_AUTO_ID, hobbyiqCardId: NO_AUTO_ID, isAuto: false });
+    const r = drive(
+      {
+        ...DEFAULT_ENV, BACKFILL_APPLY: "true",
+        HIQ_TEST_FAKE_CLOCK_STEP_MS: "100",
+        // VITEST deliberately omitted -- drive()'s env is an explicit
+        // allowlist, not inherited, so this reproduces a leaked var
+        // reaching a real dispatch exactly.
+      },
+      { sales: [sale], catalog: [CATALOG_ROW()] },
+    );
+    expect(r.code).not.toBe(0);
+    expect(r.out).toContain("FATAL: HIQ_TEST_FAKE_CLOCK_STEP_MS is set but VITEST is not");
+    expect(r.out).not.toMatch(/budget \d+m loop/);
+    expect(r.led.salesUpserts.length).toBe(0);
   });
 });
 
@@ -930,20 +1004,27 @@ describe("repoint-sales-isauto-flip -- MUTATION: notReached back in the candidat
   }
 
   it("with notReached folded back into the formula, the SAME budget-stop fixture WOULD false-red -- proving the fix is what stops it on the real lane", () => {
+    // Same fake-clock straddle as the R-0927f suite above (call 1 = cell,
+    // call 2 = setKey, calls 3-7 = sales 1-5 proceed, call 8 = sale 6 stops)
+    // -- deterministic by CLOCK.outOfClock() call count, never by real delay.
     const sales = Array.from({ length: 6 }, (_, i) => {
       const no = `${PREFIX}mut${i}:base:no-auto`;
       return SALE({ id: `mut${i}`, cardId: no, hobbyiqCardId: no, isAuto: false });
     });
     const catalog = Array.from({ length: 6 }, (_, i) => CATALOG_ROW({ id: `${PREFIX}mut${i}:base:auto`, cardId: `${PREFIX}mut${i}:base:auto` }));
-    const env = { ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1", BUDGET_MS: "120", RESERVE_MS: "20" };
+    const env = {
+      ...DEFAULT_ENV, BACKFILL_APPLY: "true", CONCURRENCY: "1",
+      BUDGET_MS: "1000", RESERVE_MS: "350",
+      HIQ_TEST_FAKE_CLOCK_STEP_MS: "100", VITEST: "1",
+    };
 
-    const regressed = driveRegressed(env, { sales, catalog, catalogReadDelayMs: 25 });
+    const regressed = driveRegressed(env, { sales, catalog });
     expect(regressed.out).toMatch(/stopped at the .*budget/); // the mutation's own run must ALSO hit the budget stop
     expect(regressed.out).toMatch(/RECONCILE MISMATCH/); // the mutation: false red on a clean budget stop
     expect(regressed.code).toBe(4);
 
     // The REAL, committed lane on the SAME input must reconcile cleanly.
-    const real = drive(env, { sales, catalog, catalogReadDelayMs: 25 });
+    const real = drive(env, { sales, catalog });
     expect(real.out).not.toMatch(/RECONCILE MISMATCH/);
     expect(real.code).toBe(0);
   });
