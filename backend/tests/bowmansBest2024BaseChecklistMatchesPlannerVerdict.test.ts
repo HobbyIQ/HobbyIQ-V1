@@ -173,6 +173,33 @@ describe("2024 Bowman's Best Baseball full checklist (Beckett S3)", () => {
     expect(mk("Mini-Diamonds Refractors")).not.toBe(mk("Mini-Diamond Refractors"));
   });
 
+  it("the five autograph subsets whose sheet rows state a base print run in a per-row cell carry it on their plain row: FPA-/BSA- /99, DA-/QA-/TA- /75 (62 cards); the other six stay blank", () => {
+    // CF-A-ROW-STATED-PRINT-RUN-IS-A-STATED-PRINT-RUN (review fix on #2476):
+    // the Autographs sheet states these runs beside the card, not on the
+    // "Parallels:" ladder, and the converter used to read only the ladder.
+    const { rows: r } = rows();
+    const plainAuto = r.filter((row) => row[0].startsWith("auto-") && row[2] === "");
+    const byPrefix: Record<string, Set<string>> = {};
+    for (const row of plainAuto) (byPrefix[row[1].split("-")[0] + "-"] ??= new Set()).add(row[4]);
+    expect(byPrefix["FPA-"]).toEqual(new Set(["99"]));
+    expect(byPrefix["BSA-"]).toEqual(new Set(["99"]));
+    expect(byPrefix["DA-"]).toEqual(new Set(["75"]));
+    expect(byPrefix["QA-"]).toEqual(new Set(["75"]));
+    expect(byPrefix["TA-"]).toEqual(new Set(["75"]));
+    for (const p of ["B24-", "FGRA-", "IPA-", "BBA-", "FDA-", "FTA-"]) expect(byPrefix[p], p).toEqual(new Set([""]));
+    const stated = plainAuto.filter((row) => row[4] !== "");
+    expect(stated.length).toBe(62);
+    expect(stated.filter((row) => row[4] === "99").length).toBe(30);
+    expect(stated.filter((row) => row[4] === "75").length).toBe(32);
+    // The rung rows of those same subsets keep the LADDER's run, not the cell's.
+    const fpaSuper = r.filter((row) => row[1].startsWith("FPA-") && row[2] === "Superfractors");
+    expect(fpaSuper.length).toBe(21);
+    for (const row of fpaSuper) expect(row[4]).toBe("1");
+    const daGold = r.filter((row) => row[1].startsWith("DA-") && row[2] === "Gold Refractors");
+    expect(daGold.length).toBe(19);
+    for (const row of daGold) expect(row[4]).toBe("50");
+  });
+
   it("every auto-* row is isAuto=true and every insert-*/base row is isAuto=false — Beckett's own sheet split, never inferred from text", () => {
     const { rows: r } = rows();
     for (const row of r) {

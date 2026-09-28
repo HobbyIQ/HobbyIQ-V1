@@ -2027,6 +2027,19 @@ function main() {
       // An RC flag sits in a later column; the repo's CSV convention folds it
       // into the player field ("Jacob Wilson RC").
       if (row.slice(2).some((c) => /^RC$/i.test(String(c || "").trim()))) player += " RC";
+      // CF-A-ROW-STATED-PRINT-RUN-IS-A-STATED-PRINT-RUN (2026-09-28, review
+      // fix on #2476). Some Beckett sheets state a subset's BASE print run
+      // not on a "Parallels:" ladder line but in a per-row cell beside the
+      // card: ["FPA-AM","Aidan Miller","Philadelphia Phillies","/99"]. This
+      // converter read only the ladder, so the plain row of every such card
+      // carried a blank run although the source stated one -- measured on
+      // 2024 Bowman's Best Baseball's Autographs sheet: 62 cards across five
+      // subsets (FPA-/BSA- "/99", DA-/QA-/TA- "/75"), while the sheet's other
+      // six subsets genuinely have nothing in that column. Read GENERICALLY
+      // (any cell past the player column whose whole content is "/N"), never
+      // a prefix list, and only ever CONSUMED to fill a run the section
+      // resolution left blank -- see the emission site.
+      const rowPrintRun = rowStatedPrintRun(row);
 
       let key = name + ">" + section;
       // CF-BECKETT-A-REPEATED-HEADER-WITH-A-DISAGREEING-ROSTER-IS-A-SECOND-
@@ -2164,6 +2177,7 @@ function main() {
       const prior = priorIdx >= 0 ? records[priorIdx] : null;
       if (prior && prior.sectionKey === key && String(prior.cardNumber).toUpperCase() === num) {
         prior.player = prior.player + "/" + player;
+        if (prior.rowPrintRun == null && rowPrintRun != null) prior.rowPrintRun = rowPrintRun;
         // The roster a card states is now the JOINED name, matching what
         // pass 3 will actually emit -- classifySections's roster fold must
         // compare against the same string the CSV carries, never the
@@ -2176,7 +2190,7 @@ function main() {
       sec.cards++;
       if (!sec.roster.has(num)) sec.roster.set(num, new Set());
       sec.roster.get(num).add(normalizeRosterPlayer(player));
-      records.push({ sectionKey: key, cardNumber: cardNumber, player: player });
+      records.push({ sectionKey: key, cardNumber: cardNumber, player: player, rowPrintRun: rowPrintRun });
       sec.lastRecordIndex = records.length - 1;
     }
   }
@@ -2299,6 +2313,10 @@ function main() {
   // CARRIES-THE-SOURCE-STATED-PRINT-RUN below. A real finding, recorded in
   // the manifest, never silently resolved either way.
   const printRunConflicts = [];
+  // CF-A-ROW-STATED-PRINT-RUN-IS-A-STATED-PRINT-RUN: how many plain rows took
+  // their run from the per-row cell, by section, for the manifest.
+  let rowStatedPrintRunsUsed = 0;
+  const rowStatedPrintRunsBySection = {};
   for (const rec of records) {
     const sec = sections.get(rec.sectionKey);
     // CF-BECKETT-ROSTER-FOLD-FOR-NAMELESS-SECTIONS's per-row carve-out: a
@@ -2386,6 +2404,24 @@ function main() {
       resolvedPrintRun = ownLadderRung ? ownLadderRung.printRun : (anchorLadderRung ? anchorLadderRung.printRun : "");
     }
     if (printRunConflict) printRunConflicts.push(printRunConflict);
+    // CF-A-ROW-STATED-PRINT-RUN-IS-A-STATED-PRINT-RUN (see pass 1). The
+    // per-row cell FILLS a blank; it never overrides a run the section or
+    // its fold anchor stated -- a disagreement between the two is a finding
+    // for the manifest, exactly like printRunConflicts above, not something
+    // this converter picks a winner for.
+    if (rec.rowPrintRun != null) {
+      if (resolvedPrintRun === "") {
+        resolvedPrintRun = rec.rowPrintRun;
+        rowStatedPrintRunsUsed++;
+        const sk = sec.sheet + " > " + sec.section;
+        rowStatedPrintRunsBySection[sk] = (rowStatedPrintRunsBySection[sk] || 0) + 1;
+      } else if (String(resolvedPrintRun) !== String(rec.rowPrintRun)) {
+        printRunConflicts.push({
+          sheet: sec.sheet, section: sec.section, cardNumber: rec.cardNumber, kind: "row-cell-vs-ladder",
+          rowPrintRun: rec.rowPrintRun, ladderPrintRun: resolvedPrintRun,
+        });
+      }
+    }
     // The plain card. Parallel stays BLANK, never "Base" — normalizeParallel()
     // already reads "" as the base tier, so the blank lies about nothing.
     out.push({
@@ -2721,6 +2757,10 @@ function main() {
     // real finding, not a silent resolution either way -- additive/opt-in
     // like every other finding array in this manifest.
     ...(printRunConflicts.length ? { printRunConflicts } : {}),
+    // CF-A-ROW-STATED-PRINT-RUN-IS-A-STATED-PRINT-RUN's own record: which
+    // sections' plain rows took a run from the per-row cell, and how many.
+    // Additive/opt-in: absent on every workbook without such a cell.
+    ...(rowStatedPrintRunsUsed ? { rowStatedPrintRuns: { rows: rowStatedPrintRunsUsed, bySection: rowStatedPrintRunsBySection } } : {}),
     // CF-A-NUMBERED-STATEMENT-OUTRANKS-AN-UNNUMBERED-ONE-OF-THE-SAME-RUNG's
     // own record (see that CF's header comment at the dedup site): additive/
     // opt-in, empty on every workbook where this shape never occurs (which
@@ -2761,6 +2801,23 @@ function main() {
 }
 
 if (require.main === module) main();
+
+/**
+ * CF-A-ROW-STATED-PRINT-RUN-IS-A-STATED-PRINT-RUN. The per-row print run a
+ * Beckett card row states in a cell of its own ("/99", "/75"), or null. Only
+ * cells PAST the player column are read, and only a cell whose ENTIRE content
+ * is a slash and a number counts -- "RC", "Rookie", a team, a parenthetical
+ * all read as nothing, and so does a ladder line ("Gold Refractors - /50"),
+ * which never reaches this function because it is not a card row.
+ */
+function rowStatedPrintRun(row) {
+  if (!Array.isArray(row)) return null;
+  for (let c = 2; c < row.length; c++) {
+    const m = /^\/\s*(\d[\d,]*)$/.exec(String(row[c] == null ? "" : row[c]).trim());
+    if (m) { const n = Number(m[1].replace(/,/g, "")); if (Number.isFinite(n) && n > 0) return n; }
+  }
+  return null;
+}
 
 module.exports = {
   classifySections, rungName, categoryFor, PLAIN_SECTION, parseRung, LADDER_HEAD, isSupersetSheet, isCountLine,
