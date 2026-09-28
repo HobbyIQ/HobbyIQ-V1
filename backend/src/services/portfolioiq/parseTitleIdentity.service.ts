@@ -970,10 +970,32 @@ export function parseListingIdentity(
   // The whitelist below already names some variations verbatim ("Chrome-Image
   // Variation"); that spelling is more specific than the family read and is
   // kept — the slug layer speaks the vocabulary either way.
-  const parallel = variation.finish
-    ? (canonicalVariationName(finish) ? finish
-      : finish && !/^base$/i.test(finish) && !/^refractor$/i.test(finish) ? `${variation.finish} ${finish}` : variation.finish)
-    : finish;
+  //
+  // GATED ON `!variation.kind` (2026-09-28, PR #2495 review). `finish` may
+  // ONLY replace or extend `variation.finish` when the vocabulary read named
+  // no KIND -- i.e. `variation.finish` is just the plain default ("Image
+  // Variation", "Image Variation SSP", ...), which is exactly the shape this
+  // whitelist exists to sharpen ("SP-Chrome" -> "Image Variation Chrome",
+  // "Image Variation Gold Speckle Refractor"'s trailing colour). When the
+  // vocabulary DID name a kind ("golden mirror" -> "Golden Mirror
+  // Variation"), that answer is already the most specific one on offer, and
+  // `extractParallel`'s OWN separate, cruder rules know nothing about kinds
+  // -- on "Golden Mirror Image Variation" it independently re-matches the
+  // bare "Image Variation" (line ~1994) as `finish`, and
+  // canonicalVariationName("Image Variation") is truthy, so the old
+  // unconditional ternary took the TRUE branch and returned "Image
+  // Variation" alone, discarding "Golden Mirror Variation" entirely — the
+  // opposite defect from the doubling this same review found on a bare
+  // "Golden Mirror" title (canonicalVariationName("Golden Mirror") is null,
+  // which used to take the ELSE branch and concatenate the two instead).
+  // Both are the same root cause: `extractParallel`'s answer was let outrank
+  // a named kind it does not know exists. A named kind now always wins.
+  const parallel = variation.kind && variation.finish
+    ? variation.finish
+    : variation.finish
+      ? (canonicalVariationName(finish) ? finish
+        : finish && !/^base$/i.test(finish) && !/^refractor$/i.test(finish) ? `${variation.finish} ${finish}` : variation.finish)
+      : finish;
   // CF-A-STATED-PARALLEL-IS-NEVER-EVICTED-TO-BASE (2026-09-15). Asked ONLY
   // when the answer was about to be "Base", so it overrides nothing: every
   // rule and reader above has already returned. It reports whether the title
@@ -1988,7 +2010,22 @@ function extractParallel(
   m = T.match(/(blue|red|green|orange|purple|gold|yellow|aqua|black|pink)\s+geometric/i);
   if (m) return capFirst(m[1]) + " Geometric";
   if (/reptilian(\s+refractor)?/i.test(T)) return "Reptilian Refractor";
-  if (/golden\s+mirror/i.test(T)) return "Golden Mirror";
+  // CF-GOLDEN-MIRROR-IS-NOT-DOUBLED (2026-09-28, PR #2495 review). "Golden
+  // Mirror" is a NAMED variation kind, already read by variationVocabulary.ts
+  // (readVariationFromTitle's `{ re: "golden\\s+mirror", kind: "golden
+  // mirror", standalone: true }`) into the canonical "Golden Mirror
+  // Variation" -- that answer is already sitting in `variation.finish` above,
+  // ahead of this function, on every call site. A bare `return "Golden
+  // Mirror"` HERE used to race it: canonicalVariationName("Golden Mirror")
+  // returns null (the text carries no "variation"/"image variation" word),
+  // so the reconciliation ternary's else-branch concatenated the two --
+  // "Golden Mirror Variation" + " " + "Golden Mirror" -- and every real
+  // "Golden Mirror" sale title parsed to the doubled slug
+  // `golden-mirror-variation-golden-mirror`, a dead address no checklist row
+  // (nor any other sale) has ever occupied. Removed rather than reconciled:
+  // this function's OWN doctrine (the comment two lines above, "Named
+  // non-refractor parallels") is for kinds this reader alone names: Golden
+  // Mirror already has an owner, and the fix is to stop competing with it.
   if (/heavy\s+lumber/i.test(T)) return "Heavy Lumber";
   if (/chrome-?image\s+variation/i.test(T)) return "Chrome-Image Variation";
   if (/image\s+variation/i.test(T)) return "Image Variation";
