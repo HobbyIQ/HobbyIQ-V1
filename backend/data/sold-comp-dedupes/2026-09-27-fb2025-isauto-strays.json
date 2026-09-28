@@ -1,0 +1,1991 @@
+{
+  "generatedAt": "2026-09-27T23:56:00Z",
+  "forLane": "dedupe-sold-comp-copies-by-list",
+  "finding": "fb2025-dupes.csv: 292 audited (saleId, docCount>=2) sales; docCount 0 rows are unmaterialized 'collapse' phantoms with no physical doc at all (needsRuling); docCount 1 sales are excluded from this list entirely (no duplicate). For every remaining row, toId is the surviving checklist-id copy per the isauto-twins census and every OTHER physical cardId the row's own docs list carries is a stray -- one entry per stray, so docCount>=3 rows mint more than one entry.",
+  "census": {
+    "source": "fb2025-dupes.csv",
+    "totalRowsInCsv": 7026,
+    "distinctSaleIds": 6991,
+    "collisionSaleIds": 11,
+    "skippedDocCount0": 18,
+    "skippedDocCount1": 6694,
+    "consideredDup": 268,
+    "entriesEmitted": 282,
+    "needsRulingCount": 11,
+    "needsRuling": [
+      {
+        "saleId": "tca-ebay::800056510075",
+        "docCount": [
+          2,
+          2
+        ],
+        "docs": [
+          "hiq:football:2025:topps-chrome:m856:base:no-auto|hiq:football:2025:topps-chrome:m856:base:no-auto;;hiq:football:2025:topps-chrome:fyf-the:base:no-auto|hiq:football:2025:topps-chrome:fyf-the:base:no-auto",
+          "hiq:football:2025:topps-chrome:m856:base:no-auto|hiq:football:2025:topps-chrome:m856:base:no-auto;;hiq:football:2025:topps-chrome:fyf-the:base:no-auto|hiq:football:2025:topps-chrome:fyf-the:base:no-auto"
+        ],
+        "toId": [
+          "hiq:football:2025:topps-chrome:m856:base:no-auto",
+          "hiq:football:2025:topps-chrome:fyf-the:base:no-auto"
+        ],
+        "fromId": [
+          "hiq:football:2025:topps-chrome:m856:base:auto",
+          "hiq:football:2025:topps-chrome:fyf-the:base:auto"
+        ],
+        "action": [
+          "move"
+        ],
+        "why": "this saleId's own audit rows disagree on toId (2 rows, 2 distinct toId values) -- a census collision, never resolved by row order"
+      },
+      {
+        "saleId": "tca-ebay::398184653140",
+        "docCount": [
+          2,
+          2
+        ],
+        "docs": [
+          "hiq:football:2025:bowman:45:base:no-auto|hiq:football:2025:bowman:45:base:no-auto;;hiq:football:2025:score:45:base:no-auto|hiq:football:2025:score:45:base:no-auto",
+          "hiq:football:2025:bowman:45:base:no-auto|hiq:football:2025:bowman:45:base:no-auto;;hiq:football:2025:score:45:base:no-auto|hiq:football:2025:score:45:base:no-auto"
+        ],
+        "toId": [
+          "hiq:football:2025:bowman:45:base:no-auto",
+          "hiq:football:2025:score:45:base:no-auto"
+        ],
+        "fromId": [
+          "hiq:football:2025:bowman:45:base:auto",
+          "hiq:football:2025:score:45:base:auto"
+        ],
+        "action": [
+          "move"
+        ],
+        "why": "this saleId's own audit rows disagree on toId (2 rows, 2 distinct toId values) -- a census collision, never resolved by row order"
+      },
+      {
+        "saleId": "tca-ebay::117346509351",
+        "docCount": [
+          2,
+          2
+        ],
+        "docs": [
+          "hiq:football:2025:topps-chrome:221:pink-refractor:no-auto:num-250|hiq:football:2025:topps-chrome:221:pink-refractor:no-auto:num-250;;hiq:football:2025:topps-chrome:221:pink-refractor:no-auto|hiq:football:2025:topps-chrome:221:pink-refractor:no-auto",
+          "hiq:football:2025:topps-chrome:221:pink-refractor:no-auto:num-250|hiq:football:2025:topps-chrome:221:pink-refractor:no-auto:num-250;;hiq:football:2025:topps-chrome:221:pink-refractor:no-auto|hiq:football:2025:topps-chrome:221:pink-refractor:no-auto"
+        ],
+        "toId": [
+          "hiq:football:2025:topps-chrome:221:pink-refractor:no-auto",
+          "hiq:football:2025:topps-chrome:221:pink-refractor:no-auto:num-250"
+        ],
+        "fromId": [
+          "hiq:football:2025:topps-chrome:221:pink-refractor:auto",
+          "hiq:football:2025:topps-chrome:221:pink-refractor:auto:num-250"
+        ],
+        "action": [
+          "move"
+        ],
+        "why": "this saleId's own audit rows disagree on toId (2 rows, 2 distinct toId values) -- a census collision, never resolved by row order"
+      },
+      {
+        "saleId": "tca-ebay::178358899439",
+        "docCount": [
+          2,
+          2,
+          2
+        ],
+        "docs": [
+          "hiq:football:2025:panini-donruss:101:base:no-auto|hiq:football:2025:panini-donruss:101:base:no-auto;;hiq:football:2025:bowman:101:base:no-auto|hiq:football:2025:bowman:101:base:no-auto",
+          "hiq:football:2025:panini-donruss:101:base:no-auto|hiq:football:2025:panini-donruss:101:base:no-auto;;hiq:football:2025:bowman:101:base:no-auto|hiq:football:2025:bowman:101:base:no-auto",
+          "hiq:football:2025:panini-donruss:101:base:no-auto|hiq:football:2025:panini-donruss:101:base:no-auto;;hiq:football:2025:bowman:101:base:no-auto|hiq:football:2025:bowman:101:base:no-auto"
+        ],
+        "toId": [
+          "hiq:football:2025:panini-donruss:101:base:no-auto",
+          "hiq:football:2025:bowman:101:base:no-auto"
+        ],
+        "fromId": [
+          "hiq:football:2025:panini-donruss:101:base:auto",
+          "hiq:football:2025:bowman:101:base:auto"
+        ],
+        "action": [
+          "move",
+          "collapse"
+        ],
+        "why": "this saleId's own audit rows disagree on toId (3 rows, 2 distinct toId values) -- a census collision, never resolved by row order"
+      },
+      {
+        "saleId": "tca-ebay::358541883332",
+        "docCount": [
+          2,
+          2
+        ],
+        "docs": [
+          "hiq:football:2025:topps-chrome:220:pink-refractor:no-auto|hiq:football:2025:topps-chrome:220:pink-refractor:no-auto;;hiq:football:2025:topps-chrome:220:pink-refractor:no-auto:num-250|hiq:football:2025:topps-chrome:220:pink-refractor:no-auto:num-250",
+          "hiq:football:2025:topps-chrome:220:pink-refractor:no-auto|hiq:football:2025:topps-chrome:220:pink-refractor:no-auto;;hiq:football:2025:topps-chrome:220:pink-refractor:no-auto:num-250|hiq:football:2025:topps-chrome:220:pink-refractor:no-auto:num-250"
+        ],
+        "toId": [
+          "hiq:football:2025:topps-chrome:220:pink-refractor:no-auto",
+          "hiq:football:2025:topps-chrome:220:pink-refractor:no-auto:num-250"
+        ],
+        "fromId": [
+          "hiq:football:2025:topps-chrome:220:pink-refractor:auto",
+          "hiq:football:2025:topps-chrome:220:pink-refractor:auto:num-250"
+        ],
+        "action": [
+          "move"
+        ],
+        "why": "this saleId's own audit rows disagree on toId (2 rows, 2 distinct toId values) -- a census collision, never resolved by row order"
+      },
+      {
+        "saleId": "tca-ebay::127979984987",
+        "docCount": [
+          2,
+          2
+        ],
+        "docs": [
+          "hiq:football:2025:topps-chrome:25:blue-refractor:no-auto:num-150|hiq:football:2025:topps-chrome:25:blue-refractor:no-auto:num-150;;hiq:football:2025:topps-chrome:ba-jt:blue-refractor:no-auto:num-150|hiq:football:2025:topps-chrome:ba-jt:blue-refractor:no-auto:num-150",
+          "hiq:football:2025:topps-chrome:25:blue-refractor:no-auto:num-150|hiq:football:2025:topps-chrome:25:blue-refractor:no-auto:num-150;;hiq:football:2025:topps-chrome:ba-jt:blue-refractor:no-auto:num-150|hiq:football:2025:topps-chrome:ba-jt:blue-refractor:no-auto:num-150"
+        ],
+        "toId": [
+          "hiq:football:2025:topps-chrome:ba-jt:blue-refractor:no-auto:num-150",
+          "hiq:football:2025:topps-chrome:25:blue-refractor:no-auto:num-150"
+        ],
+        "fromId": [
+          "hiq:football:2025:topps-chrome:ba-jt:blue-refractor:auto:num-150",
+          "hiq:football:2025:topps-chrome:25:blue-refractor:auto:num-150"
+        ],
+        "action": [
+          "move"
+        ],
+        "why": "this saleId's own audit rows disagree on toId (2 rows, 2 distinct toId values) -- a census collision, never resolved by row order"
+      },
+      {
+        "saleId": "tca-ebay::117084360837",
+        "docCount": [
+          2,
+          2
+        ],
+        "docs": [
+          "hiq:football:2025:bowman:87:base:no-auto|hiq:football:2025:bowman:87:base:no-auto;;hiq:football:2025:score:87:base:no-auto|hiq:football:2025:score:87:base:no-auto",
+          "hiq:football:2025:bowman:87:base:no-auto|hiq:football:2025:bowman:87:base:no-auto;;hiq:football:2025:score:87:base:no-auto|hiq:football:2025:score:87:base:no-auto"
+        ],
+        "toId": [
+          "hiq:football:2025:bowman:87:base:no-auto",
+          "hiq:football:2025:score:87:base:no-auto"
+        ],
+        "fromId": [
+          "hiq:football:2025:bowman:87:base:auto",
+          "hiq:football:2025:score:87:base:auto"
+        ],
+        "action": [
+          "move"
+        ],
+        "why": "this saleId's own audit rows disagree on toId (2 rows, 2 distinct toId values) -- a census collision, never resolved by row order"
+      },
+      {
+        "saleId": "tca-ebay::147498400551",
+        "docCount": [
+          3,
+          3
+        ],
+        "docs": [
+          "hiq:football:2025:topps-chrome:136:black-refractor:auto|hiq:football:2025:topps-chrome:136:black-refractor:auto;;hiq:football:2025:topps-chrome:136:base:no-auto|hiq:football:2025:topps-chrome:136:base:no-auto;;hiq:football:2025:topps-chrome:rau-ea:base:no-auto|hiq:football:2025:topps-chrome:rau-ea:base:no-auto",
+          "hiq:football:2025:topps-chrome:136:black-refractor:auto|hiq:football:2025:topps-chrome:136:black-refractor:auto;;hiq:football:2025:topps-chrome:136:base:no-auto|hiq:football:2025:topps-chrome:136:base:no-auto;;hiq:football:2025:topps-chrome:rau-ea:base:no-auto|hiq:football:2025:topps-chrome:rau-ea:base:no-auto"
+        ],
+        "toId": [
+          "hiq:football:2025:topps-chrome:136:base:no-auto",
+          "hiq:football:2025:topps-chrome:rau-ea:base:no-auto"
+        ],
+        "fromId": [
+          "hiq:football:2025:topps-chrome:136:base:auto",
+          "hiq:football:2025:topps-chrome:rau-ea:base:auto"
+        ],
+        "action": [
+          "move"
+        ],
+        "why": "this saleId's own audit rows disagree on toId (2 rows, 2 distinct toId values) -- a census collision, never resolved by row order"
+      },
+      {
+        "saleId": "tca-ebay::377383457631",
+        "docCount": [
+          2,
+          2
+        ],
+        "docs": [
+          "hiq:football:2025:panini-select:42:base:no-auto:num-25|hiq:football:2025:panini-select:42:base:no-auto:num-25;;hiq:football:2025:panini-select:42:base:no-auto|hiq:football:2025:panini-select:42:base:no-auto",
+          "hiq:football:2025:panini-select:42:base:no-auto:num-25|hiq:football:2025:panini-select:42:base:no-auto:num-25;;hiq:football:2025:panini-select:42:base:no-auto|hiq:football:2025:panini-select:42:base:no-auto"
+        ],
+        "toId": [
+          "hiq:football:2025:panini-select:42:base:no-auto:num-25",
+          "hiq:football:2025:panini-select:42:base:no-auto"
+        ],
+        "fromId": [
+          "hiq:football:2025:panini-select:42:base:auto:num-25",
+          "hiq:football:2025:panini-select:42:base:auto"
+        ],
+        "action": [
+          "move"
+        ],
+        "why": "this saleId's own audit rows disagree on toId (2 rows, 2 distinct toId values) -- a census collision, never resolved by row order"
+      },
+      {
+        "saleId": "tca-ebay::117195213411",
+        "docCount": [
+          2,
+          2
+        ],
+        "docs": [
+          "hiq:football:2025:topps-chrome:ra-tfe:refractor:no-auto|hiq:football:2025:topps-chrome:ra-tfe:refractor:no-auto;;hiq:football:2025:topps-chrome:ra-tf:refractor:no-auto|hiq:football:2025:topps-chrome:ra-tf:refractor:no-auto",
+          "hiq:football:2025:topps-chrome:ra-tfe:refractor:no-auto|hiq:football:2025:topps-chrome:ra-tfe:refractor:no-auto;;hiq:football:2025:topps-chrome:ra-tf:refractor:no-auto|hiq:football:2025:topps-chrome:ra-tf:refractor:no-auto"
+        ],
+        "toId": [
+          "hiq:football:2025:topps-chrome:ra-tfe:refractor:no-auto",
+          "hiq:football:2025:topps-chrome:ra-tf:refractor:no-auto"
+        ],
+        "fromId": [
+          "hiq:football:2025:topps-chrome:ra-tfe:refractor:auto",
+          "hiq:football:2025:topps-chrome:ra-tf:refractor:auto"
+        ],
+        "action": [
+          "move"
+        ],
+        "why": "this saleId's own audit rows disagree on toId (2 rows, 2 distinct toId values) -- a census collision, never resolved by row order"
+      },
+      {
+        "saleId": "tca-ebay::147476884018",
+        "docCount": [
+          2,
+          2
+        ],
+        "docs": [
+          "hiq:football:2025:topps-finest:fba-nc:base:no-auto|hiq:football:2025:topps-finest:fba-nc:base:no-auto;;hiq:football:2025:topps-finest:92-16:base:no-auto|hiq:football:2025:topps-finest:92-16:base:no-auto",
+          "hiq:football:2025:topps-finest:fba-nc:base:no-auto|hiq:football:2025:topps-finest:fba-nc:base:no-auto;;hiq:football:2025:topps-finest:92-16:base:no-auto|hiq:football:2025:topps-finest:92-16:base:no-auto"
+        ],
+        "toId": [
+          "hiq:football:2025:topps-finest:92-16:base:no-auto",
+          "hiq:football:2025:topps-finest:fba-nc:base:no-auto"
+        ],
+        "fromId": [
+          "hiq:football:2025:topps-finest:92-16:base:auto",
+          "hiq:football:2025:topps-finest:fba-nc:base:auto"
+        ],
+        "action": [
+          "move"
+        ],
+        "why": "this saleId's own audit rows disagree on toId (2 rows, 2 distinct toId values) -- a census collision, never resolved by row order"
+      }
+    ],
+    "byShape": {
+      "docCount-2": 255,
+      "docCount-3": 24,
+      "docCount-4": 3
+    },
+    "byFromSportYearSetKey": {
+      "football:2025:topps-signature-class": 8,
+      "football:2025:bowman": 67,
+      "football:2025:topps": 9,
+      "football:2025:panini-prizm": 12,
+      "football:2025:topps-chrome": 142,
+      "football:2025:panini-select": 10,
+      "football:2025:panini-photogenic": 3,
+      "football:2025:topps-finest": 10,
+      "football:2025:panini-phoenix": 1,
+      "football:2025:bowman-chrome": 2,
+      "football:2025:topps-resurgence": 3,
+      "football:2025:panini-donruss": 5,
+      "football:2025:bowman-chrome-sapphire": 1,
+      "football:2025:panini-prizm-draft-picks": 5,
+      "football:2025:panini-optic": 3,
+      "football:2025:panini-mosaic": 1
+    }
+  },
+  "entries": [
+    {
+      "saleId": "cardhedge::ch-daily::1780296362191x921094090912533100::2026-07-14T02:15:00+00:00::165",
+      "keepCardId": "hiq:football:2025:topps-signature-class:186:kaleidoscope-refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:186:kaleidoscope-refractor:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:186:kaleidoscope-refractor:no-auto and the checklist id hiq:football:2025:topps-signature-class:186:kaleidoscope-refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-signature-class:186:kaleidoscope-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318351387794",
+      "keepCardId": "hiq:football:2025:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:1:base:auto:num-1",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:1:base:auto:num-1 and the checklist id hiq:football:2025:bowman:1:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::397989443650",
+      "keepCardId": "hiq:football:2025:bowman:272:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:272:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:272:base:auto and the checklist id hiq:football:2025:bowman:272:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:272:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257522247087",
+      "keepCardId": "hiq:football:2025:bowman:13:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:13:base:auto:num-3",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:13:base:auto:num-3 and the checklist id hiq:football:2025:bowman:13:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:13:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188626190842",
+      "keepCardId": "hiq:football:2025:topps:rfa-jn:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps:rfa-jn:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps:rfa-jn:base:auto and the checklist id hiq:football:2025:topps:rfa-jn:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps:rfa-jn:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::407078891266",
+      "keepCardId": "hiq:football:2025:panini-prizm:ssi-mdn:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-prizm:ssi-mdn:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-prizm:ssi-mdn:base:auto and the checklist id hiq:football:2025:panini-prizm:ssi-mdn:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm:ssi-mdn:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278220168408",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-cb:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:au-cb:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:au-cb:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:au-cb:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-cb:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278243558385",
+      "keepCardId": "hiq:football:2025:bowman:123:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:123:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:123:base:auto and the checklist id hiq:football:2025:bowman:123:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:123:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::327256174577",
+      "keepCardId": "hiq:football:2025:topps-chrome:75:purple-geometric-refractor:no-auto:num-75",
+      "deleteCardId": "hiq:football:2025:topps-chrome:pf-bo-nix-purple-geometric:purple-geometric-refractor:auto:num-75",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:pf-bo-nix-purple-geometric:purple-geometric-refractor:auto:num-75 and the checklist id hiq:football:2025:topps-chrome:75:purple-geometric-refractor:no-auto:num-75 (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:75:purple-geometric-refractor:auto:num-75)"
+    },
+    {
+      "saleId": "tca-ebay::327256174577",
+      "keepCardId": "hiq:football:2025:topps-chrome:75:purple-geometric-refractor:no-auto:num-75",
+      "deleteCardId": "hiq:football:2025:topps-chrome:pf-jake-ferguson:purple-geometric-refractor:auto:num-75",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:pf-jake-ferguson:purple-geometric-refractor:auto:num-75 and the checklist id hiq:football:2025:topps-chrome:75:purple-geometric-refractor:no-auto:num-75 (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:75:purple-geometric-refractor:auto:num-75)"
+    },
+    {
+      "saleId": "tca-ebay::267743521130",
+      "keepCardId": "hiq:football:2025:topps-chrome:rpa-th:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:fyf-the:refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:fyf-the:refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:rpa-th:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rpa-th:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287287945068",
+      "keepCardId": "hiq:football:2025:topps-chrome:111:black-refractor:no-auto:num-10",
+      "deleteCardId": "hiq:football:2025:topps-chrome:111:black-refractor:auto:num-10",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:111:black-refractor:auto:num-10 and the checklist id hiq:football:2025:topps-chrome:111:black-refractor:no-auto:num-10 (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:111:black-refractor:auto:num-10)"
+    },
+    {
+      "saleId": "tca-ebay::287287945068",
+      "keepCardId": "hiq:football:2025:topps-chrome:111:black-refractor:no-auto:num-10",
+      "deleteCardId": "hiq:football:2025:topps-chrome:player-matthew-golden:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:player-matthew-golden:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:111:black-refractor:no-auto:num-10 (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:111:black-refractor:auto:num-10)"
+    },
+    {
+      "saleId": "tca-ebay::147381765593",
+      "keepCardId": "hiq:football:2025:topps-chrome:162:orange-refractor:no-auto:num-25",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rra-am:orange-refractor:auto:num-25",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rra-am:orange-refractor:auto:num-25 and the checklist id hiq:football:2025:topps-chrome:162:orange-refractor:no-auto:num-25 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:162:orange-refractor:auto:num-25)"
+    },
+    {
+      "saleId": "tca-ebay::227465309655",
+      "keepCardId": "hiq:football:2025:bowman:8:base:no-auto",
+      "deleteCardId": "hiq:football:2025:bowman:8:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:bowman:8:base:auto and the checklist id hiq:football:2025:bowman:8:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:8:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168618892895",
+      "keepCardId": "hiq:football:2025:panini-prizm:312:base:no-auto:num-149",
+      "deleteCardId": "hiq:football:2025:panini-prizm:312:base:auto:num-149",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-prizm:312:base:auto:num-149 and the checklist id hiq:football:2025:panini-prizm:312:base:no-auto:num-149 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm:312:base:auto:num-149)"
+    },
+    {
+      "saleId": "tca-ebay::137545066147",
+      "keepCardId": "hiq:football:2025:topps-chrome:231:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:231:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:231:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:231:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:231:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267743973967",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-tw:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:au-tw:gold-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:au-tw:gold-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:au-tw:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-tw:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267735020771",
+      "keepCardId": "hiq:football:2025:bowman:152:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:bowman:152:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:bowman:152:base:auto and the checklist id hiq:football:2025:bowman:152:base:no-auto (docCount=2, action=move|collapse); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:152:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287258720106",
+      "keepCardId": "hiq:football:2025:panini-select:27:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-prospect-edition:27:base:auto:num-49",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-prospect-edition:27:base:auto:num-49 and the checklist id hiq:football:2025:panini-select:27:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-select:27:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790346354458x595791526559599900",
+      "keepCardId": "hiq:football:2025:panini-photogenic:83:bronze:auto",
+      "deleteCardId": "hiq:football:2025:panini-photogenic:83:bronze:no-auto:num-150",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-photogenic:83:bronze:no-auto:num-150 and the checklist id hiq:football:2025:panini-photogenic:83:bronze:auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-photogenic:83:bronze:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790349793243x147292234858991550",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-cl:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-cl:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-cl:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:ra-cl:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-cl:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::306391705919",
+      "keepCardId": "hiq:football:2025:bowman:247:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:247:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:247:base:auto and the checklist id hiq:football:2025:bowman:247:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:247:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377218625691",
+      "keepCardId": "hiq:football:2025:bowman:ga-aj1:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:ga-aj1:base:auto:num-8",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:ga-aj1:base:auto:num-8 and the checklist id hiq:football:2025:bowman:ga-aj1:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:ga-aj1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::227356932230",
+      "keepCardId": "hiq:football:2025:bowman:ba-wh1:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:ba-wh1:base:auto:num-6",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:ba-wh1:base:auto:num-6 and the checklist id hiq:football:2025:bowman:ba-wh1:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:ba-wh1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::327184878464",
+      "keepCardId": "hiq:football:2025:bowman:ba-er1:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:ba-er1:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:ba-er1:base:auto and the checklist id hiq:football:2025:bowman:ba-er1:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:ba-er1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::117221436789",
+      "keepCardId": "hiq:football:2025:topps-chrome:1975-13:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-mgo:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-mgo:base:auto and the checklist id hiq:football:2025:topps-chrome:1975-13:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:1975-13:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377350064017",
+      "keepCardId": "hiq:football:2025:bowman:132:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:132:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:132:base:auto and the checklist id hiq:football:2025:bowman:132:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:132:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127979659110",
+      "keepCardId": "hiq:football:2025:panini-prizm:ssi-dck:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-prizm:ssi-dck:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-prizm:ssi-dck:base:auto and the checklist id hiq:football:2025:panini-prizm:ssi-dck:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm:ssi-dck:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127980170365",
+      "keepCardId": "hiq:football:2025:bowman:187:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:187:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:187:base:auto and the checklist id hiq:football:2025:bowman:187:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:187:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::198485213753",
+      "keepCardId": "hiq:football:2025:topps-chrome:1975-13:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-mgo:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-mgo:base:auto and the checklist id hiq:football:2025:topps-chrome:1975-13:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:1975-13:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::206432071551",
+      "keepCardId": "hiq:football:2025:bowman:132:base:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-rookies-and-stars:132:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-rookies-and-stars:132:base:auto and the checklist id hiq:football:2025:bowman:132:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:132:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127980237250",
+      "keepCardId": "hiq:football:2025:topps-finest:t-15:orange-refractor:no-auto:num-25",
+      "deleteCardId": "hiq:football:2025:topps-finest:1975-11:orange-refractor:auto:num-25",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-finest:1975-11:orange-refractor:auto:num-25 and the checklist id hiq:football:2025:topps-finest:t-15:orange-refractor:no-auto:num-25 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-finest:t-15:orange-refractor:auto:num-25)"
+    },
+    {
+      "saleId": "tca-ebay::377376884548",
+      "keepCardId": "hiq:football:2025:topps-finest:t-21:gold-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:football:2025:topps-finest:a-jh:gold-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-finest:a-jh:gold-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-finest:t-21:gold-refractor:no-auto:num-50 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-finest:t-21:gold-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::137578765402",
+      "keepCardId": "hiq:football:2025:bowman:194:base:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-rookies-and-stars:194:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-rookies-and-stars:194:base:auto and the checklist id hiq:football:2025:bowman:194:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:194:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790318672840x424390122833524740",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-tys:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-tys:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-tys:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:ra-tys:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-tys:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257509234070",
+      "keepCardId": "hiq:football:2025:bowman:72:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:72:base:auto:num-7",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:72:base:auto:num-7 and the checklist id hiq:football:2025:bowman:72:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:72:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800440093380",
+      "keepCardId": "hiq:football:2025:topps-chrome:rc:blue-refractor:no-auto:num-150",
+      "deleteCardId": "hiq:football:2025:topps-chrome:pf-cam-ward-true-tennessee:blue-refractor:auto:num-150",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:pf-cam-ward-true-tennessee:blue-refractor:auto:num-150 and the checklist id hiq:football:2025:topps-chrome:rc:blue-refractor:no-auto:num-150 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rc:blue-refractor:auto:num-150)"
+    },
+    {
+      "saleId": "tca-ebay::227463971304",
+      "keepCardId": "hiq:football:2025:topps-chrome:rc:green-refractor:no-auto:num-99",
+      "deleteCardId": "hiq:football:2025:topps-chrome:1975-20:green-refractor:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:1975-20:green-refractor:auto:num-99 and the checklist id hiq:football:2025:topps-chrome:rc:green-refractor:no-auto:num-99 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rc:green-refractor:auto:num-99)"
+    },
+    {
+      "saleId": "tca-ebay::127997473520",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-lb:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:rau-lb:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:rau-lb:refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-lb:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-lb:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::358915678086",
+      "keepCardId": "hiq:football:2025:topps-chrome:1975-32:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:1975-32:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:1975-32:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:1975-32:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:1975-32:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::358876674334",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-bt:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:pf-black-bhayshul-tuten:refractor:auto:num-299",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:pf-black-bhayshul-tuten:refractor:auto:num-299 and the checklist id hiq:football:2025:topps-chrome:rau-bt:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-bt:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::298568262237",
+      "keepCardId": "hiq:football:2025:panini-phoenix:89:base:no-auto:num-5",
+      "deleteCardId": "hiq:football:2025:panini-phoenix:89:ssp:auto:num-5",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-phoenix:89:ssp:auto:num-5 and the checklist id hiq:football:2025:panini-phoenix:89:base:no-auto:num-5 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-phoenix:89:base:auto:num-5)"
+    },
+    {
+      "saleId": "tca-ebay::278253528783",
+      "keepCardId": "hiq:football:2025:topps-chrome:171:orange-refractor:no-auto:num-25",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:q6821:orange-refractor:auto:num-25",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:q6821:orange-refractor:auto:num-25 and the checklist id hiq:football:2025:topps-chrome:171:orange-refractor:no-auto:num-25 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:171:orange-refractor:auto:num-25)"
+    },
+    {
+      "saleId": "tca-ebay::398264019871",
+      "keepCardId": "hiq:football:2025:topps-chrome:1975-32:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:1975-32:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:1975-32:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:1975-32:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:1975-32:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188704096652",
+      "keepCardId": "hiq:football:2025:topps-chrome:177:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rau-tb:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rau-tb:refractor:auto and the checklist id hiq:football:2025:topps-chrome:177:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:177:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188704096652",
+      "keepCardId": "hiq:football:2025:topps-chrome:177:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rau-tb:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rau-tb:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:177:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:177:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257657301530",
+      "keepCardId": "hiq:football:2025:panini-prizm:ssi-dck:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-prizm:ssi-dck:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-prizm:ssi-dck:base:auto and the checklist id hiq:football:2025:panini-prizm:ssi-dck:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm:ssi-dck:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158207652831",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-tb:purple-refractor:no-auto:num-250",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-tb:refractor:auto:num-250",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-tb:refractor:auto:num-250 and the checklist id hiq:football:2025:topps-chrome:ra-tb:purple-refractor:no-auto:num-250 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-tb:purple-refractor:auto:num-250)"
+    },
+    {
+      "saleId": "tca-ebay::206494015545",
+      "keepCardId": "hiq:football:2025:topps:pi-bf:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:pi-bf:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:pi-bf:base:auto and the checklist id hiq:football:2025:topps:pi-bf:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps:pi-bf:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780297107912x770371660361403500::2026-07-15T06:13:00+00:00::350",
+      "keepCardId": "hiq:football:2025:topps-signature-class:221:kaleidoscope-yellow-refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:221:kaleidoscope-yellow-refractor:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:221:kaleidoscope-yellow-refractor:no-auto and the checklist id hiq:football:2025:topps-signature-class:221:kaleidoscope-yellow-refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-signature-class:221:kaleidoscope-yellow-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::306970074269",
+      "keepCardId": "hiq:football:2025:bowman:fma-cjs:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-finest:fma-cjs:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-finest:fma-cjs:base:auto and the checklist id hiq:football:2025:bowman:fma-cjs:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:fma-cjs:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::389539511156",
+      "keepCardId": "hiq:football:2025:bowman:28:base:no-auto",
+      "deleteCardId": "hiq:football:2025:score:28:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:score:28:base:auto and the checklist id hiq:football:2025:bowman:28:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:28:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127752682490",
+      "keepCardId": "hiq:football:2025:bowman:24:base:no-auto",
+      "deleteCardId": "hiq:football:2025:score:24:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:score:24:base:auto and the checklist id hiq:football:2025:bowman:24:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:24:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::227437064609",
+      "keepCardId": "hiq:football:2025:topps-chrome:387:green-lava-refractor:no-auto:num-99",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:387:green-lava-refractor:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:387:green-lava-refractor:auto:num-99 and the checklist id hiq:football:2025:topps-chrome:387:green-lava-refractor:no-auto:num-99 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:387:green-lava-refractor:auto:num-99)"
+    },
+    {
+      "saleId": "tca-ebay::377350355673",
+      "keepCardId": "hiq:football:2025:bowman:119:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:119:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:119:base:auto and the checklist id hiq:football:2025:bowman:119:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:119:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127978254548",
+      "keepCardId": "hiq:football:2025:topps-chrome:rr-qj:green-refractor:no-auto:num-99",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:rc:green-refractor:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:rc:green-refractor:auto:num-99 and the checklist id hiq:football:2025:topps-chrome:rr-qj:green-refractor:no-auto:num-99 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rr-qj:green-refractor:auto:num-99)"
+    },
+    {
+      "saleId": "tca-ebay::127995352593",
+      "keepCardId": "hiq:football:2025:bowman:142:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:unknown:142:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:unknown:142:base:auto and the checklist id hiq:football:2025:bowman:142:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:142:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267738750367",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-cd:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rau-cd:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rau-cd:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-cd:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-cd:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::307086161610",
+      "keepCardId": "hiq:football:2025:topps-finest:rfa-cs:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-finest:ffa-cs:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-finest:ffa-cs:refractor:auto and the checklist id hiq:football:2025:topps-finest:rfa-cs:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-finest:rfa-cs:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::389323663072",
+      "keepCardId": "hiq:football:2025:bowman-chrome:11:gold-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:baseball:2025:bowman-chrome:11:gold-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:bowman-chrome:11:gold-refractor:auto:num-50 and the checklist id hiq:football:2025:bowman-chrome:11:gold-refractor:no-auto:num-50 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman-chrome:11:gold-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::127997473553",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-wh:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rau-wh:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rau-wh:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-wh:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-wh:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158082278488",
+      "keepCardId": "hiq:football:2025:topps-chrome:47:gold-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:47:gold-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:47:gold-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:47:gold-refractor:no-auto:num-50 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:47:gold-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::127997473839",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-rr:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:au-rr:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:au-rr:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:au-rr:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-rr:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318704427203",
+      "keepCardId": "hiq:football:2025:topps-chrome:143:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rra-mh:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rra-mh:base:auto and the checklist id hiq:football:2025:topps-chrome:143:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:143:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287504433045",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-cd:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rau-cd:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rau-cd:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-cd:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-cd:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800429706088",
+      "keepCardId": "hiq:football:2025:panini-prizm:25:pink-prizm:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-prizm:w563:pink-prizm:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-prizm:w563:pink-prizm:auto and the checklist id hiq:football:2025:panini-prizm:25:pink-prizm:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm:25:pink-prizm:auto)"
+    },
+    {
+      "saleId": "tca-ebay::327296897118",
+      "keepCardId": "hiq:football:2025:topps-chrome:70:purple-lava-refractor:no-auto:num-75",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:70:purple-lava-refractor:auto:num-75",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:70:purple-lava-refractor:auto:num-75 and the checklist id hiq:football:2025:topps-chrome:70:purple-lava-refractor:no-auto:num-75 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:70:purple-lava-refractor:auto:num-75)"
+    },
+    {
+      "saleId": "tca-ebay::278249880447",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-wh:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rau-wh:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rau-wh:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-wh:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-wh:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287509083517",
+      "keepCardId": "hiq:football:2025:topps-resurgence:180:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:180:wave-refractor:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:180:wave-refractor:auto:num-99 and the checklist id hiq:football:2025:topps-resurgence:180:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-resurgence:180:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::206470454029",
+      "keepCardId": "hiq:football:2025:topps-chrome:155:pink-refractor:no-auto:num-250",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:mg:pink-refractor:auto:num-250",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:mg:pink-refractor:auto:num-250 and the checklist id hiq:football:2025:topps-chrome:155:pink-refractor:no-auto:num-250 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:155:pink-refractor:auto:num-250)"
+    },
+    {
+      "saleId": "tca-ebay::298512930403",
+      "keepCardId": "hiq:football:2025:bowman:11:base:no-auto",
+      "deleteCardId": "hiq:football:2025:bowman:player-silhouette-ray-lewis-eddie:base:no-auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:bowman:player-silhouette-ray-lewis-eddie:base:no-auto:num-99 and the checklist id hiq:football:2025:bowman:11:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:11:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278255807105",
+      "keepCardId": "hiq:football:2025:topps-chrome:129:blue-refractor:no-auto:num-150",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:v:blue-refractor:auto:num-150",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:v:blue-refractor:auto:num-150 and the checklist id hiq:football:2025:topps-chrome:129:blue-refractor:no-auto:num-150 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:129:blue-refractor:auto:num-150)"
+    },
+    {
+      "saleId": "tca-ebay::168614475026",
+      "keepCardId": "hiq:football:2025:topps-chrome:106:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:cg-jda:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:cg-jda:refractor:auto and the checklist id hiq:football:2025:topps-chrome:106:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:106:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168614361197",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-kym:purple-refractor:no-auto:num-250",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:ra-kym:refractor:auto:num-250",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:ra-kym:refractor:auto:num-250 and the checklist id hiq:football:2025:topps-chrome:ra-kym:purple-refractor:no-auto:num-250 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-kym:purple-refractor:auto:num-250)"
+    },
+    {
+      "saleId": "tca-ebay::178305886181",
+      "keepCardId": "hiq:football:2025:topps-chrome:149:pink-refractor:no-auto:num-250",
+      "deleteCardId": "hiq:football:2025:topps-chrome:149:pink-refractor:auto:num-250",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:149:pink-refractor:auto:num-250 and the checklist id hiq:football:2025:topps-chrome:149:pink-refractor:no-auto:num-250 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:149:pink-refractor:auto:num-250)"
+    },
+    {
+      "saleId": "tca-ebay::407132347283",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-wh:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:107:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:107:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:ra-wh:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-wh:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287479729325",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-mt:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:ra-mt:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:ra-mt:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-mt:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-mt:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800482638119",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-de:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-de:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-de:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-de:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-de:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::198483106162",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-jbe:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-jbe:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-jbe:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-jbe:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-jbe:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::178396228781",
+      "keepCardId": "hiq:football:2025:panini-donruss:162:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-donruss:162:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-donruss:162:base:auto and the checklist id hiq:football:2025:panini-donruss:162:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-donruss:162:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278270022252",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-rr:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:au-rr:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:au-rr:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:au-rr:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-rr:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188758431537",
+      "keepCardId": "hiq:football:2025:bowman:8:base:no-auto",
+      "deleteCardId": "hiq:football:2025:bowman:8:orange-refractor:auto:num-25",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:bowman:8:orange-refractor:auto:num-25 and the checklist id hiq:football:2025:bowman:8:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:8:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::358880038598",
+      "keepCardId": "hiq:football:2025:topps-chrome:299:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:299:refractor:auto:num-299",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:299:refractor:auto:num-299 and the checklist id hiq:football:2025:topps-chrome:299:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:299:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::358880038598",
+      "keepCardId": "hiq:football:2025:topps-chrome:299:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:pf-bobby-wagner:refractor:auto:num-299",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:pf-bobby-wagner:refractor:auto:num-299 and the checklist id hiq:football:2025:topps-chrome:299:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:299:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::198528727408",
+      "keepCardId": "hiq:football:2025:panini-select:sip-tbz:base:auto",
+      "deleteCardId": "hiq:baseball:2025:panini-select:sip-tbz:base:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-select:sip-tbz:base:no-auto and the checklist id hiq:football:2025:panini-select:sip-tbz:base:auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-select:sip-tbz:base:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::178371197521",
+      "keepCardId": "hiq:football:2025:bowman:183:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:183:base:auto:num-199",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:183:base:auto:num-199 and the checklist id hiq:football:2025:bowman:183:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:183:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::EBAY-v1|298609979415|0",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-ee:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-ee:base:auto:num-150",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-ee:base:auto:num-150 and the checklist id hiq:football:2025:topps-chrome:ra-ee:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-ee:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790358665707x120385111102981440",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-jro:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-jro:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-jro:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:ra-jro:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-jro:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287255174185",
+      "keepCardId": "hiq:football:2025:bowman:14:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:14:base:auto:num-4",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:14:base:auto:num-4 and the checklist id hiq:football:2025:bowman:14:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:14:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::178358144050",
+      "keepCardId": "hiq:football:2025:topps-chrome:rc:orange-refractor:no-auto:num-25",
+      "deleteCardId": "hiq:football:2025:topps-chrome:pf-black-ashton-jeanty-encased:orange-refractor:auto:num-25",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:pf-black-ashton-jeanty-encased:orange-refractor:auto:num-25 and the checklist id hiq:football:2025:topps-chrome:rc:orange-refractor:no-auto:num-25 (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rc:orange-refractor:auto:num-25)"
+    },
+    {
+      "saleId": "tca-ebay::178358144050",
+      "keepCardId": "hiq:football:2025:topps-chrome:rc:orange-refractor:no-auto:num-25",
+      "deleteCardId": "hiq:football:2025:topps-chrome:pf-black-omarion-hampton:orange-refractor:auto:num-25",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:pf-black-omarion-hampton:orange-refractor:auto:num-25 and the checklist id hiq:football:2025:topps-chrome:rc:orange-refractor:no-auto:num-25 (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rc:orange-refractor:auto:num-25)"
+    },
+    {
+      "saleId": "tca-ebay::406773280138",
+      "keepCardId": "hiq:football:2025:bowman:43:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:43:base:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:43:base:auto:num-99 and the checklist id hiq:football:2025:bowman:43:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:43:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278185276983",
+      "keepCardId": "hiq:football:2025:topps-chrome:sfa-cst:gold-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:football:2025:topps-chrome:sfa-cst:black-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:sfa-cst:black-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:sfa-cst:gold-refractor:no-auto:num-50 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:sfa-cst:gold-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::158091008534",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-jl:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:231:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:231:refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-jl:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-jl:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188667879364",
+      "keepCardId": "hiq:football:2025:panini-prizm:ssi-efs:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-prizm:ssi-efs:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-prizm:ssi-efs:base:auto and the checklist id hiq:football:2025:panini-prizm:ssi-efs:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm:ssi-efs:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168534238844",
+      "keepCardId": "hiq:football:2025:panini-prizm:24:base:no-auto:num-25",
+      "deleteCardId": "hiq:football:2025:panini-prizm:24:mojo-refractor:auto:num-25",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-prizm:24:mojo-refractor:auto:num-25 and the checklist id hiq:football:2025:panini-prizm:24:base:no-auto:num-25 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm:24:base:auto:num-25)"
+    },
+    {
+      "saleId": "tca-ebay::278219210653",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-twa:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:pf-tyler-warren:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:pf-tyler-warren:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-twa:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-twa:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287353102838",
+      "keepCardId": "hiq:football:2025:bowman:106:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:106:base:auto:num-49",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:106:base:auto:num-49 and the checklist id hiq:football:2025:bowman:106:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:106:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::407089503000",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-sd:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:au-sd:gold-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:au-sd:gold-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:au-sd:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-sd:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::298549630774",
+      "keepCardId": "hiq:football:2025:bowman:173:base:no-auto",
+      "deleteCardId": "hiq:football:2025:bowman:173:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:bowman:173:base:auto and the checklist id hiq:football:2025:bowman:173:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:173:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168568506494",
+      "keepCardId": "hiq:football:2025:panini-select:210:base:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-select:sp-zfs:gold:auto:num-10",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-select:sp-zfs:gold:auto:num-10 and the checklist id hiq:football:2025:panini-select:210:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-select:210:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::358888095646",
+      "keepCardId": "hiq:football:2025:bowman:111:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:111:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:111:base:auto and the checklist id hiq:football:2025:bowman:111:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:111:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::398217792484",
+      "keepCardId": "hiq:football:2025:topps-chrome:22:gold-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:football:2025:topps-chrome:22:gold-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:22:gold-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:22:gold-refractor:no-auto:num-50 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:22:gold-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::278209031021",
+      "keepCardId": "hiq:football:2025:bowman-chrome-sapphire:11:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:cg-cwa:base:auto:num-1",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:cg-cwa:base:auto:num-1 and the checklist id hiq:football:2025:bowman-chrome-sapphire:11:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman-chrome-sapphire:11:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::358505335449",
+      "keepCardId": "hiq:football:2025:topps-chrome:205:purple-refractor:no-auto:num-250",
+      "deleteCardId": "hiq:football:2025:topps-chrome:205:purple-refractor:auto:num-250",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:205:purple-refractor:auto:num-250 and the checklist id hiq:football:2025:topps-chrome:205:purple-refractor:no-auto:num-250 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:205:purple-refractor:auto:num-250)"
+    },
+    {
+      "saleId": "tca-ebay::178355328896",
+      "keepCardId": "hiq:football:2025:topps-finest:rfa-jn:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-finest:20:base:auto:num-25",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-finest:20:base:auto:num-25 and the checklist id hiq:football:2025:topps-finest:rfa-jn:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-finest:rfa-jn:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::327300013200",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-ee:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-ee:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-ee:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-ee:refractor:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-ee:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::327300013200",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-ee:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:105:refractor:auto:num-275",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:105:refractor:auto:num-275 and the checklist id hiq:football:2025:topps-chrome:ra-ee:refractor:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-ee:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::398239623118",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-jj:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rau-jj:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rau-jj:refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-jj:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-jj:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366604220341",
+      "keepCardId": "hiq:football:2025:topps-chrome:109:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:109:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:109:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:109:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:109:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::137625754794",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-jj:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rau-jj:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rau-jj:refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-jj:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-jj:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::397861758123",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-qj:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-qj:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-qj:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-qj:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-qj:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::EBAY-v1|358924623705|0",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-qj:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-qj:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-qj:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-qj:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-qj:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188424785207",
+      "keepCardId": "hiq:football:2025:topps-finest:rfa-jc:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-finest:rc:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-finest:rc:refractor:auto and the checklist id hiq:football:2025:topps-finest:rfa-jc:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-finest:rfa-jc:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::157997472084",
+      "keepCardId": "hiq:football:2025:panini-prizm:12:base:no-auto:num-99",
+      "deleteCardId": "hiq:baseball:2025:panini-prizm:rc:silver:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-prizm:rc:silver:auto:num-99 and the checklist id hiq:football:2025:panini-prizm:12:base:no-auto:num-99 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm:12:base:auto:num-99)"
+    },
+    {
+      "saleId": "tca-ebay::358848019305",
+      "keepCardId": "hiq:football:2025:topps-chrome:rr-sw:green-refractor:no-auto:num-99",
+      "deleteCardId": "hiq:football:2025:topps-chrome:144:green-refractor:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:144:green-refractor:auto:num-99 and the checklist id hiq:football:2025:topps-chrome:rr-sw:green-refractor:no-auto:num-99 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rr-sw:green-refractor:auto:num-99)"
+    },
+    {
+      "saleId": "tca-ebay::178404020516",
+      "keepCardId": "hiq:football:2025:topps-chrome:ba-dl:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ba-dl:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ba-dl:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ba-dl:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ba-dl:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::327292392429",
+      "keepCardId": "hiq:football:2025:bowman:151:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:bowman:151:base:auto:num-349",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:bowman:151:base:auto:num-349 and the checklist id hiq:football:2025:bowman:151:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:151:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158126367599",
+      "keepCardId": "hiq:football:2025:topps:ba-dsj:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:ba-dsj:green-refractor:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:ba-dsj:green-refractor:auto:num-99 and the checklist id hiq:football:2025:topps:ba-dsj:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps:ba-dsj:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::EBAY-v1|820032250379|0",
+      "keepCardId": "hiq:football:2025:topps-resurgence:rrs-km:base:auto",
+      "deleteCardId": "hiq:football:2025:topps:rrs-km:base:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:rrs-km:base:no-auto and the checklist id hiq:football:2025:topps-resurgence:rrs-km:base:auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-resurgence:rrs-km:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790310342465x559574288192251840",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-wj:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-wj:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-wj:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:ra-wj:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-wj:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790370949201x635320535786931800",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-wj:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-wj:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-wj:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:ra-wj:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-wj:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287482991295",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-jhi:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-jhi:green-lava-refractor:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-jhi:green-lava-refractor:auto:num-99 and the checklist id hiq:football:2025:topps-chrome:ra-jhi:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-jhi:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278250976329",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-xwo:green-refractor:no-auto:num-99",
+      "deleteCardId": "hiq:football:2025:topps-chrome:au-xwo:black-refractor:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:au-xwo:black-refractor:auto:num-99 and the checklist id hiq:football:2025:topps-chrome:au-xwo:green-refractor:no-auto:num-99 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-xwo:green-refractor:auto:num-99)"
+    },
+    {
+      "saleId": "tca-ebay::227432846768",
+      "keepCardId": "hiq:football:2025:topps-chrome:ba-pn:green-geometric-refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ba-pn:green-geometric:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ba-pn:green-geometric:auto:num-99 and the checklist id hiq:football:2025:topps-chrome:ba-pn:green-geometric-refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ba-pn:green-geometric-refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1777917666006x193704051233961820::2026-07-14T14:57:00+00:00::3500",
+      "keepCardId": "hiq:football:2025:panini-prizm-draft-picks:67:red-ice:auto",
+      "deleteCardId": "hiq:football:2025:panini-prizm:67:red-ice:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-prizm:67:red-ice:no-auto and the checklist id hiq:football:2025:panini-prizm-draft-picks:67:red-ice:auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm-draft-picks:67:red-ice:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780309495166x630806661730481300::2026-07-15T21:17:00+00:00::5000",
+      "keepCardId": "hiq:football:2025:topps-signature-class:tp-29:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:tp-29:base:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:tp-29:base:no-auto and the checklist id hiq:football:2025:topps-signature-class:tp-29:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-signature-class:tp-29:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1777915425982x491049849774928060::2026-07-15T00:06:00+00:00::50",
+      "keepCardId": "hiq:football:2025:panini-prizm-draft-picks:49:gold-ice:auto",
+      "deleteCardId": "hiq:football:2025:panini-prizm:49:gold-ice:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-prizm:49:gold-ice:no-auto and the checklist id hiq:football:2025:panini-prizm-draft-picks:49:gold-ice:auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm-draft-picks:49:gold-ice:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::298347345266",
+      "keepCardId": "hiq:football:2025:bowman:11:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:11:base:auto:num-1",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:11:base:auto:num-1 and the checklist id hiq:football:2025:bowman:11:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:11:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::157885441200",
+      "keepCardId": "hiq:football:2025:bowman:11:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:11:base:auto:num-1",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:11:base:auto:num-1 and the checklist id hiq:football:2025:bowman:11:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:11:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::177839666336",
+      "keepCardId": "hiq:football:2025:bowman:270:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:270:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:270:base:auto and the checklist id hiq:football:2025:bowman:270:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:270:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257515784510",
+      "keepCardId": "hiq:football:2025:bowman:11:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:11:base:auto:num-1",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:11:base:auto:num-1 and the checklist id hiq:football:2025:bowman:11:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:11:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::336601127024",
+      "keepCardId": "hiq:football:2025:bowman:11:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:11:base:auto:num-1",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:11:base:auto:num-1 and the checklist id hiq:football:2025:bowman:11:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:11:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257522498873",
+      "keepCardId": "hiq:football:2025:bowman:11:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:11:base:auto:num-1",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:11:base:auto:num-1 and the checklist id hiq:football:2025:bowman:11:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:11:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257522514867",
+      "keepCardId": "hiq:football:2025:bowman:11:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:11:base:auto:num-1",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:11:base:auto:num-1 and the checklist id hiq:football:2025:bowman:11:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:11:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168542706839",
+      "keepCardId": "hiq:football:2025:topps:fba-mt:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps:fba-mt:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps:fba-mt:base:auto and the checklist id hiq:football:2025:topps:fba-mt:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps:fba-mt:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188649729719",
+      "keepCardId": "hiq:football:2025:topps-chrome:45:gold-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:45:gold-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:45:gold-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:45:gold-refractor:no-auto:num-50 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:45:gold-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::278185277684",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-jg:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:au-jg:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:au-jg:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:au-jg:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-jg:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168547267255",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-jn:blue-refractor:no-auto:num-150",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rau-jn:black-refractor:auto:num-150",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rau-jn:black-refractor:auto:num-150 and the checklist id hiq:football:2025:topps-chrome:rau-jn:blue-refractor:no-auto:num-150 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-jn:blue-refractor:auto:num-150)"
+    },
+    {
+      "saleId": "tca-ebay::407080921938",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-dac:orange-refractor:no-auto:num-25",
+      "deleteCardId": "hiq:football:2025:topps-chrome:au-dac:black-refractor:auto:num-25",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:au-dac:black-refractor:auto:num-25 and the checklist id hiq:football:2025:topps-chrome:au-dac:orange-refractor:no-auto:num-25 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-dac:orange-refractor:auto:num-25)"
+    },
+    {
+      "saleId": "tca-ebay::377375586405",
+      "keepCardId": "hiq:football:2025:topps-chrome:134:purple-refractor:no-auto:num-75",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:134:purple-refractor:auto:num-75",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:134:purple-refractor:auto:num-75 and the checklist id hiq:football:2025:topps-chrome:134:purple-refractor:no-auto:num-75 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:134:purple-refractor:auto:num-75)"
+    },
+    {
+      "saleId": "tca-ebay::336701239877",
+      "keepCardId": "hiq:football:2025:topps-chrome:1:red-geometric-refractor:no-auto:num-5",
+      "deleteCardId": "hiq:football:2025:topps-chrome:1:red-geometric-refractor:auto:num-5",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:1:red-geometric-refractor:auto:num-5 and the checklist id hiq:football:2025:topps-chrome:1:red-geometric-refractor:no-auto:num-5 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:1:red-geometric-refractor:auto:num-5)"
+    },
+    {
+      "saleId": "tca-ebay::257377049534",
+      "keepCardId": "hiq:football:2025:bowman:11:base:no-auto",
+      "deleteCardId": "hiq:football:2025:leaf:pf-brady-smigiel-proof-crystals:green-crystals:auto:num-1",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:leaf:pf-brady-smigiel-proof-crystals:green-crystals:auto:num-1 and the checklist id hiq:football:2025:bowman:11:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:11:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::227356928939",
+      "keepCardId": "hiq:football:2025:bowman:3:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:3:base:auto:num-10",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:3:base:auto:num-10 and the checklist id hiq:football:2025:bowman:3:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:3:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366554819703",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-jb:gold-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:rau-jb:gold-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:rau-jb:gold-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:rau-jb:gold-refractor:no-auto:num-50 (docCount=4, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-jb:gold-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::366554819703",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-jb:gold-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rau-jb:black-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rau-jb:black-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:rau-jb:gold-refractor:no-auto:num-50 (docCount=4, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-jb:gold-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::366554819703",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-jb:gold-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:rau-jb:black-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:rau-jb:black-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:rau-jb:gold-refractor:no-auto:num-50 (docCount=4, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-jb:gold-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::800418491904",
+      "keepCardId": "hiq:football:2025:panini-optic:235:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-optic:235:base:auto:num-60",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-optic:235:base:auto:num-60 and the checklist id hiq:football:2025:panini-optic:235:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-optic:235:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::128009538103",
+      "keepCardId": "hiq:football:2025:topps:fba-nc:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps:fba-nc:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps:fba-nc:base:auto and the checklist id hiq:football:2025:topps:fba-nc:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps:fba-nc:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::147476155849",
+      "keepCardId": "hiq:football:2025:panini-prizm:366:silver-prizm:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-prizm:366:silver-prizm:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-prizm:366:silver-prizm:auto and the checklist id hiq:football:2025:panini-prizm:366:silver-prizm:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm:366:silver-prizm:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377374236979",
+      "keepCardId": "hiq:football:2025:topps-finest:rfa-jn:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-finest:rfa-jn:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-finest:rfa-jn:base:auto and the checklist id hiq:football:2025:topps-finest:rfa-jn:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-finest:rfa-jn:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318699401508",
+      "keepCardId": "hiq:football:2025:bowman:133:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:bowman:133:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:bowman:133:base:auto and the checklist id hiq:football:2025:bowman:133:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:133:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::206249988099",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-wc:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-wc:aqua-lava-refractor:auto:num-199",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-wc:aqua-lava-refractor:auto:num-199 and the checklist id hiq:football:2025:topps-chrome:ra-wc:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-wc:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::198514088028",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-rl:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:rau-rl:refractor:auto:num-299",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:rau-rl:refractor:auto:num-299 and the checklist id hiq:football:2025:topps-chrome:rau-rl:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-rl:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377400165319",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-sw:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-sw:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-sw:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-sw:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-sw:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::227456273523",
+      "keepCardId": "hiq:football:2025:topps-chrome:rc:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:129:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:129:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:rc:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rc:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::147502977984",
+      "keepCardId": "hiq:football:2025:topps-chrome:10:gold-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:football:2025:topps-chrome:10:black-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:10:black-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:10:gold-refractor:no-auto:num-50 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:10:gold-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::287519869875",
+      "keepCardId": "hiq:football:2025:topps-chrome:rc:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:113:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:113:refractor:auto and the checklist id hiq:football:2025:topps-chrome:rc:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rc:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127995367429",
+      "keepCardId": "hiq:football:2025:topps-chrome:129:blue-lava-refractor:no-auto:num-150",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-jbe:blue-lava-refractor:auto:num-150",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-jbe:blue-lava-refractor:auto:num-150 and the checklist id hiq:football:2025:topps-chrome:129:blue-lava-refractor:no-auto:num-150 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:129:blue-lava-refractor:auto:num-150)"
+    },
+    {
+      "saleId": "tca-ebay::188677149523",
+      "keepCardId": "hiq:football:2025:topps-chrome:28:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ba-xw:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ba-xw:refractor:auto and the checklist id hiq:football:2025:topps-chrome:28:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:28:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::336729288853",
+      "keepCardId": "hiq:football:2025:panini-donruss:10:base:no-auto:num-25",
+      "deleteCardId": "hiq:football:2025:panini-donruss:10:base:auto:num-25",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-donruss:10:base:auto:num-25 and the checklist id hiq:football:2025:panini-donruss:10:base:no-auto:num-25 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-donruss:10:base:auto:num-25)"
+    },
+    {
+      "saleId": "tca-ebay::137517373273",
+      "keepCardId": "hiq:football:2025:panini-prizm:rc:base:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-prizm:rc:gold-vinyl:auto:num-5",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-prizm:rc:gold-vinyl:auto:num-5 and the checklist id hiq:football:2025:panini-prizm:rc:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm:rc:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::406994149042",
+      "keepCardId": "hiq:football:2025:bowman:136:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:bowman:136:base:auto:num-199",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:bowman:136:base:auto:num-199 and the checklist id hiq:football:2025:bowman:136:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:136:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790309886535x973875919584638200",
+      "keepCardId": "hiq:football:2025:panini-mosaic:32:choice-fusion-red-and-yellow:auto",
+      "deleteCardId": "hiq:football:2025:panini-mosaic:32:choice-fusion-red-and-yellow:no-auto:num-89",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-mosaic:32:choice-fusion-red-and-yellow:no-auto:num-89 and the checklist id hiq:football:2025:panini-mosaic:32:choice-fusion-red-and-yellow:auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-mosaic:32:choice-fusion-red-and-yellow:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::287044905722",
+      "keepCardId": "hiq:football:2025:bowman:ba-pf1:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:ba-pf1:base:auto:num-7",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:ba-pf1:base:auto:num-7 and the checklist id hiq:football:2025:bowman:ba-pf1:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:ba-pf1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267674497199",
+      "keepCardId": "hiq:football:2025:panini-select:79:base:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-select:sip-ddn:prizm:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-select:sip-ddn:prizm:auto and the checklist id hiq:football:2025:panini-select:79:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-select:79:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::198512717673",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-tmc:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:au-tmc:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:au-tmc:refractor:auto and the checklist id hiq:football:2025:topps-chrome:au-tmc:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-tmc:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::198512717673",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-tmc:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:au-tmc:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:au-tmc:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:au-tmc:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-tmc:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377365173637",
+      "keepCardId": "hiq:football:2025:topps:bca-jpr:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps:bca-jpr:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps:bca-jpr:base:auto and the checklist id hiq:football:2025:topps:bca-jpr:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps:bca-jpr:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::236940688292",
+      "keepCardId": "hiq:football:2025:panini-select:20:silver-prizm:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-select:pf-riley-leonard:silver-prizm:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-select:pf-riley-leonard:silver-prizm:auto and the checklist id hiq:football:2025:panini-select:20:silver-prizm:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-select:20:silver-prizm:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377349947931",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-rl:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:rau-rl:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:rau-rl:refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-rl:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-rl:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377349947931",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-rl:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:rau-rl:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:rau-rl:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-rl:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-rl:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377376986844",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-tmc:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:au-tmc:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:au-tmc:refractor:auto and the checklist id hiq:football:2025:topps-chrome:au-tmc:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-tmc:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377376986844",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-tmc:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:au-tmc:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:au-tmc:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:au-tmc:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-tmc:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800412094112",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-rl:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:rau-rl:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:rau-rl:refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-rl:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-rl:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800412094112",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-rl:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:rau-rl:black-refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:rau-rl:black-refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-rl:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-rl:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377371832741",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-jc:gold-wave-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:153:gold-wave-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:153:gold-wave-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:ra-jc:gold-wave-refractor:no-auto:num-50 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-jc:gold-wave-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::178360859565",
+      "keepCardId": "hiq:football:2025:panini-prizm:315:silver:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-prizm:pf-ashton-jeanty:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-prizm:pf-ashton-jeanty:base:auto and the checklist id hiq:football:2025:panini-prizm:315:silver:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm:315:silver:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366570541697",
+      "keepCardId": "hiq:football:2025:panini-select:29:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-select:29:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-select:29:base:auto and the checklist id hiq:football:2025:panini-select:29:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-select:29:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::178358950939",
+      "keepCardId": "hiq:football:2025:bowman:198:base:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-absolute:198:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-absolute:198:base:auto and the checklist id hiq:football:2025:bowman:198:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:198:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318584880322",
+      "keepCardId": "hiq:football:2025:topps-chrome:ba-cb:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:player-chase-brown:refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:player-chase-brown:refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:ba-cb:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ba-cb:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158058353396",
+      "keepCardId": "hiq:football:2025:topps-chrome:rra-gme:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rra-gme:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rra-gme:refractor:auto and the checklist id hiq:football:2025:topps-chrome:rra-gme:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rra-gme:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::298263510922",
+      "keepCardId": "hiq:football:2025:topps-chrome:rc:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:159:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:159:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:rc:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rc:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318704045255",
+      "keepCardId": "hiq:football:2025:panini-donruss:17:base:no-auto:num-99",
+      "deleteCardId": "hiq:baseball:2025:panini-donruss:17:base:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-donruss:17:base:auto:num-99 and the checklist id hiq:football:2025:panini-donruss:17:base:no-auto:num-99 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-donruss:17:base:auto:num-99)"
+    },
+    {
+      "saleId": "tca-ebay::117360866608",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-aj:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-aj:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-aj:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-aj:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-aj:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::307119192768",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-ee:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-ee:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-ee:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-ee:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-ee:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::407147888683",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-rp:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:au-rp:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:au-rp:refractor:auto and the checklist id hiq:football:2025:topps-chrome:au-rp:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-rp:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::327305447670",
+      "keepCardId": "hiq:football:2025:topps-chrome:207:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:207:refractor:auto:num-10",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:207:refractor:auto:num-10 and the checklist id hiq:football:2025:topps-chrome:207:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:207:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::198564258778",
+      "keepCardId": "hiq:football:2025:topps-resurgence:107:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-resurgence:107:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-resurgence:107:refractor:auto and the checklist id hiq:football:2025:topps-resurgence:107:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-resurgence:107:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::EBAY-v1|198553066664|0",
+      "keepCardId": "hiq:football:2025:topps-chrome:ba-dl:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ba-dl:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ba-dl:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ba-dl:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ba-dl:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366609508296",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-cs:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-cs:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-cs:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-cs:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-cs:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287504647689",
+      "keepCardId": "hiq:football:2025:topps-chrome:se-16:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:se-16:refractor:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:se-16:refractor:auto:num-99 and the checklist id hiq:football:2025:topps-chrome:se-16:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:se-16:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790346240175x465825090628846140",
+      "keepCardId": "hiq:football:2025:panini-photogenic:146:bronze:auto",
+      "deleteCardId": "hiq:football:2025:panini-photogenic:146:bronze:no-auto:num-150",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-photogenic:146:bronze:no-auto:num-150 and the checklist id hiq:football:2025:panini-photogenic:146:bronze:auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-photogenic:146:bronze:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790355640938x882374142545980300",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-jt:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-jt:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-jt:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:ra-jt:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-jt:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780307294411x629561057920393900::2026-07-10T17:24:00+00:00::20000",
+      "keepCardId": "hiq:football:2025:topps-signature-class:fl-25:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:fl-25:base:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:fl-25:base:no-auto and the checklist id hiq:football:2025:topps-signature-class:fl-25:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-signature-class:fl-25:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780309081242x876622604516275300::2026-07-13T19:00:00+00:00::4000",
+      "keepCardId": "hiq:football:2025:topps-signature-class:sc-5:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:sc-5:base:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:sc-5:base:no-auto and the checklist id hiq:football:2025:topps-signature-class:sc-5:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-signature-class:sc-5:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1777915459657x868517871882050300::2026-07-13T01:05:00+00:00::120",
+      "keepCardId": "hiq:football:2025:panini-prizm-draft-picks:98:gold-ice:auto",
+      "deleteCardId": "hiq:football:2025:panini-prizm:98:gold-ice:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-prizm:98:gold-ice:no-auto and the checklist id hiq:football:2025:panini-prizm-draft-picks:98:gold-ice:auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm-draft-picks:98:gold-ice:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780309040792x686587623750510000::2026-07-15T18:27:00+00:00::4110",
+      "keepCardId": "hiq:football:2025:topps-signature-class:sc-13:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:sc-13:base:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:sc-13:base:no-auto and the checklist id hiq:football:2025:topps-signature-class:sc-13:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-signature-class:sc-13:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800101959132",
+      "keepCardId": "hiq:football:2025:bowman:9:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:9:base:auto:num-10",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:9:base:auto:num-10 and the checklist id hiq:football:2025:bowman:9:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:9:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278016224500",
+      "keepCardId": "hiq:football:2025:panini-select:39:base:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-select:sme-jsh:silver:auto:num-249",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-select:sme-jsh:silver:auto:num-249 and the checklist id hiq:football:2025:panini-select:39:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-select:39:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168408995911",
+      "keepCardId": "hiq:football:2025:bowman:ba-pb1:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:ba-pb1:base:auto:num-8",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:ba-pb1:base:auto:num-8 and the checklist id hiq:football:2025:bowman:ba-pb1:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:ba-pb1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168408995911",
+      "keepCardId": "hiq:football:2025:bowman:ba-pb1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:unknown:ba-pb1:base:auto:num-8",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:unknown:ba-pb1:base:auto:num-8 and the checklist id hiq:football:2025:bowman:ba-pb1:base:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:ba-pb1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::397112651031",
+      "keepCardId": "hiq:football:2025:bowman:rc:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:bowman:pf-jalen-booklet:base:auto:num-49",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:bowman:pf-jalen-booklet:base:auto:num-49 and the checklist id hiq:football:2025:bowman:rc:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:rc:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366561801866",
+      "keepCardId": "hiq:football:2025:topps:237:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps:237:base:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps:237:base:auto:num-50 and the checklist id hiq:football:2025:topps:237:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps:237:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377349878226",
+      "keepCardId": "hiq:football:2025:topps-chrome:120:gold-wave-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-eay:gold-wave-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-eay:gold-wave-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:120:gold-wave-refractor:no-auto:num-50 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:120:gold-wave-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::366548507790",
+      "keepCardId": "hiq:football:2025:topps-chrome:177:green-refractor:no-auto:num-99",
+      "deleteCardId": "hiq:football:2025:topps-chrome:rra-tb:green-refractor:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:rra-tb:green-refractor:auto:num-99 and the checklist id hiq:football:2025:topps-chrome:177:green-refractor:no-auto:num-99 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:177:green-refractor:auto:num-99)"
+    },
+    {
+      "saleId": "tca-ebay::278269140046",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-jj:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-jj:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-jj:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-jj:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-jj:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257693110505",
+      "keepCardId": "hiq:football:2025:panini-donruss:303:base:no-auto:num-199",
+      "deleteCardId": "hiq:football:2025:panini-donruss:303:base:auto:num-199",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-donruss:303:base:auto:num-199 and the checklist id hiq:football:2025:panini-donruss:303:base:no-auto:num-199 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-donruss:303:base:auto:num-199)"
+    },
+    {
+      "saleId": "tca-ebay::117363090583",
+      "keepCardId": "hiq:football:2025:topps-chrome:ba-jal:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ba-jal:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ba-jal:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ba-jal:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ba-jal:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::178378154247",
+      "keepCardId": "hiq:football:2025:topps-chrome:84:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:84:refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:84:refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:84:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:84:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::298601238371",
+      "keepCardId": "hiq:football:2025:topps-chrome:ba-bb:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ba-bb:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ba-bb:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ba-bb:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ba-bb:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::327113738644",
+      "keepCardId": "hiq:football:2025:bowman:23:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:23:base:auto:num-7",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:23:base:auto:num-7 and the checklist id hiq:football:2025:bowman:23:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:23:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366591434435",
+      "keepCardId": "hiq:football:2025:topps-finest:150:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-finest:150:gold-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-finest:150:gold-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-finest:150:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-finest:150:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318616724054",
+      "keepCardId": "hiq:football:2025:bowman:110:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:bowman:110:base:auto:num-100",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:bowman:110:base:auto:num-100 and the checklist id hiq:football:2025:bowman:110:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:110:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267735020482",
+      "keepCardId": "hiq:football:2025:bowman:122:base:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-prizm:122:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-prizm:122:base:auto and the checklist id hiq:football:2025:bowman:122:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:122:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::227454086662",
+      "keepCardId": "hiq:football:2025:panini-optic:218:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-optic:218:base:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-optic:218:base:auto:num-99 and the checklist id hiq:football:2025:panini-optic:218:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-optic:218:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790303589659x304998789172246340",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-its:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-its:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-its:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:ra-its:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-its:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::327124622489",
+      "keepCardId": "hiq:football:2025:bowman:8:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:8:base:auto:num-9",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:8:base:auto:num-9 and the checklist id hiq:football:2025:bowman:8:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:8:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1777915413398x421651159745021900::2026-07-15T01:10:00+00:00::1050",
+      "keepCardId": "hiq:football:2025:panini-prizm-draft-picks:28:gold-ice:auto",
+      "deleteCardId": "hiq:football:2025:panini-prizm:28:gold-ice:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-prizm:28:gold-ice:no-auto and the checklist id hiq:football:2025:panini-prizm-draft-picks:28:gold-ice:auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm-draft-picks:28:gold-ice:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780224245807x322769163713524350::2026-07-15T04:53:00+00:00::399",
+      "keepCardId": "hiq:football:2025:topps-signature-class:81:kaleidoscope-refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:81:kaleidoscope-refractor:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:81:kaleidoscope-refractor:no-auto and the checklist id hiq:football:2025:topps-signature-class:81:kaleidoscope-refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-signature-class:81:kaleidoscope-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::167782989746",
+      "keepCardId": "hiq:football:2025:bowman:126:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:126:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:126:base:auto and the checklist id hiq:football:2025:bowman:126:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:126:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287184965784",
+      "keepCardId": "hiq:football:2025:bowman:ds-sjdm:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:ds-sjdm:base:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:ds-sjdm:base:auto:num-50 and the checklist id hiq:football:2025:bowman:ds-sjdm:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:ds-sjdm:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318443049548",
+      "keepCardId": "hiq:football:2025:topps:fyf-the:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps:fba-tvh:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps:fba-tvh:base:auto and the checklist id hiq:football:2025:topps:fyf-the:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps:fyf-the:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::298522374097",
+      "keepCardId": "hiq:football:2025:bowman-chrome:jra-es:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:bowman-chrome:1st-bowman:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:bowman-chrome:1st-bowman:refractor:auto and the checklist id hiq:football:2025:bowman-chrome:jra-es:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman-chrome:jra-es:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127980127920",
+      "keepCardId": "hiq:football:2025:bowman:151:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:bowman:151:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:bowman:151:base:auto and the checklist id hiq:football:2025:bowman:151:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:151:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278185356042",
+      "keepCardId": "hiq:football:2025:topps-chrome:au-jad:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:au-jad:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:au-jad:refractor:auto and the checklist id hiq:football:2025:topps-chrome:au-jad:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:au-jad:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127979647479",
+      "keepCardId": "hiq:football:2025:bowman:8:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:bowman:8:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:bowman:8:base:auto and the checklist id hiq:football:2025:bowman:8:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:8:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267697285725",
+      "keepCardId": "hiq:football:2025:topps-chrome:fs-21:pink-refractor:no-auto:num-250",
+      "deleteCardId": "hiq:football:2025:topps-chrome:34:pink-refractor:auto:num-250",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:34:pink-refractor:auto:num-250 and the checklist id hiq:football:2025:topps-chrome:fs-21:pink-refractor:no-auto:num-250 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:fs-21:pink-refractor:auto:num-250)"
+    },
+    {
+      "saleId": "tca-ebay::377404638909",
+      "keepCardId": "hiq:football:2025:topps-chrome:207:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-jh:gold-wave-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-jh:gold-wave-refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:207:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:207:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127980054543",
+      "keepCardId": "hiq:football:2025:topps-chrome:rc:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-wj:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-wj:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:rc:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rc:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168548256285",
+      "keepCardId": "hiq:football:2025:bowman:25:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:bowman:player-leaf-pro-set-metal:base:auto:num-25",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:bowman:player-leaf-pro-set-metal:base:auto:num-25 and the checklist id hiq:football:2025:bowman:25:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:25:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377371850586",
+      "keepCardId": "hiq:football:2025:topps-chrome:rc:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-bco:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-bco:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:rc:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rc:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::236985113717",
+      "keepCardId": "hiq:football:2025:bowman:55av-mm:base:no-auto",
+      "deleteCardId": "hiq:football:2025:bowman:player-miller-moss:base:auto:num-99",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:bowman:player-miller-moss:base:auto:num-99 and the checklist id hiq:football:2025:bowman:55av-mm:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:55av-mm:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::206491058035",
+      "keepCardId": "hiq:football:2025:topps-chrome:rc:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:113:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:113:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:rc:refractor:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rc:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::206491058035",
+      "keepCardId": "hiq:football:2025:topps-chrome:rc:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:rc:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:rc:refractor:auto and the checklist id hiq:football:2025:topps-chrome:rc:refractor:no-auto (docCount=3, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rc:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377406514144",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-tf:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-tf:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-tf:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-tf:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-tf:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::407150188140",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-jj:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-jj:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-jj:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-jj:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-jj:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::227481723468",
+      "keepCardId": "hiq:football:2025:panini-prizm:96:silver:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-prizm:96:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-prizm:96:base:auto and the checklist id hiq:football:2025:panini-prizm:96:silver:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm:96:silver:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257673077090",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-tf:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-tf:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-tf:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-tf:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-tf:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318738988950",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-jh:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-jh:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-jh:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-jh:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-jh:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278151454056",
+      "keepCardId": "hiq:football:2025:topps-chrome:257:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:257:refractor:auto:num-399",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:257:refractor:auto:num-399 and the checklist id hiq:football:2025:topps-chrome:257:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:257:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1776872081732x554491866245238500::2026-07-11T03:00:00+00:00::2999",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-its:base:auto",
+      "deleteCardId": "1776872081732x554491866245238500",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both 1776872081732x554491866245238500 and the checklist id hiq:football:2025:topps-chrome:ra-its:base:auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-its:base:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::EBAY-v1|227357050038|0",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-mgo:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-mgo:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-mgo:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-mgo:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-mgo:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::227469115927",
+      "keepCardId": "hiq:football:2025:topps-finest:92-40:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-finest:rfa-ee:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-finest:rfa-ee:base:auto and the checklist id hiq:football:2025:topps-finest:92-40:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-finest:92-40:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::236951060367",
+      "keepCardId": "hiq:football:2025:topps:ra-mw:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:ra-mw:blue-refractor:auto:num-150",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:ra-mw:blue-refractor:auto:num-150 and the checklist id hiq:football:2025:topps:ra-mw:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps:ra-mw:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1788142033592x671735102772122800",
+      "keepCardId": "hiq:football:2025:topps-finest:rfa-jc:gold-refractor:no-auto:num-50",
+      "deleteCardId": "1778991580787x283774934926112300",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both 1778991580787x283774934926112300 and the checklist id hiq:football:2025:topps-finest:rfa-jc:gold-refractor:no-auto:num-50 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-finest:rfa-jc:gold-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::366599499762",
+      "keepCardId": "hiq:football:2025:panini-select:41:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-select:41:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-select:41:base:auto and the checklist id hiq:football:2025:panini-select:41:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-select:41:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790311848894x509835586986882000",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-tfe:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-tfe:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-tfe:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:ra-tfe:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-tfe:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1776706112529x494453656044437500::2026-07-11T01:27:00+00:00::1250",
+      "keepCardId": "hiq:football:2025:panini-prizm-draft-picks:57:silver:auto",
+      "deleteCardId": "hiq:football:2025:panini-prizm:57:silver:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-prizm:57:silver:no-auto and the checklist id hiq:football:2025:panini-prizm-draft-picks:57:silver:auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-prizm-draft-picks:57:silver:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790329227517x682327701038000600",
+      "keepCardId": "hiq:football:2025:panini-photogenic:28:bronze:auto",
+      "deleteCardId": "hiq:football:2025:panini-photogenic:28:bronze:no-auto:num-150",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-photogenic:28:bronze:no-auto:num-150 and the checklist id hiq:football:2025:panini-photogenic:28:bronze:auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-photogenic:28:bronze:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780296866171x100397834237742740::2026-07-15T09:05:00+00:00::51",
+      "keepCardId": "hiq:football:2025:topps-signature-class:210:pandora-yellow-refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps:210:pandora-yellow-refractor:no-auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps:210:pandora-yellow-refractor:no-auto and the checklist id hiq:football:2025:topps-signature-class:210:pandora-yellow-refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-signature-class:210:pandora-yellow-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::227359346958",
+      "keepCardId": "hiq:football:2025:bowman:41:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:unknown:41:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:unknown:41:base:auto and the checklist id hiq:football:2025:bowman:41:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:41:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188292925809",
+      "keepCardId": "hiq:football:2025:panini-select:37:blue-prizm:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-select:auto:blue-prizm:auto:num-149",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-select:auto:blue-prizm:auto:num-149 and the checklist id hiq:football:2025:panini-select:37:blue-prizm:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-select:37:blue-prizm:auto)"
+    },
+    {
+      "saleId": "tca-ebay::388691297799",
+      "keepCardId": "hiq:football:2025:bowman:299:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:299:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:299:base:auto and the checklist id hiq:football:2025:bowman:299:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:299:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::178175951537",
+      "keepCardId": "hiq:football:2025:bowman:89:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:89:base:auto:num-10",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:89:base:auto:num-10 and the checklist id hiq:football:2025:bowman:89:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:89:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::396856431670",
+      "keepCardId": "hiq:football:2025:bowman:18:base:no-auto",
+      "deleteCardId": "hiq:football:2025:score:18:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:score:18:base:auto and the checklist id hiq:football:2025:bowman:18:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:18:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::389934531693",
+      "keepCardId": "hiq:football:2025:bowman:sa-nh1:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:sa-nh1:base:auto:num-4",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:sa-nh1:base:auto:num-4 and the checklist id hiq:football:2025:bowman:sa-nh1:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:sa-nh1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::137538094738",
+      "keepCardId": "hiq:football:2025:topps-chrome:eqa-cw:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:eqa-cw:refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:eqa-cw:refractor:auto:num-50 and the checklist id hiq:football:2025:topps-chrome:eqa-cw:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:eqa-cw:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278194587942",
+      "keepCardId": "hiq:football:2025:topps-finest:cr-16:red-refractor:no-auto:num-5",
+      "deleteCardId": "hiq:football:2025:topps-finest:15:red-refractor:auto:num-5",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-finest:15:red-refractor:auto:num-5 and the checklist id hiq:football:2025:topps-finest:cr-16:red-refractor:no-auto:num-5 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-finest:cr-16:red-refractor:auto:num-5)"
+    },
+    {
+      "saleId": "tca-ebay::158089204098",
+      "keepCardId": "hiq:football:2025:topps-chrome:1975-13:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:111:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:111:refractor:auto and the checklist id hiq:football:2025:topps-chrome:1975-13:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:1975-13:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158089210131",
+      "keepCardId": "hiq:football:2025:topps-chrome:1975-13:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:111:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:111:refractor:auto and the checklist id hiq:football:2025:topps-chrome:1975-13:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:1975-13:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::327156977328",
+      "keepCardId": "hiq:football:2025:bowman:82:base:no-auto",
+      "deleteCardId": "hiq:football:2025:unknown:82:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:unknown:82:base:auto and the checklist id hiq:football:2025:bowman:82:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:82:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168550702240",
+      "keepCardId": "hiq:football:2025:topps-chrome:rau-ee:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-ee:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-ee:refractor:auto and the checklist id hiq:football:2025:topps-chrome:rau-ee:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:rau-ee:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318638237554",
+      "keepCardId": "hiq:football:2025:bowman:3:base:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-donruss:3:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-donruss:3:base:auto and the checklist id hiq:football:2025:bowman:3:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:3:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188769097430",
+      "keepCardId": "hiq:football:2025:topps-chrome:157:pink-refractor:no-auto:num-250",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:ra-tw:pink-refractor:auto:num-250",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:ra-tw:pink-refractor:auto:num-250 and the checklist id hiq:football:2025:topps-chrome:157:pink-refractor:no-auto:num-250 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:157:pink-refractor:auto:num-250)"
+    },
+    {
+      "saleId": "tca-ebay::278256916849",
+      "keepCardId": "hiq:football:2025:bowman:136:base:no-auto",
+      "deleteCardId": "hiq:football:2025:bowman:136:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:bowman:136:base:auto and the checklist id hiq:football:2025:bowman:136:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:136:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800519481839",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-oh:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-oh:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-oh:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-oh:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-oh:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168600727482",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-its:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:ra-its:refractor:auto:num-399",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:ra-its:refractor:auto:num-399 and the checklist id hiq:football:2025:topps-chrome:ra-its:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-its:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::236981877234",
+      "keepCardId": "hiq:football:2025:panini-donruss:165:base:no-auto",
+      "deleteCardId": "hiq:football:2025:panini-donruss:165:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:panini-donruss:165:base:auto and the checklist id hiq:football:2025:panini-donruss:165:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-donruss:165:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158195301916",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-oh:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-oh:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-oh:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-oh:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-oh:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800488343736",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-ee:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-ee:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-ee:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ra-ee:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-ee:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188625013340",
+      "keepCardId": "hiq:football:2025:panini-optic:255:holo:no-auto:num-199",
+      "deleteCardId": "hiq:football:2025:donruss-optic:255:holo:auto:num-199",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:donruss-optic:255:holo:auto:num-199 and the checklist id hiq:football:2025:panini-optic:255:holo:no-auto:num-199 (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-optic:255:holo:auto:num-199)"
+    },
+    {
+      "saleId": "tca-ebay::307107776825",
+      "keepCardId": "hiq:football:2025:topps-chrome:16:base:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:16:refractor:auto:num-25",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:16:refractor:auto:num-25 and the checklist id hiq:football:2025:topps-chrome:16:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:16:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::407155440770",
+      "keepCardId": "hiq:football:2025:topps-chrome:ba-dl:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ba-dl:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ba-dl:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ba-dl:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ba-dl:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377429547287",
+      "keepCardId": "hiq:football:2025:topps-chrome:ba-dl:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ba-dl:refractor:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ba-dl:refractor:auto and the checklist id hiq:football:2025:topps-chrome:ba-dl:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ba-dl:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287464043376",
+      "keepCardId": "hiq:football:2025:bowman:hoca-rb:base:no-auto",
+      "deleteCardId": "hiq:football:2025:bowman:hoca-rb:gold-refractor:auto:num-50",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:bowman:hoca-rb:gold-refractor:auto:num-50 and the checklist id hiq:football:2025:bowman:hoca-rb:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:hoca-rb:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::307105109637",
+      "keepCardId": "hiq:football:2025:bowman:76:base:no-auto",
+      "deleteCardId": "hiq:hockey:2025:bowman:76:base:auto:num-10",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:hockey:2025:bowman:76:base:auto:num-10 and the checklist id hiq:football:2025:bowman:76:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:76:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377349861364",
+      "keepCardId": "hiq:football:2025:bowman:52:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:bowman:52:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:bowman:52:base:auto and the checklist id hiq:football:2025:bowman:52:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:bowman:52:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188765164867",
+      "keepCardId": "hiq:football:2025:panini-select:37:base:no-auto",
+      "deleteCardId": "hiq:baseball:2025:panini-select:37:base:auto",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2025:panini-select:37:base:auto and the checklist id hiq:football:2025:panini-select:37:base:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:panini-select:37:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790310071232x165813633439142000",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-cwa:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-cwa:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-cwa:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:ra-cwa:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-cwa:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790324271683x249715614384153700",
+      "keepCardId": "hiq:football:2025:topps-chrome:ra-jcm:refractor:no-auto",
+      "deleteCardId": "hiq:football:2025:topps-chrome:ra-jcm:refractor:auto:num-499",
+      "reason": "fb2025 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2025:topps-chrome:ra-jcm:refractor:auto:num-499 and the checklist id hiq:football:2025:topps-chrome:ra-jcm:refractor:no-auto (docCount=2, action=move); toId is the surviving copy per the census (fromId=hiq:football:2025:topps-chrome:ra-jcm:refractor:auto)"
+    }
+  ]
+}
