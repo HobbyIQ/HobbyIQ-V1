@@ -5189,10 +5189,16 @@ jobs:
         # `inputs.scope` itself is forwarded verbatim everywhere else (the
         # relaunch dispatch, the runtime env), per
         # CF-A-RELAUNCH-THAT-DROPS-AN-INPUT-INHERITS-A-DEFAULT.
+        #
+        # printf '%s', NOT echo: `echo "hockey:2025"` emits a trailing
+        # newline, and `tr -c 'A-Za-z0-9._-' '-'` maps THAT newline to a
+        # trailing `-` too, so SCOPE_SLUG would come out `hockey-2025-`
+        # (review on #2481). printf '%s' passes the value through with no
+        # trailing newline, so the colon is the only character sanitized.
         if: ${{ always() && inputs.script == 'census-sold-comp-copies' }}
         shell: bash
         run: |
-          echo "SCOPE_SLUG=$(echo "${{ inputs.scope }}" | tr -c 'A-Za-z0-9._-' '-')" >> "$GITHUB_ENV"
+          echo "SCOPE_SLUG=$(printf '%s' "${{ inputs.scope }}" | tr -c 'A-Za-z0-9._-' '-')" >> "$GITHUB_ENV"
 
       - name: Upload the census-sold-comp-copies candidate list
         if: ${{ always() && inputs.script == 'census-sold-comp-copies' }}

@@ -223,6 +223,51 @@ describe("the upload-artifact NAME never carries the scope's raw colon", () => {
     expect(fs.readFileSync(path.join(backend, "..", ".github", "actions", "relaunch-on-marker", "action.yml"), "utf8"))
       .not.toContain("download-artifact");
   });
+
+  // Review on #2481: `echo "$X" | tr -c ... '-'` maps echo's OWN trailing
+  // newline to a trailing `-` too, so a naive `echo`-based sanitizer turns
+  // scope=hockey:2025 into SCOPE_SLUG=hockey-2025- (trailing dash) and the
+  // artifact name census-sold-comp-copies-hockey-2025--slot-0-<id> (double
+  // dash). The sanitizer must use `printf '%s'`, which emits no trailing
+  // newline, not `echo`.
+  it("the sanitizer uses printf '%s', never echo, so no trailing newline reaches tr", () => {
+    const yml = fs.readFileSync(runner, "utf8");
+    const idx = yml.indexOf("Sanitize the scope for the census-sold-comp-copies artifact name");
+    expect(idx).toBeGreaterThan(-1);
+    const block = yml.slice(idx, idx + 2000);
+    const runLine = block.match(/^\s*echo "SCOPE_SLUG=.*$/m)?.[0];
+    expect(runLine, "could not find the SCOPE_SLUG export line").toBeTruthy();
+    expect(runLine).toMatch(/printf '%s' "\$\{\{\s*inputs\.scope\s*\}\}"/);
+    expect(runLine).not.toMatch(/echo "\$\{\{\s*inputs\.scope\s*\}\}"/);
+  });
+
+  it("running the real sanitizer line against scope=hockey:2025 yields the exact expected name, no trailing/double dash", () => {
+    const yml = fs.readFileSync(runner, "utf8");
+    const idx = yml.indexOf("Sanitize the scope for the census-sold-comp-copies artifact name");
+    const block = yml.slice(idx, idx + 2000);
+    const runLine = block.match(/^\s*echo "SCOPE_SLUG=.*$/m)?.[0]?.trim();
+    expect(runLine).toBeTruthy();
+
+    // Substitute the workflow-expression placeholder with a real shell
+    // variable the way GitHub Actions would substitute the literal scope
+    // text, then execute the ACTUAL line (not a reimplementation) under bash,
+    // pointing $GITHUB_ENV at a real temp file exactly the way the runner's
+    // own env does, then source it back to read SCOPE_SLUG.
+    const scope = "hockey:2025";
+    const shellLine = runLine!.replace(/\$\{\{\s*inputs\.scope\s*\}\}/g, scope);
+    const envFile = path.join(tmp, `github_env-${Math.random().toString(36).slice(2)}`);
+    fs.writeFileSync(envFile, "");
+    execFileSync("bash", ["-c", shellLine], { encoding: "utf8", env: { ...process.env, GITHUB_ENV: envFile } });
+    const out = fs.readFileSync(envFile, "utf8").trim(); // "SCOPE_SLUG=hockey-2025"
+
+    expect(out).toBe("SCOPE_SLUG=hockey-2025");
+    const scopeSlug = out.slice("SCOPE_SLUG=".length);
+    const artifactName = `census-sold-comp-copies-${scopeSlug}-slot-0-36370366955`;
+    expect(artifactName).toBe("census-sold-comp-copies-hockey-2025-slot-0-36370366955");
+    expect(artifactName).not.toMatch(/-{2,}/); // no double dash from a trailing-newline artifact
+    expect(scopeSlug).not.toMatch(/-$/); // the #2481 regression: echo's trailing newline -> trailing dash
+    expect(artifactName).not.toContain(":");
+  });
 });
 
 // ── the scope refusal ────────────────────────────────────────────────────
