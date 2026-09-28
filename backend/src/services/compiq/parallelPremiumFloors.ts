@@ -78,7 +78,26 @@ const PARALLEL_TO_PRINT_RUN: Array<{
   { match: (n) => n.includes("peanuts"), printRun: 5 },
   { match: (n) => n.includes("sunflower seeds") || n.includes("sunflower seed"), printRun: 5 },
   // CF-BOWMAN-LOGOFRACTOR (2026-07-08, Drew): /35 print run.
-  { match: (n) => n.includes("logofractor") || n.includes("logo fractor"), printRun: 35 },
+  //
+  // BOWMAN-QUALIFIED ONLY (Drew ruling, 2026-09-28; PR #2478 needsRuling #3).
+  // This rule used to match ANY "logofractor"/"logo fractor" substring and
+  // apply the Bowman /35 to it -- but Logofractor is not one product's
+  // parallel. 2024 Topps Chrome Logofractor is a same-numbered NAMED
+  // PARALLEL of the Topps Chrome flagship base set (baseballcardpedia +
+  // checklistinsider, PR #2478), and its base card is UNSERIALIZED (an
+  // estimated ~3,150 copies, not a number printed on the card) -- /35
+  // belongs to Bowman Logofractor alone. `inferPrintRun` takes only the
+  // parallel NAME, no product/setKey context, so the fix is the same shape
+  // this table already uses for every other name-only disambiguation:
+  // require the qualifying word IN the matched string, exactly as
+  // `parseTitleIdentity.service.ts`'s parser now derives "Bowman
+  // Logofractor" for Bowman cards and bare "Logofractor" / "<Color>
+  // Logofractor" (no "bowman") for Topps Chrome cards. A Topps Chrome
+  // Logofractor sale therefore gets NO synthetic floor here -- blank means
+  // unknown, never a guessed print run (D4 PR 5 doctrine, this file's own
+  // header). Bowman Logofractor and Bowman Chrome Logofractor are
+  // unaffected: both parser outputs already contain "bowman".
+  { match: (n) => n.includes("bowman") && (n.includes("logofractor") || n.includes("logo fractor")), printRun: 35 },
   // CF-BLACK-XFRACTOR (2026-07-08, Drew): /10 print run. Fits the
   // existing /10 tier alongside Orange Shimmer.
   //
@@ -160,6 +179,18 @@ const PARALLEL_TO_PRINT_RUN: Array<{
 export function inferPrintRun(parallelName: string): number | null {
   if (!parallelName || typeof parallelName !== "string") return null;
   const norm = parallelName.trim().toLowerCase();
+  // CF-LOGOFRACTOR-IS-A-PARALLEL-NOT-A-PRODUCT (Drew ruling, 2026-09-28).
+  // Any "logofractor" mention that is NOT Bowman's refuses a floor outright,
+  // checked before the table loop rather than as a table row, because a
+  // table row can only ever ASSIGN a print run -- it has no way to say "stop
+  // looking, and answer unknown" for a name that would otherwise fall
+  // through to a later, unrelated colour rule ("Gold Logofractor" is not
+  // the generic Gold /50 tier; it is Topps Chrome's unserialized base card,
+  // which states no print run at all). Placed ahead of every colour rule
+  // below for the same reason those rules order color-specific matches
+  // before their own bare fallback: a broad `startsWith("gold ")` rule
+  // cannot tell "Gold Logofractor" apart from "Gold Refractor" on its own.
+  if (/\blogo[\s-]?fractor\b/.test(norm) && !norm.includes("bowman")) return null;
   for (const rule of PARALLEL_TO_PRINT_RUN) {
     if (rule.match(norm)) return rule.printRun;
   }
