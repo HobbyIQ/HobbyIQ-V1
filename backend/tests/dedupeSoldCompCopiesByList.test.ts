@@ -587,6 +587,94 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
     expect(r.led.deletes.length).toBe(0);
   });
 
+  // ── 2026-09-28 dedupe census: title/soldAt NORMALIZATION ────────────────
+  //
+  // content-differs.csv found 154/155 refused "duplicate" pairs differing
+  // ONLY in a doubled leading product year, and one differing only in
+  // soldAt string SHAPE (+00:00 vs .000Z, same instant). varianceOf now
+  // normalizes `title` and `soldAt`/`date` before comparing -- these tests
+  // pin that the normalized cases now MATCH, while every other kind of
+  // disagreement (grade, a genuinely different title, price, a soldAt that
+  // is actually a different second) still REFUSES exactly as before.
+
+  it("MATCHES the exact doubled-leading-year twin from the census (AC-AB) -- DELETES, was previously a false REFUSE", () => {
+    const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "doubled-year-title");
+    const catalog = [KEEPER_CATALOG_ROW];
+    const sales = [
+      { ...KEEPER_SALE, cardYear: 2025, title: "2025 2025 Topps Chrome Update Baseball #AC-AB Base" },
+      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, cardYear: 2025, title: "2025 Topps Chrome Update Baseball #AC-AB Base" },
+    ];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.out).not.toMatch(/REFUSED \(content-differs\)/);
+    expect(r.out).toMatch(/normalized comparison on: title/);
+    expect(r.out).toMatch(/DELETED\s+1/);
+    expect(r.led.deletes).toEqual([SALE_ID]);
+  });
+
+  it("MATCHES the exact soldAt-format twin from the census (+00:00 vs .000Z, same instant) -- DELETES", () => {
+    const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "soldat-format-twin");
+    const catalog = [KEEPER_CATALOG_ROW];
+    const sales = [
+      { ...KEEPER_SALE, soldAt: "2026-07-18T03:36:00+00:00" },
+      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, soldAt: "2026-07-18T03:36:00.000Z" },
+    ];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.out).not.toMatch(/REFUSED \(content-differs\)/);
+    expect(r.out).toMatch(/normalized comparison on:.*soldAt/);
+    expect(r.out).toMatch(/DELETED\s+1/);
+    expect(r.led.deletes).toEqual([SALE_ID]);
+  });
+
+  it("still REFUSES (content-differs) when soldAt is a genuinely different second, not just a different format", () => {
+    const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "soldat-one-second-apart");
+    const catalog = [KEEPER_CATALOG_ROW];
+    const sales = [
+      { ...KEEPER_SALE, soldAt: "2026-07-18T03:36:00.000Z" },
+      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, soldAt: "2026-07-18T03:36:01.000Z" },
+    ];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.out).toMatch(/REFUSED \(content-differs\)/);
+    expect(r.led.deletes.length).toBe(0);
+  });
+
+  it("still REFUSES (content-differs) when gradeCompany/gradeValue disagree -- graded vs raw is never the same sale", () => {
+    const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "graded-vs-raw");
+    const catalog = [KEEPER_CATALOG_ROW];
+    const sales = [
+      { ...KEEPER_SALE, gradeCompany: "PSA", gradeValue: 10 },
+      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, gradeCompany: null, gradeValue: null },
+    ];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.out).toMatch(/REFUSED \(content-differs\)/);
+    expect(r.out).toMatch(/gradeCompany|gradeValue/);
+    expect(r.led.deletes.length).toBe(0);
+  });
+
+  it("still REFUSES (content-differs) for a real vendor-title vs checklist-title pair -- not a formatting difference", () => {
+    // A genuinely different description, not a doubled-year artifact: the
+    // vendor's paraphrase vs the checklist's own canonical wording for a
+    // DIFFERENT-shaped title. Normalization must not blur this into a match.
+    const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "vendor-vs-checklist-title");
+    const catalog = [KEEPER_CATALOG_ROW];
+    const sales = [
+      { ...KEEPER_SALE, title: "2024 Bowman Chrome Victor Hurtado Gold Refractor Auto /50 #CPA-VH" },
+      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, title: "VICTOR HURTADO RC AUTO GOLD REFRACTOR /50 PSA BGS SGC INVEST" },
+    ];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.out).toMatch(/REFUSED \(content-differs\)/);
+    expect(r.led.deletes.length).toBe(0);
+  });
+
   it("ignores a parallel-spelling difference alone -- the isauto-twins population's whole point", () => {
     // The committed lists' own population: a no-auto/auto or spelling-drift
     // parallel pair is the SAME sale mis-filed onto the wrong address, not a

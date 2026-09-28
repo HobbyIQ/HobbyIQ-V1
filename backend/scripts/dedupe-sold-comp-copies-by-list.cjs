@@ -378,6 +378,19 @@ async function main() {
       continue;
     }
 
+    // CF-A-DOUBLED-YEAR-IS-NOT-A-DIFFERENT-SALE / CF-SOLDAT-FORMAT-IS-NOT-
+    // CONTENT (2026-09-28 dedupe census): varianceOf normalizes `title`
+    // (doubled leading year, whitespace) and `soldAt`/`date` (parsed
+    // instant, so a +00:00 offset and a .000Z suffix for the SAME moment
+    // agree) before comparing. `normalizedFields` names which of the
+    // CHECKED fields had a normalizer applied at all -- not only the ones
+    // that actually differed byte-for-byte -- so this line can say plainly
+    // whether normalization was even in play for this pair, independent of
+    // whether it was the reason the gate passed.
+    if (variance.normalizedFields?.length) {
+      console.log(`      (content identity used normalized comparison on: ${variance.normalizedFields.join(", ")})`);
+    }
+
     // ── THE DELETE. REPORT computes every gate above identically and
     // stops HERE — the delete call itself is the ONLY branch point between
     // REPORT and APPLY, mirroring repoint-sales-by-list.cjs's own single
@@ -385,7 +398,7 @@ async function main() {
     if (!APPLY) {
       deleted++;
       console.log("      WOULD DELETE the stray — content identity confirmed, keeper settled and checklist-grade");
-      emitPlanRow({ action: "would-delete", saleId, keepCardId, deleteCardId });
+      emitPlanRow({ action: "would-delete", saleId, keepCardId, deleteCardId, normalizedFields: variance.normalizedFields });
       continue;
     }
 
@@ -439,7 +452,7 @@ async function main() {
 
     deleted++;
     console.log("      DELETED — verified exactly one copy remains, at keepCardId");
-    emitPlanRow({ action: "deleted", saleId, keepCardId, deleteCardId });
+    emitPlanRow({ action: "deleted", saleId, keepCardId, deleteCardId, normalizedFields: variance.normalizedFields });
   }
 
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);

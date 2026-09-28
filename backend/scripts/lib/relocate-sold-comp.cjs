@@ -96,6 +96,38 @@ function stripSystem(doc) {
 const isMissing = (v) => v === null || v === undefined || v === "";
 const cents = (p) => Math.round(Number(p ?? 0) * 100);
 const day = (iso) => String(iso ?? "").slice(0, 10);
+
+/**
+ * CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, THE MOVE-SIDE HALF (2026-09-28).
+ *
+ * The producer of the doubled-year title ("2025 2025 Topps Chrome Update
+ * Baseball #AC-AB Base") was fixed in backfill-sold-comps-from-ch.cjs on
+ * 2026-08-24 (commit 0000f60) -- new CH rows stop repeating the year. But
+ * every row written BEFORE that fix still carries the doubled title
+ * forever, because nothing that ever MOVES a row (relocateSoldComp's own
+ * callers: rekey-product-setkey, repoint-sales-by-list, repoint-sales-
+ * isauto-flip, ...) re-derives title -- they carry `row.title` through via
+ * `stripSystem(row)` unchanged. Three repair lanes (repair-base-to-title-
+ * finish, repair-refractor-mislabel, repair-setkey-from-title-parallel)
+ * already grew their OWN identical local `dedupeYear()` just to let their
+ * OWN parser read the title correctly -- none of them write the healed
+ * title back, so the stored row stays doubled and the next reader pays
+ * the same tax again. This is that helper, promoted to the shared mover so
+ * a relocate HEALS the title as it moves the row, same as it already
+ * heals cardId/hobbyiqCardId/contentHash.
+ *
+ * IDEMPOTENT BY CONSTRUCTION: only strips a LEADING "<year> <year> "
+ * (or "<year>-<year> ", for a hyphenated repeat) -- a title that has
+ * already been healed, or was never doubled, is returned byte-for-byte.
+ * Running it twice on its own output is a no-op.
+ */
+function dedupeYearPrefix(title, year) {
+  const t = String(title ?? "");
+  const y = String(year ?? "").trim();
+  if (!y || !t) return t;
+  const re = new RegExp(`^${y}[\\s-]+${y}\\s+`);
+  return t.replace(re, `${y} `);
+}
 /** Mirror of soldCompsStore's normalizeParallel (contentHash).
  *
  *  D31: the trailing " Refractor" is NO LONGER stripped. The retracted rule
@@ -147,21 +179,74 @@ function contentHashesForLookup(row) {
   return legacy === fresh ? [fresh] : [fresh, legacy];
 }
 
+/**
+ * CF-A-DOUBLED-YEAR-IS-NOT-A-DIFFERENT-SALE (2026-09-28 dedupe census).
+ * `title` compares equal when the only disagreement is a doubled leading
+ * year -- exactly `dedupeYearPrefix`'s own shape, but this comparison has
+ * no `cardYear` handed to it (varianceOf takes bare docs+fields, not a
+ * card identity), so it detects ANY `^(\d{4})\s+\1[\s-]+` doubling, not
+ * only one matching a caller-supplied year. Whitespace is also
+ * collapsed/trimmed on top of the doubling strip, so "  2025   2025  Topps"
+ * and "2025 Topps" agree too.
+ */
+function normalizeTitleForVariance(v) {
+  if (isMissing(v)) return v;
+  const collapsed = String(v).trim().replace(/\s+/g, " ");
+  return collapsed.replace(/^(\d{4})\s+\1[\s-]+/, "$1 ");
+}
+
+/**
+ * CF-SOLDAT-FORMAT-IS-NOT-CONTENT (2026-09-28 dedupe census). The census's
+ * one soldAt-only refusal was `2026-07-18T03:36:00+00:00` vs
+ * `2026-07-18T03:36:00.000Z` -- the SAME instant, two ISO renderings, one
+ * with an explicit +00:00 offset and no milliseconds, the other with a Z
+ * suffix and an explicit .000. `Date` parses both to the same epoch
+ * millisecond; comparing the parsed instant (not the string) treats them
+ * as equal without touching any other field's byte-exact comparison. An
+ * unparseable value falls back to the raw string so a garbage soldAt still
+ * REFUSES rather than silently comparing equal to another garbage value
+ * that happens to also fail to parse.
+ */
+function normalizeSoldAtForVariance(v) {
+  if (isMissing(v)) return v;
+  const t = Date.parse(String(v));
+  return Number.isFinite(t) ? `__instant:${t}` : String(v);
+}
+
+const VARIANCE_NORMALIZERS = {
+  title: normalizeTitleForVariance,
+  soldAt: normalizeSoldAtForVariance,
+  date: normalizeSoldAtForVariance,
+};
+
 /** Which of `fields` differ between the documents. Missing (null / undefined /
- *  "") values are equal to each other; strings compare trimmed. */
+ *  "") values are equal to each other; strings compare trimmed.
+ *
+ *  A field named in `VARIANCE_NORMALIZERS` (title, soldAt, date) is ALSO
+ *  passed through its normalizer before comparison -- see those functions'
+ *  own comments for what each one absorbs. Byte-exact comparison is
+ *  unchanged for every other field (source, externalId, price, grade,
+ *  currency, ...). `result.normalizedFields` names which of the CHECKED
+ *  `fields` had a normalizer applied (whether or not it changed the
+ *  outcome), so a caller's banner can say the match was via normalization
+ *  rather than a plain byte-exact agreement. */
 function varianceOf(docs, fields) {
   const differing = [];
   const values = {};
+  const normalizedFields = [];
   for (const f of fields) {
+    const normalize = VARIANCE_NORMALIZERS[f];
+    if (normalize) normalizedFields.push(f);
     const seen = new Map();
     for (const d of docs) {
-      const v = d?.[f];
+      const raw = d?.[f];
+      const v = normalize ? normalize(raw) : raw;
       const k = isMissing(v) ? "" : typeof v === "string" ? v.trim() : JSON.stringify(v);
-      if (!seen.has(k)) seen.set(k, isMissing(v) ? null : v);
+      if (!seen.has(k)) seen.set(k, isMissing(raw) ? null : raw);
     }
     if (seen.size > 1) { differing.push(f); values[f] = [...seen.values()]; }
   }
-  return { differing, values };
+  return { differing, values, normalizedFields };
 }
 
 /** Fill the fields the winner LACKS from the donors, in donor order. Never
@@ -533,4 +618,4 @@ async function relocateSoldComp(pool, { keep, drop, retry = defaultRetry, verify
   return { ok: duplicatesLeft.length === 0 && staleSincePlan.length === 0, stage: "done", existedBefore, deleted, alreadyGone, duplicatesLeft, staleSincePlan, readBackVia };
 }
 
-module.exports = { relocateSoldComp, loadGuard, readBackKeptRow, readBackShowsWrite, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef, is412 };
+module.exports = { relocateSoldComp, loadGuard, readBackKeptRow, readBackShowsWrite, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef, is412, dedupeYearPrefix };

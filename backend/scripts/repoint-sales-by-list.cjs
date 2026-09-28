@@ -284,7 +284,7 @@ async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
-  const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
+  const { relocateSoldComp, stripSystem, contentHashOf, dedupeYearPrefix } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
@@ -601,6 +601,12 @@ async function main() {
       const keep = stripSystem(sale);
       keep.cardId = toId;
       keep.hobbyiqCardId = toId;
+      // CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, the move-side half: heal a
+      // pre-2026-08-24 (commit 0000f60) doubled-year title as the row
+      // passes through the one place already touching every field it
+      // carries forward. Idempotent -- a no-op on a title already healed
+      // or never doubled.
+      if (keep.title) keep.title = dedupeYearPrefix(keep.title, keep.cardYear);
       keep.contentHash = contentHashOf(keep);
       try {
         // CF-CROSS-PARTITION-VERIFY-IS-PER-ENTRY-NOT-PER-SALE (run

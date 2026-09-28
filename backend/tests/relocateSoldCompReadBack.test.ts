@@ -5,7 +5,7 @@ import path from "node:path";
 
 const require_ = createRequire(import.meta.url);
 const LIB = path.join(process.cwd(), "scripts/lib");
-const { relocateSoldComp, readBackKeptRow, readBackShowsWrite } = require_(
+const { relocateSoldComp, readBackKeptRow, readBackShowsWrite, dedupeYearPrefix } = require_(
   path.join(LIB, "relocate-sold-comp.cjs"),
 );
 
@@ -491,5 +491,61 @@ describe("verifyNoDuplicatesAcrossPartitions -- OPTIONAL cross-partition backsto
     expect(res.ok).toBe(false);
     expect(res.stage).toBe("verify");
     expect(res.error).toMatch(/cross-partition duplicate verify threw/);
+  });
+});
+
+/**
+ * CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, THE MOVE-SIDE HALF (2026-09-28).
+ *
+ * The 2026-09-28 dedupe census (content-differs.csv) found 154/155 refused
+ * "duplicate" pairs differing ONLY in a doubled leading product year --
+ * "2025 2025 Topps Chrome Update Baseball #AC-AB Base" vs the healthy form
+ * -- with the newer (repointed) copy carrying the bug in 71 of them. The
+ * producer (backfill-sold-comps-from-ch.cjs) was fixed 2026-08-24 (commit
+ * 0000f60); this is the healer for rows written before that fix, wired into
+ * every mover that builds a `keep` object (rekey-product-setkey,
+ * repoint-sales-by-list, repoint-sales-isauto-flip).
+ */
+describe("dedupeYearPrefix: idempotent leading-year de-duplication", () => {
+  it("strips a doubled leading year down to one copy", () => {
+    expect(dedupeYearPrefix("2025 2025 Topps Chrome Update Baseball #AC-AB Base", 2025)).toBe(
+      "2025 Topps Chrome Update Baseball #AC-AB Base",
+    );
+  });
+
+  it("leaves an already-singly-prefixed title unchanged", () => {
+    const t = "2025 Topps Chrome Update Baseball #AC-AB Base";
+    expect(dedupeYearPrefix(t, 2025)).toBe(t);
+  });
+
+  it("running it twice is a no-op (idempotent)", () => {
+    const once = dedupeYearPrefix("2025 2025 Topps Chrome Update Baseball #AC-AB Base", 2025);
+    const twice = dedupeYearPrefix(once, 2025);
+    expect(twice).toBe(once);
+  });
+
+  it("leaves a title with no year prefix at all unchanged", () => {
+    const t = "Cy Young 2025 2025 Topps Chrome Platinum Blue Vibrations Refractor /150 #251";
+    // The doubled year here is NOT leading -- "Cy Young" comes first -- so
+    // this is a different (unaddressed) shape, not the leading-prefix bug.
+    expect(dedupeYearPrefix(t, 2025)).toBe(t);
+  });
+
+  it("does nothing without a year to compare against", () => {
+    const t = "2025 2025 Topps Chrome Update Baseball #AC-AB Base";
+    expect(dedupeYearPrefix(t, null)).toBe(t);
+    expect(dedupeYearPrefix(t, undefined)).toBe(t);
+  });
+
+  it("handles a null/empty title without throwing", () => {
+    expect(dedupeYearPrefix(null, 2025)).toBe("");
+    expect(dedupeYearPrefix(undefined, 2025)).toBe("");
+    expect(dedupeYearPrefix("", 2025)).toBe("");
+  });
+
+  it("also collapses a hyphen-joined doubled year", () => {
+    expect(dedupeYearPrefix("1954-1954 Topps Baseball #133 Base", 1954)).toBe(
+      "1954 Topps Baseball #133 Base",
+    );
   });
 });

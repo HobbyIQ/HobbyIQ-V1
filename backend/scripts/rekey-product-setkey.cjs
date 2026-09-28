@@ -556,7 +556,7 @@ async function main() {
   const { moveCatalogRow, retireCatalogRow, patchCatalogRowFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
-  const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
+  const { relocateSoldComp, stripSystem, contentHashOf, dedupeYearPrefix } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
   // CF-A-FOLD-NEVER-CHANGES-THE-PLAYER, the EVIDENCE half. #1838 shipped the
   // `playerEvidence` seam wired nowhere, so every different-player twin refused.
   // These gather the two arms; the rule still decides.
@@ -1146,6 +1146,14 @@ async function main() {
       keep.rekeyedSetKeyWas = parts[3];
       keep.rekeyedAt = new Date().toISOString();
       keep.rekeyedReason = REASON;
+      // CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, the move-side half: a row
+      // written before the 2026-08-24 producer fix (commit 0000f60) still
+      // carries "<year> <year> <set>..." in its title. A relocate is the
+      // one place that already touches every field this row will ever
+      // carry forward -- heal it here so the doubled year does not ride
+      // along into the new address forever. No-op on an already-healed
+      // or never-doubled title (dedupeYearPrefix is idempotent).
+      if (keep.title) keep.title = dedupeYearPrefix(keep.title, keep.cardYear);
       // THE HASH FOLLOWS THE ADDRESS. cardId is contentHash's first component,
       // so a moved row that kept the old hash would be invisible to the store's
       // partition-scoped pre-write dedup and every re-emit would duplicate it.
