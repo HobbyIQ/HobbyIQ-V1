@@ -38,10 +38,10 @@
  *
  * ADDING A ROW IS A RULING, not a guess: an entry must be backed by the
  * checklist-verified audit's per-code table (class (i), "true Topps
- * collision"), never a matcher's suspicion. CPA-ES is PROVISIONAL in the
- * audit -- one of its two claimed players (Emilio Sanchez) still needs one
- * more direct citation -- so it is DOCUMENTED here but EXCLUDED from the
- * active table until confirmed. CPA-GD and CPA-JF are named by
+ * collision"), never a matcher's suspicion. CPA-ES is now CONFIRMED for both
+ * claimants (SportsCardInvestor + eBay, Orange Lava Refractor /25, Red Wave
+ * Refractor /5, audit 2026-09-28) and is wired into the active table below.
+ * CPA-GD and CPA-JF are named by
  * checklistinsider as duplicates of the same class, but no source read by
  * this audit carries the two players' names for either code, so they are
  * ALSO excluded pending that lookup. Minting a surname slug from a guessed
@@ -97,7 +97,7 @@ function claimant(playerName: string): CodeCollisionClaimant {
 }
 
 /**
- * THE 13 CONFIRMED CODES (2026-09-28 checklist-verified audit, class (i)).
+ * THE 14 CONFIRMED CODES (2026-09-28 checklist-verified audit, class (i)).
  * Every entry: 2024 Bowman Chrome, setKey `bowman-chrome`, sport baseball.
  */
 export const CODE_COLLISIONS: readonly CodeCollisionEntry[] = [
@@ -140,14 +140,13 @@ export const CODE_COLLISIONS: readonly CodeCollisionEntry[] = [
   { sport: "baseball", year: 2024, setKey: "bowman-chrome", code: "CPA-JB",
     claimants: [claimant("Jacob Burke"), claimant("Jake Bloss")],
     source: "eBay, CPA-JB WHITE SOX (Burke) and eBay/COMC/Beckett live product-checklist subpage for HTA Choice Refractors/SportsCardDatabase (Bloss)." },
+  { sport: "baseball", year: 2024, setKey: "bowman-chrome", code: "CPA-ES",
+    claimants: [claimant("Estuar Suero"), claimant("Emilio Sanchez")],
+    source: "SportsCardInvestor + eBay (Orange Lava Refractor /25, Red Wave Refractor /5), audit 2026-09-28." },
 
   // -- PROVISIONAL / EXCLUDED. Documented for the follow-up audit, NOT wired
   // into COLLISION_INDEX below. Do not use these until a ruling confirms
   // them and moves them into CODE_COLLISIONS proper.
-  //
-  // CPA-ES: Estuar Suero is directly confirmed (eBay x6, Blue Refractor
-  // /150). Emilio Sanchez's exact printed code was not directly visible in
-  // the audit pass -- one more citation is needed before this ships.
   //
   // CPA-GD, CPA-JF: named by checklistinsider as duplicates of the same
   // class as CPA-PS, but no source read by the audit carries either code's

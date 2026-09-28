@@ -13,8 +13,8 @@ import {
 import { computeHobbyIqCardId } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 
 describe("CODE_COLLISIONS — table validity", () => {
-  it("has at least the 13 confirmed 2024 Bowman Chrome codes", () => {
-    expect(CODE_COLLISIONS.length).toBeGreaterThanOrEqual(13);
+  it("has at least the 14 confirmed 2024 Bowman Chrome codes", () => {
+    expect(CODE_COLLISIONS.length).toBeGreaterThanOrEqual(14);
   });
 
   it("every entry has exactly 2+ claimants with distinct surname slugs", () => {
@@ -44,11 +44,18 @@ describe("CODE_COLLISIONS — table validity", () => {
     }
   });
 
-  it("CPA-ES, CPA-GD, CPA-JF are NOT registered (provisional/unconfirmed per the ruling)", () => {
-    for (const code of ["CPA-ES", "CPA-GD", "CPA-JF"]) {
+  it("CPA-GD, CPA-JF are NOT registered (provisional/unconfirmed per the ruling)", () => {
+    for (const code of ["CPA-GD", "CPA-JF"]) {
       const hit = findCodeCollision({ sport: "baseball", year: 2024, setKey: "bowman-chrome", code });
       expect(hit, `${code} must stay excluded until confirmed`).toBeNull();
     }
+  });
+
+  it("CPA-ES is registered (Estuar Suero / Emilio Sanchez, confirmed 2026-09-28)", () => {
+    const hit = findCodeCollision({ sport: "baseball", year: 2024, setKey: "bowman-chrome", code: "CPA-ES" });
+    expect(hit).not.toBeNull();
+    const slugs = hit!.claimants.map((c) => c.surnameSlug).sort();
+    expect(slugs).toEqual(["sanchez", "suero"]);
   });
 });
 
