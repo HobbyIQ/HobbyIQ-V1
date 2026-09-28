@@ -15,18 +15,19 @@
  * sanctioned ingester's OWN planStagedDirectory verdict for this package,
  * measured with nothing but what THIS branch provides.
  *
- * UNLIKE the 1982/1985 siblings, this package's insert setKey
- * ('donruss-the-rookies') is NOT a productSetKeys.ts registration -- see the
- * manifest's setKeyNeedsRuling/setKeyRulingNote for the two proposed options
- * awaiting Drew's ruling. Measured directly here: planStagedDirectory PASSES
- * this file in isolation (nothing to separate against in an empty cell,
- * every row lands on the bare 'donruss' key) -- the mechanical guard is not
- * a safety net for this shape, which is exactly why the manifest gates
- * ingest on a human ruling rather than on the tool's own verdict.
+ * RULED (Drew, 2026-09-28, on PR #2477): this package's insert setKey
+ * ('donruss-the-rookies') is now a productSetKeys.ts registration -- see
+ * backend/tests/donrussTheRookiesEraRuling.test.ts for the registration/
+ * era-spelling pins. This manifest's own `setKey` field was updated to the
+ * registered key itself, so planFile stamps every row onto its own address
+ * from the start; the isolated-file assertions below were re-measured
+ * against that registered key and against the flagship package staged in
+ * the SAME directory (the collision this key exists to resolve).
  */
 import { describe, it, expect } from "vitest";
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, mkdtempSync, copyFileSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 
 const require_ = createRequire(import.meta.url);
@@ -85,22 +86,60 @@ describe("1987 Donruss The Rookies (baseballalmanac) — staged, ruling pending"
     expect(rows.find((l) => l.startsWith("insert-the-rookies,1,"))).toContain("Mark McGwire");
   });
 
-  it("planStagedDirectory PASSES this file in isolation: bare 'donruss' product key, zero collisions, 55 rows/55 ids", () => {
+  it("planStagedDirectory PASSES this file in isolation: registered 'donruss-the-rookies' product key, zero collisions, 55 rows/55 ids", () => {
     const { entry } = planPackage();
     expect(entry.product).not.toBeNull();
     expect(entry.product.sport).toBe("baseball");
     expect(entry.product.year).toBe(1987);
-    expect(entry.product.setKey).toBe("donruss");
+    expect(entry.product.setKey).toBe("donruss-the-rookies");
     expect(entry.plan.verdict, JSON.stringify(entry.plan.unregistered)).toBe("pass");
     expect(entry.plan.rows).toBe(55);
     expect(entry.plan.ids).toBe(55);
     expect(entry.plan.collisions).toEqual([]);
-    // In isolation there is no sibling category to separate against, so the
-    // planner does NOT derive the insert's own key here -- it lands every
-    // row on the bare product key. This is the exact blind spot the
-    // manifest's setKeyRulingNote documents: a clean isolated PASS is not
-    // proof this file is safe to ingest once the flagship package (which
-    // shares numbers, e.g. #14) is in the same run.
+    expect(entry.plan.unregistered).toEqual([]);
+    // Every row already lands on its OWN registered address -- there is no
+    // sibling category in this cell to separate against, and none is needed:
+    // the key itself, not a same-cell separation step, is what keeps this
+    // set off the flagship's bare 'donruss' address.
     expect(entry.plan.separate.size).toBe(0);
+  });
+
+  it("planStagedDirectory PASSES BOTH files staged together with the flagship package: zero collisions, zero unregistered keys, 'the-rookies' no longer in either file's separate set", () => {
+    // The exact shape the manifest's pre-ruling setKeyRulingNote measured as
+    // a blind spot: this set's #14 (Bo Jackson) vs the flagship's own #14
+    // (Kevin McReynolds DK) would collide on a shared bare 'donruss' address.
+    // Registering 'donruss-the-rookies' resolves it by giving this file its
+    // own address from the start, so nothing needs to be separated at
+    // ingest time anymore.
+    const flagshipDir = join(SCRAPED_ROOT, "acq-2026-09-13-bcp");
+    const flagshipCsv = "1987-donruss-baseball.csv";
+    const flagshipManifest = "1987-donruss-baseball.manifest.json";
+
+    const combined = mkdtempSync(join(tmpdir(), "donruss-the-rookies-1987-combined-"));
+    copyFileSync(join(SCRAPED_ROOT, PACKAGE_DIR, CSV_NAME), join(combined, CSV_NAME));
+    copyFileSync(
+      join(SCRAPED_ROOT, PACKAGE_DIR, "1987-donruss-the-rookies.manifest.json"),
+      join(combined, "1987-donruss-the-rookies.manifest.json"),
+    );
+    copyFileSync(join(flagshipDir, flagshipCsv), join(combined, flagshipCsv));
+    copyFileSync(join(flagshipDir, flagshipManifest), join(combined, flagshipManifest));
+
+    const files = readdirSync(combined).filter((f: string) => f.endsWith(".csv"));
+    expect(files.sort()).toEqual([flagshipCsv, CSV_NAME].sort());
+    const plans = INGEST.planStagedDirectory(combined, files);
+
+    const rookiesEntry = plans.get(CSV_NAME);
+    const flagshipEntry = plans.get(flagshipCsv);
+    expect(rookiesEntry.plan.verdict, JSON.stringify(rookiesEntry.plan.unregistered)).toBe("pass");
+    expect(flagshipEntry.plan.verdict, JSON.stringify(flagshipEntry.plan.unregistered)).toBe("pass");
+    expect(rookiesEntry.plan.collisions).toEqual([]);
+    expect(flagshipEntry.plan.collisions).toEqual([]);
+    expect(rookiesEntry.plan.unregistered).toEqual([]);
+    expect(flagshipEntry.plan.unregistered).toEqual([]);
+    // The whole point of the ruling: 'the-rookies' no longer shows up as
+    // something that needs separating, on either file, because both already
+    // sit on their own registered, distinct addresses.
+    expect(rookiesEntry.plan.separate.has("the-rookies")).toBe(false);
+    expect(flagshipEntry.plan.separate.has("the-rookies")).toBe(false);
   });
 });

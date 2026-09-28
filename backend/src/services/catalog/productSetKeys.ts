@@ -1050,6 +1050,32 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("panini-donruss", { family: "donruss" }),
   P("donruss-elite"),
   P("donruss-studio"),
+  // CF-THE-ROOKIES-IS-A-BOXED-SET-NOT-A-PACK-INSERT (Drew, 2026-09-28 ruling
+  // on #2477). 1987 Donruss "The Rookies" is a 56-card dealer-only boxed
+  // factory set with its OWN 1-56 numbering that collides with the 660-card
+  // flagship's own numbers (this set's #14 is Bo Jackson; the flagship's #14
+  // is Kevin McReynolds DK) -- measured directly against planStagedDirectory
+  // on the branch that staged it: the two files pass individually but
+  // separate onto `the-rookies` the moment they share a directory, and that
+  // derived key was UNREGISTERED, an idempotent-but-unregistered blind spot
+  // in the ingest guard (normalizeSetKey("donruss-the-rookies") fell through
+  // every rewrite to a no-op slugify, so unregisteredKeys' fixed-point test
+  // never caught it). `S`, not `P`, exactly as R38 registers the modern
+  // Panini-era insert-set siblings below (panini-donruss-the-rookies,
+  // donruss-optic-the-rookies): only a `spelled` entry makes this key answer
+  // as itself out of productSetKeyForName, ahead of the bare `(^|-)donruss
+  // (-|$)` alias that would otherwise fold "1987 Donruss The Rookies" onto
+  // `panini-donruss` (CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009) or past its own
+  // subset onto bare `donruss` (the exact fold R38 prevents for the football/
+  // basketball siblings). Same pricing family as the flagship for the same
+  // reason bare `donruss` and `panini-donruss` share one (`family: "donruss"`
+  // just above) -- one product line, two owners' eras, still one comp pool
+  // for pricing fallbacks. `panini-donruss-the-rookies` is its OWN separate
+  // family (`panini-donruss`) because it is a different, unrelated modern
+  // football insert -- spellForEra bridges the TWO PRE-EXISTING vintage/
+  // modern spellings by year below (PANINI_DONRUSS_FROM_YEAR), the same
+  // mechanism that already bridges bare donruss/panini-donruss.
+  S("donruss-the-rookies", { family: "donruss", parent: "donruss" }),
   // D31, Drew 2026-08-31: "panini-optic and donruss-optic are ONE product,
   // canonical key donruss-optic" -- the product as every checklist names it.
   // Measured read-only 2026-08-31: donruss-optic holds the checklist rows
@@ -3392,6 +3418,21 @@ export function spellForEra(setKey: string, year: number | null | undefined, pol
   // without a year — there is no boundary to sit on, only a prefix to stop.
   const bare = NEVER_ACQUIRED_MAKER_PREFIXES[setKey];
   if (bare !== undefined) return bare;
+  // CF-THE-ROOKIES-IS-A-BOXED-SET-NOT-A-PACK-INSERT (Drew, 2026-09-28 ruling
+  // on #2477): the boxed-set sibling takes the SAME era boundary as the
+  // flagship pair below -- 1987 Donruss The Rookies is `donruss-the-rookies`,
+  // and the unrelated modern football insert already registered under
+  // `panini-donruss` is `panini-donruss-the-rookies` from PANINI_DONRUSS_FROM_
+  // YEAR on. `spellForEra` never receives a year for the modern key from any
+  // real caller (it is football-era-only in the checklist data, never staged
+  // against a pre-2009 year), but the pair is bridged symmetrically anyway,
+  // exactly as the flagship pair is, so a mis-dated row corrects instead of
+  // silently mismatching its family.
+  if (setKey === "donruss-the-rookies" || setKey === "panini-donruss-the-rookies") {
+    if (policy === "as-named") return setKey;
+    if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
+    return year >= PANINI_DONRUSS_FROM_YEAR ? "panini-donruss-the-rookies" : "donruss-the-rookies";
+  }
   if (setKey !== "donruss" && setKey !== "panini-donruss") return setKey;
   if (policy === "as-named") return setKey;
   if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
