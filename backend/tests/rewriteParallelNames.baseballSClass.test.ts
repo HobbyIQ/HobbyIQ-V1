@@ -41,12 +41,14 @@ describe("baseball S-class aliases (2026-09-28) -- file exists and loads", () =>
     expect(rules.length).toBeGreaterThan(0);
   });
 
-  it("carries exactly the 2 shipped alias rules this batch confirmed (>=50 sales, single checklist-backed target)", () => {
+  it("carries exactly the 4 shipped alias rules this batch confirmed (2 rungs x 2 source-glyph variants each, >=50 sales, checklist-backed target)", () => {
     const rules = lib.loadRules(RULES_FILE, []);
     const ids = rules.map((r) => r.id).sort();
     expect(ids).toEqual([
-      "alias-fathers-day-blue-curly-apostrophe-topps-2023",
-      "alias-mothers-day-pink-curly-apostrophe-topps-2023",
+      "alias-fathers-day-blue-ascii-topps-2023",
+      "alias-fathers-day-blue-curly-source-to-ascii-topps-2023",
+      "alias-mothers-day-pink-ascii-topps-2023",
+      "alias-mothers-day-pink-curly-source-to-ascii-topps-2023",
     ]);
   });
 
@@ -80,16 +82,33 @@ describe("baseball S-class aliases -- from != to, and the alias actually changes
     }
   });
 
-  it("applyRule recovers the exact 'to' text for a raw sale-side 'from' string", () => {
+  it("applyRule recovers the exact ASCII 'to' text for both the ASCII- and curly-apostrophe source spellings", () => {
     const rules = lib.loadRules(RULES_FILE, []);
-    const mothersDay = rules.find((r) => r.id === "alias-mothers-day-pink-curly-apostrophe-topps-2023")!;
-    const fathersDay = rules.find((r) => r.id === "alias-fathers-day-blue-curly-apostrophe-topps-2023")!;
-    expect(lib.applyRule(mothersDay, "Mother's Day Pink")).toEqual({ name: "Mother’s Day Hot Pink", strippedNote: null });
-    expect(lib.applyRule(fathersDay, "Father's Day Blue")).toEqual({ name: "Father’s Day Powder Blue", strippedNote: null });
-    // A raw value that does not exactly equal `from` never matches (exact
-    // human-form string per the alias contract, not a fuzzy/partial match).
-    expect(lib.applyRule(mothersDay, "Mother's Day Hot Pink")).toBeNull();
-    expect(lib.applyRule(mothersDay, "mother's day pink")).toBeNull();
+    const mothersDayAscii = rules.find((r) => r.id === "alias-mothers-day-pink-ascii-topps-2023")!;
+    const mothersDayCurly = rules.find((r) => r.id === "alias-mothers-day-pink-curly-source-to-ascii-topps-2023")!;
+    const fathersDayAscii = rules.find((r) => r.id === "alias-fathers-day-blue-ascii-topps-2023")!;
+    const fathersDayCurly = rules.find((r) => r.id === "alias-fathers-day-blue-curly-source-to-ascii-topps-2023")!;
+
+    // Both source-glyph variants fold to the SAME ASCII checklist name.
+    expect(lib.applyRule(mothersDayAscii, "Mother's Day Pink")).toEqual({ name: "Mother's Day Hot Pink", strippedNote: null });
+    expect(lib.applyRule(mothersDayCurly, "Mother’s Day Pink")).toEqual({ name: "Mother's Day Hot Pink", strippedNote: null });
+    expect(lib.applyRule(fathersDayAscii, "Father's Day Blue")).toEqual({ name: "Father's Day Powder Blue", strippedNote: null });
+    expect(lib.applyRule(fathersDayCurly, "Father’s Day Blue")).toEqual({ name: "Father's Day Powder Blue", strippedNote: null });
+
+    // Each rule matches ONLY its own source glyph -- exact human-form string
+    // per the alias contract, never a fuzzy/partial/glyph-insensitive match.
+    // That is exactly why this rung needs two rules, not one.
+    expect(lib.applyRule(mothersDayAscii, "Mother’s Day Pink")).toBeNull();
+    expect(lib.applyRule(mothersDayCurly, "Mother's Day Pink")).toBeNull();
+    expect(lib.applyRule(mothersDayAscii, "Mother's Day Hot Pink")).toBeNull();
+    expect(lib.applyRule(mothersDayAscii, "mother's day pink")).toBeNull();
+  });
+
+  it("every rule's 'to' is the ASCII apostrophe form -- never the curly glyph", () => {
+    const doc = readJson(RULES_FILE);
+    for (const r of doc.rules) {
+      expect(r.to).not.toContain("’");
+    }
   });
 });
 
