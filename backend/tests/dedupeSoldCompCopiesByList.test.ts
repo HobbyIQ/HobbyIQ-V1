@@ -530,6 +530,60 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
     expect(r.led.deletes.length).toBe(0);
   });
 
+  // ── CF-COLLISION-IS-NOT-A-DUPLICATE at write time (PR #2490 review,
+  // https://github.com/HobbyIQ/HobbyIQ-V1/pull/2490#issuecomment-5871669672).
+  // A stale list committed before the generator's own fix (or a hand-built
+  // one) must not be able to delete through this lane either -- the SAME
+  // keeper-name check runs again, fresh, at the delete call.
+
+  it("REFUSES (keeper-name-disagrees) when the keeper's own sale title names a different player than its catalog row -- NEVER deleted, in either mode", () => {
+    const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "keeper-name-disagrees");
+    const catalog = [KEEPER_CATALOG_ROW]; // playerName: "Victor Hurtado"
+    // The keeper's own stored sale is a completely different player's title
+    // -- a stale/hand-built list entry the generator's own fix would never
+    // have minted, but this lane must refuse it too, never trusting the
+    // list's say-so.
+    const wrongPlayerSale = { ...KEEPER_SALE, title: "2025 Panini Rookies & Stars Cam Skattebo Crusade Silver #21 Giants Rookie RC" };
+    const sales = [
+      wrongPlayerSale,
+      { ...wrongPlayerSale, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID },
+    ];
+
+    const reportRun = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(reportRun);
+    expect(reportRun.out).toMatch(/REFUSED \(keeper-name-disagrees\)/);
+    expect(reportRun.out).toMatch(/REFUSED: keeper-name-disagrees\s+1/);
+    expect(reportRun.led.deletes.length).toBe(0);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
+    expect(applyRun.out).toMatch(/REFUSED \(keeper-name-disagrees\)/);
+    expect(applyRun.out).toMatch(/REFUSED: keeper-name-disagrees\s+1/);
+    // The count is IDENTICAL in both modes, and APPLY still wrote nothing --
+    // a keeper-name-disagrees refusal never reaches the delete call.
+    expect(applyRun.led.deletes.length).toBe(0);
+    expect(applyRun.led.finalSales.length).toBe(2);
+  });
+
+  it("still DELETES cleanly when the keeper's own title genuinely names its catalog row's player (control)", () => {
+    // Proves the new gate is not a blanket refusal: the ordinary clean-delete
+    // shape (already covered above) still works when the keeper's title
+    // agrees with its own row -- restated here as an explicit control next to
+    // the disagreement test above.
+    const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "keeper-name-agrees-control");
+    const catalog = [KEEPER_CATALOG_ROW]; // playerName: "Victor Hurtado"
+    const sales = [
+      KEEPER_SALE, // title: "Victor Hurtado Gold Refractor Auto" -- agrees
+      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID },
+    ];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.out).not.toMatch(/REFUSED \(keeper-name-disagrees\)/);
+    expect(r.out).toMatch(/DELETED\s+1/);
+    expect(r.led.deletes).toEqual([SALE_ID]);
+  });
+
   it("SKIPS (already-gone) when the stray is absent -- never a failure, never retried as a delete", () => {
     const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "already-gone");
     const catalog = [KEEPER_CATALOG_ROW];
@@ -601,8 +655,8 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
     const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "doubled-year-title");
     const catalog = [KEEPER_CATALOG_ROW];
     const sales = [
-      { ...KEEPER_SALE, cardYear: 2025, title: "2025 2025 Topps Chrome Update Baseball #AC-AB Base" },
-      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, cardYear: 2025, title: "2025 Topps Chrome Update Baseball #AC-AB Base" },
+      { ...KEEPER_SALE, cardYear: 2025, title: "2025 2025 Topps Chrome Update Baseball Victor Hurtado #AC-AB Base" },
+      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, cardYear: 2025, title: "2025 Topps Chrome Update Baseball Victor Hurtado #AC-AB Base" },
     ];
 
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
@@ -621,8 +675,8 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
     const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "doubled-year-title-hyphen");
     const catalog = [KEEPER_CATALOG_ROW];
     const sales = [
-      { ...KEEPER_SALE, cardYear: 2025, title: "2025-2025 Topps Chrome Update Baseball #AC-AB Base" },
-      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, cardYear: 2025, title: "2025 Topps Chrome Update Baseball #AC-AB Base" },
+      { ...KEEPER_SALE, cardYear: 2025, title: "2025-2025 Topps Chrome Update Baseball Victor Hurtado #AC-AB Base" },
+      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, cardYear: 2025, title: "2025 Topps Chrome Update Baseball Victor Hurtado #AC-AB Base" },
     ];
 
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
@@ -641,8 +695,8 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
     const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "different-leading-years");
     const catalog = [KEEPER_CATALOG_ROW];
     const sales = [
-      { ...KEEPER_SALE, cardYear: 2025, title: "2024-2025 Topps Chrome Update Baseball #AC-AB Base" },
-      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, cardYear: 2025, title: "2025 Topps Chrome Update Baseball #AC-AB Base" },
+      { ...KEEPER_SALE, cardYear: 2025, title: "2024-2025 Topps Chrome Update Baseball Victor Hurtado #AC-AB Base" },
+      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, cardYear: 2025, title: "2025 Topps Chrome Update Baseball Victor Hurtado #AC-AB Base" },
     ];
 
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });

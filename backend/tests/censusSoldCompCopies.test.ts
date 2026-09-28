@@ -31,7 +31,18 @@ const CELL = `${SPORT}:${YEAR}`;
 const KEEP_ID = "hiq:hockey:2025:upper-deck:1:base:no-auto";
 const STRAY_ID = "1234567890"; // raw vendor cardId, no hobbyiqCardId prefix at all -- the ~86% shape
 
-type Doc = { id: string; cardId: string; hobbyiqCardId: string };
+type Doc = { id: string; cardId: string; hobbyiqCardId: string; title?: string; playerName?: string };
+
+// A title that plainly names KEEP_ID's own catalog playerName below ("Connor
+// McDavid") -- used by every fixture whose whole point is keeper-selection
+// MECHANICS (address coherence, checklist-grade, grouping), not the new
+// keeper-name gate this suite also pins separately (PR #2490 review). Every
+// coherent+checklist-grade catalog row fixture below now carries a matching
+// `playerName`, and every sale `Doc` that is meant to be ELIGIBLE as a keeper
+// carries this SAME-player `title`, so the gate this PR adds passes cleanly
+// and these pre-existing tests keep exercising what they always tested.
+const KEEPER_TITLE = "2025 Upper Deck Connor McDavid Base #1";
+const KEEPER_PLAYER = "Connor McDavid";
 
 /**
  * A stub honouring:
@@ -296,12 +307,12 @@ describe("SCOPE must name one sport:year cell", () => {
 
 describe("keeper selection", () => {
   it("single canonical keeper -> emits one entry per other doc", () => {
-    const pass1Docs: Doc[] = [{ id: "sale::A", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID }];
+    const pass1Docs: Doc[] = [{ id: "sale::A", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE }];
     const allDocs: Doc[] = [
-      { id: "sale::A", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID },
-      { id: "sale::A", cardId: STRAY_ID, hobbyiqCardId: KEEP_ID },
+      { id: "sale::A", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE },
+      { id: "sale::A", cardId: STRAY_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE },
     ];
-    const catalog = [{ id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27" }];
+    const catalog = [{ id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27", playerName: KEEPER_PLAYER }];
 
     const r = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
     expect(r.out).not.toMatch(/FATAL|ReferenceError|TypeError/);
@@ -316,14 +327,18 @@ describe("keeper selection", () => {
 
   it("two canonical keepers -> ambiguous, filed under needsRuling, nothing emitted", () => {
     const KEEP_ID_2 = "hiq:hockey:2025:upper-deck:1:young-guns:no-auto";
-    const pass1Docs: Doc[] = [{ id: "sale::B", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID }];
+    // Both candidate addresses are given the SAME player as the sale's own
+    // title, so both pass the new name-agreement gate and the ambiguity this
+    // test pins is still the genuine "two checklist-grade coherent docs"
+    // shape, not a side effect of one of them failing on name instead.
+    const pass1Docs: Doc[] = [{ id: "sale::B", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE }];
     const allDocs: Doc[] = [
-      { id: "sale::B", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID },
-      { id: "sale::B", cardId: KEEP_ID_2, hobbyiqCardId: KEEP_ID_2 },
+      { id: "sale::B", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE },
+      { id: "sale::B", cardId: KEEP_ID_2, hobbyiqCardId: KEEP_ID_2, title: KEEPER_TITLE },
     ];
     const catalog = [
-      { id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27" },
-      { id: KEEP_ID_2, cardId: KEEP_ID_2, source: "checklistinsider-2026-08-27" },
+      { id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27", playerName: KEEPER_PLAYER },
+      { id: KEEP_ID_2, cardId: KEEP_ID_2, source: "checklistinsider-2026-08-27", playerName: KEEPER_PLAYER },
     ];
 
     const r = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
@@ -381,6 +396,123 @@ describe("keeper selection", () => {
   });
 });
 
+// ── CF-COLLISION-IS-NOT-A-DUPLICATE: the keeper-name gate (PR #2490 review,
+// https://github.com/HobbyIQ/HobbyIQ-V1/pull/2490#issuecomment-5871669672) ─
+
+describe("the keeper-name gate refuses a bare #cardNumber collision that names a different player", () => {
+  it("Skattebo/Acuña shape: a football sale colliding with a baseball checklist row -> needsRuling, no entry", () => {
+    // The exact real-world shape the review found: sale tca-ebay::198458636920
+    // is a "Cam Skattebo" football card; its coherent + checklist-grade
+    // address is hiq:baseball:2025:bowman:21:base:no-auto, whose catalog row
+    // playerName is "Ronald Acuña Jr." -- a bare card-number (#21) collision
+    // across a sport boundary, never a genuine duplicate. This generator's
+    // own PASS 1 discovers ids by STARTSWITH(hobbyiqCardId, PREFIX) for the
+    // scope's own sport/year, so the fixture's "wrong" address is filed under
+    // THIS SUITE's own scope (hockey:2025, the CELL constant) -- exactly the
+    // shape the real census run is scoped to -- while the sale's own title
+    // and the catalog row's own playerName carry the real collision (a
+    // football sale's content sitting at an address whose row names a
+    // baseball player).
+    const WRONG_ID = "hiq:hockey:2025:upper-deck:21:base:no-auto";
+    const SKATTEBO_TITLE = "2025 Panini Rookies & Stars Cam Skattebo Crusade Silver #21 Giants Rookie RC";
+    const pass1Docs: Doc[] = [{ id: "tca-ebay::198458636920", cardId: WRONG_ID, hobbyiqCardId: WRONG_ID, title: SKATTEBO_TITLE }];
+    const allDocs: Doc[] = [
+      { id: "tca-ebay::198458636920", cardId: WRONG_ID, hobbyiqCardId: WRONG_ID, title: SKATTEBO_TITLE },
+      { id: "tca-ebay::198458636920", cardId: STRAY_ID, hobbyiqCardId: WRONG_ID, title: SKATTEBO_TITLE },
+    ];
+    const catalog = [{ id: WRONG_ID, cardId: WRONG_ID, source: "checklistinsider-2026-08-27", playerName: "Ronald Acuña Jr." }];
+
+    const r = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
+    expect(r.out).not.toMatch(/FATAL|ReferenceError|TypeError/);
+    expect(r.code).toBe(0);
+    const doc = readArtifact(r.planOut);
+    expect(doc.entries).toHaveLength(0);
+    expect(doc.census.needsRuling).toHaveLength(1);
+    expect(doc.census.needsRuling[0].reason).toBe("keeper-name-disagrees");
+    expect(doc.census.needsRuling[0].nameDisagreements).toHaveLength(1);
+    expect(doc.census.needsRuling[0].nameDisagreements[0]).toMatchObject({
+      cardId: WRONG_ID,
+      saleName: SKATTEBO_TITLE,
+      keeperName: "Ronald Acuña Jr.",
+    });
+  });
+
+  it("same-sport collision (Connor Bedard sale vs Bryan Rust row) -> needsRuling, no entry", () => {
+    // Review's own same-sport example shape: a Connor Bedard sale colliding,
+    // by bare card number, with a checklist row for Bryan Rust -- same sport
+    // (hockey), still a completely different player, still refused.
+    const BEDARD_ID = "hiq:hockey:2025:o-pee-chee:8:base:no-auto";
+    const BEDARD_TITLE = "2025-26 O-Pee-Chee Connor Bedard #8 Blackhawks";
+    const pass1Docs: Doc[] = [{ id: "tca-ebay::147339415515", cardId: BEDARD_ID, hobbyiqCardId: BEDARD_ID, title: BEDARD_TITLE }];
+    const allDocs: Doc[] = [
+      { id: "tca-ebay::147339415515", cardId: BEDARD_ID, hobbyiqCardId: BEDARD_ID, title: BEDARD_TITLE },
+      { id: "tca-ebay::147339415515", cardId: STRAY_ID, hobbyiqCardId: BEDARD_ID, title: BEDARD_TITLE },
+    ];
+    const catalog = [{ id: BEDARD_ID, cardId: BEDARD_ID, source: "checklistinsider-2026-08-27", playerName: "Bryan Rust" }];
+
+    const r = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
+    expect(r.out).not.toMatch(/FATAL|ReferenceError|TypeError/);
+    expect(r.code).toBe(0);
+    const doc = readArtifact(r.planOut);
+    expect(doc.entries).toHaveLength(0);
+    expect(doc.census.needsRuling).toHaveLength(1);
+    expect(doc.census.needsRuling[0].reason).toBe("keeper-name-disagrees");
+    expect(doc.census.needsRuling[0].nameDisagreements[0]).toMatchObject({
+      cardId: BEDARD_ID,
+      saleName: BEDARD_TITLE,
+      keeperName: "Bryan Rust",
+    });
+  });
+
+  it("a good group -- the sale's own title names the keeper's player -> emits the entry exactly as before", () => {
+    const pass1Docs: Doc[] = [{ id: "sale::GOOD", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE }];
+    const allDocs: Doc[] = [
+      { id: "sale::GOOD", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE },
+      { id: "sale::GOOD", cardId: STRAY_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE },
+    ];
+    const catalog = [{ id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27", playerName: KEEPER_PLAYER }];
+
+    const r = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
+    expect(r.code).toBe(0);
+    const doc = readArtifact(r.planOut);
+    expect(doc.entries).toHaveLength(1);
+    expect(doc.entries[0]).toMatchObject({ saleId: "sale::GOOD", keepCardId: KEEP_ID, deleteCardId: STRAY_ID });
+    expect(doc.entries[0].reason).toContain("name-agreeing");
+    expect(doc.census.needsRuling).toHaveLength(0);
+  });
+
+  it("a DIFFERENT copy in the group at a checklist-grade address whose row player agrees IS the keeper", () => {
+    // The address that fails the name test is address-coherent + checklist-
+    // grade but names the wrong player; a SECOND coherent + checklist-grade
+    // doc in the SAME group whose own row agrees with the sale's title must
+    // still be selected as keeper -- the generator never gives up on the
+    // whole group just because one candidate failed. WRONG_ID is filed under
+    // THIS SUITE's own scope (hockey:2025, the CELL constant) so PASS 1's
+    // own STARTSWITH discovers the id at all; RIGHT_ID is the genuinely
+    // correct address PASS 2's cross-partition lookup then also finds.
+    const WRONG_ID = "hiq:hockey:2025:upper-deck:21:base:no-auto";
+    const RIGHT_ID = "hiq:football:2025:panini-rookies-and-stars:21:crusade-silver:no-auto";
+    const SKATTEBO_TITLE = "2025 Panini Rookies & Stars Cam Skattebo Crusade Silver #21 Giants Rookie RC";
+    const pass1Docs: Doc[] = [{ id: "sale::TWOCAND", cardId: WRONG_ID, hobbyiqCardId: WRONG_ID, title: SKATTEBO_TITLE }];
+    const allDocs: Doc[] = [
+      { id: "sale::TWOCAND", cardId: WRONG_ID, hobbyiqCardId: WRONG_ID, title: SKATTEBO_TITLE },
+      { id: "sale::TWOCAND", cardId: RIGHT_ID, hobbyiqCardId: RIGHT_ID, title: SKATTEBO_TITLE },
+    ];
+    const catalog = [
+      { id: WRONG_ID, cardId: WRONG_ID, source: "checklistinsider-2026-08-27", playerName: "Ronald Acuña Jr." },
+      { id: RIGHT_ID, cardId: RIGHT_ID, source: "checklistinsider-2026-08-27", playerName: "Cam Skattebo" },
+    ];
+
+    const r = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
+    expect(r.out).not.toMatch(/FATAL|ReferenceError|TypeError/);
+    expect(r.code).toBe(0);
+    const doc = readArtifact(r.planOut);
+    expect(doc.census.needsRuling).toHaveLength(0);
+    expect(doc.entries).toHaveLength(1);
+    expect(doc.entries[0]).toMatchObject({ saleId: "sale::TWOCAND", keepCardId: RIGHT_ID, deleteCardId: WRONG_ID });
+  });
+});
+
 // ── second-pass discovery of an out-of-scope stray ────────────────────────
 
 describe("second pass finds a stray filed under a completely different address", () => {
@@ -388,12 +520,12 @@ describe("second pass finds a stray filed under a completely different address",
     // PASS 1's own STARTSWITH would never see the stray at all -- it carries
     // no hobbyiqCardId in scope (a raw vendor cardId, the ~86% shape). Only
     // because PASS 2 re-queries by id (ARRAY_CONTAINS) does it surface.
-    const pass1Docs: Doc[] = [{ id: "sale::F", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID }];
+    const pass1Docs: Doc[] = [{ id: "sale::F", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE }];
     const allDocs: Doc[] = [
-      { id: "sale::F", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID },
-      { id: "sale::F", cardId: "9999999999", hobbyiqCardId: "" }, // no hobbyiqCardId at all
+      { id: "sale::F", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE },
+      { id: "sale::F", cardId: "9999999999", hobbyiqCardId: "", title: KEEPER_TITLE }, // no hobbyiqCardId at all
     ];
-    const catalog = [{ id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27" }];
+    const catalog = [{ id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27", playerName: KEEPER_PLAYER }];
 
     const r = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
     expect(r.code).toBe(0);
@@ -426,12 +558,12 @@ describe("no cursor -- a budget stop reruns the WHOLE shard from the top on rela
   });
 
   it("re-running the SAME shard from the top (simulating a relaunch) reproduces the identical artifact -- the walk is idempotent", () => {
-    const pass1Docs: Doc[] = [{ id: "sale::G2", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID }];
+    const pass1Docs: Doc[] = [{ id: "sale::G2", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE }];
     const allDocs: Doc[] = [
-      { id: "sale::G2", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID },
-      { id: "sale::G2", cardId: STRAY_ID, hobbyiqCardId: KEEP_ID },
+      { id: "sale::G2", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE },
+      { id: "sale::G2", cardId: STRAY_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE },
     ];
-    const catalog = [{ id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27" }];
+    const catalog = [{ id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27", playerName: KEEPER_PLAYER }];
 
     const first = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
     const second = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
@@ -451,12 +583,12 @@ describe("the artifact loads through dedupe-sold-comp-copies-by-list's real clas
     const dedupeLane = path.join(backend, "scripts", "dedupe-sold-comp-copies-by-list.cjs");
     const { classifyEntry } = require(dedupeLane) as { classifyEntry: (e: unknown) => { ok: boolean; why?: string } };
 
-    const pass1Docs: Doc[] = [{ id: "sale::H", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID }];
+    const pass1Docs: Doc[] = [{ id: "sale::H", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE }];
     const allDocs: Doc[] = [
-      { id: "sale::H", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID },
-      { id: "sale::H", cardId: STRAY_ID, hobbyiqCardId: KEEP_ID },
+      { id: "sale::H", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE },
+      { id: "sale::H", cardId: STRAY_ID, hobbyiqCardId: KEEP_ID, title: KEEPER_TITLE },
     ];
-    const catalog = [{ id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27" }];
+    const catalog = [{ id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27", playerName: KEEPER_PLAYER }];
 
     const r = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
     expect(r.code).toBe(0);
