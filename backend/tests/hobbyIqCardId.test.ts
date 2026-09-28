@@ -1421,3 +1421,137 @@ describe("normalizeSetKey — bcp same-numbered insert sets (R30, 2026-09-13)", 
     }
   });
 });
+
+// CF-A-CODE-TWO-PLAYERS-SHARE-GETS-A-PLAYER-SEGMENT (Drew, 2026-09-28 14:35Z).
+// A REGISTERED same-product code collision (codeCollisions.ts) mints a
+// player-qualified cardNumber segment; every other code is untouched. See
+// backend/tests/codeCollisions.test.ts for the table-validity + resolution
+// tests -- these cover the id-minting integration.
+describe("computeHobbyIqCardId — registered code collisions get a player segment", () => {
+  it("2024 Bowman Chrome CPA-PS mints DIFFERENT ids for its two claimants", () => {
+    const skenes = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "bowman-chrome",
+      cardNumber: "CPA-PS", parallel: "Base", isAuto: true,
+      authoritativeSetKey: true, playerName: "Paul Skenes",
+    });
+    const santana = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "bowman-chrome",
+      cardNumber: "CPA-PS", parallel: "Base", isAuto: true,
+      authoritativeSetKey: true, playerName: "Paulino Santana",
+    });
+    expect(skenes).toBe("hiq:baseball:2024:bowman-chrome:cpa-ps-skenes:base:auto");
+    expect(santana).toBe("hiq:baseball:2024:bowman-chrome:cpa-ps-santana:base:auto");
+    expect(skenes).not.toBe(santana);
+  });
+
+  it("case/punctuation on playerName does not change the resolved slug", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "bowman-chrome",
+      cardNumber: "cpa-ps", parallel: "Base", isAuto: true,
+      authoritativeSetKey: true, playerName: "  PAUL   skenes ",
+    });
+    expect(slug).toBe("hiq:baseball:2024:bowman-chrome:cpa-ps-skenes:base:auto");
+  });
+
+  it("a second confirmed code (CPA-ET) mints its own two distinct ids", () => {
+    const torres = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "bowman-chrome",
+      cardNumber: "CPA-ET", parallel: "Refractor", isAuto: true, printRun: 499,
+      authoritativeSetKey: true, playerName: "Erick Torres",
+    });
+    const tait = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "bowman-chrome",
+      cardNumber: "CPA-ET", parallel: "Refractor", isAuto: true, printRun: 499,
+      authoritativeSetKey: true, playerName: "Eduardo Tait",
+    });
+    expect(torres).toBe("hiq:baseball:2024:bowman-chrome:cpa-et-torres:refractor:auto:num-499");
+    expect(tait).toBe("hiq:baseball:2024:bowman-chrome:cpa-et-tait:refractor:auto:num-499");
+  });
+
+  it("UNDERIVABLE (throws) when playerName resolves to NEITHER claimant", () => {
+    expect(() => computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "bowman-chrome",
+      cardNumber: "CPA-PS", parallel: "Base", isAuto: true,
+      authoritativeSetKey: true, playerName: "Someone Else",
+    })).toThrow(/UNDERIVABLE/);
+  });
+
+  it("UNDERIVABLE (throws) when playerName is blank -- never a guess", () => {
+    expect(() => computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "bowman-chrome",
+      cardNumber: "CPA-PS", parallel: "Base", isAuto: true,
+      authoritativeSetKey: true, playerName: null,
+    })).toThrow(/UNDERIVABLE/);
+  });
+
+  it("a NON-collided CPA code on the same product is completely unaffected", () => {
+    // CPA-GLO (George Lombard Jr.) is explicitly NOT in the table (audit
+    // class (iii): spelling variant only, not a collision).
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "bowman-chrome",
+      cardNumber: "CPA-GLO", parallel: "Base", isAuto: true,
+      authoritativeSetKey: true, playerName: "George Lombard Jr.",
+    });
+    expect(slug).toBe("hiq:baseball:2024:bowman-chrome:cpa-glo:base:auto");
+  });
+
+  it("the SAME code in a different year is not registered and is unaffected", () => {
+    const slug = computeHobbyIqCardId({
+      sport: "baseball", year: 2021, setKey: "bowman-chrome",
+      cardNumber: "CPA-PS", parallel: "Base", isAuto: true,
+      authoritativeSetKey: true, playerName: "Anybody At All",
+    });
+    expect(slug).toBe("hiq:baseball:2021:bowman-chrome:cpa-ps:base:auto");
+  });
+
+  it("REGRESSION: 20 existing non-collided ids stay byte-identical", () => {
+    // A mix of bowman/bowman-chrome CPA codes NOT in the collision table,
+    // plus unrelated products, pinned before this feature existed. Every one
+    // of these must mint EXACTLY the id it minted before codeCollisions.ts.
+    const cases: Array<[Parameters<typeof computeHobbyIqCardId>[0], string]> = [
+      [{ sport: "baseball", year: 2026, setKey: "Bowman", cardNumber: "CPA-EHA", parallel: "Gold Refractor", isAuto: true, printRun: 50 },
+        "hiq:baseball:2026:bowman:cpa-eha:gold-refractor:auto:num-50"],
+      [{ sport: "baseball", year: 2026, setKey: "Bowman", cardNumber: "BCP-102", parallel: "Base", isAuto: false },
+        "hiq:baseball:2026:bowman-chrome:bcp-102:base:no-auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman-chrome", cardNumber: "CPA-GLO", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman-chrome:cpa-glo:base:auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman", cardNumber: "CPA-AA", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman:cpa-aa:base:auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman", cardNumber: "CPA-AF", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman:cpa-af:base:auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman-chrome", cardNumber: "CPA-AC", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman-chrome:cpa-ac:base:auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman-chrome", cardNumber: "CPA-FDI", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman-chrome:cpa-fdi:base:auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman-chrome", cardNumber: "CPA-TB", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman-chrome:cpa-tb:base:auto"],
+      [{ sport: "baseball", year: 2026, setKey: "bowman", cardNumber: "CPA-AG", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2026:bowman:cpa-ag:base:auto"],
+      [{ sport: "baseball", year: 2026, setKey: "bowman-chrome", cardNumber: "CPA-AG", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2026:bowman-chrome:cpa-ag:base:auto"],
+      [{ sport: "basketball", year: 2024, setKey: "panini-prizm", cardNumber: "1", parallel: "Silver Prizm", isAuto: false, printRun: 99 },
+        "hiq:basketball:2024:panini-prizm:1:silver-prizm:no-auto:num-99"],
+      [{ sport: "pokemon", year: 2023, setKey: "sv1", cardNumber: "151", parallel: "Full Art", isAuto: false },
+        "hiq:pokemon:2023:sv1:151:full-art:no-auto"],
+      [{ sport: "football", year: 2024, setKey: "Bowman Chrome", cardNumber: "BCP-10", parallel: "Base", isAuto: true },
+        "hiq:football:2024:bowman-chrome:bcp-10:base:auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman", cardNumber: "CPA-BA", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman:cpa-ba:base:auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman", cardNumber: "CPA-BB", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman:cpa-bb:base:auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman-chrome", cardNumber: "CPA-BJ", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman-chrome:cpa-bj:base:auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman-chrome", cardNumber: "CPA-BN", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman-chrome:cpa-bn:base:auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman-chrome", cardNumber: "CPA-CA", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman-chrome:cpa-ca:base:auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman", cardNumber: "CPA-CC", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman:cpa-cc:base:auto"],
+      [{ sport: "baseball", year: 2024, setKey: "bowman-chrome", cardNumber: "CPA-CR", parallel: "Base", isAuto: true, authoritativeSetKey: true },
+        "hiq:baseball:2024:bowman-chrome:cpa-cr:base:auto"],
+    ];
+    for (const [input, expected] of cases) {
+      expect(computeHobbyIqCardId(input), JSON.stringify(input)).toBe(expected);
+    }
+  });
+});

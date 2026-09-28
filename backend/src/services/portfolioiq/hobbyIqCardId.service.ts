@@ -56,6 +56,7 @@ import { ruledPokemonEnglishSetKey } from "../catalog/pokemonEnglishSetKeyRuling
 import { ruledJapaneseSetAliases } from "../catalog/japaneseVintageSetKeyRuling.js";
 import { normalizePokemonCardNumber } from "../catalog/pokemonCardNumber.js";
 import { isMakerlessCatchAllSetKey, makerlessCatchAllMessage } from "../catalog/makerlessCatchAll.js";
+import { findCodeCollision, resolveCodeCollisionClaimant } from "../catalog/codeCollisions.js";
 // CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL (#1938): ONE vertical vocabulary.
 // The builder and the write door must agree on what a sport IS, so the builder
 // asks the door's table rather than keeping a four-alias copy of it.
@@ -3078,7 +3079,7 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   const statedCardNumber = sport === "pokemon"
     ? normalizePokemonCardNumber(components.cardNumber, components.pokemonChecklistNumberWidth ?? null)
     : components.cardNumber;
-  const cardNumber = unnumbered
+  let cardNumber = unnumbered
     // The row's own (sport, year, setKey) go with the name: "Chrome" is a
     // product word on topps-chrome and a finish word on topps, and the
     // person-test is per-product for exactly that reason.
@@ -3151,6 +3152,44 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
         cardNumber,
         year,
       );
+  // CF-A-CODE-TWO-PLAYERS-SHARE-GETS-A-PLAYER-SEGMENT (Drew, 2026-09-28
+  // 14:35Z). See codeCollisions.ts's header for the full ruling. Unlike
+  // CF-CHROME-PREFIX-OVERRIDE-NARROW above, this is a WITHIN-PRODUCT defect
+  // -- the same checklist prints the same code for two different players --
+  // so there is no product word to disambiguate with, only the player. Only
+  // fires for a (sport, year, setKey, cardNumber) the table REGISTERS;
+  // every other code, including every unregistered CPA code, is untouched.
+  //
+  // components.playerName is the ONE input this reads, uniformly for both
+  // callers the ruling names: the catalog ingest path passes the row's own
+  // playerName, and a sale path is expected to have ALREADY resolved the
+  // title to a player (the R34-style resolution in
+  // resolveCodeCollisionFromTitle) before calling this function -- this
+  // module has no title to read, only whatever playerName it was given.
+  //
+  // BLANK MEANS UNKNOWN, NEVER A GUESS. A registered code whose playerName
+  // does not resolve to exactly one claimant -- because it is blank, because
+  // it names neither player, or because a caller mistakenly passed literal
+  // ambiguous text -- throws UNDERIVABLE rather than falling back to the
+  // bare, collision-bearing code. That is a stricter refusal than the code
+  // carried before this table existed (a bare CPA-PS was previously minted,
+  // silently pooling two rookies); the two products' worth of comps this
+  // breaks are exactly the ones the checklist-verified audit found split
+  // roughly 50/50 with no parallel-axis distinction -- there is no safe
+  // bare-code fallback for a REGISTERED collision.
+  const collision = findCodeCollision({ sport, year, setKey, code: cardNumber });
+  if (collision) {
+    const won = resolveCodeCollisionClaimant(collision, components.playerName);
+    if (!won) {
+      throw new Error(
+        `hobbyiq-cardid: ${collision.code} is a registered code collision `
+        + `(${collision.claimants.map((c) => c.playerName).join(" vs ")}) and playerName `
+        + `"${String(components.playerName ?? "")}" resolves to neither — identity is UNDERIVABLE `
+        + `(CF-A-CODE-TWO-PLAYERS-SHARE-GETS-A-PLAYER-SEGMENT)`,
+      );
+    }
+    cardNumber = `${cardNumber}-${won.surnameSlug}`;
+  }
   // CF-AUTO-ONLY-FORCE (Drew, 2026-08-11). Auto-only prefixes always
   // produce autograph cards — force isAuto=true so vendor label drift
   // (isAuto=false on a CPA- sale, etc.) can't fragment the pool.
