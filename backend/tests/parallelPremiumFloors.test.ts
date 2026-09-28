@@ -110,8 +110,23 @@ describe("CF-RETAIL-SNACKPACK-SIBLINGS — Peanuts / Sunflower Seeds /5", () => 
 describe("CF-BOWMAN-LOGOFRACTOR — /35", () => {
   it("recognizes Bowman Logofractor as /35", () => {
     expect(inferPrintRun("Bowman Logofractor")).toBe(35);
-    expect(inferPrintRun("Logofractor")).toBe(35);
-    expect(inferPrintRun("Logo Fractor")).toBe(35);
+    expect(inferPrintRun("Bowman Logo Fractor")).toBe(35);
+  });
+
+  // CF-LOGOFRACTOR-IS-A-PARALLEL-NOT-A-PRODUCT (Drew ruling, 2026-09-28;
+  // PR #2478). This pin used to assert bare "Logofractor" and "Logo
+  // Fractor" (no "Bowman") were ALSO /35, on the strength of a name-only
+  // substring match with no product qualifier. That was wrong for the same
+  // reason the parser's old "topps-chrome-logofractor" setKey was wrong:
+  // 2024 Topps Chrome Logofractor's base card is UNSERIALIZED (an estimated
+  // ~3,150 copies, never a printed serial), so a bare or Topps-Chrome-scoped
+  // "Logofractor" now refuses a floor entirely -- blank means unknown, never
+  // a guessed print run borrowed from a different product's ruling. See
+  // toppsChromeLogofractorIsAParallel.test.ts for the full pin.
+  it("refuses a floor for Logofractor names that do not say Bowman", () => {
+    expect(inferPrintRun("Logofractor")).toBeNull();
+    expect(inferPrintRun("Logo Fractor")).toBeNull();
+    expect(inferPrintRun("Gold Logofractor")).toBeNull();
   });
 });
 
