@@ -449,7 +449,10 @@ describe("the 2026-09-14 scopes are dispatchable, and armed only by name", () =>
   });
 
   it("a typo is still refused rather than defaulted", () => {
-    expect(K.parseApplyScope("r34").ok).toBe(false);
+    // r34 is a real scope as of R34-CPA-NAME-RESOLVE (2026-09-28) -- see
+    // rematchRuledScopesR34_20260928.test.ts. r99 stands in for "not a real
+    // scope" here instead.
+    expect(K.parseApplyScope("r99").ok).toBe(false);
     expect(K.parseApplyScope("refractor").ok).toBe(false);
   });
 
@@ -461,7 +464,10 @@ describe("the 2026-09-14 scopes are dispatchable, and armed only by name", () =>
   });
 
   it("THE FLEET ALLOWLIST accepts the three scopes and maps `split` to r32", () => {
-    expect(FLEET_SRC).toMatch(/improve\|r26\|r27\|r28\|r31\|r32\|r33\)\s*;;/);
+    // r34 was added to this same allowlist by R34-CPA-NAME-RESOLVE
+    // (2026-09-28) -- the pattern below intentionally still matches, since
+    // r34 rides after r33 on the same line rather than replacing it.
+    expect(FLEET_SRC).toMatch(/improve\|r26\|r27\|r28\|r31\|r32\|r33\|r34\)\s*;;/);
     expect(FLEET_SRC).toMatch(/split\)\s*SCOPE=r32\s*;;/);
     // The count key is read generically -- no per-scope case was needed.
     expect(FLEET_SRC).toMatch(/\*\)\s+SCOPE_COUNT_KEY="\$SCOPE"\s*;;/);
