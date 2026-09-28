@@ -848,7 +848,7 @@ describe("end-to-end: GATE 6 strips the destination product's own parallel vocab
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
     assertNoUncaughtError(r);
     expect(r.code).toBe(0);
-    expect(r.out).toMatch(/REFUSED \(name-disagreement\) src::1: sale "Adael Amador Teal" vs destination "Julio Rodriguez RC"/);
+    expect(r.out).toMatch(/REFUSED \(name-disagreement\) src::1: sale "Adael Amador Teal" \(decidedBy=playerName\) vs destination "Julio Rodriguez RC"/);
     expect(r.out).toMatch(/REFUSED: name-disagreement\s+1/);
     expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+0/);
     expect(r.led.salesUpserts.length).toBe(0);
@@ -1046,42 +1046,49 @@ describe("regression: run 36353646453 -- a physical duplicate sharing an id must
   // banner clean, failed 0, no "DUPLICATE LEFT IN POOL" line, and the
   // leftover stood in the pool forever after.
   //
-  // Fixed at two layers: (1) lib/sales-at-id.cjs now dedupes on the REAL
-  // Cosmos identity (id, cardId), so BOTH documents are handed to the
-  // per-sale loop; (2) relocateSoldComp's optional
-  // verifyNoDuplicatesAcrossPartitions (which this lane now passes) is the
-  // backstop -- a cross-partition `WHERE c.id = @id` after the delete loop
-  // that catches anything still standing regardless of layer (1).
-  it("APPLY deletes BOTH old-address copies and leaves exactly one document, at toId", () => {
+  // sales-at-id.cjs's own fix (dedupe on the REAL Cosmos identity, (id,
+  // cardId)) still stands -- BOTH documents are handed to the per-sale loop.
+  // But CF-STALE-HOBBYIQCARDID-IS-NOT-RESIDENCY (this PR, #2454 follow-up)
+  // supersedes what this lane is allowed to DO with the second one: a ref
+  // whose live cardId is not fromId was never resident at fromId's
+  // partition, whatever its hobbyiqCardId says, and moving/deleting it here
+  // is exactly the false-positive class this PR closes (2,046 sales matched
+  // a fromId only via a stale hobbyiqCardId while their cardId already
+  // named a different address). This lane now REFUSES that second document
+  // as not-resident-at-from rather than sweeping it into the move --
+  // cleaning up a stray physical copy under a raw vendor cardId is
+  // dedupe-sold-comp-copies-by-list.cjs's own, narrower, content-identity-
+  // gated job, never this lane's.
+  it("APPLY moves the resident copy and REFUSES the raw-vendor-cardId leftover as not-resident-at-from, never deleting it", () => {
     const RAW_VENDOR_CARD_ID = "1765857544536x502800993546556500";
-    // expectedSales: 2, not 1 -- this IS the fix showing up one gate early.
-    // Before the sales-at-id.cjs fix, the drain's id-only dedup would have
-    // reported total=1 for this fixture (the second document silently
-    // folded away), so a census taken against the UNFIXED code would have
-    // written expectedSales:1 into a list like this one and GATE 5 would
-    // have waved it through -- exactly how the incident's own list passed
-    // review. Post-fix, the drain correctly reports both, so the true count
-    // the list must carry is 2.
+    // expectedSales: 2 -- sales-at-id.cjs's own dedup-by-(id,cardId) fix
+    // still reports both documents to GATE 5; this lane's own residency
+    // check is what decides what happens to each of them afterward.
     const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "duplicate-left regression", expectedSales: 2 }], "dupleft-regression");
     const catalog = [FROM_ROW, TO_ROW];
     // Two PHYSICALLY DISTINCT documents, same id, different cardId partitions,
     // both pointing at fromId via hobbyiqCardId -- exactly the incident shape.
-    const properlyAddressed = { id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" };
-    const leftoverAtRawVendorId = { id: "src::1", cardId: RAW_VENDOR_CARD_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" };
+    const properlyAddressed = { id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", title: "Adael Amador RayWave Refractor", playerName: "Adael Amador", parallel: "RayWave Refractor" };
+    const leftoverAtRawVendorId = { id: "src::1", cardId: RAW_VENDOR_CARD_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", title: "Adael Amador RayWave Refractor", playerName: "Adael Amador", parallel: "RayWave Refractor" };
     const sales = [properlyAddressed, leftoverAtRawVendorId];
 
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
     assertNoUncaughtError(r);
     expect(r.code, r.out).toBe(0);
     expect(r.out).not.toMatch(/DUPLICATE LEFT IN POOL/);
+    expect(r.out).toMatch(/REFUSED \(not-resident-at-from\) src::1/);
+    expect(r.out).toMatch(/REFUSED: not-resident-at-from\s+1/);
+    expect(r.out).toMatch(/MOVED \(sales\)\s+1/);
 
     const finalSales = r.led.finalSales as Array<{ id: string; cardId: string }>;
     const atThisId = finalSales.filter((d) => d.id === "src::1");
-    // The whole point: exactly ONE document survives for this id, across
-    // every partition, and it sits at toId -- neither old address (fromId
-    // nor the raw vendor cardId) still holds a copy.
-    expect(atThisId.length, JSON.stringify(atThisId)).toBe(1);
-    expect(atThisId[0].cardId).toBe(TO_ID);
+    // The resident copy moved to toId; the raw-vendor-cardId leftover was
+    // NEVER TOUCHED -- refused, not deleted -- so it still stands at its
+    // own address. Two documents survive, deliberately: this lane's job is
+    // moving a resident sale, not deduping a stray copy under a different
+    // lane's own doctrine.
+    expect(atThisId.length, JSON.stringify(atThisId)).toBe(2);
+    expect(atThisId.map((d) => d.cardId).sort()).toEqual([RAW_VENDOR_CARD_ID, TO_ID].sort());
   });
 
   it("MUTATION CHECK: with only the properly-addressed copy present (no leftover), the same list still moves cleanly", () => {
@@ -1100,5 +1107,112 @@ describe("regression: run 36353646453 -- a physical duplicate sharing an id must
     const atThisId = finalSales.filter((d) => d.id === "src::1");
     expect(atThisId.length).toBe(1);
     expect(atThisId[0].cardId).toBe(TO_ID);
+  });
+});
+
+// ── GATE 6, TITLE-FIRST (this PR). "The title proves the sale": a sale's
+// stored playerName field can itself be corrupt while its title -- the
+// actual listing text -- plainly names the destination player. The title
+// is read FIRST; playerName is consulted ONLY when the title is blank. ──────
+
+describe("GATE 6 reads the sale's TITLE first, and playerName only when the title is blank", () => {
+  it("corrupt playerName + title naming the destination -> PASSES, decidedBy=title", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "title proves the sale", expectedSales: 1 }], "title-first-pass");
+    const catalog = [FROM_ROW, TO_ROW];
+    // playerName is corrupt (names neither Adael Amador nor anyone at the
+    // destination); the title plainly names "Adael Amador".
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "Adael Amador RayWave Refractor", playerName: "Yordanny Monegro", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
+    expect(applyRun.code).toBe(0);
+    expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
+  });
+
+  it("title names a DIFFERENT player + playerName matches the destination -> REFUSED (title wins on conflict)", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "title wins on conflict", expectedSales: 1 }], "title-first-conflict");
+    const catalog = [FROM_ROW, TO_ROW];
+    // playerName agrees with the destination ("Adael Amador"), but the
+    // title plainly names a different player ("Yohandy Morales") -- the
+    // exact PR #2485 shape (Yordanny Monegro / Yohandy Morales #CPA-YM).
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "Yohandy Morales RayWave Refractor", playerName: "Adael Amador", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED \(name-disagreement\) src::1: sale "Yohandy Morales RayWave Refractor" \(decidedBy=title\)/);
+    expect(r.out).toMatch(/REFUSED: name-disagreement\s+1/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+0/);
+  });
+
+  it("blank title + playerName matches the destination -> PASSES, decidedBy=playerName (the fallback)", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "no title, fall back", expectedSales: 1 }], "title-first-fallback");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "", playerName: "Adael Amador", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
+    expect(applyRun.code).toBe(0);
+    expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
+  });
+});
+
+// ── CF-STALE-HOBBYIQCARDID-IS-NOT-RESIDENCY. A ref whose live cardId is not
+// fromId was never resident at fromId's partition -- refused, never moved. ──
+
+describe("a sale whose live cardId is not fromId is refused as not-resident-at-from, never moved", () => {
+  it("a sale drained only via a stale hobbyiqCardId (its own cardId is a different, unrelated address) is REFUSED, never rewritten", () => {
+    const STALE_OTHER_ADDRESS = "hiq:baseball:2025:topps-chrome-update-series:usc199:some-other-card:no-auto";
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "stale hobbyiqCardId false positive", expectedSales: 1 }], "not-resident-at-from");
+    const catalog = [FROM_ROW, TO_ROW];
+    // This sale's REAL, live partition is STALE_OTHER_ADDRESS -- a wholly
+    // different card's address -- but its hobbyiqCardId still carries the
+    // stale FROM_ID value from a prior repoint, which is exactly what pulls
+    // it into this entry's drain via the `OR hobbyiqCardId = @id` half of
+    // the dual predicate.
+    const sales = [{
+      id: "src::1", cardId: STALE_OTHER_ADDRESS, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "Some Other Player", playerName: "Some Other Player", parallel: "Base",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED \(not-resident-at-from\) src::1: live cardId "hiq:baseball:2025:topps-chrome-update-series:usc199:some-other-card:no-auto" != fromId/);
+    expect(r.out).toMatch(/REFUSED: not-resident-at-from\s+1/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+0/);
+    // Never reached the name gate at all -- residency is checked first.
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
+    expect(applyRun.code).toBe(0);
+    expect(applyRun.out).toMatch(/REFUSED: not-resident-at-from\s+1/);
+    expect(applyRun.led.salesUpserts.length).toBe(0);
+    expect(applyRun.led.salesDeletes.length).toBe(0);
+    // The sale is UNTOUCHED, still at its own real address.
+    const finalSales = applyRun.led.finalSales as Array<{ id: string; cardId: string }>;
+    expect(finalSales).toEqual([expect.objectContaining({ id: "src::1", cardId: STALE_OTHER_ADDRESS })]);
   });
 });

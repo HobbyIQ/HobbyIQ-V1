@@ -6,7 +6,10 @@
  * in place -- the sale never changes partition -- gated per entry on the
  * live hobbyiqCardId matching the list's own expectedStaleHobbyiqCardId,
  * toHobbyiqCardId equaling cardId, the cardId's own card_catalog row being
- * checklist-grade, and namesAgree against that row's playerName.
+ * checklist-grade, and namesAgree against that row's playerName -- TITLE
+ * FIRST (follow-up PR, mirrors repoint-sales-by-list.cjs's own GATE 6): the
+ * sale's title is read before its (possibly corrupt) playerName field, and
+ * wins on a real conflict.
  *
  * Modeled on dedupeSoldCompCopiesByList.test.ts's own shape: the lane is
  * require()'d directly (its dist/ requires live inside main(), so the
@@ -295,7 +298,7 @@ const SALE_ID = "cardsight::7f92af3bddc61b38fc6ab6df";
 const CARD_ID = "hiq:baseball:2024:bowman:cpa-aca:refractor:auto:num-499";
 const STALE = "hiq:baseball:2024:bowman-chrome:cpa-aca:blue-refractor:auto:num-499";
 
-const CATALOG_ROW = { id: CARD_ID, cardId: CARD_ID, source: "checklistinsider-2026-08-27", playerName: "Allan Castro" };
+const CATALOG_ROW = { id: CARD_ID, cardId: CARD_ID, source: "checklistinsider-2026-08-27", playerName: "Allan Castro", setKey: "bowman", year: 2024 };
 const SALE = { id: SALE_ID, cardId: CARD_ID, hobbyiqCardId: STALE, source: "cardsight", title: "Allan Castro Blue Refractor Auto", playerName: "Allan Castro", price: 40, soldAt: "2026-02-01", _etag: '"etag-1"' };
 
 function writeList(entries: Entry[], tag: string): string {
@@ -508,6 +511,51 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
     assertNoUncaughtError(r);
     expect(r.out).toMatch(/REFUSED \(name-disagreement\)/);
     expect(r.led.patches.length).toBe(0);
+  });
+
+  // ── GATE (e), TITLE-FIRST (follow-up PR). "The title proves the sale":
+  // the same doctrine repoint-sales-by-list.cjs's GATE 6 carries. ─────────
+
+  it("PASSES, decidedBy=title, when playerName is corrupt but the title plainly names the checklist row's player", () => {
+    const list = writeList([{ saleId: SALE_ID, cardId: CARD_ID, expectedStaleHobbyiqCardId: STALE, toHobbyiqCardId: CARD_ID }], "title-first-pass");
+    const catalog = [CATALOG_ROW];
+    // playerName is corrupt (names nobody real); the title plainly names
+    // "Allan Castro", the checklist row's own playerName.
+    const sales = [{ ...SALE, playerName: "Yordanny Monegro", title: "Allan Castro Blue Refractor Auto" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/PATCHED\s+1/);
+    expect(r.led.patches.length).toBe(1);
+  });
+
+  it("REFUSES (title wins on conflict) when the title names a DIFFERENT player even though playerName matches the checklist row", () => {
+    const list = writeList([{ saleId: SALE_ID, cardId: CARD_ID, expectedStaleHobbyiqCardId: STALE, toHobbyiqCardId: CARD_ID }], "title-first-conflict");
+    const catalog = [CATALOG_ROW];
+    // playerName agrees with the destination ("Allan Castro"), but the
+    // title plainly names a different player -- the title wins.
+    const sales = [{ ...SALE, playerName: "Allan Castro", title: "Someone Else Entirely Blue Refractor Auto" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED \(name-disagreement\): sale "Someone Else Entirely Blue Refractor Auto" \(decidedBy=title\)/);
+    expect(r.led.patches.length).toBe(0);
+  });
+
+  it("PASSES, decidedBy=playerName, when the title is blank (the fallback)", () => {
+    const list = writeList([{ saleId: SALE_ID, cardId: CARD_ID, expectedStaleHobbyiqCardId: STALE, toHobbyiqCardId: CARD_ID }], "title-first-fallback");
+    const catalog = [CATALOG_ROW];
+    const sales = [{ ...SALE, playerName: "Allan Castro", title: "" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/PATCHED\s+1/);
+    expect(r.led.patches.length).toBe(1);
   });
 
   it("FAILS (etag-conflict, REFUSED) when the patch is rejected with a 412 -- never retried, never written", () => {

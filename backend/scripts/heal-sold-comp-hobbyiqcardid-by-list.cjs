@@ -63,13 +63,19 @@
  *       must be a real, checklist-attested card, exactly the same
  *       standard repoint-sales-by-list.cjs's own GATE 2 holds its
  *       destination to.
- *   (e) namesAgree(sale title/playerName, catalog row playerName) must
- *       pass (lib/name-agreement.cjs) -- REFUSED (name-disagreement)
- *       otherwise. "A checklist row proves the ROW, the player name
- *       proves the SALE": gate (d) establishes cardId is a real card;
- *       this establishes THIS sale is that card's sale, not some other
+ *   (e) namesAgree(sale TITLE first, catalog row playerName) must pass
+ *       (lib/name-agreement.cjs) -- REFUSED (name-disagreement) otherwise.
+ *       "A checklist row proves the ROW, the player name proves the
+ *       SALE": gate (d) establishes cardId is a real card; this
+ *       establishes THIS sale is that card's sale, not some other
  *       player's listing that happened to already carry the right
- *       partition key.
+ *       partition key. TITLE FIRST (this PR, mirrors
+ *       repoint-sales-by-list.cjs's own GATE 6): the sale's stored
+ *       playerName can itself be corrupt while its title plainly names the
+ *       destination player -- the title is read first, playerName only
+ *       when the title is blank, and the title WINS on a real conflict
+ *       even when playerName would have agreed. `decidedBy` records which
+ *       field decided, in both the pass and refuse evidence.
  *
  * On pass: PATCH `{ hobbyiqCardIdBefore: <the stale value>, hobbyiqCardId:
  * toHobbyiqCardId }` at (saleId, cardId), with an `IfMatch` access
@@ -114,6 +120,13 @@ const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budge
 const { withBackoff } = require(path.join(__dirname, "lib", "cosmos-backoff.cjs"));
 const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
 const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
+// GATE (e)'s own stripTrailingTokens vocabulary (this PR's title-first fix)
+// -- see that lib module's own header for why this lane needs it (its real
+// committed list's titles carry print-attribute words like "Auto" that a
+// bare namesAgree(title, playerName) would never fold onto the checklist's
+// bare name). Reads the checklist corpus directly, no dist/ and no Cosmos --
+// same load-without-a-build contract as name-agreement.cjs itself.
+const { stripVocabularyForDestination } = require(path.join(__dirname, "lib", "checklist-parallel-strip-vocab.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
@@ -350,13 +363,32 @@ async function main() {
       continue;
     }
 
-    // ── GATE (e): namesAgree(sale title/playerName, catalog playerName) ──
-    const saleName = String(sale.playerName ?? sale.title ?? "");
-    const destName = String(catalogRow.playerName ?? "");
-    if (!namesAgree(saleName, destName)) {
+    // ── GATE (e), TITLE-FIRST (this PR). "A checklist row proves the ROW,
+    // the player name proves the SALE" -- but the sale's own stored
+    // playerName field can itself be corrupt while its TITLE plainly names
+    // the destination player. The title is read FIRST, through the SAME
+    // stripTrailingTokens vocabulary GATE 6 in repoint-sales-by-list.cjs
+    // builds for its own destination (lib/checklist-parallel-strip-vocab.cjs
+    // -- without it, a real title like "Allan Castro Blue Refractor Auto"
+    // would never fold onto the checklist's bare "Allan Castro", and this
+    // lane's own committed list of 2,022 real sales carries exactly that
+    // shape). playerName is consulted ONLY when the title is blank (carries
+    // no name tokens at all). On a real conflict the TITLE WINS -- see
+    // repoint-sales-by-list.cjs's own GATE 6 for the identical doctrine and
+    // the PR #2485 incident (Yordanny Monegro / Yohandy Morales #CPA-YM)
+    // this mirrors. `decidedBy` records which field actually decided, in
+    // the plan-row evidence for both the pass and the refuse path.
+    const strip = stripVocabularyForDestination(catalogRow);
+    const titleSource = String(sale.title ?? "").trim();
+    const playerNameSource = String(sale.playerName ?? "").trim();
+    const destName = String(catalogRow.playerName ?? "").trim();
+    const titleHasNameTokens = titleSource.length > 0;
+    const decidedBy = titleHasNameTokens ? "title" : "playerName";
+    const saleName = titleHasNameTokens ? titleSource : playerNameSource;
+    if (!namesAgree(saleName, destName, { stripTrailingTokens: strip.tokens })) {
       refusedNameDisagreement++;
-      console.error(`      REFUSED (name-disagreement): sale "${saleName.slice(0, 60)}" vs destination "${destName.slice(0, 60)}"`);
-      emitPlanRow({ action: "refused", reason: "name-disagreement", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId, saleName, destName });
+      console.error(`      REFUSED (name-disagreement): sale "${saleName.slice(0, 60)}" (decidedBy=${decidedBy}) vs destination "${destName.slice(0, 60)}"`);
+      emitPlanRow({ action: "refused", reason: "name-disagreement", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId, saleName, destName, decidedBy });
       continue;
     }
 
@@ -370,7 +402,7 @@ async function main() {
     if (!APPLY) {
       patched++;
       console.log("      WOULD PATCH hobbyiqCardId — every gate passed, sale's cardId is already the checklist address");
-      emitPlanRow({ action: "would-patch", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId });
+      emitPlanRow({ action: "would-patch", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId, decidedBy });
       continue;
     }
 
@@ -406,7 +438,7 @@ async function main() {
 
     patched++;
     console.log("      PATCHED — hobbyiqCardId aligned to the sale's own checklist partition address");
-    emitPlanRow({ action: "patched", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId });
+    emitPlanRow({ action: "patched", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId, decidedBy });
   }
 
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);

@@ -52,15 +52,40 @@
  *   5. the source must have at least ONE sale (salesAtId's dual
  *      cross-partition + partition-scoped check) -- zero sales is refused
  *      as "nothing to do" and counted, never silently skipped.
- *   6. for EVERY sale moved, namesAgree(sale title/player, destination
- *      row's player) must pass. "A checklist row proves the ROW, the
- *      player name proves the SALE": the catalog gates above establish
- *      that the DESTINATION is a real, checklist-attested card; namesAgree
+ *   5b. CF-STALE-HOBBYIQCARDID-IS-NOT-RESIDENCY (this PR). GATE 4's own
+ *      drain matches `hobbyiqCardId = fromId OR cardId = fromId` --
+ *      deliberately wide, so a sale re-pointed but never re-partitioned is
+ *      still found. But sold_comps partitions on /cardId: a drained ref
+ *      whose freshly-read document's OWN cardId is NOT fromId was never
+ *      resident at fromId's partition at all -- only its hobbyiqCardId
+ *      still carries the stale value. Moving such a sale would rewrite a
+ *      document none of this entry's gates (checklist-grade, product-
+ *      address, name agreement) were ever actually run against ITS
+ *      resident card. Checked per sale, right after the read, BEFORE gate
+ *      6: refused as "not-resident-at-from", counted in its own bucket,
+ *      never moved or rewritten. A stray physical duplicate under a
+ *      different cardId is NOT this lane's job to clean up either way --
+ *      that is dedupe-sold-comp-copies-by-list.cjs's own, narrower,
+ *      content-identity-gated delete.
+ *   6. for EVERY sale moved, namesAgree(TITLE first, destination row's
+ *      player) must pass. "A checklist row proves the ROW, the player name
+ *      proves the SALE": the catalog gates above establish that the
+ *      DESTINATION is a real, checklist-attested card; namesAgree
  *      establishes that THIS PARTICULAR SALE is that card's sale and not
  *      some other player's listing that happened to share a source
- *      partition. A sale whose title/player disagrees is refused alone --
- *      it does not fail the whole entry, and it does not retry under a
- *      looser rule.
+ *      partition. TITLE FIRST (this PR): the sale's stored `playerName`
+ *      field can itself be corrupt (a mis-extraction at ingest), while the
+ *      TITLE -- the actual listing text -- plainly names the destination
+ *      player. The title is read first, through the same
+ *      stripTrailingTokens vocabulary as before; playerName is consulted
+ *      ONLY when the title is blank (carries no name tokens at all). On a
+ *      real conflict the TITLE WINS -- a title naming a different player
+ *      refuses the sale even when the (corrupt) playerName would have
+ *      agreed. `decidedBy` ("title" or "playerName") is recorded on every
+ *      per-sale plan row, pass or refuse, so the evidence states which
+ *      field actually decided. A sale whose title/player disagrees is
+ *      refused alone -- it does not fail the whole entry, and it does not
+ *      retry under a looser rule.
  *
  * Any refusal is named, counted, and never silently merged into another
  * bucket -- CF-NEVER-DISMISS-SMALL-NUMBERS-AS-NOISE.
@@ -355,6 +380,23 @@ async function main() {
   let refusedProductMismatch = 0, refusedSameId = 0, refusedZeroSales = 0;
   let refusedExpectedSalesMismatch = 0;
   let refusedNameDisagreement = 0;
+  // CF-STALE-HOBBYIQCARDID-IS-NOT-RESIDENCY (this PR). drainSalesIdsAtId's
+  // own dual predicate is `hobbyiqCardId = fromId OR cardId = fromId` --
+  // deliberately wide, because a sale re-pointed (hobbyiqCardId rewritten)
+  // but never re-partitioned still needs to be found. But sold_comps
+  // partitions on /cardId: a ref whose OWN cardId is some OTHER address (the
+  // sale's real, current partition) and whose hobbyiqCardId merely still
+  // carries the STALE value `fromId` was never resident at fromId's
+  // partition at all -- it only LOOKS like a fromId candidate because a
+  // prior lane already moved (or repointed) it and left hobbyiqCardId
+  // behind. Moving such a sale to toId would silently rewrite a document
+  // this entry's own gates (checklist-grade, product-address, name
+  // agreement) were never actually run against ITS resident card -- the
+  // sale's true address was already something else. Checked once per sale,
+  // right after the read succeeds and BEFORE the name gate (GATE 6): a sale
+  // is refused here, counted in its own bucket, and NEVER moved or rewritten
+  // -- this is a residency fact, not a name-agreement judgment call.
+  let refusedNotResidentAtFrom = 0;
   // A sale whose destination guardSoldCompDoc refuses as a malformed key --
   // consulted by relocateSoldComp BEFORE its own dryRun short-circuit, so
   // this fires identically in REPORT and APPLY (see the per-sale move block).
@@ -580,12 +622,46 @@ async function main() {
         continue;
       }
 
-      const saleName = String(sale.playerName ?? sale.title ?? "");
-      const destName = String(toRow.playerName ?? "");
+      // CF-STALE-HOBBYIQCARDID-IS-NOT-RESIDENCY. The ref that got this sale
+      // into `salesRows` may have matched on hobbyiqCardId alone (a prior
+      // repoint left it stale) while the sale's OWN cardId -- its real,
+      // current partition -- is a DIFFERENT address entirely. That sale was
+      // never resident at fromId; refuse it as its own outcome and never
+      // move or rewrite it. Checked against the freshly-read document's own
+      // cardId (not `ref.cardId`, which is only the drain's own snapshot) so
+      // this reads the live value, not a stale one the drain itself cached.
+      if (String(sale.cardId ?? "") !== fromId) {
+        refusedNotResidentAtFrom++;
+        console.error(`      REFUSED (not-resident-at-from) ${sale.id}: live cardId "${String(sale.cardId ?? "").slice(0, 80)}" != fromId "${fromId.slice(0, 80)}" -- hobbyiqCardId is stale, not residency`);
+        emitPlanRow({ action: "refused", reason: "not-resident-at-from", fromId, toId, saleId: sale.id, liveCardId: sale.cardId ?? null });
+        continue;
+      }
+
+      // ── GATE 6, TITLE-FIRST (this PR). "A checklist row proves the ROW,
+      // the player name proves the SALE" -- but a sale's STORED playerName
+      // field can itself be corrupt (mis-extracted at ingest) while its
+      // TITLE, the actual listing text, plainly names the destination
+      // player. The title is read FIRST, through the identical
+      // stripTrailingTokens vocabulary GATE 6 already builds for the
+      // destination; playerName is consulted ONLY when the title carries no
+      // name tokens at all (a blank/empty title after trim) -- never when
+      // the title simply disagrees. On a real conflict (title names one
+      // player, playerName says another) the TITLE WINS and the sale is
+      // refused, even though a playerName-only check would have passed it --
+      // a corrupt stored field must never outrank the evidence a human
+      // listed the card under. `decidedBy` records which field actually
+      // produced the verdict, in both the pass and the refuse path, so the
+      // per-sale reconcile evidence states which source decided every sale.
+      const titleSource = String(sale.title ?? "").trim();
+      const playerNameSource = String(sale.playerName ?? "").trim();
+      const destName = String(toRow.playerName ?? "").trim();
+      const titleHasNameTokens = titleSource.length > 0;
+      const decidedBy = titleHasNameTokens ? "title" : "playerName";
+      const saleName = titleHasNameTokens ? titleSource : playerNameSource;
       if (!namesAgree(saleName, destName, { stripTrailingTokens: strip.tokens })) {
         refusedNameDisagreement++;
-        console.error(`      REFUSED (name-disagreement) ${sale.id}: sale "${saleName.slice(0, 60)}" vs destination "${destName.slice(0, 60)}"`);
-        emitPlanRow({ action: "refused", reason: "name-disagreement", fromId, toId, saleId: sale.id, saleName, destName });
+        console.error(`      REFUSED (name-disagreement) ${sale.id}: sale "${saleName.slice(0, 60)}" (decidedBy=${decidedBy}) vs destination "${destName.slice(0, 60)}"`);
+        emitPlanRow({ action: "refused", reason: "name-disagreement", fromId, toId, saleId: sale.id, saleName, destName, decidedBy });
         continue;
       }
 
@@ -637,7 +713,7 @@ async function main() {
           emitPlanRow({ action: "refused", reason: "guard", fromId, toId, saleId: sale.id, error: String(res.error ?? "") });
         } else if (res.ok) {
           movedSales++;
-          emitPlanRow({ action: APPLY ? "moved" : "would-move", reason: "repoint-sales-by-list", fromId, toId, saleId: sale.id, before: sale.cardId, after: toId });
+          emitPlanRow({ action: APPLY ? "moved" : "would-move", reason: "repoint-sales-by-list", fromId, toId, saleId: sale.id, before: sale.cardId, after: toId, decidedBy });
         } else {
           failedSales++;
           console.error(`      FAILED at ${res.stage}: ${String(res.error ?? "").slice(0, 100)}`);
@@ -672,6 +748,7 @@ async function main() {
   console.log(`  REFUSED: zero-sales           ${f(refusedZeroSales)}`);
   console.log(`  REFUSED: expected-sales-mismatch ${f(refusedExpectedSalesMismatch)}`);
   console.log(`  REFUSED: name-disagreement    ${f(refusedNameDisagreement)}`);
+  console.log(`  REFUSED: not-resident-at-from ${f(refusedNotResidentAtFrom)}`);
   console.log(`  REFUSED: guard (malformed key) ${f(refusedGuard)}`);
   console.log(`  failed (per-sale)             ${f(failedSales)}`);
   console.log(`  failed (entry-level read)     ${f(entryLevelFailed)}`);
@@ -731,7 +808,7 @@ async function main() {
   // read found nothing -- a benign concurrent mutation, never a failure. It
   // must sit in this formula or the strict sale-side identity reports a
   // false RECONCILE MISMATCH on any ordinary race against a live container.
-  const saleLevelOutcomes = movedSales + refusedNameDisagreement + refusedGuard + failedSales
+  const saleLevelOutcomes = movedSales + refusedNameDisagreement + refusedNotResidentAtFrom + refusedGuard + failedSales
     + goneSinceRead + notReachedSales;
   const saleAccounted = saleLevelOutcomes;
   const intendedSales = intendedSalesTotal;
@@ -739,7 +816,7 @@ async function main() {
   console.log(`\n  reconciled (entries): intended ${f(intendedEntries)} = gated-through ${f(entriesGatedThrough)} `
     + `+ entry-refusals ${f(entryLevelRefusals)} + entry-failed ${f(entryLevelFailed)} + malformed ${f(entriesFailedToClassify)} + not-reached ${f(notReached)}`);
   console.log(`  reconciled (sales):   intended ${f(intendedSales)} = moved/would-move ${f(movedSales)} `
-    + `+ refused ${f(refusedNameDisagreement + refusedGuard)} + failed ${f(failedSales)} + gone-since-read ${f(goneSinceRead)} + not-reached ${f(notReachedSales)}`);
+    + `+ refused ${f(refusedNameDisagreement + refusedNotResidentAtFrom + refusedGuard)} + failed ${f(failedSales)} + gone-since-read ${f(goneSinceRead)} + not-reached ${f(notReachedSales)}`);
   if (entryAccounted !== intendedEntries || saleAccounted !== intendedSales) {
     console.error("  !! RECONCILE MISMATCH -- an entry or a sale was neither gated, moved, refused, failed, malformed nor deferred");
     process.exitCode = 4;
@@ -761,14 +838,15 @@ async function main() {
     // entries, and whole entries the budget never started -- none of these
     // are the guard/namesAgree DECISIONS `refused` exists for.
     // `refused` ("we understood this row and declined to write it") is the
-    // sale-level namesAgree and splitIdentityWriteGuard refusals only.
+    // sale-level namesAgree, not-resident-at-from and splitIdentityWriteGuard
+    // refusals only.
     // `failed` is genuine errors on either side of the entry/sale split.
     reportWrites({
       job: "repoint-sales-by-list",
       intended: intendedSales + entryLevelRefusals + entryLevelFailed + entriesFailedToClassify + notReached,
       written: movedSales,
       skipped: entryLevelRefusals + entriesFailedToClassify + notReached + notReachedSales + goneSinceRead,
-      refused: refusedNameDisagreement + refusedGuard,
+      refused: refusedNameDisagreement + refusedNotResidentAtFrom + refusedGuard,
       failed: failedSales + entryLevelFailed,
     });
   }
