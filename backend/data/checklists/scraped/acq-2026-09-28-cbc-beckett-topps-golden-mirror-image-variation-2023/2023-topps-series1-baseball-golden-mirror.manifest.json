@@ -1,0 +1,26 @@
+{
+  "scrapedAt": "2026-09-28T00:00:00.000Z",
+  "sourceUrl": "https://www.cardboardconnection.com/2023-topps-series-1-baseball-variations",
+  "sourceUrl2": "https://www.beckett.com/baseball/2023/topps-golden-mirror-image-variations",
+  "source": "cardboardconnection-beckett-2026-09-28",
+  "sport": "baseball",
+  "year": 2023,
+  "setName": "2023 Topps Series 1 Baseball",
+  "productKey": "2023-topps",
+  "setKey": "topps",
+  "rowCount": 330,
+  "parallelColumnAuthoritative": true,
+  "note": "Drew 09-28: Golden Mirror Image Variations are named cards (own rows), not a parallel. 2023 Topps Series 1's Golden Mirror Image Variation SSP swaps the photo (gold foil Topps logo front, gold-scheme back, gold-foil 'SSP' marker near the card number, CMP code tail #585 vs base #565) on EVERY one of the 330 Series 1 base numbers, #1 Juan Soto through #330 Julio Rodriguez -- same card number and same player as the anchoring base row on this same package's own '2023-topps-series1-baseball.csv' (category=base, blank parallel). Cardboard Connection's Series 1 variations page and Beckett's dedicated Golden Mirror guide both confirm full 1:330 coverage (no subset of named photos the way 2018 Bowman Chrome's 15-card 'Carrying Bag'-style Rookie Image Variations work -- Golden Mirror photo-swaps the WHOLE base checklist, one swap per number, un-named per card). Pack odds (Cardboard Connection, Series 1): Hobby 1:454, Jumbo 1:46, Hanger 1:203, Blaster 1:1,360. No per-card print run is stated by either source -- printRun is left blank on purpose, not a guessed default.\n\nPARALLEL NAME. Rows carry 'Golden Mirror Variation' -- variationVocabulary.ts's own established canonical slug (golden-mirror-variation; see D22's 'Golden Mirror Image Variation -> golden-mirror-variation' worked example and the 2026-08-30 census: 1,034/760/1,129/391/350 live sale titles across five 'Golden Mirror ... Variation(s)' spellings, none of them carrying the word 'Checklist'). This keeps the checklist row's slug identical to what live sale titles already resolve to through the existing parser, so the 818 previously-unbacked 2023 Topps 'Golden Mirror' sales this acquisition targets can match a real catalog row instead of falling into an unaddressed pool.\n\nSISTER FILE FIX (SAME RULING, same directory as this manifest, no new CSV): 2023 Topps Series 2's already-committed Golden Mirror rows (acq-2026-09-20-beckett-topps-series2-2023-baseball/2023-topps-series2-baseball.csv, cardNumbers 331-660) were staged with the raw scraped section-heading text 'Golden Mirror Variations Checklist' verbatim in the parallel column -- that source workbook's Variations sheet had no sibling section and no Master-sheet corroboration for stripChecklistSuffix to safely drop the trailing page-heading word 'Checklist' at conversion time (see that manifest's own note), so the converter correctly left it un-stripped pending exactly this kind of externally-verified ruling. This acquisition corrects those 330 rows' parallel column in place, from 'Golden Mirror Variations Checklist' to 'Golden Mirror Variation', for the identical reason: 'Checklist' names the Variations SHEET, not the card, and the corrected string is the one live sale titles already normalize to.\n\nUPDATE SERIES -- NOT STAGED, LISTED AS NEEDS RULING. Beckett/Cardboard Connection both state 2023 Topps Update Series carries its own 330-card Golden Mirror Image Variation SSP run (odds 1:412 hobby) on the SAME 1:1-with-base pattern as Series 1/2. No 2023 Topps Update Series BASE checklist package is committed anywhere in this repo to anchor a Golden Mirror twin against (verified: no acq-*-2023-topps-update* or 2023-topps-update-series-baseball.csv exists under backend/data/checklists), so minting 330 Golden Mirror rows here would have no base row to sit beside and no verified card-number/player list to check them against -- absent beats wrong. Acquiring 2023 Topps Update Series base is its own, larger, separate scope (a ~330-card+ checklist acquisition in its own right) and is left for a follow-on PR once that base package exists.",
+  "sources": [
+    { "name": "Cardboard Connection — 2023 Topps Series 1 Baseball Variations", "url": "https://www.cardboardconnection.com/2023-topps-series-1-baseball-variations" },
+    { "name": "Cardboard Connection — 2023 Topps Series 2 Baseball Variations", "url": "https://www.cardboardconnection.com/2023-topps-series-2-baseball-variations" },
+    { "name": "Beckett — 2023 Topps Golden Mirror Image Variations Guide", "url": "https://www.beckett.com/news/2023-topps-golden-mirror-image-variations-guide/" },
+    { "name": "Beckett — 2023 Topps Golden Mirror Image Variations (online database)", "url": "https://www.beckett.com/baseball/2023/topps-golden-mirror-image-variations" }
+  ],
+  "countsPerSeries": {
+    "series1": { "cards": 330, "staged": true, "file": "2023-topps-series1-baseball-golden-mirror.csv" },
+    "series2": { "cards": 330, "staged": "already committed, parallel name corrected by this PR", "file": "../acq-2026-09-20-beckett-topps-series2-2023-baseball/2023-topps-series2-baseball.csv" },
+    "update": { "cards": 330, "staged": false, "needsRuling": "no 2023 Topps Update Series base checklist package exists in this repo to anchor the twin against; acquire Update's base checklist first" }
+  },
+  "authoredAt": "2026-09-28"
+}
