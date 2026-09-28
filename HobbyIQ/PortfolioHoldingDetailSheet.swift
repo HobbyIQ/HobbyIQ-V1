@@ -73,6 +73,12 @@ struct PortfolioHoldingDetailSheet: View {
     /// nil, or the holding hasn't been resolved to a catalog card
     /// yet.
     @State private var panelEntries: [CardPanelGradeEntry] = []
+    /// CF-CARD-TITLE-NEVER-DOUBLES-THE-YEAR (Drew, 2026-09-06, backend
+    /// PR #1904): the card title the /card-panel identity composed ONCE,
+    /// server-side. Filled by the same fetch that fills `panelEntries`.
+    /// Nil until it lands, on a failed fetch, and against an engine older
+    /// than PR #1904 — every reader falls back to its own composition.
+    @State private var panelDisplayName: String?
     /// CF-HOLDING-DETAIL-V2 (2026-07-06): Grading Scenario is
     /// collapsed by default. Section only renders for raw holdings
     /// with a successful panel fetch.
@@ -434,12 +440,14 @@ struct PortfolioHoldingDetailSheet: View {
         guard let cardId = card.cardId?.trimmingCharacters(in: .whitespacesAndNewlines),
               cardId.isEmpty == false else {
             panelEntries = []
+            panelDisplayName = nil
             return
         }
         do {
             let response = try await APIService.shared.fetchCardPanel(cardId: cardId)
             let entries = response.gradeCurve?.entries ?? []
             panelEntries = entries
+            panelDisplayName = response.identity?.displayName
             let hasObserved = entries.contains { entry in
                 entry.valueSource == .observed && entry.sampleCount > 0
             }
@@ -448,6 +456,7 @@ struct PortfolioHoldingDetailSheet: View {
             }
         } catch {
             panelEntries = []
+            panelDisplayName = nil
         }
     }
 
@@ -1382,7 +1391,8 @@ struct PortfolioHoldingDetailSheet: View {
                             cardYear: Int(card.year.trimmingCharacters(in: .whitespaces)),
                             product: card.setName.isEmpty ? nil : card.setName,
                             player: card.playerName,
-                            cardNumber: nil
+                            cardNumber: nil,
+                            displayName: panelDisplayName
                         )
                         .padding(.horizontal, 16)
 

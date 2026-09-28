@@ -460,6 +460,25 @@ struct CompIQPricedCardView: View {
             return hit.year.map(String.init)
         }()
         let set: String? = {
+            // CF-CARD-TITLE-NEVER-DOUBLES-THE-YEAR (Drew, 2026-09-06,
+            // backend PR #1904): `setName` is the product with any leading
+            // year already stripped server-side. Every other candidate
+            // below — `release`, `set`, the hit's fields — may still lead
+            // with the year, and this line prepends `year` to whatever it
+            // picks, which is exactly how the web card page came to read
+            // "2023 2023 Topps Heritage". Prefer the field that cannot
+            // double; the rest stay as the fallback for an engine older
+            // than PR #1904.
+            //
+            // The wire also carries `displayName`, the whole title composed
+            // once — it is deliberately NOT used here because this string
+            // is the SUBTITLE under `headerPrimaryTitle`, which already
+            // renders the player name, and displayName includes it.
+            let serverSetName = priceResponse?.cardIdentity?.setName?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let serverSetName, serverSetName.isEmpty == false {
+                return Self.stripCategorySuffix(serverSetName)
+            }
             let serverRelease = priceResponse?.cardIdentity?.release?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if let serverRelease, serverRelease.isEmpty == false {
