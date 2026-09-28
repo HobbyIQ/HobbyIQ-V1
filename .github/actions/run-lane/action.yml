@@ -1,0 +1,137 @@
+name: Upload a lane's artifact, then relaunch on the budget marker
+description: >-
+  The upload-artifact + relaunch-on-marker PAIR that follows almost every
+  backfill-runner.yml lane's own script run, in ONE place instead of one copy
+  per lane.
+
+# ONE COPY, NOT NINETY (2026-09-28). backend/tests/relaunchNeverCallsAKilledRunFinished.test.ts
+# already moved the four-outcome relaunch SHELL into relaunch-on-marker
+# (#1984), but every lane still carried its OWN "Upload the X log/plan" step
+# immediately before its OWN "Self-relaunch X" step that `uses:` that
+# composite. That pair -- upload, then relaunch -- is identical in shape
+# across every lane that has one: an `if: always() && inputs.script == '<x>'`
+# upload-artifact whose `name:` and `path:` are the only lane-specific parts,
+# followed by an `if: !cancelled() && inputs.script == '<x>'` relaunch whose
+# `preamble:`/`budget-notice:`/`finished-notice:`/`dispatch:`/
+# `startup-marker-prefix:`/`startup-banner-regex:` are the only lane-specific
+# parts. Retyping the pair per lane is what grew backfill-runner.yml past
+# GitHub's 512 KB per-workflow limit once already (#1984's own postmortem);
+# this composite is the same fix applied one layer further out.
+#
+# WHAT STAYS IN THE WORKFLOW. The `if:` gate naming each lane's script (or
+# lanes, for a wave block), the `env:` block, and any lane-specific gate step
+# (an APPLY refusal, a scope sanitizer, a canary check) stay in
+# backfill-runner.yml: those decide WHICH lane runs and what it is allowed to
+# do, and folding them in here would turn an explicit per-lane opt-in into a
+# pattern match this action cannot see. What moves is only the upload +
+# relaunch PAIR, and only when a lane's own upload is the plain
+# name/path/if-no-files-found/retention-days shape relaunch-on-marker's own
+# lanes already use.
+#
+# A lane with no artifact to upload (nothing written to /tmp beyond
+# /tmp/backfill.log, which the runner tees for every lane regardless) passes
+# `path: ""` (the default) and the upload step is skipped entirely.
+#
+# NAMED `name:`/`path:`, NOT `artifact-name:`/`artifact-path:` -- deliberately
+# matching upload-artifact@v4's own input names. Several existing pin tests
+# (healSoldCompHobbyiqCardIdByList.test.ts, censusSoldCompCopies.test.ts)
+# assert on the literal substring `"name: <artifact-name-value>"` appearing
+# in backfill-runner.yml -- a leftover from when that line was upload-
+# artifact's own `with: name:`. Keeping this action's input spelled `name:`
+# means a converted lane's calling step still contains that exact substring,
+# so those pins keep working unchanged rather than needing a rewrite to
+# chase a renamed key.
+
+inputs:
+  # ── artifact upload (skipped when path is empty) ────────────────────────
+  name:
+    description: >-
+      The upload-artifact `name:`. Lane-specific — usually
+      "<script>-${{ inputs.apply == true && 'apply' || 'report' }}-...-${{
+      github.run_id }}". Passed through verbatim; this action does not
+      template it, so a lane whose scope can contain a colon must sanitize
+      BEFORE calling this action (see census-sold-comp-copies's own
+      SCOPE_SLUG step, which is unaffected by this action and still runs
+      first in the workflow).
+    required: false
+    default: ""
+  path:
+    description: >-
+      The upload-artifact `path:` (a single path or a multi-line block).
+      Empty skips the upload step, for a lane whose only output is the
+      teed log line the relaunch itself reads.
+    required: false
+    default: ""
+  retention-days:
+    description: Upload-artifact `retention-days:`. Every existing lane uses 90.
+    required: false
+    default: "90"
+  # ── relaunch-on-marker passthrough (identical names/meanings) ───────────
+  outcome:
+    description: steps.backfill.outcome, forwarded verbatim to relaunch-on-marker.
+    required: true
+  script:
+    description: The lane's script name, forwarded verbatim to relaunch-on-marker.
+    required: false
+    default: ""
+  dispatch:
+    description: The full `gh workflow run` line, forwarded verbatim to relaunch-on-marker.
+    required: true
+  preamble:
+    description: Optional shell before the outcome test, forwarded verbatim.
+    required: false
+    default: ""
+  budget-notice:
+    description: Optional shell for outcome (a), forwarded verbatim.
+    required: false
+    default: ""
+  finished-notice:
+    description: Optional shell for outcome (b), forwarded verbatim.
+    required: false
+    default: ""
+  startup-marker-prefix:
+    description: Optional startup-narration prefix, forwarded verbatim.
+    required: false
+    default: ""
+  startup-banner-regex:
+    description: Optional startup banner regex, forwarded verbatim.
+    required: false
+    default: ""
+  log:
+    description: The lane's teed stdout, forwarded verbatim (default /tmp/backfill.log).
+    required: false
+    default: /tmp/backfill.log
+
+runs:
+  using: composite
+  steps:
+    # The calling step's own `if:` in backfill-runner.yml is
+    # `always() && inputs.script == '<x>'` -- the BROADER of the two
+    # conditions the original pair used, matching what the upload step always
+    # had (it must still run when the backfill step itself failed). The
+    # relaunch step narrows back to `!cancelled()` here, INSIDE the
+    # composite, so a cancelled run still uploads whatever the lane wrote but
+    # does not also re-dispatch -- exactly the two original steps' behavior,
+    # unchanged.
+    - name: Upload the lane's artifact
+      if: ${{ inputs.path != '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        if-no-files-found: warn
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Relaunch on the budget marker
+      if: ${{ !cancelled() }}
+      uses: ./.github/actions/relaunch-on-marker
+      with:
+        log: ${{ inputs.log }}
+        outcome: ${{ inputs.outcome }}
+        script: ${{ inputs.script }}
+        dispatch: ${{ inputs.dispatch }}
+        preamble: ${{ inputs.preamble }}
+        budget-notice: ${{ inputs.budget-notice }}
+        finished-notice: ${{ inputs.finished-notice }}
+        startup-marker-prefix: ${{ inputs.startup-marker-prefix }}
+        startup-banner-regex: ${{ inputs.startup-banner-regex }}
