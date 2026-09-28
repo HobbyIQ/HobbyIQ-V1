@@ -7,12 +7,15 @@
  * future edit to the CSV or the manifest changes what the branch alone can
  * prove.
  *
- * This is the first-ever numbered BASE checklist acquisition for Bowman's
- * Best baseball (any year) -- see the manifest's own gapThisFills note. The
- * setKey `bowmans-best` is already registered in productSetKeys.ts
- * (parent: "bowman"), so this package registers nothing new; the test below
- * pins that registration is real (normalizeSetKey resolves it to itself)
- * rather than merely asserted in prose.
+ * This is the first-ever numbered checklist acquisition for Bowman's Best
+ * baseball (any year). The package carries the FULL Beckett workbook as the
+ * source lists it -- the 100 base/prospect cards, their 16 named Refractor-
+ * family rungs (plus the Mini-Diamond rungs), and every autograph and insert
+ * subset -- so the counts pinned here are the whole staged file, not a
+ * base-only slice. The setKey `bowmans-best` is already registered in
+ * productSetKeys.ts (parent: "bowman"), so this package registers nothing
+ * new; the test below pins that registration is real (normalizeSetKey
+ * resolves it to itself) rather than merely asserted in prose.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
@@ -21,11 +24,37 @@ import { createRequire } from "node:module";
 
 const require_ = createRequire(import.meta.url);
 const INGEST = require_(join(__dirname, "..", "scripts", "ingest-checklist-csv-to-catalog.cjs"));
-const { normalizeSetKey } = require_(join(__dirname, "..", "dist", "services", "portfolioiq", "hobbyIqCardId.service.js"));
+const { normalizeSetKey, computeHobbyIqCardId } = require_(join(__dirname, "..", "dist", "services", "portfolioiq", "hobbyIqCardId.service.js"));
 
 const SCRAPED_ROOT = join(__dirname, "..", "data", "checklists", "scraped");
 const DIR_NAME = "acq-2026-09-28-beckett-bowmans-best-2024";
 const CSV_NAME = "2024-bowmans-best-baseball.csv";
+
+/** Every category the staged file carries, with its row count -- the
+ *  converter's own per-kind output, pinned so a dropped sheet or a silently
+ *  absorbed section shows up as a number, not a vibe. */
+const EXPECTED_BY_CATEGORY: Record<string, number> = {
+  "base": 1900,
+  "auto-best-of-2024-autographs": 1442,
+  "auto-2024-mlb-all-star-futures-game-chrome-autograph-relics": 306,
+  "auto-impact-players-autographs": 100,
+  "auto-dual-autographs": 95,
+  "auto-triple-autographs": 50,
+  "auto-best-ballers-autographs": 44,
+  "auto-fabled-phenoms-autographs": 42,
+  "auto-family-tree-dual-autographs": 30,
+  "auto-bowman-showpieces-autographs": 18,
+  "auto-quad-autographs": 12,
+  "auto-family-tree-triple-autographs": 6,
+  "insert-impact-players": 120,
+  "insert-best-ballers": 120,
+  "insert-fabled-phenoms": 100,
+  "insert-2024-mlb-all-star-futures-game": 60,
+  "insert-bowman-showpieces": 48,
+  "insert-strokes-of-gold": 25,
+  "insert-1955-bowman-anime": 20,
+};
+const EXPECTED_TOTAL = 4538;
 
 function planPackage() {
   const dir = join(SCRAPED_ROOT, DIR_NAME);
@@ -39,7 +68,13 @@ function manifest() {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
-describe("2024 Bowman's Best Baseball base checklist (Beckett S3)", () => {
+function rows() {
+  const raw = readFileSync(join(SCRAPED_ROOT, DIR_NAME, CSV_NAME), "utf8");
+  const lines = raw.split("\n").filter((l) => l.trim().length > 0);
+  return { header: lines[0], rows: lines.slice(1).map((l) => l.split(",")) };
+}
+
+describe("2024 Bowman's Best Baseball full checklist (Beckett S3)", () => {
   it("ships exactly one staged CSV", () => {
     const { files } = planPackage();
     expect(files).toEqual([CSV_NAME]);
@@ -49,7 +84,7 @@ describe("2024 Bowman's Best Baseball base checklist (Beckett S3)", () => {
     expect(normalizeSetKey("bowmans-best")).toBe("bowmans-best");
   });
 
-  it("planStagedDirectory reports PASS: 100 rows, 100 distinct ids, 0 collisions, 0 unregistered", () => {
+  it("planStagedDirectory reports PASS: 4,538 rows, 4,538 distinct ids, 0 collisions, 0 unregistered, no subset separation needed", () => {
     const { entry } = planPackage();
     expect(entry.product).not.toBeNull();
     expect(entry.product.setKey).toBe("bowmans-best");
@@ -59,44 +94,106 @@ describe("2024 Bowman's Best Baseball base checklist (Beckett S3)", () => {
     expect(entry.plan.reason).toBeNull();
     expect(entry.plan.unregistered).toEqual([]);
     expect(entry.plan.collisions.length).toBe(0);
-    expect(entry.plan.rows).toBe(100);
-    expect(entry.plan.ids).toBe(100);
+    expect(entry.plan.rows).toBe(EXPECTED_TOTAL);
+    expect(entry.plan.ids).toBe(EXPECTED_TOTAL);
     expect(entry.plan.duplicatesFolded).toBe(0);
+    expect(entry.plan.unslugable).toBe(0);
+    // Every subset carries its own printed prefix (B24-, FGRA-, IP-, FP-, ...)
+    // so no insert set ever shares an address with base and the planner
+    // measures ZERO need to split any subset onto its own setKey.
+    expect(entry.plan.keys).toEqual([]);
   });
 
-  it("carries no heldRows gate — the whole staged file is this product's own base checklist", () => {
+  it("carries no heldRows gate — the whole staged file is this product's own checklist", () => {
     const m = manifest();
     expect(m.heldRows).toBeUndefined();
   });
 
-  it("CSV has the required header and no duplicate card numbers", () => {
-    const { dir } = planPackage();
-    const raw = readFileSync(join(dir, CSV_NAME), "utf8");
-    const lines = raw.split("\n").filter((l) => l.trim().length > 0);
-    expect(lines[0]).toBe("category,cardNumber,parallel,isAuto,printRun,player");
-    const rows = lines.slice(1).map((l) => l.split(","));
-    expect(rows.length).toBe(100);
-    const numbers = rows.map((r) => r[1]);
+  it("CSV header, total, and per-category counts match the converter output pinned in the manifest", () => {
+    const { header, rows: r } = rows();
+    expect(header).toBe("category,cardNumber,parallel,isAuto,printRun,player");
+    expect(r.length).toBe(EXPECTED_TOTAL);
+    const byCat: Record<string, number> = {};
+    for (const row of r) byCat[row[0]] = (byCat[row[0]] ?? 0) + 1;
+    expect(byCat).toEqual(EXPECTED_BY_CATEGORY);
+    expect(Object.values(EXPECTED_BY_CATEGORY).reduce((a, b) => a + b, 0)).toBe(EXPECTED_TOTAL);
+  });
+
+  it("the 100 plain base cards: 70 numbered #1-70 + 30 Top Prospects TP-1..TP-30, no duplicates, no auto, no print run", () => {
+    const { rows: r } = rows();
+    const plain = r.filter((row) => row[0] === "base" && row[2] === "");
+    expect(plain.length).toBe(100);
+    const numbers = plain.map((row) => row[1]);
     expect(new Set(numbers).size).toBe(100);
-    // 70 plain-numbered base veterans/rookies (#1-70) + 30 TP-prefixed Top
-    // Prospects (TP-1..TP-30), matching the source's own stated split.
     expect(numbers.filter((n) => /^\d+$/.test(n)).length).toBe(70);
     expect(numbers.filter((n) => /^TP-\d+$/.test(n)).length).toBe(30);
-    // Base-only package: no autos, no print runs, no named parallel in this file.
-    for (const r of rows) {
-      expect(r[3]).toBe("false");
-      expect(r[4]).toBe("");
-      expect(r[2]).toBe("");
+    for (const row of plain) {
+      expect(row[3]).toBe("false");
+      expect(row[4]).toBe("");
     }
   });
 
-  it("manifest states the setKey is already registered and cites the gap this backs", () => {
+  it("base parallels: 16 full-run Refractor-family rungs x 100 cards + the two Mini-Diamond rungs, print runs as the sheet states them", () => {
+    const { rows: r } = rows();
+    const base = r.filter((row) => row[0] === "base" && row[2] !== "");
+    expect(base.length).toBe(1800);
+    const byPar: Record<string, { n: number; runs: Set<string> }> = {};
+    for (const row of base) {
+      byPar[row[2]] ??= { n: 0, runs: new Set() };
+      byPar[row[2]].n++;
+      byPar[row[2]].runs.add(row[4]);
+    }
+    // 16 Refractor-family rungs + the 2 Mini-Diamond rungs (full-run once
+    // harmonised) = 18 rungs covering all 100 cards; 18 x 100 = 1,800.
+    const fullRun = Object.entries(byPar).filter(([, v]) => v.n === 100).map(([k]) => k).sort();
+    expect(fullRun.length).toBe(18);
+    expect(Object.keys(byPar).length).toBe(18);
+    // Every full-run rung states exactly one print run (or none) across all 100 cards.
+    for (const k of fullRun) expect(byPar[k].runs.size, k).toBe(1);
+    expect(byPar["Refractors"].runs).toEqual(new Set([""]));
+    expect(byPar["Wave Refractors"].runs).toEqual(new Set([""]));
+    expect(byPar["Superfractors"].runs).toEqual(new Set(["1"]));
+    expect(byPar["Black Refractors"].runs).toEqual(new Set(["10"]));
+    expect(byPar["Purple Mojo Refractors"].runs).toEqual(new Set(["250"]));
+    // The Mini-Diamond rungs cover the whole 100-card run too, once the
+    // Prospects sheet's own "Mini-Diamonds" spelling is harmonised onto the
+    // Base sheet's "Mini-Diamond" (see manifest.spellingHarmonization).
+    expect(byPar["Mini-Diamond Refractors"]).toEqual({ n: 100, runs: new Set(["299"]) });
+    expect(byPar["Green Mini-Diamond Refractors"]).toEqual({ n: 100, runs: new Set(["99"]) });
+    expect(byPar["Mini-Diamonds Refractors"]).toBeUndefined();
+    expect(byPar["Green Mini-Diamonds Refractors"]).toBeUndefined();
+  });
+
+  it("the harmonised Mini-Diamond spelling reaches ONE id per card, where the sheet's inner-word plural would have split the pool", () => {
+    const mk = (parallel: string) => computeHobbyIqCardId({
+      sport: "baseball", year: 2024, setKey: "bowmans-best", cardNumber: "TP-1",
+      parallel, isAuto: false, printRun: 299, authoritativeSetKey: true,
+    });
+    expect(mk("Mini-Diamond Refractors")).toBe(mk("Mini-Diamond Refractor"));
+    expect(mk("Mini-Diamonds Refractors")).not.toBe(mk("Mini-Diamond Refractors"));
+  });
+
+  it("every auto-* row is isAuto=true and every insert-*/base row is isAuto=false — Beckett's own sheet split, never inferred from text", () => {
+    const { rows: r } = rows();
+    for (const row of r) {
+      const expected = row[0].startsWith("auto-") ? "true" : "false";
+      expect(row[3], `${row[0]} ${row[1]} ${row[2]}`).toBe(expected);
+    }
+    expect(r.filter((row) => row[3] === "true").length).toBe(2145);
+  });
+
+  it("manifest states the setKey is already registered, cites the gap, names each subset's source sheet, and pins the harmonisation", () => {
     const m = manifest();
     expect(m.setKey).toBe("bowmans-best");
     expect(m.setKeyConfirmed).toMatch(/already registered/i);
     expect(m.gapThisFills).toMatch(/24,422/);
+    expect(m.rowCount).toBe(EXPECTED_TOTAL);
     expect(m.readyToIngest).toBe(true);
-    expect(Array.isArray(m.heldOut)).toBe(true);
-    expect(m.heldOut.length).toBeGreaterThan(0);
+    expect(m.spellingHarmonization.rowsChanged).toBe(60);
+    for (const cat of Object.keys(EXPECTED_BY_CATEGORY)) {
+      expect(m.sectionsReport.byCategory[cat], cat).toBeDefined();
+      expect(m.sectionsReport.byCategory[cat].rows, cat).toBe(EXPECTED_BY_CATEGORY[cat]);
+      expect(["Base", "Prospects", "Autographs", "Inserts"]).toContain(m.sectionsReport.byCategory[cat].sheet);
+    }
   });
 });

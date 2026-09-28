@@ -1,9 +1,13 @@
 {
   "scrapedAt": "2026-09-28T02:16:09.000Z",
+  "revisedAt": "2026-09-28T03:05:00.000Z",
+  "revisionNote": "REVISED same session on the coordinator's scope change: the original version of this package staged only the 100 plain base/prospect cards and held out every rung and every autograph/insert subset. The 2024 Bowman's Best sales cell is mostly Refractor parallels and autographs, and 'no synthetic parallels' forbids INVENTING rungs, not staging the rungs the Beckett checklist itself lists -- those are scraped source rows and belong in the package. This revision stages the FULL workbook as Beckett lists it: 4,538 rows across the Base, Prospects, Autographs and Inserts sheets, per-parallel rows with the print run the sheet states, isAuto=true for every Autographs-sheet subset, insert-/auto- category prefixes kept. Nothing is held out; see heldOut.",
   "articleUrl": "https://www.beckett.com/news/2024-bowmans-best-baseball-cards/",
   "articleFetchNote": "beckett.com 302s to maintenance.beckett.com when fetched live (same defect noted in acq-2026-09-19-beckett-bowman-chrome-2025-bcp-base); confirmed via a Wayback Machine snapshot instead (http://web.archive.org/web/20260123051811/https://www.beckett.com/news/2024-bowmans-best-baseball-cards/, captured 2026-01-23), whose HTML carries the S3 xlsx link used below. The xlsx itself is the primary source and was fetched directly, not through Wayback.",
   "sourceUrl": "https://beckett-www.s3.amazonaws.com/news/news-content/uploads/2024/12/2024-Bowmans-Best-Baseball-Checklist.xlsx",
   "xlsxHttpStatus": 200,
+  "xlsxLastModified": "Wed, 04 Dec 2024 16:40:54 GMT",
+  "xlsxContentLength": 147433,
   "sha256": "3a2f97fefcbe5ebc1436839728f72b287862aa1283d6646f2f573e74eeedb118",
   "source": "beckett-s3-2026-09-28",
   "sport": "baseball",
@@ -11,87 +15,59 @@
   "setName": "2024 Bowman's Best Baseball",
   "productKey": "2024-bowmans-best",
   "setKey": "bowmans-best",
-  "setKeyConfirmed": "Already registered in backend/src/services/catalog/productSetKeys.ts (~line 727): P(\"bowmans-best\", { parent: \"bowman\" }), with a child P(\"bowman-best-university\", { parent: \"bowmans-best\" }) and a sibling insert P(\"bowmans-best-preview\", { parent: \"bowmans-best\" }) for the unrelated 1997 BBP1-BBP20 preview insert. No year-scoped variant exists (e.g. no `bowmans-best-2024`) -- Bowman's Best is registered as ONE flat key across years, confirmed by reading the table directly. This package needs NO new setKey registration and files no needsRuling item for the key itself.",
-  "rowCount": 100,
+  "setKeyConfirmed": "Already registered in backend/src/services/catalog/productSetKeys.ts (~line 727): P(\"bowmans-best\", { parent: \"bowman\" }), with a child P(\"bowman-best-university\", { parent: \"bowmans-best\" }) and a sibling insert P(\"bowmans-best-preview\", { parent: \"bowmans-best\" }) for the unrelated 1997 BBP1-BBP20 preview insert. No year-scoped variant exists (e.g. no `bowmans-best-2024`) -- Bowman's Best is registered as ONE flat key across years, confirmed by reading the table directly. This package needs NO new setKey registration and files no needsRuling item for the key itself. No insert-set key is needed either: see plannerVerdict -- every subset carries its own printed prefix, so planStagedDirectory measures zero subsets to separate and every row lands on the plain bowmans-best key.",
+  "rowCount": 4538,
   "readyToIngest": true,
-  "readyToIngestNote": "planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run offline against this directory alone) reports PASS: 100 staged rows, 100 distinct ids, 0 unregistered keys, 0 collisions, 0 duplicatesFolded. setKey is already registered and the CSV is clean, so there is no blocker to ingest.",
-  "stagedNote": "STAGED, not ingested. This directory alone does not write to Cosmos; a human/workflow runs ingest-checklist-csv-to-catalog.cjs in REPORT mode first, reviews the banner, then re-runs with APPLY=true.",
-  "gapThisFills": "One of the four genuine-gap checklist acquisitions ordered by Drew 2026-09-28. Cell 2024|bowman-chrome carries 24,422 unbacked sales (raw census label: 'mixed: N-number-resolve + checklist ingest (Bowman's Best/CPA insert)'); the orchestrator-confirmed SPECIFIC gap this package targets is that no year of 2024 Bowman's Best had ever had a numbered BASE checklist acquired -- only parallels vocabulary and a Beckett variations guide existed prior to this package. This base checklist unlocks matching for the product's own base-card sales (both the 70-card veterans/rookies range #1-70 and the 30-card Top Prospects range TP-1..TP-30); it does NOT by itself resolve every unbacked sale at the 2024|bowman-chrome cell, since that cell is a distinct, already-registered sibling product (bowman-chrome) and some of its unbacked volume is CPA-insert/autograph rows outside this base-only scope. Held-out auto/insert/parallel subsets (see heldOut below) remain unbacked after this package and are explicitly not claimed as fixed by it.",
-  "sourcePageShape": "Beckett xlsx workbook, sheets include Base, Autographs, Inserts (standard Beckett shape, same converter used by every other package in this family). The Base sheet's own numbering states two ranges as printed on the actual cards: cards #1-70 for the base veterans/rookies portion (Mike Trout, Ronald Acuna Jr., Jackson Holliday, Paul Skenes, Bo Bichette, etc.), and cards TP-1 through TP-30 for the Top Prospects portion (Jose Perdomo, Roman Anthony, Jacob Wilson, Dylan Crews, etc.) -- a distinct printed number prefix, not a continuation of 71-100. Base cards also carry 16 named Refractor-family parallel rungs (Refractors, Wave Refractors, Superfractors, Red/Red Lava/Purple/Purple Mojo/Orange/Green/Gold/Gold Lava/Blue/Blue X-Fractors/Black/Aqua Lava/Yellow Lazer Refractors) plus Mini-Diamond(s) Refractor variants scoped to only part of the 100-card run -- all held out of this package, see heldOut below.",
-  "converterNote": "Converted with the sanctioned scripts/convertBeckettChecklistXlsx.cjs (--xlsx <path> --year 2024 --set-key bowmans-best --set-name \"2024 Bowman's Best\" --sport baseball --out 2024-bowmans-best-baseball.raw.csv --source-url <sourceUrl> --source-label beckett-s3-2026-09-28). Converter output: wrote 2024-bowmans-best-baseball.raw.csv; rows=4538 (deduped 0); by kind: {\"base\":1900,\"auto\":2145,\"insert\":493}; sections: 20 (anchors 2, parallels 0, own-cards 18). This committed CSV is filtered from that raw output down to only rows with category=base AND a blank parallel column -- the 100 plain-numbered base/prospects cards -- via: awk -F',' 'NR==1{print;next} $1==\"base\" && $3==\"\"{print}' 2024-bowmans-best-baseball.raw.csv > 2024-bowmans-best-baseball.csv (fields re-ordered to the canonical header; parallel column left blank rather than \"Base\", matching sibling packages' convention).",
+  "readyToIngestNote": "planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run offline against this directory alone) reports PASS: 4,538 staged rows, 4,538 distinct ids, 0 unregistered keys, 0 collisions, 0 duplicatesFolded, 0 unslugable, keys=[] (no subset separation needed). rungNameHygiene run over every parallel value in the file: 0 dirty names (24 distinct parallel names, all clean). setKey is already registered and the CSV is clean, so there is no blocker to ingest.",
+  "stagedNote": "STAGED, not ingested. This directory alone does not write to Cosmos; a human/workflow runs ingest-checklist-csv-to-catalog.cjs in REPORT mode first, reviews the banner, then re-runs with APPLY=true. REPORT mode cannot evaluate the sibling-rung-twin guard (APPLY only); the nearest sibling keys are bowman-chrome / bowman (parent) and the numbering here (1-70, TP-, B24-, FGRA-, IP-, FP-, ...) does not mirror either.",
+  "gapThisFills": "One of the four genuine-gap checklist acquisitions ordered by Drew 2026-09-28. Cell 2024|bowman-chrome carries 24,422 unbacked sales (raw census label: 'mixed: N-number-resolve + checklist ingest (Bowman's Best/CPA insert)'); the orchestrator-confirmed SPECIFIC gap this package targets is that no year of Bowman's Best had ever had a numbered checklist acquired -- only a parallels vocabulary (data/checklist-parallel-names.json, cell baseball|2024|bowmans-best, 28 names) and a Beckett variations guide existed prior to this package. Because the unbacked volume in that cell is mostly Refractor parallels and autographs, this package stages the whole workbook: the 100 base/prospect cards, their full Refractor-family ladder, and every autograph and insert subset with its own ladder. It does NOT by itself resolve every unbacked sale at 2024|bowman-chrome, since that cell is a distinct, already-registered sibling product (bowman-chrome) and some of its volume is CPA-insert rows that belong to bowman-chrome, not to this product.",
+  "sourcePageShape": "Beckett xlsx workbook, six sheets: Base (95 raw rows), Prospects (55), Autographs (968), Inserts (1046), Teams (skipped: team-sorted duplicate of the others), Master (skipped: superset sheet). Each sheet lists a card-number column, a player column, and one section per named rung with the print run stated in the section heading. Numbering as printed on the cards: Base #1-70 (veterans/rookies), Prospects TP-1..TP-30, Autographs B24-XX (Best of 2024 Autographs), FGRA-XX (2024 MLB All-Star Futures Game Chrome Autograph Relics), IPA-XX, BBA-XX, FPA-XX, BSA-XX, DA-XX, TA-XXX, QA-XXXX, FDA-XX, FTA-XXX; Inserts IP-N, BB-N, FP-N, FG-N, BS-N, SG-N, BA-N. Every prefix is unique to its subset, so no two subsets share an address.",
+  "converterNote": "Converted with the sanctioned scripts/convertBeckettChecklistXlsx.cjs (--xlsx <path> --year 2024 --set-key bowmans-best --set-name \"2024 Bowman's Best\" --sport baseball --out 2024-bowmans-best-baseball.raw.csv --source-url <sourceUrl> --source-label beckett-s3-2026-09-28). Converter output: wrote 2024-bowmans-best-baseball.raw.csv; rows=4538 (deduped 0); by kind: {\"base\":1900,\"auto\":2145,\"insert\":493}; sections: 20 (anchors 2, parallels 0, own-cards 18). The committed CSV is the converter's raw output with ONE change: the 60-row spelling harmonisation described under spellingHarmonization. No rows added, none dropped, no other field touched. Print runs and isAuto flags are the converter's own reading of the sheet section headings and of which SHEET a row sat on (Autographs -> isAuto=true), never inferred from player text.",
+  "spellingHarmonization": {
+    "rowsChanged": 60,
+    "from": ["Mini-Diamonds Refractors", "Green Mini-Diamonds Refractors"],
+    "to": ["Mini-Diamond Refractors", "Green Mini-Diamond Refractors"],
+    "scope": "Only the 30 Prospects-sheet TP- cards x these two rungs (30 + 30 = 60 rows). The 70 Base-sheet cards already carry the singular spelling.",
+    "why": "The workbook spells the SAME rung two ways across its two base-roster sheets: 'Mini-Diamond Refractors /299' and 'Green Mini-Diamond Refractors /99' on the Base sheet, 'Mini-Diamonds Refractors /299' and 'Green Mini-Diamonds Refractors /99' on the Prospects sheet -- identical print run, identical ladder position, one product. computeHobbyIqCardId singularises only the TRAILING word of a parallel ('Refractors' -> refractor, harmless), not an inner word, so 'Mini-Diamonds Refractors' slugs to `mini-diamonds-refractor` and 'Mini-Diamond Refractors' to `mini-diamond-refractor`: two ids, two pools, for one card class -- exactly the split 'one card, one row, one pool' forbids. The Base sheet's spelling is kept because (a) it is the majority spelling in the workbook itself, (b) it is the spelling the existing vocabulary cell baseball|2024|bowmans-best already carries ('Mini-Diamond Refractor', 'Green Mini-Diamond Refractor'), and (c) an in-repo census of data/*.json finds 'Mini-Diamond Refractor(s)' 136 times against 'Mini-Diamonds Refractor' 18. This is a spelling correction of the source's own inconsistency, not a new rung: both rungs exist in the source with these print runs. Flagged in the PR as the one reviewable judgment call in this package.",
+    "verifiedBy": "bowmansBest2024BaseChecklistMatchesPlannerVerdict.test.ts pins that the harmonised spelling reaches the same id as the singular vocabulary form and that the plural inner-word form would not, and that neither 'Mini-Diamonds' spelling remains in the CSV."
+  },
+  "vocabularyCrossCheck": "Every one of the 18 base rungs staged here was cross-checked against the existing cell baseball|2024|bowmans-best in data/checklist-parallel-names.json (28 names): 16 match on name (trailing 's' dropped) AND print run exactly (Wave null, Mini-Diamond 299, Purple 250, Purple Mojo 250, Aqua Lava 199, Blue 150, Blue X-Fractor 150, Green 99, Green Mini-Diamond 99, Yellow Lazer 75, Gold 50, Gold Lava 50, Orange 25, Black 10, Red 5, Red Lava 5); the remaining 2 differ only in the vocabulary's own alternate spelling of the same rung ('Refractor - 1 per pack' for the unnumbered Refractors; 'SuperFractor' / 'Superfractors' /1). The vocabulary's other 10 names are the auto/insert ladders (Mini-Diamond /25, Lava /50, Red /5, Gold /50, Orange /25, Black /10, Blue /150, Green /99, Purple /250) and agree with the print runs on this file's auto-*/insert-* rows. No print-run disagreement anywhere.",
   "sectionsReport": {
     "rawConverterRows": 4538,
     "rawByKind": { "base": 1900, "auto": 2145, "insert": 493 },
-    "stagedThisPackage": {
-      "baseVeteransRookies_1to70": 70,
-      "topProspects_TP1toTP30": 30,
-      "total": 100
-    }
+    "stagedTotal": 4538,
+    "byCategory": {
+      "base": { "sheet": "Base", "sheetAlso": "Prospects", "rows": 1900, "cards": 100, "note": "70 Base-sheet cards #1-70 + 30 Prospects-sheet cards TP-1..TP-30, both under category=base. 100 plain rows + 1,800 rung rows: 16 full-run rungs x 100 cards (Refractors, Wave Refractors [both unnumbered], Purple /250, Purple Mojo /250, Aqua Lava /199, Blue /150, Blue X-Fractors /150, Green /99, Yellow Lazer /75, Gold /50, Gold Lava /50, Orange /25, Black /10, Red /5, Red Lava /5, Superfractors /1) + Mini-Diamond Refractors /299 x 100 + Green Mini-Diamond Refractors /99 x 100 (after harmonisation)." },
+      "auto-best-of-2024-autographs": { "sheet": "Autographs", "prefix": "B24-", "rows": 1442, "cards": 103, "ladder": "plain (unnumbered), Refractors (unnumbered), Blue /150, Green /99, Gold /50, Gold Mini-Diamond /50, Orange /25, Orange X-Fractors /25, Teal /15, Black /10, Red /5, Red Lava /5, Superfractors /1, Printing Plates /1", "note": "103 distinct B24- numbers, every one present on all 14 rungs (103 x 14 = 1,442). The Autographs sheet's card column carries 104 B24- rows because B24-NM (Noble Meyer, Miami Marlins) is printed twice, on consecutive sheet rows 167-168 -- the workbook's own duplicate of one card, carried once here. Verified by re-reading the sheet against the staged CSV." },
+      "auto-2024-mlb-all-star-futures-game-chrome-autograph-relics": { "sheet": "Autographs", "prefix": "FGRA-", "rows": 306, "cards": 34, "ladder": "plain, Purple /250, Blue /150, Green /99, Gold /50, Orange /25, Black /10, Red /5, Superfractors /1" },
+      "auto-impact-players-autographs": { "sheet": "Autographs", "prefix": "IPA-", "rows": 100, "cards": 25, "ladder": "plain, Lava /50, Mini-Diamond /25, Superfractors /1" },
+      "auto-dual-autographs": { "sheet": "Autographs", "prefix": "DA-", "rows": 95, "cards": 19, "ladder": "plain, Gold /50, Orange /25, Red /5, Superfractors /1" },
+      "auto-triple-autographs": { "sheet": "Autographs", "prefix": "TA-", "rows": 50, "cards": 10, "ladder": "plain, Gold /50, Orange /25, Red /5, Superfractors /1" },
+      "auto-best-ballers-autographs": { "sheet": "Autographs", "prefix": "BBA-", "rows": 44, "cards": 11, "ladder": "plain, Lava /50, Mini-Diamond /25, Superfractors /1" },
+      "auto-fabled-phenoms-autographs": { "sheet": "Autographs", "prefix": "FPA-", "rows": 42, "cards": 21, "ladder": "plain, Superfractors /1" },
+      "auto-family-tree-dual-autographs": { "sheet": "Autographs", "prefix": "FDA-", "rows": 30, "cards": 10, "ladder": "plain, Mini-Diamond /10, Superfractors /1" },
+      "auto-bowman-showpieces-autographs": { "sheet": "Autographs", "prefix": "BSA-", "rows": 18, "cards": 9, "ladder": "plain, Superfractors /1" },
+      "auto-quad-autographs": { "sheet": "Autographs", "prefix": "QA-", "rows": 12, "cards": 3, "ladder": "plain, Lava /50, Mini-Diamond /25, Superfractors /1" },
+      "auto-family-tree-triple-autographs": { "sheet": "Autographs", "prefix": "FTA-", "rows": 6, "cards": 2, "ladder": "plain, Mini-Diamond /10, Superfractors /1" },
+      "insert-impact-players": { "sheet": "Inserts", "prefix": "IP-", "rows": 120, "cards": 30, "ladder": "plain, Lava /50, Mini-Diamond (no print run stated), Superfractors /1" },
+      "insert-best-ballers": { "sheet": "Inserts", "prefix": "BB-", "rows": 120, "cards": 30, "ladder": "plain, Lava /50, Mini-Diamond (no print run stated), Superfractors /1" },
+      "insert-fabled-phenoms": { "sheet": "Inserts", "prefix": "FP-", "rows": 100, "cards": 25, "ladder": "plain, Lava /50, Mini-Diamond (no print run stated), Superfractors /1" },
+      "insert-2024-mlb-all-star-futures-game": { "sheet": "Inserts", "prefix": "FG-", "rows": 60, "cards": 20, "ladder": "plain, Lava /50, Superfractors /1" },
+      "insert-bowman-showpieces": { "sheet": "Inserts", "prefix": "BS-", "rows": 48, "cards": 12, "ladder": "plain, Lava /50, Mini-Diamond (no print run stated), Superfractors /1" },
+      "insert-strokes-of-gold": { "sheet": "Inserts", "prefix": "SG-", "rows": 25, "cards": 25, "ladder": "plain only -- the sheet states no rungs for this insert" },
+      "insert-1955-bowman-anime": { "sheet": "Inserts", "prefix": "BA-", "rows": 20, "cards": 5, "ladder": "plain, Red /5, Black /10, Superfractors /1" }
+    },
+    "isAutoRows": 2145,
+    "notes": [
+      "Print runs are blank where the sheet states none (the unnumbered Refractors and Wave Refractors on base; the plain row of every auto/insert subset; the Mini-Diamond rung of the four Inserts-sheet subsets, which the sheet lists without a number). Blank means 'the source did not state one', never 'unnumbered by inference'.",
+      "'Printing Plates' on Best of 2024 Autographs is staged as the sheet lists it: one rung, /1. The sheet does not break it into the four plate colours, so neither does this file.",
+      "The Best of 2024 Autographs section's Refractors rung is unnumbered on the sheet (it is the base-level chrome auto), exactly as the base Refractors is."
+    ]
   },
-  "categoryNote": "Both ranges are staged under category=base (never a separate insert-/auto- category). Verified against the sanctioned ingester's own planStagedDirectory: with a single plain category, the TP- prefix already keeps every id distinct from the 1-70 range (no card-number collision, since 'TP-1' and '1' slugify to different cardNumbers), so planStagedDirectory measures zero need for subset separation and every one of the 100 rows resolves onto the plain bowmans-best setKey -- 100 staged rows, 100 distinct ids, 0 collisions, 0 unregistered keys. Splitting Top Prospects into its own insert-top-prospects category (the 1985 Donruss precedent's convention for a subset with a genuinely separate, colliding numbering track) was considered and rejected here: TP- already disambiguates on its own, and minting a second setKey (bowmans-best-top-prospects) for cards that are still fundamentally base-style chrome cards of the same product would fork one pool into two for no addressing reason -- the opposite of 'one card, one row, one pool.'",
-  "heldOut": [
-    {
-      "what": "16 named Refractor-family parallels of the same 100 base/prospects cards (Refractors, Wave/Superfractors/Red/Red Lava/Purple/Purple Mojo/Orange/Green/Gold/Gold Lava/Blue/Blue X-Fractors/Black/Aqua Lava/Yellow Lazer Refractors), plus Mini-Diamond(s) Refractor variants scoped to parts of the run",
-      "rows": 1800,
-      "reason": "Parallels vocabulary, not base-checklist card lines -- out of scope for this base-checklist package per the task's own doctrine note ('only parallels vocab... exists today' already covers this axis). These rungs ride the parallel column against the same 100 cardNumbers staged here and need no new checklist rows once this base package is ingested; they were not re-verified against the existing parallels vocabulary in this pass."
-    },
-    {
-      "what": "Best of 2024 Autographs (the flagship on-card auto subset)",
-      "rows": 1442,
-      "reason": "Auto subset, out of scope for this base-checklist package."
-    },
-    {
-      "what": "2024 MLB All-Star Futures Game Chrome Autograph Relics",
-      "rows": 306,
-      "reason": "Auto/relic subset, out of scope."
-    },
-    {
-      "what": "Impact Players (insert) + Impact Players Autographs",
-      "rows": 220,
-      "reason": "Insert + its auto parallel, out of scope."
-    },
-    {
-      "what": "Best Ballers (insert) + Best Ballers Autographs",
-      "rows": 164,
-      "reason": "Insert + its auto parallel, out of scope."
-    },
-    {
-      "what": "Fabled Phenoms (insert) + Fabled Phenoms Autographs",
-      "rows": 142,
-      "reason": "Insert + its auto parallel, out of scope."
-    },
-    {
-      "what": "Dual / Triple / Quad Autographs (multi-signer autograph cards)",
-      "rows": 157,
-      "reason": "Auto subset, out of scope."
-    },
-    {
-      "what": "2024 MLB All-Star Futures Game (insert)",
-      "rows": 60,
-      "reason": "Insert, out of scope."
-    },
-    {
-      "what": "Bowman Showpieces (insert) + Bowman Showpieces Autographs",
-      "rows": 66,
-      "reason": "Insert + its auto parallel, out of scope."
-    },
-    {
-      "what": "Family Tree Dual/Triple Autographs",
-      "rows": 36,
-      "reason": "Auto subset, out of scope."
-    },
-    {
-      "what": "Strokes of Gold (insert)",
-      "rows": 25,
-      "reason": "Insert, out of scope."
-    },
-    {
-      "what": "1955 Bowman Anime (insert)",
-      "rows": 20,
-      "reason": "Insert, out of scope."
-    }
-  ],
-  "salesUnlockedEstimate": "Not measured directly against Cosmos in this pass (no Cosmos access from this staging step). Directionally: this base checklist backs matching for every sale whose title resolves to a 2024 Bowman's Best base or Top Prospects card (cardNumber in 1-70 or TP-1..TP-30, any of the 16 held-out parallel names as the sale's stated rung) -- a meaningful slice of the 24,422 unbacked-sales cell, but not the whole cell, since 2024|bowman-chrome is bowman-chrome's own registered product and this package does not touch it, and the auto/insert subsets listed under heldOut remain unbacked by this package specifically.",
-  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run offline against this directory alone): 100 batch rows, 100 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys.",
-  "note": "First-ever numbered base checklist acquisition for any year of Bowman's Best. Sibling packages for context: acq-2026-09-19-beckett-bowman-chrome-2025-bcp-base (bowman-chrome, base+BCP prospects), acq-2026-09-19-beckett-bowman-mega-box-2026 (bowman-mega, base+auto+insert all staged, base-only ingestable). This package deliberately mirrors their base-only scoping and manifest field set."
+  "categoryNote": "Base and Top Prospects are both category=base (never a separate insert-/auto- category): the TP- prefix already keeps every id distinct from the 1-70 range, so planStagedDirectory measures zero need for subset separation. Every Autographs-sheet subset is auto-<slug> and every Inserts-sheet subset is insert-<slug>, the converter's own category naming, kept verbatim. Because each subset has its own printed prefix, none of these categories ever collides with base or with one another, so no subset is minted onto its own setKey (plan.keys=[]) -- they all ride the plain bowmans-best key with the category preserved on the row for display, exactly as the 2025 Topps Chrome Beckett package's auto/insert rows do.",
+  "heldOut": [],
+  "heldOutNote": "Nothing held out in this revision. The planner found no insert prefix that collides and no subset whose key would need registering, so there was no reason to hold any subset; every row the Beckett workbook lists for this product is staged. Rows from the Teams and Master sheets are not 'held out' -- they are the same cards re-sorted, which the converter correctly skips as duplicates.",
+  "salesUnlockedEstimate": "Not measured directly against Cosmos in this pass (no Cosmos access from this staging step). Directionally: this file backs matching for every sale whose title resolves to any card of 2024 Bowman's Best as Beckett lists the product -- base and Top Prospects at any of the 18 stated rungs, and every autograph/insert subset at its stated ladder -- which is the bulk of the product's own unbacked volume (mostly Refractor parallels and Best of 2024 Autographs). It does not touch the 2024|bowman-chrome sibling product's own rows.",
+  "plannerVerdict": "PASS -- planStagedDirectory (ingest-checklist-csv-to-catalog.cjs, run offline against this directory alone): 4,538 batch rows, 4,538 distinct ids, 0 collisions, 0 duplicatesFolded, 0 unregistered keys, 0 unslugable, keys=[] (no subset separation). 24 distinct parallel names, 0 refused by rungNameHygiene.",
+  "note": "First-ever numbered checklist acquisition for any year of Bowman's Best. Sibling packages for shape: acq-2026-09-19-beckett-topps-chrome-baseball-2025 (Beckett, full workbook incl. per-rung base rows and auto/insert subsets), acq-2026-09-19-beckett-bowman-chrome-2025-bcp-base (Beckett, base-only), acq-2026-09-21-checklistinsider-bowman-mega-box-mojo-ladder-2026 (per-rung ladder rows with print runs; its spellingAudit is the precedent for vocabularyCrossCheck above)."
 }
