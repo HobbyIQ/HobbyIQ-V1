@@ -177,8 +177,27 @@
  *  unattested shapes ("(RC)", "RC SP"/"RC SSP") that are deliberately left
  *  out. Order matters here only in that longer/more specific markers should
  *  not be shadowed by this one -- RCup already ends in "up" so `\s+RC$`
- *  cannot fire on it first (the regex anchors at the true end of string). */
-const TRAILING_SUBSET_MARKERS = [/\s+RCup$/i, /\s+FS$/i, /\s+RC$/i];
+ *  cannot fire on it first (the regex anchors at the true end of string).
+ *
+ *  `\s+Au$` / `\s+Autographs$` -- the 2024 Bowman Chrome CPA residue review
+ *  (PR #2485 round 2, 2026-09-28). Measured against the 88-player, 1,385-row
+ *  hiq:baseball:2024:bowman:cpa-* checklist corpus this residue targets:
+ *  ZERO of the 88 playerName strings end in the bare word "Au" or
+ *  "Autographs" -- unlike a real surname (`Green`), these are pure
+ *  auto-format vendor tags ("Anthony Baptist Au", "2024 Bowman - Chrome
+ *  Prospect Autographs Anthony Baptist #CPA-AB (AU, RC)" reduced by the
+ *  extractor to "Anthony Baptist Autographs") that a listing appends after
+ *  the player's own name, the identical shape "RC" already covers one word
+ *  over. FLOOR 1 (never strip below two tokens) already refuses this on any
+ *  two-token name, so a mononym or placeholder is unaffected. Deliberately
+ *  NOT adding "Autos" (leading, not trailing -- "Autos Allan Castro") or any
+ *  team/city abbreviation ("Texas", "Nats", "Mt", "Ny", "On") seen in the
+ *  same review: those are an open-ended, un-closeable list (every card's
+ *  seller can abbreviate a team differently) and exactly the hazard FLOOR 2
+ *  exists to bound one word at a time, not the shape this fixed list is for
+ *  -- see stripVocabularyForDestination's own opts.stripTrailingTokens for a
+ *  caller that wants a product-scoped, not global, extension. */
+const TRAILING_SUBSET_MARKERS = [/\s+RCup$/i, /\s+FS$/i, /\s+RC$/i, /\s+Autographs$/i, /\s+Au$/i];
 
 /** League-leader suffix: "LL AL HR", "LL NL ERA", etc. -- league then stat. */
 const LEAGUE_LEADER_SUFFIX = /\s+LL\s+(?:AL|NL)\s+(?:HR|RBI|ERA|W|AVG)$/i;

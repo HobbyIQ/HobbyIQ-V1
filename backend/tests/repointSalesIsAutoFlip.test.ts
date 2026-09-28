@@ -82,6 +82,15 @@ function shim(opts: {
   // overridable) to expire deterministically after a known number of rows
   // have been fully classified, with CONCURRENCY=1 (strictly sequential).
   catalogReadDelayMs?: number;
+  // Incident fix test-only knob: the FIRST successful sales point-read at
+  // this exact key ("id::cardId") gets its `_etag` silently changed in the
+  // store right after being served -- simulating a concurrent write landing
+  // on the OLD address between this lane's own scan and its collapse-path
+  // re-read (performMove's `freshAtOldAddress` guard). The NEXT read of the
+  // same key (the guard's own re-read) then sees a document whose etag no
+  // longer matches the `sale` object `processSale` scanned, exactly the race
+  // `stale-since-plan` exists to catch.
+  mutateEtagAfterReadOfKey?: string;
 } = {}): { requirePath: string; ledger: string } {
   const ledger = path.join(tmp, `ledger-${Math.random().toString(36).slice(2)}.json`);
   const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
@@ -100,6 +109,7 @@ function shim(opts: {
   const throwFetchNextAtPage = opts.throwFetchNextAtPage ?? 0;
   const pageSize = opts.pageSize ?? 500;
   const throwSalesReadAfter = opts.throwSalesReadAfter ?? -1;
+  const mutateEtagAfterReadOfKey = opts.mutateEtagAfterReadOfKey ?? null;
 
   fs.writeFileSync(p, `
 const Module = require("node:module");
@@ -111,6 +121,8 @@ const PAGE_SIZE = ${JSON.stringify(pageSize)};
 const THROW_SALES_READ_AFTER = ${JSON.stringify(throwSalesReadAfter)};
 let salesReadCount = 0;
 const CATALOG_READ_DELAY_MS = ${JSON.stringify(catalogReadDelayMs)};
+const MUTATE_ETAG_AFTER_READ_OF_KEY = ${JSON.stringify(mutateEtagAfterReadOfKey)};
+let mutateEtagArmed = MUTATE_ETAG_AFTER_READ_OF_KEY !== null;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const salesKey = (id, cardId) => id + "::" + cardId;
@@ -203,7 +215,25 @@ const salesContainer = {
           if (THROW_FETCHNEXT_AT_PAGE > 0 && pageIdx + 1 === THROW_FETCHNEXT_AT_PAGE) throw throttled();
           pageIdx++;
           const slice = resources.slice((pageIdx - 1) * PAGE_SIZE, pageIdx * PAGE_SIZE);
-          return { resources: slice.map((r) => structuredClone(r)), continuationToken: undefined };
+          const out = slice.map((r) => structuredClone(r));
+          // Mutates the STORE's row -- NOT the snapshot just handed to the
+          // caller -- the instant the scan serves it, simulating a
+          // concurrent write landing on that address between this lane's
+          // OWN scan and its later re-read/write of the same row. The
+          // cloned row processSale goes on to use (already copied into
+          // out above) still carries the OLD etag; the store (and every
+          // later read) has already moved on.
+          if (mutateEtagArmed) {
+            for (const r of slice) {
+              if (MUTATE_ETAG_AFTER_READ_OF_KEY === salesKey(r.id, r.cardId)) {
+                mutateEtagArmed = false;
+                const stored = state.sales.get(salesKey(r.id, r.cardId));
+                if (stored) { stored._etag = "etag-mutated-" + (++etagCounter); save(); }
+                break;
+              }
+            }
+          }
+          return { resources: out, continuationToken: undefined };
         },
         fetchAll: async () => ({ resources: resources.map((r) => structuredClone(r)) }),
       };
@@ -700,6 +730,108 @@ describe("repoint-sales-isauto-flip -- possible-twin-at-destination", () => {
   });
 });
 
+describe("repoint-sales-isauto-flip -- same-partition self-collapse never deletes the only copy (incident, 2026-09-28)", () => {
+  // C:/tmp/incident_1430/REPORT.md: a sale whose `cardId` is ALREADY the
+  // flip destination -- a stale dual-pk copy already sitting in the
+  // destination partition, carrying a hobbyiqCardId that has not caught up
+  // -- used to make `residentAt(sale.id, toId)` a SELF-READ: the row read
+  // back IS the row being processed, the contentHash trivially matched
+  // itself, and the old code deleted the only physical copy with nothing
+  // ever upserted in its place. Confirmed losses: baseball:2024 173 sales,
+  // basketball:2025 1.
+  it("APPLY patches in place, never deletes, when sale.cardId already equals the flip destination", () => {
+    // sale.cardId (the row's PHYSICAL address) is ALREADY AUTO_ID, but its
+    // hobbyiqCardId is the stale NO_AUTO_ID -- the exact dual-pk shape the
+    // incident found: currentId (hobbyiqCardId||cardId) flips to AUTO_ID,
+    // which equals sale.cardId itself.
+    const sale = SALE({ id: "s1", cardId: AUTO_ID, hobbyiqCardId: NO_AUTO_ID, isAuto: false });
+    const r = drive({ ...DEFAULT_ENV, BACKFILL_APPLY: "true" }, { sales: [sale], catalog: [CATALOG_ROW()] });
+    expect(r.code).toBe(0);
+    // The only copy is UPSERTED (healed in place), never deleted.
+    expect(r.led.salesUpserts).toContain("s1");
+    expect(r.led.salesDeletes.length).toBe(0);
+    // Exactly one physical copy survives, at the flip address, healed.
+    const survivor = r.led.salesUpserts.length ? true : false;
+    expect(survivor).toBe(true);
+    expect(r.out).toMatch(/PATCHED in place \(same partition\)\s+1/);
+    expect(r.out).not.toMatch(/COLLAPSED onto a resident \(same sale\)\s+1/);
+  });
+
+  it("REPORT performs the identical patch-in-place evaluation as APPLY, with zero writes", () => {
+    const sale = SALE({ id: "s1", cardId: AUTO_ID, hobbyiqCardId: NO_AUTO_ID, isAuto: false });
+    const report = drive(DEFAULT_ENV, { sales: [sale], catalog: [CATALOG_ROW()] });
+    expect(report.code).toBe(0);
+    expect(report.led.salesUpserts.length).toBe(0);
+    expect(report.led.salesDeletes.length).toBe(0);
+    expect(report.out).toMatch(/WOULD PATCH in place \(same partition\)\s+1/);
+  });
+
+  it("a GENUINE dual-pk twin at the destination still collapses correctly -- the non-destination copy is deleted, the destination survivor verified", () => {
+    // Two PHYSICALLY DIFFERENT documents sharing the same `id`: one resident
+    // at the OLD address (what processSale scans and reads `sale` from) --
+    // a partially-applied prior run's LEFTOVER, so its OWN isAuto already
+    // reads the FLIPPED (destination) value even though its cardId/
+    // hobbyiqCardId never got cleaned up -- and one already resident at
+    // AUTO_ID (the destination), a real duplicate, not a self-read. The old
+    // address's copy must be deleted; the destination's copy is the
+    // verified survivor. contentHashOf compares cardId/parallel/isAuto/
+    // grade/price/soldAt -- NOT hobbyiqCardId -- so this is the same-sale
+    // match the original code's own predicate was built to recognise.
+    const saleAtOldAddress = SALE({ id: "s1", cardId: NO_AUTO_ID, hobbyiqCardId: NO_AUTO_ID, isAuto: true });
+    const twinAtDestination = {
+      id: "s1", cardId: AUTO_ID, hobbyiqCardId: AUTO_ID,
+      title: saleAtOldAddress.title, sport: SPORT, cardYear: YEAR,
+      price: saleAtOldAddress.price, isAuto: true, playerName: saleAtOldAddress.playerName,
+      soldAt: saleAtOldAddress.soldAt, source: saleAtOldAddress.source,
+    };
+    const r = drive(
+      { ...DEFAULT_ENV, BACKFILL_APPLY: "true" },
+      { sales: [saleAtOldAddress, twinAtDestination], catalog: [CATALOG_ROW()] },
+    );
+    expect(r.code).toBe(0);
+    // The OLD address's copy is deleted -- the destination's own copy
+    // (a distinct physical document) is the one left standing.
+    expect(r.led.salesDeletes).toContain("s1");
+    expect(r.out).toMatch(/COLLAPSED onto a resident \(same sale\)\s+1/);
+    expect(r.out).not.toMatch(/PATCHED in place \(same partition\)\s+1/);
+  });
+
+  it("if the OLD address changes between the collapse's own scan and its write, the collapse is REFUSED -- nothing is deleted", () => {
+    // A genuine dual-pk twin at the destination (same shape as the test
+    // above), but this time the row at the OLD address is mutated by a
+    // concurrent write (a different `_etag`) the instant performMove's own
+    // last-line re-read (`freshAtOldAddress`) serves it -- i.e. the SOURCE
+    // changed between this lane's scan and the collapse's write. The fix's
+    // etag guard must refuse rather than delete a row it can no longer prove
+    // is the one it scanned.
+    const saleAtOldAddress = SALE({ id: "s1", cardId: NO_AUTO_ID, hobbyiqCardId: NO_AUTO_ID, isAuto: true });
+    const twinAtDestination = {
+      id: "s1", cardId: AUTO_ID, hobbyiqCardId: AUTO_ID,
+      title: saleAtOldAddress.title, sport: SPORT, cardYear: YEAR,
+      price: saleAtOldAddress.price, isAuto: true, playerName: saleAtOldAddress.playerName,
+      soldAt: saleAtOldAddress.soldAt, source: saleAtOldAddress.source,
+    };
+    const r = drive(
+      { ...DEFAULT_ENV, BACKFILL_APPLY: "true" },
+      {
+        sales: [saleAtOldAddress, twinAtDestination],
+        catalog: [CATALOG_ROW()],
+        // Keys off (id, cardId) == ("s1", NO_AUTO_ID) -- the OLD address --
+        // so the FIRST read of that exact address (performMove's own
+        // freshAtOldAddress re-read; the scan itself reads via a query, not
+        // a point-read) is the one that gets raced.
+        mutateEtagAfterReadOfKey: `s1::${NO_AUTO_ID}`,
+      },
+    );
+    expect(r.code).toBe(0);
+    // REFUSED, not collapsed -- nothing deleted, nothing upserted.
+    expect(r.led.salesDeletes.length).toBe(0);
+    expect(r.led.salesUpserts.length).toBe(0);
+    expect(r.out).toMatch(/REFUSED: stale since the read\s+1/);
+    expect(r.out).not.toMatch(/COLLAPSED onto a resident \(same sale\)\s+1/);
+  });
+});
+
 describe("repoint-sales-isauto-flip -- titles (setKey) filter", () => {
   it("with titles naming a DIFFERENT setKey, the candidate is out of scope and untouched", () => {
     const sale = SALE({ cardId: NO_AUTO_ID, hobbyiqCardId: NO_AUTO_ID, isAuto: false });
@@ -969,10 +1101,10 @@ describe("repoint-sales-isauto-flip -- MUTATION: notReached back in the candidat
 
   function notReachedInReconcileSrc() {
     const patched = LANE_SRC.replace(
-      `    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged
+      `    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged + s.collapseRefusedSelf
     + s.failed;
   console.log(\`\\n  reconciled: candidates \${f(s.candidates)} = accounted-for \${f(candidateOutcomes)}\`);`,
-      `    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged
+      `    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged + s.collapseRefusedSelf
     + s.failed + s.notReached; // MUTATED: the R-0927f fix is reverted
   console.log(\`\\n  reconciled: candidates \${f(s.candidates)} = accounted-for \${f(candidateOutcomes)}\`);`,
     );

@@ -263,6 +263,67 @@ describe("namesAgree -- bare trailing RC marker (USC143, run 36346769892)", () =
   });
 });
 
+// ── CF-AU-AUTOGRAPHS-ARE-FORMAT-WORDS-NOT-SURNAMES (PR #2485 round 2,
+//    2026-09-28). Independent review of the 2024 Bowman Chrome CPA residue
+//    ran the REAL gate (namesAgree + the lane's own stripVocabularyForDestination
+//    output) against 268 live sale docs the residue PR intended to repoint --
+//    0/268 passed. The single largest recoverable failure shape (95 of 267,
+//    measured against the review's own sample) is a bare trailing "Au" or
+//    "Autographs" the sale's own extraction appended after the player's name
+//    ("Anthony Baptist Au", title "... Prospect Autographs Anthony Baptist
+//    #CPA-AB (AU, RC)"). Same shape and same closed-list treatment as the
+//    existing RC/RCup/FS markers just above -- an auto-format vendor tag, not
+//    a real surname. Measured against the 88-player, 1,385-row
+//    hiq:baseball:2024:bowman:cpa-* checklist corpus this residue targets:
+//    ZERO playerName strings end in "Au" or "Autographs". Deliberately scoped
+//    to `cjs.namesAgree` only (same carve-out as the RC block above): a src/
+//    change forces a redeploy this fix does not need. Deliberately NOT adding
+//    a leading-strip rule ("Autos Allan Castro") or any team/city
+//    abbreviation ("Texas", "Nats", "Mt", "Ny") -- those are open-ended and
+//    unsafe to hardcode into a shared, global marker list; the residue PR
+//    holds those sales to needsRuling instead. ──
+describe("namesAgree -- bare trailing Au/Autographs marker (PR #2485 round 2, 2024 Bowman Chrome CPA residue)", () => {
+  it("the review's own pair: \"Anthony Baptist Au\" vs \"Anthony Baptist\" agrees", () => {
+    expect(cjs.namesAgree("Anthony Baptist Au", "Anthony Baptist")).toBe(true);
+  });
+
+  it("\"Autographs\" on either side agrees (presence-vs-absence, same shape as RCup/FS/RC)", () => {
+    expect(cjs.namesAgree("Anthony Huezo Autographs", "Anthony Huezo")).toBe(true);
+    expect(cjs.namesAgree("Anthony Huezo", "Anthony Huezo Autographs")).toBe(true);
+  });
+
+  it("\"Au\" and \"Autographs\" on BOTH sides still agrees", () => {
+    expect(cjs.namesAgree("Ryan Lasko Au", "Ryan Lasko Au")).toBe(true);
+  });
+
+  it("Au vs a DIFFERENT surname still refuses -- Au never widens past the same player", () => {
+    expect(cjs.namesAgree("Anthony Baptist Au", "Julio Rodriguez Au")).toBe(false);
+    expect(cjs.namesAgree("Anthony Baptist Au", "Julio Rodriguez")).toBe(false);
+  });
+
+  it("FLOOR 1 still applies: a two-token \"<First> Au\" never strips down to a bare single first name", () => {
+    // "Sam Au" read as one bare surname-shaped token pair would strip to the
+    // single token "Sam" -- FLOOR 1 (never strip below two tokens) refuses
+    // this exactly as it already does for RC/RCup/FS.
+    expect(cjs.namesAgree("Sam Au", "Sam")).toBe(false);
+  });
+
+  it("DROP THE AU/AUTOGRAPHS MARKER -> red: without it \"Anthony Baptist Au\" would still disagree with \"Anthony Baptist\"", () => {
+    const oldCompare = (x: string, y: string) =>
+      x.trim().toLowerCase().replace(/[^a-z0-9]/g, "") === y.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    expect(oldCompare("Anthony Baptist Au", "Anthony Baptist")).toBe(false); // the old defect
+    expect(cjs.namesAgree("Anthony Baptist Au", "Anthony Baptist")).toBe(true); // the fix
+  });
+
+  it("leading noise (\"Autos Allan Castro\") is NOT stripped -- this marker is trailing-only, by design", () => {
+    expect(cjs.namesAgree("Autos Allan Castro", "Allan Castro")).toBe(false);
+  });
+
+  it("a team/city abbreviation is NOT on this closed list -- \"Ryan Lasko Au Oakland\" still disagrees", () => {
+    expect(cjs.namesAgree("Ryan Lasko Au Oakland", "Ryan Lasko")).toBe(false);
+  });
+});
+
 // ── opts.stripTrailingTokens: the CALLER-SUPPLIED closed list ──────────────
 describe("namesAgree -- opts.stripTrailingTokens (caller-supplied, product-scoped)", () => {
   it("the run's own pair, full shape: \"Adael Amador Teal\" vs \"Adael Amador RC\" agree when the caller supplies the product's parallel vocabulary", () => {

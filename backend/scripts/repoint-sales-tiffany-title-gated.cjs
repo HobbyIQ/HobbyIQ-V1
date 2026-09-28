@@ -253,7 +253,7 @@ async function main() {
 
   const s = {
     scanned: 0, otherShard: 0, candidates: 0,
-    moved: 0, collapsedOntoResident: 0,
+    moved: 0, collapsedOntoResident: 0, patchedInPlace: 0, collapseRefusedSelf: 0,
     leftNoTiffanyTitle: 0, leftNoDestRow: 0, leftNameGuard: 0,
     refusedPossibleTwinAtDestination: 0, refusedEtagChanged: 0,
     failed: 0, notReached: 0,
@@ -408,14 +408,91 @@ async function main() {
 
     if (examples.length < 10) examples.push(`  ${sale.id}: ${currentId} -> ${newId}  ("${String(sale.title ?? "").slice(0, 90)}")`);
 
+    // ── SAME-PARTITION PATCH, never a delete (incident, 2026-09-28: see
+    // repoint-sales-isauto-flip.cjs's own header for the full trace; this
+    // lane shares its exact collapse shape). `currentId` is derived from
+    // `sale.hobbyiqCardId || sale.cardId`; the row's PHYSICAL address is
+    // `sale.cardId` alone. When `sale.cardId` already equals `newId`, the
+    // row this sale describes and "the resident at the destination" are the
+    // SAME PHYSICAL DOCUMENT, and `residentAt(sale.id, newId)` below would
+    // be a SELF-READ. Patch in place instead, through relocateSoldComp with
+    // an EMPTY drop, so there is never a delete to lose the row to.
+    if (sale.cardId === newId) {
+      try {
+        const keep = stripSystem({ ...sale, cardId: newId, hobbyiqCardId: newId });
+        const result = await relocateSoldComp(pool, {
+          keep, drop: [],
+          verifyFields: ["cardId", "hobbyiqCardId"],
+          dryRun: !APPLY,
+        });
+        if (result?.ok) {
+          s.patchedInPlace++;
+          emitPlanRow(sale, "patch", "same-partition-in-place", { fromKey, toKey, target: newId });
+        } else {
+          s.failed++;
+          const stage = result?.stage ?? "unknown";
+          const errMsg = result?.error ?? "unknown";
+          const msg = `FAILED patch-in-place ${sale.id}@${currentId} -> ${newId}: [stage=${stage}] ${errMsg}`;
+          failures.push(`  ${msg}`);
+          emitPlanRow(sale, "failed", "patch-in-place", { fromKey, toKey, target: newId, error: `[stage=${stage}] ${errMsg}` });
+          console.log(`\n::warning::${msg}`);
+        }
+      } catch (e) {
+        s.failed++;
+        const code = e?.code ?? e?.statusCode ?? "unknown";
+        const msg = `FAILED patch-in-place ${sale.id}@${currentId} -> ${newId}: [${code}] ${e?.message || e}`;
+        failures.push(`  ${msg}`);
+        emitPlanRow(sale, "failed", "patch-in-place-threw", { fromKey, toKey, target: newId, error: `[${code}] ${e?.message || String(e)}` });
+        console.log(`\n::warning::${msg}`);
+      }
+      return;
+    }
+
     // Collision / twin detection runs in BOTH modes -- a REPORT must show
     // what would happen, mirrors repoint-sales-cardnumber-suffix.cjs.
     const resident = await residentAt(sale.id, newId);
     if (resident) {
+      // Reaching here already proves `sale.cardId !== newId` (the branch
+      // above returns otherwise) -- a resident sharing `sale.cardId` would
+      // mean the read somehow answered with the row being processed; refuse
+      // rather than trust a "distinct survivor" the read did not prove.
+      if (resident.cardId === sale.cardId) {
+        s.collapseRefusedSelf++;
+        refusals["possible-twin-at-destination"].push(`  ${sale.id}@${currentId} -> ${newId}: residentAt read back the SAME document being processed -- refused, never treated as a distinct survivor`);
+        emitPlanRow(sale, "refused", "collapse-refused-self", { fromKey, toKey, target: newId });
+        return;
+      }
       if (contentHashOf(resident) === contentHashOf({ ...sale, cardId: newId, hobbyiqCardId: newId })) {
-        s.collapsedOntoResident++;
-        if (APPLY) { try { await pool.item(sale.id, sale.cardId).delete(); } catch { /* best effort; proven duplicate either way */ } }
-        emitPlanRow(sale, "collapse", "same-sale-resident", { fromKey, toKey, target: newId });
+        try {
+          const keep = stripSystem({ ...sale, cardId: newId, hobbyiqCardId: newId });
+          const result = await relocateSoldComp(pool, {
+            keep, drop: [{ id: sale.id, cardId: sale.cardId }],
+            verifyFields: ["cardId", "hobbyiqCardId"],
+            dryRun: !APPLY,
+          });
+          if (result?.ok) {
+            s.collapsedOntoResident++;
+            emitPlanRow(sale, "collapse", "same-sale-resident", { fromKey, toKey, target: newId });
+          } else if (result?.staleSincePlan?.length) {
+            s.refusedEtagChanged++;
+            emitPlanRow(sale, "refused", "stale-since-plan", { fromKey, toKey, target: newId });
+          } else {
+            s.failed++;
+            const stage = result?.stage ?? "unknown";
+            const errMsg = result?.error ?? "unknown";
+            const msg = `FAILED collapse ${sale.id}@${currentId} -> ${newId}: [stage=${stage}] ${errMsg}`;
+            failures.push(`  ${msg}`);
+            emitPlanRow(sale, "failed", "collapse", { fromKey, toKey, target: newId, error: `[stage=${stage}] ${errMsg}` });
+            console.log(`\n::warning::${msg}`);
+          }
+        } catch (e) {
+          s.failed++;
+          const code = e?.code ?? e?.statusCode ?? "unknown";
+          const msg = `FAILED collapse ${sale.id}@${currentId} -> ${newId}: [${code}] ${e?.message || e}`;
+          failures.push(`  ${msg}`);
+          emitPlanRow(sale, "failed", "collapse-threw", { fromKey, toKey, target: newId, error: `[${code}] ${e?.message || String(e)}` });
+          console.log(`\n::warning::${msg}`);
+        }
         return;
       }
       s.refusedPossibleTwinAtDestination++;
@@ -512,11 +589,13 @@ async function main() {
   console.log(`sales scanned                          ${f(s.scanned)}${SHARD_SCOPE.SHARDED ? `  (${f(s.otherShard)} in other shards)` : ""}`);
   console.log(`  candidates (topps/topps-traded shape) ${f(s.candidates)}`);
   console.log(`  ${APPLY ? "MOVED" : "WOULD MOVE"}                          ${f(s.moved)}`);
+  console.log(`  ${APPLY ? "PATCHED in place (same partition)" : "WOULD PATCH in place (same partition)"}  ${f(s.patchedInPlace)}`);
   console.log(`  COLLAPSED onto a resident (same sale)  ${f(s.collapsedOntoResident)}`);
   console.log(`  LEFT: no-tiffany-title                  ${f(s.leftNoTiffanyTitle)}`);
   console.log(`  LEFT: no-dest-row                       ${f(s.leftNoDestRow)}`);
   console.log(`  LEFT: name-guard                        ${f(s.leftNameGuard)}`);
   console.log(`  REFUSED: possible-twin-at-destination   ${f(s.refusedPossibleTwinAtDestination)}`);
+  console.log(`  REFUSED: collapse-refused-self          ${f(s.collapseRefusedSelf)}`);
   console.log(`  REFUSED: stale since the read            ${f(s.refusedEtagChanged)}`);
   console.log(`  failed                                  ${f(s.failed)}`);
   console.log(`  not reached (budget)                     ${f(s.notReached)}`);
@@ -529,9 +608,9 @@ async function main() {
   // left (named), refused (named), failed, or not reached before the
   // budget -- never silently dropped. Denominators must match: `candidates`
   // is the SAME population every outcome below is drawn from.
-  const candidateOutcomes = s.moved + s.collapsedOntoResident
+  const candidateOutcomes = s.moved + s.collapsedOntoResident + s.patchedInPlace
     + s.leftNoTiffanyTitle + s.leftNoDestRow + s.leftNameGuard
-    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged
+    + s.refusedPossibleTwinAtDestination + s.refusedEtagChanged + s.collapseRefusedSelf
     + s.failed + s.notReached;
   console.log(`\n  reconciled: candidates ${f(s.candidates)} = accounted-for ${f(candidateOutcomes)}`);
   if (candidateOutcomes !== s.candidates) {
@@ -539,13 +618,13 @@ async function main() {
     process.exitCode = 4;
   }
 
-  const refusedTotal = s.refusedPossibleTwinAtDestination + s.refusedEtagChanged;
+  const refusedTotal = s.refusedPossibleTwinAtDestination + s.refusedEtagChanged + s.collapseRefusedSelf;
   const leftTotal = s.leftNoTiffanyTitle + s.leftNoDestRow + s.leftNameGuard;
   if (APPLY) {
     reportWrites({
       job: "repoint-sales-tiffany-title-gated",
       intended: s.candidates,
-      written: s.moved + s.collapsedOntoResident,
+      written: s.moved + s.collapsedOntoResident + s.patchedInPlace,
       refused: refusedTotal + leftTotal,
       skipped: s.notReached,
       failed: s.failed,
