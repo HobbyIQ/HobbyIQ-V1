@@ -1,0 +1,411 @@
+{
+ "generatedAt": "2026-09-28T16:43:31.644Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew review -- no apply is authorized by this PR",
+ "finding": "Companion to 2026-09-28-topps-2023-green-foil-duplicate-retire.json (589 rows) and the sidecar 2026-09-28-topps-2023-green-foil-needs-ruling.md (68 pairs held for Drew review). Drew ruling (09-28 16:25Z): of the 68 held pairs, the 61 name-superset pairs where the Beckett-sourced mover row and the existing canonical baseballcardpedia-ladders twin differ only by a name suffix (Jr./Sr. presence-absence, a bare RC/RCup/FS rookie-subset tag, or a team/collision tag token) are the SAME card -- the duplicate Beckett row retires onto its twin exactly like the 589 already-applied same-player duplicates. The remaining 7 two-player/three-player combo cards sharing a card number with a solo-named Beckett row are DISTINCT (a genuine numbering disagreement between the Beckett scrape and the checklist transcription, never a spelling variant) and keep both rows untouched -- they do not appear anywhere in this list. Read-only re-verification (2026-09-28) against the live card_catalog/sold_comps containers, run pair by pair against lib/name-agreement.cjs's own namesAgree primitive on the ACTUAL STORED playerName fields (not the sidecar table's hand-transcribed text), found 9 of the 61 pairs are NOT a pure suffix difference by the repo's own name-fold rules -- an error-card (UER) annotation, a doubled RC/RCup marker, a quoted nickname/subset phrase outside the closed QUOTED_SUBSET_NAMES vocabulary, or (#178) a stored multi-player name with no spaces around its \"/\" separators that the multi-name split rule does not recognise as the same shape. Those 9 are listed as needsRuling below and are NOT in this retire list; only the 52 pairs namesAgree confirms as a pure suffix/tag difference are retired here.",
+ "rulings": [
+  "OWNER RULING (Drew, 2026-09-28 16:25Z): the 61 Green Foil name-superset pairs (2023 Topps, setKey topps, rung Green Foil /499) where the mover and twin differ only by a name suffix are the SAME card -- the duplicate Beckett row retires onto its twin (requireTwinId). The 7 two-player combo-card collisions sharing a number with a solo card are DISTINCT and keep both rows untouched.",
+  "CF-A-RETIRE-REQUIRES-ITS-TWIN (2026-09-27): every entry names requireTwinId = the existing baseballcardpedia-ladders \"Green Foil\" address this duplicate's identity belongs to. The lane refuses the delete unless that twin exists AND is checklist-grade at delete time -- read fresh, never trusted from this list's own snapshot. Verified read-only 2026-09-28 via catalogAuthorityOf against the live twin row's own source field for each of the 52 entries below (all classify as checklist).",
+  "NAME-SUFFIX VERIFICATION (2026-09-28, read-only): each pair checked point-read (mover + twin, None-pk aware), cardNumber/isAuto/printRun equality, twin checklist-grade via catalogAuthorityOf, twin parallel === \"Green Foil\", and namesAgree(moverPlayerName, twinPlayerName) via lib/name-agreement.cjs on the LIVE stored playerName fields. Of the 61 held pairs, 52 pass every gate and are listed below; 9 fail the namesAgree gate specifically (not a pure suffix difference under the repo's own fold rules) and are excluded -- see needsRuling below, not retired by this list.",
+  "ZERO SALES AT ANY OF THE 52 MOVER IDS (partition-scoped count, read-only, 2026-09-28) -- every entry in this list is a clean retire; none needs a repoint-sales companion entry before the retire. The twin ids carry between 0 and 4 sales each; those are UNAFFECTED by this retire (the twin is the keeper, not touched).",
+  "APPLY ORDER: independent of 2026-09-28-topps-2023-green-foil-duplicate-retire.json and 2026-09-28-topps-2023-green-foil-vacant-reslug.json (both already merged/applied per PR #2491) -- this list may run standalone.",
+  "The 7 different-player collisions (award/combo cards sharing a number with a solo card, e.g. mover \"Aaron Judge\" vs occupant \"Matt Carpenter / Aaron Judge \\\"Judgement Day\\\"\") are DELIBERATELY EXCLUDED, per Drew's ruling that they are distinct cards -- they do not appear in this list, in needsRuling, or anywhere else in this PR."
+ ],
+ "census": {
+  "totalPairsUnderRuling": 61,
+  "pureSuffixRetireCount": 52,
+  "needsRulingCount": 9,
+  "collisionExclusionsVerifiedAbsent": 7,
+  "rowsWithSalesAtMoverIdCensusTime": 0,
+  "repointCompanionEntriesNeeded": 0,
+  "method": "Point read (None-pk aware, id then cardId==id then undefined pk) of mover id hiq:baseball:2023:topps:<n>:<green-foil-board|green-rainbow-foil>:no-auto:num-499 and twin id hiq:baseball:2023:topps:<n>:green-foil:no-auto:num-499 for each of the 61 pairs Drew ruled on; cardNumber/isAuto/printRun equality; twin catalogAuthorityOf===checklist; twin parallel===\"Green Foil\"; namesAgree(mover.playerName, twin.playerName) via lib/name-agreement.cjs on the live stored fields; sales-at-id via partition-scoped COUNT(1) WHERE c.cardId=@id (partitionKey supplied, no cross-partition COUNT), run against both the mover and twin id for all 61 pairs."
+ },
+ "needsRuling": [
+  {
+   "num": 143,
+   "moverId": "hiq:baseball:2023:topps:143:green-foil-board:no-auto:num-499",
+   "twinId": "hiq:baseball:2023:topps:143:green-foil:no-auto:num-499",
+   "moverPlayerName": "Nestor Cortes",
+   "twinPlayerName": "Nestor Cortes UER: Called \"Nelson\" on back.",
+   "reason": "namesAgree(moverPlayerName, twinPlayerName) returns false on the live stored fields -- not a pure suffix/tag difference under lib/name-agreement.cjs (an error-card UER annotation, a doubled RC/RCup marker, a quoted subset phrase outside the closed vocabulary, or an unspaced multi-player \"/\" list). Held out of this retire list; needs a fresh Drew ruling before any action."
+  },
+  {
+   "num": 178,
+   "moverId": "hiq:baseball:2023:topps:178:green-foil-board:no-auto:num-499",
+   "twinId": "hiq:baseball:2023:topps:178:green-foil:no-auto:num-499",
+   "moverPlayerName": "Austin Riley/Kyle Schwarber/Pete Alonso",
+   "twinPlayerName": "Austin Riley / Kyle Schwarber / Pete Alonso LL NL HR",
+   "reason": "namesAgree(moverPlayerName, twinPlayerName) returns false on the live stored fields -- not a pure suffix/tag difference under lib/name-agreement.cjs (an error-card UER annotation, a doubled RC/RCup marker, a quoted subset phrase outside the closed vocabulary, or an unspaced multi-player \"/\" list). Held out of this retire list; needs a fresh Drew ruling before any action."
+  },
+  {
+   "num": 183,
+   "moverId": "hiq:baseball:2023:topps:183:green-foil-board:no-auto:num-499",
+   "twinId": "hiq:baseball:2023:topps:183:green-foil:no-auto:num-499",
+   "moverPlayerName": "Seiya Suzuki",
+   "twinPlayerName": "Seiya Suzuki UER: Stats are from Japan",
+   "reason": "namesAgree(moverPlayerName, twinPlayerName) returns false on the live stored fields -- not a pure suffix/tag difference under lib/name-agreement.cjs (an error-card UER annotation, a doubled RC/RCup marker, a quoted subset phrase outside the closed vocabulary, or an unspaced multi-player \"/\" list). Held out of this retire list; needs a fresh Drew ruling before any action."
+  },
+  {
+   "num": 226,
+   "moverId": "hiq:baseball:2023:topps:226:green-foil-board:no-auto:num-499",
+   "twinId": "hiq:baseball:2023:topps:226:green-foil:no-auto:num-499",
+   "moverPlayerName": "Michael Harris II",
+   "twinPlayerName": "Michael Harris II RC RCup",
+   "reason": "namesAgree(moverPlayerName, twinPlayerName) returns false on the live stored fields -- not a pure suffix/tag difference under lib/name-agreement.cjs (an error-card UER annotation, a doubled RC/RCup marker, a quoted subset phrase outside the closed vocabulary, or an unspaced multi-player \"/\" list). Held out of this retire list; needs a fresh Drew ruling before any action."
+  },
+  {
+   "num": 250,
+   "moverId": "hiq:baseball:2023:topps:250:green-foil-board:no-auto:num-499",
+   "twinId": "hiq:baseball:2023:topps:250:green-foil:no-auto:num-499",
+   "moverPlayerName": "Adley Rutschman",
+   "twinPlayerName": "Adley Rutschman (RC) RCup",
+   "reason": "namesAgree(moverPlayerName, twinPlayerName) returns false on the live stored fields -- not a pure suffix/tag difference under lib/name-agreement.cjs (an error-card UER annotation, a doubled RC/RCup marker, a quoted subset phrase outside the closed vocabulary, or an unspaced multi-player \"/\" list). Held out of this retire list; needs a fresh Drew ruling before any action."
+  },
+  {
+   "num": 303,
+   "moverId": "hiq:baseball:2023:topps:303:green-foil-board:no-auto:num-499",
+   "twinId": "hiq:baseball:2023:topps:303:green-foil:no-auto:num-499",
+   "moverPlayerName": "Jorge Alfaro",
+   "twinPlayerName": "Jorge Alfaro \"Wild West\"",
+   "reason": "namesAgree(moverPlayerName, twinPlayerName) returns false on the live stored fields -- not a pure suffix/tag difference under lib/name-agreement.cjs (an error-card UER annotation, a doubled RC/RCup marker, a quoted subset phrase outside the closed vocabulary, or an unspaced multi-player \"/\" list). Held out of this retire list; needs a fresh Drew ruling before any action."
+  },
+  {
+   "num": 326,
+   "moverId": "hiq:baseball:2023:topps:326:green-foil-board:no-auto:num-499",
+   "twinId": "hiq:baseball:2023:topps:326:green-foil:no-auto:num-499",
+   "moverPlayerName": "Byron Buxton",
+   "twinPlayerName": "Byron Buxton \"Walk-Off Waterfall\"",
+   "reason": "namesAgree(moverPlayerName, twinPlayerName) returns false on the live stored fields -- not a pure suffix/tag difference under lib/name-agreement.cjs (an error-card UER annotation, a doubled RC/RCup marker, a quoted subset phrase outside the closed vocabulary, or an unspaced multi-player \"/\" list). Held out of this retire list; needs a fresh Drew ruling before any action."
+  },
+  {
+   "num": 339,
+   "moverId": "hiq:baseball:2023:topps:339:green-rainbow-foil:no-auto:num-499",
+   "twinId": "hiq:baseball:2023:topps:339:green-foil:no-auto:num-499",
+   "moverPlayerName": "Will Benson",
+   "twinPlayerName": "Will Benson RC UER: Atlanta mispelled \"Altanta\"",
+   "reason": "namesAgree(moverPlayerName, twinPlayerName) returns false on the live stored fields -- not a pure suffix/tag difference under lib/name-agreement.cjs (an error-card UER annotation, a doubled RC/RCup marker, a quoted subset phrase outside the closed vocabulary, or an unspaced multi-player \"/\" list). Held out of this retire list; needs a fresh Drew ruling before any action."
+  },
+  {
+   "num": 540,
+   "moverId": "hiq:baseball:2023:topps:540:green-rainbow-foil:no-auto:num-499",
+   "twinId": "hiq:baseball:2023:topps:540:green-foil:no-auto:num-499",
+   "moverPlayerName": "Alek Manoah",
+   "twinPlayerName": "Alek Manoah UER: Juan Guzman referred to as \"Jose\"",
+   "reason": "namesAgree(moverPlayerName, twinPlayerName) returns false on the live stored fields -- not a pure suffix/tag difference under lib/name-agreement.cjs (an error-card UER annotation, a doubled RC/RCup marker, a quoted subset phrase outside the closed vocabulary, or an unspaced multi-player \"/\" list). Held out of this retire list; needs a fresh Drew ruling before any action."
+  }
+ ],
+ "entries": [
+  {
+   "id": "hiq:baseball:2023:topps:7:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:7:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Bobby Witt Jr.\" and twin playerName \"Bobby Witt\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 5 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:23:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:23:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Fernando Tatis Jr.\" and twin playerName \"Fernando Tatis\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 1 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:35:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:35:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"CJ Abrams\" and twin playerName \"CJ Abrams FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:43:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:43:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Paul Goldschmidt / Freddie Freeman / Jeff McNeil\" and twin playerName \"Paul Goldschmidt / Freddie Freeman / Jeff McNeil LL NL AVG\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:82:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:82:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Framber Valdez / Justin Verlander / Alek Manoah\" and twin playerName \"Framber Valdez / Justin Verlander / Alek Manoah LL AL W\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:116:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:116:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Steven Kwan\" and twin playerName \"Steven Kwan RCup\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 2 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:149:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:149:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Josiah Gray\" and twin playerName \"Josiah Gray FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 1 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:150:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:150:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Ronald Acuña Jr.\" and twin playerName \"Ronald Acuña\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 3 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:155:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:155:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Hunter Greene\" and twin playerName \"Hunter Greene FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 3 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:160:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:160:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Cal Raleigh\" and twin playerName \"Cal Raleigh FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 11 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:172:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:172:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Jazz Chisholm Jr.\" and twin playerName \"Jazz Chisholm\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 1 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:174:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:174:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Julio Rodríguez\" and twin playerName \"Julio Rodríguez / Abraham Toro \"Celebration in Seattle\"\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:190:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:190:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Pete Alonso\" and twin playerName \"Pete Alonso / Mark Canha \"Bro Time\"\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:195:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:195:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"George Kirby\" and twin playerName \"George Kirby FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 2 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:211:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:211:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Max Fried / Sandy Alcantara / Julio Urías\" and twin playerName \"Max Fried / Sandy Alcantara / Julio Urías LL NL ERA\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:215:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:215:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Wander Franco\" and twin playerName \"Wander Franco FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:216:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:216:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Vladimir Guerrero Jr.\" and twin playerName \"Vladimir Guerrero\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:237:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:237:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Brandon Marsh\" and twin playerName \"Brandon Marsh FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:240:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:240:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Paul Goldschmidt / Pete Alonso / Francisco Lindor\" and twin playerName \"Paul Goldschmidt / Pete Alonso / Francisco Lindor LL NL RBI\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:241:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:241:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Kyle Tucker / José Ramírez / Aaron Judge\" and twin playerName \"Kyle Tucker / José Ramírez / Aaron Judge LL AL RBI\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:242:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:242:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Jarren Duran\" and twin playerName \"Jarren Duran FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 2 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:246:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:246:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Aaron Judge / Mike Trout / Yordan Alvarez\" and twin playerName \"Aaron Judge / Mike Trout / Yordan Alvarez LL AL HR\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:284:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:284:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Yu Darvish / Julio Urías / Kyle Wright\" and twin playerName \"Yu Darvish / Julio Urías / Kyle Wright LL NL W\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:285:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:285:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Oneil Cruz\" and twin playerName \"Oneil Cruz FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 3 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:289:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:289:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Luis Arraez / Aaron Judge / Xander Bogaerts\" and twin playerName \"Luis Arraez / Aaron Judge / Xander Bogaerts LL AL AVG\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 1 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:295:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:295:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Bryson Stott\" and twin playerName \"Bryson Stott FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 3 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:300:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:300:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Vladimir Guerrero Jr.\" and twin playerName \"Vladimir Guerrero\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 2 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:302:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:302:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Vinnie Pasquantino\" and twin playerName \"Vinnie Pasquantino RC RCup\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 4 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:311:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:311:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Alek Manoah / Justin Verlander / Dylan Cease\" and twin playerName \"Alek Manoah / Justin Verlander / Dylan Cease LL AL ERA\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:330:green-foil-board:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:330:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Julio Rodríguez\" and twin playerName \"Julio Rodríguez RCup\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 4 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:347:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:347:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Jeremy Peña\" and twin playerName \"Jeremy Peña RCup\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 2 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:365:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:365:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Spencer Torkelson\" and twin playerName \"Spencer Torkelson FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 1 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:369:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:369:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Alexis Díaz\" and twin playerName \"Alexis Díaz RCup\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:376:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:376:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Christopher Morel\" and twin playerName \"Christopher Morel / Nelson Velazquez \"Rookie Takeover\"\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:396:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:396:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Mike Trout\" and twin playerName \"Mike Trout / Vladimir Guerrero\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:406:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:406:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Nick Lodolo\" and twin playerName \"Nick Lodolo FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:410:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:410:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Jackie Bradley Jr.\" and twin playerName \"Jackie Bradley\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:422:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:422:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Jake McCarthy\" and twin playerName \"Jake McCarthy FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:432:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:432:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Bryce Harper\" and twin playerName \"Bryce Harper / Brandon Marsh \"Postseason Optimists\"\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:451:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:451:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Royce Lewis\" and twin playerName \"Royce Lewis FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 1 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:455:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:455:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Lars Nootbaar\" and twin playerName \"Lars Nootbaar FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 1 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:470:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:470:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Joey Meneses\" and twin playerName \"Joey Meneses RC RCup\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:499:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:499:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Ryan McKenna\" and twin playerName \"Ryan McKenna / Austin Hays \"Slam Dunk Win\"\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:505:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:505:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"José Miranda\" and twin playerName \"José Miranda FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:559:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:559:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Roansy Contreras\" and twin playerName \"Roansy Contreras FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:568:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:568:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Alek Thomas\" and twin playerName \"Alek Thomas FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:579:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:579:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Lourdes Gurriel Jr.\" and twin playerName \"Lourdes Gurriel\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 1 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:584:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:584:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Brendan Donovan\" and twin playerName \"Brendan Donovan RCup\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:587:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:587:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"MJ Melendez\" and twin playerName \"MJ Melendez FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:602:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:602:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Spencer Strider\" and twin playerName \"Spencer Strider RCup\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 3 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:629:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:629:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"MacKenzie Gore\" and twin playerName \"MacKenzie Gore FS\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-29), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 0 sale(s), unaffected by this retire."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:645:green-rainbow-foil:no-auto:num-499",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2023:topps:645:green-foil:no-auto:num-499",
+   "reason": "Drew 09-28: name-suffix pairs on one number are one card; fold onto the checklist spelling. Mover playerName \"Reid Detmers\" and twin playerName \"Reid Detmers RCup\" differ only by a generational suffix / RC / FS / team-tag token (namesAgree=true per lib/name-agreement.cjs, read-only verification 2026-09-28). Twin is checklist-grade (source baseballcardpedia-ladders-2026-08-28), parallel \"Green Foil\", cardNumber/isAuto/printRun match (printRun 499). Zero sales at the mover id at census time; twin carries 2 sale(s), unaffected by this retire."
+  }
+ ]
+}
