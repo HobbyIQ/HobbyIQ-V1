@@ -368,12 +368,26 @@ function relaunchSteps(): RelaunchStep[] {
     path.join(WORKFLOWS, "..", "actions", "relaunch-on-marker", "action.yml"), "utf8",
   );
   const actionKeyed = BUDGET_MARKER.test(ACTION.replace(/^\s*#.*$/gm, ""));
+  // A SECOND HOP (2026-09-28): .github/actions/run-lane wraps the
+  // upload-artifact + relaunch-on-marker pair several lanes used to carry as
+  // two separate steps. It has no `run:` shell of its own -- its own
+  // "Relaunch on the budget marker" inner step is itself a
+  // `uses: ./.github/actions/relaunch-on-marker` -- so a step that delegates
+  // to run-lane is marker-keyed under the exact same rule, one hop further.
+  const RUN_LANE_PATH = path.join(WORKFLOWS, "..", "actions", "run-lane", "action.yml");
+  const runLaneExists = fs.existsSync(RUN_LANE_PATH);
+  const runLaneDelegates = runLaneExists
+    && /uses: \.\/\.github\/actions\/relaunch-on-marker/.test(
+      fs.readFileSync(RUN_LANE_PATH, "utf8").replace(/^\s*#.*$/gm, ""),
+    );
   return yml
     .split(/\n(?=      - name:)/)
     .filter((step) => /gh workflow run backfill-runner\.yml/.test(step))
     .map((step) => {
       const bare = step.replace(/^\s*#.*$/gm, "");
-      const delegates = /uses: \.\/\.github\/actions\/relaunch-on-marker/.test(bare);
+      const delegatesDirect = /uses: \.\/\.github\/actions\/relaunch-on-marker/.test(bare);
+      const delegatesViaRunLane = /uses: \.\/\.github\/actions\/run-lane/.test(bare) && runLaneDelegates;
+      const delegates = delegatesDirect || delegatesViaRunLane;
       return {
         name: /- name:\s*(.*)/.exec(step)?.[1]?.trim() ?? "?",
         scripts: [...step.matchAll(/inputs\.script == '([^']+)'/g)].map((m) => m[1]),
@@ -636,8 +650,27 @@ describe("a marker-gated relaunch fires in report mode, and as a report", () => 
   });
 
   it("every marker-gated step still refuses to relaunch a cancel", () => {
-    // #1361: relaunch iff the budget marker, never on cancel/failure.
-    const unguarded = markerGated().filter((r) => !r.gate.includes("!cancelled()"));
+    // #1361: relaunch iff the budget marker, never on cancel/failure. A step
+    // that calls run-lane (the second-hop composite, 2026-09-28) carries
+    // `always()` on its OWN gate instead -- deliberately broader, so the
+    // upload half still runs when the backfill step itself failed -- and
+    // narrows back to `!cancelled()` one level down, on run-lane's own
+    // "Relaunch on the budget marker" inner step. Either shape still refuses
+    // to relaunch a cancel; only the level at which that refusal lives moves.
+    const runLanePath = path.join(WORKFLOWS, "..", "actions", "run-lane", "action.yml");
+    const runLaneNarrowsToCancelled = fs.existsSync(runLanePath)
+      && /if: \$\{\{ !cancelled\(\) \}\}/.test(fs.readFileSync(runLanePath, "utf8"));
+    const yml = fs.readFileSync(RUNNER, "utf8");
+    const unguarded = markerGated().filter((r) => {
+      if (r.gate.includes("!cancelled()")) return false;
+      if (r.gate.includes("always()") && runLaneNarrowsToCancelled) {
+        // Confirm THIS step's own source actually delegates to run-lane --
+        // r.gate alone cannot distinguish that from an unrelated always().
+        const step = yml.split(/\n(?=      - name:)/).find((s) => s.includes(r.name));
+        if (step && /uses: \.\/\.github\/actions\/run-lane/.test(step)) return false;
+      }
+      return true;
+    });
     expect(unguarded.map((r) => r.name)).toEqual([]);
   });
 

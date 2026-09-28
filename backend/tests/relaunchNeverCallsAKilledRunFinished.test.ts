@@ -102,13 +102,30 @@ const RUNNER = fs.readFileSync(RUNNER_PATH, "utf8").replace(/\r\n/g, "\n");
  *  actually routes through it and hands it that lane's own dispatch. The
  *  mutation check is unchanged in spirit and stronger in reach — breaking the
  *  contract in the one place now names every lane at once, and a lane that
- *  quietly stops delegating is named by `delegates to the composite` below. */
+ *  quietly stops delegating is named by `delegates to the composite` below.
+ *
+ *  A SECOND HOP (2026-09-28). .github/actions/run-lane/action.yml wraps the
+ *  upload-artifact + relaunch-on-marker PAIR that most lanes carried as two
+ *  separate steps, so a lane calling `uses: ./.github/actions/run-lane`
+ *  delegates to relaunch-on-marker ONE LEVEL DEEPER than a step that calls
+ *  relaunch-on-marker directly — run-lane's own action.yml has no `run:`
+ *  block of its own; its "Relaunch on the budget marker" inner step is
+ *  itself a `uses: ./.github/actions/relaunch-on-marker`. Both delegation
+ *  shapes end at the SAME shell, so both are held to the same contract here:
+ *  `delegates` is true for either `uses:` spelling, and the shell substituted
+ *  in is the composite's either way. */
 const ACTION_PATH = path.join(
   backend, "..", ".github", "actions", "relaunch-on-marker", "action.yml",
 );
 const ACTION = fs.readFileSync(ACTION_PATH, "utf8").replace(/\r\n/g, "\n");
 /** The composite's single `run:` block — the shell every lane now executes. */
 const ACTION_RUN = ACTION.slice(ACTION.indexOf("      run: |"));
+
+const RUN_LANE_PATH = path.join(
+  backend, "..", ".github", "actions", "run-lane", "action.yml",
+);
+const RUN_LANE_EXISTS = fs.existsSync(RUN_LANE_PATH);
+const RUN_LANE = RUN_LANE_EXISTS ? fs.readFileSync(RUN_LANE_PATH, "utf8").replace(/\r\n/g, "\n") : "";
 
 const BUDGET_MARKER = /stopped at the \.\*budget/;
 /** The line finishLane() writes with writeSync just before process.exit. */
@@ -124,7 +141,13 @@ type Step = {
  *  D18 learned this the hard way against the marker gate itself. */
 const stripComments = (s: string) => s.replace(/^\s*#.*$/gm, "");
 
-const USES_COMPOSITE = /uses: \.\/\.github\/actions\/relaunch-on-marker/;
+const USES_COMPOSITE_DIRECT = /uses: \.\/\.github\/actions\/relaunch-on-marker/;
+/** run-lane is a second, indirect delegation path (see the comment above):
+ *  it must itself route to relaunch-on-marker, or a lane calling it would be
+ *  delegating to nothing. */
+const USES_RUN_LANE = /uses: \.\/\.github\/actions\/run-lane/;
+const RUN_LANE_DELEGATES = RUN_LANE_EXISTS && USES_COMPOSITE_DIRECT.test(RUN_LANE);
+const USES_COMPOSITE = USES_COMPOSITE_DIRECT;
 
 /** Every runner step that re-dispatches this workflow when the budget marker
  *  is in the log — the population this rule governs. The three lanes that
@@ -133,14 +156,17 @@ const USES_COMPOSITE = /uses: \.\/\.github\/actions\/relaunch-on-marker/;
  *  work REMAINING rather than inferring completion from an absent marker.
  *
  *  `run` is the shell the step actually RUNS: the composite's, for a step that
- *  delegates; its own inline block otherwise. Every assertion below reads that,
- *  so both shapes are held to the same contract and a lane cannot escape it by
- *  changing which shape it uses. */
+ *  delegates (directly OR via run-lane's second hop); its own inline block
+ *  otherwise. Every assertion below reads that, so both shapes are held to
+ *  the same contract and a lane cannot escape it by changing which shape it
+ *  uses. */
 function markerRelaunchSteps(): Step[] {
   return RUNNER.split(/\n(?=      - name:)/)
     .filter((s) => /gh workflow run backfill-runner\.yml/.test(s))
     .map((s) => {
-      const delegates = USES_COMPOSITE.test(s);
+      const delegatesDirect = USES_COMPOSITE_DIRECT.test(s);
+      const delegatesViaRunLane = USES_RUN_LANE.test(s) && RUN_LANE_DELEGATES;
+      const delegates = delegatesDirect || delegatesViaRunLane;
       const withAt = s.indexOf("\n        with:\n");
       return {
         name: /- name:\s*(.*)/.exec(s)?.[1]?.trim() ?? "?",
@@ -180,10 +206,27 @@ describe("the census finds the steps this rule governs", () => {
   });
 
   it("every one of them runs after a kill — which is what makes the bug reachable", () => {
-    const notAfterKill = STEPS.filter((s) => !/!cancelled\(\)/.test(s.gate));
+    // A step that calls run-lane directly carries `always()` on its OWN gate
+    // (broader than `!cancelled()`, deliberately: run-lane's upload half must
+    // still fire when the backfill step itself failed) and narrows back to
+    // `!cancelled()` one level down, on run-lane's own "Relaunch on the
+    // budget marker" inner step -- see run-lane/action.yml. Either spelling
+    // satisfies the property this test is actually checking: the step (or
+    // its delegate) still executes -- and still decides -- after a kill.
+    // `always()` is a superset of "runs after a kill", so a step gated on it
+    // qualifies directly; a step gated on `!cancelled()` qualifies as before.
+    const runLaneNarrowsToCancelled = RUN_LANE_EXISTS && /if: \$\{\{ !cancelled\(\) \}\}/.test(RUN_LANE);
+    const notAfterKill = STEPS.filter((s) => {
+      if (/!cancelled\(\)/.test(s.gate)) return false;
+      if (/always\(\)/.test(s.gate) && USES_RUN_LANE.test(s.src) && runLaneNarrowsToCancelled) return false;
+      return true;
+    });
     expect(
       notAfterKill.map((s) => s.name),
-      "!cancelled() is TRUE after a timeout, so these steps execute on a killed run too",
+      "a step must run after a kill (directly via !cancelled(), or via always() " +
+        "delegating to run-lane, which narrows to !cancelled() one level down) -- " +
+        "otherwise the relaunch decision this rule governs would never be reached " +
+        "on a killed run",
     ).toEqual([]);
   });
 });
@@ -269,11 +312,15 @@ describe("every marker-keyed relaunch step handles the killed case", () => {
     it(`${step.name} delegates to the composite that holds the contract`, () => {
       // A lane may keep its shell inline, but if it does, the four-outcome
       // logic above is being asserted against ITS copy — which is exactly the
-      // duplication that grew the file past 512 KB. New lanes must delegate.
+      // duplication that grew the file past 512 KB. New lanes must delegate,
+      // directly or via run-lane's second hop (see the comment above
+      // USES_RUN_LANE).
       expect(
-        USES_COMPOSITE.test(step.src) || /run: \|/.test(step.src),
-        `${step.name} neither delegates to .github/actions/relaunch-on-marker nor carries an `
-          + `inline run: block, so nothing decides its outcome.`,
+        USES_COMPOSITE_DIRECT.test(step.src)
+          || (USES_RUN_LANE.test(step.src) && RUN_LANE_DELEGATES)
+          || /run: \|/.test(step.src),
+        `${step.name} neither delegates to .github/actions/relaunch-on-marker (directly or via `
+          + `run-lane) nor carries an inline run: block, so nothing decides its outcome.`,
       ).toBe(true);
     });
   }
@@ -615,7 +662,12 @@ describe("backfill-runner.yml stays well under GitHub's 512 KB workflow limit", 
   });
 
   it("the composite is what keeps it there — every marker lane delegates to it", () => {
-    const inline = STEPS.filter((s) => !USES_COMPOSITE.test(s.src)).map((s) => s.name);
+    // Delegation via run-lane (the second hop, 2026-09-28) counts too: it
+    // carries no `run:` shell of its own, only its own `uses:
+    // ./.github/actions/relaunch-on-marker` one level down.
+    const inline = STEPS.filter(
+      (s) => !USES_COMPOSITE_DIRECT.test(s.src) && !(USES_RUN_LANE.test(s.src) && RUN_LANE_DELEGATES),
+    ).map((s) => s.name);
     expect(
       inline,
       `these marker-keyed relaunch steps still carry their own copy of the four-outcome shell. `

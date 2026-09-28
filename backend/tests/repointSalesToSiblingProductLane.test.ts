@@ -1549,7 +1549,12 @@ describe("repoint-sales-to-sibling-product -- the runner contract", () => {
 
   it("uploads its log and self-relaunches on the budget marker, forwarding scope, titles, AND mode", () => {
     expect(RUNNER).toMatch(/Upload the repoint-sales-to-sibling-product log/);
-    const relaunch = RUNNER.slice(RUNNER.indexOf("Self-relaunch the sibling-product repoint"));
+    // ONE STEP, NOT TWO (2026-09-28): upload + relaunch now travel through
+    // one run-lane-delegating step, named "Upload the repoint-sales-to-
+    // sibling-product log, then relaunch on the marker" -- anchor on the
+    // still-present script token rather than the old step name, which no
+    // longer exists as its own step.
+    const relaunch = RUNNER.slice(RUNNER.indexOf("script: repoint-sales-to-sibling-product"));
     expect(relaunch).toMatch(/script: repoint-sales-to-sibling-product/);
     expect(relaunch).toMatch(/-f scope="\$\{\{ inputs\.scope \}\}"/);
     expect(relaunch).toMatch(/-f titles="\$\{\{ inputs\.titles \}\}"/);

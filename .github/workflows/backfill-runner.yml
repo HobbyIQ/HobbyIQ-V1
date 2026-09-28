@@ -2683,17 +2683,6 @@ jobs:
       # decide whether the sport->vertical refactor is worth its cost and what
       # to say to four publishers. A number that only ever lived in a log is a
       # number nobody can quote in a permission request.
-      - name: Upload the TCG volume census
-        if: ${{ always() && inputs.script == 'census-tcg-verticals' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: tcg-verticals-census-slot-${{ inputs.slot }}-${{ github.run_id }}
-          path: |
-            /tmp/tcg-verticals/
-            /tmp/backfill.log
-          if-no-files-found: warn
-          retention-days: 90
-
       # TCG volume census self-relaunch. Relaunch iff the budget marker printed
       # (CF-RELAUNCH-ONLY-ON-BUDGET, #1361), forwarding every input verbatim --
       # `apply` included (#1578), though there is no live apply case to forward:
@@ -2708,12 +2697,19 @@ jobs:
       # slots, not a cursor -- the banner prints PARTIAL and names the sports
       # that did not finish, so a shard that never completes is visible in the
       # log rather than silent.
-      - name: Self-relaunch census-tcg-verticals until the shard is finished
-        if: ${{ !cancelled() && inputs.script == 'census-tcg-verticals' }}
+      #
+      # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+      # same always()/!cancelled() split as before -- see its action.yml.
+      - name: Upload the TCG volume census, then relaunch on the marker
+        if: ${{ always() && inputs.script == 'census-tcg-verticals' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        uses: ./.github/actions/relaunch-on-marker
+        uses: ./.github/actions/run-lane
         with:
+          name: tcg-verticals-census-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/tcg-verticals/
+            /tmp/backfill.log
           outcome: ${{ steps.backfill.outcome }}
           script: census-tcg-verticals
           budget-notice: |
@@ -3900,26 +3896,22 @@ jobs:
       # point is that a reviewer can audit exactly which 9,370 rows moved and
       # why anything else did not, same reason the checklist-numbered fold log
       # above is kept.
-      - name: Upload the id-follows-setkey-field rekey log
-        if: ${{ always() && inputs.script == 'rekey-catalog-id-to-setkey' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: rekey-catalog-id-to-setkey-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
-          path: /tmp/backfill.log
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the id-follows-setkey-field rekey until the scope is clean
+      - name: Upload the id-follows-setkey-field rekey log, then relaunch on the marker
         # Stops at its own 110-minute budget and PRINTS its summary; a run killed
         # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
         # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
         # re-run after a budget stop is idempotent by construction: a row that
         # already moved no longer matches the umbrella-prefix selection.
-        if: ${{ !cancelled() && inputs.script == 'rekey-catalog-id-to-setkey' }}
+        #
+        # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+        # same always()/!cancelled() split as before -- see its action.yml.
+        if: ${{ always() && inputs.script == 'rekey-catalog-id-to-setkey' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
+        uses: ./.github/actions/run-lane
         with:
+          name: rekey-catalog-id-to-setkey-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/backfill.log
           outcome: ${{ steps.backfill.outcome }}
           script: rekey-catalog-id-to-setkey
           preamble: |
@@ -3937,27 +3929,17 @@ jobs:
       # sales moved and why anything else was refused needs the full list,
       # never a truncated sample -- same reason the checklist-numbered fold
       # log and the id-follows-setkey-field rekey log above are both kept.
-      - name: Upload the repoint-sales-to-checklist-numbered log
+      #
+      # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+      # same always()/!cancelled() split as before -- see its action.yml.
+      - name: Upload the repoint-sales-to-checklist-numbered log, then relaunch on the marker
         if: ${{ always() && inputs.script == 'repoint-sales-to-checklist-numbered' }}
-        uses: actions/upload-artifact@v4
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/run-lane
         with:
           name: repoint-sales-to-checklist-numbered-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
           path: /tmp/backfill.log
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the sales-to-checklist-numbered repoint until the scope is clean
-        # Stops at its own 110-minute budget and PRINTS its summary; a run killed
-        # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
-        # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
-        # re-run after a budget stop is idempotent by construction: a sale that
-        # already relocated or was patched no longer matches the short-id
-        # selection (its cardId/hobbyiqCardId is now the numbered id).
-        if: ${{ !cancelled() && inputs.script == 'repoint-sales-to-checklist-numbered' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
-        with:
           outcome: ${{ steps.backfill.outcome }}
           script: repoint-sales-to-checklist-numbered
           preamble: |
@@ -3978,18 +3960,7 @@ jobs:
       # both-slugs-are-real-rungs, and which were left alone needs the full
       # list, never a truncated sample, same reason every sibling repoint log
       # above is kept.
-      - name: Upload the repoint-sales-parallel-suffix log
-        if: ${{ always() && inputs.script == 'repoint-sales-parallel-suffix' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: repoint-sales-parallel-suffix-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
-          path: |
-            /tmp/backfill.log
-            /tmp/repoint-sales-parallel-suffix-plan/
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the parallel-suffix repoint until the scope is clean
+      - name: Upload the repoint-sales-parallel-suffix log, then relaunch on the marker
         # Stops at its own 110-minute budget and PRINTS its summary; a run killed
         # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
         # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
@@ -3997,11 +3968,18 @@ jobs:
         # already relocated or was patched no longer matches the unbacked-sale
         # selection (its cardId/hobbyiqCardId is now the checklist's own
         # suffix spelling).
-        if: ${{ !cancelled() && inputs.script == 'repoint-sales-parallel-suffix' }}
+        #
+        # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+        # same always()/!cancelled() split as before -- see its action.yml.
+        if: ${{ always() && inputs.script == 'repoint-sales-parallel-suffix' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
+        uses: ./.github/actions/run-lane
         with:
+          name: repoint-sales-parallel-suffix-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/repoint-sales-parallel-suffix-plan/
           outcome: ${{ steps.backfill.outcome }}
           script: repoint-sales-parallel-suffix
           preamble: |
@@ -4015,27 +3993,23 @@ jobs:
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-parallel-suffix -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
-      - name: Upload the repoint-sales-cardnumber-suffix log
+      - name: Upload the repoint-sales-cardnumber-suffix log, then relaunch on the marker
+        # Same discipline as the parallel-suffix sibling immediately above:
+        # stops at its own 110-minute budget and PRINTS its summary; idempotent
+        # by construction (a relocated sale's own cardNumber segment no longer
+        # matches the bare year-coded candidate shape on a re-scan).
+        #
+        # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+        # same always()/!cancelled() split as before -- see its action.yml.
         if: ${{ always() && inputs.script == 'repoint-sales-cardnumber-suffix' }}
-        uses: actions/upload-artifact@v4
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/run-lane
         with:
           name: repoint-sales-cardnumber-suffix-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
           path: |
             /tmp/backfill.log
             /tmp/repoint-sales-cardnumber-suffix-plan/
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the cardnumber-suffix repoint until the scope is clean
-        # Same discipline as the parallel-suffix sibling immediately above:
-        # stops at its own 110-minute budget and PRINTS its summary; idempotent
-        # by construction (a relocated sale's own cardNumber segment no longer
-        # matches the bare year-coded candidate shape on a re-scan).
-        if: ${{ !cancelled() && inputs.script == 'repoint-sales-cardnumber-suffix' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
-        with:
           outcome: ${{ steps.backfill.outcome }}
           script: repoint-sales-cardnumber-suffix
           preamble: |
@@ -4146,27 +4120,23 @@ jobs:
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-isauto-flip -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
-      - name: Upload the reconcile-split-identity log
+      - name: Upload the reconcile-split-identity log, then relaunch on the marker
+        # Same discipline as the isAuto-flip sibling immediately above: stops
+        # at its own 110-minute budget and PRINTS its summary; idempotent by
+        # construction (a reconciled row's cardId/hobbyiqCardId no longer
+        # disagree on a re-scan, so it no longer classifies as HIQ-SPLIT).
+        #
+        # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+        # same always()/!cancelled() split as before -- see its action.yml.
         if: ${{ always() && inputs.script == 'reconcile-split-identity' }}
-        uses: actions/upload-artifact@v4
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/run-lane
         with:
           name: reconcile-split-identity-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
           path: |
             /tmp/backfill.log
             /tmp/reconcile-split-identity-plan/
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the split-identity reconcile until the scope is clean
-        # Same discipline as the isAuto-flip sibling immediately above: stops
-        # at its own 110-minute budget and PRINTS its summary; idempotent by
-        # construction (a reconciled row's cardId/hobbyiqCardId no longer
-        # disagree on a re-scan, so it no longer classifies as HIQ-SPLIT).
-        if: ${{ !cancelled() && inputs.script == 'reconcile-split-identity' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
-        with:
           outcome: ${{ steps.backfill.outcome }}
           script: reconcile-split-identity
           preamble: |
@@ -4185,16 +4155,7 @@ jobs:
       # number-is-base-number, and which were refused needs the full list,
       # never a truncated sample -- same reason every sibling repoint/rekey
       # log above is kept.
-      - name: Upload the repoint-stored-insert-sales log
-        if: ${{ always() && inputs.script == 'repoint-stored-insert-sales' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: repoint-stored-insert-sales-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
-          path: /tmp/backfill.log
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the stored-insert-sales repoint until the scope is clean
+      - name: Upload the repoint-stored-insert-sales log, then relaunch on the marker
         # Stops at its own 110-minute budget and PRINTS its summary; a run killed
         # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
         # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
@@ -4202,11 +4163,16 @@ jobs:
         # already moved or was patched no longer matches
         # STARTSWITH(c.hobbyiqCardId, "hiq:sport:year:baseSetKey:") -- its
         # hobbyiqCardId now names the insert's own setKey segment.
-        if: ${{ !cancelled() && inputs.script == 'repoint-stored-insert-sales' }}
+        #
+        # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+        # same always()/!cancelled() split as before -- see its action.yml.
+        if: ${{ always() && inputs.script == 'repoint-stored-insert-sales' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
+        uses: ./.github/actions/run-lane
         with:
+          name: repoint-stored-insert-sales-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/backfill.log
           outcome: ${{ steps.backfill.outcome }}
           script: repoint-stored-insert-sales
           preamble: |
@@ -4227,18 +4193,7 @@ jobs:
       # product-plan/ (one NDJSON record per in-scope row, written by the
       # PLAN_OUT wiring above, guarded on script) is uploaded alongside the
       # log, exactly as resolve-split-identity-parks' own artifact does.
-      - name: Upload the repoint-sales-to-sibling-product log
-        if: ${{ always() && inputs.script == 'repoint-sales-to-sibling-product' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: repoint-sales-to-sibling-product-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
-          path: |
-            /tmp/backfill.log
-            /tmp/repoint-sales-to-sibling-product-plan/
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the sibling-product repoint until the scope is clean
+      - name: Upload the repoint-sales-to-sibling-product log, then relaunch on the marker
         # Stops at its own 110-minute budget and PRINTS its summary; a run killed
         # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
         # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
@@ -4246,11 +4201,18 @@ jobs:
         # already moved or was patched no longer matches
         # STARTSWITH(c.hobbyiqCardId, "hiq:sport:year:fromSetKey:") -- its
         # hobbyiqCardId now carries the TO product's setKey segment.
-        if: ${{ !cancelled() && inputs.script == 'repoint-sales-to-sibling-product' }}
+        #
+        # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+        # same always()/!cancelled() split as before -- see its action.yml.
+        if: ${{ always() && inputs.script == 'repoint-sales-to-sibling-product' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
+        uses: ./.github/actions/run-lane
         with:
+          name: repoint-sales-to-sibling-product-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/repoint-sales-to-sibling-product-plan/
           outcome: ${{ steps.backfill.outcome }}
           script: repoint-sales-to-sibling-product
           preamble: |
@@ -4269,18 +4231,7 @@ jobs:
       # dispatch line a human/steward would run) is the whole point of this
       # lane's output, so it is uploaded alongside the log exactly as the
       # other PLAN_OUT lanes above are.
-      - name: Upload the route-backing-gaps log
-        if: ${{ always() && inputs.script == 'route-backing-gaps' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: route-backing-gaps-report-slot-${{ inputs.slot }}-${{ github.run_id }}
-          path: |
-            /tmp/backfill.log
-            /tmp/route-backing-gaps-plan/
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the gap router until the scope is clean
+      - name: Upload the route-backing-gaps log, then relaunch on the marker
         # Stops at its own 110-minute budget and PRINTS its summary; a run
         # killed by the 150-minute step ceiling prints nothing.
         # CF-RELAUNCH-ONLY-ON-BUDGET (#1361): relaunch iff the marker printed,
@@ -4295,11 +4246,18 @@ jobs:
         # 12 hops (`hop-cap`), never after 20 throttles (`throttled`), never
         # on its RU cap -- those exit with a verdict and this step reports
         # it, re-dispatch withheld.
-        if: ${{ !cancelled() && inputs.script == 'route-backing-gaps' }}
+        #
+        # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+        # same always()/!cancelled() split as before -- see its action.yml.
+        if: ${{ always() && inputs.script == 'route-backing-gaps' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
+        uses: ./.github/actions/run-lane
         with:
+          name: route-backing-gaps-report-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/route-backing-gaps-plan/
           outcome: ${{ steps.backfill.outcome }}
           script: route-backing-gaps
           preamble: |
@@ -4316,27 +4274,23 @@ jobs:
       # flipped sale that moved (or was refused, and why) -- never a
       # truncated sample -- same reason the checklist-numbered fold log and
       # the id-follows-setkey-field rekey log above are both kept.
-      - name: Upload the revert-set-sport-repair log
-        if: ${{ always() && inputs.script == 'revert-set-sport-repair' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: revert-set-sport-repair-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
-          path: /tmp/backfill.log
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the set-sport-repair revert until the scope is clean
+      - name: Upload the revert-set-sport-repair log, then relaunch on the marker
         # Stops at its own 110-minute budget and PRINTS its summary; a run killed
         # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
         # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
         # re-run after a budget stop is idempotent by construction: a row this
         # run restores stamps setSportReversedAt and drops out of the next
         # run's selection.
-        if: ${{ !cancelled() && inputs.script == 'revert-set-sport-repair' }}
+        #
+        # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+        # same always()/!cancelled() split as before -- see its action.yml.
+        if: ${{ always() && inputs.script == 'revert-set-sport-repair' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
+        uses: ./.github/actions/run-lane
         with:
+          name: revert-set-sport-repair-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/backfill.log
           outcome: ${{ steps.backfill.outcome }}
           script: revert-set-sport-repair
           preamble: |
@@ -4362,29 +4316,25 @@ jobs:
       # record per in-scope row to /tmp/resolve-split-identity-parks-plan/,
       # and that directory is added to THIS SAME step's path list -- no new
       # upload-artifact step, no new workflow_dispatch input.
-      - name: Upload the resolve-split-identity-parks log
-        if: ${{ always() && inputs.script == 'resolve-split-identity-parks' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: resolve-split-identity-parks-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
-          path: |
-            /tmp/backfill.log
-            /tmp/resolve-split-identity-parks-plan/
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the split-identity resolver until the scope is clean
+      - name: Upload the resolve-split-identity-parks log, then relaunch on the marker
         # Stops at its own 110-minute budget and PRINTS its summary; a run killed
         # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
         # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
         # re-run after a budget stop is idempotent by construction: a row this
         # run resolves clears its park fields and drops out of the next run's
         # selection.
-        if: ${{ !cancelled() && inputs.script == 'resolve-split-identity-parks' }}
+        #
+        # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+        # same always()/!cancelled() split as before -- see its action.yml.
+        if: ${{ always() && inputs.script == 'resolve-split-identity-parks' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
+        uses: ./.github/actions/run-lane
         with:
+          name: resolve-split-identity-parks-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/resolve-split-identity-parks-plan/
           outcome: ${{ steps.backfill.outcome }}
           script: resolve-split-identity-parks
           preamble: |
@@ -5090,18 +5040,7 @@ jobs:
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=relocate-catalog-rows-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
 
-      - name: Upload the repoint-sales-by-list plan
-        if: ${{ always() && inputs.script == 'repoint-sales-by-list' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: repoint-sales-by-list-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
-          path: |
-            /tmp/backfill.log
-            /tmp/repoint-sales-by-list-plan/
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the sales-by-list repoint until the list is drained
+      - name: Upload the repoint-sales-by-list plan, then relaunch on the marker
         # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, modeled EXACTLY on the
         # relocate-catalog-rows-by-list block immediately above -- this
         # lane's own sibling on the sold_comps side (Drew, 2026-09-27 widget
@@ -5120,11 +5059,18 @@ jobs:
         # fromId and is refused (zero-sales), never re-moved and never
         # counted as written. So a continuation pays one cheap dual-check
         # per finished entry and writes only the remainder.
-        if: ${{ !cancelled() && inputs.script == 'repoint-sales-by-list' }}
+        #
+        # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+        # same always()/!cancelled() split as before -- see its action.yml.
+        if: ${{ always() && inputs.script == 'repoint-sales-by-list' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
+        uses: ./.github/actions/run-lane
         with:
+          name: repoint-sales-by-list-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/repoint-sales-by-list-plan/
           outcome: ${{ steps.backfill.outcome }}
           script: repoint-sales-by-list
           preamble: |
@@ -5137,24 +5083,13 @@ jobs:
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
 
-      - name: Upload the dedupe-sold-comp-copies-by-list plan
-        if: ${{ always() && inputs.script == 'dedupe-sold-comp-copies-by-list' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: dedupe-sold-comp-copies-by-list-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
-          path: |
-            /tmp/backfill.log
-            /tmp/dedupe-sold-comp-copies-by-list-plan/
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the sold-comp-copies dedupe until the list is drained
+      - name: Upload the dedupe-sold-comp-copies-by-list plan, then relaunch on the marker
         # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, modeled EXACTLY on the
-        # repoint-sales-by-list block immediately above -- this lane's own
-        # sibling on the sold_comps side (Drew, 2026-09-27 ~23:56Z: "Build
-        # lane + census; REPORT first"). A unit here is one STRAY COPY
-        # CONSIDERED, but the shape is the same: budget, stop, print the
-        # marker, exit; this step continues it.
+        # repoint-sales-by-list block above -- this lane's own sibling on the
+        # sold_comps side (Drew, 2026-09-27 ~23:56Z: "Build lane + census;
+        # REPORT first"). A unit here is one STRAY COPY CONSIDERED, but the
+        # shape is the same: budget, stop, print the marker, exit; this step
+        # continues it.
         #
         # THE SCOPE IS RE-DISPATCHED VERBATIM, and it must be: `scope` names
         # the committed list file, the lane has no default, and a relaunch
@@ -5167,11 +5102,18 @@ jobs:
         # deleteCardId and is SKIPPED (already-gone), never re-deleted and
         # never counted as written. So a continuation pays one cheap point
         # read per finished entry and writes only the remainder.
-        if: ${{ !cancelled() && inputs.script == 'dedupe-sold-comp-copies-by-list' }}
+        #
+        # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+        # same always()/!cancelled() split as before -- see its action.yml.
+        if: ${{ always() && inputs.script == 'dedupe-sold-comp-copies-by-list' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
+        uses: ./.github/actions/run-lane
         with:
+          name: dedupe-sold-comp-copies-by-list-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/dedupe-sold-comp-copies-by-list-plan/
           outcome: ${{ steps.backfill.outcome }}
           script: dedupe-sold-comp-copies-by-list
           preamble: |
@@ -5184,24 +5126,13 @@ jobs:
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=dedupe-sold-comp-copies-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
 
-      - name: Upload the heal-sold-comp-hobbyiqcardid-by-list plan
-        if: ${{ always() && inputs.script == 'heal-sold-comp-hobbyiqcardid-by-list' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: heal-sold-comp-hobbyiqcardid-by-list-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
-          path: |
-            /tmp/backfill.log
-            /tmp/heal-sold-comp-hobbyiqcardid-by-list-plan/
-          if-no-files-found: warn
-          retention-days: 90
-
-      - name: Self-relaunch the hobbyiqCardId heal until the list is drained
+      - name: Upload the heal-sold-comp-hobbyiqcardid-by-list plan, then relaunch on the marker
         # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, modeled EXACTLY on the
-        # dedupe-sold-comp-copies-by-list block immediately above -- this
-        # lane's own sibling on the sold_comps side (PR #2485 follow-up
-        # finding, 2026-09-28). A unit here is one ENTRY (one sale patched),
-        # but the shape is the same: budget, stop, print the marker, exit;
-        # this step continues it.
+        # dedupe-sold-comp-copies-by-list block above -- this lane's own
+        # sibling on the sold_comps side (PR #2485 follow-up finding,
+        # 2026-09-28). A unit here is one ENTRY (one sale patched), but the
+        # shape is the same: budget, stop, print the marker, exit; this step
+        # continues it.
         #
         # THE SCOPE IS RE-DISPATCHED VERBATIM, and it must be: `scope` names
         # the committed list file, the lane has no default, and a relaunch
@@ -5213,11 +5144,18 @@ jobs:
         # sale's hobbyiqCardId already reads the healed value fails GATE (c)
         # (stale-mismatch) on the re-read, never re-patched and never
         # counted as written twice.
-        if: ${{ !cancelled() && inputs.script == 'heal-sold-comp-hobbyiqcardid-by-list' }}
+        #
+        # ONE STEP, NOT TWO (2026-09-28): upload + relaunch via run-lane,
+        # same always()/!cancelled() split as before -- see its action.yml.
+        if: ${{ always() && inputs.script == 'heal-sold-comp-hobbyiqcardid-by-list' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        uses: ./.github/actions/relaunch-on-marker
+        uses: ./.github/actions/run-lane
         with:
+          name: heal-sold-comp-hobbyiqcardid-by-list-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/heal-sold-comp-hobbyiqcardid-by-list-plan/
           outcome: ${{ steps.backfill.outcome }}
           script: heal-sold-comp-hobbyiqcardid-by-list
           preamble: |

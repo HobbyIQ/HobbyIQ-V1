@@ -696,8 +696,13 @@ describe("route-backing-gaps -- the runner contract", () => {
   });
 
   it("the relaunch forwards every input the lane reads", () => {
-    const relaunch = RUNNER.slice(RUNNER.indexOf("Self-relaunch the gap router"));
-    const line = relaunch.slice(0, relaunch.indexOf("\n\n"));
+    // ONE STEP, NOT TWO (2026-09-28): upload + relaunch now travel through
+    // one run-lane-delegating step, named "Upload the route-backing-gaps
+    // log, then relaunch on the marker" -- anchor on the still-present
+    // script token rather than the old step name, which no longer exists as
+    // its own step.
+    const relaunch = RUNNER.slice(RUNNER.indexOf("script: route-backing-gaps"));
+    const line = relaunch.slice(0, relaunch.indexOf("dispatch: |") + relaunch.slice(relaunch.indexOf("dispatch: |")).indexOf("\n\n"));
     for (const input of ["apply", "slot", "slots", "scope", "titles", "limit"]) expect(line).toContain(`-f ${input}="\${{ inputs.${input} }}"`);
     expect(line).toMatch(/-f script=route-backing-gaps/);
     // THE RESUME VALUE: a lane that writes nothing keeps no cursor, so the
