@@ -172,8 +172,8 @@ case "$SCOPE" in
   split) SCOPE=r32 ;;
 esac
 case "$SCOPE" in
-  improve|r26|r27|r28|r31|r32|r33) ;;
-  *) die "WAVE2_APPLY_SCOPE='$SCOPE' is not one of improve|r26|r27|r28|r31|r32|r33 (or 'split', a synonym for r32) — refusing rather than guess which class of rows to write." ;;
+  improve|r26|r27|r28|r31|r32|r33|r34) ;;
+  *) die "WAVE2_APPLY_SCOPE='$SCOPE' is not one of improve|r26|r27|r28|r31|r32|r33|r34 (or 'split', a synonym for r32) — refusing rather than guess which class of rows to write." ;;
 esac
 # The census artifact's count KEY for this scope. `improve` reads the
 # original `counts.IMPROVE` (unchanged casing, unchanged key, so an existing
