@@ -1,0 +1,33 @@
+{
+ "generatedAt": "2026-09-28T09:00:00.000Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew review -- no apply is authorized by this PR",
+ "finding": "Companion to FINAL-repoint-list.json (repoint-sales-by-list), ROUND 2. Of the 153 rows List 2 (run 36369192965) refused as sales-present, only these 2 are verified -- against the REAL gate, live against Cosmos, filtered to genuinely-resident sales -- to reach ZERO total live sales (including any stale-hobbyiqCardId straggler) once the companion repoint list applies. Round 1 of this PR wrongly named 61 rows here, built from an offline classification heuristic that did not verify against the real gate or check for stale-hobbyiqCardId stragglers; round 2 replaces that list entirely with these 2, ground-truth verified rows.",
+ "rulings": [
+  "CF-A-RETIRE-REQUIRES-ITS-TWIN (2026-09-27): every entry names requireTwinId, exactly as List 2 and round 1 did.",
+  "ORDER OF OPERATIONS: apply FINAL-repoint-list.json (repoint-sales-by-list) FIRST. This retire list is SAFE to run before or after the repoint (a premature retire attempt on a still-sold row is simply refused via the sales-present dual-check), but is only INTENDED to complete after the repoint has moved these 2 rows' sales.",
+  "CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (see the parent list's own rulings for the full citation chain)."
+ ],
+ "census": {
+  "parentRun": "36369192965 (List 2 APPLY, 2026-09-28T02:35:49Z)",
+  "refusedSalesPresentInParentRun": 153,
+  "round1WronglyNamed": 61,
+  "round2VerifiedEligible": 2,
+  "heldOutOfThisList": 151,
+  "dataQualityNote": "Most of the 153 fromIds' live sales are matched only via a stale hobbyiqCardId field while already resident at a different (usually correct) cardId -- see the companion repoint list's own census.dataQualityNote. Those rows correctly stay un-retired: their sales-present dual-check will keep finding them present until hobbyiqCardId is healed by a separate, not-yet-written lane."
+ },
+ "entries": [
+  {
+   "id": "hiq:baseball:2024:bowman-chrome:cpa-cq:base:auto",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2024:bowman:cpa-cq:base:auto",
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (rebuilt from ground truth after independent review REQUEST CHANGES, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). This row had 1 live sale(s) at census time, ALL of them (a) resident genuinely at this fromId (sale.cardId === this id, never merely matched via a stale hobbyiqCardId) and (b) verified to PASS the real namesAgree + stripVocabularyForDestination gate the companion repoint list uses. Once that repoint applies, this row reads zero sales of ANY kind (no stale-hobbyiqCardId stragglers either) and is safe to retire, requireTwinId-gated exactly as List 2's own 607."
+  },
+  {
+   "id": "hiq:baseball:2024:bowman-chrome:cpa-id:yellow-refractor:auto:num-75",
+   "action": "retire",
+   "requireTwinId": "hiq:baseball:2024:bowman:cpa-id:yellow-refractor:auto:num-75",
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (rebuilt from ground truth after independent review REQUEST CHANGES, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). This row had 1 live sale(s) at census time, ALL of them (a) resident genuinely at this fromId (sale.cardId === this id, never merely matched via a stale hobbyiqCardId) and (b) verified to PASS the real namesAgree + stripVocabularyForDestination gate the companion repoint list uses. Once that repoint applies, this row reads zero sales of ANY kind (no stale-hobbyiqCardId stragglers either) and is safe to retire, requireTwinId-gated exactly as List 2's own 607."
+  }
+ ]
+}

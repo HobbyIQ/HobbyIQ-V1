@@ -388,7 +388,10 @@ describe("wave2-fleet.sh: WAVE2_APPLY_SCOPE=split refuses by name, not as a gene
    */
   it("the source rewrites split to r32 BY NAME, ahead of the ordinary allowlist check", () => {
     const splitIdx = fleetSrc.indexOf("split) SCOPE=r32 ;;");
-    const allowlistIdx = fleetSrc.indexOf("improve|r26|r27|r28|r31|r32|r33) ;;");
+    // R34-CPA-NAME-RESOLVE (2026-09-28) extended this same allowlist line with
+    // its own token, after r33 -- the position relative to `split`'s rewrite
+    // is what this test pins, not the exact trailing token list.
+    const allowlistIdx = fleetSrc.indexOf("improve|r26|r27|r28|r31|r32|r33|r34) ;;");
     expect(splitIdx).toBeGreaterThan(0);
     expect(allowlistIdx).toBeGreaterThan(splitIdx);
     // The ruling is NAMED at the point of the rewrite, so an operator reading
@@ -418,10 +421,13 @@ describe("wave2-fleet.sh: WAVE2_APPLY_SCOPE=split refuses by name, not as a gene
   });
 
   itShell("an UNKNOWN scope is still refused -- the fold did not open the allowlist", () => {
+    // r34 is a real scope as of R34-CPA-NAME-RESOLVE (2026-09-28) -- see
+    // rematchRuledScopeR34_20260928.test.ts. r99 stands in for "not a real
+    // scope" here instead, same substitution as parseApplyScope's own pin.
     try {
       execFileSync(BASH!, [toShellPath(FLEET), "census"], {
         stdio: ["ignore", "pipe", "pipe"],
-        env: { ...process.env, WAVE2_APPLY_SCOPE: "r34", WAVE2_DISPATCH: "false" },
+        env: { ...process.env, WAVE2_APPLY_SCOPE: "r99", WAVE2_DISPATCH: "false" },
       });
       expect.unreachable("expected the script to exit nonzero");
     } catch (e: unknown) {
