@@ -126,6 +126,7 @@ const backend = path.resolve(__dirname, "..");
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
+const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(__dirname, "lib", "delete-ledger.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const str = (v) => String(v ?? "").trim();
@@ -292,7 +293,7 @@ async function main() {
     refusedDestinationNotOnChecklist: 0, refusedDifferentPlayer: 0,
     refusedPinnedOrFlagged: 0, refusedPossibleTwinAtDestination: 0,
     refusedParallelOrAutoDowngrade: 0,
-    failed: 0, notReached: 0,
+    failed: 0, notReached: 0, ledgerWriteFailed: 0,
   };
   let stoppedAtBudget = false;
   let planned = 0;
@@ -462,7 +463,22 @@ async function main() {
       // silently erase it -- refused, never overwritten.
       if (contentHashOf(resident) === contentHashOf({ ...sale, cardId: newId, hobbyiqCardId: newId })) {
         s.collapsedOntoResident++;
-        if (APPLY) { try { await pool.item(sale.id, sale.cardId).delete(); } catch { /* best effort; the sale is a proven duplicate either way */ } }
+        if (APPLY) {
+          try {
+            // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+            // (2026-09-28): `sale` is the full pre-delete document; a
+            // ledger-write failure refuses the delete, counted apart from
+            // the "best effort" delete-itself-threw case below.
+            await recordDeleteOrThrow(sale, {
+              lane: "repoint-sales-cardnumber-suffix", action: "collapse", reason: "same-sale-resident",
+              toId: newId, container: "sold_comps",
+            });
+            await pool.item(sale.id, sale.cardId).delete();
+          } catch (e) {
+            if (isLedgerWriteFailure(e)) { s.ledgerWriteFailed++; s.failed++; }
+            // else: best effort; the sale is a proven duplicate either way
+          }
+        }
         emitPlanRow(sale, "collapse", "same-sale-resident", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
         return;
       }
@@ -578,6 +594,7 @@ async function main() {
   console.log(`  REFUSED: parallel-or-auto-downgrade     ${f(s.refusedParallelOrAutoDowngrade)}`);
   console.log(`  REFUSED: stale since the read            ${f(s.refusedEtagChanged)}`);
   console.log(`  failed                                  ${f(s.failed)}`);
+  console.log(`  of which ledger-write-failed             ${f(s.ledgerWriteFailed)}`);
   console.log(`  not reached (budget)                     ${f(s.notReached)}`);
   if (stoppedAtBudget || CLOCK.outOfClock()) {
     console.log(`  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- the slot has more to do`);

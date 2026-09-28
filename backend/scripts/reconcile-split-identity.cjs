@@ -120,6 +120,7 @@ const backend = path.resolve(__dirname, "..");
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
+const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(__dirname, "lib", "delete-ledger.cjs"));
 const { parseSlugWithGrade } = require(path.join(__dirname, "lib", "graded-id.cjs"));
 const splitIdentity = require(path.join(__dirname, "lib", "split-identity.cjs"));
 const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
@@ -221,7 +222,7 @@ async function main() {
     refusedAmbiguousBothChecklist: 0, refusedNeitherChecklist: 0,
     refusedNoSalePlayer: 0, refusedPlayerDisagrees: 0,
     refusedPossibleTwinAtDestination: 0, refusedEtagChanged: 0,
-    failed: 0, notReached: 0,
+    failed: 0, notReached: 0, ledgerWriteFailed: 0,
   };
   let stoppedAtBudget = false;
   // Per-setKey counters -- the setKey named by the row's OWN hobbyiqCardId,
@@ -448,7 +449,20 @@ async function main() {
     if (resident) {
       if (contentHashOf(resident) === contentHashOf({ ...sale, cardId: winningId, hobbyiqCardId: winningId })) {
         s.collapsedOntoResident++;
-        if (APPLY) { try { await pool.item(sale.id, sale.cardId).delete(); } catch { /* best effort; proven duplicate either way */ } }
+        if (APPLY) {
+          try {
+            // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+            // (2026-09-28): full pre-delete document, ledger before delete.
+            await recordDeleteOrThrow(sale, {
+              lane: "reconcile-split-identity", action: "collapse", reason: "same-sale-resident",
+              toId: winningId, container: "sold_comps",
+            });
+            await pool.item(sale.id, sale.cardId).delete();
+          } catch (e) {
+            if (isLedgerWriteFailure(e)) { s.ledgerWriteFailed++; s.failed++; }
+            // else: best effort; proven duplicate either way
+          }
+        }
         relocatedTo.set(sale.id, winningId);
         emitPlanRow(sale, "collapse", "same-sale-resident", { fromId: cardId, toId: winningId });
         return;
@@ -692,6 +706,7 @@ async function main() {
   console.log(`  REFUSED: possible-twin-at-destination   ${f(s.refusedPossibleTwinAtDestination)}`);
   console.log(`  REFUSED: stale since the read            ${f(s.refusedEtagChanged)}`);
   console.log(`  failed                                  ${f(s.failed)}`);
+  console.log(`  of which ledger-write-failed             ${f(s.ledgerWriteFailed)}`);
   console.log(`  not reached (budget)                     ${f(s.notReached)}`);
   if (stoppedAtBudget || CLOCK.outOfClock()) {
     console.log(`  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- the slot has more to do`);

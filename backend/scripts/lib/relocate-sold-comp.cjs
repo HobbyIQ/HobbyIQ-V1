@@ -40,6 +40,7 @@
 const crypto = require("crypto");
 const path = require("path");
 const { withBackoff } = require("./cosmos-backoff.cjs");
+const { recordDeleteOrThrow, isLedgerWriteFailure } = require("./delete-ledger.cjs");
 
 /**
  * DEFAULT_RETRY (2026-09-27, incident: run 36297136135 -- see cosmos-backoff.cjs's
@@ -466,7 +467,7 @@ function is412(e) {
  * "verify"` -- never silently read as "found nothing, therefore clean" --
  * mirroring how a thrown read-back is already handled above.
  */
-async function relocateSoldComp(pool, { keep, drop, retry = defaultRetry, verifyFields = [], dryRun = false, wait = sleep, guard = undefined, verifyNoDuplicatesAcrossPartitions = false }) {
+async function relocateSoldComp(pool, { keep, drop, retry = defaultRetry, verifyFields = [], dryRun = false, wait = sleep, guard = undefined, verifyNoDuplicatesAcrossPartitions = false, ledger = undefined }) {
   const drops = (drop ?? []).filter((d) => d && d.id && d.cardId && !sameRef(d, keep));
   if (!keep || !keep.id || !keep.cardId) throw new Error("relocateSoldComp: keep needs id and cardId");
 
@@ -563,6 +564,60 @@ async function relocateSoldComp(pool, { keep, drop, retry = defaultRetry, verify
 
   const deleted = [], alreadyGone = [], duplicatesLeft = [], staleSincePlan = [];
   for (const d of drops) {
+    // ── PRE-DELETE LEDGER (2026-09-28, CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-
+    // LEDGER-LINE-FIRST). Incident: repoint-sales-isauto-flip's self-collapse
+    // defect deleted 583 sales whose only trace was that run's own PLAN_OUT
+    // ndjson, which never carried price/soldAt/grade -- a plan line records
+    // a DECISION, not a recoverable copy of what was destroyed.
+    //
+    // `d` (the drop object) is NOT reliably the full document -- every one
+    // of the 22+ existing callers grepped in this file's own header hands in
+    // only `{ id, cardId }` (repoint-sales-by-list.cjs, rekey-product-setkey.
+    // cjs, ...), never the sale's own price/soldAt/grade/title. So the FULL
+    // document is re-read fresh from the pool at this drop's own address,
+    // right here, immediately before the delete -- the same address the
+    // delete call below is about to hit. A row that is genuinely gone by now
+    // (404) has nothing left to lose and nothing to ledger; that is
+    // "already gone", not a ledger failure, and the delete call below still
+    // runs and reports it the same way it always has.
+    //
+    // A ledger-write failure (the read succeeded but the ndjson write did
+    // not) REFUSES the delete: counted here as `ledgerWriteFailed`, disjoint
+    // from `duplicatesLeft`'s ordinary ("the delete itself threw") failures
+    // so an operator can tell "the row is still there because Cosmos said
+    // no" apart from "the row is still there because we refused to even try
+    // without a recovery copy first".
+    //
+    // `ledger` is OPTIONAL and additive: every existing caller that does not
+    // pass it gets a no-op here (recordDeleteOrThrow is simply never called),
+    // byte-for-byte the same delete loop as before this option existed.
+    if (ledger) {
+      let fullDoc = null;
+      try {
+        fullDoc = (await retry(() => pool.item(d.id, d.cardId).read())).resource ?? null;
+      } catch (e) {
+        if (!is404(e)) {
+          duplicatesLeft.push({ ...d, error: `ledger pre-read threw: ${String(e?.message ?? e)}` });
+          continue;
+        }
+      }
+      if (!fullDoc) {
+        // Already gone before we even got to ledger it -- the delete call
+        // below will 404 the same way and report it as alreadyGone, exactly
+        // as it would with no ledger option at all.
+      } else {
+        try {
+          await recordDeleteOrThrow(fullDoc, { ...ledger, toId: ledger.toId ?? keep.cardId ?? keep.id });
+        } catch (e) {
+          if (isLedgerWriteFailure(e)) {
+            duplicatesLeft.push({ ...d, error: `ledger-write-failed: ${String(e?.message ?? e)}`, ledgerWriteFailed: true });
+          } else {
+            duplicatesLeft.push({ ...d, error: String(e?.message ?? e) });
+          }
+          continue; // never reach the delete call below without a ledger line
+        }
+      }
+    }
     // CONDITIONAL DELETE (review, 2026-09-19): only when the caller supplied
     // an etag for THIS drop -- every existing caller's drop objects carry no
     // `ifMatchEtag`, so `options` stays `undefined` and the call below is

@@ -181,6 +181,7 @@ const backend = path.resolve(__dirname, "..");
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
+const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(__dirname, "lib", "delete-ledger.cjs"));
 const { parseSlugWithGrade } = require(path.join(__dirname, "lib", "graded-id.cjs"));
 const { autoOnlyOverride, autoOnlyOverrideDisabledReason } = require(path.join(__dirname, "lib", "auto-only-override.cjs"));
 const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
@@ -445,7 +446,7 @@ async function main() {
     repointed: 0, collapsedOntoResident: 0, movedByAutoOnlyOverride: 0,
     refusedNoChecklistAtFlip: 0, refusedChecklistAtBoth: 0, refusedGradedParse: 0,
     refusedPossibleTwinAtDestination: 0, refusedEtagChanged: 0,
-    failed: 0, notReached: 0,
+    failed: 0, notReached: 0, ledgerWriteFailed: 0,
   };
   // From this line on, the module-scope exit safety net (process.on("exit"),
   // registered above) can see LIVE counters -- a crash one line below this
@@ -527,7 +528,24 @@ async function main() {
     if (resident) {
       if (contentHashOf(resident) === contentHashOf({ ...sale, cardId: toId, hobbyiqCardId: toId })) {
         s.collapsedOntoResident++;
-        if (APPLY) { try { await pool.item(sale.id, sale.cardId).delete(); } catch { /* best effort; proven duplicate either way */ } }
+        if (APPLY) {
+          try {
+            // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+            // (2026-09-28). `sale` is the FULL pre-delete document (this
+            // lane's own scan query selects every field). A ledger-write
+            // failure refuses the delete -- counted separately from the
+            // "best effort" catch below, which is only for the DELETE
+            // itself throwing after a successful ledger write.
+            await recordDeleteOrThrow(sale, {
+              lane: "repoint-sales-isauto-flip", action: "collapse", reason: "same-sale-resident",
+              toId, container: "sold_comps",
+            });
+            await pool.item(sale.id, sale.cardId).delete();
+          } catch (e) {
+            if (isLedgerWriteFailure(e)) { s.ledgerWriteFailed++; s.failed++; }
+            // else: best effort; proven duplicate either way
+          }
+        }
         emitPlanRow(sale, "collapse", "same-sale-resident", { fromId: currentId, toId });
         return;
       }
@@ -787,6 +805,7 @@ async function main() {
   console.log(`  REFUSED: possible-twin-at-destination   ${f(s.refusedPossibleTwinAtDestination)}`);
   console.log(`  REFUSED: stale since the read            ${f(s.refusedEtagChanged)}`);
   console.log(`  failed                                  ${f(s.failed)}`);
+  console.log(`  of which ledger-write-failed             ${f(s.ledgerWriteFailed)}`);
   console.log(`  not reached (budget)                     ${f(s.notReached)}`);
   console.log(`  Cosmos 429 retries (this run)           ${f(throttleStats.count)}${throttleStats.halvings ? `   <- concurrency halved ${throttleStats.halvings}x, now ${f(CONCURRENCY_STATE.effective)} (started at ${f(REQUESTED_CONCURRENCY)})` : ""}`);
   if (stoppedAtBudget || CLOCK.outOfClock()) {

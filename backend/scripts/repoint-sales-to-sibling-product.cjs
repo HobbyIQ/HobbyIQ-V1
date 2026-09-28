@@ -1094,6 +1094,7 @@ async function main() {
   const { parseHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf, is412 } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+  const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(backend, "scripts", "lib", "delete-ledger.cjs"));
 
   // TITLE MACHINERY -- every one of these is an ALREADY-SHIPPED reader, called
   // read-only, in the SAME order repoint-sales-to-checklist-numbered.cjs's own
@@ -1380,7 +1381,7 @@ async function main() {
     refusedTitleNamesFromProduct: 0, refusedSplitIdentity: 0, refusedPossibleTwin: 0,
     refusedPinnedOrVerified: 0, refusedFlaggedOrExcluded: 0, refusedAlreadyParked: 0,
     refusedGuardParked: 0, refusedEtagChanged: 0,
-    salesFailed: 0, notReached: 0, throttled: 0,
+    salesFailed: 0, notReached: 0, throttled: 0, ledgerWriteFailed: 0,
     salesQueries: 0, ruCharge: 0,
   };
   const REFUSAL_KEYS = Object.freeze([
@@ -1656,7 +1657,19 @@ async function main() {
               // PROVEN same sale by content hash -> COLLAPSE: delete the
               // FROM-side copy, keep the resident. Nothing about the kept
               // document changes.
-              if (APPLY) await retry(() => pool.item(sale.id, sale.cardId).delete());
+              //
+              // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+              // (2026-09-28): `sale` is the full pre-delete document. A
+              // ledger-write failure throws here and is caught by this
+              // block's own outer catch (s.salesFailed++, reported in
+              // `failures`), same as any other failure in this try.
+              if (APPLY) {
+                await recordDeleteOrThrow(sale, {
+                  lane: "repoint-sales-to-sibling-product", action: "collapse", reason: "same-sale-at-destination",
+                  toId: plan.newCardId, container: "sold_comps",
+                });
+                await retry(() => pool.item(sale.id, sale.cardId).delete());
+              }
               s.collapsedOntoResident++;
               if (collapsedExamples.length < 20) collapsedExamples.push(`  COLLAPSE ${sale.id}@${sale.cardId} -- same sale already resident at ${plan.newCardId}; from-side copy deleted`);
               emitPlanRow(sale, "collapse", "same-sale-at-destination", { from, to, toId: plan.newCardId, twinId: resident.id, twinSource: resident.source ?? null });
@@ -1772,6 +1785,7 @@ async function main() {
         emitPlanRow(sale, "patch", null, { from, to, toId: plan.newHiq, destinationRowId: plan.targetRow?.id ?? null, destinationRowPlayer: plan.targetRow?.playerName ?? null, destinationRowSource: plan.targetRow?.source ?? null });
       } catch (e) {
         s.salesFailed++;
+        if (isLedgerWriteFailure(e)) s.ledgerWriteFailed++;
         failures.push(`  FAILED ${plan.action} ${sale.id}@${sale.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
         emitPlanRow(sale, "failed", String(e?.message ?? e), { from, to });
       }
@@ -1819,6 +1833,7 @@ async function main() {
   console.log(`  REFUSED: guard-parked (malformed key)    ${f(s.refusedGuardParked)}`);
   console.log(`  REFUSED: stale-since-plan                ${f(s.refusedEtagChanged)}   <- source doc changed or vanished between plan and write`);
   console.log(`  failed                                  ${f(s.salesFailed)}`);
+  console.log(`  of which ledger-write-failed            ${f(s.ledgerWriteFailed)}`);
   console.log(`  not reached (budget / LIMIT)            ${f(s.notReached)}`);
 
   console.log("");
@@ -1938,6 +1953,7 @@ async function runByPlayerMode(io) {
   } = io;
   const deps = { catalogAuthorityOf, namesAgree, withProductSetKey, productParentOf, productSetKeys };
   const { relocateSoldComp, stripSystem, contentHashOf, is412 } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+  const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(backend, "scripts", "lib", "delete-ledger.cjs"));
 
   const client = new CosmosClient(conn);
   const db = client.database(process.env.COSMOS_DATABASE || "hobbyiq");
@@ -1967,7 +1983,7 @@ async function runByPlayerMode(io) {
     refusedPinnedOrVerified: 0, refusedFlaggedOrExcluded: 0, refusedAlreadyParked: 0,
     refusedGuardParked: 0, refusedEtagChanged: 0, refusedGradedParseFailed: 0,
     derivedResidentAtSource: 0,
-    salesFailed: 0, notReached: 0, otherShard: 0,
+    salesFailed: 0, notReached: 0, otherShard: 0, ledgerWriteFailed: 0,
   };
   const REFUSAL_KEYS_BY_PLAYER = Object.freeze([
     "already-checklist-backed", "stale-no-row", "from-row-agrees",
@@ -2184,7 +2200,17 @@ async function runByPlayerMode(io) {
           const resident = await residentAt(sale.id, plan.newCardId);
           if (resident) {
             if (contentHashOf(resident) === contentHashOf(keep)) {
-              if (APPLY) await retry(() => pool.item(sale.id, sale.cardId).delete());
+              // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+              // (2026-09-28): full pre-delete document, ledger before
+              // delete; a ledger-write failure throws into this block's
+              // own outer catch (s.salesFailed++).
+              if (APPLY) {
+                await recordDeleteOrThrow(sale, {
+                  lane: "repoint-sales-to-sibling-product", action: "collapse", reason: "same-sale-at-destination",
+                  toId: plan.newCardId, container: "sold_comps",
+                });
+                await retry(() => pool.item(sale.id, sale.cardId).delete());
+              }
               s.collapsedOntoResident++;
               toBucket.moved++;
               emitPlanRow(sale, "collapse", "same-sale-at-destination", { from: fromKey, to: toKey, toId: plan.newCardId });
@@ -2272,6 +2298,7 @@ async function runByPlayerMode(io) {
         emitPlanRow(sale, "patch", null, { from: fromKey, to: toKey, toId: plan.newHiq, derivedResident: plan.derivedResident ?? false });
       } catch (e) {
         s.salesFailed++;
+        if (isLedgerWriteFailure(e)) s.ledgerWriteFailed++;
         failures.push(`  FAILED ${plan.action} ${sale.id}@${sale.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
         emitPlanRow(sale, "failed", String(e?.message ?? e), { from: fromKey, to: toKey });
       }
@@ -2326,6 +2353,7 @@ async function runByPlayerMode(io) {
   console.log(`  REFUSED: stale-since-plan                   ${f(s.refusedEtagChanged)}`);
   console.log(`  REFUSED: graded-parse-failed (not a candidate) ${f(s.refusedGradedParseFailed)}`);
   console.log(`  failed                                     ${f(s.salesFailed)}`);
+  console.log(`  of which ledger-write-failed                ${f(s.ledgerWriteFailed)}`);
   console.log(`  not reached (budget / LIMIT)                ${f(s.notReached)}`);
 
   if (examples.length) { console.log(`\n  examples:`); for (const e of [...examples].sort()) console.log(e); }

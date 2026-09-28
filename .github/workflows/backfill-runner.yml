@@ -2494,6 +2494,17 @@ jobs:
           # fixed-path-guarded-on-script convention, no new input (PR #2485
           # follow-up finding).
           PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'repoint-sales-isauto-flip' && '/tmp/repoint-sales-isauto-flip-plan' || inputs.script == 'reconcile-split-identity' && '/tmp/reconcile-split-identity-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || inputs.script == 'repoint-sales-by-list' && '/tmp/repoint-sales-by-list-plan' || inputs.script == 'dedupe-sold-comp-copies-by-list' && '/tmp/dedupe-sold-comp-copies-by-list-plan' || inputs.script == 'census-sold-comp-copies' && '/tmp/census-sold-comp-copies-plan' || inputs.script == 'heal-sold-comp-hobbyiqcardid-by-list' && '/tmp/heal-sold-comp-hobbyiqcardid-by-list-plan' || '' }}
+          # relocate-catalog-rows-by-list (2026-09-28): this lane has no
+          # PLAN_OUT of its own (it emits no per-row ndjson today) but its
+          # retire path deletes card_catalog rows with no other recoverable
+          # copy -- CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST.
+          # LEDGER_OUT gives backend/scripts/lib/delete-ledger.cjs's TS twin
+          # (deleteLedger.ts, wired into catalogRowOps.service.ts's
+          # retireCatalogRow via the new opt-in `ledgerLane` option) a fixed
+          # directory to write into, uploaded by the SAME step below that
+          # already uploads this lane's backfill.log (no new PLAN_OUT-shaped
+          # convention needed for a lane that never had one).
+          LEDGER_OUT: ${{ inputs.script == 'relocate-catalog-rows-by-list' && '/tmp/relocate-catalog-rows-by-list-ledger' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -5089,6 +5100,25 @@ jobs:
             echo "::notice::${{ inputs.scope }} finished within budget (considered=${N:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=relocate-catalog-rows-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
+
+      - name: Upload the relocate-catalog-rows-by-list ledger
+        # CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28).
+        # This lane has no PLAN_OUT-shaped plan artifact of its own -- only
+        # backfill.log and, now, LEDGER_OUT's pre-delete ndjson (one line per
+        # card_catalog row this run's retire path actually deleted, written
+        # by deleteLedger.ts through catalogRowOps.service.js's opt-in
+        # `ledgerLane`, BEFORE the Cosmos delete). Uploaded here rather than
+        # folded into an existing step, since this lane had no prior upload
+        # step to extend.
+        if: ${{ always() && inputs.script == 'relocate-catalog-rows-by-list' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: relocate-catalog-rows-by-list-ledger-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/relocate-catalog-rows-by-list-ledger/
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Upload the repoint-sales-by-list plan
         if: ${{ always() && inputs.script == 'repoint-sales-by-list' }}
