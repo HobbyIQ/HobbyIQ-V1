@@ -113,7 +113,6 @@ function shimOf(opts: { pass1Docs: Doc[]; allDocs: Doc[]; catalog: Array<{ id: s
 function drive(env: Record<string, string>, opts: Parameters<typeof shimOf>[0]) {
   const shim = shimOf(opts);
   const planOut = path.join(tmp, `plan-${Math.random().toString(36).slice(2)}`);
-  const cursorOut = path.join(planOut, "cursor.json");
   try {
     const stdout = execFileSync(process.execPath, [script], {
       cwd: backend,
@@ -123,7 +122,6 @@ function drive(env: Record<string, string>, opts: Parameters<typeof shimOf>[0]) 
         NODE_OPTIONS: `--require ${JSON.stringify(shim)}`,
         COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
         PLAN_OUT: planOut,
-        CURSOR_OUT: cursorOut,
         RUN_MINUTES: "60",
         ...env,
       },
@@ -131,9 +129,9 @@ function drive(env: Record<string, string>, opts: Parameters<typeof shimOf>[0]) 
       stdio: ["ignore", "pipe", "pipe"],
       timeout: 60_000,
     });
-    return { code: 0, out: stdout, planOut, cursorOut };
+    return { code: 0, out: stdout, planOut };
   } catch (e: any) {
-    return { code: e.status as number, out: String(e.stdout ?? "") + String(e.stderr ?? ""), planOut, cursorOut };
+    return { code: e.status as number, out: String(e.stdout ?? "") + String(e.stderr ?? ""), planOut };
   }
 }
 
@@ -312,65 +310,43 @@ describe("second pass finds a stray filed under a completely different address",
   });
 });
 
-// ── cursor resume ──────────────────────────────────────────────────────────
+// ── no cursor: a relaunch reruns the whole shard from the top ────────────
 
-describe("cursor resume", () => {
-  it("PASS 1 saves a cursor with offset 0, and a relaunch given that cursor resumes PASS 2 from it rather than re-draining PASS 1", () => {
-    // A zero budget stops PASS 1 itself (its own while loop checks the clock
-    // before every fetchNext, including the first) -- proving that shape
-    // directly, then driving a SECOND, fully-budgeted run against a
-    // pre-seeded cursor is what isolates PASS 2's own resume behaviour from
-    // the budget race, deterministically rather than by timing.
-    const ids = ["sale::G1", "sale::G2"];
-    const pass1Docs: Doc[] = ids.map((id) => ({ id, cardId: KEEP_ID, hobbyiqCardId: KEEP_ID }));
+describe("no cursor -- a budget stop reruns the WHOLE shard from the top on relaunch", () => {
+  it("never writes or reads any cursor file, in PLAN_OUT or elsewhere", () => {
+    const src = fs.readFileSync(script, "utf8");
+    expect(src).not.toContain("CURSOR_OUT");
+    expect(src.toLowerCase()).not.toContain("cursor.json");
+  });
+
+  it("a budget stop during PASS 1 prints that the relaunch re-reads from the top, with no cursor", () => {
+    const pass1Docs: Doc[] = [{ id: "sale::G1", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID }];
+    const allDocs: Doc[] = pass1Docs;
+    const catalog = [{ id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27" }];
+
+    const r = drive({ SCOPE: CELL, RUN_MINUTES: "1", BUDGET_MS: "0", RESERVE_MS: "1" }, { pass1Docs, allDocs, catalog });
+    expect(r.out).not.toMatch(/FATAL|ReferenceError|TypeError/);
+    expect(r.out).toMatch(/stopped at the 1-minute budget/);
+    expect(r.out).toMatch(/during PASS 1/);
+    expect(r.out).toMatch(/re-reads this shard from the top \(no cursor/);
+  });
+
+  it("re-running the SAME shard from the top (simulating a relaunch) reproduces the identical artifact -- the walk is idempotent", () => {
+    const pass1Docs: Doc[] = [{ id: "sale::G2", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID }];
     const allDocs: Doc[] = [
-      { id: "sale::G1", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID },
-      { id: "sale::G1", cardId: STRAY_ID, hobbyiqCardId: KEEP_ID },
       { id: "sale::G2", cardId: KEEP_ID, hobbyiqCardId: KEEP_ID },
-      { id: "sale::G2", cardId: "8888888888", hobbyiqCardId: KEEP_ID },
+      { id: "sale::G2", cardId: STRAY_ID, hobbyiqCardId: KEEP_ID },
     ];
     const catalog = [{ id: KEEP_ID, cardId: KEEP_ID, source: "checklistinsider-2026-08-27" }];
 
-    const first = drive(
-      { SCOPE: CELL, RUN_MINUTES: "1", BUDGET_MS: "0", RESERVE_MS: "1" },
-      { pass1Docs, allDocs, catalog },
-    );
-    expect(first.out).not.toMatch(/FATAL|ReferenceError|TypeError/);
-    expect(first.out).toMatch(/stopped at the 1-minute budget/);
-    expect(first.out).toMatch(/during PASS 1/);
-
-    // Pre-seed the cursor exactly as a completed PASS 1 would have written
-    // it, at offset 0 -- the shape a relaunch after a PASS-2 budget stop
-    // would actually find on disk.
-    const planOut = path.join(tmp, `plan-preseed-${Math.random().toString(36).slice(2)}`);
-    fs.mkdirSync(planOut, { recursive: true });
-    const cursorOut = path.join(planOut, "cursor.json");
-    fs.writeFileSync(cursorOut, JSON.stringify({
-      cursorKey: `${CELL}|slot0of1`, ids, offset: 0, savedAt: new Date().toISOString(),
-    }));
-
-    const second = execFileSync(process.execPath, [script], {
-      cwd: backend,
-      env: {
-        PATH: process.env.PATH ?? "",
-        SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\\Windows",
-        NODE_OPTIONS: `--require ${JSON.stringify(shimOf({ pass1Docs, allDocs, catalog }))}`,
-        COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
-        PLAN_OUT: planOut,
-        CURSOR_OUT: cursorOut,
-        SCOPE: CELL,
-        RUN_MINUTES: "60",
-      },
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 60_000,
-    });
-    expect(second).toMatch(/RESUMING from cursor/);
-    expect(second).not.toMatch(/PASS 1: draining/); // never re-drains PASS 1 once a matching cursor exists
-    expect(second).not.toMatch(/FATAL|ReferenceError|TypeError/);
-    const doc = readArtifact(planOut);
-    expect(doc.entries).toHaveLength(2);
-    expect(doc.census.idsConsideredInPass2).toBe(2);
+    const first = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
+    const second = drive({ SCOPE: CELL }, { pass1Docs, allDocs, catalog });
+    expect(first.code).toBe(0);
+    expect(second.code).toBe(0);
+    const firstDoc = readArtifact(first.planOut);
+    const secondDoc = readArtifact(second.planOut);
+    expect(secondDoc.entries).toEqual(firstDoc.entries);
+    expect(secondDoc.census.idsScanned).toBe(firstDoc.census.idsScanned);
   });
 });
 

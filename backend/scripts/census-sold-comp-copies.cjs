@@ -84,23 +84,41 @@
  * BUDGET + RELAUNCH + SHARDING
  * ────────────────────────────────────────────────────────────────────────
  *
- * A unit is ONE ID CONSIDERED IN PASS 2 (one batched IN-lookup slot). Budget
- * stops before starting a new batch and prints CF-RELAUNCH-ONLY-ON-BUDGET's
- * literal marker; the relaunch resumes PASS 2 from CURSOR_OUT's saved offset
- * into the (already-collected) PASS 1 id list rather than re-draining PASS 1
- * -- PASS 1's own result (the in-scope id list) is written to CURSOR_OUT
- * alongside the offset, so a relaunch never re-issues the STARTSWITH scan.
- * SLOT/SLOTS optionally shard PASS 1's id list by hash(hobbyiqCardId) --
- * lib/runner-shard-scope.cjs's own inherited-vs-chosen discipline, so a bare
- * inherited slot=0/slots=16 sweeps every id rather than silently covering
- * 1/16 of the cell.
+ * A RELAUNCH RE-READS THIS SHARD FROM THE TOP -- exactly the same discipline
+ * census-duplicate-sale-ids.cjs and census-split-identity.cjs already carry,
+ * and for the SAME reason: this generator is READ ONLY, so there is no
+ * predicate that shrinks as it works, and a NO-CURSOR design was chosen
+ * deliberately over a cross-hop cursor file. relaunch-on-marker dispatches a
+ * FRESH runner for the continuation, and this workflow has no
+ * download-artifact step between hops -- a cursor written to PLAN_OUT on one
+ * runner's disk is simply gone on the next one's, so a design that relied on
+ * one would silently re-drain PASS 1 and restart PASS 2 at offset 0 anyway,
+ * while claiming to resume. Cheaper to be honest about it: a budget stop
+ * means the WHOLE shard reruns, both passes, from nothing.
  *
- * RECONCILE IDENTITY: ids scanned (PASS 1) = single (groups of 1) + grouped
- * (groups of >=2).
+ * This is a real limit, not a corner cut: a shard too big for one budget
+ * will relaunch forever without making progress, exactly as the split-
+ * identity census's own header already says. The fix is the one that census
+ * already prescribes too -- MORE SLOTS, not a cursor -- SLOT/SLOTS shard
+ * PASS 1's id list by hash(hobbyiqCardId), honouring
+ * lib/runner-shard-scope.cjs's own inherited-vs-chosen discipline (a bare
+ * inherited slot=0/slots=16 sweeps every id rather than silently covering
+ * 1/16 of the cell), so a cell too large for one pass fans out across
+ * several dispatches instead of relaunching the same unbounded walk. In
+ * practice this cell rarely needs it: the 2026-09-27 stratified census
+ * measured roughly 11.5k ids for hockey:2025 (dupRate 20.9% x its sampled
+ * denominator), well inside one pass's budget.
+ *
+ * A unit is ONE ID CONSIDERED IN PASS 2 (one batched IN-lookup batch of <=50
+ * ids). Budget stops before starting a new batch and prints
+ * CF-RELAUNCH-ONLY-ON-BUDGET's literal marker; RECONCILE IDENTITY: ids
+ * scanned (PASS 1) = single (groups of 1) + grouped (groups of >=2), over
+ * the ids THIS RUN actually considered in PASS 2 -- a budget stop leaves the
+ * rest to the relaunch's own from-the-top pass, never double-counted.
  *
  * Env: COSMOS_CONNECTION_STRING; SCOPE=<sport>:<year> (REQUIRED, no default
  *      -- this lane has no whole-corpus mode); SLOT/SLOTS; RUN_MINUTES
- *      (default 110); PLAN_OUT; CURSOR_OUT (default alongside PLAN_OUT).
+ *      (default 110); PLAN_OUT.
  * Requires dist/ (catalogAuthority.service.js).
  * READ ONLY -- never writes to Cosmos, in any mode; there is no APPLY branch.
  */
@@ -138,6 +156,14 @@ const SPORT = SCOPE_MATCH ? SCOPE_MATCH[1] : "";
 const YEAR = SCOPE_MATCH ? SCOPE_MATCH[2] : "";
 const CELL = `${SPORT}:${YEAR}`;
 const PREFIX = `hiq:${SPORT}:${YEAR}:`;
+
+/** Minutes on the clock for the work loop. Hoisted to a named constant --
+ *  not an inline `budget({ minutes: Number(...) })` -- so tests/
+ *  runnerBudgetMargin.test.ts's static scan (which greps this file's own
+ *  source for `const RUN_MINUTES = Number(process.env.RUN_MINUTES || N)`)
+ *  can compute this lane's worst case alongside every sibling budgeted
+ *  lane; an inline expression is invisible to that pin. */
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
 
 const SHARD_SCOPE = runnerShardScope({ label: "census-sold-comp-copies" });
 const shardOf = (key) => crypto.createHash("md5").update(String(key)).digest().readUInt32BE(0) % SHARD_SCOPE.SLOTS;
@@ -200,93 +226,63 @@ async function main() {
   console.log(`  prefix                   ${PREFIX}`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
 
-  const CLOCK = budget({ minutes: Number(process.env.RUN_MINUTES || 110), reserveMs: 30 * 1000, verifyMs: 60 * 1000 });
+  const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: 30 * 1000, verifyMs: 60 * 1000 });
   console.log(`  ${CLOCK.describe()}`);
   console.log("");
 
   const PLAN_OUT = String(process.env.PLAN_OUT || "").trim() || path.join(backend, "..", "tmp", "census-sold-comp-copies");
-  const CURSOR_OUT = String(process.env.CURSOR_OUT || "").trim() || path.join(PLAN_OUT, "cursor.json");
   try { fs.mkdirSync(PLAN_OUT, { recursive: true }); } catch { /* best effort; a write failure below is a ::warning::, never a crash */ }
-
-  // ── CURSOR: PASS 1's own id list, saved once, so a relaunch resumes PASS 2
-  // from an offset instead of re-draining the STARTSWITH scan. Keyed by
-  // scope+slot so a stale cursor from a DIFFERENT cell/slot is never
-  // silently reused.
-  const cursorKey = `${CELL}|slot${SHARD_SCOPE.SLOT}of${SHARD_SCOPE.SLOTS}`;
-  let ids = null;
-  let resumeOffset = 0;
-  if (fs.existsSync(CURSOR_OUT)) {
-    try {
-      const saved = JSON.parse(fs.readFileSync(CURSOR_OUT, "utf8"));
-      if (saved && saved.cursorKey === cursorKey && Array.isArray(saved.ids)) {
-        ids = saved.ids;
-        resumeOffset = Number(saved.offset || 0);
-        console.log(`  RESUMING from cursor: ${f(ids.length)} ids, offset ${f(resumeOffset)}`);
-      }
-    } catch (e) {
-      console.log(`\n::warning::could not read CURSOR_OUT (${CURSOR_OUT}): ${e?.message}`);
-    }
-  }
 
   const rowsByIdSeen = new Map(); // id -> { cardId, hobbyiqCardId } (PASS 1's own row -- kept only so PASS 2 always has >=1 doc per id even if the point read races a concurrent write)
   let idsScanned = 0;
   let otherShard = 0;
 
-  if (!ids) {
-    // ── PASS 1: in-scope discovery. Cross-partition, paginated,
-    // NEVER break on an empty page -- Cosmos pagination can legitimately
-    // hand back an empty page before hasMoreResults() goes false.
-    console.log("  PASS 1: draining in-scope ids by STARTSWITH(hobbyiqCardId, prefix)...");
-    const iter = pool.items.query({
-      query: "SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE STARTSWITH(c.hobbyiqCardId, @prefix)",
-      parameters: [{ name: "@prefix", value: PREFIX }],
-    }, { maxItemCount: 500, maxDegreeOfParallelism: -1 });
+  // ── PASS 1: in-scope discovery. Cross-partition, paginated, NEVER break
+  // on an empty page -- Cosmos pagination can legitimately hand back an
+  // empty page before hasMoreResults() goes false. NO CURSOR: a relaunch
+  // re-reads this shard from the top (see the header above) -- a budget
+  // stop here means the WHOLE shard, both passes, reruns on relaunch.
+  console.log("  PASS 1: draining in-scope ids by STARTSWITH(hobbyiqCardId, prefix)...");
+  const iter = pool.items.query({
+    query: "SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE STARTSWITH(c.hobbyiqCardId, @prefix)",
+    parameters: [{ name: "@prefix", value: PREFIX }],
+  }, { maxItemCount: 500, maxDegreeOfParallelism: -1 });
 
-    const idSet = new Set();
-    while (iter.hasMoreResults()) {
-      if (CLOCK.outOfClock()) {
-        console.log(`\n  stopped at the ${CLOCK.RUN_MINUTES}-minute budget during PASS 1 (in-scope discovery) --`
-          + " the relaunch resumes PASS 1 from the top (no cursor exists yet for this scope/slot).");
-        console.log(`  ids scanned so far          ${f(idsScanned)}`);
-        return { client, budget: CLOCK, exitCode: 0, printedBudgetMarker: true };
-      }
-      const page = await retry(() => iter.fetchNext());
-      for (const row of page.resources ?? []) {
-        idsScanned++;
-        const id = String(row.id ?? "");
-        if (!id) continue;
-        if (SHARD_SCOPE.SHARDED && shardOf(row.hobbyiqCardId || id) !== SHARD_SCOPE.SLOT) { otherShard++; continue; }
-        if (!idSet.has(id)) { idSet.add(id); rowsByIdSeen.set(id, row); }
-      }
-      // deliberately NO break on an empty page -- loop only on hasMoreResults()
+  const idSet = new Set();
+  while (iter.hasMoreResults()) {
+    if (CLOCK.outOfClock()) {
+      console.log(`\n  stopped at the ${CLOCK.RUN_MINUTES}-minute budget during PASS 1 (in-scope discovery) --`
+        + " the relaunch re-reads this shard from the top (no cursor; see the header).");
+      console.log(`  ids scanned so far          ${f(idsScanned)}`);
+      return { client, budget: CLOCK, exitCode: 0, printedBudgetMarker: true };
     }
-    ids = [...idSet];
-    try {
-      fs.writeFileSync(CURSOR_OUT, JSON.stringify({ cursorKey, ids, offset: 0, savedAt: new Date().toISOString() }));
-    } catch (e) {
-      console.log(`\n::warning::could not write CURSOR_OUT (${CURSOR_OUT}): ${e?.message}`);
+    const page = await retry(() => iter.fetchNext());
+    for (const row of page.resources ?? []) {
+      idsScanned++;
+      const id = String(row.id ?? "");
+      if (!id) continue;
+      if (SHARD_SCOPE.SHARDED && shardOf(row.hobbyiqCardId || id) !== SHARD_SCOPE.SLOT) { otherShard++; continue; }
+      if (!idSet.has(id)) { idSet.add(id); rowsByIdSeen.set(id, row); }
     }
-    console.log(`  PASS 1 complete: ${f(ids.length)} distinct in-scope ids${SHARD_SCOPE.SHARDED ? ` (${f(otherShard)} in other shards)` : ""}\n`);
-  } else {
-    idsScanned = ids.length;
+    // deliberately NO break on an empty page -- loop only on hasMoreResults()
   }
+  const ids = [...idSet];
+  console.log(`  PASS 1 complete: ${f(ids.length)} distinct in-scope ids${SHARD_SCOPE.SHARDED ? ` (${f(otherShard)} in other shards)` : ""}\n`);
 
   // ── PASS 2: out-of-scope discovery. For every id PASS 1 saw, the SAME
   // cross-partition per-id query the census audits used, batched via
-  // ARRAY_CONTAINS in groups of <=50.
+  // ARRAY_CONTAINS in groups of <=50. NO CURSOR here either -- a budget stop
+  // mid-PASS-2 relaunches the WHOLE shard from the top of PASS 1 (see the
+  // header above); the fix for a cell too large for one pass is more slots,
+  // never a cross-hop cursor this workflow cannot actually deliver.
   console.log(`  PASS 2: cross-partition lookup of every physical document per id (batches of ${IN_BATCH_SIZE})...`);
   const docsById = new Map(); // id -> [{id, cardId, hobbyiqCardId}, ...]
   let stoppedInPass2 = false;
-  let offset = resumeOffset;
+  let offset = 0;
 
   for (; offset < ids.length; offset += IN_BATCH_SIZE) {
     if (CLOCK.outOfClock()) {
       stoppedInPass2 = true;
-      try {
-        fs.writeFileSync(CURSOR_OUT, JSON.stringify({ cursorKey, ids, offset, savedAt: new Date().toISOString() }));
-      } catch (e) {
-        console.log(`\n::warning::could not write CURSOR_OUT (${CURSOR_OUT}): ${e?.message}`);
-      }
       break;
     }
     const batch = ids.slice(offset, offset + IN_BATCH_SIZE);
@@ -312,7 +308,8 @@ async function main() {
 
   if (stoppedInPass2) {
     console.log(`\n  stopped at the ${CLOCK.RUN_MINUTES}-minute budget during PASS 2 (per-id lookup) --`
-      + ` offset ${f(offset)} of ${f(ids.length)} saved to the cursor; the relaunch resumes from there.`);
+      + ` offset ${f(offset)} of ${f(ids.length)}. NO CURSOR: the relaunch re-reads this shard from`
+      + " the top, both passes (see the header) -- raise SLOT/SLOTS if this cell needs more than one pass.");
   }
 
   // A batch that returned nothing for an id it should have found at least
@@ -429,7 +426,7 @@ async function main() {
   console.log("");
   console.log(`  ids scanned (PASS 1)                 ${f(ids.length)}${SHARD_SCOPE.SHARDED ? `  (${f(otherShard)} in other shards)` : ""}`);
   console.log(`  ids considered in PASS 2 this run     ${f(consideredIds.length)}`);
-  console.log(`  not yet considered (budget)           ${f(notConsidered)}   <- the relaunch resumes from the cursor`);
+  console.log(`  not yet considered (budget)           ${f(notConsidered)}   <- the relaunch reruns this WHOLE shard from the top (no cursor)`);
   console.log(`  single-doc ids                        ${f(single)}`);
   console.log(`    of which intra-doc drift (cardId != hobbyiqCardId, informational only) ${f(intraDocDriftIds)}`);
   console.log(`  groups of >=2 docs                    ${f(grouped)}`);
@@ -493,7 +490,7 @@ async function main() {
 
   if (notConsidered > 0) {
     console.log(`\n  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- ${f(notConsidered)} id(s) not yet considered; `
-      + "the relaunch resumes PASS 2 from the saved cursor.");
+      + "the relaunch reruns this WHOLE shard from the top (no cursor -- see the header).");
   } else {
     console.log(`\n  finished within budget (ids considered=${f(consideredIds.length)}) -- done, no re-dispatch.`);
   }
