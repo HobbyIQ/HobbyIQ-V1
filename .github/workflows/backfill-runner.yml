@@ -823,6 +823,24 @@ on:
           # the 2026-09-27 twins-lane + isauto-twins audits (usc143, fb2025,
           # bb2026 CSVs).
           - dedupe-sold-comp-copies-by-list
+          # CF-ONE-SALE-ONE-DOCUMENT, the GENERATOR (Drew, 2026-09-28 ~00:50Z:
+          # "Build it; start with hockey 2025 REPORT"). Per sport:year, drains
+          # the in-scope hobbyiqCardId prefix (PASS 1), then re-queries every
+          # id found by its BARE id, cross-partition, in batches of <=50
+          # (PASS 2, the same shape the 2026-09-27 stratified census used) --
+          # PASS 2 is what finds a stray copy PASS 1's own STARTSWITH would
+          # never see (a raw vendor cardId with no hobbyiqCardId prefix in
+          # scope at all, or a stray filed under another sport/year). Keeper
+          # = the one doc that is address-coherent (cardId===hobbyiqCardId)
+          # AND checklist-grade at that address; none or several such docs is
+          # filed under census.needsRuling, NEVER guessed. Produces
+          # dedupe-candidates-<sport>-<year>[-slotN].json in
+          # dedupe-sold-comp-copies-by-list's own list schema -- an artifact
+          # for a REVIEWED list PR, never applied directly. READ ONLY -- has
+          # no write path at all, in any mode; `scope` (sport:year, e.g.
+          # hockey:2025) is REQUIRED, no default. First dispatch:
+          # scope=hockey:2025 (the census's own worst cell, 20.9% dup rate).
+          - census-sold-comp-copies
           # CF-THE-ACQUISITION-QUEUE-MUST-ONLY-CARRY-CELLS-A-SOURCE-CAN-SERVE
           # (2026-09-07). The WRITE half of audit-seed-queue-sport-hygiene,
           # which is report-only by construction and emitted the 2,080-entry
@@ -2446,7 +2464,12 @@ jobs:
           # failed) -- same fixed-path-guarded-on-script convention, no new
           # input (Drew, 2026-09-27 ~23:56Z: "Build lane + census; REPORT
           # first").
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'repoint-sales-isauto-flip' && '/tmp/repoint-sales-isauto-flip-plan' || inputs.script == 'reconcile-split-identity' && '/tmp/reconcile-split-identity-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || inputs.script == 'repoint-sales-by-list' && '/tmp/repoint-sales-by-list-plan' || inputs.script == 'dedupe-sold-comp-copies-by-list' && '/tmp/dedupe-sold-comp-copies-by-list-plan' || '' }}
+          # census-sold-comp-copies (2026-09-28): the GENERATOR's own
+          # candidate-list JSON (dedupe-candidates-<sport>-<year>[-slotN].json)
+          # plus its resume cursor -- same fixed-path-guarded-on-script
+          # convention, no new input (Drew, 2026-09-28 ~00:50Z: "Build it;
+          # start with hockey 2025 REPORT").
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'repoint-sales-isauto-flip' && '/tmp/repoint-sales-isauto-flip-plan' || inputs.script == 'reconcile-split-identity' && '/tmp/reconcile-split-identity-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || inputs.script == 'repoint-sales-by-list' && '/tmp/repoint-sales-by-list-plan' || inputs.script == 'dedupe-sold-comp-copies-by-list' && '/tmp/dedupe-sold-comp-copies-by-list-plan' || inputs.script == 'census-sold-comp-copies' && '/tmp/census-sold-comp-copies-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -5136,6 +5159,60 @@ jobs:
             echo "::notice::${{ inputs.scope }} finished within budget (considered=${N:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=dedupe-sold-comp-copies-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
+
+      # GATE for census-sold-comp-copies: the GENERATOR is READ ONLY, in
+      # every mode, with no write path in the script at all (Drew, 2026-09-28
+      # ~00:50Z: "Build it; start with hockey 2025 REPORT"). Same reasoning as
+      # the census-split-identity / census-duplicate-sale-ids gates above: an
+      # apply=true dispatch of a read-only generator is a dispatch whose
+      # author believed a write would happen. Refuse rather than run: the
+      # candidate list it produces becomes a REVIEWED list PR for
+      # dedupe-sold-comp-copies-by-list, which is the audited lane that
+      # actually writes.
+      - name: Refuse an APPLY dispatch of the read-only sold-comp-copies generator
+        if: ${{ inputs.script == 'census-sold-comp-copies' && inputs.apply == true }}
+        shell: bash
+        run: |
+          echo "::error::census-sold-comp-copies is READ ONLY — it has no write path. Re-dispatch with apply=false; review its candidate list into a committed dedupe-sold-comp-copies-by-list scope."
+          exit 1
+
+      - name: Upload the census-sold-comp-copies candidate list
+        if: ${{ always() && inputs.script == 'census-sold-comp-copies' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: census-sold-comp-copies-${{ inputs.scope }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/census-sold-comp-copies-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch census-sold-comp-copies until the cell is drained
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, modeled on the REPORT-only
+        # census lanes above (census-split-identity, census-duplicate-sale-
+        # ids): stops at its own budget, prints the marker, and its own
+        # CURSOR_OUT file (not this preamble) is what lets the continuation
+        # resume PASS 2 from an offset instead of re-draining PASS 1. `scope`
+        # (sport:year) and slot/slots are forwarded verbatim, matching
+        # repoint-sales-isauto-flip's own relaunch dispatch line -- there is
+        # no separate cursor input to carry; the script finds its own cursor
+        # file inside PLAN_OUT.
+        if: ${{ !cancelled() && inputs.script == 'census-sold-comp-copies' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: census-sold-comp-copies
+          preamble: |
+            N=$(grep -aoE "entries emitted +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "entries_emitted=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (entries_emitted=${N:-0}) — re-dispatching ${{ inputs.scope }} slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::${{ inputs.scope }} slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (entries_emitted=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=census-sold-comp-copies -f apply=false -f scope="${{ inputs.scope }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
 
       - name: Self-relaunch a newly budgeted write lane until its scope is drained
         # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, for the lanes #1944's ratchet
