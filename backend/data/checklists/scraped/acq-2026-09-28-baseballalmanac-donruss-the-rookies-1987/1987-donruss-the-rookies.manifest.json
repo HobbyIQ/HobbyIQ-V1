@@ -1,0 +1,39 @@
+{
+  "source": "baseballalmanac-2026-09-28",
+  "sourceUrl": "https://www.baseball-almanac.com/baseball_cards/baseball_cards_oneset.php?s=1987don02",
+  "secondSourceUrl": "https://baseballcardpedia.com/index.php/1987_Donruss_The_Rookies",
+  "thirdSourceUrl": "https://waxpackgods.com/1987-donruss-the-rookies/",
+  "fetchedAt": "2026-09-28",
+  "sport": "baseball",
+  "year": 1987,
+  "setName": "1987 Donruss The Rookies",
+  "productKey": "1987-donruss-the-rookies",
+  "setKey": "donruss-the-rookies",
+  "setKeyNote": "RULED (Drew, 2026-09-28, on PR #2477): 'donruss-the-rookies' is registered as its own S() entry under the bare 'donruss' family in productSetKeys.ts, parallel to how 'donruss-elite'/'donruss-studio' sit beside bare 'donruss', mirroring the modern 'panini-donruss-the-rookies' S() entry (~line 1922). spellForEra bridges this pair by the SAME PANINI_DONRUSS_FROM_YEAR=2009 boundary that already bridges bare donruss/panini-donruss: 1987-2008 spells 'donruss-the-rookies', 2009+ spells the pre-existing, unrelated modern insert 'panini-donruss-the-rookies'. This manifest's setKey is now the REGISTERED insert-set key itself, fed to ingest-checklist-csv-to-catalog.cjs as productOf()'s product.setKey -- no separation step is needed at ingest time because every row already lands on its own registered address, distinct from the flagship's bare 'donruss' key from the start.",
+  "setKeyRuling": "Drew 09-28: donruss-the-rookies under the donruss family. See backend/src/services/catalog/productSetKeys.ts (S(\"donruss-the-rookies\", { family: \"donruss\", parent: \"donruss\" })) and spellForEra's explicit donruss-the-rookies/panini-donruss-the-rookies pair. Pinned by backend/tests/donrussTheRookiesEraRuling.test.ts and backend/tests/donrussTheRookies1987PlannerVerdict.test.ts.",
+  "rowCount": 55,
+  "trueSetTotal": 56,
+  "parallelColumnAuthoritative": false,
+  "readyToIngest": true,
+  "readyToIngestNote": "setKey ruling landed 2026-09-28 (see setKeyRuling above). Re-measured against this branch's planStagedDirectory with the registered key: this file ALONE -- verdict 'pass', 55 rows/55 ids, zero collisions, on its own 'donruss-the-rookies' address; staged ALONGSIDE the already-committed flagship package (acq-2026-09-13-bcp/1987-donruss-baseball.csv) -- verdict 'pass' for BOTH files, zero collisions, zero unregistered keys, and 'the-rookies' no longer appears in either file's `separate` set, because both files' rows already land on their own registered, distinct addresses (hiq:baseball:1987:donruss-the-rookies:14:... vs hiq:baseball:1987:donruss:14:...) rather than needing a same-cell separation step. This directory sits under backend/data/checklists/scraped/ where a human/workflow chooses which directories to point DIR at; REPORT mode first as always, APPLY only after human review of the REPORT output -- this PR now touches backend/src (productSetKeys.ts), so it needs Drew's merge + a manual 'Daily 5AM ET Refresh & Deploy' workflow dispatch, and the ingest REPORT->APPLY run happens after that deploy per repo doctrine (merging alone does not deploy).",
+  "gapThisFills": "2026-09-28 acquisition queue, one of four Drew ordered same day. Gap analysis found 21,882 unbacked sales at cell 1987|panini-donruss (label: 'Donruss box-set insert (Rookies) distinct from flagship; base flagship also unapplied'). This package covers ONLY the 56-card 'The Rookies' boxed insert set -- it does NOT touch the 660-card 1987 Donruss base/flagship set, which is a separate, already-staged product elsewhere in the acquisition pipeline. The setKey ruling landed 2026-09-28 (see setKeyRuling); the follow-on REPORT-mode ingest run (after Drew's merge + the next 'Daily 5AM ET Refresh & Deploy') is what actually matches these 55 rows against the unbacked sales share.",
+  "sourcePageShape": "Baseball Almanac's one-set checklist page (baseball_cards_oneset.php?s=1987don02) lists a bare 'NUMBER. Player Name' line per card, #1-56, with #56 printed as 'Checklist' (the set's own numbered checklist card, not a player). Cross-checked in full against BaseballCardPedia's 1987 Donruss The Rookies article (same 56 rows, XRC annotations for extended-rookie-card players, #56 also listed as the checklist card) and Wax Pack Gods' set guide (same 56 rows and note). All three sources agree on every row; minor spelling variants across sources (e.g. Ken Williams/Kenny Williams, Mike Jackson/Michael Jackson, Bill Ripken/Billy Ripken, James Steels/Jim Steels) were resolved to BaseballCardPedia's spelling as this package's primary transcription source, cross-referenced against Baseball Almanac.",
+  "converterNote": "Rows transcribed by hand from the fetched checklist text (no HTML scraper script needed for a 56-row page): number and player name copied verbatim per source, category stamped 'insert-the-rookies' uniformly (no base tier exists in this file -- see heldOut), isAuto=false and printRun blank for every row (no source states either), parallel left blank (no named parallel is claimed by any of the three sources for this set).",
+  "sectionsReport": [
+    {
+      "category": "insert-the-rookies",
+      "cardRange": "1-55",
+      "cards": 55,
+      "note": "OWN numbering for the entire boxed set, 1-55 (see heldOut for #56). This is a standalone dealer-only factory set distributed in its own small green-and-black box, never packed with or numbered against the 660-card 1987 Donruss flagship, and its numbers DO overlap the flagship's own 1-660 range (this set's #14 is Bo Jackson; the flagship's #14 is Kevin McReynolds DK -- confirmed by reading acq-2026-09-13-bcp/1987-donruss-baseball.csv on this branch). Resolved by the 2026-09-28 setKeyRuling: this file's rows key to the registered 'donruss-the-rookies' address, distinct from the flagship's bare 'donruss' address, so the shared card numbers no longer clash."
+    }
+  ],
+  "heldOut": [
+    {
+      "section": "Card #56, 'Checklist' (the set's own checklist card)",
+      "rows": 1,
+      "reason": "Not a player card -- all three sources list #56 as the checklist card itself, the same shape as the 1985 Donruss sibling package's excluded 'NNO Diamond Kings Checklist' filler cards. No player name to key an identity on. Held out rather than staged as e.g. player='Checklist', per the same exclusion rule as that sibling package."
+    }
+  ],
+  "salesUnlockedEstimate": "Not separately measured in this pass (no Cosmos access). This package targets a share of the 21,882 unbacked sales at cell 1987|panini-donruss; the setKey ruling has landed, but per readyToIngestNote the actual match count is only known once the follow-on REPORT-mode ingest run happens post-deploy -- this PR stages the checklist and registers the key.",
+  "relatedProductNote": "The 660-card 1987 Donruss base/flagship set is a SEPARATE product, already staged elsewhere in the acquisition pipeline (acq-2026-09-13-bcp/1987-donruss-baseball.csv, manifest setKey 'donruss'), and this PR does NOT touch, modify, or merge into that file or its rows. This package's own category ('insert-the-rookies') is distinct from the flagship's ('base'), and the two sets DO share card-number values (both run roughly 1-55/56 and 1-660 respectively, so e.g. #14 exists in both) -- resolved by the 2026-09-28 setKeyRuling, which gives this package its own registered 'donruss-the-rookies' address distinct from the flagship's bare 'donruss'."
+}
