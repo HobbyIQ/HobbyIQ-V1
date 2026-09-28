@@ -6115,9 +6115,23 @@ function cpaNameResolveEvidence({
   titleSerial = null,
   titleParallel = null,
   resolvedBacked = false,
+  titleNamesSiblingProduct = null,
 }) {
   const failed = [];
   const title = str(row?.title);
+
+  // P0 -- THE TITLE MUST NOT NAME A SIBLING OF THE PRODUCT BEING WRITTEN
+  // (review finding #1, 2026-09-28). Same guard, same reasoning, same
+  // helper R31's own T5a uses -- see that leg's header for the full
+  // reasoning. `stored.setKey` is a FIELD an earlier writer minted, never a
+  // title reading, and this codebase's own memory documents the exact
+  // hazard by name (Bowman-family setKey mis-filings). A title stating
+  // "Sapphire" / "Draft" / "Mega Box" over a row whose stored setKey is the
+  // plain flagship must refuse rather than resolve a specialty card's sale
+  // onto the flagship's own checklist row. Caller-supplied and NARROWING
+  // only, exactly like R31's own leg: `null` (unasked, or the title names no
+  // product at all) keeps today's behaviour rather than refusing every row.
+  if (titleNamesSiblingProduct === true) failed.push("title-names-sibling-product");
 
   // P1 -- THE ROW MUST BE EXACTLY THIS DEFECT. Any other guard reason present
   // means the derivation is broken on an axis this rung has no evidence for,
@@ -6374,10 +6388,16 @@ function classifyRow({
   //                       reader R31 uses), or null. Never invented.
   //   cpaResolvedBacked   is the resolved (year, setKey, resolvedNumber)
   //                       checklist-backed? Caller-supplied.
+  //   cpaTitleNamesSiblingProduct  R31's own T5a guard, reused (review
+  //                       finding #1, 2026-09-28): does the title name a
+  //                       SIBLING product of the stored setKey (Sapphire /
+  //                       Draft / Mega Box over a plain flagship row)? true
+  //                       refuses; null/false narrows nothing, same as R31.
   titleInsertPrefix = null,
   cpaCandidates = [],
   cpaTitleParallel = null,
   cpaResolvedBacked = false,
+  cpaTitleNamesSiblingProduct = null,
 }) {
   const prov = provenanceTier(row);
   // THE SLUG-SHAPE DEFECTS ARE COMPUTED FOR EVERY ROW AND CHANGE NOTHING.
@@ -6509,6 +6529,7 @@ function classifyRow({
       row, stored, derivationReasons,
       titleInsertPrefix, candidates: cpaCandidates, titleSerial,
       titleParallel: cpaTitleParallel, resolvedBacked: cpaResolvedBacked,
+      titleNamesSiblingProduct: cpaTitleNamesSiblingProduct,
     });
     if (r34.qualifies) {
       const resolvedIdentity = { ...stored, cardNumber: r34.evidence.resolvedCardNumber };

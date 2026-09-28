@@ -126,6 +126,7 @@ describe("R34-CPA-NAME-RESOLVE — the predicate", () => {
     titleSerial: o.titleSerial === undefined ? 499 : o.titleSerial,
     titleParallel: o.titleParallel === undefined ? null : o.titleParallel,
     resolvedBacked: o.resolvedBacked === undefined ? true : o.resolvedBacked,
+    titleNamesSiblingProduct: o.titleNamesSiblingProduct === undefined ? null : o.titleNamesSiblingProduct,
   });
 
   it("HAPPY PATH: exactly one candidate's name agrees with the title -> resolved", () => {
@@ -143,6 +144,47 @@ describe("R34-CPA-NAME-RESOLVE — the predicate", () => {
     });
     expect(r.qualifies).toBe(false);
     expect(r.failed.some((f: string) => f.startsWith("ambiguous-initials-collision"))).toBe(true);
+  });
+
+  // Review finding #3 (2026-09-28): the test above uses two UNRELATED full
+  // names in one title. The doctrine's own cited hazard (cpaProductRule.ts's
+  // header) is the shared-INITIALS collision -- CPA-AN is both Angel Nunez
+  // and Alejandro Nunez, two real players sharing one number. This is the
+  // actual documented population, and it is untested until now.
+  it("SHARED-INITIALS COLLISION (CPA-AN: Angel Nunez vs Alejandro Nunez) refuses ambiguous when both first names are stated", () => {
+    const NUNEZ_CANDIDATES = [
+      { cardNumber: "CPA-AN", playerName: "Angel Nunez", printRun: 499, parallel: "Refractor" },
+      { cardNumber: "CPA-AN", playerName: "Alejandro Nunez", printRun: 499, parallel: "Refractor" },
+    ];
+    const r = r34({
+      title: "2024 Bowman Angel Nunez Alejandro Nunez Chrome Prospect Auto dual /499",
+      candidates: NUNEZ_CANDIDATES,
+      titleSerial: null,
+    });
+    expect(r.qualifies).toBe(false);
+    expect(r.failed.some((f: string) => f.startsWith("ambiguous-initials-collision"))).toBe(true);
+  });
+
+  it("SHARED-INITIALS COLLISION: a BARE surname alone refuses UNRESOLVED (not a match), never guesses either player", () => {
+    // `titleNamesCandidatePlayer` requires the candidate's FULL multi-word
+    // name as a contiguous run (titleWithoutPlayerName, T2/T3: a multi-word
+    // name that never appears as a run is not matched at all -- no
+    // bare-surname floor exists structurally). A title stating only "Nunez"
+    // must therefore correctly refuse BOTH candidates as no-match, not as
+    // ambiguous -- this is the structural guarantee that makes the ambiguity
+    // gate meaningful rather than a coin flip disguised as a refusal.
+    const NUNEZ_CANDIDATES = [
+      { cardNumber: "CPA-AN", playerName: "Angel Nunez", printRun: 499, parallel: "Refractor" },
+      { cardNumber: "CPA-AN", playerName: "Alejandro Nunez", printRun: 499, parallel: "Refractor" },
+    ];
+    const r = r34({
+      title: "2024 Bowman Nunez Chrome Prospect Auto Refractor /499 - Raw",
+      candidates: NUNEZ_CANDIDATES,
+      titleSerial: 499,
+    });
+    expect(r.qualifies).toBe(false);
+    expect(r.failed).toContain("no-candidate-name-agrees-with-title");
+    expect(r.evidence.matchCount).toBe(0);
   });
 
   it("NAME DISAGREEMENT: neither candidate's name is in the title -> refused, never a guess", () => {
@@ -233,6 +275,118 @@ describe("R34-CPA-NAME-RESOLVE — the predicate", () => {
       expect(K.insertPrefixNamedInTitle(title), `"${title}" must name no registered insert`).toBeNull();
     }
   });
+
+  // ── P0: the sibling-product guard (review finding #1, 2026-09-28) ────────
+
+  it("SAPPHIRE MUST NOT RESOLVE ONTO A BASE BOWMAN CHROME CPA ROW", () => {
+    // The failing case the review posted verbatim: a title stating "Sapphire"
+    // over a row whose stored setKey is mis-set to the plain bowman-chrome
+    // flagship must refuse rather than resolve the Sapphire sale onto the
+    // flagship's own checklist row.
+    const r = r34({
+      title: "2024 Bowman Chrome Sapphire Prospect Auto Travis Sykora /75",
+      stored: { setKey: "bowman-chrome", cardNumber: null, parallel: null },
+      titleSerial: null,
+      titleNamesSiblingProduct: true,
+    });
+    expect(r.qualifies).toBe(false);
+    expect(r.failed).toContain("title-names-sibling-product");
+  });
+
+  it("DRAFT MUST NOT RESOLVE ONTO A BASE BOWMAN CPA ROW", () => {
+    const r = r34({
+      title: "2024 Bowman Draft Chrome Prospect Auto Travis Sykora /499",
+      stored: { setKey: "bowman", cardNumber: null, parallel: null },
+      titleNamesSiblingProduct: true,
+    });
+    expect(r.qualifies).toBe(false);
+    expect(r.failed).toContain("title-names-sibling-product");
+  });
+
+  it("MEGA BOX MUST NOT RESOLVE ONTO A BASE BOWMAN CHROME CPA ROW", () => {
+    const r = r34({
+      title: "2024 Bowman Chrome Mega Box Prospect Auto Travis Sykora /499",
+      stored: { setKey: "bowman-chrome", cardNumber: null, parallel: null },
+      titleNamesSiblingProduct: true,
+    });
+    expect(r.qualifies).toBe(false);
+    expect(r.failed).toContain("title-names-sibling-product");
+  });
+
+  it("the sibling guard is NARROWING ONLY — null/false (unasked, or title names no product) never refuses on it", () => {
+    for (const v of [null, false, undefined]) {
+      const r = r34({ titleNamesSiblingProduct: v });
+      expect(r.qualifies, `titleNamesSiblingProduct=${v} must not refuse`).toBe(true);
+    }
+  });
+
+  it("a title naming the SAME product's own words (bare 'Bowman' on a bowman-chrome row) is NOT a sibling — still resolves", () => {
+    // R31's own T5a distinction: the parent of the written key, less
+    // specific, is not a fork. Modeled here by simply not asserting the
+    // sibling flag -- the driver's own `titleNamesSiblingOfSetKey` decides
+    // this, not the evidence function; this pins that a false/null answer
+    // for that exact shape never blocks a real resolution.
+    const r = r34({ titleNamesSiblingProduct: false });
+    expect(r.qualifies).toBe(true);
+  });
+
+  // ── year-mismatch (untested regression named by the review) ──────────────
+
+  it("YEAR-MISMATCH: a player's CPA row in a DIFFERENT product-year is never offered as a candidate — refuses by construction", () => {
+    // `checklistCpaCandidates` is scoped by (year, setKey, sport) in the
+    // driver, so a 2023 CPA-TSY row is never in the `candidates` array a
+    // 2024 row's evidence call receives. Modeled here directly: an empty
+    // candidate list (the year-scoped query found nothing for THIS year)
+    // must refuse exactly like "insert not registered for this product/year"
+    // -- absent beats wrong, never a cross-year guess.
+    const r = r34({ candidates: [] });
+    expect(r.qualifies).toBe(false);
+    expect(r.failed.some((f: string) => f.startsWith("insert-not-registered-for-product-year"))).toBe(true);
+  });
+
+  // ── dual-auto title, only one player has a candidate row ─────────────────
+
+  it("a dual-player title where only ONE name has a candidate row still resolves to that one", () => {
+    // Two players named in the title, but the candidate pool (this
+    // product-year's checklist) only carries a row for one of them -- the
+    // other player has no CPA row here at all (a different insert, a
+    // different year, or simply not in this checklist). Exactly one
+    // candidate can agree, so this resolves rather than refusing as
+    // ambiguous: ambiguity is about the CANDIDATE POOL disagreeing on who
+    // the title names, not about how many names the title happens to state.
+    const r = r34({
+      title: "Travis Sykora and Someone Uncataloged 2024 Bowman Chrome Prospect Auto /499",
+      candidates: [{ cardNumber: "CPA-TSY", playerName: "Travis Sykora", printRun: 499, parallel: "Refractor" }],
+    });
+    expect(r.qualifies).toBe(true);
+    expect(r.evidence.resolvedPlayerName).toBe("Travis Sykora");
+  });
+
+  // ── accented-name / diacritic gap (review finding #4, documented not fixed) ─
+
+  it("KNOWN GAP, DOCUMENTED NOT FIXED: an accented checklist name never matches its unaccented title spelling", () => {
+    // `titleNamesCandidatePlayer` reuses `titleWithoutPlayerName`, which
+    // reduces through the shared `lower()` -- a bare `.toLowerCase()` with no
+    // NFD/diacritic fold (rematch-classify.cjs:524). This is NOT specific to
+    // R34: every other rung that calls `titleWithoutPlayerName` (G6's own
+    // parallel-suppression witness included) shares the identical gap, so
+    // fixing it here alone would not be a targeted fix -- it would touch a
+    // shared primitive many other rungs depend on, which is its own PR with
+    // its own blast-radius review, not this one's. Pinned here so the gap is
+    // VISIBLE (an explicit, named refusal) rather than silently absorbed
+    // into the ordinary refusal-count noise as an unremarkable
+    // no-candidate-name-agrees-with-title.
+    expect(K.titleNamesCandidatePlayer(
+      "2024 Bowman Chrome Munoz Prospect Auto Refractor /499",
+      "Muñoz",
+    )).toBe(false);
+    const r = r34({
+      title: "2024 Bowman Chrome Munoz Prospect Auto Refractor /499",
+      candidates: [{ cardNumber: "CPA-MU", playerName: "Muñoz", printRun: 499, parallel: "Refractor" }],
+    });
+    expect(r.qualifies, "documents the diacritic gap -- this SHOULD resolve once titleWithoutPlayerName folds accents").toBe(false);
+    expect(r.failed).toContain("no-candidate-name-agrees-with-title");
+  });
 });
 
 // ── dispatch wiring: parseApplyScope / APPLY_CLASSES / applyKindOf / APPLY_KINDS ─
@@ -310,6 +464,72 @@ describe("R34 is dispatchable, and armed only by its own name", () => {
 
   it("THE FLEET ALLOWLIST accepts r34 beside the existing scopes", () => {
     expect(FLEET_SRC).toMatch(/improve\|r26\|r27\|r28\|r31\|r32\|r33\|r34\)\s*;;/);
+  });
+
+  // ── review finding #2 (2026-09-28): guardSlugInputs at all three sites ──
+
+  it("cpaInputs guards the resolved identity through guardSlugInputs before any backing read", () => {
+    const start = RUNNER_SRC.indexOf("const cpaInputs = async (row, stored, der) => {");
+    expect(start).toBeGreaterThan(-1);
+    const end = RUNNER_SRC.indexOf("const scopeCounts = {", start);
+    expect(end).toBeGreaterThan(start);
+    const body = RUNNER_SRC.slice(start, end);
+    expect(body).toMatch(/const guard = deps\.guardSlugInputs\(\{/);
+    // The backing read (checklistBacked) must be gated BEHIND the guard
+    // check, not run unconditionally before it.
+    const guardIdx = body.indexOf("deps.guardSlugInputs({");
+    const backingIdx = body.indexOf("checklistBacked(resolvedSlug)");
+    expect(guardIdx).toBeGreaterThan(-1);
+    expect(backingIdx).toBeGreaterThan(guardIdx);
+  });
+
+  it("the write-time re-check guards the resolved identity through guardSlugInputs before computeHobbyIqCardId", () => {
+    const start = RUNNER_SRC.indexOf("const cpaGuard = cpaResolved ? deps.guardSlugInputs({");
+    expect(start).toBeGreaterThan(-1);
+    const computeIdx = RUNNER_SRC.indexOf("deps.computeHobbyIqCardId({", start);
+    expect(computeIdx).toBeGreaterThan(start);
+    // The refusal path (guard not ok) must skip and count, never throw.
+    expect(RUNNER_SRC.slice(start, start + 1400)).toMatch(/refused:cpa-resolved-identity-failed-guard/);
+  });
+
+  it("the queue-time dispatch guards the resolved identity through guardSlugInputs before computeHobbyIqCardId", () => {
+    const start = RUNNER_SRC.indexOf("const cpaQueueGuard = resolvedIdentity ? deps.guardSlugInputs({");
+    expect(start).toBeGreaterThan(-1);
+    const computeIdx = RUNNER_SRC.indexOf("deps.computeHobbyIqCardId({", start);
+    expect(computeIdx).toBeGreaterThan(start);
+    expect(RUNNER_SRC.slice(start, start + 1600)).toMatch(/refused:cpa-resolved-identity-failed-guard/);
+  });
+
+  it("a guard-refusing resolved identity never reaches computeHobbyIqCardId at any of the three sites", () => {
+    // Structural proof that all three sites branch on the guard's `.ok`
+    // before calling `computeHobbyIqCardId` -- never an unconditional build
+    // followed by a later check.
+    const sites = [
+      "const guard = deps.guardSlugInputs({",
+      "const cpaGuard = cpaResolved ? deps.guardSlugInputs({",
+      "const cpaQueueGuard = resolvedIdentity ? deps.guardSlugInputs({",
+    ];
+    for (const site of sites) {
+      const idx = RUNNER_SRC.indexOf(site);
+      expect(idx, `site not found: ${site}`).toBeGreaterThan(-1);
+      const window = RUNNER_SRC.slice(idx, idx + 700);
+      expect(window, `${site} must branch on guard.ok before building the slug`).toMatch(/guard\.ok|Guard\.ok/);
+    }
+  });
+
+  it("FUNCTIONAL: guardSlugInputs itself refuses an uncanonical sport — the real gate, not a stub", () => {
+    const dist = require_("../dist/services/portfolioiq/slugGuard.service.js");
+    const bad = dist.guardSlugInputs({
+      sport: null, year: 2024, normalizedSetKey: "bowman-chrome",
+      cardNumber: "CPA-TSY", playerName: "Travis Sykora",
+    });
+    expect(bad.ok).toBe(false);
+    expect(bad.reasons).toContain("sport-uncanonical");
+    const good = dist.guardSlugInputs({
+      sport: "baseball", year: 2024, normalizedSetKey: "bowman-chrome",
+      cardNumber: "CPA-TSY", playerName: "Travis Sykora",
+    });
+    expect(good.ok).toBe(true);
   });
 });
 

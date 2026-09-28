@@ -2349,6 +2349,7 @@ async function main() {
   const cpaInputs = async (row, stored, der) => {
     const none = {
       titleInsertPrefix: null, cpaCandidates: [], cpaTitleParallel: null, cpaResolvedBacked: false,
+      cpaTitleNamesSiblingProduct: null,
     };
     // P1's cheap half, asked here so a row that is not this shape costs
     // nothing more: `deriveIdentity` must have failed on EXACTLY
@@ -2365,8 +2366,27 @@ async function main() {
     const setKey = String(stored?.setKey ?? "").toLowerCase();
     if (!sport || !year || !setKey) return none;
 
+    // R31'S OWN GUARD, REUSED (review finding #1, 2026-09-28). `stored.setKey`
+    // is a FIELD, not a title reading -- and this codebase's own memory
+    // documents the exact hazard by name (Bowman-family setKey mis-filings:
+    // Sapphire/Draft/Mega Box collisions). R31 (T5a) refuses a fill the
+    // instant the title names a SIBLING of the address being written to; R34
+    // fetches its candidate pool from `stored.setKey` with no equivalent
+    // check at all, so a title stating "Sapphire" or "Draft" or "Mega Box"
+    // over a row whose stored setKey is the plain `bowman-chrome` would
+    // silently resolve a Sapphire/Draft/Mega sale onto the FLAGSHIP's own
+    // checklist row -- exactly the flagship-swallows-specialization shape
+    // R26 exists to name, arriving through a door R26 never reaches (R26
+    // needs a real `derived` identity; R34 exists precisely where there is
+    // none). Reusing `titleNamesSiblingOfSetKey` rather than a second
+    // implementation keeps the one definition of "sibling" R31 already
+    // proved out -- family-ancestor aware, so "Bowman" on a `bowman-chrome`
+    // row is NOT a sibling (same family line, less specific) but "Sapphire"
+    // on a `bowman-chrome` row IS (a genuine fork).
+    const cpaTitleNamesSiblingProduct = titleNamesSiblingOfSetKey(row?.title, setKey);
+
     const titleInsertPrefix = K.insertPrefixNamedInTitle(row?.title);
-    if (!titleInsertPrefix) return none;
+    if (!titleInsertPrefix) return { ...none, cpaTitleNamesSiblingProduct };
 
     const allCandidates = await checklistCpaCandidatesOnce(year, setKey, sport);
     const prefixUpper = String(titleInsertPrefix).toUpperCase();
@@ -2393,17 +2413,38 @@ async function main() {
     const title = String(row?.title ?? "");
     const matches = cpaCandidates.filter((c) => c.playerName && K.titleNamesCandidatePlayer(title, c.playerName));
     let cpaResolvedBacked = false;
-    if (matches.length === 1) {
+    // The backing/slug read is skipped entirely when the sibling guard has
+    // already decided this row refuses -- the same "costs nothing on a row
+    // that cannot qualify anyway" discipline R31 states for its own legs.
+    if (matches.length === 1 && cpaTitleNamesSiblingProduct !== true) {
       const resolved = matches[0];
-      const resolvedSlug = deps.computeHobbyIqCardId({
-        sport, year, setKey, cardNumber: resolved.cardNumber,
-        parallel: resolved.parallel || "Base", isAuto: true, printRun: resolved.printRun ?? null,
-        playerName: resolved.playerName, gradeCompany: stored?.gradeCompany ?? null, gradeValue: stored?.gradeValue ?? null,
+      // REVIEW FINDING #2 (2026-09-28): route the resolved identity through
+      // the SAME `guardSlugInputs` gate `deriveIdentity` itself calls
+      // (rematch-derive-identity.cjs:118) before EVER building a slug from
+      // it. `computeHobbyIqCardId`'s own internal throws are narrower than
+      // the guard -- they do not re-validate `playerName`/cardNumber shape
+      // the way `guardSlugInputs` does -- and this rung exists precisely
+      // because the guard already refused the row ONCE (cardnumber-unparsed);
+      // the resolved identity carries a materially different cardNumber than
+      // what was refused and deserves the same seam every other writer
+      // trusts, not a narrower one. A guard failure here is a REFUSAL (no
+      // backing lookup, no slug, `cpaResolvedBacked` stays false), never a
+      // thrown exception the caller has to catch.
+      const guard = deps.guardSlugInputs({
+        sport, year, normalizedSetKey: setKey, cardNumber: resolved.cardNumber,
+        playerName: resolved.playerName,
       });
-      cpaResolvedBacked = await checklistBacked(resolvedSlug);
+      if (guard.ok) {
+        const resolvedSlug = deps.computeHobbyIqCardId({
+          sport, year, setKey, cardNumber: resolved.cardNumber,
+          parallel: resolved.parallel || "Base", isAuto: true, printRun: resolved.printRun ?? null,
+          playerName: resolved.playerName, gradeCompany: stored?.gradeCompany ?? null, gradeValue: stored?.gradeValue ?? null,
+        });
+        cpaResolvedBacked = await checklistBacked(resolvedSlug);
+      }
     }
 
-    return { titleInsertPrefix, cpaCandidates, cpaTitleParallel, cpaResolvedBacked, titleSerial };
+    return { titleInsertPrefix, cpaCandidates, cpaTitleParallel, cpaResolvedBacked, titleSerial, cpaTitleNamesSiblingProduct };
   };
 
   /**
@@ -3201,14 +3242,36 @@ async function main() {
       // queue-time `cand.slug` -- exactly the same "re-read and re-classify
       // decides every row" discipline every other kind already gets from
       // `der` being recomputed above on `fresh`.
-      const cpaResolved = cand.kind === K.CPA_NAME_RESOLVE ? res.derived : null;
-      const cpaResolvedSlug = cpaResolved ? deps.computeHobbyIqCardId({
-        sport: cpaResolved.sport, year: cpaResolved.cardYear, setKey: cpaResolved.setKey,
-        cardNumber: cpaResolved.cardNumber, parallel: cpaResolved.parallel, isAuto: cpaResolved.isAuto,
-        printRun: cpaResolved.printRun,
-        playerName: res.cpaNameResolveEvidence?.resolvedPlayerName ?? null,
-        gradeCompany: cpaResolved.gradeCompany, gradeValue: cpaResolved.gradeValue,
-      }) : null;
+      //
+      // REVIEW FINDING #2 (2026-09-28): route the resolved identity through
+      // `guardSlugInputs` -- the SAME gate `deriveIdentity` itself calls
+      // before EVER building a slug -- rather than relying solely on
+      // `computeHobbyIqCardId`'s narrower internal throws. A guard failure
+      // here is a REFUSAL, not a thrown exception: `cpaResolvedSlug` stays
+      // null, `target` falls through to nothing this kind can write, and
+      // the row is skipped and counted rather than crashing the worker.
+      let cpaResolved = null, cpaResolvedSlug = null;
+      if (cand.kind === K.CPA_NAME_RESOLVE) {
+        cpaResolved = res.derived;
+        const cpaGuard = cpaResolved ? deps.guardSlugInputs({
+          sport: cpaResolved.sport, year: cpaResolved.cardYear,
+          normalizedSetKey: cpaResolved.setKey, cardNumber: cpaResolved.cardNumber,
+          playerName: res.cpaNameResolveEvidence?.resolvedPlayerName ?? null,
+        }) : { ok: false, reasons: ["no-resolved-identity"] };
+        if (cpaGuard.ok) {
+          cpaResolvedSlug = deps.computeHobbyIqCardId({
+            sport: cpaResolved.sport, year: cpaResolved.cardYear, setKey: cpaResolved.setKey,
+            cardNumber: cpaResolved.cardNumber, parallel: cpaResolved.parallel, isAuto: cpaResolved.isAuto,
+            printRun: cpaResolved.printRun,
+            playerName: res.cpaNameResolveEvidence?.resolvedPlayerName ?? null,
+            gradeCompany: cpaResolved.gradeCompany, gradeValue: cpaResolved.gradeValue,
+          });
+        } else {
+          stats.skipped++; perClass[cand.kind].skipped++;
+          bump(reasons, `apply  refused:cpa-resolved-identity-failed-guard:${cpaGuard.reasons.join(",")}`);
+          continue;
+        }
+      }
       const target = cand.kind === K.BASE_EVICTION ? der.baseSlug
         : cand.kind === K.CPA_NAME_RESOLVE ? cpaResolvedSlug
         : der.slug;
@@ -3814,6 +3877,9 @@ async function main() {
         cpaCandidates: cpaIn.cpaCandidates,
         cpaTitleParallel: cpaIn.cpaTitleParallel,
         cpaResolvedBacked: cpaIn.cpaResolvedBacked,
+        // Review finding #1 (2026-09-28): R31's own sibling-product guard,
+        // reused rather than reimplemented. See cpaInputs's own comment.
+        cpaTitleNamesSiblingProduct: cpaIn.cpaTitleNamesSiblingProduct,
       });
       counts[res.klass]++;
       // CENSUS BACKING COUNT (see CENSUS_BACKING above). notPricedFlagged
@@ -4012,6 +4078,7 @@ async function main() {
           titleSerial: cpaIn.titleSerial,
           titleParallel: cpaIn.cpaTitleParallel,
           resolvedBacked: cpaIn.cpaResolvedBacked,
+          titleNamesSiblingProduct: cpaIn.cpaTitleNamesSiblingProduct,
         });
         scopeTally("r34", r34Ev,
           () => `${row.id}  [${res.klass}/${res.tier}]  ${quoted}  ${row.cardId}  ->  ${r34Ev.evidence.resolvedCardNumber}/${r34Ev.evidence.resolvedPlayerName}`,
@@ -4234,16 +4301,32 @@ async function main() {
             // OWN resolved cardNumber substituted in). The slug is built
             // from that identity the same way `deriveIdentity` builds every
             // other slug, through the one shared seam.
+            //
+            // REVIEW FINDING #2 (2026-09-28): `guardSlugInputs` first, the
+            // SAME gate `deriveIdentity` calls before ever building a slug --
+            // not just `computeHobbyIqCardId`'s narrower internal throws. A
+            // guard failure here means the candidate is never queued at all
+            // (counted as a refusal, same as any other armed-but-refused
+            // row), never a thrown exception.
             const resolvedIdentity = res.derived;
-            const resolvedSlug = deps.computeHobbyIqCardId({
-              sport: resolvedIdentity?.sport, year: resolvedIdentity?.cardYear,
-              setKey: resolvedIdentity?.setKey, cardNumber: resolvedIdentity?.cardNumber,
-              parallel: resolvedIdentity?.parallel, isAuto: resolvedIdentity?.isAuto,
-              printRun: resolvedIdentity?.printRun,
+            const cpaQueueGuard = resolvedIdentity ? deps.guardSlugInputs({
+              sport: resolvedIdentity.sport, year: resolvedIdentity.cardYear,
+              normalizedSetKey: resolvedIdentity.setKey, cardNumber: resolvedIdentity.cardNumber,
               playerName: res.cpaNameResolveEvidence?.resolvedPlayerName ?? null,
-              gradeCompany: resolvedIdentity?.gradeCompany, gradeValue: resolvedIdentity?.gradeValue,
-            });
-            queueCandidate({ kind, row, stored, slug: resolvedSlug, identity: resolvedIdentity });
+            }) : { ok: false, reasons: ["no-resolved-identity"] };
+            if (cpaQueueGuard.ok) {
+              const resolvedSlug = deps.computeHobbyIqCardId({
+                sport: resolvedIdentity.sport, year: resolvedIdentity.cardYear,
+                setKey: resolvedIdentity.setKey, cardNumber: resolvedIdentity.cardNumber,
+                parallel: resolvedIdentity.parallel, isAuto: resolvedIdentity.isAuto,
+                printRun: resolvedIdentity.printRun,
+                playerName: res.cpaNameResolveEvidence?.resolvedPlayerName ?? null,
+                gradeCompany: resolvedIdentity.gradeCompany, gradeValue: resolvedIdentity.gradeValue,
+              });
+              queueCandidate({ kind, row, stored, slug: resolvedSlug, identity: resolvedIdentity });
+            } else {
+              bump(reasons, `apply  refused:cpa-resolved-identity-failed-guard:${cpaQueueGuard.reasons.join(",")}`);
+            }
           } else if (kind === K.IMPROVE) {
             queueCandidate({ kind: K.IMPROVE, row, stored, slug: der.slug, identity: der.identity });
           } else if (kind === K.BASE_EVICTION) {
