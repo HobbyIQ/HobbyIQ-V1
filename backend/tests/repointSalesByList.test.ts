@@ -204,6 +204,61 @@ describe("classifyEntry validates the list schema", () => {
     });
     expect(without.expectedSales).toBeNull();
   });
+
+  // Run 36450985291 (#2499): Number(null) === 0, so the OLD coercion
+  // (`Number.isFinite(Number(e?.expectedSales)) ? Number(e.expectedSales) :
+  // null`) read an explicit `expectedSales: null` -- the list author's way
+  // of saying "skip GATE 5, I have no census count" -- as "expect exactly
+  // zero sales", and every one of the 4 entries in
+  // 2026-09-28-dedupe-keeper-collisions-repoint.json was REFUSED
+  // (expected-sales-mismatch) although the sales were resident (live counts
+  // 1, 8, 2, 10). Fixed: null/undefined always mean "skip"; 0 is enforced
+  // as a genuine zero; a non-numeric value is malformed, never silently 0.
+  describe("expectedSales null means 'skip the gate', not 'expect 0' (run 36450985291)", () => {
+    it("explicit null skips the gate — same as omitting the field entirely", () => {
+      const explicitNull = L.classifyEntry({
+        fromId: "hiq:a:1:b:1:base:no-auto", toId: "hiq:a:1:b:2:base:no-auto",
+        reason: "why", expectedSales: null,
+      });
+      expect(explicitNull.ok).toBe(true);
+      expect(explicitNull.expectedSales).toBeNull();
+    });
+
+    it("0 is a real, enforced expectation — never confused with 'skip'", () => {
+      const zero = L.classifyEntry({
+        fromId: "hiq:a:1:b:1:base:no-auto", toId: "hiq:a:1:b:2:base:no-auto",
+        reason: "why", expectedSales: 0,
+      });
+      expect(zero.ok).toBe(true);
+      expect(zero.expectedSales).toBe(0);
+      expect(zero.expectedSales).not.toBeNull();
+    });
+
+    it("a non-numeric expectedSales is MALFORMED, never silently coerced to 0 or null", () => {
+      const stringVal = L.classifyEntry({
+        fromId: "hiq:a:1:b:1:base:no-auto", toId: "hiq:a:1:b:2:base:no-auto",
+        reason: "why", expectedSales: "abc",
+      });
+      expect(stringVal.ok).toBe(false);
+      expect(stringVal.why).toContain("expectedSales is not a finite number");
+
+      const nanString = L.classifyEntry({
+        fromId: "hiq:a:1:b:1:base:no-auto", toId: "hiq:a:1:b:2:base:no-auto",
+        reason: "why", expectedSales: "NaN",
+      });
+      expect(nanString.ok).toBe(false);
+      expect(nanString.why).toContain("expectedSales is not a finite number");
+    });
+
+    it("MUTATION CHECK: the existing numeric path is unchanged by this fix", () => {
+      const withCount = L.classifyEntry({
+        fromId: "hiq:a:1:b:1:base:no-auto", toId: "hiq:a:1:b:2:base:no-auto",
+        reason: "why", expectedSales: 8,
+      });
+      expect(withCount.ok).toBe(true);
+      expect(withCount.expectedSales).toBe(8);
+    });
+  });
 });
 
 // ── sameProductAddress: the cross-product gate ───────────────────────────
@@ -767,6 +822,57 @@ describe("end-to-end: expectedSales is enforced", () => {
     expect(omitted.out).not.toMatch(/REFUSED \(expected-sales-mismatch\)/);
     expect(omitted.out).toMatch(/REFUSED: expected-sales-mismatch\s+0/);
     expect(omitted.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+  });
+
+  // Run 36450985291 (#2499): explicit `expectedSales: null` in a committed
+  // list must skip GATE 5 exactly like omitting the field -- the old
+  // coercion read Number(null) as 0 and refused every one of these entries
+  // even though the sales were resident. This drives the full lane
+  // end-to-end against a live count that disagrees with "0" (8 real sales),
+  // proving the entry still moves rather than being refused.
+  it("explicit expectedSales:null skips the gate end-to-end, even against a live count far from zero", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why", expectedSales: null }], "expected-null-skips");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = Array.from({ length: 8 }, (_, i) => ({
+      id: `src::${i}`, cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10 + i,
+      soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor",
+    }));
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(expected-sales-mismatch\)/);
+    expect(r.out).toMatch(/REFUSED: expected-sales-mismatch\s+0/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+8/);
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("expectedSales:0 (a REAL zero-expectation, not null) still enforces the gate and refuses a nonzero live count", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why", expectedSales: 0 }], "expected-zero-enforced");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED \(expected-sales-mismatch\)/);
+    expect(r.out).toMatch(/REFUSED: expected-sales-mismatch\s+1/);
+    expect(r.led.salesUpserts.length).toBe(0);
+  });
+
+  it("a malformed (non-numeric) expectedSales is counted as a malformed entry, never silently gated as 0", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "why", expectedSales: "abc" as unknown as number }], "expected-malformed");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{ id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/MALFORMED — expectedSales is not a finite number/);
+    expect(r.out).toMatch(/entries malformed\s+1/);
+    // Never counted as a gate refusal, and never enumerated a sale.
+    expect(r.out).not.toMatch(/REFUSED \(expected-sales-mismatch\)/);
+    expect(r.led.salesUpserts.length).toBe(0);
   });
 });
 

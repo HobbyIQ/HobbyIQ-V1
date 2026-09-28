@@ -149,9 +149,17 @@ describe("the repoint list matches repoint-sales-by-list.cjs's own schema", () =
     }
   });
 
-  it("no entry sets expectedSales (this batch was not census-counted per-sale by the list author)", () => {
+  it("every entry now carries an explicit expectedSales, set to its live sales-at-id count (fix for run 36450985291 / #2499, verified read-only against sold_comps 2026-09-28)", () => {
+    // This batch originally shipped with expectedSales:null on every entry
+    // (no per-sale census at write time). Once the repoint-sales-by-list.cjs
+    // null-coercion bug (Number(null) === 0) was fixed so null genuinely
+    // means "skip GATE 5", the four fromIds here were verified read-only via
+    // drainSalesIdsAtId and their live counts written in explicitly, so the
+    // list states its own expectation rather than staying silent.
+    const expected = [1, 8, 2, 10];
+    expect(repointEntries.map((e) => e.expectedSales)).toEqual(expected);
     for (const e of repointEntries) {
-      expect(e.expectedSales === null || e.expectedSales === undefined).toBe(true);
+      expect(typeof e.expectedSales).toBe("number");
     }
   });
 });
