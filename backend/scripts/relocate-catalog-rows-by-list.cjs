@@ -467,15 +467,83 @@ function classifyEntry(e) {
     // becomes a no-op nobody notices.
     return { ok: false, why: `${action} entry must not name a "to": ${id.slice(0, 60)}` };
   }
-  // A PATCHFIELDS ENTRY NAMES ITS FIELD IN-LINE, NOT IN A NESTED OBJECT --
-  // `parallel` is the only field this shape may touch (CF-A-RESLUG-THAT-
-  // CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT heal, 2026-09-26). Scoped to one
-  // field deliberately: this action exists to heal the ONE gap the reslug fix
-  // closed going forward -- rows already moved with stale parallel text --
-  // never as a general-purpose raw-field escape hatch. Anything else in the
-  // entry besides id/action/reason/evidence/parallel is a typo'd key or a
-  // request to patch a field this shape was never reviewed to touch.
+  // A RETIRE MAY NAME A LIVE TWIN THAT MUST EXIST AND BE CHECKLIST-GRADE AT
+  // THE DELETE CALL (CF-A-RETIRE-REQUIRES-ITS-TWIN, 2026-09-27). PR #2466's
+  // 1,869 empty `:no-auto` rows are each justified by the presence of their
+  // checklist-grade `:auto` twin -- today that justification lives only in
+  // the list author's head and the PR description, never checked by the
+  // lane itself. `requireTwinId` names that twin so the lane can refuse
+  // instead of trusting the list. It is optional and additive: an entry
+  // without it behaves exactly as before this change.
+  //
+  // Validated here, at load time, the same way `to` is validated for a
+  // reslug -- well-formed hiq slug, and never the entry's own id (a
+  // self-referential twin can never be read "at delete time" because the
+  // delete call is what removes it).
+  const requireTwinId = String(e?.requireTwinId ?? "").trim();
+  if (requireTwinId) {
+    if (action !== "retire") {
+      return { ok: false, why: `requireTwinId is only meaningful on a retire entry, got action ${JSON.stringify(action)}: ${id.slice(0, 60)}` };
+    }
+    if (!requireTwinId.startsWith("hiq:")) {
+      return { ok: false, why: `requireTwinId is not a hiq slug: ${requireTwinId.slice(0, 60)}` };
+    }
+    if (requireTwinId === id) {
+      return { ok: false, why: `requireTwinId equals the entry's own id: ${id.slice(0, 60)}` };
+    }
+  }
+  // Classification only, worded to avoid a second copy of the exact "if"
+  // condition guarding the WRITE branch in main()'s loop below -- a
+  // source-string pin in relocateCatalogRowsByList.test.ts locates that
+  // guard by its literal text and slices forward to the RESLUG marker to
+  // prove a retire never reads a destination. A duplicate here, even inside
+  // a comment, would make that indexOf find this spot instead.
+  if ("retire" === action) {
+    return { ok: true, id, action, to, reason, requireTwinId: requireTwinId || null };
+  }
+  // A PATCHFIELDS ENTRY NAMES ITS FIELD IN-LINE, NOT IN A NESTED OBJECT.
+  // Two fields are supported, each its own heal, and an entry touches
+  // exactly one of them -- never a general-purpose raw-field escape hatch:
+  //
+  //   parallel (default, CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-
+  //     RUNG'S-TEXT heal, 2026-09-26): rows a PRIOR reslug already moved
+  //     onto their correct id while leaving stale human-form parallel text.
+  //     Carries its own value (the entry's `parallel`), because the correct
+  //     text cannot be read off the id -- computeHobbyIqCardId is lossy from
+  //     slug back to human form.
+  //
+  //   setKey (CF-A-STORED-SETKEY-MAY-DISAGREE-WITH-ITS-OWN-ID, 2026-09-27
+  //     unsigned-twins census, run 36351266066): rows whose stored `setKey`
+  //     field disagrees with the setKey segment already baked into their own
+  //     id -- a wrong INGEST-WRITTEN field, not a wrong address. Unlike
+  //     `parallel`, no value is given in the entry: the id is the
+  //     authoritative source of the correct setKey (`idSetKey(id)`), because
+  //     that segment is exactly what already-existing catalog matchers keyed
+  //     off elsewhere (catalogMatcher, resolveSetKey) read as truth. An entry
+  //     naming `field: "setKey"` that also carries a `setKey` value is
+  //     refused, not merged — the value would only ever have to equal
+  //     idSetKey(id) to be legal, so a caller supplying one is a sign the
+  //     entry was meant for a different row.
+  //
+  // `field` is optional and defaults to "parallel" so every existing list
+  // (none of which name it) keeps its current meaning unchanged.
   if (action === "patchFields") {
+    const field = e && typeof e === "object" && "field" in e ? String(e.field ?? "").trim() : "parallel";
+    if (field !== "parallel" && field !== "setKey") {
+      return { ok: false, why: `patchFields "field" must be "parallel" or "setKey", got ${JSON.stringify(e?.field ?? null)}: ${id.slice(0, 60)}` };
+    }
+    if (field === "setKey") {
+      const KNOWN_KEYS = new Set(["id", "action", "to", "reason", "evidence", "field"]);
+      const stray = e && typeof e === "object" ? Object.keys(e).filter((k) => !KNOWN_KEYS.has(k)) : [];
+      if (stray.length) {
+        return { ok: false, why: `patchFields (field: "setKey") entry carries unsupported field(s) ${stray.join(", ")} — the correct value is read off the id, never supplied: ${id.slice(0, 60)}` };
+      }
+      const correctSetKey = idSetKey(id);
+      if (!correctSetKey) {
+        return { ok: false, why: `patchFields (field: "setKey") entry's own id has no setKey segment to read: ${id.slice(0, 60)}` };
+      }
+      return { ok: true, id, action, to, reason, field, setKey: correctSetKey };
+    }
     const normalized = normalizedTextOrRefusal(e?.parallel);
     if (!normalized.ok) {
       return {
@@ -486,12 +554,12 @@ function classifyEntry(e) {
       };
     }
     const parallel = normalized.value;
-    const KNOWN_KEYS = new Set(["id", "action", "to", "reason", "evidence", "parallel"]);
+    const KNOWN_KEYS = new Set(["id", "action", "to", "reason", "evidence", "parallel", "field"]);
     const stray = e && typeof e === "object" ? Object.keys(e).filter((k) => !KNOWN_KEYS.has(k)) : [];
     if (stray.length) {
       return { ok: false, why: `patchFields entry carries unsupported field(s) ${stray.join(", ")} — this shape only patches "parallel": ${id.slice(0, 60)}` };
     }
-    return { ok: true, id, action, to, reason, parallel };
+    return { ok: true, id, action, to, reason, field: "parallel", parallel };
   }
   // A VERIFY MUST CITE ITS EVIDENCE, BOTH FIELDS, BEFORE ANY ROW IS EVEN READ.
   // Doctrine: "verified" means checklist-backed or ruled by Drew WITH A
@@ -959,6 +1027,12 @@ async function main() {
   // nor a twin-authority check on the destination it is completing onto.
   // catalogAuthorityOf answers the twin half; the sales half reuses `salesAt`.
   const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+  // CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES (2026-09-14).
+  // `pkOf` is used here only for its None-partition sentinel -- a row with no
+  // `cardId` lives at Cosmos's own None partition key, not at (id, id) -- the
+  // same fallback repoint-sales-by-list.cjs's own `catalogRowAt` already
+  // reads a blind id through (2.53M live rows carry no cardId).
+  const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
   const { marketVerdict } = require(path.join(__dirname, "lib", "market-guard.cjs"));
   // CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT (2026-09-26).
   // Loaded from the built tree, the same way moveCatalogRow itself is -- this
@@ -1028,6 +1102,25 @@ async function main() {
     try { return (await retry(() => cat.item(slug, slug).read())).resource ?? null; }
     catch (err) { if (err?.code === 404 || err?.statusCode === 404) return null; throw err; }
   };
+  // NONE-PARTITION-AWARE, for a BLIND id -- unlike `rowAt` above, this is for
+  // reading a row we do not yet hold (so we cannot ask `pkOf(row)`, which
+  // needs the row's own `cardId` to decide). Tries (id, id) first, exactly
+  // like `rowAt`; on a 404 there, retries once at the SDK's None sentinel
+  // (`pkOf({})`, since a row with no `cardId` lives there, never at a
+  // partition keyed by its own id) before calling the row absent. Mirrors
+  // repoint-sales-by-list.cjs's own `catalogRowAt` exactly, for the same
+  // reason: a bare (id, id) guess 404s on every one of the 2.53M live rows
+  // that carry no `cardId`, which would otherwise misreport a live twin as
+  // absent. THROWS PROPAGATE from both attempts -- an unanswered read must
+  // never be read as "gone", the same rule `salesAt` already enforces.
+  const rowAtNonePkAware = async (slug) => {
+    try { return (await retry(() => cat.item(slug, slug).read())).resource ?? null; }
+    catch (err) {
+      if (err?.code !== 404 && err?.statusCode !== 404) throw err;
+    }
+    try { return (await retry(() => cat.item(slug, pkOf({})).read())).resource ?? null; }
+    catch (err) { if (err?.code === 404 || err?.statusCode === 404) return null; throw err; }
+  };
   // How many sales point at a slug. Printed for a retire so the size of the
   // hand-off to the rematch is visible BEFORE the apply. DUAL check: a bare
   // cross-partition equality query can miss a real row (see lib/sales-at-id
@@ -1084,6 +1177,16 @@ async function main() {
   // -- refused, never deleted. `salesUnplaced` above is what a LICENSED
   // retire hands to the rematch; this is the entry that never got that far.
   let refusedSalesPresent = 0;
+  // A retire naming `requireTwinId` whose twin does not exist at the delete
+  // call. "Present" is answered fresh, per row, by a point-read at gate time
+  // -- never from a batch snapshot taken when the list was built, which could
+  // go stale between the census and the apply.
+  let refusedTwinAbsent = 0;
+  // A retire naming `requireTwinId` whose twin exists but is not
+  // checklist-grade (catalogAuthorityOf(twin.source) !== "checklist"). Present
+  // is not enough: a VENDOR or DERIVED row at the twin's address is not the
+  // checklist-backed home this retire is justified by.
+  let refusedTwinNotChecklistGrade = 0;
   // A SUBSET of refusedOccupied, never an addition to it: the reconciliation
   // identity below counts occupied refusals once, and a superset IS one.
   let refusedNameSuperset = 0;
@@ -1145,7 +1248,7 @@ async function main() {
     considered++;
     const c = classifyEntry(e);
     if (!c.ok) { failed++; console.error(`  MALFORMED — ${c.why}`); continue; }
-    const { id, action, to, reason } = c;
+    const { id, action, to, reason, requireTwinId } = c;
     const evidence = String(e.evidence ?? "").trim();
 
     const row = await rowAt(id);
@@ -1309,6 +1412,44 @@ async function main() {
         console.error("      a retire needs zero sales by BOTH the cross-partition and the partition-scoped read");
         continue;
       }
+      // THE OPTIONAL LIVE TWIN GATE (CF-A-RETIRE-REQUIRES-ITS-TWIN,
+      // 2026-09-27). A list author may name `requireTwinId` to say "delete
+      // this row ONLY if this other row exists and is checklist-grade" --
+      // exactly PR #2466's justification for its 1,869 empty `:no-auto`
+      // rows, now CHECKED instead of merely asserted in the PR description.
+      // Read fresh here, at the delete call, never off a batch snapshot: the
+      // twin could have been retired, reslugged or demoted to a non-checklist
+      // source by an earlier entry in THIS SAME RUN, or by any other lane,
+      // between when the list was built and now. REPORT mode runs this exact
+      // read too, and prints the exact refusal APPLY would -- so a clean
+      // REPORT is evidence the APPLY will pass this gate, not merely a hope.
+      if (requireTwinId) {
+        // NONE-PARTITION-AWARE, and a THROW here is FAILED, never "absent" --
+        // the same rule the sales check above already enforces. An unanswered
+        // read must never be treated as a green light (nor a red one it did
+        // not actually establish) to decide the row's whole justification.
+        let twin;
+        try {
+          twin = await rowAtNonePkAware(requireTwinId);
+        } catch (err) {
+          failed++;
+          console.error(`      FAILED: twin read threw — ${String(err?.message ?? err).slice(0, 80)}`);
+          continue;
+        }
+        if (!twin) {
+          refusedTwinAbsent++;
+          console.error(`  REFUSED (twin-absent)  ${id.slice(0, 70)}`);
+          console.error(`      requireTwinId ${requireTwinId.slice(0, 70)} does not exist -- this retire's justification is gone`);
+          continue;
+        }
+        const twinAuthority = catalogAuthorityOf(twin.source);
+        if (twinAuthority !== "checklist") {
+          refusedTwinNotChecklistGrade++;
+          console.error(`  REFUSED (twin-not-checklist-grade, authority=${twinAuthority})  ${id.slice(0, 70)}`);
+          console.error(`      requireTwinId ${requireTwinId.slice(0, 70)} carries source="${String(twin.source ?? "")}" -- present is not checklist-grade`);
+          continue;
+        }
+      }
       if (!APPLY) { retired++; continue; }
       try {
         const res = await retireCatalogRow(cat, id, row.cardId ?? id, reason, { retry });
@@ -1353,6 +1494,45 @@ async function main() {
     // reproduce under the new text is not this gap -- it needs a reslug, not
     // a field patch, and is refused rather than silently patched into a
     // parallel field that disagrees with its own address.
+    if (action === "patchFields" && c.field === "setKey") {
+      // CF-A-STORED-SETKEY-MAY-DISAGREE-WITH-ITS-OWN-ID (2026-09-27). Unlike
+      // the `parallel` heal below, the correct value is never supplied by the
+      // entry and never round-tripped through computeHobbyIqCardId: the
+      // setKey segment already baked into this row's OWN id (idSetKey(id),
+      // verified equal to `c.setKey` at classify time) IS the correct value,
+      // because that segment is what the address already commits to. There
+      // is no "does this text reproduce the id" question to ask -- the id
+      // is not changing, only a stored field that had drifted from it.
+      console.log(`  PATCH FIELDS  ${id.slice(0, 62)}`);
+      console.log(`      ${String(row.playerName ?? "(no player)")} — ${String(row.setName ?? "")}`.slice(0, 100));
+      console.log(`      reason: ${reason.slice(0, 90)}`);
+      console.log(`      setKey: "${String(row.setKey ?? "")}" -> "${c.setKey}"`);
+      // Belt-and-suspenders: classify already required idSetKey(id) to be
+      // non-empty and equal to c.setKey, but a row is only ever patched
+      // through the id it was actually read at -- re-derive from THIS id,
+      // not from the classified copy, so a future refactor that hands this
+      // branch a different id cannot silently patch the wrong value.
+      const liveCorrectSetKey = idSetKey(id);
+      if (!liveCorrectSetKey || liveCorrectSetKey !== c.setKey) {
+        failed++;
+        console.error(`      FAILED: id's own setKey segment (${JSON.stringify(liveCorrectSetKey)}) no longer matches the classified value — refusing rather than patching a stale target`);
+        continue;
+      }
+      try {
+        const res = await patchCatalogRowFields(
+          cat, id, row.cardId ?? id,
+          { setKey: c.setKey },
+          { retry, dryRun: !APPLY },
+        );
+        if (res?.action === "noop") { alreadyRight++; continue; }
+        patchedFields++;
+      } catch (err) {
+        failed++;
+        console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
+      }
+      continue;
+    }
+
     if (action === "patchFields") {
       console.log(`  PATCH FIELDS  ${id.slice(0, 62)}`);
       console.log(`      ${String(row.playerName ?? "(no player)")} — ${String(row.setName ?? "")}`.slice(0, 100));
@@ -1670,6 +1850,8 @@ async function main() {
   console.log(`  refused — cross-market  ${f(refusedCrossMarket)}   <- a JA row may never land on an EN key, or the reverse`);
   console.log(`  refused — rung text     ${f(refusedRungTextMissing)}   <- the rung moved with no parallel text, or the text does not produce "to"`);
   console.log(`  refused — sales present ${f(refusedSalesPresent)}   <- a retire needs zero sales by BOTH forms of the dual check`);
+  console.log(`  refused — twin absent   ${f(refusedTwinAbsent)}   <- requireTwinId named a row that does not exist at the delete call`);
+  console.log(`  refused — twin not checklist-grade ${f(refusedTwinNotChecklistGrade)}   <- the twin exists but present is not checklist-grade`);
   console.log(`  already gone            ${f(alreadyRight)}`);
   console.log(`  not found               ${f(notFound)}`);
   console.log(`  read-back needed a retry ${f(readBackRetried)}   <- replica lag, delete confirmed landed — NOT failed`);
@@ -1705,21 +1887,27 @@ async function main() {
   const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked + verified + patchedFields;
   const skipped = alreadyRight + notFound + alreadyParked + alreadyVerified;
   const refused = refusedOccupied + refusedCrossMarket + refusedNotPending + refusedRungTextMissing + refusedSalesPresent;
+  // THE TWIN GATE'S TWO REFUSAL NAMES JOIN THE SAME IDENTITY (2026-09-27). A
+  // separate statement rather than folded into the sum above so the older
+  // reconcile line -- pinned by its own exact text in
+  // relocateCatalogRowsByListRungText.test.ts -- stays byte-identical and
+  // this addition cannot be mistaken for editing it.
+  const refusedTotal = refused + refusedTwinAbsent + refusedTwinNotChecklistGrade;
   // A PARTIAL RUN STILL RECONCILES. The identity has to hold over what the
   // loop CONSIDERED, not over the file, or a budget stop reads as 6,695 lost
   // entries. `not reached` carries the remainder explicitly so the two numbers
   // an operator cares about -- what happened, and what is left -- are both on
   // the page rather than one being inferred from the other's absence.
   console.log(`  reconciled: intended ${f(intended)} = written ${f(written)} + skipped ${f(skipped)} `
-    + `+ refused ${f(refused)} + failed ${f(failed)} + not reached ${f(notReached)}`);
-  if (written + skipped + refused + failed + notReached !== intended) {
+    + `+ refused ${f(refusedTotal)} + failed ${f(failed)} + not reached ${f(notReached)}`);
+  if (written + skipped + refusedTotal + failed + notReached !== intended) {
     console.error("  !! RECONCILE MISMATCH — an entry was neither written, skipped, refused, failed nor deferred");
     process.exitCode = 4;
   }
   if (APPLY) {
     reportWrites({
       job: "relocate-catalog-rows-by-list", intended,
-      written, skipped: skipped + notReached, failed: failed + refused,
+      written, skipped: skipped + notReached, failed: failed + refusedTotal,
     });
   }
 

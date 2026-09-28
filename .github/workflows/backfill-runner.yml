@@ -336,6 +336,30 @@ on:
           # get these done FAST." The pilot dispatch is scope=baseball:2025
           # titles=bowmans-best.
           - repoint-sales-isauto-flip
+          # CF-A-SPLIT-ROW-POLLUTES-TWO-POOLS -- reconcile-split-identity.cjs
+          # (tonight's census, 2026-09-27 ~00:00Z, SPLIT-IDENTITY diagnostic;
+          # 73,567 such rows in 2026 baseball slot 5 alone). A sold_comps row
+          # whose cardId and hobbyiqCardId are BOTH hiq: slugs and NAME
+          # DIFFERENT CARDS is read into both cards' pools by the exact pool
+          # reader's OR -- lib/split-identity.cjs's own HIQ_SPLIT class, reused
+          # here rather than reimplemented so the census and this repair
+          # decide identically. Point-reads card_catalog at BOTH ids: exactly
+          # ONE checklist-grade (catalogAuthorityOf === "checklist"; DERIVED
+          # and VENDOR never count) sets BOTH fields to that id (a MOVE when
+          # the winner differs from the row's own cardId, a PATCH IN PLACE
+          # when it is already that partition); BOTH checklist-grade REFUSES
+          # ambiguous-both-checklist (a guess between two attested winners
+          # would be ours, never Drew's); NEITHER REFUSES neither-checklist
+          # (the rematch's job). Graded ids preserve the grade segment
+          # (lib/graded-id.cjs). SCOPE is REQUIRED (`scope`, sport:year cells,
+          # no whole-corpus mode); `titles` (BCP_TITLES/SET_KEYS) OPTIONALLY
+          # narrows to one or more setKeys, same convention as every sibling
+          # repoint lane above. Owner Drew, 2026-09-27 ~00:00Z: "Let's get a
+          # lot of agents going in clean up." APPLY needs Drew's own click;
+          # this PR builds and REPORTs only. The pilot dispatch is
+          # scope=baseball:2026 slot=0 slots=2 (and slot=1 for the sibling
+          # half).
+          - reconcile-split-identity
           # CF-INGEST-KEEPS-STORED-IDENTITY repair (Drew, 2026-09-19, PR #2331
           # follow-up). The R66/R67/R70 ingest-time insert re-key only ever
           # fires for a FRESH sale being written today; a sale that landed in
@@ -775,6 +799,68 @@ on:
           # because no catalog field excludes a row from the MATCH paths; see
           # the script's header for the measurement behind that.
           - relocate-catalog-rows-by-list
+          # CF-THE-LIST-IS-THE-SCOPE, for a single sold_comps re-key (Drew,
+          # 2026-09-27 widget ruling: "Build repoint-sales-by-list lane").
+          # Moves sales from a listed SOURCE hobbyiqCardId to a listed
+          # DESTINATION hobbyiqCardId; retire of the emptied source catalog
+          # row is a SEPARATE follow-up via relocate-catalog-rows-by-list,
+          # never this lane -- one axis, sales only. `scope` carries the
+          # list path and is REQUIRED, same convention as the catalog lane
+          # immediately above: no default, an empty scope is fatal. First
+          # use: USC143 (Adael Amador, 2025 Topps Chrome Update Series
+          # RayWave Refractor spelling drift, PR #2454).
+          - repoint-sales-by-list
+          # CF-THE-LIST-IS-THE-SCOPE, for stray DUPLICATE COPIES of a sale
+          # (Drew, 2026-09-27 ~23:56Z: "Build lane + census; REPORT first").
+          # Deletes a stray physical sold_comps document for a saleId that
+          # already has a checklist-id copy resident, gated per row on
+          # content identity (source/externalId/title/price/soldAt/grade/
+          # currency) with the surviving copy at the checklist id -- never a
+          # relocation (that is repoint-sales-by-list's own job, immediately
+          # above). `scope` carries the list path and is REQUIRED -- this
+          # lane deletes, so it has no default list, same convention as
+          # relocate-catalog-rows-by-list. First use: 681 stray copies from
+          # the 2026-09-27 twins-lane + isauto-twins audits (usc143, fb2025,
+          # bb2026 CSVs).
+          - dedupe-sold-comp-copies-by-list
+          # CF-THE-LIST-IS-THE-SCOPE, for a sale whose cardId is already the
+          # CORRECT checklist partition address but whose hobbyiqCardId is
+          # STALE, still pointing at a retired address (PR #2485 finding,
+          # 2026-09-28: 952+ of 1,779 live sales at the 153 List-2-refused
+          # bowman-chrome:cpa-* rows read cardId=bowman:cpa-* already, plus
+          # two named docs). A PATCH only, never a move/delete: the sale's
+          # partition never changes, `hobbyiqCardIdBefore` (add) then
+          # `hobbyiqCardId` (set) at the SAME (id, cardId) address, mirroring
+          # every hobbyiqCardId-touching repair script's own `<field>Before`
+          # reversible-patch convention. Gated per entry on the LIVE
+          # hobbyiqCardId matching the list's own expectedStaleHobbyiqCardId,
+          # toHobbyiqCardId equaling cardId (aligns identity to the
+          # partition address only, never a general re-key), the cardId's
+          # own card_catalog row being checklist-grade, and namesAgree
+          # against that row's playerName. `scope` carries the list path and
+          # is REQUIRED -- this lane writes, so it has no default list, same
+          # convention as repoint-sales-by-list and dedupe-sold-comp-copies-
+          # by-list. First use: 2026-09-28-cpa-2024-bowman-chrome-stale-
+          # hobbyiqcardid.json.
+          - heal-sold-comp-hobbyiqcardid-by-list
+          # CF-ONE-SALE-ONE-DOCUMENT, the GENERATOR (Drew, 2026-09-28 ~00:50Z:
+          # "Build it; start with hockey 2025 REPORT"). Per sport:year, drains
+          # the in-scope hobbyiqCardId prefix (PASS 1), then re-queries every
+          # id found by its BARE id, cross-partition, in batches of <=50
+          # (PASS 2, the same shape the 2026-09-27 stratified census used) --
+          # PASS 2 is what finds a stray copy PASS 1's own STARTSWITH would
+          # never see (a raw vendor cardId with no hobbyiqCardId prefix in
+          # scope at all, or a stray filed under another sport/year). Keeper
+          # = the one doc that is address-coherent (cardId===hobbyiqCardId)
+          # AND checklist-grade at that address; none or several such docs is
+          # filed under census.needsRuling, NEVER guessed. Produces
+          # dedupe-candidates-<sport>-<year>[-slotN].json in
+          # dedupe-sold-comp-copies-by-list's own list schema -- an artifact
+          # for a REVIEWED list PR, never applied directly. READ ONLY -- has
+          # no write path at all, in any mode; `scope` (sport:year, e.g.
+          # hockey:2025) is REQUIRED, no default. First dispatch:
+          # scope=hockey:2025 (the census's own worst cell, 20.9% dup rate).
+          - census-sold-comp-copies
           # CF-THE-ACQUISITION-QUEUE-MUST-ONLY-CARRY-CELLS-A-SOURCE-CAN-SERVE
           # (2026-09-07). The WRITE half of audit-seed-queue-sport-hygiene,
           # which is report-only by construction and emitted the 2,080-entry
@@ -2383,7 +2469,31 @@ jobs:
           # resolve-disagreeing-sale-twins (2026-09-20): one NDJSON record per
           # twins-disagree pair -- same fixed-path-guarded-on-script
           # convention, no new input.
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'repoint-sales-isauto-flip' && '/tmp/repoint-sales-isauto-flip-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || '' }}
+          # reconcile-split-identity (2026-09-27): one NDJSON record per
+          # in-scope split row (action, reason, fromId/toId) -- same
+          # auditability doctrine as every sibling PLAN_OUT lane above, same
+          # fixed-path-guarded-on-script convention (no new input; the
+          # runner's dispatch form is at 24 of GitHub's 25). Uploaded by the
+          # SAME step that already uploads this lane's backfill.log, below.
+          # repoint-sales-by-list (2026-09-27): one NDJSON record per sale
+          # moved/would-move/refused/failed -- same fixed-path-guarded-on-
+          # script convention, no new input (Drew's widget ruling: "Build
+          # repoint-sales-by-list lane").
+          # dedupe-sold-comp-copies-by-list (2026-09-27): one NDJSON record
+          # per stray copy considered (deleted/would-delete/skipped/refused/
+          # failed) -- same fixed-path-guarded-on-script convention, no new
+          # input (Drew, 2026-09-27 ~23:56Z: "Build lane + census; REPORT
+          # first").
+          # census-sold-comp-copies (2026-09-28): the GENERATOR's own
+          # candidate-list JSON (dedupe-candidates-<sport>-<year>[-slotN].json)
+          # plus its resume cursor -- same fixed-path-guarded-on-script
+          # convention, no new input (Drew, 2026-09-28 ~00:50Z: "Build it;
+          # start with hockey 2025 REPORT").
+          # heal-sold-comp-hobbyiqcardid-by-list (2026-09-28): one NDJSON
+          # record per entry (patched/would-patch/refused/failed) -- same
+          # fixed-path-guarded-on-script convention, no new input (PR #2485
+          # follow-up finding).
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'repoint-sales-isauto-flip' && '/tmp/repoint-sales-isauto-flip-plan' || inputs.script == 'reconcile-split-identity' && '/tmp/reconcile-split-identity-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || inputs.script == 'repoint-sales-by-list' && '/tmp/repoint-sales-by-list-plan' || inputs.script == 'dedupe-sold-comp-copies-by-list' && '/tmp/dedupe-sold-comp-copies-by-list-plan' || inputs.script == 'census-sold-comp-copies' && '/tmp/census-sold-comp-copies-plan' || inputs.script == 'heal-sold-comp-hobbyiqcardid-by-list' && '/tmp/heal-sold-comp-hobbyiqcardid-by-list-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -3988,6 +4098,22 @@ jobs:
         # idempotent by construction (a repointed sale's own auto/no-auto
         # segment no longer matches the current-absent/flip-checklist shape
         # on a re-scan).
+        #
+        # INCIDENT (run 36297136135, 2026-09-27): the OLD preamble here greped
+        # the log's LAST "REPOINTED"/"WOULD REPOINT" banner line, a line the
+        # script only ever prints at the very END of a clean run. A Cosmos 429
+        # that escaped the lane's retry and killed the process mid-scan meant
+        # that line never printed, the shell default `${R:-0}` fired, and the
+        # notice read "repointed=0" on a run that had in fact already written
+        # 3,244 verified moves (proved by read-back afterwards — see the
+        # script's own header). The script now writes its own counters to a
+        # small JSON ledger on every exit path (lib/cosmos-backoff.cjs +
+        # repoint-sales-isauto-flip.cjs's own LEDGER_STATE), so this preamble
+        # reads THAT file instead of the banner text -- honest even when the
+        # log itself is truncated by a kill. Falls back to `repointed=0` only
+        # when the ledger file itself is entirely absent (the process died
+        # before main() ever set LEDGER_STATE.s -- a startup-time crash, not
+        # this fix's incident shape).
         if: ${{ !cancelled() && inputs.script == 'repoint-sales-isauto-flip' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -3996,14 +4122,62 @@ jobs:
           outcome: ${{ steps.backfill.outcome }}
           script: repoint-sales-isauto-flip
           preamble: |
-            R=$(grep -aoE "(REPOINTED|WOULD REPOINT) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            LEDGER="/tmp/repoint-sales-isauto-flip-plan/repoint-sales-isauto-flip-counters.json"
+            if [ -f "$LEDGER" ]; then
+              R=$(node -e 'try{const l=require(process.argv[1]);process.stdout.write(String(l.confirmedWrites??0))}catch{process.stdout.write("0")}' "$LEDGER" 2>/dev/null || echo 0)
+              ABNORMAL=$(node -e 'try{const l=require(process.argv[1]);process.stdout.write(l.abnormalExit?"true":"false")}catch{process.stdout.write("false")}' "$LEDGER" 2>/dev/null || echo false)
+            else
+              R=0
+              ABNORMAL=false
+            fi
             echo "repointed=${R:-0}"
+            echo "abnormal_exit=${ABNORMAL:-false}"
+            if [ "$ABNORMAL" = "true" ]; then
+              echo "::warning::ABNORMAL EXIT after ${R:-0} confirmed writes — see plan ledger ($LEDGER)"
+            fi
           budget-notice: |
             echo "::notice::budget hit (repointed=${R:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
           finished-notice: |
-            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repointed=${R:-0}) — done, no re-dispatch."
+            if [ "$ABNORMAL" = "true" ]; then
+              echo "::notice::ABNORMAL EXIT after ${R:-0} confirmed writes — see plan ledger, slot ${{ inputs.slot }}/${{ inputs.slots }}."
+            else
+              echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (repointed=${R:-0}) — done, no re-dispatch."
+            fi
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-isauto-flip -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+
+      - name: Upload the reconcile-split-identity log
+        if: ${{ always() && inputs.script == 'reconcile-split-identity' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: reconcile-split-identity-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/reconcile-split-identity-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the split-identity reconcile until the scope is clean
+        # Same discipline as the isAuto-flip sibling immediately above: stops
+        # at its own 110-minute budget and PRINTS its summary; idempotent by
+        # construction (a reconciled row's cardId/hobbyiqCardId no longer
+        # disagree on a re-scan, so it no longer classifies as HIQ-SPLIT).
+        if: ${{ !cancelled() && inputs.script == 'reconcile-split-identity' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: reconcile-split-identity
+          preamble: |
+            R=$(grep -aoE "(RECONCILED|WOULD RECONCILE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "reconciled=${R:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (reconciled=${R:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (reconciled=${R:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reconcile-split-identity -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
 
       # This lane's whole point is the stored insert sales the R66/R67/R70
       # ingest-time re-key can never reach (CF-INGEST-KEEPS-STORED-IDENTITY),
@@ -4915,6 +5089,233 @@ jobs:
             echo "::notice::${{ inputs.scope }} finished within budget (considered=${N:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=relocate-catalog-rows-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
+
+      - name: Upload the repoint-sales-by-list plan
+        if: ${{ always() && inputs.script == 'repoint-sales-by-list' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: repoint-sales-by-list-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/repoint-sales-by-list-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the sales-by-list repoint until the list is drained
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, modeled EXACTLY on the
+        # relocate-catalog-rows-by-list block immediately above -- this
+        # lane's own sibling on the sold_comps side (Drew, 2026-09-27 widget
+        # ruling: "Build repoint-sales-by-list lane"). A unit here is one
+        # SALE MOVED rather than one list entry, but the shape is the same:
+        # budget, stop, print the marker, exit; this step continues it.
+        #
+        # THE SCOPE IS RE-DISPATCHED VERBATIM, and it must be: `scope` names
+        # the committed list file, the lane has no default, and a relaunch
+        # that dropped it would be fatal at entry 0 rather than merely
+        # wrong. There is no cursor input and none is wanted -- the
+        # continuation re-reads the same file from the top.
+        #
+        # THAT RE-READ IS SAFE BECAUSE THE LIST IS IDEMPOTENT. A move whose
+        # source has already been repointed reads back as zero sales at
+        # fromId and is refused (zero-sales), never re-moved and never
+        # counted as written. So a continuation pays one cheap dual-check
+        # per finished entry and writes only the remainder.
+        if: ${{ !cancelled() && inputs.script == 'repoint-sales-by-list' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: repoint-sales-by-list
+          preamble: |
+            N=$(grep -aoE "^  entries considered +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "entries_considered=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (considered=${N:-0}) — re-dispatching ${{ inputs.scope }} to continue"
+          finished-notice: |
+            echo "::notice::${{ inputs.scope }} finished within budget (considered=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
+
+      - name: Upload the dedupe-sold-comp-copies-by-list plan
+        if: ${{ always() && inputs.script == 'dedupe-sold-comp-copies-by-list' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dedupe-sold-comp-copies-by-list-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/dedupe-sold-comp-copies-by-list-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the sold-comp-copies dedupe until the list is drained
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, modeled EXACTLY on the
+        # repoint-sales-by-list block immediately above -- this lane's own
+        # sibling on the sold_comps side (Drew, 2026-09-27 ~23:56Z: "Build
+        # lane + census; REPORT first"). A unit here is one STRAY COPY
+        # CONSIDERED, but the shape is the same: budget, stop, print the
+        # marker, exit; this step continues it.
+        #
+        # THE SCOPE IS RE-DISPATCHED VERBATIM, and it must be: `scope` names
+        # the committed list file, the lane has no default, and a relaunch
+        # that dropped it would be fatal at entry 0 rather than merely
+        # wrong. There is no cursor input and none is wanted -- the
+        # continuation re-reads the same file from the top.
+        #
+        # THAT RE-READ IS SAFE BECAUSE THE LIST IS IDEMPOTENT. A delete whose
+        # stray has already been removed reads back as no document at
+        # deleteCardId and is SKIPPED (already-gone), never re-deleted and
+        # never counted as written. So a continuation pays one cheap point
+        # read per finished entry and writes only the remainder.
+        if: ${{ !cancelled() && inputs.script == 'dedupe-sold-comp-copies-by-list' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: dedupe-sold-comp-copies-by-list
+          preamble: |
+            N=$(grep -aoE "^  entries considered +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "entries_considered=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (considered=${N:-0}) — re-dispatching ${{ inputs.scope }} to continue"
+          finished-notice: |
+            echo "::notice::${{ inputs.scope }} finished within budget (considered=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=dedupe-sold-comp-copies-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
+
+      - name: Upload the heal-sold-comp-hobbyiqcardid-by-list plan
+        if: ${{ always() && inputs.script == 'heal-sold-comp-hobbyiqcardid-by-list' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: heal-sold-comp-hobbyiqcardid-by-list-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/heal-sold-comp-hobbyiqcardid-by-list-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the hobbyiqCardId heal until the list is drained
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, modeled EXACTLY on the
+        # dedupe-sold-comp-copies-by-list block immediately above -- this
+        # lane's own sibling on the sold_comps side (PR #2485 follow-up
+        # finding, 2026-09-28). A unit here is one ENTRY (one sale patched),
+        # but the shape is the same: budget, stop, print the marker, exit;
+        # this step continues it.
+        #
+        # THE SCOPE IS RE-DISPATCHED VERBATIM, and it must be: `scope` names
+        # the committed list file, the lane has no default, and a relaunch
+        # that dropped it would be fatal at entry 0 rather than merely
+        # wrong. There is no cursor input and none is wanted -- the
+        # continuation re-reads the same file from the top.
+        #
+        # THAT RE-READ IS SAFE BECAUSE THE LIST IS IDEMPOTENT. A patch whose
+        # sale's hobbyiqCardId already reads the healed value fails GATE (c)
+        # (stale-mismatch) on the re-read, never re-patched and never
+        # counted as written twice.
+        if: ${{ !cancelled() && inputs.script == 'heal-sold-comp-hobbyiqcardid-by-list' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: heal-sold-comp-hobbyiqcardid-by-list
+          preamble: |
+            N=$(grep -aoE "^  entries considered +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "entries_considered=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (considered=${N:-0}) — re-dispatching ${{ inputs.scope }} to continue"
+          finished-notice: |
+            echo "::notice::${{ inputs.scope }} finished within budget (considered=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=heal-sold-comp-hobbyiqcardid-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
+
+      # GATE for census-sold-comp-copies: the GENERATOR is READ ONLY, in
+      # every mode, with no write path in the script at all (Drew, 2026-09-28
+      # ~00:50Z: "Build it; start with hockey 2025 REPORT"). Same reasoning as
+      # the census-split-identity / census-duplicate-sale-ids gates above: an
+      # apply=true dispatch of a read-only generator is a dispatch whose
+      # author believed a write would happen. Refuse rather than run: the
+      # candidate list it produces becomes a REVIEWED list PR for
+      # dedupe-sold-comp-copies-by-list, which is the audited lane that
+      # actually writes.
+      - name: Refuse an APPLY dispatch of the read-only sold-comp-copies generator
+        if: ${{ inputs.script == 'census-sold-comp-copies' && inputs.apply == true }}
+        shell: bash
+        run: |
+          echo "::error::census-sold-comp-copies is READ ONLY — it has no write path. Re-dispatch with apply=false; review its candidate list into a committed dedupe-sold-comp-copies-by-list scope."
+          exit 1
+
+      - name: Sanitize the scope for the census-sold-comp-copies artifact name
+        # CF-ARTIFACT-NAME-CANNOT-CARRY-THE-SCOPE-COLON (run 36370366955,
+        # 2026-09-28): every legitimate scope for this lane is `sport:year`
+        # (e.g. hockey:2025), and upload-artifact@v4 rejects a name containing
+        # `:` ("The artifact name is not valid... Colon :"). The census
+        # completed cleanly -- banner reconciled, exit 0 -- and still LOST
+        # PLAN_OUT because the upload step after it failed on the name alone.
+        # This runs unconditionally for the lane (not gated on outcome) so the
+        # `always()` upload below still gets a valid name even when the
+        # backfill step itself failed. Only the ARTIFACT NAME is sanitized;
+        # `inputs.scope` itself is forwarded verbatim everywhere else (the
+        # relaunch dispatch, the runtime env), per
+        # CF-A-RELAUNCH-THAT-DROPS-AN-INPUT-INHERITS-A-DEFAULT.
+        #
+        # printf '%s', NOT echo: `echo "hockey:2025"` emits a trailing
+        # newline, and `tr -c 'A-Za-z0-9._-' '-'` maps THAT newline to a
+        # trailing `-` too, so SCOPE_SLUG would come out `hockey-2025-`
+        # (review on #2481). printf '%s' passes the value through with no
+        # trailing newline, so the colon is the only character sanitized.
+        if: ${{ always() && inputs.script == 'census-sold-comp-copies' }}
+        shell: bash
+        run: |
+          echo "SCOPE_SLUG=$(printf '%s' "${{ inputs.scope }}" | tr -c 'A-Za-z0-9._-' '-')" >> "$GITHUB_ENV"
+
+      - name: Upload the census-sold-comp-copies candidate list
+        if: ${{ always() && inputs.script == 'census-sold-comp-copies' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: census-sold-comp-copies-${{ env.SCOPE_SLUG }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/census-sold-comp-copies-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch census-sold-comp-copies until the cell is drained
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, modeled EXACTLY on the
+        # REPORT-only census lanes above (census-split-identity,
+        # census-duplicate-sale-ids): stops at its own budget and prints the
+        # marker; NO CURSOR -- a relaunch re-reads the WHOLE shard from the
+        # top (both passes), same discipline those two lanes already carry,
+        # for the same reason (relaunch-on-marker dispatches a fresh runner
+        # with no artifact download between hops, so a cursor on one
+        # runner's disk could not reach the next anyway). `scope` (sport:
+        # year) and slot/slots are forwarded verbatim.
+        #
+        # `apply` is ALSO forwarded verbatim, matching every marker-gated
+        # relaunch except rematch-sold-comps's own canary-gated exception
+        # (tests/everyWriteJobReconciles.test.ts: "only the rematch deviates
+        # from forward-verbatim"). This lane's own APPLY-refusal gate above
+        # is what actually stops an apply=true dispatch from doing anything
+        # -- the relaunch step must not ALSO decide that by hardcoding
+        # apply=false, which the same pin separately forbids as a
+        # de-escalating relaunch.
+        if: ${{ !cancelled() && inputs.script == 'census-sold-comp-copies' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: census-sold-comp-copies
+          preamble: |
+            N=$(grep -aoE "entries emitted +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "entries_emitted=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (entries_emitted=${N:-0}) — re-dispatching ${{ inputs.scope }} slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::${{ inputs.scope }} slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (entries_emitted=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=census-sold-comp-copies -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
 
       - name: Self-relaunch a newly budgeted write lane until its scope is drained
         # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, for the lanes #1944's ratchet

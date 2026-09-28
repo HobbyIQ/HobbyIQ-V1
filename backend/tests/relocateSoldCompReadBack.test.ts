@@ -5,7 +5,7 @@ import path from "node:path";
 
 const require_ = createRequire(import.meta.url);
 const LIB = path.join(process.cwd(), "scripts/lib");
-const { relocateSoldComp, readBackKeptRow, readBackShowsWrite } = require_(
+const { relocateSoldComp, readBackKeptRow, readBackShowsWrite, dedupeYearPrefix } = require_(
   path.join(LIB, "relocate-sold-comp.cjs"),
 );
 
@@ -377,5 +377,283 @@ describe("CF-BOTH-ADDRESSES-MOVE-TOGETHER (fold-checklist-numbered-twins.cjs's o
     const patchOpsBlock = source.slice(source.indexOf("const ops: PatchOperation[]"), source.indexOf("const ops: PatchOperation[]") + 400);
     expect(patchOpsBlock).toContain('path: "/hobbyiqCardId"');
     expect(patchOpsBlock).not.toContain('path: "/cardId"');
+  });
+});
+
+describe("verifyNoDuplicatesAcrossPartitions -- OPTIONAL cross-partition backstop (run 36353646453)", () => {
+  // Default OFF: no existing caller's fake pool answers this query shape, so
+  // omitting the option must never issue it -- every one of the other 22+
+  // callers is byte-for-byte unaffected.
+  it("OFF by default: pool.items.query is never called for the extra verify", async () => {
+    let queryCalls = 0;
+    const written: Array<Record<string, unknown>> = [];
+    const pool = {
+      item: (id: string, pk: string) => ({
+        read: async () => ({ resource: written.find((w) => w.id === id && w.cardId === pk) ?? null }),
+        delete: async () => {},
+      }),
+      items: {
+        upsert: async (d: Record<string, unknown>) => { written.push({ ...d }); },
+        query: () => { queryCalls++; return { fetchAll: async () => ({ resources: [] }) }; },
+      },
+    };
+    const keep = { id: "s::1", cardId: "hiq:a:1:b:1:base:no-auto", hobbyiqCardId: "hiq:a:1:b:1:base:no-auto" };
+    const res = await relocateSoldComp(pool as never, {
+      keep, drop: [], verifyFields: [], guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(true);
+    // The read-back's OWN query fallback only fires when the point-read
+    // never shows the write -- here the point-read finds `keep` on attempt 0
+    // (upsert pushed it into `written` first), so queryCalls being 0 proves
+    // NEITHER the read-back fallback NOR the new verify ran.
+    expect(queryCalls).toBe(0);
+  });
+
+  it("ON, and the pool is clean: reports ok:true, no extra duplicatesLeft", async () => {
+    const written: Array<Record<string, unknown>> = [];
+    const deleted: string[] = [];
+    const keep = { id: "s::1", cardId: "hiq:a:1:b:1:base:no-auto", hobbyiqCardId: "hiq:a:1:b:1:base:no-auto" };
+    const drop = { id: "s::1", cardId: "hiq:a:1:b:1:base:no-auto:legacy" };
+    const pool = {
+      item: (id: string, pk: string) => ({
+        read: async () => ({ resource: written.find((w) => w.id === id && w.cardId === pk) ?? null }),
+        delete: async () => { deleted.push(`${id}@${pk}`); },
+      }),
+      items: {
+        upsert: async (d: Record<string, unknown>) => { written.push({ ...d }); },
+        query: (spec: { query: string; parameters: Array<{ name: string; value: string }> }) => {
+          expect(spec.query).toContain("SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE c.id = @id");
+          const id = spec.parameters.find((p) => p.name === "@id")!.value;
+          // The clean pool: only the keeper answers to this id, at keep.cardId.
+          const resources = written.filter((w) => w.id === id).map((w) => ({ id: w.id, cardId: w.cardId, hobbyiqCardId: w.hobbyiqCardId }));
+          return { fetchAll: async () => ({ resources }) };
+        },
+      },
+    };
+    const res = await relocateSoldComp(pool as never, {
+      keep, drop: [drop], verifyFields: [], guard: () => ({ verdict: "ok" }),
+      verifyNoDuplicatesAcrossPartitions: true,
+    });
+    expect(res.ok).toBe(true);
+    expect(res.duplicatesLeft).toEqual([]);
+    expect(deleted).toEqual([`${drop.id}@${drop.cardId}`]);
+  });
+
+  it("ON, and a leftover this call was never told about is still resident: reported in duplicatesLeft, ok:false", async () => {
+    const keep = { id: "s::1", cardId: "hiq:a:1:b:1:base:no-auto", hobbyiqCardId: "hiq:a:1:b:1:base:no-auto" };
+    const leftover = { id: "s::1", cardId: "1765857544536x502800993546556500", hobbyiqCardId: "hiq:a:1:b:1:base:no-auto" };
+    const written: Array<Record<string, unknown>> = [];
+    const pool = {
+      item: (id: string, pk: string) => ({
+        read: async () => ({ resource: written.find((w) => w.id === id && w.cardId === pk) ?? null }),
+        delete: async () => {},
+      }),
+      items: {
+        upsert: async (d: Record<string, unknown>) => { written.push({ ...d }); },
+        // The caller's OWN drop list never named `leftover` -- this is the
+        // exact shape an upstream scan bug (the old id-only dedup in
+        // sales-at-id.cjs) produces: a real document the delete loop was
+        // never told to touch.
+        query: () => ({ fetchAll: async () => ({ resources: [{ ...keep }, { ...leftover }] }) }),
+      },
+    };
+    const res = await relocateSoldComp(pool as never, {
+      keep, drop: [], verifyFields: [], guard: () => ({ verdict: "ok" }),
+      verifyNoDuplicatesAcrossPartitions: true,
+    });
+    expect(res.ok).toBe(false);
+    expect(res.duplicatesLeft).toHaveLength(1);
+    expect(res.duplicatesLeft[0]).toMatchObject({
+      id: "s::1",
+      cardId: "1765857544536x502800993546556500",
+      hobbyiqCardId: "hiq:a:1:b:1:base:no-auto",
+      viaCrossPartitionVerify: true,
+    });
+  });
+
+  it("ON, and the verify query itself throws: FAILED, never a clean ok:true", async () => {
+    const keep = { id: "s::1", cardId: "hiq:a:1:b:1:base:no-auto", hobbyiqCardId: "hiq:a:1:b:1:base:no-auto" };
+    const written: Array<Record<string, unknown>> = [];
+    const pool = {
+      item: (id: string, pk: string) => ({
+        read: async () => ({ resource: written.find((w) => w.id === id && w.cardId === pk) ?? null }),
+        delete: async () => {},
+      }),
+      items: {
+        upsert: async (d: Record<string, unknown>) => { written.push({ ...d }); },
+        query: () => ({ fetchAll: async () => { throw new Error("probe: verify query threw"); } }),
+      },
+    };
+    const res = await relocateSoldComp(pool as never, {
+      keep, drop: [], verifyFields: [], guard: () => ({ verdict: "ok" }),
+      verifyNoDuplicatesAcrossPartitions: true,
+    });
+    expect(res.ok).toBe(false);
+    expect(res.stage).toBe("verify");
+    expect(res.error).toMatch(/cross-partition duplicate verify threw/);
+  });
+});
+
+/**
+ * CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, THE MOVE-SIDE HALF (2026-09-28).
+ *
+ * The 2026-09-28 dedupe census (content-differs.csv) found 154/155 refused
+ * "duplicate" pairs differing ONLY in a doubled leading product year --
+ * "2025 2025 Topps Chrome Update Baseball #AC-AB Base" vs the healthy form
+ * -- with the newer (repointed) copy carrying the bug in 71 of them. The
+ * producer (backfill-sold-comps-from-ch.cjs) was fixed 2026-08-24 (commit
+ * 0000f60); this is the healer for rows written before that fix, wired into
+ * every mover that builds a `keep` object (rekey-product-setkey,
+ * repoint-sales-by-list, repoint-sales-isauto-flip).
+ */
+describe("dedupeYearPrefix: idempotent leading-year de-duplication", () => {
+  it("strips a doubled leading year down to one copy", () => {
+    expect(dedupeYearPrefix("2025 2025 Topps Chrome Update Baseball #AC-AB Base", 2025)).toBe(
+      "2025 Topps Chrome Update Baseball #AC-AB Base",
+    );
+  });
+
+  it("leaves an already-singly-prefixed title unchanged", () => {
+    const t = "2025 Topps Chrome Update Baseball #AC-AB Base";
+    expect(dedupeYearPrefix(t, 2025)).toBe(t);
+  });
+
+  it("running it twice is a no-op (idempotent)", () => {
+    const once = dedupeYearPrefix("2025 2025 Topps Chrome Update Baseball #AC-AB Base", 2025);
+    const twice = dedupeYearPrefix(once, 2025);
+    expect(twice).toBe(once);
+  });
+
+  it("leaves a title with no year prefix at all unchanged", () => {
+    const t = "Cy Young 2025 2025 Topps Chrome Platinum Blue Vibrations Refractor /150 #251";
+    // The doubled year here is NOT leading -- "Cy Young" comes first -- so
+    // this is a different (unaddressed) shape, not the leading-prefix bug.
+    expect(dedupeYearPrefix(t, 2025)).toBe(t);
+  });
+
+  it("does nothing without a year to compare against", () => {
+    const t = "2025 2025 Topps Chrome Update Baseball #AC-AB Base";
+    expect(dedupeYearPrefix(t, null)).toBe(t);
+    expect(dedupeYearPrefix(t, undefined)).toBe(t);
+  });
+
+  it("handles a null/empty title without throwing", () => {
+    expect(dedupeYearPrefix(null, 2025)).toBe("");
+    expect(dedupeYearPrefix(undefined, 2025)).toBe("");
+    expect(dedupeYearPrefix("", 2025)).toBe("");
+  });
+
+  it("also collapses a hyphen-joined doubled year", () => {
+    expect(dedupeYearPrefix("1954-1954 Topps Baseball #133 Base", 1954)).toBe(
+      "1954 Topps Baseball #133 Base",
+    );
+  });
+
+  it("also collapses a hyphen BETWEEN the two years (review follow-up, PR #2474)", () => {
+    // The gap fixed by this review round: dedupeYearPrefix's own regex used
+    // to require its TWO year-tokens to be joined by [\s-]+ once, but the
+    // FIRST fix's regex only matched a hyphen after the second year
+    // ("<year> <year>-"), not between the two ("<year>-<year> "). Both gaps
+    // now accept space OR hyphen.
+    expect(dedupeYearPrefix("2025-2025 Topps Chrome Update Baseball #AC-AB Base", 2025)).toBe(
+      "2025 Topps Chrome Update Baseball #AC-AB Base",
+    );
+  });
+});
+
+/**
+ * CENTRALIZATION (review follow-up, 2026-09-28: PR #2474 review). The first
+ * cut wired dedupeYearPrefix into three individual movers' own `keep`
+ * builds -- but relocateSoldComp has ~30 callers that all build `keep` via
+ * `stripSystem(row)` the same way, and the reviewer's count (~15+ found by
+ * grepping `stripSystem(` near a relocateSoldComp call) is why it moved
+ * INSIDE relocateSoldComp itself: every caller inherits the heal for free,
+ * with no per-caller edit and no future mover starting unhealed by default.
+ * These tests pin the heal at the ONE place it now lives, proving the
+ * healed title is what actually gets upserted -- not merely what a helper
+ * function returns in isolation.
+ */
+describe("relocateSoldComp heals a doubled-year title centrally, for every caller", () => {
+  function poolFake(written: Array<Record<string, unknown>>) {
+    return {
+      item: (id: string, pk: string) => ({
+        read: async () => ({ resource: written.find((w) => w.id === id && w.cardId === pk) ?? null }),
+        delete: async () => {},
+      }),
+      items: {
+        upsert: async (d: Record<string, unknown>) => { written.push({ ...d }); },
+        query: () => ({ fetchAll: async () => ({ resources: [] }) }),
+      },
+    };
+  }
+
+  it("heals keep.title before the upsert, with no caller having to call dedupeYearPrefix itself", async () => {
+    const written: Array<Record<string, unknown>> = [];
+    const keep = {
+      id: "ch-daily::1",
+      cardId: "hiq:baseball:2025:topps-chrome-update-series:ac-ab:base:auto",
+      hobbyiqCardId: "hiq:baseball:2025:topps-chrome-update-series:ac-ab:base:auto",
+      cardYear: 2025,
+      title: "2025 2025 Topps Chrome Update Baseball #AC-AB Base",
+    };
+    const res = await relocateSoldComp(poolFake(written) as never, {
+      keep, drop: [], verifyFields: [], guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(true);
+    expect(written[0]!.title).toBe("2025 Topps Chrome Update Baseball #AC-AB Base");
+    // The caller's own `keep` object is mutated in place too (same contract
+    // the guard already has), so a caller reading `keep.title` afterward
+    // (an example/plan-row log line, say) sees the healed form as well.
+    expect(keep.title).toBe("2025 Topps Chrome Update Baseball #AC-AB Base");
+  });
+
+  it("representative mover: rekey-product-setkey's own keep shape (stripSystem + address rewrite) persists the healed title", async () => {
+    // Mirrors rekey-product-setkey.cjs's own keep build: stripSystem(row)
+    // then cardId/hobbyiqCardId/setKey overwritten -- title is carried
+    // through UNTOUCHED by the caller, same as production code, and must
+    // still come out healed because relocateSoldComp heals it centrally.
+    const written: Array<Record<string, unknown>> = [];
+    const row = {
+      id: "tca-ebay::42", cardId: "1765857132073x655930228459218600",
+      cardYear: 2025, title: "2025 2025 Topps Chrome Update Baseball #AC-AB Base",
+    };
+    const keep = { ...row };
+    keep.cardId = "hiq:baseball:2025:topps-chrome-update-series:ac-ab:base:auto";
+    (keep as Record<string, unknown>).hobbyiqCardId = keep.cardId;
+    const res = await relocateSoldComp(poolFake(written) as never, {
+      keep, drop: [{ id: row.id, cardId: row.cardId }], verifyFields: [], guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(true);
+    expect(written[0]!.title).toBe("2025 Topps Chrome Update Baseball #AC-AB Base");
+  });
+
+  it("representative mover: repoint-sales-isauto-flip's own keep shape (spread + address rewrite) persists the healed title", async () => {
+    // Mirrors repoint-sales-isauto-flip.cjs's own
+    // stripSystem({ ...sale, cardId: toId, hobbyiqCardId: toId }) shape.
+    const written: Array<Record<string, unknown>> = [];
+    const sale = {
+      id: "tca-ebay::43", cardId: "hiq:baseball:2025:topps-chrome-update:ac-jv:base:no-auto",
+      cardYear: 2025, title: "2025 2025 Topps Chrome Update Baseball #AC-JV Base",
+    };
+    const toId = "hiq:baseball:2025:topps-chrome-update-series:ac-jv:base:auto";
+    const keep = { ...sale, cardId: toId, hobbyiqCardId: toId };
+    const res = await relocateSoldComp(poolFake(written) as never, {
+      keep, drop: [{ id: sale.id, cardId: sale.cardId }], verifyFields: [], guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(true);
+    expect(written[0]!.title).toBe("2025 Topps Chrome Update Baseball #AC-JV Base");
+  });
+
+  it("a title with no doubled year passes through unchanged -- centralization is a no-op for healthy rows", async () => {
+    const written: Array<Record<string, unknown>> = [];
+    const keep = {
+      id: "tca-ebay::44", cardId: "hiq:baseball:2024:bowman-chrome:cpa-vh:gold-refractor:auto:num-50",
+      cardYear: 2024, title: "2024 Bowman Chrome Victor Hurtado Gold Refractor Auto #CPA-VH",
+    };
+    const res = await relocateSoldComp(poolFake(written) as never, {
+      keep, drop: [], verifyFields: [], guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(true);
+    expect(written[0]!.title).toBe("2024 Bowman Chrome Victor Hurtado Gold Refractor Auto #CPA-VH");
   });
 });

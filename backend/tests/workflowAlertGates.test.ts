@@ -396,10 +396,92 @@ describe("nightly-cleanliness anomaly detection is a budgeted, resumable lane", 
     expect(yml).not.toMatch(/curl[^\n]*--max-time/);
   });
 
-  it("waits for the dispatched run (and any budget-stop relaunches) with a bounded number of attempts, never an unbounded loop", () => {
-    const step = yml.slice(yml.indexOf("- name: Wait for anomaly-force-scan"));
-    expect(step).toMatch(/for i in \$\(seq 1 \d+\); do/);
-    expect(step).toContain("sleep 60");
+  it("waits for the SETTLE OUTCOME (the report doc), not a gh run list sample of the shared dispatcher, and is still bounded", () => {
+    // CF-CLEANLINESS-SETTLE-ON-REPORT-DOC (2026-09-27). backfill-runner.yml
+    // is one shared workflow name for every lane, so "the newest
+    // backfill-runner run" can be any lane's run, not this dispatch's own
+    // chain — on 2026-09-26 it sampled an unrelated hourly lane
+    // (run-ebay-order-poll) mid-sweep and called the real chain "settled"
+    // while it was still running 805 units. The fix polls the doc the chain
+    // itself writes only on completion, which has no such ambiguity.
+    const step = yml.slice(yml.indexOf("- name: Wait for anomaly-force-scan"), yml.indexOf("- name: Read anomaly scan report"));
+    expect(step).toContain("node backend/scripts/wait-for-doc.cjs");
+    expect(step).toContain("WAIT_FOR_DOC_ID=");
+    expect(step).toContain("::anomaly-scan-report");
+    // No more sampling gh run list / gh run view to infer "done".
+    expect(step).not.toMatch(/gh run list/);
+    expect(step).not.toMatch(/gh run view/);
+    // Still bounded, never an unbounded loop — CF-A-KILLED-JOB-CANNOT-
+    // REPORT-PROGRESS — just bounded inside the script now rather than the
+    // workflow's own shell loop.
+    expect(step).toContain("WAIT_FOR_DOC_MAX_MS=");
+    expect(step).toContain("WAIT_FOR_DOC_POLL_MS=");
+  });
+
+  it("wait-for-doc.cjs itself enforces the bound and never spins unboundedly", () => {
+    const src = read("backend", "scripts", "wait-for-doc.cjs");
+    expect(src).toMatch(/maxMs/);
+    expect(src).toMatch(/if \(Date\.now\(\) - t0 \+ pollMs > maxMs\)/);
+    expect(src).toContain("never finished settling");
+  });
+
+  // CF-CLEANLINESS-SETTLE-ON-REPORT-DOC (review, 2026-09-27) — STALE-DOC
+  // HAZARD. The report id is date-only, and workflow_dispatch stays enabled
+  // (no new inputs added for this fix), so a same-day re-dispatch can find
+  // an EARLIER run's doc under the SAME id and read its stale numbers as
+  // fresh. DISPATCHED_AT is stamped in the SAME dispatch step that already
+  // exists (unchanged in shape, just gains this one stamp before it ever
+  // calls `gh workflow run`) and threaded through to both the wait step and
+  // the read step, so neither can be fooled by an older doc under the same
+  // id.
+  it("DISPATCHED_AT is stamped before the dispatch and threaded to both the wait and read steps", () => {
+    const dispatch = yml.slice(
+      yml.indexOf("- name: Dispatch anomaly-force-scan"),
+      yml.indexOf("- name: Wait for anomaly-force-scan"),
+    );
+    expect(dispatch).toMatch(/DISPATCHED_AT=\$\(date -u \+%Y-%m-%dT%H:%M:%SZ\)/);
+    expect(dispatch).toContain('echo "DISPATCHED_AT=$DISPATCHED_AT" >> "$GITHUB_ENV"');
+    // Stamped BEFORE the dispatch call, not after.
+    expect(dispatch.indexOf("DISPATCHED_AT=$(date")).toBeLessThan(dispatch.indexOf("gh workflow run backfill-runner.yml"));
+
+    const waitStep = yml.slice(yml.indexOf("- name: Wait for anomaly-force-scan"), yml.indexOf("- name: Read anomaly scan report"));
+    expect(waitStep).toContain('WAIT_FOR_DOC_NOT_BEFORE="$DISPATCHED_AT"');
+
+    const readStep = yml.slice(yml.indexOf("- name: Read anomaly scan report"));
+    expect(readStep).toContain('ANOMALY_NOT_BEFORE="$DISPATCHED_AT"');
+  });
+
+  it("no new workflow_dispatch input was added to carry the stale-doc guard", () => {
+    expect(yml.slice(0, yml.indexOf("jobs:"))).not.toContain("inputs:");
+  });
+
+  it("check-anomaly-scan-report.cjs rejects a report doc older than ANOMALY_NOT_BEFORE (same hazard, second layer)", () => {
+    const src = read("backend", "scripts", "check-anomaly-scan-report.cjs");
+    expect(src).toContain("ANOMALY_NOT_BEFORE");
+    // Numeric epoch-ms compare via the shared helper, not a raw ISO-string
+    // compare (that compared wrong once one side carries milliseconds).
+    expect(src).toContain('require("./lib/not-before.cjs")');
+    expect(src).toMatch(/if \(!isFreshEnough\(doc\.computedAt, notBeforeMs\)\)/);
+    expect(src).toContain("is stale");
+    // notBefore is REQUIRED — an empty/malformed bound must fail fast (1),
+    // never silently skip the check.
+    expect(src).toContain("requireNotBefore(process.env.ANOMALY_NOT_BEFORE)");
+    expect(src).toContain("ANOMALY_NOT_BEFORE invalid");
+  });
+
+  it("wait-for-doc.cjs and check-anomaly-scan-report.cjs share ONE stale-doc helper, not two copies of the logic", () => {
+    expect(read("backend", "scripts", "lib", "not-before.cjs")).toContain("CLOCK_SKEW_TOLERANCE_MS");
+    const wait = read("backend", "scripts", "wait-for-doc.cjs");
+    expect(wait).toContain('require("./lib/not-before.cjs")');
+    expect(wait).toContain("requireNotBefore(opts.notBefore)");
+    expect(wait).toContain("WAIT_FOR_DOC_NOT_BEFORE invalid");
+  });
+
+  it("train-confidence-weights has a designed timeout margin for the 4h doc wait, not GH's 360m default", () => {
+    // train-confidence-weights is the last job in this workflow file, so the
+    // job body runs to EOF.
+    const job = yml.slice(yml.indexOf("train-confidence-weights:"));
+    expect(job.slice(0, job.indexOf("steps:"))).toMatch(/timeout-minutes:\s*330\b/);
   });
 
   it("reads the result from the anomaly_scan_reports container, via the dedicated checker script", () => {

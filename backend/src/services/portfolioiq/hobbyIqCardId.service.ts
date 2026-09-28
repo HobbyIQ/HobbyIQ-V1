@@ -61,6 +61,7 @@ import { isMakerlessCatchAllSetKey, makerlessCatchAllMessage } from "../catalog/
 // asks the door's table rather than keeping a four-alias copy of it.
 import { normalizeSportStrict } from "./slugGuard.service.js";
 import { isScopedAutoOnlyPrefix } from "./scopedAutoOnlyPrefixes.js";
+import { resolveT206ChecklistPosition } from "./t206ChecklistPositionResolver.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -493,6 +494,27 @@ export function unnumberedCardSegment(
       // never move a card.
       subject = raw;
     }
+  }
+
+  // CF-T206-NAME-TO-POSITION (Drew, "fix all of baseball now", 2026-09-28).
+  // Companion to CF-T206-BACK-BRAND-IS-NOT-THE-PLAYER: that fix cleaned WHAT
+  // lands in the player-<slug> family, but the t206 catalog is keyed by the
+  // checklist's own numeric position (`t206:<1-550>`), never by
+  // player-<slug> -- the two families are closed and disjoint, so no amount
+  // of back-brand cleanup can ever land a sale on a catalog row. Measured
+  // 0/200 on today's code (C:/tmp/t206probe_1430/REPORT.md, 2026-09-27).
+  //
+  // Consult the checklist's own name(+pose)-to-position lookup HERE, after
+  // the back-brand strip and before the player-<slug> fallback, scoped
+  // strictly to t206 (see resolveT206ChecklistPosition's own doc for the
+  // disambiguation rule: single-pose surname match resolves unconditionally;
+  // multi-pose surnames resolve only when the residue states the pose word
+  // that picks exactly one candidate; anything else is UNRESOLVED and falls
+  // through to player-<slug> below, unchanged from today -- absent beats
+  // wrong, never a guess).
+  if (scopeKey === "t206") {
+    const position = resolveT206ChecklistPosition(subject);
+    if (position !== null) return String(position);
   }
 
   const p = slugify(subject);
@@ -3086,7 +3108,15 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // old code let `normalizeCardNumber("nno")` through as the literal `nno`,
   // which is the shared-slug collapse CF-PLAYER-IS-THE-NUMBER was written to
   // end (395 players, one pool, $3.49 to $103,700).
-  if (unnumbered && !cardNumber.startsWith("player-")) {
+  //
+  // CF-T206-NAME-TO-POSITION (2026-09-28) adds a SECOND valid shape here: a
+  // bare digit string, when unnumberedCardSegment resolved the residue to
+  // the t206 checklist's own numeric position (resolveT206ChecklistPosition)
+  // instead of falling back to player-<slug>. That is a real, checklist-
+  // backed identity too -- refusing it here would throw away the exact
+  // resolution this feature exists to produce.
+  const isResolvedChecklistPosition = /^\d+$/.test(cardNumber);
+  if (unnumbered && !cardNumber.startsWith("player-") && !isResolvedChecklistPosition) {
     throw new Error("hobbyiq-cardid: unnumbered card has no player to identify it — identity is UNDERIVABLE");
   }
   // CF-CHROME-PREFIX-OVERRIDE-NARROW (Drew, 2026-08-10). Cards with

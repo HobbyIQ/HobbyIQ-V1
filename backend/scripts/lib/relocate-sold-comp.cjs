@@ -39,6 +39,22 @@
 "use strict";
 const crypto = require("crypto");
 const path = require("path");
+const { withBackoff } = require("./cosmos-backoff.cjs");
+
+/**
+ * DEFAULT_RETRY (2026-09-27, incident: run 36297136135 -- see cosmos-backoff.cjs's
+ * own header for the full trace). Every existing caller of `relocateSoldComp`/
+ * `readBackKeptRow` that does not pass its own `retry` used to get a bare
+ * `(fn) => fn()` passthrough -- so a 429 that outlived the @azure/cosmos SDK's
+ * own internal retry budget threw straight out of the upsert/read-back/delete
+ * chain with NO application-level backoff underneath any of the 22 other
+ * callers grepped in this file's own header, not just the isAuto-flip lane
+ * that surfaced it. The default is now a bounded, logged backoff instead of a
+ * no-op passthrough -- ANY caller that already supplies its own `retry`
+ * (rematch-sold-comps, rekey-product-setkey, ...) is COMPLETELY UNCHANGED,
+ * because a supplied argument always wins over a default parameter; this only
+ * changes the callers that had NOTHING wrapping their Cosmos calls before. */
+const defaultRetry = (fn) => withBackoff(fn, { label: "relocate-sold-comp" });
 
 /**
  * CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). The mover is SANCTIONED --
@@ -80,6 +96,44 @@ function stripSystem(doc) {
 const isMissing = (v) => v === null || v === undefined || v === "";
 const cents = (p) => Math.round(Number(p ?? 0) * 100);
 const day = (iso) => String(iso ?? "").slice(0, 10);
+
+/**
+ * CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, THE MOVE-SIDE HALF (2026-09-28).
+ *
+ * The producer of the doubled-year title ("2025 2025 Topps Chrome Update
+ * Baseball #AC-AB Base") was fixed in backfill-sold-comps-from-ch.cjs on
+ * 2026-08-24 (commit 0000f60) -- new CH rows stop repeating the year. But
+ * every row written BEFORE that fix still carries the doubled title
+ * forever, because nothing that ever MOVES a row (relocateSoldComp's own
+ * callers: rekey-product-setkey, repoint-sales-by-list, repoint-sales-
+ * isauto-flip, ...) re-derives title -- they carry `row.title` through via
+ * `stripSystem(row)` unchanged. Three repair lanes (repair-base-to-title-
+ * finish, repair-refractor-mislabel, repair-setkey-from-title-parallel)
+ * already grew their OWN identical local `dedupeYear()` just to let their
+ * OWN parser read the title correctly -- none of them write the healed
+ * title back, so the stored row stays doubled and the next reader pays
+ * the same tax again. This is that helper, promoted to the shared mover so
+ * a relocate HEALS the title as it moves the row, same as it already
+ * heals cardId/hobbyiqCardId/contentHash.
+ *
+ * IDEMPOTENT BY CONSTRUCTION: only strips a LEADING "<year> <year> ",
+ * accepting a space OR a hyphen in either gap ("<year>-<year> ",
+ * "<year> <year>-", "<year>-<year>-") -- a title that has already been
+ * healed, or was never doubled, is returned byte-for-byte. Running it
+ * twice on its own output is a no-op. `normalizeTitleForVariance` below
+ * delegates to this SAME function rather than re-deriving the pattern, so
+ * the two can never drift the way they briefly did (review follow-up,
+ * PR #2474): the first cut of the variance-side check used its own regex
+ * that only recognised the space-separated form, missing the hyphenated
+ * "2025-2025 " shape this function has always handled.
+ */
+function dedupeYearPrefix(title, year) {
+  const t = String(title ?? "");
+  const y = String(year ?? "").trim();
+  if (!y || !t) return t;
+  const re = new RegExp(`^${y}[\\s-]+${y}[\\s-]+`);
+  return t.replace(re, `${y} `);
+}
 /** Mirror of soldCompsStore's normalizeParallel (contentHash).
  *
  *  D31: the trailing " Refractor" is NO LONGER stripped. The retracted rule
@@ -131,21 +185,81 @@ function contentHashesForLookup(row) {
   return legacy === fresh ? [fresh] : [fresh, legacy];
 }
 
+/**
+ * CF-A-DOUBLED-YEAR-IS-NOT-A-DIFFERENT-SALE (2026-09-28 dedupe census).
+ * `title` compares equal when the only disagreement is a doubled leading
+ * year. Delegates to `dedupeYearPrefix` itself (review follow-up, PR #2474:
+ * a hand-duplicated regex here had drifted from dedupeYearPrefix's own --
+ * it missed the hyphenated "2025-2025 " shape dedupeYearPrefix handles --
+ * which is exactly the kind of split this fix exists to end) rather than
+ * re-deriving the same pattern a second time. `varianceOf` has no
+ * caller-supplied `cardYear` to compare against (it takes bare
+ * docs+fields, not a card identity), so the "year" fed to
+ * `dedupeYearPrefix` is read off the title's OWN leading token -- if that
+ * token is 4 digits and repeats, it is a doubled year by definition,
+ * whatever the token's value. Whitespace is also collapsed/trimmed on top
+ * of the doubling strip, so "  2025   2025  Topps" and "2025 Topps" agree
+ * too.
+ */
+function normalizeTitleForVariance(v) {
+  if (isMissing(v)) return v;
+  const collapsed = String(v).trim().replace(/\s+/g, " ");
+  const m = collapsed.match(/^(\d{4})[\s-]/);
+  return m ? dedupeYearPrefix(collapsed, m[1]) : collapsed;
+}
+
+/**
+ * CF-SOLDAT-FORMAT-IS-NOT-CONTENT (2026-09-28 dedupe census). The census's
+ * one soldAt-only refusal was `2026-07-18T03:36:00+00:00` vs
+ * `2026-07-18T03:36:00.000Z` -- the SAME instant, two ISO renderings, one
+ * with an explicit +00:00 offset and no milliseconds, the other with a Z
+ * suffix and an explicit .000. `Date` parses both to the same epoch
+ * millisecond; comparing the parsed instant (not the string) treats them
+ * as equal without touching any other field's byte-exact comparison. An
+ * unparseable value falls back to the raw string so a garbage soldAt still
+ * REFUSES rather than silently comparing equal to another garbage value
+ * that happens to also fail to parse.
+ */
+function normalizeSoldAtForVariance(v) {
+  if (isMissing(v)) return v;
+  const t = Date.parse(String(v));
+  return Number.isFinite(t) ? `__instant:${t}` : String(v);
+}
+
+const VARIANCE_NORMALIZERS = {
+  title: normalizeTitleForVariance,
+  soldAt: normalizeSoldAtForVariance,
+  date: normalizeSoldAtForVariance,
+};
+
 /** Which of `fields` differ between the documents. Missing (null / undefined /
- *  "") values are equal to each other; strings compare trimmed. */
+ *  "") values are equal to each other; strings compare trimmed.
+ *
+ *  A field named in `VARIANCE_NORMALIZERS` (title, soldAt, date) is ALSO
+ *  passed through its normalizer before comparison -- see those functions'
+ *  own comments for what each one absorbs. Byte-exact comparison is
+ *  unchanged for every other field (source, externalId, price, grade,
+ *  currency, ...). `result.normalizedFields` names which of the CHECKED
+ *  `fields` had a normalizer applied (whether or not it changed the
+ *  outcome), so a caller's banner can say the match was via normalization
+ *  rather than a plain byte-exact agreement. */
 function varianceOf(docs, fields) {
   const differing = [];
   const values = {};
+  const normalizedFields = [];
   for (const f of fields) {
+    const normalize = VARIANCE_NORMALIZERS[f];
+    if (normalize) normalizedFields.push(f);
     const seen = new Map();
     for (const d of docs) {
-      const v = d?.[f];
+      const raw = d?.[f];
+      const v = normalize ? normalize(raw) : raw;
       const k = isMissing(v) ? "" : typeof v === "string" ? v.trim() : JSON.stringify(v);
-      if (!seen.has(k)) seen.set(k, isMissing(v) ? null : v);
+      if (!seen.has(k)) seen.set(k, isMissing(raw) ? null : raw);
     }
     if (seen.size > 1) { differing.push(f); values[f] = [...seen.values()]; }
   }
-  return { differing, values };
+  return { differing, values, normalizedFields };
 }
 
 /** Fill the fields the winner LACKS from the donors, in donor order. Never
@@ -235,7 +349,7 @@ function readBackShowsWrite(doc, keep, verifyFields = []) {
   return verifyFields.every((f) => JSON.stringify(doc[f] ?? null) === JSON.stringify(keep[f] ?? null));
 }
 
-async function readBackKeptRow(pool, keep, retry = (fn) => fn(), wait = sleep, verifyFields = []) {
+async function readBackKeptRow(pool, keep, retry = defaultRetry, wait = sleep, verifyFields = []) {
   const shows = (doc) => readBackShowsWrite(doc, keep, verifyFields);
   for (let attempt = 0; attempt < READ_BACK_ATTEMPTS; attempt++) {
     let doc = null;
@@ -324,10 +438,55 @@ function is412(e) {
  *                 that still matched; a 412 means it did not match at all)
  *   readBackVia   how the write was confirmed: "point-read", a retry, or the
  *                 (id, cardId) query that defeats replica lag
+ *
+ * CROSS-PARTITION DUPLICATE VERIFY (2026-09-27, incident: run 36353646453,
+ * OPTIONAL, additive, default OFF). Pass `verifyNoDuplicatesAcrossPartitions:
+ * true` to run one extra query after the delete loop: cross-partition,
+ * `SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE c.id = @id`, asking
+ * the pool itself whether any OTHER document still answers to this id. Every
+ * per-drop delete above can only address what it was HANDED in `drop` --
+ * it cannot see a physical duplicate the caller's own scan never told it
+ * about (exactly what happened here: drainSalesIdsAtId's id-only dedup
+ * silently dropped one of two documents sharing an id before this function
+ * was ever called, so its `drop` list never named the leftover, and no
+ * per-drop delete could have reached it). This verify is the backstop for
+ * that upstream class of miss, not a replacement for the drop-list fix
+ * (sales-at-id.cjs's own fix keys on (id, cardId), so the leftover should
+ * never reach `relocateSoldComp` un-named in the first place -- this is
+ * defense in depth for callers that opt in).
+ *
+ * OFF by default because `pool.items.query` is a real Cosmos SDK call this
+ * function did not make before, and the 22+ existing callers' own test
+ * fakes are not shaped to answer it -- opting in is the caller's choice, not
+ * a silent behavior change for everyone who already calls this helper.
+ * When on, a leftover this verify finds is appended to `duplicatesLeft`
+ * (each carrying its own `cardId`/`hobbyiqCardId` and
+ * `viaCrossPartitionVerify: true`, disjoint from a per-drop delete failure);
+ * a THROW from the verify query itself is reported as `ok: false, stage:
+ * "verify"` -- never silently read as "found nothing, therefore clean" --
+ * mirroring how a thrown read-back is already handled above.
  */
-async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verifyFields = [], dryRun = false, wait = sleep, guard = undefined }) {
+async function relocateSoldComp(pool, { keep, drop, retry = defaultRetry, verifyFields = [], dryRun = false, wait = sleep, guard = undefined, verifyNoDuplicatesAcrossPartitions = false }) {
   const drops = (drop ?? []).filter((d) => d && d.id && d.cardId && !sameRef(d, keep));
   if (!keep || !keep.id || !keep.cardId) throw new Error("relocateSoldComp: keep needs id and cardId");
+
+  // CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, THE MOVE-SIDE HALF, CENTRALIZED
+  // (review follow-up, 2026-09-28: PR #2474 review). This was first wired
+  // into three individual movers' own `keep` builds (rekey-product-setkey,
+  // repoint-sales-by-list, repoint-sales-isauto-flip) -- but relocateSoldComp
+  // has ~30 callers that all build `keep` the same way
+  // (`stripSystem(row)`/`stripSystem({ ...sale, cardId, hobbyiqCardId })`),
+  // and wiring this per-caller means 27 more edits and every future mover
+  // starting unhealed by default. Healing it ONCE here, before the guard
+  // and the upsert, means every caller inherits it for free -- the same
+  // reasoning that already puts contentHash-follows-the-address logic in
+  // callers rather than here is the wrong model for a fix whose whole point
+  // is "never forget this on the next mover." Mutates `keep` in place, same
+  // as the guard below already does; no caller passes `title` in
+  // `verifyFields`, so this cannot desync a verify against an unhealed copy
+  // the caller kept elsewhere. A no-op when `keep.title` is empty or the
+  // title carries no doubled year (dedupeYearPrefix is idempotent).
+  if (keep.title) keep.title = dedupeYearPrefix(keep.title, keep.cardYear);
 
   // ── THE ADDRESS THE ROW IS MOVING TO ─────────────────────────────────────
   // Judged BEFORE the dry-run return, so a dry run reports the same refusal an
@@ -411,6 +570,15 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
     const options = d.ifMatchEtag
       ? { accessCondition: { type: "IfMatch", condition: d.ifMatchEtag } }
       : undefined;
+    // The delete is addressed at THIS drop's OWN (id, cardId) -- whatever
+    // partition key the CALLER attached to it. relocateSoldComp never
+    // second-guesses that address; a caller that hands it the wrong pk for
+    // a drop (the #2454 incident: repoint-sales-by-list.cjs handed a `drop`
+    // whose cardId was never the doc's own, because the SCAN upstream
+    // (drainSalesIdsAtId) had already lost the row -- see sales-at-id.cjs's
+    // own fix) leaves the real document untouched and this delete 404s or
+    // hits an unrelated row. The cross-partition verify below is what
+    // catches that regardless of which layer mis-addressed it.
     try {
       await retry(() => pool.item(d.id, d.cardId).delete(options));
       deleted.push(d);
@@ -420,7 +588,65 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
       else duplicatesLeft.push({ ...d, error: String(e?.message ?? e) });
     }
   }
+
+  // ── CROSS-PARTITION VERIFY (2026-09-27, incident: run 36353646453). ──────
+  //
+  // Every delete above can report success (`deleted`) or an expected miss
+  // (`alreadyGone`) while a THIRD physical document -- one this call was
+  // never TOLD about, because whatever scanned for drops upstream missed it
+  // -- still sits in the pool under this same `id`. A per-drop delete can
+  // only ever address what it was handed; it cannot see what it wasn't.
+  //
+  // So after the drop loop, ask the pool itself, cross-partition, by `id`
+  // alone: how many documents answer to this id, and where do they sit? A
+  // clean move leaves EXACTLY ONE -- the keeper, at `keep.cardId`. Anything
+  // else (zero, or more than one, or one sitting at the wrong address) is a
+  // real duplicate/loss this call did not fully resolve, reported here with
+  // each leftover's own cardId/hobbyiqCardId so an operator can address it
+  // directly rather than re-deriving it from a census.
+  //
+  // This is a SEPARATE query from `duplicatesLeft` above (which reports a
+  // drop THIS call attempted and failed to delete) -- a leftover found only
+  // here was never attempted at all. Both lists feed the same `ok` verdict;
+  // neither is folded into the other, so an operator reading `duplicatesLeft`
+  // sees which leftovers were attempted-and-failed vs found-only-by-verify
+  // (the latter carry `viaCrossPartitionVerify: true`).
+  //
+  // OFF unless the caller opts in (see this function's own doc comment) --
+  // every one of the other 22+ callers, and their own test fakes, get
+  // byte-for-byte the same behavior as before this option existed.
+  if (verifyNoDuplicatesAcrossPartitions) {
+    let crossPartitionExtras = [];
+    try {
+      const res = await retry(() => pool.items.query({
+        query: "SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE c.id = @id",
+        parameters: [{ name: "@id", value: keep.id }],
+      }).fetchAll());
+      const resources = res?.resources ?? [];
+      crossPartitionExtras = resources.filter((r) => r && r.cardId !== keep.cardId);
+    } catch (e) {
+      // A THROWN verify query is reported the same way a thrown read-back is
+      // (CF-A-THROWN-VERIFY-IS-FAILED-NOT-CLEAN): we do not know the true
+      // state of the pool, so this is never silently treated as "verify
+      // found nothing, therefore clean".
+      return {
+        ok: false, stage: "verify",
+        error: `cross-partition duplicate verify threw: ${String(e?.message ?? e)}`,
+        existedBefore, deleted, alreadyGone, duplicatesLeft, staleSincePlan, readBackVia,
+      };
+    }
+    for (const extra of crossPartitionExtras) {
+      duplicatesLeft.push({
+        id: extra.id,
+        cardId: extra.cardId ?? null,
+        hobbyiqCardId: extra.hobbyiqCardId ?? null,
+        error: "cross-partition verify found a leftover document at this id that this call was never told to delete",
+        viaCrossPartitionVerify: true,
+      });
+    }
+  }
+
   return { ok: duplicatesLeft.length === 0 && staleSincePlan.length === 0, stage: "done", existedBefore, deleted, alreadyGone, duplicatesLeft, staleSincePlan, readBackVia };
 }
 
-module.exports = { relocateSoldComp, loadGuard, readBackKeptRow, readBackShowsWrite, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef, is412 };
+module.exports = { relocateSoldComp, loadGuard, readBackKeptRow, readBackShowsWrite, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef, is412, dedupeYearPrefix };

@@ -1146,6 +1146,11 @@ async function main() {
       keep.rekeyedSetKeyWas = parts[3];
       keep.rekeyedAt = new Date().toISOString();
       keep.rekeyedReason = REASON;
+      // CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, the move-side half: relocateSoldComp
+      // itself heals a pre-2026-08-24 (commit 0000f60) doubled-year title
+      // before it upserts `keep` (lib/relocate-sold-comp.cjs, review follow-up
+      // to PR #2474: centralized there instead of per-caller so every mover
+      // inherits it, not just this one).
       // THE HASH FOLLOWS THE ADDRESS. cardId is contentHash's first component,
       // so a moved row that kept the old hash would be invisible to the store's
       // partition-scoped pre-write dedup and every re-emit would duplicate it.

@@ -118,6 +118,13 @@ jobs:
   train-confidence-weights:
     runs-on: ubuntu-latest
     needs: auto-quarantine-pools
+    # CF-CLEANLINESS-SETTLE-ON-REPORT-DOC (2026-09-27, review). The doc-poll
+    # wait below is bounded to 4h (WAIT_FOR_DOC_MAX_MS) on its own clock, but
+    # that bound only has teeth if the JOB can't be killed by GitHub's
+    # unconfigured default (360 minutes) with no margin for the steps around
+    # it. 330 gives the 4h wait a designed ceiling with margin either side,
+    # rather than relying on the platform default.
+    timeout-minutes: 330
     steps:
       # The anomaly steps below run backend/scripts/check-anomaly-scan-report
       # .cjs from the checkout. First step so it cannot clobber anything a
@@ -188,6 +195,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          # CF-CLEANLINESS-SETTLE-ON-REPORT-DOC (2026-09-27, review): stamped
+          # BEFORE the dispatch so the wait/read steps below can reject a
+          # report doc older than this run's own dispatch -- the report id
+          # is date-only, so a same-day workflow_dispatch re-run could
+          # otherwise find an EARLIER run's doc under the same id and read
+          # its stale numbers as fresh.
+          DISPATCHED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "DISPATCHED_AT=$DISPATCHED_AT" >> "$GITHUB_ENV"
           gh workflow run backfill-runner.yml \
             --repo "$GITHUB_REPOSITORY" \
             --ref main \
@@ -202,48 +217,82 @@ jobs:
           echo "anomaly-force-scan dispatched → run $RUN_ID"
           echo "ANOMALY_SCAN_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
 
-      # A budget stop re-dispatches a NEW run (relaunch-on-marker), so
-      # waiting on the one run id above is not enough — this polls the
-      # NEWEST backfill-runner run each cycle, which follows the chain as it
-      # relaunches, and stops once the newest run id has been STABLE for one
-      # full poll cycle (unchanged since the previous iteration) AND has
-      # reached a terminal status: a relaunch would have replaced it with a
-      # fresher id within that same 60s window, since relaunch-on-marker
-      # dispatches immediately when the budget marker is present. Bounded
-      # attempts (30 x 60s = 30 minutes) rather than an unbounded loop, per
-      # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS: a chain that is still
-      # relaunching past that is reported as such, not silently awaited
-      # forever, and the checker step below still reads whatever report
-      # (or absence of one) is actually on the pool.
-      - name: Wait for anomaly-force-scan (and any budget-stop relaunches) to settle
-        if: env.ADMIN_API_TOKEN != '' && env.ANOMALY_SCAN_RUN_ID != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set +e
-          LAST_ID="$ANOMALY_SCAN_RUN_ID"
-          for i in $(seq 1 30); do
-            RUN_ID=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow=backfill-runner.yml --limit 1 --json databaseId --jq '.[0].databaseId')
-            STATUS=$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --json status --jq '.status' 2>/dev/null || echo unknown)
-            CONCLUSION=$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --json conclusion --jq '.conclusion' 2>/dev/null || echo "")
-            echo "[$(date -u +%H:%M:%S)] attempt=$i run=$RUN_ID status=$STATUS conclusion=$CONCLUSION"
-            if [ "$STATUS" = "completed" ] && [ "$RUN_ID" = "$LAST_ID" ]; then
-              # The newest run is done AND it is the same run we saw last
-              # cycle — a relaunch would have replaced it with a fresher id
-              # within one 60s window, since relaunch-on-marker dispatches
-              # immediately when the marker is present.
-              echo "settled: run $RUN_ID concluded $CONCLUSION"
-              break
-            fi
-            LAST_ID="$RUN_ID"
-            sleep 60
-          done
-
-      - name: Install backend deps (check-anomaly-scan-report.cjs needs @azure/cosmos)
+      # CF-CLEANLINESS-SETTLE-ON-REPORT-DOC (2026-09-27). This step used to
+      # poll `gh run list --workflow=backfill-runner.yml --limit 1` for 30
+      # cycles, on the theory that a run id STABLE across one 60s window
+      # meant the chain (including any budget-stop relaunches) had settled.
+      # That reasoning had a hole: backfill-runner.yml is a SHARED dispatcher
+      # with one static workflow name used by every lane -- catalog-driven
+      # canonicalization, trust-tier promotion, baseline-pool-snapshot,
+      # auto-quarantine, anomaly-force-scan, and unrelated hourly lanes like
+      # run-ebay-order-poll all show up as "the backfill-runner run". "The
+      # newest one" is whichever lane fired most recently, not necessarily
+      # this dispatch's own chain.
+      #
+      # On 2026-09-26 the loop sampled run-ebay-order-poll (run 36215231471,
+      # @ 03:36Z) — already completed, so it read as "settled" on the very
+      # first cycle — while the actual anomaly-force-scan chain (805 units,
+      # 110-minute budget, relaunched by relaunch-on-marker at 03:51Z) was
+      # still mid-sweep. The next step then read a report doc that could not
+      # exist yet: "no anomaly scan report for 2026-09-26
+      # (id=2026-09-26::anomaly-scan-report) -- the sweep did not finish
+      # tonight." Runs 36213879571 / 36089169537 / 35950221396 show the same
+      # shape; last green was 35682083053 on 09-22, before this race started
+      # firing on a night where an hourly lane's timing happened to overlap.
+      #
+      # FIX: stop sampling gh run list for ANY lane's identity and wait for
+      # the OUTCOME instead. anomaly-force-scan.cjs writes its report doc
+      # (`<scanDate>::anomaly-scan-report`, container anomaly_scan_reports,
+      # pk /id -- see check-anomaly-scan-report.cjs below, which reads the
+      # same id) ONLY once the full sweep completes: a scan-phase budget stop
+      # persists a crawl_state cursor and deliberately writes NO report (a
+      # partial report would compare a different, smaller pool against the
+      # baseline and report drift that never happened -- see that lane's own
+      # header). So the doc's existence is race-free by construction: there
+      # is no shared-dispatcher identity to disambiguate, because nothing but
+      # the finished chain ever writes this id. This is exactly the settle
+      # signal wanted, and it is the same doc the next step already reads.
+      #
+      # backend/scripts/wait-for-doc.cjs polls that doc with a plain point
+      # read every 5 minutes for up to 4 hours (bounded, never unbounded —
+      # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS) and exits 2 naming the
+      # missing doc on timeout. No gh calls at all in this step now, so the
+      # ">= 15s between gh calls" concern doesn't apply here.
+      #
+      # STALE-DOC HAZARD (review, 2026-09-27): the doc id is date-only, and
+      # this workflow keeps workflow_dispatch, so a same-day re-run could
+      # find an EARLIER run's doc under the same id before THIS chain ever
+      # writes its own. WAIT_FOR_DOC_NOT_BEFORE (stamped as DISPATCHED_AT in
+      # the dispatch step above, before that step ever calls `gh workflow
+      # run`) rejects a doc whose own `computedAt` predates this dispatch —
+      # treated exactly like "not present yet" — and check-anomaly-scan-
+      # report.cjs below gets the same bound via ANOMALY_NOT_BEFORE so the
+      # same hazard can't slip through if this step's guard is ever bypassed
+      # (e.g. a manual re-run of just the read step).
+      - name: Install backend deps (wait-for-doc.cjs + check-anomaly-scan-report.cjs need @azure/cosmos)
         if: env.ADMIN_API_TOKEN != ''
         working-directory: backend
         run: npm ci --omit=dev
+
+      - name: Wait for anomaly-force-scan (and any budget-stop relaunches) to settle
+        if: env.ADMIN_API_TOKEN != '' && env.ANOMALY_SCAN_RUN_ID != ''
+        shell: bash
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "::error::COSMOS_CONNECTION_STRING empty from App Service"
+            exit 1
+          fi
+          SCAN_DATE=$(date -u +%Y-%m-%d)
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          WAIT_FOR_DOC_ID="${SCAN_DATE}::anomaly-scan-report" \
+          WAIT_FOR_DOC_NOT_BEFORE="$DISPATCHED_AT" \
+          WAIT_FOR_DOC_MAX_MS=14400000 \
+          WAIT_FOR_DOC_POLL_MS=300000 \
+          node backend/scripts/wait-for-doc.cjs
 
       - name: Read anomaly scan report
         if: env.ADMIN_API_TOKEN != ''
@@ -258,4 +307,5 @@ jobs:
           fi
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           COSMOS_DATABASE=hobbyiq \
+          ANOMALY_NOT_BEFORE="$DISPATCHED_AT" \
           node backend/scripts/check-anomaly-scan-report.cjs

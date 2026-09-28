@@ -84,7 +84,15 @@ describe("class B: a named product is never folded into its flagship", () => {
     ["2021 Topps Stadium Club Chrome Ichiro Refractor #87 Mariners", "stadium-club-chrome", "topps-stadium-club"],
     ["2024 Panini Prizm WNBA Basketball #13 Red", "panini-prizm-wnba", "panini-prizm"],
     ["2025 Bowman Chrome Mega Box Baseball #46 Base", "bowman-chrome-mega-box", "bowman-chrome"],
-    ["2024 Topps Chrome Logofractor Baseball #55 Base", "topps-chrome-logofractor", "topps-chrome"],
+    // "2024 Topps Chrome Logofractor Baseball #55 Base" was pinned here as
+    // class B ("topps-chrome-logofractor", folded to "topps-chrome" by the
+    // census's deriver). Drew's 2026-09-28 ruling reverses that: Logofractor
+    // is a same-numbered NAMED PARALLEL of Topps Chrome, not a standalone
+    // product -- the "ruled key" this row asserted was never actually
+    // registered in productSetKeys.ts. The fold to "topps-chrome" this row
+    // used to call a CENSUS DEFECT is now the CORRECT answer, so it no
+    // longer belongs in class B at all; see toppsChromeEditionIsTheProduct
+    // .test.ts's "MUTATION" case for the pin on the new (correct) behaviour.
     ["2024 Panini Select WNBA Basketball #70 Bronze Checker", "panini-select-wnba", "panini-select"],
     ["2025 Panini Prizm Black Football #10 Blue", "panini-prizm-black", "panini-prizm"],
     ["2025 Topps Holiday #H1 Shohei Ohtani Blue Metallic Glitter Holiday - Raw", "topps-holiday", "topps"],

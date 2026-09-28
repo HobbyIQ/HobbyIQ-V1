@@ -1,0 +1,1439 @@
+{
+  "generatedAt": "2026-09-27T23:56:00Z",
+  "forLane": "dedupe-sold-comp-copies-by-list",
+  "finding": "bb2026-dupes.csv: 222 audited (saleId, docCount>=2) sales, same isauto-twins census shape as fb2025 (docs list per saleId, toId/fromId a logical pair), but with physical docs separated by a SINGLE ';' rather than fb2025's ';;' -- verified directly against both CSVs (bb2026 has zero ';;' occurrences, fb2025 has zero lone-';' occurrences) and handled by the list-builder's own delimiter-tolerant parse. Every toId resolves to a real physical cardId among its own row's docs (needsRuling is empty for this file) and every OTHER physical cardId in the row is a stray -- one entry per stray, so docCount>=3 rows mint more than one entry. 21 saleIds are audited more than once in the CSV and all 21 agree on toId across their repeated rows, so none of them collide.",
+  "census": {
+    "source": "bb2026-dupes.csv",
+    "totalRowsInCsv": 5130,
+    "distinctSaleIds": 5109,
+    "collisionSaleIds": 0,
+    "skippedDocCount0": 25,
+    "skippedDocCount1": 4863,
+    "consideredDup": 221,
+    "entriesEmitted": 234,
+    "needsRulingCount": 0,
+    "needsRuling": [],
+    "byShape": {
+      "docCount-2": 210,
+      "docCount-3": 18,
+      "docCount-4": 6
+    },
+    "byFromSportYearSetKey": {
+      "baseball:2026:topps-chrome": 65,
+      "baseball:2026:topps-finest": 30,
+      "baseball:2026:topps": 74,
+      "baseball:2026:bowman": 53,
+      "baseball:2026:panini-immaculate": 4,
+      "baseball:2026:panini-donruss": 1,
+      "baseball:2026:bowman-chrome": 3,
+      "baseball:2026:panini-prizm": 1,
+      "baseball:2026:topps-tribute": 3
+    }
+  },
+  "entries": [
+    {
+      "saleId": "cardhedge::ch-daily::1790300480688x768676431963271000",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-bse:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-bse:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-bse:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-bse:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-bse:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790306753675x433214928565981200",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-kk:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-kk:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-kk:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-kk:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-kk:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::407130488286",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fi-de:gold-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fi-de:base:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fi-de:base:auto:num-50 and the checklist id hiq:baseball:2026:topps-finest:fi-de:gold-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fi-de:gold-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::358772907825",
+      "keepCardId": "hiq:baseball:2026:topps:91asr-i:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:player-ichiro-suzuki-relic-game:base:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:player-ichiro-suzuki-relic-game:base:auto:num-50 and the checklist id hiq:baseball:2026:topps:91asr-i:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:91asr-i:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::307111824988",
+      "keepCardId": "hiq:baseball:2026:topps:7:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-series-2:91b2-cb:base:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-series-2:91b2-cb:base:auto:num-99 and the checklist id hiq:baseball:2026:topps:7:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:7:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::307111824988",
+      "keepCardId": "hiq:baseball:2026:topps:7:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:91b2-cb:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:91b2-cb:base:auto and the checklist id hiq:baseball:2026:topps:7:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:7:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287511264979",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:rr-ss:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:rr-ss:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:rr-ss:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:rr-ss:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:rr-ss:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::178391618240",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:rr-ss:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:rr-ss:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:rr-ss:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:rr-ss:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:rr-ss:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::147438529212",
+      "keepCardId": "hiq:baseball:2026:bowman:39:blue-refractor:no-auto:num-150",
+      "deleteCardId": "hiq:baseball:2026:bowman:ak-27:blue-refractor:auto:num-150",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:ak-27:blue-refractor:auto:num-150 and the checklist id hiq:baseball:2026:bowman:39:blue-refractor:no-auto:num-150 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:39:blue-refractor:auto:num-150)"
+    },
+    {
+      "saleId": "tca-ebay::287269092291",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:25:orange-refractor:no-auto:num-25",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:25:orange-refractor:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:25:orange-refractor:auto:num-25 and the checklist id hiq:baseball:2026:topps-chrome:25:orange-refractor:no-auto:num-25 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:25:orange-refractor:auto:num-25)"
+    },
+    {
+      "saleId": "tca-ebay::377411287949",
+      "keepCardId": "hiq:baseball:2026:topps-finest:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:1:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:1:base:auto and the checklist id hiq:baseball:2026:topps-finest:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::198440003534",
+      "keepCardId": "hiq:baseball:2026:bowman:33:green-refractor:no-auto:num-99",
+      "deleteCardId": "hiq:baseball:2026:bowman:33:mojo-refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:33:mojo-refractor:auto:num-99 and the checklist id hiq:baseball:2026:bowman:33:green-refractor:no-auto:num-99 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:33:green-refractor:auto:num-99)"
+    },
+    {
+      "saleId": "tca-ebay::128019313204",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:25:orange-refractor:no-auto:num-25",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:25:orange-refractor:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:25:orange-refractor:auto:num-25 and the checklist id hiq:baseball:2026:topps-chrome:25:orange-refractor:no-auto:num-25 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:25:orange-refractor:auto:num-25)"
+    },
+    {
+      "saleId": "tca-ebay::198495820993",
+      "keepCardId": "hiq:baseball:2026:topps:at1jr-ja:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tier-one:at1jr-ja:base:auto:num-10",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tier-one:at1jr-ja:base:auto:num-10 and the checklist id hiq:baseball:2026:topps:at1jr-ja:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:at1jr-ja:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366599988971",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-be:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-be:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-be:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-be:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-be:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188715005461",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fi-cf:green-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fi-cf:green-refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fi-cf:green-refractor:auto and the checklist id hiq:baseball:2026:topps-finest:fi-cf:green-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fi-cf:green-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::407157076333",
+      "keepCardId": "hiq:baseball:2026:topps:74:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:74:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:74:base:auto and the checklist id hiq:baseball:2026:topps:74:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:74:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::407145733041",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-jma:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-jma:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-jma:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-jma:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-jma:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::336725960099",
+      "keepCardId": "hiq:baseball:2026:panini-immaculate:5:base:auto:num-35",
+      "deleteCardId": "hiq:baseball:2026:panini-immaculate:5:base:no-auto:num-35",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:panini-immaculate:5:base:no-auto:num-35 and the checklist id hiq:baseball:2026:panini-immaculate:5:base:auto:num-35 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:panini-immaculate:5:base:no-auto:num-35)"
+    },
+    {
+      "saleId": "tca-ebay::117361815893",
+      "keepCardId": "hiq:baseball:2026:panini-immaculate:20:base:auto:num-35",
+      "deleteCardId": "hiq:baseball:2026:panini-immaculate:20:base:no-auto:num-35",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:panini-immaculate:20:base:no-auto:num-35 and the checklist id hiq:baseball:2026:panini-immaculate:20:base:auto:num-35 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:panini-immaculate:20:base:no-auto:num-35)"
+    },
+    {
+      "saleId": "tca-ebay::407132449628",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:214:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:214:refractor:auto:num-250",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:214:refractor:auto:num-250 and the checklist id hiq:baseball:2026:topps-chrome:214:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:214:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::178343410953",
+      "keepCardId": "hiq:baseball:2026:bowman:pc-17:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman-chrome:pc-17:refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-chrome:pc-17:refractor:auto:num-50 and the checklist id hiq:baseball:2026:bowman:pc-17:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:pc-17:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168604218623",
+      "keepCardId": "hiq:baseball:2026:topps:tog-21:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:tog-21:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:tog-21:refractor:auto and the checklist id hiq:baseball:2026:topps:tog-21:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:tog-21:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158165941583",
+      "keepCardId": "hiq:baseball:2026:bowman:bp-90:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman-chrome:1st:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-chrome:1st:refractor:auto and the checklist id hiq:baseball:2026:bowman:bp-90:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:bp-90:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1781308543362x626837804557601300::2026-07-17T00:16:00+00:00::5156",
+      "keepCardId": "hiq:baseball:2026:topps:ccar-jv:base:auto",
+      "deleteCardId": "1781308543362x626837804557601300",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both 1781308543362x626837804557601300 and the checklist id hiq:baseball:2026:topps:ccar-jv:base:auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:ccar-jv:base:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::407128621725",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:198:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:198:refractor:auto:num-199",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:198:refractor:auto:num-199 and the checklist id hiq:baseball:2026:topps-chrome:198:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:198:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::398233556355",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fma-kc:red-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fma-kc:base:auto:num-5",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fma-kc:base:auto:num-5 and the checklist id hiq:baseball:2026:topps-finest:fma-kc:red-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fma-kc:red-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158178687828",
+      "keepCardId": "hiq:baseball:2026:topps:tog-21:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:tog-21:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:tog-21:refractor:auto and the checklist id hiq:baseball:2026:topps:tog-21:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:tog-21:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::137561558402",
+      "keepCardId": "hiq:baseball:2026:topps-finest:150:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:150:gold-refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:150:gold-refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps-finest:150:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:150:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::398177930229",
+      "keepCardId": "hiq:baseball:2026:topps:t1cs-cb:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:player-cool-papa-bell:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:player-cool-papa-bell:base:auto:num-1 and the checklist id hiq:baseball:2026:topps:t1cs-cb:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:t1cs-cb:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287517522505",
+      "keepCardId": "hiq:baseball:2026:topps:smlb-59:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:smlb-59:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:smlb-59:refractor:auto and the checklist id hiq:baseball:2026:topps:smlb-59:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:smlb-59:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287517522505",
+      "keepCardId": "hiq:baseball:2026:topps:smlb-59:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-ty:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-ty:base:auto and the checklist id hiq:baseball:2026:topps:smlb-59:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:smlb-59:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1781308543362x626837804557601300::2026-07-17T02:17:00+00:00::4869",
+      "keepCardId": "hiq:baseball:2026:topps:ccar-jv:base:auto",
+      "deleteCardId": "1781308543362x626837804557601300",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both 1781308543362x626837804557601300 and the checklist id hiq:baseball:2026:topps:ccar-jv:base:auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:ccar-jv:base:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::377376409769",
+      "keepCardId": "hiq:baseball:2026:topps:110:base:no-auto",
+      "deleteCardId": "hiq:mma:2026:topps:bav-mc:purple:auto:num-10",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:mma:2026:topps:bav-mc:purple:auto:num-10 and the checklist id hiq:baseball:2026:topps:110:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:110:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377376409769",
+      "keepCardId": "hiq:baseball:2026:topps:110:base:no-auto",
+      "deleteCardId": "hiq:mma:2026:topps:bav-mc:base:auto:num-10",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:mma:2026:topps:bav-mc:base:auto:num-10 and the checklist id hiq:baseball:2026:topps:110:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:110:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::198501941361",
+      "keepCardId": "hiq:baseball:2026:topps-finest:45:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fpa-kr:base:auto:num-5",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fpa-kr:base:auto:num-5 and the checklist id hiq:baseball:2026:topps-finest:45:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:45:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::178349272936",
+      "keepCardId": "hiq:baseball:2026:topps-finest:66:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:66:green-refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:66:green-refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps-finest:66:base:no-auto (docCount=4); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:66:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::178349272936",
+      "keepCardId": "hiq:baseball:2026:topps-finest:66:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:player-jonathan-aranda:green-refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:player-jonathan-aranda:green-refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps-finest:66:base:no-auto (docCount=4); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:66:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::178349272936",
+      "keepCardId": "hiq:baseball:2026:topps-finest:66:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:pf-jonathan-aranda:green-refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:pf-jonathan-aranda:green-refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps-finest:66:base:no-auto (docCount=4); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:66:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::307066206137",
+      "keepCardId": "hiq:baseball:2026:topps:110:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:t1s-ag:base:auto:num-10",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:t1s-ag:base:auto:num-10 and the checklist id hiq:baseball:2026:topps:110:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:110:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1787959444955x214930018120366180",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fi-ad:green-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fi-ad:green-refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fi-ad:green-refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps-finest:fi-ad:green-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fi-ad:green-refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790302336088x960201926938967900",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-ok:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-ok:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-ok:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-ok:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-ok:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790306148685x700351923199640000",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-ck:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-ck:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-ck:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-ck:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-ck:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790306121095x223692474923487870",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-ck:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-ck:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-ck:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-ck:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-ck:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790299767112x861413924579335700",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-cb:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-cb:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-cb:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-cb:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-cb:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1783477703340x587716052210844700::2026-07-18T04:12:00+00:00::1499",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fma-gf:mini-diamond-refractor:auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fma-gf:mini-diamond-refractor:no-auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fma-gf:mini-diamond-refractor:no-auto and the checklist id hiq:baseball:2026:topps-finest:fma-gf:mini-diamond-refractor:auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fma-gf:mini-diamond-refractor:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::366324823325",
+      "keepCardId": "hiq:baseball:2026:bowman:46:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:46:base:auto:num-6",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:46:base:auto:num-6 and the checklist id hiq:baseball:2026:bowman:46:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:46:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267730571204",
+      "keepCardId": "hiq:baseball:2026:panini-immaculate:10:base:auto:num-49",
+      "deleteCardId": "hiq:baseball:2026:panini-immaculate:pf-aaron-judge-ny-collection:base:no-auto:num-49",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:panini-immaculate:pf-aaron-judge-ny-collection:base:no-auto:num-49 and the checklist id hiq:baseball:2026:panini-immaculate:10:base:auto:num-49 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:panini-immaculate:10:base:no-auto:num-49)"
+    },
+    {
+      "saleId": "tca-ebay::366472017872",
+      "keepCardId": "hiq:baseball:2026:bowman:47:blue-border:no-auto:num-150",
+      "deleteCardId": "hiq:baseball:2026:bowman-paper:bpa-sh:blue:auto:num-150",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-paper:bpa-sh:blue:auto:num-150 and the checklist id hiq:baseball:2026:bowman:47:blue-border:no-auto:num-150 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:47:blue-border:auto:num-150)"
+    },
+    {
+      "saleId": "tca-ebay::168416753488",
+      "keepCardId": "hiq:baseball:2026:panini-donruss:15:purple:no-auto",
+      "deleteCardId": "hiq:baseball:2026:panini-donruss:15:base:auto:num-49",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:panini-donruss:15:base:auto:num-49 and the checklist id hiq:baseball:2026:panini-donruss:15:purple:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:panini-donruss:15:purple:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127995231186",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-cm:black-rookie-refractor:no-auto:num-10",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-cm:black-rookie-refractor:auto:num-10",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-cm:black-rookie-refractor:auto:num-10 and the checklist id hiq:baseball:2026:topps-chrome:ra-cm:black-rookie-refractor:no-auto:num-10 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-cm:black-rookie-refractor:auto:num-10)"
+    },
+    {
+      "saleId": "tca-ebay::377376895718",
+      "keepCardId": "hiq:baseball:2026:bowman-chrome:13:speckle-refractor:no-auto:num-299",
+      "deleteCardId": "hiq:baseball:2026:bowman-chrome:cpa-gj:speckle-refractor:auto:num-299",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-chrome:cpa-gj:speckle-refractor:auto:num-299 and the checklist id hiq:baseball:2026:bowman-chrome:13:speckle-refractor:no-auto:num-299 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman-chrome:13:speckle-refractor:auto:num-299)"
+    },
+    {
+      "saleId": "tca-ebay::358609527931",
+      "keepCardId": "hiq:baseball:2026:bowman:12:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:12:base:auto:num-2",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:12:base:auto:num-2 and the checklist id hiq:baseball:2026:bowman:12:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:12:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287355456087",
+      "keepCardId": "hiq:baseball:2026:bowman:22:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:22:base:auto:num-2",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:22:base:auto:num-2 and the checklist id hiq:baseball:2026:bowman:22:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:22:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267649027968",
+      "keepCardId": "hiq:baseball:2026:bowman:12:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:12:base:auto:num-2",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:12:base:auto:num-2 and the checklist id hiq:baseball:2026:bowman:12:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:12:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::236996317969",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fa-jg:gold-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fa-jg:gold-refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fa-jg:gold-refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps-finest:fa-jg:gold-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fa-jg:gold-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::398221489979",
+      "keepCardId": "hiq:baseball:2026:topps:91b2-kmc:base:auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:pf-kevin-mcgonigle:base:no-auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:pf-kevin-mcgonigle:base:no-auto and the checklist id hiq:baseball:2026:topps:91b2-kmc:base:auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:91b2-kmc:base:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::236940783850",
+      "keepCardId": "hiq:baseball:2026:topps:ccs-jw:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tier-one:ccs-jw:base:auto:num-10",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tier-one:ccs-jw:base:auto:num-10 and the checklist id hiq:baseball:2026:topps:ccs-jw:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:ccs-jw:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::327297365649",
+      "keepCardId": "hiq:baseball:2026:topps-finest:126:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:126:base:auto:num-150",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:126:base:auto:num-150 and the checklist id hiq:baseball:2026:topps-finest:126:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:126:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::398223362756",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:75:black-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:player-johnny-damon-th-bjgzh:black-refractor:auto:num-10",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:player-johnny-damon-th-bjgzh:black-refractor:auto:num-10 and the checklist id hiq:baseball:2026:topps-chrome:75:black-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:75:black-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188596324526",
+      "keepCardId": "hiq:baseball:2026:topps:t1rca-kt:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:player-tier-one-kyle-teel:base:auto:num-49",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:player-tier-one-kyle-teel:base:auto:num-49 and the checklist id hiq:baseball:2026:topps:t1rca-kt:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:t1rca-kt:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::198504766466",
+      "keepCardId": "hiq:baseball:2026:bowman:28:base:no-auto",
+      "deleteCardId": "hiq:hockey:2026:bowman:28:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:hockey:2026:bowman:28:base:auto and the checklist id hiq:baseball:2026:bowman:28:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:28:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::178302648886",
+      "keepCardId": "hiq:baseball:2026:bowman:28:base:no-auto",
+      "deleteCardId": "hiq:hockey:2026:bowman:28:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:hockey:2026:bowman:28:base:auto and the checklist id hiq:baseball:2026:bowman:28:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:28:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::298543135277",
+      "keepCardId": "hiq:baseball:2026:panini-prizm:94:base:no-auto",
+      "deleteCardId": "hiq:soccer:2026:panini-prizm:94:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:soccer:2026:panini-prizm:94:base:auto and the checklist id hiq:baseball:2026:panini-prizm:94:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:panini-prizm:94:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278258800023",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fa-jg:green-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fa-jg:green-refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fa-jg:green-refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps-finest:fa-jg:green-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fa-jg:green-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::336741134372",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fpa-og:gold-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fpa-og:gold-refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fpa-og:gold-refractor:auto and the checklist id hiq:baseball:2026:topps-finest:fpa-og:gold-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fpa-og:gold-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188647052939",
+      "keepCardId": "hiq:baseball:2026:topps:t1xa-jd:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:player-tier-one-xplosions-on:base:auto:num-15",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:player-tier-one-xplosions-on:base:auto:num-15 and the checklist id hiq:baseball:2026:topps:t1xa-jd:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:t1xa-jd:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168604030286",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:cla-fm:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:cla-fm:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:cla-fm:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:cla-fm:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:cla-fm:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278263900763",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:7:orange-refractor:no-auto:num-25",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:7:orange-refractor:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:7:orange-refractor:auto:num-25 and the checklist id hiq:baseball:2026:topps-chrome:7:orange-refractor:no-auto:num-25 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:7:orange-refractor:auto:num-25)"
+    },
+    {
+      "saleId": "tca-ebay::158169294038",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:137:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:fa-cad:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:fa-cad:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:137:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:137:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158174653747",
+      "keepCardId": "hiq:baseball:2026:topps:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:1:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:1:base:auto and the checklist id hiq:baseball:2026:topps:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287519646472",
+      "keepCardId": "hiq:baseball:2026:topps:113:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:bsa-ic:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:bsa-ic:base:auto and the checklist id hiq:baseball:2026:topps:113:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:113:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800430204957",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-be:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-be:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-be:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-be:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-be:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::EBAY-v1|407152500039|0",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-oka:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-oka:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-oka:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-oka:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-oka:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::EBAY-v1|278303038827|0",
+      "keepCardId": "hiq:baseball:2026:topps:372:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:372:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:372:base:auto and the checklist id hiq:baseball:2026:topps:372:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:372:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158171703457",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:155:black-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:rc:refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:rc:refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps-chrome:155:black-refractor:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:155:black-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158171703457",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:155:black-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:155:refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:155:refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps-chrome:155:black-refractor:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:155:black-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::398264591464",
+      "keepCardId": "hiq:baseball:2026:topps-tribute:13:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tribute:13:gold-refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tribute:13:gold-refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps-tribute:13:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-tribute:13:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158139284623",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:75:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:pf-johnny-bench-th-autographs:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:pf-johnny-bench-th-autographs:refractor:auto and the checklist id hiq:baseball:2026:topps-chrome:75:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:75:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377420069941",
+      "keepCardId": "hiq:baseball:2026:topps:ppr-jb:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:ppr-jb:green-refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:ppr-jb:green-refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps:ppr-jb:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:ppr-jb:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::128009120812",
+      "keepCardId": "hiq:baseball:2026:topps-finest:16:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:16:green-refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:16:green-refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps-finest:16:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:16:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::227484419312",
+      "keepCardId": "hiq:baseball:2026:topps:154:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:154:green-refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:154:green-refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps:154:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:154:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800476911903",
+      "keepCardId": "hiq:baseball:2026:topps-tribute:12:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tribute:12:gold-refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tribute:12:gold-refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps-tribute:12:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-tribute:12:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790306004661x357793453963317800",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-as:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-as:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-as:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-as:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-as:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790301764149x185375583222892060",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-yf:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-yf:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-yf:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-yf:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-yf:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790332467447x837210220961544200",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-jpa:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-jpa:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-jpa:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-jpa:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-jpa:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790374846060x338186596273384300",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-pt:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-pt:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-pt:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-pt:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-pt:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::137323278309",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::206295099379",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::206295099379",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:leaf:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:leaf:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257624428553",
+      "keepCardId": "hiq:baseball:2026:topps:169:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:pf-alex-freeland:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:pf-alex-freeland:base:auto and the checklist id hiq:baseball:2026:topps:169:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:169:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188656219756",
+      "keepCardId": "hiq:baseball:2026:panini-immaculate:12:base:no-auto:num-75",
+      "deleteCardId": "hiq:baseball:2026:panini-immaculate:pf-kristian-campbell-debut-signatures:base:auto:num-75",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:panini-immaculate:pf-kristian-campbell-debut-signatures:base:auto:num-75 and the checklist id hiq:baseball:2026:panini-immaculate:12:base:no-auto:num-75 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:panini-immaculate:12:base:auto:num-75)"
+    },
+    {
+      "saleId": "tca-ebay::318588681111",
+      "keepCardId": "hiq:baseball:2026:topps:t91-41:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:91a-hou:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:91a-hou:base:auto and the checklist id hiq:baseball:2026:topps:t91-41:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:t91-41:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127999095195",
+      "keepCardId": "hiq:baseball:2026:topps-finest:33:gold-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:530:gold-refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:530:gold-refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps-finest:33:gold-refractor:no-auto:num-50 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:33:gold-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::398217456574",
+      "keepCardId": "hiq:baseball:2026:topps-finest:38:green-refractor:no-auto:num-99",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:pf-brooks-lee:green-refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:pf-brooks-lee:green-refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps-finest:38:green-refractor:no-auto:num-99 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:38:green-refractor:auto:num-99)"
+    },
+    {
+      "saleId": "tca-ebay::188729815173",
+      "keepCardId": "hiq:baseball:2026:topps-finest:22:blue-refractor:no-auto:num-150",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:cpa-cs:blue-refractor:auto:num-150",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:cpa-cs:blue-refractor:auto:num-150 and the checklist id hiq:baseball:2026:topps-finest:22:blue-refractor:no-auto:num-150 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:22:blue-refractor:auto:num-150)"
+    },
+    {
+      "saleId": "tca-ebay::198378339394",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:leaf:1:base:auto:num-7",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:leaf:1:base:auto:num-7 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127886666599",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127886036083",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158137868680",
+      "keepCardId": "hiq:baseball:2026:topps-finest:rpa-pm:gold-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:1550:base:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:1550:base:auto:num-50 and the checklist id hiq:baseball:2026:topps-finest:rpa-pm:gold-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:rpa-pm:gold-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::236982302790",
+      "keepCardId": "hiq:baseball:2026:topps:t1xa-jd:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tier-one:t1xa-jd:base:auto:num-199",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tier-one:t1xa-jd:base:auto:num-199 and the checklist id hiq:baseball:2026:topps:t1xa-jd:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:t1xa-jd:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127884533307",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366591500809",
+      "keepCardId": "hiq:baseball:2026:topps:ardb-zn:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tier-one:ardb-zn:base:auto:num-49",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tier-one:ardb-zn:base:auto:num-49 and the checklist id hiq:baseball:2026:topps:ardb-zn:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:ardb-zn:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318664434174",
+      "keepCardId": "hiq:baseball:2026:topps:111:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-series-1:111:base:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-series-1:111:base:auto:num-25 and the checklist id hiq:baseball:2026:topps:111:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:111:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::128002326099",
+      "keepCardId": "hiq:baseball:2026:topps:boa-jj:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tier-one:boa-jj:base:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tier-one:boa-jj:base:auto:num-99 and the checklist id hiq:baseball:2026:topps:boa-jj:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:boa-jj:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::147489472493",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:wsca-mbu:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:wsca-mbu:yellow-refractor:auto:num-75",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:wsca-mbu:yellow-refractor:auto:num-75 and the checklist id hiq:baseball:2026:topps-chrome:wsca-mbu:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:wsca-mbu:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188695922162",
+      "keepCardId": "hiq:baseball:2026:topps:351:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:cc-dd:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:cc-dd:base:auto and the checklist id hiq:baseball:2026:topps:351:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:351:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168538687328",
+      "keepCardId": "hiq:baseball:2026:bowman:67:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman-paper:bpa-ze:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-paper:bpa-ze:base:auto and the checklist id hiq:baseball:2026:bowman:67:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:67:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267730403583",
+      "keepCardId": "hiq:baseball:2026:topps:ppa-jw:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:player-jordan-westburg:base:auto:num-199",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:player-jordan-westburg:base:auto:num-199 and the checklist id hiq:baseball:2026:topps:ppa-jw:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:ppa-jw:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287516828347",
+      "keepCardId": "hiq:baseball:2026:topps:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tribute:1:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tribute:1:base:auto and the checklist id hiq:baseball:2026:topps:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287520894146",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:cla-ad:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:cla-ad:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:cla-ad:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:cla-ad:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:cla-ad:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168601324003",
+      "keepCardId": "hiq:baseball:2026:bowman:99:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:99:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:99:base:auto and the checklist id hiq:baseball:2026:bowman:99:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:99:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::327302246697",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:45:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:45:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:45:refractor:auto and the checklist id hiq:baseball:2026:topps-chrome:45:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:45:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800451300558",
+      "keepCardId": "hiq:baseball:2026:topps:ppa-thu:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tier-one:ppa-thu:base:auto:num-49",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tier-one:ppa-thu:base:auto:num-49 and the checklist id hiq:baseball:2026:topps:ppa-thu:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:ppa-thu:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318722381164",
+      "keepCardId": "hiq:baseball:2026:topps:34:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:34:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:34:base:auto and the checklist id hiq:baseball:2026:topps:34:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:34:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::128023320890",
+      "keepCardId": "hiq:baseball:2026:topps:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tribute:1:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tribute:1:base:auto and the checklist id hiq:baseball:2026:topps:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377415446951",
+      "keepCardId": "hiq:baseball:2026:topps:91as-tt:base:auto",
+      "deleteCardId": "hiq:baseball:2026:topps:91as-tt:base:no-auto:bgs-10",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:91as-tt:base:no-auto:bgs-10 and the checklist id hiq:baseball:2026:topps:91as-tt:base:auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:91as-tt:base:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::227407423246",
+      "keepCardId": "hiq:baseball:2026:topps:tss-fm:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tier-one:tss-fm:base:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tier-one:tss-fm:base:auto:num-25 and the checklist id hiq:baseball:2026:topps:tss-fm:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:tss-fm:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::EBAY-v1|117351584124|0",
+      "keepCardId": "hiq:baseball:2026:topps:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tribute:1:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tribute:1:base:auto and the checklist id hiq:baseball:2026:topps:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287509231637",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:178:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:178:refractor:auto:num-299",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:178:refractor:auto:num-299 and the checklist id hiq:baseball:2026:topps-chrome:178:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:178:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::336743052931",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:202:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:202:refractor:auto:num-81",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:202:refractor:auto:num-81 and the checklist id hiq:baseball:2026:topps-chrome:202:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:202:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168581571810",
+      "keepCardId": "hiq:baseball:2026:topps:21:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:21:base:no-auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:21:base:no-auto and the checklist id hiq:baseball:2026:topps:21:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:21:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377382782337",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:51:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:51:refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:51:refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps-chrome:51:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:51:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377382782337",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:51:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:player-larry-walker-ink-stroke:refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:player-larry-walker-ink-stroke:refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps-chrome:51:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:51:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::336686241763",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fa-km:purple-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fa-km:purple-refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fa-km:purple-refractor:auto and the checklist id hiq:baseball:2026:topps-finest:fa-km:purple-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fa-km:purple-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::336720621105",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:74:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:169:base:no-auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:169:base:no-auto and the checklist id hiq:baseball:2026:topps-chrome:74:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:74:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::307072417914",
+      "keepCardId": "hiq:baseball:2026:topps:526:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:526:gold-refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:526:gold-refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps:526:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:526:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127886036020",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:leaf:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:leaf:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::137228992602",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287367897519",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158137447679",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:15:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:pf-jimmy-crooks-print:refractor:auto:num-5",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:pf-jimmy-crooks-print:refractor:auto:num-5 and the checklist id hiq:baseball:2026:topps-chrome:15:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:15:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::298536921227",
+      "keepCardId": "hiq:baseball:2026:topps:21:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:21:base:no-auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:21:base:no-auto and the checklist id hiq:baseball:2026:topps:21:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:21:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::398264591479",
+      "keepCardId": "hiq:baseball:2026:topps-tribute:89:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tribute:89:green-refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tribute:89:green-refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps-tribute:89:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-tribute:89:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::407113155695",
+      "keepCardId": "hiq:baseball:2026:topps:46:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:46:green-refractor:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:46:green-refractor:auto:num-99 and the checklist id hiq:baseball:2026:topps:46:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:46:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267677068817",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:leaf:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:leaf:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127980236903",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:leaf:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:leaf:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377408278807",
+      "keepCardId": "hiq:baseball:2026:topps:22:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tribute:22:gold-refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tribute:22:gold-refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps:22:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:22:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127978016355",
+      "keepCardId": "hiq:baseball:2026:topps:lla-ad:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:lla-ad:gold-refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:lla-ad:gold-refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps:lla-ad:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:lla-ad:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267680804383",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127888432977",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:leaf:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:leaf:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::358851200364",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:299:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:mlm2-pt:refractor:auto:num-299",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:mlm2-pt:refractor:auto:num-299 and the checklist id hiq:baseball:2026:topps-chrome:299:refractor:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:299:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::358851200364",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:299:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:mlm2-pt:base:auto:num-299",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:mlm2-pt:base:auto:num-299 and the checklist id hiq:baseball:2026:topps-chrome:299:refractor:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:299:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::307103745835",
+      "keepCardId": "hiq:baseball:2026:topps:at1r-ara:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tier-one:at1r-ara:base:auto:num-10",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tier-one:at1r-ara:base:auto:num-10 and the checklist id hiq:baseball:2026:topps:at1r-ara:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:at1r-ara:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287489774801",
+      "keepCardId": "hiq:baseball:2026:topps:t91-41:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:91b2-bh:base:auto:num-15",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:91b2-bh:base:auto:num-15 and the checklist id hiq:baseball:2026:topps:t91-41:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:t91-41:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::137557771216",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:74:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:169:base:no-auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:169:base:no-auto and the checklist id hiq:baseball:2026:topps-chrome:74:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:74:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::358831812862",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:74:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:169:base:no-auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:169:base:no-auto and the checklist id hiq:baseball:2026:topps-chrome:74:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:74:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278039521457",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318643040358",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:89:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:89:refractor:auto:num-299",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:89:refractor:auto:num-299 and the checklist id hiq:baseball:2026:topps-chrome:89:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:89:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127803346220",
+      "keepCardId": "hiq:baseball:2026:bowman:44:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:44:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:44:base:auto and the checklist id hiq:baseball:2026:bowman:44:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:44:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377210352074",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800038410705",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:1:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:1:base:auto:num-1 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1783478183270x593657911063769000::2026-07-18T04:23:00+00:00::199",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fma-bb:mini-diamond-refractor:auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fma-bb:mini-diamond-refractor:no-auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fma-bb:mini-diamond-refractor:no-auto and the checklist id hiq:baseball:2026:topps-finest:fma-bb:mini-diamond-refractor:auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fma-bb:mini-diamond-refractor:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::287353056288",
+      "keepCardId": "hiq:baseball:2026:bowman:23:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:23:base:auto:num-3",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:23:base:auto:num-3 and the checklist id hiq:baseball:2026:bowman:23:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:23:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::336611391589",
+      "keepCardId": "hiq:baseball:2026:bowman:23:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:23:base:auto:num-3",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:23:base:auto:num-3 and the checklist id hiq:baseball:2026:bowman:23:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:23:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::306959848550",
+      "keepCardId": "hiq:baseball:2026:bowman:bp-82:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:cpa-ef:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:cpa-ef:refractor:auto and the checklist id hiq:baseball:2026:bowman:bp-82:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:bp-82:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267680813455",
+      "keepCardId": "hiq:baseball:2026:bowman:14:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:14:base:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:14:base:auto:num-25 and the checklist id hiq:baseball:2026:bowman:14:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:14:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318355249085",
+      "keepCardId": "hiq:baseball:2026:bowman:9:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:9:base:auto:num-9",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:9:base:auto:num-9 and the checklist id hiq:baseball:2026:bowman:9:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:9:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::267680808732",
+      "keepCardId": "hiq:baseball:2026:bowman:3:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:3:base:auto:num-4",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:3:base:auto:num-4 and the checklist id hiq:baseball:2026:bowman:3:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:3:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168418632917",
+      "keepCardId": "hiq:baseball:2026:bowman-chrome:2:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman-chrome:bma-km:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-chrome:bma-km:refractor:auto and the checklist id hiq:baseball:2026:bowman-chrome:2:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman-chrome:2:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::198514398239",
+      "keepCardId": "hiq:baseball:2026:topps:boa-dr:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:91a-dr:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:91a-dr:base:auto and the checklist id hiq:baseball:2026:topps:boa-dr:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:boa-dr:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::127980479181",
+      "keepCardId": "hiq:baseball:2026:topps-finest:4:gold-geometric-refractor:no-auto:num-50",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:4:gold-geometric-refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:4:gold-geometric-refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps-finest:4:gold-geometric-refractor:no-auto:num-50 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:4:gold-geometric-refractor:auto:num-50)"
+    },
+    {
+      "saleId": "tca-ebay::377347112443",
+      "keepCardId": "hiq:baseball:2026:topps:tog-34:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:91a-cas:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:91a-cas:base:auto and the checklist id hiq:baseball:2026:topps:tog-34:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:tog-34:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318354325956",
+      "keepCardId": "hiq:baseball:2026:bowman:14:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:14:base:auto:num-4",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:14:base:auto:num-4 and the checklist id hiq:baseball:2026:bowman:14:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:14:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257575760359",
+      "keepCardId": "hiq:baseball:2026:bowman-chrome:2:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman-chrome:bma-km:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-chrome:bma-km:refractor:auto and the checklist id hiq:baseball:2026:bowman-chrome:2:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman-chrome:2:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318672231302",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:cla-ry:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:player-robin-yount:refractor:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:player-robin-yount:refractor:auto:num-25 and the checklist id hiq:baseball:2026:topps-chrome:cla-ry:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:cla-ry:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278234614941",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fa-ar:gold-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fa-ar:gold-refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fa-ar:gold-refractor:auto and the checklist id hiq:baseball:2026:topps-finest:fa-ar:gold-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fa-ar:gold-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::117326263092",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:55:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:player-ozzie-smith-world-champion:refractor:auto:num-100",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:player-ozzie-smith-world-champion:refractor:auto:num-100 and the checklist id hiq:baseball:2026:topps-chrome:55:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:55:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318688996002",
+      "keepCardId": "hiq:baseball:2026:topps:10:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:10:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:10:base:auto and the checklist id hiq:baseball:2026:topps:10:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:10:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158173141032",
+      "keepCardId": "hiq:baseball:2026:topps:7:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:7:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:7:base:auto and the checklist id hiq:baseball:2026:topps:7:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:7:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366600223476",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-sb:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-sb:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-sb:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-sb:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-sb:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366600227685",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-sb:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-sb:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-sb:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-sb:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-sb:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::358902810264",
+      "keepCardId": "hiq:baseball:2026:topps:10:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:10:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:10:base:auto and the checklist id hiq:baseball:2026:topps:10:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:10:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::298573735205",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:91cb-27:pink-refractor:no-auto:num-250",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:91cb-27:refractor:auto:num-250",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:91cb-27:refractor:auto:num-250 and the checklist id hiq:baseball:2026:topps-chrome:91cb-27:pink-refractor:no-auto:num-250 (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:91cb-27:pink-refractor:auto:num-250)"
+    },
+    {
+      "saleId": "tca-ebay::168612102893",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:chr-dm:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:chr-dm:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:chr-dm:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:chr-dm:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:chr-dm:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::236923691321",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:18:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:18:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:18:refractor:auto and the checklist id hiq:baseball:2026:topps-chrome:18:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:18:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377413137294",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:1:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:1:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:1:refractor:auto and the checklist id hiq:baseball:2026:topps-chrome:1:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:1:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377419048696",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:1:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:1:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:1:refractor:auto and the checklist id hiq:baseball:2026:topps-chrome:1:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:1:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::800504110289",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-mac:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-mac:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-mac:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-mac:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-mac:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278280547380",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:cla-lwa:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:cla-lwa:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:cla-lwa:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:cla-lwa:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:cla-lwa:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188754768269",
+      "keepCardId": "hiq:baseball:2026:bowman:bcp-22:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman-chrome:bcp-22:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-chrome:bcp-22:refractor:auto and the checklist id hiq:baseball:2026:bowman:bcp-22:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:bcp-22:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::336701220941",
+      "keepCardId": "hiq:baseball:2026:topps:at1r-cr:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:91a-raf:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:91a-raf:base:auto and the checklist id hiq:baseball:2026:topps:at1r-cr:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:at1r-cr:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377372651320",
+      "keepCardId": "hiq:baseball:2026:topps:625:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:625:orange-refractor:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:625:orange-refractor:auto:num-25 and the checklist id hiq:baseball:2026:topps:625:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:625:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168578904435",
+      "keepCardId": "hiq:baseball:2026:topps:163:base:no-auto",
+      "deleteCardId": "hiq:football:2026:topps:163:base:auto:num-250",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:football:2026:topps:163:base:auto:num-250 and the checklist id hiq:baseball:2026:topps:163:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:163:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257600906646",
+      "keepCardId": "hiq:baseball:2026:bowman:pc-8:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:02750:gold-refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:02750:gold-refractor:auto:num-50 and the checklist id hiq:baseball:2026:bowman:pc-8:base:no-auto (docCount=4); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:pc-8:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257600906646",
+      "keepCardId": "hiq:baseball:2026:bowman:pc-8:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:02750:base:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:02750:base:auto:num-50 and the checklist id hiq:baseball:2026:bowman:pc-8:base:no-auto (docCount=4); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:pc-8:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257600906646",
+      "keepCardId": "hiq:baseball:2026:bowman:pc-8:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:pc-8:gold-refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:pc-8:gold-refractor:auto:num-50 and the checklist id hiq:baseball:2026:bowman:pc-8:base:no-auto (docCount=4); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:pc-8:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::398221171942",
+      "keepCardId": "hiq:baseball:2026:bowman:bcp-42:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman-chrome:pf-david-davalillo:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-chrome:pf-david-davalillo:refractor:auto and the checklist id hiq:baseball:2026:bowman:bcp-42:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:bcp-42:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::EBAY-v1|366538575264|0",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:17:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:17:refractor:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:17:refractor:auto:num-25 and the checklist id hiq:baseball:2026:topps-chrome:17:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:17:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790305882987x387102007059157760",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-zm:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-zm:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-zm:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-zm:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-zm:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790327267952x271167093804328450",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-aa:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-aa:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-aa:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-aa:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-aa:refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1783477974167x470131379675410050::2026-07-12T18:38:00+00:00::1200",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fma-mbr:mini-diamond-refractor:auto",
+      "deleteCardId": "1783477974167x470131379675410050",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both 1783477974167x470131379675410050 and the checklist id hiq:baseball:2026:topps-finest:fma-mbr:mini-diamond-refractor:auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fma-mbr:mini-diamond-refractor:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::227352118669",
+      "keepCardId": "hiq:baseball:2026:bowman:22:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:22:base:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:22:base:auto:num-50 and the checklist id hiq:baseball:2026:bowman:22:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:22:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::287363433218",
+      "keepCardId": "hiq:baseball:2026:bowman:bp-6:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman-chrome:cpa-jj:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-chrome:cpa-jj:base:auto and the checklist id hiq:baseball:2026:bowman:bp-6:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:bp-6:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::137358922486",
+      "keepCardId": "hiq:baseball:2026:bowman:bp-6:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman-chrome:cpa-jj:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-chrome:cpa-jj:base:auto and the checklist id hiq:baseball:2026:bowman:bp-6:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:bp-6:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::147337853597",
+      "keepCardId": "hiq:baseball:2026:bowman:1:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:1:base:auto:num-15",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:1:base:auto:num-15 and the checklist id hiq:baseball:2026:bowman:1:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:1:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::278016364261",
+      "keepCardId": "hiq:baseball:2026:bowman:2:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:2:base:auto:num-3",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:2:base:auto:num-3 and the checklist id hiq:baseball:2026:bowman:2:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:2:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377210102829",
+      "keepCardId": "hiq:baseball:2026:bowman:67:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:leaf:pf-leaf-pop-century-crystal:purple-crystal:auto:num-7",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:leaf:pf-leaf-pop-century-crystal:purple-crystal:auto:num-7 and the checklist id hiq:baseball:2026:bowman:67:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:67:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377210102829",
+      "keepCardId": "hiq:baseball:2026:bowman:67:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:67:base:auto:num-7",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:67:base:auto:num-7 and the checklist id hiq:baseball:2026:bowman:67:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:67:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::147465501553",
+      "keepCardId": "hiq:baseball:2026:topps:t91-41:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fabh:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fabh:base:auto and the checklist id hiq:baseball:2026:topps:t91-41:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:t91-41:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::188723254086",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fa-cw:green-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fa-cw:gold-refractor:no-auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fa-cw:gold-refractor:no-auto and the checklist id hiq:baseball:2026:topps-finest:fa-cw:green-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fa-cw:green-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::298579885716",
+      "keepCardId": "hiq:baseball:2026:bowman:bp-6:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman-chrome:cpa-jj:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-chrome:cpa-jj:base:auto and the checklist id hiq:baseball:2026:bowman:bp-6:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:bp-6:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::168592258374",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fa-jt:purple-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:91b2-jt:purple-refractor:auto:num-75",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:91b2-jt:purple-refractor:auto:num-75 and the checklist id hiq:baseball:2026:topps-finest:fa-jt:purple-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fa-jt:purple-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::336601504710",
+      "keepCardId": "hiq:baseball:2026:bowman:58:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:unknown:58:base:auto:num-8",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:unknown:58:base:auto:num-8 and the checklist id hiq:baseball:2026:bowman:58:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:58:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318668734281",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:75:red-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:player-ozzie-smith-th:red-refractor:auto:num-5",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:player-ozzie-smith-th:red-refractor:auto:num-5 and the checklist id hiq:baseball:2026:topps-chrome:75:red-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:75:red-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::407112486925",
+      "keepCardId": "hiq:baseball:2026:topps:at1r-av:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tier-one:at1r-av:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tier-one:at1r-av:base:auto:num-1 and the checklist id hiq:baseball:2026:topps:at1r-av:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:at1r-av:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318611727814",
+      "keepCardId": "hiq:baseball:2026:topps:15:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:player-mitch-farris:base:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:player-mitch-farris:base:auto:num-25 and the checklist id hiq:baseball:2026:topps:15:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:15:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::158127230381",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:164:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:164299:refractor:auto:num-299",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:164299:refractor:auto:num-299 and the checklist id hiq:baseball:2026:topps-chrome:164:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:164:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::407113487892",
+      "keepCardId": "hiq:baseball:2026:topps:ccs-cc:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tier-one:ccs-cc:base:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tier-one:ccs-cc:base:auto:num-99 and the checklist id hiq:baseball:2026:topps:ccs-cc:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:ccs-cc:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::227446122370",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:75:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman-chrome:75:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-chrome:75:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:75:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:75:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318591953116",
+      "keepCardId": "hiq:baseball:2026:topps:t1ta-rp:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:player-tier-one-rafael-palmeiro:base:auto:num-99",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:player-tier-one-rafael-palmeiro:base:auto:num-99 and the checklist id hiq:baseball:2026:topps:t1ta-rp:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:t1ta-rp:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::206476884970",
+      "keepCardId": "hiq:baseball:2026:topps:122:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:122:base:auto:num-375",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:122:base:auto:num-375 and the checklist id hiq:baseball:2026:topps:122:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:122:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318689180473",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:17:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:17:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:17:refractor:auto and the checklist id hiq:baseball:2026:topps-chrome:17:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:17:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::147488211434",
+      "keepCardId": "hiq:baseball:2026:topps:ppa-je:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-tier-one:ppa-je:base:auto:num-1",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-tier-one:ppa-je:base:auto:num-1 and the checklist id hiq:baseball:2026:topps:ppa-je:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:ppa-je:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257684125825",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-hf:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-hf:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-hf:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-hf:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-hf:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::407140438851",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fa-rz:green-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fa-rz:green-refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fa-rz:green-refractor:auto and the checklist id hiq:baseball:2026:topps-finest:fa-rz:green-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fa-rz:green-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::147496624546",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-mmi:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-mmi:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-mmi:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-mmi:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-mmi:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::237002179642",
+      "keepCardId": "hiq:baseball:2026:topps:60:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:60:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:60:base:auto and the checklist id hiq:baseball:2026:topps:60:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:60:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::307116228559",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:75d-br:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:75d-br:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:75d-br:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:75d-br:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:75d-br:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::237000140105",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-mmi:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:pf-munetaka-murakami-redemption-white:refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:pf-munetaka-murakami-redemption-white:refractor:auto and the checklist id hiq:baseball:2026:topps-chrome:ra-mmi:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-mmi:refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::EBAY-v1|336752880386|0",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fa-my:gold-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fa-my:gold-refractor:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fa-my:gold-refractor:auto and the checklist id hiq:baseball:2026:topps-finest:fa-my:gold-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fa-my:gold-refractor:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366621087724",
+      "keepCardId": "hiq:baseball:2026:topps:25:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:25:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:25:base:auto and the checklist id hiq:baseball:2026:topps:25:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:25:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::137602806125",
+      "keepCardId": "hiq:baseball:2026:topps:39:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:39:refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:39:refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps:39:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:39:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::377421709516",
+      "keepCardId": "hiq:baseball:2026:topps:22:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:22:base:no-auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:22:base:no-auto and the checklist id hiq:baseball:2026:topps:22:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:22:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366608296972",
+      "keepCardId": "hiq:baseball:2026:bowman:bp-6:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:bowman-chrome:cpa-jj:base:auto",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman-chrome:cpa-jj:base:auto and the checklist id hiq:baseball:2026:bowman:bp-6:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:bowman:bp-6:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::257669906634",
+      "keepCardId": "hiq:baseball:2026:topps:7:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:7:blue-refractor:auto:num-150",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:7:blue-refractor:auto:num-150 and the checklist id hiq:baseball:2026:topps:7:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:7:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::336679305593",
+      "keepCardId": "hiq:baseball:2026:topps:35:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:35:red-refractor:auto:num-5",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:35:red-refractor:auto:num-5 and the checklist id hiq:baseball:2026:topps:35:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:35:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318569198931",
+      "keepCardId": "hiq:baseball:2026:topps:at1r-hp:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:player-hunter-pence-triple-relic:base:auto:num-24",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:player-hunter-pence-triple-relic:base:auto:num-24 and the checklist id hiq:baseball:2026:topps:at1r-hp:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:at1r-hp:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::318612043364",
+      "keepCardId": "hiq:baseball:2026:topps:ppa-ajo:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:player-tier-one-adam-jones:base:auto:num-75",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:player-tier-one-adam-jones:base:auto:num-75 and the checklist id hiq:baseball:2026:topps:ppa-ajo:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:ppa-ajo:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::366589020980",
+      "keepCardId": "hiq:baseball:2026:topps:240:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps:240:gold-refractor:auto:num-50",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps:240:gold-refractor:auto:num-50 and the checklist id hiq:baseball:2026:topps:240:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:240:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::137557132371",
+      "keepCardId": "hiq:baseball:2026:topps:25:base:no-auto",
+      "deleteCardId": "hiq:soccer:2026:topps-pristine:pf-pristine-man-jeremy-doku:base:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:soccer:2026:topps-pristine:pf-pristine-man-jeremy-doku:base:auto:num-25 and the checklist id hiq:baseball:2026:topps:25:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:25:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::137557132371",
+      "keepCardId": "hiq:baseball:2026:topps:25:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-pristine:2525:base:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-pristine:2525:base:auto:num-25 and the checklist id hiq:baseball:2026:topps:25:base:no-auto (docCount=3); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:25:base:auto)"
+    },
+    {
+      "saleId": "tca-ebay::137557152543",
+      "keepCardId": "hiq:baseball:2026:topps:46:base:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-pristine:4675:base:auto:num-75",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-pristine:4675:base:auto:num-75 and the checklist id hiq:baseball:2026:topps:46:base:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps:46:base:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1788066289750x906134648410216200",
+      "keepCardId": "hiq:baseball:2026:topps-finest:fma-jca:orange-refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-finest:fma-jca:orange-refractor:auto:num-25",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-finest:fma-jca:orange-refractor:auto:num-25 and the checklist id hiq:baseball:2026:topps-finest:fma-jca:orange-refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-finest:fma-jca:orange-refractor:auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1790301419102x370288726133036740",
+      "keepCardId": "hiq:baseball:2026:topps-chrome:ra-dg:refractor:no-auto",
+      "deleteCardId": "hiq:baseball:2026:topps-chrome:ra-dg:refractor:auto:num-499",
+      "reason": "bb2026 isauto-twins audit 2026-09-27: sale stored at both hiq:baseball:2026:topps-chrome:ra-dg:refractor:auto:num-499 and the checklist id hiq:baseball:2026:topps-chrome:ra-dg:refractor:no-auto (docCount=2); toId is the surviving copy per the census (fromId=hiq:baseball:2026:topps-chrome:ra-dg:refractor:auto)"
+    }
+  ]
+}
