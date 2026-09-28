@@ -3298,7 +3298,7 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // CF-CHROME-COLOR-IMPLIES-REFRACTOR (Drew, 2026-08-07). See CHROME_STOCK
   // constants above — on known chrome product lines, any non-base parallel
   // that doesn't already carry "-refractor" gets it appended so "Blue",
-  // "Blue Shimmer", "Blue Wave", "Blue Ray Wave" all share one FMV pool
+  // "Blue Shimmer", "Blue Wave", "Blue RayWave" all share one FMV pool
   // with "Blue Refractor", "Blue Shimmer Refractor", etc.
   //
   // Also skip when the slug already ends in `-fractor` (covers `x-fractor`,

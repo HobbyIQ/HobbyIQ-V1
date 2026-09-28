@@ -548,7 +548,7 @@ function catalogHitToCardIdentity(hit: CanonicalSearchHit): CardIdentity {
  * provisional tiering, collapses grade and vendor duplicates, and prefers
  * canonical slugs. Nothing routed the web to it. Run against the same query
  * it returns the full ladder — Bowman Logofractor, Black Refractor, Purple
- * Ray Wave Refractor, Speckle, Mini-Diamond and the rest.
+ * RayWave Refractor, Speckle, Mini-Diamond and the rest.
  *
  * ADDITIVE, NOT A REPLACEMENT. The vendor passes still run and still merge;
  * a card we only know through a vendor stays findable. Checklist hits are

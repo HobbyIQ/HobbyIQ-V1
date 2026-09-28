@@ -13,13 +13,14 @@
  *   canonicalizeParallel("Blue Mini-Diamond Refractor")→ { display: "Blue Mini-Diamond Refractor",slug: "blue-mini-diamond-refractor" }
  *   canonicalizeParallel("Gold X-Fractor")            → { display: "Gold X-Fractor",            slug: "gold-x-fractor" }
  *   canonicalizeParallel("Black and White")           → { display: "Black and White",           slug: "black-and-white" }
- *   canonicalizeParallel("Raywave")                   → { display: "Ray Wave",                  slug: "ray-wave" }
+ *   canonicalizeParallel("Raywave")                   → { display: "RayWave",                   slug: "ray-wave" }
+ *   canonicalizeParallel("Ray Wave")                  → { display: "RayWave",                   slug: "ray-wave" }
  *   canonicalizeParallel("Xfractor")                  → { display: "X-Fractor",                 slug: "x-fractor" }
  *   canonicalizeParallel("Mega Refractor")            → { display: "Mojo Refractor",            slug: "mojo-refractor" }
  *
  * Rules:
  *   1. Strip surrounding brackets and collapse whitespace.
- *   2. Apply INPUT_ALIASES (Raywave→Ray Wave, Xfractor→X-Fractor,
+ *   2. Apply INPUT_ALIASES (Raywave/Ray Wave→RayWave, Xfractor→X-Fractor,
  *      Mega Refractor→Mojo Refractor) — collapses the "same-parallel,
  *      different market vocab" fragmentation.
  *   3. Title Case each space-separated word, PRESERVING meaningful
@@ -50,9 +51,23 @@ const STOP_WORDS = new Set(["and", "or", "of", "the", "a", "an", "in", "on"]);
 // prefix is a hyphen — this turns "blue-x-fractor" (slug form) into
 // "blue X-Fractor" so downstream space-splitting sees two segments and
 // the X-Fractor internal hyphen survives.
-const INPUT_ALIASES: Array<[RegExp, (m: string, prefix: string) => string]> = [
-  // "Raywave" / "RayWave" → "Ray Wave"
-  [/(^|[-\s])raywave\b/gi, (_m, p) => normalizePrefix(p) + "Ray Wave"],
+const INPUT_ALIASES: Array<[RegExp, (m: string, ...groups: string[]) => string]> = [
+  // "Raywave" / "RayWave" (already one token), and "Ray Wave" / "Ray-Wave"
+  // (two tokens, space or hyphen between them) → the compound "RayWave".
+  // Topps prints it compound, every sampled sale title reads it compound,
+  // and variationVocabulary.ts's FINISH_SPELLING already says "RayWave" —
+  // this collapses the market's alternate spellings onto that one
+  // canonical form instead of the reverse.
+  //
+  // Both entries consume the TRAILING separator too, not just the leading
+  // one: in slug-shape input ("blue-raywave-refractor" / "blue-ray-wave-
+  // refractor") the replacement inserts a mixed-case "RayWave" mid-string,
+  // which breaks the all-lowercase slug-shape test below (the one that
+  // turns remaining hyphens into spaces) — so an uneaten trailing hyphen
+  // would otherwise strand itself as "RayWave-Refractor" instead of
+  // "RayWave Refractor".
+  [/(^|[-\s])raywave\b([-\s]|$)/gi, (_m, p, suf) => normalizePrefix(p) + "RayWave" + normalizePrefix(suf)],
+  [/(^|[-\s])ray[\s-]wave\b([-\s]|$)/gi, (_m, p, suf) => normalizePrefix(p) + "RayWave" + normalizePrefix(suf)],
   // "Xfractor" / "XFractor" (no hyphen) → "X-Fractor"
   [/(^|[-\s])xfractor\b/gi, (_m, p) => normalizePrefix(p) + "X-Fractor"],
   // "x-fractor" (already hyphenated) → "X-Fractor"
@@ -70,8 +85,19 @@ function normalizePrefix(p: string): string {
   return p;
 }
 
+// Words with an internal capital that a run-of-the-mill title-case pass
+// would flatten ("RayWave" -> "Raywave"). Keyed lowercase, looked up
+// case-insensitively so any input casing still resolves to the one
+// canonical compound spelling Topps prints and every sampled sale title
+// uses. Checked BEFORE the acronym short-circuit below.
+const COMPOUND_CASE_WORDS: Readonly<Record<string, string>> = {
+  raywave: "RayWave",
+};
+
 function titleCaseWord(w: string): string {
   if (!w) return w;
+  const compound = COMPOUND_CASE_WORDS[w.toLowerCase()];
+  if (compound) return compound;
   // Preserve strings that are already all-caps AND short (acronyms like
   // "USA", "RC", "SP"). Anything longer than 3 chars gets normalized so
   // "REFRACTOR" doesn't stay all-caps.
