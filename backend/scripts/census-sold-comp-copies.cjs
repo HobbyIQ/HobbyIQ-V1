@@ -47,13 +47,39 @@
  *   hobbyiqCardId's OWN card_catalog row is CHECKLIST-GRADE
  *   (catalogAuthorityOf(row.source) === "checklist", via
  *   lib/catalog-none-pk.cjs's pkOf -- a catalog row without cardId lives at
- *   Cosmos's own None partition key, never a bare (id, id) guess).
+ *   Cosmos's own None partition key, never a bare (id, id) guess) AND whose
+ *   own SALE TITLE (that doc's own stored `title`, `playerName` field only as
+ *   a fallback) NAMES THE CATALOG ROW'S PLAYER (`titleNamesPlayer`,
+ *   lib/name-agreement.cjs -- a containment check built for exactly this
+ *   shape: a free-text listing title against a bare checklist playerName,
+ *   with the SAME stripTrailingTokens vocabulary repoint-sales-by-list.cjs's
+ *   own GATE 6 builds, from the candidate's own year/setKey checklist
+ *   parallel names).
  *
- * Exactly one such doc in the group -> emit ONE dedupe entry per OTHER doc in
- * the group (keepCardId = the keeper's cardId, deleteCardId = the other
- * doc's cardId). Zero such docs, or more than one -- this generator NEVER
- * GUESSES: the whole group is filed under census.needsRuling, every doc's
- * own (cardId, hobbyiqCardId) named, and nothing is emitted for it.
+ *   PR #2490 REVIEW (https://github.com/HobbyIQ/HobbyIQ-V1/pull/2490#issuecomment-5871669672):
+ *   "address-coherent + checklist-grade" alone is not enough -- a bare
+ *   #cardNumber collision across a sport/setKey boundary can put a coherent,
+ *   checklist-grade doc at an address that names a COMPLETELY DIFFERENT
+ *   PLAYER than the sale actually stored there (measured: 118/190 cross-sport
+ *   entries and 3/30 same-sport entries in the hockey:2025 list -- e.g. sale
+ *   tca-ebay::198458636920's own title is a Cam Skattebo football card, but
+ *   its coherent+checklist-grade address hiq:baseball:2025:bowman:21:base:
+ *   no-auto names Ronald Acuña Jr.). "A checklist row proves the ROW, the
+ *   player name proves the SALE" -- a candidate that fails this test is
+ *   never promoted to keeper, no matter how address-coherent or
+ *   checklist-grade its row is.
+ *
+ * Exactly one address-coherent + checklist-grade + name-agreeing doc in the
+ * group -> emit ONE dedupe entry per OTHER doc in the group (keepCardId = the
+ * keeper's cardId, deleteCardId = the other doc's cardId). Zero such docs, or
+ * more than one -- this generator NEVER GUESSES: the whole group is filed
+ * under census.needsRuling, every doc's own (cardId, hobbyiqCardId) named,
+ * and nothing is emitted for it. A candidate that was address-coherent and
+ * checklist-grade but FAILED the name test is filed under its own reason,
+ * `keeper-name-disagrees` (with the sale's own title and the candidate row's
+ * playerName recorded), distinct from `no-checklist-grade-coherent-doc` --
+ * the two reasons mean different things (no candidate was checklist-grade at
+ * all, vs. a checklist-grade candidate existed but named the wrong player).
  *
  * INTRA-DOC DRIFT (informational only). A group of exactly 1 whose own
  * cardId != hobbyiqCardId is counted under `intraDocDriftIds`, entirely
@@ -131,6 +157,13 @@ const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budge
 const { withBackoff } = require(path.join(__dirname, "lib", "cosmos-backoff.cjs"));
 const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
+const { titleNamesPlayer, firstNonBlank } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
+// checklistParallelNamesFor is a scripts/lib module (reads the checklist
+// corpus JSON directly, no dist/ and no Cosmos), the SAME vocabulary
+// repoint-sales-by-list.cjs builds for its own GATE 6 -- required at top
+// level for the same reason that lane requires it there: loading this
+// module must not need a built tree.
+const { checklistParallelNamesFor } = require(path.join(__dirname, "lib", "rematch-finish-vocab.cjs"));
 
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 
@@ -197,6 +230,77 @@ function setKeyPrefixOf(doc) {
   return seg.length >= 4 ? seg.slice(0, 4).join(":") : hiq;
 }
 
+// ── CF-COLLISION-IS-NOT-A-DUPLICATE, THE PLAYER-NAME GATE ──────────────────
+//
+// PR #2490 review (https://github.com/HobbyIQ/HobbyIQ-V1/pull/2490#issuecomment-5871669672):
+// "address-coherent + checklist-grade" alone picked a keeper on a bare
+// #cardNumber collision, with zero check that the SALE's own title names the
+// keeper row's player -- 118/190 cross-sport entries and 3/30 same-sport
+// entries in the hockey:2025 list turned out to be a different sale for a
+// different player (e.g. sale tca-ebay::198458636920 "Cam Skattebo" football
+// card, keeper catalog row playerName "Ronald Acuña Jr."). "A checklist row
+// proves the ROW, the player name proves the SALE" -- exactly the doctrine
+// repoint-sales-by-list.cjs's own GATE 6 already applies before it moves a
+// sale onto a checklist-attested destination; this generator now applies the
+// SAME check before it ever calls a doc the keeper of a group.
+//
+// Vocabulary built once per (year, setKey) and cached, exactly mirroring
+// repoint-sales-by-list.cjs's own `stripVocabularyForDestination` (kept as a
+// separate copy rather than a shared import: this generator has no dist/
+// requirement and this module must stay loadable with no built tree, the
+// same contract name-agreement.cjs itself states).
+const _stripVocabCache = new Map();
+const COLOUR_PREFIX_FAMILY_RE = /^([a-z][a-z'-]*)\s+(refractor|prizm)s?$/i;
+const BARE_FAMILY_WORDS = ["Refractor", "Prizm", "Parallel"];
+
+function stripVocabularyForKeeper(catalogRow) {
+  const year = catalogRow?.year ?? catalogRow?.cardYear ?? null;
+  const setKey = String(catalogRow?.setKey ?? "").trim();
+  const cacheKey = `${year}|${setKey.toLowerCase()}`;
+  if (_stripVocabCache.has(cacheKey)) return _stripVocabCache.get(cacheKey);
+
+  let names = null;
+  try { names = setKey ? checklistParallelNamesFor(year, setKey) : null; }
+  catch { names = null; }
+  const tokens = new Set();
+  if (names) {
+    for (const name of names) {
+      const trimmed = String(name ?? "").trim();
+      if (!trimmed) continue;
+      tokens.add(trimmed);
+      const m = trimmed.match(COLOUR_PREFIX_FAMILY_RE);
+      if (m) tokens.add(m[1]);
+    }
+  }
+  for (const w of BARE_FAMILY_WORDS) tokens.add(w);
+
+  const result = [...tokens];
+  _stripVocabCache.set(cacheKey, result);
+  return result;
+}
+
+/**
+ * Does the SALE's own title (falling back to its playerName field only when
+ * no title is stored) name the candidate keeper's catalog-row playerName?
+ * `titleNamesPlayer` (lib/name-agreement.cjs) is the shared containment
+ * check built for exactly this shape -- a free-text listing title (year, set,
+ * parallel, grade and all) against a bare checklist playerName, where a
+ * strict `namesAgree` whole-string fold would false-refuse almost every
+ * genuinely correct keeper (confirmed against this repo's own fixtures:
+ * "Victor Hurtado Gold Refractor Auto" vs "Victor Hurtado" fails plain
+ * namesAgree, passes titleNamesPlayer) while still refusing the real
+ * collisions PR #2490 found (a Cam Skattebo title never contains "Ronald
+ * Acuña Jr." in any spelling). Per the doctrine this fix exists to apply: a
+ * checklist row proves the ROW, the player name proves the SALE.
+ */
+function keeperNameAgreesWithSale(saleDoc, catalogRow) {
+  const saleName = firstNonBlank(saleDoc?.title, saleDoc?.playerName);
+  const keeperName = String(catalogRow?.playerName ?? "");
+  if (!saleName || !keeperName) return false;
+  const strip = stripVocabularyForKeeper(catalogRow);
+  return titleNamesPlayer(saleName, keeperName, { stripTrailingTokens: strip });
+}
+
 async function main() {
   console.log("");
   console.log("=".repeat(78));
@@ -244,7 +348,7 @@ async function main() {
   // stop here means the WHOLE shard, both passes, reruns on relaunch.
   console.log("  PASS 1: draining in-scope ids by STARTSWITH(hobbyiqCardId, prefix)...");
   const iter = pool.items.query({
-    query: "SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE STARTSWITH(c.hobbyiqCardId, @prefix)",
+    query: "SELECT c.id, c.cardId, c.hobbyiqCardId, c.title, c.playerName FROM c WHERE STARTSWITH(c.hobbyiqCardId, @prefix)",
     parameters: [{ name: "@prefix", value: PREFIX }],
   }, { maxItemCount: 500, maxDegreeOfParallelism: -1 });
 
@@ -289,7 +393,7 @@ async function main() {
     let rows;
     try {
       const res = await retry(() => pool.items.query({
-        query: "SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE ARRAY_CONTAINS(@ids, c.id)",
+        query: "SELECT c.id, c.cardId, c.hobbyiqCardId, c.title, c.playerName FROM c WHERE ARRAY_CONTAINS(@ids, c.id)",
         parameters: [{ name: "@ids", value: batch }],
       }, { maxItemCount: 500, maxDegreeOfParallelism: -1 }).fetchAll());
       rows = res?.resources ?? [];
@@ -301,7 +405,10 @@ async function main() {
       const id = String(row.id ?? "");
       if (!id) continue;
       const list = docsById.get(id) ?? [];
-      list.push({ id, cardId: String(row.cardId ?? ""), hobbyiqCardId: String(row.hobbyiqCardId ?? "") });
+      list.push({
+        id, cardId: String(row.cardId ?? ""), hobbyiqCardId: String(row.hobbyiqCardId ?? ""),
+        title: row.title ?? "", playerName: row.playerName ?? "",
+      });
       docsById.set(id, list);
     }
   }
@@ -318,7 +425,12 @@ async function main() {
   for (const id of ids.slice(0, offset)) {
     if (!docsById.has(id) || docsById.get(id).length === 0) {
       const seen = rowsByIdSeen.get(id);
-      if (seen) docsById.set(id, [{ id, cardId: String(seen.cardId ?? ""), hobbyiqCardId: String(seen.hobbyiqCardId ?? "") }]);
+      if (seen) {
+        docsById.set(id, [{
+          id, cardId: String(seen.cardId ?? ""), hobbyiqCardId: String(seen.hobbyiqCardId ?? ""),
+          title: seen.title ?? "", playerName: seen.playerName ?? "",
+        }]);
+      }
     }
   }
 
@@ -379,9 +491,20 @@ async function main() {
     }
 
     // Candidate keepers: address-coherent (cardId === hobbyiqCardId) AND
-    // checklist-grade at that address.
+    // checklist-grade at that address AND (CF-COLLISION-IS-NOT-A-DUPLICATE,
+    // PR #2490 review) the SALE'S OWN title (that coherent doc's own stored
+    // title, falling back to its playerName field only when no title is
+    // stored) agrees with the keeper catalog row's playerName. A
+    // checklist-grade address-coherent doc that FAILS the name test is never
+    // promoted to keeper -- the doc's own cardId/hobbyiqCardId pair proves
+    // its ADDRESS is coherent, not that the sale sitting there is the right
+    // sale for that address; a bare #cardNumber collision across a
+    // sport/setKey boundary can produce exactly this shape (Cam Skattebo's
+    // football sale landing, by number alone, on Ronald Acuña Jr.'s
+    // baseball row).
     const coherent = distinctDocs.filter((d) => d.cardId && d.cardId === d.hobbyiqCardId);
     const checklistKeepers = [];
+    const nameDisagreements = [];
     for (const d of coherent) {
       let row;
       try { row = await catalogRowAt(d.cardId); }
@@ -389,7 +512,16 @@ async function main() {
         console.log(`\n::warning::catalog read threw for ${d.cardId}: ${String(err?.message ?? err).slice(0, 120)} -- treated as absent for this group`);
         row = null;
       }
-      if (row && catalogAuthorityOf(row.source) === "checklist") checklistKeepers.push(d);
+      if (!row || catalogAuthorityOf(row.source) !== "checklist") continue;
+      if (keeperNameAgreesWithSale(d, row)) {
+        checklistKeepers.push(d);
+      } else {
+        nameDisagreements.push({
+          cardId: d.cardId,
+          saleName: firstNonBlank(d.title, d.playerName),
+          keeperName: String(row.playerName ?? ""),
+        });
+      }
     }
 
     if (checklistKeepers.length === 1) {
@@ -401,13 +533,27 @@ async function main() {
           keepCardId: keeper.cardId,
           deleteCardId: d.cardId,
           reason: `census-sold-comp-copies: ${CELL} generator, ${distinctDocs.length} docs for this id, `
-            + `keeper is address-coherent + checklist-grade at ${keeper.cardId}`,
+            + `keeper is address-coherent + checklist-grade + name-agreeing at ${keeper.cardId}`,
         });
         entriesEmitted++;
       }
       if (examples.length < 20) {
         examples.push(`  ${id}: keep ${keeper.cardId} -> delete ${distinctDocs.filter((d) => d.cardId !== keeper.cardId).map((d) => d.cardId).join(", ")}`);
       }
+    } else if (checklistKeepers.length === 0 && nameDisagreements.length > 0) {
+      // At least one candidate was address-coherent + checklist-grade but
+      // failed the name test -- a bare card-number collision minted it, not
+      // a genuine duplicate. Named its own reason (never folded into
+      // "no-checklist-grade-coherent-doc", which means something else: no
+      // candidate was even checklist-grade at all) and records the sale
+      // title + keeper row player for the human ruling this reason exists
+      // to route to.
+      needsRuling.push({
+        saleId: id,
+        reason: "keeper-name-disagrees",
+        docs: distinctDocs.map((d) => ({ cardId: d.cardId, hobbyiqCardId: d.hobbyiqCardId })),
+        nameDisagreements,
+      });
     } else {
       needsRuling.push({
         saleId: id,
@@ -499,7 +645,7 @@ async function main() {
   return { client, budget: CLOCK, exitCode: process.exitCode || 0, printedBudgetMarker: notConsidered > 0 };
 }
 
-module.exports = { SCOPE_ERROR, CELL_RE, shapeOf, setKeyPrefixOf };
+module.exports = { SCOPE_ERROR, CELL_RE, shapeOf, setKeyPrefixOf, keeperNameAgreesWithSale, stripVocabularyForKeeper };
 
 if (require.main === module) {
   main()

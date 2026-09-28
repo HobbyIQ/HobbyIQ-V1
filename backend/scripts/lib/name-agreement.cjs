@@ -466,8 +466,240 @@ function namesAgree(nameA, nameB, opts) {
   return foldForCompare(strippedA) === foldForCompare(strippedB);
 }
 
+/**
+ * Split a string into WORD TOKENS, each folded individually
+ * (case/diacritic/punctuation-insensitive, via the SAME `foldForCompare`
+ * every other rule in this file uses -- but applied PER TOKEN, never to the
+ * whole joined string, which is exactly what let a shorter name hide inside
+ * a longer one across a word boundary, see `titleNamesPlayer`'s own header).
+ * Splits on whitespace first (so "Crow-Armstrong" and "#CPA-VH" each stay
+ * their own token; a hyphen inside a token is folded away by
+ * `foldForCompare`, same as it always was for a name-shaped string), then
+ * drops any token that folds to empty (bare punctuation, "#", "/").
+ */
+function foldedTokens(s) {
+  return String(s ?? "")
+    .trim()
+    .split(/\s+/)
+    .map((tok) => foldForCompare(tok))
+    .filter(Boolean);
+}
+
+/**
+ * Does `needle` (an array of folded tokens) appear as a CONTIGUOUS
+ * subsequence inside `haystack` (an array of folded tokens)? This is the
+ * word-boundary-respecting replacement for a raw folded-substring check --
+ * `["ryan","reynolds"]` is NOT a contiguous subsequence of
+ * `["bryan","reynolds","auto"]` (the token "bryan" is never split into "b" +
+ * "ryan"), where the raw-substring version this function replaces would
+ * have wrongly matched because folding drops the whitespace between
+ * "Bryan" and "Reynolds" and the flattened text "bryanreynolds" happens to
+ * contain "ryanreynolds" as a byte range. An empty `needle` never matches
+ * (nothing to find).
+ */
+function containsTokenSubsequence(haystack, needle) {
+  if (needle.length === 0) return false;
+  if (needle.length > haystack.length) return false;
+  for (let i = 0; i + needle.length <= haystack.length; i++) {
+    let ok = true;
+    for (let j = 0; j < needle.length; j++) {
+      if (haystack[i + j] !== needle[j]) { ok = false; break; }
+    }
+    if (ok) return true;
+  }
+  return false;
+}
+
+/**
+ * Does a FREE-TEXT LISTING TITLE (a full marketplace title -- year, set,
+ * parallel, grade, "PSA 10", "/50", etc., not just a name) name the given
+ * player? Built for census-sold-comp-copies.cjs's and
+ * dedupe-sold-comp-copies-by-list.cjs's own keeper-name gate
+ * (CF-COLLISION-IS-NOT-A-DUPLICATE, PR #2490 review), where the LEFT side is
+ * a real sold_comps `title` field ("2024 Bowman Chrome Victor Hurtado Gold
+ * Refractor Auto /50 #CPA-VH") and the RIGHT side is a card_catalog row's
+ * bare `playerName` ("Victor Hurtado").
+ *
+ * `namesAgree` ALONE is the wrong tool for this shape: it compares two
+ * NAME-shaped strings (its own header says so -- rule (a)'s multi-name split
+ * is the only concession to more than one name on a side), and a whole-string
+ * fold/compare against a full sentence-length title fails for the ordinary
+ * case (a title carrying the player's name plus a dozen other words never
+ * folds byte-for-byte equal to the bare name) -- confirmed against this
+ * lane's own committed fixture ("Victor Hurtado Gold Refractor Auto" vs
+ * "Victor Hurtado": namesAgree alone returns false, a FALSE REFUSAL of an
+ * obviously correct keeper).
+ *
+ * This function instead asks the CONTAINMENT question the PR #2490 review
+ * itself asked ("does the keeper's catalog-row playerName appear in the
+ * stray's own title?") -- but at TOKEN GRANULARITY, never a raw folded
+ * SUBSTRING check. Round 1 of this PR's own review found the substring
+ * version unsafe in exactly the direction this gate exists to close: folding
+ * strips whitespace before comparing, so a SHORTER name can hide inside a
+ * LONGER one across a word boundary --
+ * `titleNamesPlayer("2025 Topps Chrome Bryan Reynolds Auto", "Ryan Reynolds")`
+ * wrongly returned `true` under the substring version, because
+ * "ryanreynolds" is a byte-range substring of "...bryanreynoldsauto" even
+ * though "Bryan" is never split into "B" + "ryan". `containsTokenSubsequence`
+ * (above) fixes this: both sides are split into WORD tokens first (each
+ * folded individually, not the whole string), and a match requires the
+ * player's tokens to appear as a CONTIGUOUS RUN of the title's tokens --
+ * "ryan" and "bryan" are different tokens, full stop, no matter how they
+ * fold together as bytes.
+ *
+ * Refinements, all reusing this file's own existing primitives rather than
+ * inventing new stripping rules:
+ *
+ *   1. `namesAgree(title, playerName, opts)` is tried FIRST -- this covers
+ *      the case where the "title" is itself already a bare name (a fixture,
+ *      or a sale whose title field was stored clean), so a short title that
+ *      would fail plain token-subsequence containment because of a
+ *      generational suffix or a caller-supplied strip token still agrees
+ *      exactly the way it would for any other namesAgree caller.
+ *   2. MULTI-NAME REDUCTION (round 1 review, item 4): when the player's own
+ *      name is a " / "-separated multi-name card (a league-leader or dual
+ *      insert row, e.g. "Shohei Ohtani / Marcell Ozuna / Kyle Schwarber LL
+ *      NL HR"), it is reduced to its FIRST-listed name via
+ *      `firstListedName` -- the SAME reduction `namesAgree`'s own rule (a)
+ *      applies internally -- before any suffix-extraction or containment
+ *      step below ever sees it. Without this, a legitimate keeper whose
+ *      catalog row is a multi-name card would route to
+ *      `keeper-name-disagrees` even though the sale's title correctly names
+ *      the first-listed player; real checklist CSVs in this repo (e.g.
+ *      2003-topps-baseball.csv) carry this shape.
+ *   3. WHEN THE PLAYER'S OWN NAME CARRIES "Jr."/"Sr." (ONLY), THE TITLE IS
+ *      SCANNED FOR AN EXPLICIT, DISAGREEING "Jr"/"Sr" TOKEN OF ITS OWN,
+ *      BEFORE ANY CONTAINMENT TRY -- a title carrying an EXPLICIT "Sr" or
+ *      "Jr" token somewhere (scanned across the whole title, not anchored at
+ *      its end like `GENERATIONAL_SUFFIX`'s own name-shaped match, since a
+ *      suffix can sit mid-title -- "Ken Griffey Sr. Autograph Card") that
+ *      DISAGREES with the player's own suffix refuses outright, no matter
+ *      what the rest of the title says -- Jr. and Sr. are two DIFFERENT,
+ *      both-carded people (rule (c)'s own doctrine), and a title that
+ *      EXPLICITLY names one must never be read as containing the other just
+ *      because their base names are substrings of each other. Deliberately
+ *      NARROWER than `GENERATIONAL_SUFFIX`'s own II/III/IV/V set: those
+ *      Roman numerals collide constantly with ordinary card-title vocabulary
+ *      that has nothing to do with a person's generation (set editions,
+ *      parallel/insert numbering, print-run markers), and scanning for them
+ *      MID-TITLE (rather than name-anchored) would false-refuse real
+ *      matches on pure coincidence -- confirmed: "2025 Topps V Bobby Witt Jr
+ *      Auto" against playerName "Bobby Witt Jr." false-disagreed under an
+ *      unnarrowed version of this check, because the title's own unrelated
+ *      "V" token (a set/parallel word) was read as a generational suffix.
+ *      This gate is skipped ENTIRELY when the player carries no suffix (or
+ *      a II/III/IV/V one) -- nothing to disagree about, and title-scanning
+ *      for one would be pure false-positive risk for zero benefit.
+ *   4. Token-subsequence containment, tried against the player's name AS
+ *      GIVEN, its generational suffix STRIPPED (Jr./Sr./II/III/IV/V -- the
+ *      ordinary shape of a real listing title omits "Jr." even when the
+ *      checklist's own playerName carries it: "2021 Bowman Vladimir Guerrero
+ *      Base" DOES name Vladimir Guerrero Jr., a title carrying NO suffix at
+ *      all is not evidence the title means the Sr., the same
+ *      presence-vs-absence posture rule (c) already takes for namesAgree
+ *      itself -- guarded by check 3 above so this never re-opens the Jr./Sr.
+ *      hole), and fully marker-stripped via `stripMarkers` (rule (b)'s own
+ *      closed vocabulary PLUS any caller-supplied `opts.stripTrailingTokens`)
+ *      -- so a checklist playerName carrying a trailing "RC" or a product's
+ *      own parallel word still finds its base name inside the title even
+ *      when the title's OWN text does not spell that marker at all. THE
+ *      SURNAME FLOOR (#2463): a single-token needle (a bare first name or
+ *      surname alone, e.g. "Nick" after some upstream reduction) is never
+ *      enough on its own to prove a match -- floor 1 from namesAgree's own
+ *      header ("a first name alone proves nothing about which player a card
+ *      is") applies here too, so this function requires the player's
+ *      reduced name to carry AT LEAST TWO TOKENS before treating a
+ *      containment hit as an agreement; a native single-token playerName
+ *      (a mononym) is the one exception, exactly as namesAgree's own FLOOR 3
+ *      already carves out.
+ *
+ * A blank title or playerName never agrees (nothing to check either
+ * direction). This is a ONE-DIRECTION widening of what counts as "the title
+ * names this player" over plain namesAgree, exactly like every other rule in
+ * this file -- it can only turn a would-be false refusal into an agreement,
+ * never turn a real disagreement (Skattebo's own title containing neither
+ * "Ronald Acuña Jr." nor "Ronald Acuña") into a false agreement, and never
+ * turn an EXPLICIT Jr./Sr. disagreement, or a word-boundary near-miss like
+ * Bryan/Ryan Reynolds, into a false one either.
+ */
+function titleNamesPlayer(title, playerName, opts) {
+  const t = String(title ?? "").trim();
+  let p = String(playerName ?? "").trim();
+  if (!t || !p) return false;
+
+  if (namesAgree(t, p, opts)) return true;
+
+  // Check 2: multi-name reduction (see the header) -- a " / "-separated
+  // catalog row is reduced to its FIRST-listed name before anything below
+  // (suffix extraction, containment) ever sees it, exactly the reduction
+  // namesAgree's own rule (a) applies internally.
+  const first = firstListedName(p);
+  if (first) p = first;
+
+  // Check 3: does the TITLE itself carry an explicit "Jr"/"Sr" token that
+  // DISAGREES with the player's own generational suffix? See the header for
+  // why this is Jr/Sr ONLY, never the full GENERATIONAL_SUFFIX set.
+  const { suffix: playerSuffix } = extractGenerationalSuffix(p);
+  if (playerSuffix === "jr" || playerSuffix === "sr") {
+    const titleSuffixMatch = t.match(/\b(Jr|Sr)\.?\b/i);
+    const titleSuffix = titleSuffixMatch ? titleSuffixMatch[1].toLowerCase() : null;
+    if (!suffixesCompatible(titleSuffix, playerSuffix)) return false;
+  }
+
+  const extraTrailingTokens = Array.isArray(opts?.stripTrailingTokens) ? opts.stripTrailingTokens : [];
+  const titleTokens = foldedTokens(t);
+
+  // THE SURNAME FLOOR (#2463): a needle reduced to a single token never
+  // proves a match on its own UNLESS the player's name was already a single
+  // token before any reduction ran (a native mononym) -- the same posture
+  // namesAgree's own FLOOR 3 takes. Checked once per candidate needle below,
+  // against that needle's OWN token count, not the pre-reduction name's.
+  const nativeSingleToken = tokenCount(p) < 2;
+  const safeContains = (needleTokens) => {
+    if (needleTokens.length < 2 && !nativeSingleToken) return false;
+    return containsTokenSubsequence(titleTokens, needleTokens);
+  };
+
+  const playerAsGivenTokens = foldedTokens(p);
+  if (safeContains(playerAsGivenTokens)) return true;
+
+  const { base } = extractGenerationalSuffix(p);
+  const playerNoSuffixTokens = foldedTokens(base);
+  if (safeContains(playerNoSuffixTokens)) return true;
+
+  // Fully marker-stripped (rule (b)'s closed vocabulary + any caller-supplied
+  // tokens) -- covers a checklist playerName carrying its own trailing "RC"
+  // or product parallel word that the title's own text never spells at all.
+  const strippedPlayer = stripMarkers(base, extraTrailingTokens, "");
+  const playerStrippedTokens = foldedTokens(strippedPlayer);
+  if (safeContains(playerStrippedTokens)) return true;
+
+  return false;
+}
+
+/**
+ * The first of `title`/`playerName` that is non-blank AFTER TRIMMING,
+ * treating whitespace-only the same as absent. Built for
+ * census-sold-comp-copies.cjs's and dedupe-sold-comp-copies-by-list.cjs's
+ * own keeper-name gate (round 1 review, items 2/3): `saleDoc.title ??
+ * saleDoc.playerName ?? ""` only falls through on `null`/`undefined` -- a
+ * stored `title: ""` (a real, valid absence shape) short-circuits to `""`
+ * and never reaches `playerName`, so a genuinely correct keeper whose title
+ * field happens to be an empty string was misfiled as `keeper-name-
+ * disagrees` even when `playerName` would have agreed exactly. This is the
+ * ONE place that decision is made, so both call sites derive the sale's
+ * "name text" identically rather than restating the fallback each time.
+ */
+function firstNonBlank(title, playerName) {
+  const t = String(title ?? "").trim();
+  if (t) return t;
+  return String(playerName ?? "").trim();
+}
+
 module.exports = {
   namesAgree,
+  titleNamesPlayer,
+  firstNonBlank,
   // exported for the mirror-equality test against the TS copy, and for a
   // caller that wants the intermediate reduction rather than the boolean.
   stripMarkers,
