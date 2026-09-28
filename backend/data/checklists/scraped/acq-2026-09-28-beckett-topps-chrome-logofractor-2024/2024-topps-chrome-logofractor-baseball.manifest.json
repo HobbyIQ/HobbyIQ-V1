@@ -1,0 +1,59 @@
+{
+  "scrapedAt": "2026-09-28T02:00:00.000Z",
+  "sourceUrl": "https://www.checklistinsider.com/2024-topps-chrome-logofractor-baseball",
+  "crossCheckedUrl": "https://baseballcardpedia.com/index.php/2024_Topps_Chrome_Logofractor",
+  "source": "checklistinsider",
+  "sport": "baseball",
+  "year": 2024,
+  "setName": "2024 Topps Chrome",
+  "productKey": "2024-topps-chrome-logofractor",
+  "setKey": "topps-chrome",
+  "rowCount": 200,
+  "readyToIngest": false,
+  "why": "Gap-analysis cell 2024|topps-chrome-logofractor, 10,203 unbacked sales, labeled 'standalone insert product never acquired (only variations guide exists)'. Sourcing shows this label is a misnomer: Logofractor is a NAMED PARALLEL of 2024 Topps Chrome base, not a distinct product. See needsRuling below.",
+  "finding": {
+    "verdict": "PARALLEL_OF_BASE_NOT_STANDALONE_PRODUCT",
+    "evidence": [
+      "baseballcardpedia.com: '2024 Topps Chrome Logofractor is a 200-card rendition of the 2024 Topps Chrome set released September 17th.' -- explicit same-set framing, not a sibling product.",
+      "checklistinsider.com (this file's source): Logofractor's card numbers/players are a SKIP-NUMBERED SUBSET of the 300-card 2024 Topps Chrome base checklist -- verified by cross-referencing all 200 fetched (cardNumber, player) pairs against the repo's own committed backend/data/checklists/2024-topps-chrome-baseball.csv: 200/200 matched exactly (0 misses), e.g. #1 Shohei Ohtani, #2 Colt Keith, #3 Corbin Burnes identical in both files. Numbers 7, 8, 13, 17, etc. (MJ Melendez, Tristan Gray, Seiya Suzuki, Brett Baty, ...) are simply skipped, not reassigned to different players.",
+      "Beckett-sourced web summary: 'The Logofractor checklist increases to 200 base cards ... These skip-numbered cards come from the 300-card base set in 2024 Topps Chrome Baseball.' and 'the obvious design difference from standard Chrome is the repeating MLB logo Refractor background (aka LogoFractor)' -- confirms Logofractor is a FINISH/background treatment applied to a subset of base's own cards, not an independently numbered checklist.",
+      "Print run: 'We estimate 3150 copies of each base card were produced' (baseballcardpedia) -- an unnumbered, estimated print run in the same style as an unserialized refractor-tier parallel, not a stated serial number. Logofractor itself then carries its OWN nested numbered sub-parallel ladder underneath it (Purple /250, Aqua /199, Green /99, Rose Gold 1/1, Superfractor 1/1, etc.) -- the same 'named parallel with its own ladder' shape the repo already uses for Refractor/X-Fractor/Superfractor families."
+    ]
+  },
+  "repoCitationsConsistentWithFinding": [
+    "backend/src/services/catalog/catalogSearch.service.ts:797 CATALOG_FINISH_WORDS includes \"logofractor\" alongside refractor/xfractor/prizm/sapphire -- i.e. the repo already classifies the bare word as a FINISH/PARALLEL token, not a product name.",
+    "backend/src/services/catalog/variationVocabulary.ts:182 maps logofractor -> \"Logofractor\" in the parallel-name vocabulary (same table as superfractor, xfractor, raywave, frozenfractor).",
+    "backend/src/services/compiq/parallelPremiumFloors.ts:80-81 matches \"logofractor\"/\"logo fractor\" as a parallel name (comment cites a Bowman /35 tier -- see caveat below).",
+    "backend/src/services/compiq/parallelRatioLookup.service.ts:105 lists logofractor in a parallel-name regex table.",
+    "backend/src/services/catalog/parallelLadders.ts:228,266 register \"Bowman Logofractor\" (slug bowman-logofractor, printRun 35) -- this is BOWMAN's Logofractor tier, a DIFFERENT product from Topps Chrome's. Sourcing found no /35 serial for Topps Chrome Logofractor's base card; its print run is an unserialized ~3,150-copy estimate, and Bowman Logofractor's /35 must not be reused for Topps Chrome Logofractor.",
+    "backend/src/services/portfolioiq/parseTitleIdentity.service.ts:4148-4167 -- the title parser's own comment states 'topps-chrome-black and topps-chrome-logofractor are BOTH ruled keys (productSetKeys.ts:479 carries topps-chrome-black with parent topps-chrome; normalizeSetKey answers both as fixed points)' and the code returns the STRING \"Topps Chrome Logofractor\" as a card-identity label for titles matching /topps\\s+chrome\\s+logofractor|\\blogofractor\\b/i. This is parser-level identity text, not a catalog productSetKeys.ts registration -- see needsRuling #2.",
+    "backend/src/services/catalog/catalogRowOps.service.ts:407,452 DRIFT comments show real ingested rows with setKey field literal \"topps-chrome-logofractor-edition\" over stem \"topps-chrome\" -- i.e. when this string appears in the wild as a setKey-shaped value, it already resolves under the topps-chrome parent, consistent with the parallel finding."
+  ],
+  "verifiedNoRegisteredProductSetKey": "grep -n 'topps-chrome-logofractor' backend/src/services/catalog/productSetKeys.ts returns 0 matches (checked against this clone 2026-09-28). Only 'topps-chrome' itself (P(\"topps-chrome\", { parent: \"topps\" })) and named Chrome sub-products with their OWN full checklists (topps-chrome-platinum, topps-chrome-black, topps-chrome-sapphire, etc., all P(..., { parent: \"topps-chrome\" })) are registered. Logofractor has no such entry, which is doctrine-consistent with it NOT being a registered product -- but see needsRuling #1: some Chrome sub-products with their own full committed checklists (Platinum, Black) DO get their own setKey despite also being called 'editions'/retail-exclusive Chrome variants, which is the tension this ruling should resolve.",
+  "reproduce": {
+    "crossReferenceMethod": "Fetched checklistinsider.com's full 2024 Topps Chrome Logofractor card list (200 cardNumber/player pairs). Wrote each pair as a 'Logofractor' parallel row keyed to the SAME cardNumber already present in the committed backend/data/checklists/2024-topps-chrome-baseball.csv (setKey topps-chrome, 300 base rows, source=seed/baseballcardpedia). All 200 numbers were found in the base file with byte-identical player names already on file -- no new player identities were introduced, only a new parallel value at 200 of the 300 existing base addresses.",
+    "ingestReportCommand": "npx tsx backend/scripts/ingest-checklist.ts --file backend/data/checklists/scraped/acq-2026-09-28-beckett-topps-chrome-logofractor-2024/2024-topps-chrome-logofractor-baseball.csv --year 2024 --set \"Topps Chrome\" --sport baseball   # REPORT mode only (omit --auto-approve); requires AZURE_OPENAI_* + COSMOS_CONNECTION_STRING, not run from this PR."
+  },
+  "rowsByCategory": {
+    "base_logofractorParallel": 200,
+    "note": "200 rows, category=base, parallel=Logofractor, isAuto=false, printRun blank (unserialized, ~3,150-copy estimate per baseballcardpedia -- not printed on the card, so left blank rather than guessed into the printRun field per 'no synthetic parallels'/only cite what the source states). Every row's cardNumber+player pair is copied verbatim from the already-committed backend/data/checklists/2024-topps-chrome-baseball.csv, not retyped from the web source, to guarantee identity-field consistency with the canonical base rows this pairs with."
+  },
+  "unbackedRemaining": "This package backs ONLY the base-finish 'Logofractor' parallel name at 200/300 card numbers. It does NOT back Logofractor's own nested numbered sub-parallels (Purple /250, Aqua /199, Green /99, Rose Gold 1/1, Superfractor 1/1, etc.), nor the Logofractor-finish versions of All-Etch / All-Etch Rookie Rush / Future Stars inserts and autographs that the sourcing surfaced. Of the cell's original 10,203 unbacked sales, this closes only the plain-Logofractor-parallel share; the numbered sub-parallel and insert/auto shares remain open gaps for a follow-up acquisition.",
+  "needsRuling": [
+    {
+      "id": "R-2024-topps-chrome-logofractor-1",
+      "title": "Gap-analysis label 'standalone insert product never acquired' is a misnomer for this cell -- it is a parallel-completion gap under an already-acquired product",
+      "detail": "The 2024|topps-chrome-logofractor gap cell describes Logofractor as a standalone insert product with no checklist beyond a variations guide. Sourcing (baseballcardpedia + checklistinsider, cross-checked 200/200 against the repo's own committed base file) shows Logofractor is a same-numbering PARALLEL of 2024 Topps Chrome base (200 of the base set's 300 cards, printed on Logofractor-finish stock, ~3,150 estimated copies, no separate player pool). This matches the repo's OWN existing treatment: catalogSearch.service.ts's CATALOG_FINISH_WORDS and variationVocabulary.ts both already carry 'logofractor' as a finish/parallel word, not a product name, and parseTitleIdentity.service.ts's own comment explicitly rules 'topps-chrome-logofractor' a fixed point under parent topps-chrome. Recommend: relabel or annotate this gap-analysis cell (and audit sibling cells for the same 'variations guide exists therefore standalone' inference pattern) so the gap queue stops routing parallel-completion work through the standalone-product acquisition path."
+    },
+    {
+      "id": "R-2024-topps-chrome-logofractor-2",
+      "title": "topps-chrome-logofractor has parser-level identity text but no productSetKeys.ts registration -- decide whether it needs one",
+      "detail": "parseTitleIdentity.service.ts:4167 already returns the literal string \"Topps Chrome Logofractor\" as a title-parse identity result, and its own comment (line 4148) asserts 'topps-chrome-black and topps-chrome-logofractor are BOTH ruled keys' citing productSetKeys.ts:479 -- but productSetKeys.ts registers topps-chrome-black (P(), own full checklist, own price curve per that file's comment) while topps-chrome-logofractor has NO entry there at all. Either (a) the parser comment is stale/aspirational and topps-chrome-logofractor should stay unregistered, folding to topps-chrome via normalizeSetKey the same way Refractor/X-Fractor names do (consistent with this PR's finding), or (b) Drew wants a lightweight productSetKeys.ts entry for topps-chrome-logofractor anyway (without its own checklist, purely so normalizeSetKey has an explicit fixed point matching the parser's existing behavior instead of relying on implicit fallthrough). Recommend Drew rule on (a) vs (b); this PR takes no position and registers no new setKey."
+    },
+    {
+      "id": "R-2024-topps-chrome-logofractor-3",
+      "title": "parallelPremiumFloors.ts's logofractor match (line 80-81) currently assumes the Bowman /35 print run for ANY 'logofractor' match, including Topps Chrome's -- likely wrong for Topps Chrome",
+      "detail": "parallelPremiumFloors.ts:80-81 matches n.includes(\"logofractor\") and applies printRun: 35, sourced from a Bowman Logofractor /35 ruling (CF-BOWMAN-LOGOFRACTOR, 2026-07-08). Topps Chrome Logofractor's own base card is NOT serial-numbered at /35 -- it is an unserialized ~3,150-copy-estimate print run, and its nested numbered sub-parallels (Purple /250, Aqua /199, Green /99, etc.) are separate rungs from Bowman's flat /35. Applying a /35 premium floor to a Topps Chrome Logofractor base-parallel sale would misprice it. Recommend a product-qualified match (e.g. require 'bowman' in the title alongside 'logofractor') rather than a bare substring match once Topps Chrome Logofractor sales are being priced against this table."
+    }
+  ]
+}
