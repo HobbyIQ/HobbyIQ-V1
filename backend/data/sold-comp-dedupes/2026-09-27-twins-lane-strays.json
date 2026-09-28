@@ -1,0 +1,1016 @@
+{
+  "generatedAt": "2026-09-27T23:56:00Z",
+  "forLane": "dedupe-sold-comp-copies-by-list",
+  "finding": "usc143-0927-dupes.csv: 165 sales stored under 2 physical sold_comps documents each (docCount=2), keyed by (cardId1, cardId2) with hobbyiqCardId twins matching their own cardId. toId names the checklist-id copy the twins-lane census kept; the other of cardId1/cardId2 is the stray. fromId is the twins-lane's own logical is-auto-flip label, never a physical address in this file, and is kept only for the reason string.",
+  "census": {
+    "source": "usc143-0927-dupes.csv",
+    "totalRowsInCsv": 6771,
+    "distinctSaleIds": 165,
+    "skippedDocCount1": 6606,
+    "consideredDup": 165,
+    "entriesEmitted": 165,
+    "needsRulingCount": 0,
+    "needsRuling": [],
+    "byShape": {
+      "unsigned-twin-pair": 165
+    },
+    "byFromSportYearSetKey": {
+      "baseball:2024:bowman-chrome": 1,
+      "baseball:2025:topps-chrome-update-series": 38,
+      "baseball:2026:bowman-mega": 125,
+      "baseball:2024:bowman": 1
+    }
+  },
+  "entries": [
+    {
+      "saleId": "tca-ebay::318499154523",
+      "keepCardId": "hiq:baseball:2024:bowman-chrome:cpa-vh:gold-refractor:auto:num-50",
+      "deleteCardId": "hiq:baseball:2024:bowman-chrome:player-victor-hurtado:gold-refractor:auto:num-50",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2024:bowman-chrome:player-victor-hurtado:gold-refractor:auto:num-50 and the checklist id hiq:baseball:2024:bowman-chrome:cpa-vh:gold-refractor:auto:num-50; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2024:bowman-chrome:cpa-vh:gold-refractor:no-auto:num-50)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765501293245x828057077675043300::2026-07-18T03:36:00+00:00::650",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:chru-et:green-refractor:auto:num-99",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:chru-et:green-refractor:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:chru-et:green-refractor:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:chru-et:green-refractor:auto:num-99; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:chru-et:green-refractor:no-auto:num-99)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857132073x655930228459218600::2026-07-12T05:11:00+00:00::1350",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-ab:base:auto",
+      "deleteCardId": "1765857132073x655930228459218600",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1765857132073x655930228459218600 and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-ab:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-ab:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765856976425x532617548443460350::2026-07-14T03:36:00+00:00::107",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-jv:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-jv:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-jv:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-jv:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-jv:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857657510x337089763212666200::2026-07-12T05:32:00+00:00::1299",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-nm:base:auto",
+      "deleteCardId": "1765857657510x337089763212666200",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1765857657510x337089763212666200 and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-nm:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-nm:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857755459x355773922594958500::2026-07-16T01:52:00+00:00::2000",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-tcg:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-tcg:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-tcg:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-tcg:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-tcg:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857755459x355773922594958500::2026-07-14T00:41:00+00:00::1350",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-tcg:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-tcg:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-tcg:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-tcg:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-tcg:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857755459x355773922594958500::2026-07-14T12:34:00+00:00::1700",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-tcg:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-tcg:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-tcg:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-tcg:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-tcg:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857496171x931456808014763400::2026-07-14T03:11:00+00:00::325",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-tc:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-tc:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-tc:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-tc:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-tc:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765856983169x282336214172064220::2026-07-12T01:10:00+00:00::200",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-hs:base:auto",
+      "deleteCardId": "1765856983169x282336214172064220",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1765856983169x282336214172064220 and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-hs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-hs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857178816x564144040781312800::2026-07-15T21:41:00+00:00::1800",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-cg:gold-wave-refractor:auto:num-50",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-cg:gold-wave-refractor:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-cg:gold-wave-refractor:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-cg:gold-wave-refractor:auto:num-50; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-cg:gold-wave-refractor:no-auto:num-50)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857226184x366406275199616640::2026-07-14T22:23:00+00:00::849",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-ao:base:auto",
+      "deleteCardId": "1765857226184x366406275199616640",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1765857226184x366406275199616640 and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-ao:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-ao:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857027237x393131364403182200::2026-07-14T04:17:00+00:00::225",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-ar:base:auto",
+      "deleteCardId": "1765857027237x393131364403182200",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1765857027237x393131364403182200 and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-ar:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-ar:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765856813734x902935306435749500::2026-07-12T23:59:00+00:00::300",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-ty:base:auto",
+      "deleteCardId": "1765856813734x902935306435749500",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1765856813734x902935306435749500 and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-ty:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-ty:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765856813734x902935306435749500::2026-07-12T06:34:00+00:00::600",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-ty:base:auto",
+      "deleteCardId": "1765856813734x902935306435749500",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1765856813734x902935306435749500 and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-ty:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-ty:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765856813734x902935306435749500::2026-07-14T12:18:00+00:00::450",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-ty:base:auto",
+      "deleteCardId": "1765856813734x902935306435749500",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1765856813734x902935306435749500 and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-ty:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-ty:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857286000x814110037963336800::2026-07-16T02:14:00+00:00::131",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-cmc:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-cmc:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-cmc:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-cmc:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-cmc:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857479139x946402580684732000::2026-07-12T23:46:00+00:00::1500",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-tto:blue-ray-wave-refractor:auto:num-150",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-tto:blue-ray-wave-refractor:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-tto:blue-ray-wave-refractor:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-tto:blue-ray-wave-refractor:auto:num-150; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-tto:blue-ray-wave-refractor:no-auto:num-150)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857297542x245146228276145860::2026-07-14T15:41:00+00:00::2000",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-abu:base:auto",
+      "deleteCardId": "1765857297542x245146228276145860",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1765857297542x245146228276145860 and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-abu:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-abu:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857801872x819872247569883900::2026-07-14T01:23:00+00:00::1999",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-tto:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-tto:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-tto:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-tto:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-tto:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765856646502x263731183344995100::2026-07-14T14:29:00+00:00::225",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-ss:base:auto",
+      "deleteCardId": "1765856646502x263731183344995100",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1765856646502x263731183344995100 and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-ss:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-ss:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857521561x209763921900988800::2026-07-12T06:48:00+00:00::575",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-cpe:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-cpe:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-cpe:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-cpe:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-cpe:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765856816377x315450931553744400::2026-07-16T00:01:00+00:00::1000",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-jm:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-jm:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-jm:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-jm:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-jm:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765856864900x571241168974570000::2026-07-14T01:01:00+00:00::336",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-rj:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-rj:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-rj:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-rj:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-rj:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765856956503x516690860547468900::2026-07-14T02:28:00+00:00::125",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-le:base:auto",
+      "deleteCardId": "1765856956503x516690860547468900",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1765856956503x516690860547468900 and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-le:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-le:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857544536x502800993546556500::2026-07-12T01:22:00+00:00::1487",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-mb:blue-ray-wave-refractor:auto:num-150",
+      "deleteCardId": "1765857544536x502800993546556500",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1765857544536x502800993546556500 and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-mb:blue-ray-wave-refractor:auto:num-150; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-mb:blue-ray-wave-refractor:no-auto:num-150)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1765857680810x588299787130376300::2026-07-14T11:16:00+00:00::300",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-rf:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:ac-rf:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:ac-rf:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-rf:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-rf:base:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::327000275191",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:ac-hdo:aqua-wave-refractor:auto:num-199",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome:ac-hdo:aqua-wave-refractor:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome:ac-hdo:aqua-wave-refractor:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:ac-hdo:aqua-wave-refractor:auto:num-199; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:ac-hdo:aqua-wave-refractor:no-auto:num-199)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200956287x449292262795732100::2026-07-15T05:20:00+00:00::499",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-yr:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-yr:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-yr:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-yr:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-yr:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200956287x449292262795732100::2026-07-12T01:23:00+00:00::426",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-yr:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-yr:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-yr:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-yr:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-yr:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200715000x519738707105827260::2026-07-12T16:48:00+00:00::2899",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ii:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ii:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ii:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ii:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ii:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200715000x519738707105827260::2026-07-12T22:27:00+00:00::1500",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ii:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ii:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ii:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ii:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ii:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200715000x519738707105827260::2026-07-14T17:03:00+00:00::1550",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ii:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ii:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ii:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ii:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ii:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200715000x519738707105827260::2026-07-15T14:58:00+00:00::3100",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ii:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ii:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ii:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ii:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ii:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200715000x519738707105827260::2026-07-16T00:12:00+00:00::1450",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ii:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ii:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ii:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ii:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ii:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201075624x338048500955706400::2026-07-15T20:23:00+00:00::1200",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-as:base:auto",
+      "deleteCardId": "1780201075624x338048500955706400",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201075624x338048500955706400 and the checklist id hiq:baseball:2026:bowman-mega:bma-as:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-as:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200909666x793437335127092200::2026-07-12T14:22:00+00:00::2199",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tg:base:auto",
+      "deleteCardId": "1780200909666x793437335127092200",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200909666x793437335127092200 and the checklist id hiq:baseball:2026:bowman-mega:bma-tg:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tg:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200909666x793437335127092200::2026-07-15T15:50:00+00:00::2499",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tg:base:auto",
+      "deleteCardId": "1780200909666x793437335127092200",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200909666x793437335127092200 and the checklist id hiq:baseball:2026:bowman-mega:bma-tg:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tg:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200909666x793437335127092200::2026-07-16T02:06:00+00:00::2000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tg:base:auto",
+      "deleteCardId": "1780200909666x793437335127092200",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200909666x793437335127092200 and the checklist id hiq:baseball:2026:bowman-mega:bma-tg:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tg:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200984144x707450736443887100::2026-07-15T00:53:00+00:00::9700",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ev:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ev:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ev:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ev:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ev:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200984144x707450736443887100::2026-07-14T01:17:00+00:00::13000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ev:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ev:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ev:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ev:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ev:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200984144x707450736443887100::2026-07-12T01:07:00+00:00::12999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ev:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ev:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ev:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ev:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ev:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200984144x707450736443887100::2026-07-16T22:12:00+00:00::7100",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ev:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ev:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ev:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ev:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ev:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200984144x707450736443887100::2026-07-17T00:34:00+00:00::8900",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ev:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ev:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ev:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ev:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ev:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200984144x707450736443887100::2026-07-14T04:12:00+00:00::3999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ev:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ev:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ev:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ev:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ev:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200984144x707450736443887100::2026-07-14T23:05:00+00:00::5999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ev:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ev:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ev:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ev:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ev:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200984144x707450736443887100::2026-07-15T23:57:00+00:00::8700",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ev:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ev:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ev:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ev:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ev:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200984144x707450736443887100::2026-07-14T17:06:00+00:00::15249",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ev:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ev:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ev:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ev:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ev:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200984144x707450736443887100::2026-07-16T20:44:00+00:00::11850",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ev:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ev:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ev:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ev:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ev:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200843886x904415113223134800::2026-07-14T12:34:00+00:00::284",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-mn:base:auto",
+      "deleteCardId": "1780200843886x904415113223134800",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200843886x904415113223134800 and the checklist id hiq:baseball:2026:bowman-mega:bma-mn:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-mn:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201056652x439309061804846100::2026-07-14T21:01:00+00:00::1751",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-bm:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-bm:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-bm:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-bm:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-bm:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200751328x659094482324163100::2026-07-16T15:06:00+00:00::1550",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-jle:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-jle:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-jle:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-jle:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-jle:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200751328x659094482324163100::2026-07-17T04:30:00+00:00::1950",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-jle:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-jle:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-jle:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-jle:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-jle:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200751328x659094482324163100::2026-07-12T02:51:00+00:00::1700",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-jle:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-jle:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-jle:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-jle:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-jle:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200751328x659094482324163100::2026-07-17T02:37:00+00:00::1550",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-jle:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-jle:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-jle:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-jle:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-jle:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200971196x992059926332588400::2026-07-15T17:34:00+00:00::12000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-eh:base:auto",
+      "deleteCardId": "1780200971196x992059926332588400",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200971196x992059926332588400 and the checklist id hiq:baseball:2026:bowman-mega:bma-eh:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-eh:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200798142x407448252527691260::2026-07-15T03:29:00+00:00::750",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ka:base:auto",
+      "deleteCardId": "1780200798142x407448252527691260",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200798142x407448252527691260 and the checklist id hiq:baseball:2026:bowman-mega:bma-ka:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ka:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200798142x407448252527691260::2026-07-16T01:09:00+00:00::1650",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ka:base:auto",
+      "deleteCardId": "1780200798142x407448252527691260",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200798142x407448252527691260 and the checklist id hiq:baseball:2026:bowman-mega:bma-ka:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ka:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201009730x719555020332579300::2026-07-14T14:55:00+00:00::1000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-cr:base:auto",
+      "deleteCardId": "1780201009730x719555020332579300",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201009730x719555020332579300 and the checklist id hiq:baseball:2026:bowman-mega:bma-cr:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-cr:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201009730x719555020332579300::2026-07-16T16:01:00+00:00::1300",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-cr:base:auto",
+      "deleteCardId": "1780201009730x719555020332579300",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201009730x719555020332579300 and the checklist id hiq:baseball:2026:bowman-mega:bma-cr:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-cr:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201009730x719555020332579300::2026-07-16T17:37:00+00:00::1875",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-cr:base:auto",
+      "deleteCardId": "1780201009730x719555020332579300",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201009730x719555020332579300 and the checklist id hiq:baseball:2026:bowman-mega:bma-cr:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-cr:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200821957x485836178318651140::2026-07-15T00:38:00+00:00::1999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-kw:base:auto",
+      "deleteCardId": "1780200821957x485836178318651140",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200821957x485836178318651140 and the checklist id hiq:baseball:2026:bowman-mega:bma-kw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-kw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200821957x485836178318651140::2026-07-15T22:26:00+00:00::2000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-kw:base:auto",
+      "deleteCardId": "1780200821957x485836178318651140",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200821957x485836178318651140 and the checklist id hiq:baseball:2026:bowman-mega:bma-kw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-kw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200821957x485836178318651140::2026-07-16T00:07:00+00:00::1999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-kw:base:auto",
+      "deleteCardId": "1780200821957x485836178318651140",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200821957x485836178318651140 and the checklist id hiq:baseball:2026:bowman-mega:bma-kw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-kw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200897217x637498455078083800::2026-07-14T01:29:00+00:00::3800",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-sm:base:auto",
+      "deleteCardId": "1780200897217x637498455078083800",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200897217x637498455078083800 and the checklist id hiq:baseball:2026:bowman-mega:bma-sm:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-sm:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200897217x637498455078083800::2026-07-14T19:35:00+00:00::4800",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-sm:base:auto",
+      "deleteCardId": "1780200897217x637498455078083800",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200897217x637498455078083800 and the checklist id hiq:baseball:2026:bowman-mega:bma-sm:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-sm:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200897217x637498455078083800::2026-07-15T04:19:00+00:00::4100",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-sm:base:auto",
+      "deleteCardId": "1780200897217x637498455078083800",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200897217x637498455078083800 and the checklist id hiq:baseball:2026:bowman-mega:bma-sm:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-sm:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200897217x637498455078083800::2026-07-15T23:53:00+00:00::3999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-sm:base:auto",
+      "deleteCardId": "1780200897217x637498455078083800",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200897217x637498455078083800 and the checklist id hiq:baseball:2026:bowman-mega:bma-sm:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-sm:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200773043x362968195470187800::2026-07-14T16:01:00+00:00::2000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-jt:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-jt:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-jt:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-jt:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-jt:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201022784x336127212481437400::2026-07-12T22:48:00+00:00::1349",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ca:base:auto",
+      "deleteCardId": "1780201022784x336127212481437400",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201022784x336127212481437400 and the checklist id hiq:baseball:2026:bowman-mega:bma-ca:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ca:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201022784x336127212481437400::2026-07-12T14:09:00+00:00::800",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ca:base:auto",
+      "deleteCardId": "1780201022784x336127212481437400",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201022784x336127212481437400 and the checklist id hiq:baseball:2026:bowman-mega:bma-ca:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ca:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201022784x336127212481437400::2026-07-12T05:09:00+00:00::700",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ca:base:auto",
+      "deleteCardId": "1780201022784x336127212481437400",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201022784x336127212481437400 and the checklist id hiq:baseball:2026:bowman-mega:bma-ca:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ca:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201022784x336127212481437400::2026-07-15T22:03:00+00:00::1100",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ca:base:auto",
+      "deleteCardId": "1780201022784x336127212481437400",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201022784x336127212481437400 and the checklist id hiq:baseball:2026:bowman-mega:bma-ca:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ca:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201022784x336127212481437400::2026-07-15T19:50:00+00:00::1000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ca:base:auto",
+      "deleteCardId": "1780201022784x336127212481437400",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201022784x336127212481437400 and the checklist id hiq:baseball:2026:bowman-mega:bma-ca:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ca:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201022784x336127212481437400::2026-07-16T01:15:00+00:00::850",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ca:base:auto",
+      "deleteCardId": "1780201022784x336127212481437400",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201022784x336127212481437400 and the checklist id hiq:baseball:2026:bowman-mega:bma-ca:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ca:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201022784x336127212481437400::2026-07-17T11:28:00+00:00::995",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ca:base:auto",
+      "deleteCardId": "1780201022784x336127212481437400",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201022784x336127212481437400 and the checklist id hiq:baseball:2026:bowman-mega:bma-ca:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ca:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200798736x806993332013702700::2026-07-14T23:01:00+00:00::1799",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-kc:base:auto",
+      "deleteCardId": "1780200798736x806993332013702700",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200798736x806993332013702700 and the checklist id hiq:baseball:2026:bowman-mega:bma-kc:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-kc:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200798736x806993332013702700::2026-07-17T07:21:00+00:00::1750",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-kc:base:auto",
+      "deleteCardId": "1780200798736x806993332013702700",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200798736x806993332013702700 and the checklist id hiq:baseball:2026:bowman-mega:bma-kc:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-kc:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200913500x199090865676821120::2026-07-16T06:19:00+00:00::3600",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tg:blue-mojo-refractor:auto:num-150",
+      "deleteCardId": "1780200913500x199090865676821120",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200913500x199090865676821120 and the checklist id hiq:baseball:2026:bowman-mega:bma-tg:blue-mojo-refractor:auto:num-150; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tg:blue-mojo-refractor:no-auto:num-150)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200913500x199090865676821120::2026-07-17T02:32:00+00:00::3800",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tg:blue-mojo-refractor:auto:num-150",
+      "deleteCardId": "1780200913500x199090865676821120",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200913500x199090865676821120 and the checklist id hiq:baseball:2026:bowman-mega:bma-tg:blue-mojo-refractor:auto:num-150; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tg:blue-mojo-refractor:no-auto:num-150)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200876593x152892040463772800::2026-07-12T17:50:00+00:00::11000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-sh:base:auto",
+      "deleteCardId": "1780200876593x152892040463772800",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200876593x152892040463772800 and the checklist id hiq:baseball:2026:bowman-mega:bma-sh:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-sh:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200876593x152892040463772800::2026-07-14T16:44:00+00:00::10499",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-sh:base:auto",
+      "deleteCardId": "1780200876593x152892040463772800",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200876593x152892040463772800 and the checklist id hiq:baseball:2026:bowman-mega:bma-sh:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-sh:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200876593x152892040463772800::2026-07-15T15:52:00+00:00::12000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-sh:base:auto",
+      "deleteCardId": "1780200876593x152892040463772800",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200876593x152892040463772800 and the checklist id hiq:baseball:2026:bowman-mega:bma-sh:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-sh:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200876593x152892040463772800::2026-07-16T03:11:00+00:00::10500",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-sh:base:auto",
+      "deleteCardId": "1780200876593x152892040463772800",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200876593x152892040463772800 and the checklist id hiq:baseball:2026:bowman-mega:bma-sh:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-sh:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200876593x152892040463772800::2026-07-17T02:01:00+00:00::9323",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-sh:base:auto",
+      "deleteCardId": "1780200876593x152892040463772800",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200876593x152892040463772800 and the checklist id hiq:baseball:2026:bowman-mega:bma-sh:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-sh:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200876593x152892040463772800::2026-07-17T02:19:00+00:00::9324",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-sh:base:auto",
+      "deleteCardId": "1780200876593x152892040463772800",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200876593x152892040463772800 and the checklist id hiq:baseball:2026:bowman-mega:bma-sh:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-sh:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200947631x910430219230244900::2026-07-14T00:10:00+00:00::1000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-yp:base:auto",
+      "deleteCardId": "1780200947631x910430219230244900",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200947631x910430219230244900 and the checklist id hiq:baseball:2026:bowman-mega:bma-yp:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-yp:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200876920x993827395771100500::2026-07-17T13:36:00+00:00::3300",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-sha:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-sha:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-sha:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-sha:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-sha:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200935449x664373266593269400::2026-07-14T12:45:00+00:00::1700",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ws:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-ws:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-ws:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-ws:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ws:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200853480x720736537646474100::2026-07-14T15:34:00+00:00::800",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-mv:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-mv:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-mv:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-mv:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-mv:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200853480x720736537646474100::2026-07-12T12:32:00+00:00::1100",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-mv:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-mv:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-mv:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-mv:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-mv:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200853480x720736537646474100::2026-07-12T01:50:00+00:00::1000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-mv:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-mv:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-mv:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-mv:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-mv:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200853480x720736537646474100::2026-07-12T14:04:00+00:00::1300",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-mv:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-mv:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-mv:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-mv:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-mv:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200853480x720736537646474100::2026-07-15T17:46:00+00:00::1999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-mv:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-mv:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-mv:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-mv:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-mv:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200853480x720736537646474100::2026-07-12T01:47:00+00:00::1375",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-mv:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-mv:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-mv:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-mv:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-mv:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201035077x208170129269986700::2026-07-16T22:42:00+00:00::2750",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-cc:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-cc:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-cc:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-cc:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-cc:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201035077x208170129269986700::2026-07-17T19:04:00+00:00::1550",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-cc:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-cc:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-cc:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-cc:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-cc:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201035077x208170129269986700::2026-07-18T00:34:00+00:00::1650",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-cc:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-cc:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-cc:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-cc:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-cc:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201035077x208170129269986700::2026-07-16T18:06:00+00:00::2000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-cc:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-cc:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-cc:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-cc:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-cc:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200727881x626665904561625900::2026-07-16T08:08:00+00:00::1900",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-jcac:base:auto",
+      "deleteCardId": "1780200727881x626665904561625900",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200727881x626665904561625900 and the checklist id hiq:baseball:2026:bowman-mega:bma-jcac:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-jcac:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200822376x854536486142933200::2026-07-14T22:49:00+00:00::1499",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-md:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-md:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-md:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-md:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-md:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200822376x854536486142933200::2026-07-16T02:06:00+00:00::1050",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-md:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-md:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-md:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-md:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-md:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200822376x854536486142933200::2026-07-14T23:09:00+00:00::700",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-md:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-md:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-md:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-md:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-md:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-14T20:19:00+00:00::3400",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-12T01:36:00+00:00::6000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-15T03:40:00+00:00::2999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-15T14:41:00+00:00::3800",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-14T18:44:00+00:00::3500",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-14T02:19:00+00:00::3600",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-16T02:14:00+00:00::4201",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-15T01:36:00+00:00::3319",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-17T14:25:00+00:00::3000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-14T16:36:00+00:00::2999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-12T16:37:00+00:00::3499",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-14T11:55:00+00:00::3995",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200866168x950272606942279600::2026-07-15T04:25:00+00:00::3999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rs:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-rs:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-rs:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-rs:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rs:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200853962x928561948956304400::2026-07-14T23:07:00+00:00::2300",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-rb:base:auto",
+      "deleteCardId": "1780200853962x928561948956304400",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200853962x928561948956304400 and the checklist id hiq:baseball:2026:bowman-mega:bma-rb:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-rb:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201023293x910245430464724200::2026-07-14T22:23:00+00:00::1600",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-cb:base:auto",
+      "deleteCardId": "1780201023293x910245430464724200",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201023293x910245430464724200 and the checklist id hiq:baseball:2026:bowman-mega:bma-cb:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-cb:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780201023293x910245430464724200::2026-07-16T18:25:00+00:00::1650",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-cb:base:auto",
+      "deleteCardId": "1780201023293x910245430464724200",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780201023293x910245430464724200 and the checklist id hiq:baseball:2026:bowman-mega:bma-cb:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-cb:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T03:01:00+00:00::1747",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-17T02:34:00+00:00::2450",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-17T17:38:00+00:00::3500",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T02:26:00+00:00::2399",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T01:00:00+00:00::1899",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T15:19:00+00:00::3000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T03:34:00+00:00::2500",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T12:27:00+00:00::2999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-17T17:28:00+00:00::2900",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T15:19:00+00:00::3300",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T02:42:00+00:00::1999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T20:09:00+00:00::2699",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-17T16:54:00+00:00::1999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T02:26:00+00:00::2575",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T06:53:00+00:00::2000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T03:48:00+00:00::2100",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-16T02:43:00+00:00::2299",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200923857x753670248638384000::2026-07-17T00:02:00+00:00::2000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-tw:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:bma-tw:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:bma-tw:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:bma-tw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-tw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200761631x545038987034838460::2026-07-14T15:07:00+00:00::4000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-jp:base:auto",
+      "deleteCardId": "1780200761631x545038987034838460",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200761631x545038987034838460 and the checklist id hiq:baseball:2026:bowman-mega:bma-jp:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-jp:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200761631x545038987034838460::2026-07-17T03:36:00+00:00::6000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-jp:base:auto",
+      "deleteCardId": "1780200761631x545038987034838460",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200761631x545038987034838460 and the checklist id hiq:baseball:2026:bowman-mega:bma-jp:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-jp:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200726861x492380733056756030::2026-07-13T13:41:00+00:00::951",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-jb:base:auto",
+      "deleteCardId": "1780200726861x492380733056756030",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200726861x492380733056756030 and the checklist id hiq:baseball:2026:bowman-mega:bma-jb:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-jb:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200726861x492380733056756030::2026-07-14T19:06:00+00:00::1300",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-jb:base:auto",
+      "deleteCardId": "1780200726861x492380733056756030",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200726861x492380733056756030 and the checklist id hiq:baseball:2026:bowman-mega:bma-jb:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-jb:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200810917x724246031596314600::2026-07-14T02:26:00+00:00::1099",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-km:base:auto",
+      "deleteCardId": "1780200810917x724246031596314600",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200810917x724246031596314600 and the checklist id hiq:baseball:2026:bowman-mega:bma-km:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-km:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200983643x772722145269011600::2026-07-16T12:34:00+00:00::1000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ep:base:auto",
+      "deleteCardId": "1780200983643x772722145269011600",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200983643x772722145269011600 and the checklist id hiq:baseball:2026:bowman-mega:bma-ep:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ep:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200983643x772722145269011600::2026-07-17T18:27:00+00:00::1300",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-ep:base:auto",
+      "deleteCardId": "1780200983643x772722145269011600",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200983643x772722145269011600 and the checklist id hiq:baseball:2026:bowman-mega:bma-ep:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-ep:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200696151x356643981853666000::2026-07-16T09:18:00+00:00::2625",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-gw:base:auto",
+      "deleteCardId": "1780200696151x356643981853666000",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200696151x356643981853666000 and the checklist id hiq:baseball:2026:bowman-mega:bma-gw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-gw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200696151x356643981853666000::2026-07-17T22:23:00+00:00::3000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-gw:base:auto",
+      "deleteCardId": "1780200696151x356643981853666000",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200696151x356643981853666000 and the checklist id hiq:baseball:2026:bowman-mega:bma-gw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-gw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200843533x229930029261558460::2026-07-14T22:54:00+00:00::3499",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-mh:base:auto",
+      "deleteCardId": "1780200843533x229930029261558460",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200843533x229930029261558460 and the checklist id hiq:baseball:2026:bowman-mega:bma-mh:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-mh:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200993639x118895809986208750::2026-07-12T03:57:00+00:00::900",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-gf:base:auto",
+      "deleteCardId": "1780200993639x118895809986208750",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200993639x118895809986208750 and the checklist id hiq:baseball:2026:bowman-mega:bma-gf:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-gf:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200993639x118895809986208750::2026-07-14T01:17:00+00:00::598",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-gf:base:auto",
+      "deleteCardId": "1780200993639x118895809986208750",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200993639x118895809986208750 and the checklist id hiq:baseball:2026:bowman-mega:bma-gf:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-gf:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780200993639x118895809986208750::2026-07-15T05:34:00+00:00::812",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:bma-gf:base:auto",
+      "deleteCardId": "1780200993639x118895809986208750",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1780200993639x118895809986208750 and the checklist id hiq:baseball:2026:bowman-mega:bma-gf:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:bma-gf:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1767154385608x466940649794667970::2026-07-14T03:07:00+00:00::125",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:crda-bt:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:crda-bt:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:crda-bt:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:crda-bt:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:crda-bt:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1767154699043x625457459457378600::2026-07-15T18:53:00+00:00::15000",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:crda-jwo:base:auto",
+      "deleteCardId": "1767154699043x625457459457378600",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1767154699043x625457459457378600 and the checklist id hiq:baseball:2025:topps-chrome-update-series:crda-jwo:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:crda-jwo:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1767154773031x584041049164196700::2026-07-17T03:17:00+00:00::2800",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:crda-dd:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:crda-dd:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:crda-dd:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:crda-dd:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:crda-dd:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1767154460284x462812169139875650::2026-07-15T01:41:00+00:00::325",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:crda-sa:base:auto",
+      "deleteCardId": "1767154460284x462812169139875650",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1767154460284x462812169139875650 and the checklist id hiq:baseball:2025:topps-chrome-update-series:crda-sa:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:crda-sa:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1767154511699x627811633764989700::2026-07-15T16:49:00+00:00::3336",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:crda-jw:base:auto",
+      "deleteCardId": "1767154511699x627811633764989700",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1767154511699x627811633764989700 and the checklist id hiq:baseball:2025:topps-chrome-update-series:crda-jw:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:crda-jw:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1767154648930x776937792327736600::2026-07-15T01:39:00+00:00::325",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:crda-mg:base:auto",
+      "deleteCardId": "1767154648930x776937792327736600",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1767154648930x776937792327736600 and the checklist id hiq:baseball:2025:topps-chrome-update-series:crda-mg:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:crda-mg:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1767035735047x494351635152633860::2026-07-14T02:36:00+00:00::225",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:crda-ny:base:auto",
+      "deleteCardId": "1767035735047x494351635152633860",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1767035735047x494351635152633860 and the checklist id hiq:baseball:2025:topps-chrome-update-series:crda-ny:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:crda-ny:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1767154260881x448418533891668160::2026-07-14T00:13:00+00:00::425",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:crda-jn:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:crda-jn:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:crda-jn:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:crda-jn:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:crda-jn:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1767154557968x894735341993115900::2026-07-15T01:12:00+00:00::258",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:crda-ic:base:auto",
+      "deleteCardId": "1767154557968x894735341993115900",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1767154557968x894735341993115900 and the checklist id hiq:baseball:2025:topps-chrome-update-series:crda-ic:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:crda-ic:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1767154557968x894735341993115900::2026-07-15T02:07:00+00:00::226",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:crda-ic:base:auto",
+      "deleteCardId": "1767154557968x894735341993115900",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both 1767154557968x894735341993115900 and the checklist id hiq:baseball:2025:topps-chrome-update-series:crda-ic:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:crda-ic:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1767154517718x330181387802584960::2026-07-14T16:29:00+00:00::44000",
+      "keepCardId": "hiq:baseball:2025:topps-chrome-update-series:crda-br:base:auto",
+      "deleteCardId": "hiq:baseball:2025:topps-chrome-update:crda-br:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2025:topps-chrome-update:crda-br:base:no-auto and the checklist id hiq:baseball:2025:topps-chrome-update-series:crda-br:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2025:topps-chrome-update-series:crda-br:base:no-auto)"
+    },
+    {
+      "saleId": "tca-ebay::178169543065",
+      "keepCardId": "hiq:baseball:2024:bowman:cra-yy:base:auto",
+      "deleteCardId": "hiq:baseball:2024:unknown:pf-yoshinobu-yamamoto:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2024:unknown:pf-yoshinobu-yamamoto:base:no-auto and the checklist id hiq:baseball:2024:bowman:cra-yy:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2024:bowman:cra-yy:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780158112612x812761789725362600::2026-07-16T17:13:00+00:00::10000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:rma-cb:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:rma-cb:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:rma-cb:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:rma-cb:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:rma-cb:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780158094655x702493243997244240::2026-07-15T21:58:00+00:00::6000",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:rma-cmo:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:rma-cmo:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:rma-cmo:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:rma-cmo:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:rma-cmo:base:no-auto)"
+    },
+    {
+      "saleId": "cardhedge::ch-daily::1780158094655x702493243997244240::2026-07-16T23:09:00+00:00::5999",
+      "keepCardId": "hiq:baseball:2026:bowman-mega:rma-cmo:base:auto",
+      "deleteCardId": "hiq:baseball:2026:bowman:rma-cmo:base:no-auto",
+      "reason": "usc143 twins-lane audit 2026-09-27: sale stored at both hiq:baseball:2026:bowman:rma-cmo:base:no-auto and the checklist id hiq:baseball:2026:bowman-mega:rma-cmo:base:auto; toId is the surviving copy per the twins-lane census (fromId=hiq:baseball:2026:bowman-mega:rma-cmo:base:no-auto)"
+    }
+  ]
+}
