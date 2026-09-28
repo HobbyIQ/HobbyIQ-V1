@@ -933,7 +933,7 @@ describe("reportWrites: intended must be the SAME population skipped/refused/wri
     const call = /reportWrites\(\{\s*job:\s*"repoint-sales-cardnumber-suffix",([\s\S]*?)\}\);/.exec(LANE_SRC);
     expect(call![1]).toMatch(/refused:\s*refusedTotal/);
     expect(call![1]).toMatch(/skipped:\s*s\.notReached/);
-    expect(LANE_SRC).toMatch(/const refusedTotal = s\.refusedDestinationNotOnChecklist \+ s\.refusedDifferentPlayer\s*\n\s*\+ s\.refusedPossibleTwinAtDestination \+ s\.refusedParallelOrAutoDowngrade \+ s\.refusedEtagChanged;/);
+    expect(LANE_SRC).toMatch(/const refusedTotal = s\.refusedDestinationNotOnChecklist \+ s\.refusedDifferentPlayer\s*\n\s*\+ s\.refusedPossibleTwinAtDestination \+ s\.refusedParallelOrAutoDowngrade \+ s\.refusedEtagChanged\s*\n\s*\+ s\.collapseRefusedSelf;/);
   });
 
   it("the reportWrites() call itself is guarded by `if (APPLY)`, matching repoint-sales-parallel-suffix.cjs's own convention -- a REPORT run's correctness signal is its own 'reconciled: candidates = accounted-for' line, not an exit-4 gate meant for confirmed writes", () => {
