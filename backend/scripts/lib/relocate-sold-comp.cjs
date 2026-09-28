@@ -116,16 +116,22 @@ const day = (iso) => String(iso ?? "").slice(0, 10);
  * a relocate HEALS the title as it moves the row, same as it already
  * heals cardId/hobbyiqCardId/contentHash.
  *
- * IDEMPOTENT BY CONSTRUCTION: only strips a LEADING "<year> <year> "
- * (or "<year>-<year> ", for a hyphenated repeat) -- a title that has
- * already been healed, or was never doubled, is returned byte-for-byte.
- * Running it twice on its own output is a no-op.
+ * IDEMPOTENT BY CONSTRUCTION: only strips a LEADING "<year> <year> ",
+ * accepting a space OR a hyphen in either gap ("<year>-<year> ",
+ * "<year> <year>-", "<year>-<year>-") -- a title that has already been
+ * healed, or was never doubled, is returned byte-for-byte. Running it
+ * twice on its own output is a no-op. `normalizeTitleForVariance` below
+ * delegates to this SAME function rather than re-deriving the pattern, so
+ * the two can never drift the way they briefly did (review follow-up,
+ * PR #2474): the first cut of the variance-side check used its own regex
+ * that only recognised the space-separated form, missing the hyphenated
+ * "2025-2025 " shape this function has always handled.
  */
 function dedupeYearPrefix(title, year) {
   const t = String(title ?? "");
   const y = String(year ?? "").trim();
   if (!y || !t) return t;
-  const re = new RegExp(`^${y}[\\s-]+${y}\\s+`);
+  const re = new RegExp(`^${y}[\\s-]+${y}[\\s-]+`);
   return t.replace(re, `${y} `);
 }
 /** Mirror of soldCompsStore's normalizeParallel (contentHash).
@@ -182,17 +188,24 @@ function contentHashesForLookup(row) {
 /**
  * CF-A-DOUBLED-YEAR-IS-NOT-A-DIFFERENT-SALE (2026-09-28 dedupe census).
  * `title` compares equal when the only disagreement is a doubled leading
- * year -- exactly `dedupeYearPrefix`'s own shape, but this comparison has
- * no `cardYear` handed to it (varianceOf takes bare docs+fields, not a
- * card identity), so it detects ANY `^(\d{4})\s+\1[\s-]+` doubling, not
- * only one matching a caller-supplied year. Whitespace is also
- * collapsed/trimmed on top of the doubling strip, so "  2025   2025  Topps"
- * and "2025 Topps" agree too.
+ * year. Delegates to `dedupeYearPrefix` itself (review follow-up, PR #2474:
+ * a hand-duplicated regex here had drifted from dedupeYearPrefix's own --
+ * it missed the hyphenated "2025-2025 " shape dedupeYearPrefix handles --
+ * which is exactly the kind of split this fix exists to end) rather than
+ * re-deriving the same pattern a second time. `varianceOf` has no
+ * caller-supplied `cardYear` to compare against (it takes bare
+ * docs+fields, not a card identity), so the "year" fed to
+ * `dedupeYearPrefix` is read off the title's OWN leading token -- if that
+ * token is 4 digits and repeats, it is a doubled year by definition,
+ * whatever the token's value. Whitespace is also collapsed/trimmed on top
+ * of the doubling strip, so "  2025   2025  Topps" and "2025 Topps" agree
+ * too.
  */
 function normalizeTitleForVariance(v) {
   if (isMissing(v)) return v;
   const collapsed = String(v).trim().replace(/\s+/g, " ");
-  return collapsed.replace(/^(\d{4})\s+\1[\s-]+/, "$1 ");
+  const m = collapsed.match(/^(\d{4})[\s-]/);
+  return m ? dedupeYearPrefix(collapsed, m[1]) : collapsed;
 }
 
 /**
@@ -456,6 +469,24 @@ function is412(e) {
 async function relocateSoldComp(pool, { keep, drop, retry = defaultRetry, verifyFields = [], dryRun = false, wait = sleep, guard = undefined, verifyNoDuplicatesAcrossPartitions = false }) {
   const drops = (drop ?? []).filter((d) => d && d.id && d.cardId && !sameRef(d, keep));
   if (!keep || !keep.id || !keep.cardId) throw new Error("relocateSoldComp: keep needs id and cardId");
+
+  // CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, THE MOVE-SIDE HALF, CENTRALIZED
+  // (review follow-up, 2026-09-28: PR #2474 review). This was first wired
+  // into three individual movers' own `keep` builds (rekey-product-setkey,
+  // repoint-sales-by-list, repoint-sales-isauto-flip) -- but relocateSoldComp
+  // has ~30 callers that all build `keep` the same way
+  // (`stripSystem(row)`/`stripSystem({ ...sale, cardId, hobbyiqCardId })`),
+  // and wiring this per-caller means 27 more edits and every future mover
+  // starting unhealed by default. Healing it ONCE here, before the guard
+  // and the upsert, means every caller inherits it for free -- the same
+  // reasoning that already puts contentHash-follows-the-address logic in
+  // callers rather than here is the wrong model for a fix whose whole point
+  // is "never forget this on the next mover." Mutates `keep` in place, same
+  // as the guard below already does; no caller passes `title` in
+  // `verifyFields`, so this cannot desync a verify against an unhealed copy
+  // the caller kept elsewhere. A no-op when `keep.title` is empty or the
+  // title carries no doubled year (dedupeYearPrefix is idempotent).
+  if (keep.title) keep.title = dedupeYearPrefix(keep.title, keep.cardYear);
 
   // ── THE ADDRESS THE ROW IS MOVING TO ─────────────────────────────────────
   // Judged BEFORE the dry-run return, so a dry run reports the same refusal an

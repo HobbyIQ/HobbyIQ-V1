@@ -613,6 +613,44 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
     expect(r.led.deletes).toEqual([SALE_ID]);
   });
 
+  it("MATCHES a hyphen-joined doubled leading year ('2025-2025 ...') -- same parity dedupeYearPrefix already has (review follow-up)", () => {
+    // PR #2474 review: normalizeTitleForVariance's first cut used a
+    // space-only regex and missed this shape even though dedupeYearPrefix
+    // (the move-side healer) already handled it. Both now share one
+    // pattern via dedupeYearPrefix itself.
+    const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "doubled-year-title-hyphen");
+    const catalog = [KEEPER_CATALOG_ROW];
+    const sales = [
+      { ...KEEPER_SALE, cardYear: 2025, title: "2025-2025 Topps Chrome Update Baseball #AC-AB Base" },
+      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, cardYear: 2025, title: "2025 Topps Chrome Update Baseball #AC-AB Base" },
+    ];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.out).not.toMatch(/REFUSED \(content-differs\)/);
+    expect(r.out).toMatch(/normalized comparison on: title/);
+    expect(r.out).toMatch(/DELETED\s+1/);
+    expect(r.led.deletes).toEqual([SALE_ID]);
+  });
+
+  it("CONTROL: still REFUSES when the two leading 4-digit tokens actually DIFFER -- not every doubled-looking title matches", () => {
+    // "2024-2025 ..." is not a doubled year -- it is two DIFFERENT years
+    // (e.g. a split-year season product misfiled), and must not be folded
+    // into a match by a normalizer that only checks "starts with two
+    // 4-digit tokens" without checking they're the SAME token.
+    const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "different-leading-years");
+    const catalog = [KEEPER_CATALOG_ROW];
+    const sales = [
+      { ...KEEPER_SALE, cardYear: 2025, title: "2024-2025 Topps Chrome Update Baseball #AC-AB Base" },
+      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID, cardYear: 2025, title: "2025 Topps Chrome Update Baseball #AC-AB Base" },
+    ];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.out).toMatch(/REFUSED \(content-differs\)/);
+    expect(r.led.deletes.length).toBe(0);
+  });
+
   it("MATCHES the exact soldAt-format twin from the census (+00:00 vs .000Z, same instant) -- DELETES", () => {
     const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "soldat-format-twin");
     const catalog = [KEEPER_CATALOG_ROW];

@@ -180,7 +180,7 @@ const backend = path.resolve(__dirname, "..");
 
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
-const { relocateSoldComp, stripSystem, contentHashOf, dedupeYearPrefix } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
+const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 const { parseSlugWithGrade } = require(path.join(__dirname, "lib", "graded-id.cjs"));
 const { autoOnlyOverride, autoOnlyOverrideDisabledReason } = require(path.join(__dirname, "lib", "auto-only-override.cjs"));
 const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
@@ -538,13 +538,12 @@ async function main() {
     }
 
     try {
+      // CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, the move-side half: relocateSoldComp
+      // itself heals a pre-2026-08-24 (commit 0000f60) doubled-year title
+      // before it upserts `keep` (lib/relocate-sold-comp.cjs, review follow-up
+      // to PR #2474: centralized there instead of per-caller so every mover
+      // inherits it, not just this one).
       const keep = stripSystem({ ...sale, cardId: toId, hobbyiqCardId: toId });
-      // CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, the move-side half: heal a
-      // pre-2026-08-24 (commit 0000f60) doubled-year title as the row
-      // passes through the one place already touching every field it
-      // carries forward. Idempotent -- a no-op on a title already healed
-      // or never doubled.
-      if (keep.title) keep.title = dedupeYearPrefix(keep.title, keep.cardYear);
       const result = await relocateSoldComp(pool, {
         keep, drop: [{ id: sale.id, cardId: sale.cardId }],
         verifyFields: ["cardId", "hobbyiqCardId"],
