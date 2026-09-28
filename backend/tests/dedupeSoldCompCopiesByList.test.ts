@@ -34,6 +34,7 @@ const LISTS = [
   "2026-09-27-twins-lane-strays.json",
   "2026-09-27-fb2025-isauto-strays.json",
   "2026-09-27-bb2026-isauto-strays.json",
+  "2026-09-28-hockey-2025-copies-v2.json",
 ];
 
 type Entry = { saleId: string; keepCardId: string; deleteCardId: string; reason?: string };
@@ -286,9 +287,9 @@ describe("the three committed lists", () => {
     });
   }
 
-  it("681 entries total across the three lists (165 + 282 + 234)", () => {
+  it("907 entries total across the four lists (165 + 282 + 234 + 226)", () => {
     const total = LISTS.reduce((sum, file) => sum + readList(join(LIST_DIR, file)).entries.length, 0);
-    expect(total).toBe(681);
+    expect(total).toBe(907);
   });
 });
 
