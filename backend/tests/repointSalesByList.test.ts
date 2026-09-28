@@ -24,6 +24,9 @@ import { spawnSync } from "node:child_process";
 import * as os from "node:os";
 
 const require_ = createRequire(__filename);
+const { titleNamesPlayer } = require_(join(__dirname, "..", "scripts", "lib", "name-agreement.cjs")) as {
+  titleNamesPlayer: (title: unknown, playerName: unknown, opts?: { stripTrailingTokens?: string[] }) => boolean;
+};
 
 const lane = join(__dirname, "..", "scripts", "repoint-sales-by-list.cjs");
 const backend = join(__dirname, "..");
@@ -351,6 +354,36 @@ describe("the gates, driven directly against the shared libraries", () => {
   });
 });
 
+// ── BLOCKED ON #2500 (fix/dedupe-keeper-must-agree-with-the-sale-title-0928
+// -1514). titleNamesPlayer was copied verbatim from that branch into this
+// repo's lib/name-agreement.cjs -- an independent adversarial review of
+// #2500 (https://github.com/HobbyIQ/HobbyIQ-V1/pull/2500#issuecomment-
+// 5873357117) found three confirmed defects in the SAME function this PR
+// depends on, reproduced directly against THIS branch's own copy:
+//
+//   1. (unsafe direction) Unbounded substring match, no token boundary --
+//      foldForCompare strips all whitespace before containment, so a
+//      SHORTER name that is a raw substring of a LONGER token false-
+//      matches ("Ryan Reynolds" inside "Bryan Reynolds"). This is a false
+//      PASS on GATE 6/GATE (e) -- a sale genuinely naming a different
+//      player ("Bryan Reynolds") could wrongly be read as corroborating a
+//      destination named "Ryan Reynolds", exactly the unsafe direction
+//      this whole PR exists to close.
+//   4. (over-refusal) No firstListedName() fallback for a multi-name
+//      league-leader/insert catalog row ("Shohei Ohtani / Marcell Ozuna /
+//      Kyle Schwarber LL NL HR") -- titleNamesPlayer's containment
+//      fallback tries the WHOLE multi-name string rather than reducing to
+//      the first-listed player the way namesAgree's own rule (a) does
+//      internally, so a title correctly naming the first-listed player is
+//      refused as a false disagreement.
+//
+// #2500's own builder is fixing these upstream (token-boundary matching,
+// firstListedName reduction) -- these tests are deliberately RED until
+// that fix lands and this branch rebases onto it, dropping the verbatim
+// copy for #2500's corrected export. Do not "fix" these locally by
+// patching this branch's own copy: the fix belongs in #2500, and a
+// parallel local patch here would just create a second copy to
+// re-reconcile at rebase time.
 // ── REPORT writes nothing; a thrown read-back is FAILED not clean ───────
 
 describe("REPORT computes the same gates APPLY would, and writes nothing", () => {
@@ -1271,6 +1304,74 @@ describe("GATE 6 reads the sale's TITLE first, and playerName only when the titl
     assertNoUncaughtError(applyRun);
     expect(applyRun.code).toBe(0);
     expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
+  });
+});
+
+// ── BLOCKED ON #2500 (fix/dedupe-keeper-must-agree-with-the-sale-title-0928
+// -1514). titleNamesPlayer was copied verbatim from that branch into this
+// repo's lib/name-agreement.cjs -- an independent adversarial review of
+// #2500 (https://github.com/HobbyIQ/HobbyIQ-V1/pull/2500#issuecomment-
+// 5873357117) found three confirmed defects in the SAME function this PR
+// depends on, reproduced directly against THIS branch's own copy:
+//
+//   1. (unsafe direction) Unbounded substring match, no token boundary --
+//      foldForCompare strips all whitespace before containment, so a
+//      SHORTER name that is a raw substring of a LONGER token false-
+//      matches ("Ryan Reynolds" inside "Bryan Reynolds"). This is a false
+//      PASS on GATE 6/GATE (e) -- a sale genuinely naming a different
+//      player ("Bryan Reynolds") could wrongly be read as corroborating a
+//      destination named "Ryan Reynolds", exactly the unsafe direction
+//      this whole PR exists to close.
+//   4. (over-refusal) No firstListedName() fallback for a multi-name
+//      league-leader/insert catalog row ("Shohei Ohtani / Marcell Ozuna /
+//      Kyle Schwarber LL NL HR") -- titleNamesPlayer's containment
+//      fallback tries the WHOLE multi-name string rather than reducing to
+//      the first-listed player the way namesAgree's own rule (a) does
+//      internally, so a title correctly naming the first-listed player is
+//      refused as a false disagreement.
+//
+// #2500's own builder is fixing these upstream (token-boundary matching,
+// firstListedName reduction) -- these tests are deliberately RED until
+// that fix lands and this branch rebases onto it, dropping the verbatim
+// copy for #2500's corrected export. Do not "fix" these locally by
+// patching this branch's own copy: the fix belongs in #2500, and a
+// parallel local patch here would just create a second copy to
+// re-reconcile at rebase time.
+describe("BLOCKED ON #2500 -- known titleNamesPlayer defects, red until rebase", () => {
+  it("DEFECT 1 (unsafe): a shorter name must NOT match as a raw substring of a longer one (Bryan Reynolds / Ryan Reynolds)", () => {
+    expect(titleNamesPlayer("2025 Topps Chrome Bryan Reynolds Auto", "Ryan Reynolds")).toBe(false);
+  });
+
+  it("DEFECT 1 (unsafe): same collision, shortest reproduction (Bryan / Ryan)", () => {
+    expect(titleNamesPlayer("2025 Topps Chrome Bryan", "Ryan")).toBe(false);
+  });
+
+  it("DEFECT 1 (unsafe), through the actual GATE 6 end-to-end: a title naming a genuinely different player (Bryan Reynolds) must REFUSE against a destination named Ryan Reynolds, never silently pass", () => {
+    const bryanRow = { ...FROM_ROW, playerName: "Bryan Reynolds" };
+    const ryanRow = { ...TO_ROW, playerName: "Ryan Reynolds" };
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "defect-1 regression", expectedSales: 1 }], "defect1-bryan-ryan");
+    const catalog = [bryanRow, ryanRow];
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "2025 Topps Chrome Bryan Reynolds Auto", playerName: "Bryan Reynolds", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    // A sale genuinely about Bryan Reynolds must be REFUSED against a
+    // destination that is actually Ryan Reynolds -- the title's own
+    // (correct) "Bryan Reynolds" must not be misread as containing
+    // "Ryan Reynolds" merely because the letters are a raw substring.
+    expect(r.out).toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+0/);
+  });
+
+  it("DEFECT 4 (over-refusal): a title naming the FIRST-LISTED player of a multi-name league-leader catalog row must PASS, not refuse", () => {
+    expect(titleNamesPlayer(
+      "2024 Topps Shohei Ohtani League Leaders NL HR",
+      "Shohei Ohtani / Marcell Ozuna / Kyle Schwarber LL NL HR",
+    )).toBe(true);
   });
 });
 
