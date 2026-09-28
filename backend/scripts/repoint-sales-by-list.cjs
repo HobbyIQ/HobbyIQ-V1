@@ -251,10 +251,31 @@ function classifyEntry(e) {
   if (allowCrossProduct && !crossProductRuling) {
     return { ok: false, why: `allowCrossProduct:true needs a crossProductRuling string: ${fromId.slice(0, 60)}` };
   }
+  // expectedSales is OPTIONAL and, when given, must be a genuine finite
+  // number. `null`/`undefined` (the field omitted, or explicitly null) means
+  // "the list author skipped this census" -- GATE 5 below reads that as
+  // "skip the gate", never as "expect zero". Number(null) === 0 and
+  // Number(undefined) === NaN, so a naive `Number.isFinite(Number(x))
+  // ? Number(x) : null` collapses an explicit `null` into 0 (Number(null)
+  // is finite!) rather than passing it through -- a list entry that says
+  // "I don't know the count" was silently read as "I expect exactly zero
+  // sales" and GATE 5 refused every one of them (run 36450985291, #2499:
+  // 4/4 refused although the sales were resident). A malformed value (a
+  // non-numeric string, an object, NaN) is a THIRD outcome, distinct from
+  // both -- it must never be silently treated as "skip" either, so it fails
+  // classifyEntry outright and the entry is malformed, not gated at all.
+  let expectedSales;
+  if (e?.expectedSales === null || e?.expectedSales === undefined) {
+    expectedSales = null;
+  } else if (Number.isFinite(Number(e.expectedSales))) {
+    expectedSales = Number(e.expectedSales);
+  } else {
+    return { ok: false, why: `expectedSales is not a finite number: ${JSON.stringify(e.expectedSales).slice(0, 60)}` };
+  }
   return {
     ok: true, fromId, toId, player, cardNumber, reason,
     allowCrossProduct, crossProductRuling,
-    expectedSales: Number.isFinite(Number(e?.expectedSales)) ? Number(e.expectedSales) : null,
+    expectedSales,
   };
 }
 
