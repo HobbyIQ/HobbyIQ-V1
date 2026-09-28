@@ -854,6 +854,19 @@ const playerKeyOf = playerIdentityKey;
  * that produced them. A pair `namesAgree` recognises is `not-a-conflict`, same
  * as an equal `playerKeyOf`; a pair it does not recognise reaches the arms
  * below exactly as before.
+ *
+ * CF-A-CODE-TWO-PLAYERS-SHARE-GETS-A-PLAYER-SEGMENT (Drew, 2026-09-28 14:35Z,
+ * codeCollisions.ts). A REGISTERED same-product code collision (2024 Bowman
+ * Chrome CPA-PS: Paul Skenes and Paulino Santana) never reaches this function
+ * as a same-address conflict at all: `computeHobbyIqCardId` mints the two rows
+ * at DIFFERENT addresses (`cpa-ps-skenes` / `cpa-ps-santana`) before either one
+ * is ever a candidate for the other's slug, so `chooseSurvivor`'s upstream
+ * address-collision check (moveCatalogRow) never pairs them up for
+ * `arbitratePlayer` to see. This function's refuse-or-arbitrate ladder is
+ * therefore UNCHANGED and still the right behavior for the case codeCollisions
+ * does NOT cover: an unregistered code where two rows genuinely disagree on
+ * the player is exactly the CF-A-FOLD-NEVER-CHANGES-THE-PLAYER conflict this
+ * function exists to settle, and it still settles it the same way.
  */
 function arbitratePlayer(
   incoming: CatalogRowDoc,
