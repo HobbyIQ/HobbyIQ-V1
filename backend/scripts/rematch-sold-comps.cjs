@@ -2560,6 +2560,45 @@ async function main() {
   const BACKING_CELL_CAP = 2000;
   const backingBySport = new Map();
   const backingByCell = new Map();
+  /**
+   * STORED-FIELD DRIFT (2026-09-27, the panini-donruss mis-bucket fix).
+   *
+   * INFORMATIONAL ONLY -- never read by the classification below, never
+   * folded into any backedStrict/noRow/etc bucket, and never fed back into
+   * `counts`/IMPROVE/R-class. `storedIdentity(row, deps)` (scripts/lib/
+   * rematch-derive-identity.cjs) computes `setKey` FRESH from `row.setName`
+   * via `normalizeSetKey(setName, sport?)` on every call -- that helper takes
+   * NO YEAR, so a 1987 sale with setName "Donruss" normalises to the MODERN
+   * spelling `panini-donruss` (spellForEra's era boundary,
+   * PANINI_DONRUSS_FROM_YEAR, never runs) while the sale's own
+   * `hobbyiqCardId` was minted WITH the year (computeHobbyIqCardId calls
+   * spellForEra directly) and correctly says `donruss`. The cell classified
+   * below is now read off the ID's OWN segments (never `stored`), so this
+   * mismatch no longer misfiles the sale into the wrong cell's preload --
+   * but the disagreement itself is real signal: every drifted sale is a row
+   * whose stored setName-derived spelling and whose id disagree on the
+   * product, and the census would otherwise have no record of how large
+   * that population is. Measured 2026-09-27: 21,882 sales landed in
+   * baseball|1987|panini-donruss (all noRow) while only 1,122 sales actually
+   * carry panini-donruss in hobbyiqCardId -- the other ~20,760 are exactly
+   * this drift.
+   *
+   * Bucketed per sport and per (sport,year,setKey) CELL -- the id's own
+   * cell, matching backingByCell's key shape -- so the artifact's own
+   * `backing.storedFieldDrift.topCells` list (built at artifact-write time,
+   * below) is the heal worklist: every cell with a large count here is a
+   * candidate for a stored-field heal pass, never a catalog gap.
+   */
+  const storedFieldDriftBySport = new Map();
+  const storedFieldDriftByCell = new Map();
+  const bumpDrift = (sport, cellKey) => {
+    storedFieldDriftBySport.set(sport, (storedFieldDriftBySport.get(sport) ?? 0) + 1);
+    if (cellKey) {
+      const overflowing = !storedFieldDriftByCell.has(cellKey) && storedFieldDriftByCell.size >= BACKING_CELL_CAP;
+      const key = overflowing ? "other" : cellKey;
+      storedFieldDriftByCell.set(key, (storedFieldDriftByCell.get(key) ?? 0) + 1);
+    }
+  };
   const backingBucketsOf = (m, key) => {
     let b = m.get(key);
     if (!b) {
@@ -2869,6 +2908,11 @@ async function main() {
     if (CENSUS_BACKING) {
       out.backingBySport = Object.fromEntries([...backingBySport].map(([k, b]) => [k, backingBucketsToArray(b)]));
       out.backingByCell = Object.fromEntries([...backingByCell].map(([k, b]) => [k, backingBucketsToArray(b)]));
+      // STORED-FIELD DRIFT counters (2026-09-27) travel in the checkpoint the
+      // same way -- plain counts, not 7-bucket objects, so no array encoding
+      // is needed; Object.fromEntries alone is already compact.
+      out.storedFieldDriftBySport = Object.fromEntries(storedFieldDriftBySport);
+      out.storedFieldDriftByCell = Object.fromEntries(storedFieldDriftByCell);
     }
     return out;
   };
@@ -2960,6 +3004,24 @@ async function main() {
     if (CENSUS_BACKING) {
       mergeBackingMapInto(backingBySport, prior.backingBySport, {});
       mergeBackingMapInto(backingByCell, prior.backingByCell, { capAt: BACKING_CELL_CAP });
+      // STORED-FIELD DRIFT counters merge the same way -- add by key, cap
+      // NEW keys at BACKING_CELL_CAP for byCell (a key already present, live
+      // or from an earlier merge, always adds into its own count; see
+      // mergeBackingMapInto's own header for why the cap only ever gates a
+      // key this pass has not seen). Absent on a cursor written before this
+      // fix -- treated as nothing to merge, same as backingBySport/byCell.
+      if (prior.storedFieldDriftBySport && typeof prior.storedFieldDriftBySport === "object") {
+        for (const [k, n] of Object.entries(prior.storedFieldDriftBySport)) {
+          storedFieldDriftBySport.set(k, (storedFieldDriftBySport.get(k) ?? 0) + (Number(n) || 0));
+        }
+      }
+      if (prior.storedFieldDriftByCell && typeof prior.storedFieldDriftByCell === "object") {
+        for (const [k, n] of Object.entries(prior.storedFieldDriftByCell)) {
+          const overflowing = k !== "other" && !storedFieldDriftByCell.has(k) && storedFieldDriftByCell.size >= BACKING_CELL_CAP;
+          const key = overflowing ? "other" : k;
+          storedFieldDriftByCell.set(key, (storedFieldDriftByCell.get(key) ?? 0) + (Number(n) || 0));
+        }
+      }
     }
   };
   const sample = (klass, cardId, line) => {
@@ -3703,24 +3765,34 @@ async function main() {
       // round trip happens, identically to how `checklistBacked` etc. above
       // are warmed here and re-read (free) in the loop.
       //
-      // Distinct CELLS of the page, not distinct rows: `pageIdentity`'s
-      // `stored` already carries `sport`/`year`/`setKey` per row (the SAME
-      // fields the row loop's own CENSUS_BACKING block reads off `stored`),
-      // so this collects the page's distinct (sport, year, setKey) cells
-      // ONCE and preloads each ONCE, bounded by CLASSIFY_CONCURRENCY -- never
-      // once per row, which would just move the N-fold cost here instead of
-      // removing it.
+      // Distinct CELLS of the page, not distinct rows: collects the page's
+      // distinct (sport, year, setKey) cells ONCE and preloads each ONCE,
+      // bounded by CLASSIFY_CONCURRENCY -- never once per row, which would
+      // just move the N-fold cost here instead of removing it.
+      //
+      // *** READ OFF `row.hobbyiqCardId`, NEVER `stored` (2026-09-27, the
+      // panini-donruss mis-bucket fix). *** This warm phase must derive the
+      // SAME cell the row loop's own CENSUS_BACKING block preloads under
+      // (below), or it warms the wrong cell and every row loses the free
+      // cache hit this phase exists to buy -- silently falling back to a
+      // cold per-row preload, or (worse) warming a cell nothing ever looks
+      // up. `stored` was that same wrong source the row loop used to read:
+      // storedIdentity's `setKey` is computed fresh from `row.setName` via
+      // an era-blind `normalizeSetKey` (no year), so a pre-1990 Donruss sale
+      // warms the modern `panini-donruss` cell while its own hobbyiqCardId
+      // (and the row loop's lookup) addresses `donruss`. See the row loop's
+      // own comment below for the measured 21,882-sale population this
+      // produced.
       if (CENSUS_BACKING) {
         const cellsToWarm = new Map(); // cellKey -> { sport, year, setKey }
         for (const row of toWarm) {
-          const warmed = pageIdentity.get(row.id);
-          const stored = warmed ? warmed.stored : null;
-          if (!stored) continue; // prefilter-skipped or a caught failure above; the row loop re-derives it and preloads on its own miss
-          const sport = String(stored?.sport ?? row?.sport ?? "").trim().toLowerCase() || null;
-          const year = stored?.year ?? stored?.cardYear ?? null;
-          const setKey = stored?.setKey ?? null;
+          const parsedId = row?.hobbyiqCardId ? hic.parseHobbyIqCardId(row.hobbyiqCardId) : null;
+          if (!parsedId) continue; // no id, or unparseable -- the row loop's own unparseable bucket handles it; nothing to warm
+          const sport = String(parsedId.sport ?? "").trim().toLowerCase() || null;
+          const year = parsedId.year ?? null;
+          const setKey = parsedId.setKey ?? null;
           if (!sport || year == null || !setKey) continue; // same "absent beats wrong" refusal the row loop's own unparseable bucket uses
-          const cellKey = `${year}|${setKey}|${sport}`;
+          const cellKey = `${sport}|${year}|${setKey}`; // SAME field order as the row loop's own cellKey below
           if (!cellsToWarm.has(cellKey)) cellsToWarm.set(cellKey, { sport, year, setKey });
         }
         const cellList = [...cellsToWarm.values()];
@@ -3900,19 +3972,77 @@ async function main() {
       // `card_catalog.id` addresses, same field `checklistBacked` itself
       // reads at the splitBackedSides call site above).
       if (CENSUS_BACKING) {
-        const sport = String(stored?.sport ?? row?.sport ?? "").trim().toLowerCase() || null;
+        // *** THE CELL IS THE ID'S OWN SEGMENTS, NEVER `stored` (2026-09-27,
+        // the panini-donruss mis-bucket fix). ***
+        //
+        // `row.hobbyiqCardId` is the SAME field the lookup below reads
+        // (`idMap.get(row.hobbyiqCardId)`) and the SAME field
+        // `backingCellIdPrefix`'s STARTSWITH query addresses -- so the cell
+        // this block preloads under and the id it looks up must come from
+        // the SAME source or the two can silently disagree. `stored` is NOT
+        // that source: storedIdentity(row, deps) (rematch-derive-identity.cjs)
+        // computes `setKey` FRESH from `row.setName` via
+        // `normalizeSetKey(setName, sport?)` -- no year -- so a pre-1990
+        // Donruss sale's setName "Donruss" normalises to the MODERN spelling
+        // `panini-donruss` while the id itself (minted WITH the year, via
+        // spellForEra) correctly says `donruss`. Keying the preload and the
+        // lookup off `stored` sent 21,882 1953-1990 baseball sales to the
+        // `panini-donruss` cell's (empty) preload map and bucketed every one
+        // `noRow`, while their real cell (`donruss`) held the catalog row
+        // that would have answered `backedStrict`.
+        //
+        // Parsed via `hic.parseHobbyIqCardId` -- the repo's own reverse
+        // parser (hobbyIqCardId.service.ts), never a hand-rolled split -- so
+        // this reads the id exactly the way every other id-aware lane in this
+        // file already does (see card-number-scope.cjs's own header on the
+        // same point).
+        const parsedId = row?.hobbyiqCardId ? hic.parseHobbyIqCardId(row.hobbyiqCardId) : null;
+        // FALL BACK TO `stored` ONLY WHEN THERE IS NO ID TO READ AT ALL --
+        // never when an id exists and merely disagrees with `stored` (that
+        // disagreement is the drift this fix exists to stop feeding into the
+        // preload). A row with no hobbyiqCardId, or an id the parser
+        // refuses, has no id-side address to prefer, so the best available
+        // signal for WHICH cell an `unparseable` row's stats land under is
+        // still its own stored fields -- exactly the cell the pre-fix code
+        // always used. `row?.hobbyiqCardId` is checked (not just `parsedId`)
+        // so a row whose id exists but fails to parse is not silently
+        // treated as if it had none.
+        const sport = parsedId
+          ? (String(parsedId.sport ?? "").trim().toLowerCase() || null)
+          : (String(stored?.sport ?? row?.sport ?? "").trim().toLowerCase() || null);
         const sb = backingBucketsOf(backingBySport, sport ?? "(unknown)");
-        // Per-cell breakdown, capped. `year`/`setKey` come off the STORED
-        // identity (the row's own fields): the cell describes what the row
-        // IS, not what it re-derives to, since an IMPROVE row's derived
-        // cell may differ from its stored one and the backing question is
-        // "does the row's own product have a catalog", not "does its
-        // corrected product have one".
-        const year = stored?.year ?? stored?.cardYear ?? null;
-        const setKey = stored?.setKey ?? null;
+        // `year`/`setKey` come off the PARSED ID whenever one exists -- the
+        // cell then describes the address the id itself claims, which is
+        // what the preload's own STARTSWITH(c.id, 'hiq:<sport>:<year>:
+        // <setKey>:') prefix addresses. An IMPROVE row's derived cell may
+        // still differ from this one (this is the row's CURRENT id, not its
+        // re-derived destination) -- the backing question stays "does the
+        // row's own product have a catalog", unchanged; only WHERE that
+        // product's cell is read from has moved off the drift-prone stored
+        // fields, for every row that HAS an id to read it from.
+        const year = parsedId ? (parsedId.year ?? null) : (stored?.year ?? stored?.cardYear ?? null);
+        const setKey = parsedId ? (parsedId.setKey ?? null) : (stored?.setKey ?? null);
         const cellKey = (sport && year != null && setKey) ? `${sport}|${year}|${setKey}` : null;
         const overflowing = cellKey && !backingByCell.has(cellKey) && backingByCell.size >= BACKING_CELL_CAP;
         const cb = cellKey ? backingBucketsOf(backingByCell, overflowing ? "other" : cellKey) : null;
+        // STORED-FIELD DRIFT, INFORMATIONAL ONLY (see storedFieldDriftBySport's
+        // header above). Compared AFTER the real cell is already decided, so
+        // this can never influence backedStrict/noRow/etc -- it only counts
+        // how often the row's setName-derived `stored` (sport, year, setKey)
+        // triple disagrees with its own id's (sport, year, setKey), so a heal
+        // pass has a worklist. Never computed when the id itself couldn't be
+        // parsed -- there is no id-side answer to disagree with `stored` in
+        // that case, and that population is already counted by
+        // `unparseable`.
+        if (parsedId) {
+          const storedSport = String(stored?.sport ?? row?.sport ?? "").trim().toLowerCase() || null;
+          const storedYear = stored?.year ?? stored?.cardYear ?? null;
+          const storedSetKey = stored?.setKey ?? null;
+          const drifted = storedSport !== sport
+            || (storedYear != null ? Number(storedYear) : null) !== year
+            || String(storedSetKey ?? "").toLowerCase() !== String(setKey ?? "").toLowerCase();
+          if (drifted) bumpDrift(sport ?? "(unknown)", cellKey);
+        }
         if (row?.flaggedWrong === true || row?.excludedFromFmv === true) {
           // Own bucket, checked BEFORE parked: a flagged/excluded sale is
           // never priced regardless of whether it is also parked, and this
@@ -4912,6 +5042,37 @@ async function main() {
           + "large cells and re-querying previously-evicted-then-revisited "
           + "cells more than the locality assumption expects; cellCap is "
           + "now only the SECONDARY bound.",
+      },
+      // STORED-FIELD DRIFT (2026-09-27, the panini-donruss mis-bucket fix).
+      // ADDITIVE ONLY -- a NEW top-level field of `backing`, never a rename
+      // of bySport/byCell/preload; a reader of a prior artifact shape sees
+      // this as simply absent. INFORMATIONAL: every count here is a sale
+      // whose stored setName-derived (sport,year,setKey) disagreed with its
+      // own hobbyiqCardId -- the id's own reading is what bySport/byCell
+      // above are now classified by, so this population no longer affects
+      // backedStrict/noRow/etc, but its SIZE is exactly the heal worklist
+      // (see storedFieldDriftBySport's own header, above the row loop, for
+      // the mechanism: storedIdentity's setKey is era-blind). `topCells` is
+      // the drift-heaviest (sport,year,setKey) cells this slot saw, sorted
+      // descending, capped at 50 -- the same shape as merge-census-backing's
+      // own topUnbackedCells, so a reader can point a heal pass at the
+      // biggest drift first.
+      storedFieldDrift: {
+        bySport: Object.fromEntries(storedFieldDriftBySport),
+        byCell: Object.fromEntries(storedFieldDriftByCell),
+        topCells: [...storedFieldDriftByCell.entries()]
+          .filter(([cell]) => cell !== "other")
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 50)
+          .map(([cell, count]) => ({ cell, driftedSales: count })),
+        note: "Count of sales whose STORED (setName-derived) sport/year/setKey "
+          + "disagreed with their own hobbyiqCardId's segments -- the id's "
+          + "reading is authoritative for bySport/byCell above, so this is "
+          + "informational, never a bucket a sale is priced or excluded by. "
+          + "A cell with a large count here is a candidate for a sold_comps "
+          + "stored-field heal (rewriting stored sport/year/setKey from the "
+          + "id), never a catalog gap -- see the PR that added this field "
+          + "for whether apply-improve already performs that heal.",
       },
     } : null,
     // The filter is part of the census's identity: two censuses of the same

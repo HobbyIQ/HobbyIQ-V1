@@ -141,11 +141,10 @@ if (APPLY && !SPORTS.length && !YEARS.length && !SETKEYS.length) {
 }
 
 /** The doubled-year producer is fixed (0000f60) but stored titles still carry
- *  it; strip so the parser sees what the seller actually wrote. */
-function dedupeYear(title, year) {
-  const t = String(title ?? ""), y = String(year ?? "");
-  return y && t.startsWith(y + " " + y + " ") ? t.slice(y.length + 1) : t;
-}
+ *  it; strip so the parser sees what the seller actually wrote. Shared with
+ *  lib/relocate-sold-comp.cjs's dedupeYearPrefix (2026-09-28) -- see that
+ *  file's comment for why three copies of this had drifted into existence. */
+const dedupeYear = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs")).dedupeYearPrefix;
 
 /**
  * The products that could rival a chosen destination: everything sharing its

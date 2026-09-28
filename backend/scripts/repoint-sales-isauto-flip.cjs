@@ -538,6 +538,11 @@ async function main() {
     }
 
     try {
+      // CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, the move-side half: relocateSoldComp
+      // itself heals a pre-2026-08-24 (commit 0000f60) doubled-year title
+      // before it upserts `keep` (lib/relocate-sold-comp.cjs, review follow-up
+      // to PR #2474: centralized there instead of per-caller so every mover
+      // inherits it, not just this one).
       const keep = stripSystem({ ...sale, cardId: toId, hobbyiqCardId: toId });
       const result = await relocateSoldComp(pool, {
         keep, drop: [{ id: sale.id, cardId: sale.cardId }],
