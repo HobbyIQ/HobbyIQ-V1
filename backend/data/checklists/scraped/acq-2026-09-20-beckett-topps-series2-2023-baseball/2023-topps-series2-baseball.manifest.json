@@ -323,9 +323,10 @@
       "printRun": 300
     }
   ],
-  "sha256": "a5e1885baabf15f42f9f809ff2f52dd989495f670c1c8df2231da835eaa6f1bb",
+  "sha256": "b7b2600430e97a0ee20f4d296f24dbfbfa2335ece2bc412a9ef15877a489bdf7",
   "notes": [
     "Removed 4 pure-duplicate rows the source workbook printed for card numbers 371/423/452/505 with unaccented player-name spellings (Livan Soto / Jordan Diaz / Carlos Perez / Jose Miranda) immediately following the plain Base Set run and before the Golden Mirror Variations run began -- each number already carries its correctly-accented row earlier in the same run.",
-    "The Variations sheet parallel is committed verbatim as Beckett prints it: \"Golden Mirror Variations Checklist\" (330 rows). This workbook Master sheet lists no per-parallel names at all, so stripChecklistSuffix Master-authority gate never fires, and the Variations sheet has no sibling section to confirm a sheet-wide Checklist-suffix convention either."
+    "ORIGINALLY the Variations sheet parallel was committed verbatim as Beckett prints it: \"Golden Mirror Variations Checklist\" (330 rows). This workbook Master sheet lists no per-parallel names at all, so stripChecklistSuffix Master-authority gate never fired at conversion time, and the Variations sheet had no sibling section to confirm a sheet-wide Checklist-suffix convention either -- so the converter correctly left the string un-stripped rather than guess.",
+    "CORRECTED 2026-09-28 (Drew's ruling, acq-2026-09-28-cbc-beckett-topps-golden-mirror-image-variation-2023): all 330 rows' parallel column changed from \"Golden Mirror Variations Checklist\" to \"Golden Mirror Variation\", the codebase's own established canonical spelling (variationVocabulary.ts: golden-mirror-variation slug, corroborated by Cardboard Connection's Series 1/Series 2 variations pages and Beckett's dedicated Golden Mirror guide, none of which use the word Checklist as part of the card's name -- it named the source workbook's VARIATIONS SHEET, not the card). This keeps the row's identity slug identical to what live sale titles already normalize to through the existing title parser, so these 330 checklist rows can back sales instead of leaving them unaddressed. sha256 updated to reflect this single find-and-replace across the file; no other row's category, cardNumber, isAuto, printRun or player changed."
   ]
 }
