@@ -1,0 +1,13 @@
+{
+  "productKey": "2024-panini-photogenic",
+  "sport": "football",
+  "year": 2024,
+  "setKey": "panini-photogenic",
+  "setName": "2024 Panini Photogenic Football",
+  "source": "checklistinsider",
+  "confidence": 0.9,
+  "provenance": "checklistinsider.com 2024 Panini Photogenic Football -- staged to C:/tmp/ci/csv2 by the acquisition sweep, read 2026-09-18. 4,646 rows, 80 distinct parallel spellings, 4,133 rows carrying a print run. The source lists each base colour rung TWICE (once under `base`, once under `insert-base-<colour>`): 841 of those pairs are byte-identical on player, cardNumber, parallel, isAuto and printRun and are folded by CF-A-DUPLICATE-IS-NOT-A-COLLISION, not refused.",
+  "sourceUrl": "https://www.checklistinsider.com/2024-panini-photogenic-football",
+  "rowCount": 4646,
+  "parallelColumnAuthoritative": true
+}
