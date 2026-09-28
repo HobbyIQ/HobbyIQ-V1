@@ -119,7 +119,7 @@ const backend = path.resolve(__dirname, "..");
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { withBackoff } = require(path.join(__dirname, "lib", "cosmos-backoff.cjs"));
 const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
-const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
+const { namesAgree, titleNamesPlayer } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
 // GATE (e)'s own stripTrailingTokens vocabulary (this PR's title-first fix)
 // -- see that lib module's own header for why this lane needs it (its real
 // committed list's titles carry print-attribute words like "Auto" that a
@@ -127,11 +127,6 @@ const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs")
 // bare name). Reads the checklist corpus directly, no dist/ and no Cosmos --
 // same load-without-a-build contract as name-agreement.cjs itself.
 const { stripVocabularyForDestination } = require(path.join(__dirname, "lib", "checklist-parallel-strip-vocab.cjs"));
-// GATE (e)'s own "is the title even name-shaped" test (this PR) -- see that
-// module's own header for why a bare "title is non-blank" check false-
-// refuses real CardHedge/eBay listing titles that carry no player name at
-// all.
-const { titleHasNameTokens } = require(path.join(__dirname, "lib", "title-has-name-tokens.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
@@ -368,41 +363,68 @@ async function main() {
       continue;
     }
 
-    // ── GATE (e), TITLE-FIRST (this PR). "A checklist row proves the ROW,
-    // the player name proves the SALE" -- but the sale's own stored
-    // playerName field can itself be corrupt while its TITLE plainly names
-    // the destination player. The title is read FIRST, through the SAME
-    // stripTrailingTokens vocabulary GATE 6 in repoint-sales-by-list.cjs
-    // builds for its own destination (lib/checklist-parallel-strip-vocab.cjs
-    // -- without it, a real title like "Allan Castro Blue Refractor Auto"
-    // would never fold onto the checklist's bare "Allan Castro", and this
-    // lane's own committed list of 2,022 real sales carries exactly that
-    // shape). playerName is consulted ONLY when the title carries NO NAME
-    // TOKENS AT ALL -- lib/title-has-name-tokens.cjs strips the destination
-    // card's own setKey/sport/cardNumber vocabulary (parsed off `cardId`'s
-    // own `hiq:sport:year:setKey:cardNumber:...` slug when the catalog row
-    // itself carries no separate setKey field) before counting, so a bare
-    // vendor listing title with no player name in it at all falls back to
-    // playerName rather than being refused on its own product noise. On a
-    // real conflict the TITLE WINS -- see repoint-sales-by-list.cjs's own
-    // GATE 6 for the identical doctrine and the PR #2485 incident (Yordanny
-    // Monegro / Yohandy Morales #CPA-YM) this mirrors. `decidedBy` records
-    // which field actually decided, in the plan-row evidence for both the
-    // pass and the refuse path.
+    // ── GATE (e), TITLE-FIRST (this PR, revised after review). "A
+    // checklist row proves the ROW, the player name proves the SALE" -- but
+    // the sale's own stored playerName field can itself be corrupt while
+    // its TITLE plainly names the destination player.
+    //
+    // REVIEW FINDING (first cut rejected): comparing the RAW title against
+    // the destination via plain `namesAgree` never fires on a real title
+    // shape -- namesAgree/stripMarkers strip only TRAILING vocabulary, and
+    // a real title's leading year/brand/card-number preamble sits BEFORE
+    // the name. `titleNamesPlayer` (lib/name-agreement.cjs, identical to PR
+    // #2500's own function) asks the CONTAINMENT question instead ("does
+    // the folded title contain the folded player name anywhere"), so
+    // leading noise never matters -- see repoint-sales-by-list.cjs's own
+    // GATE 6 for the identical doctrine and its own longer comment.
+    //
+    // THE GATE, IN ORDER:
+    //   1. titleNamesPlayer(title, destination playerName) -- title
+    //      corroborates the destination -> PASS, decidedBy=title.
+    //   2. titleNamesPlayer(title, the STALE address's own registered
+    //      player), when that stale-address name disagrees with the
+    //      destination -- the title names a DIFFERENT, real,
+    //      checklist-registered player (the sale's own PRIOR address,
+    //      read via catalogRowAt(expectedStaleHobbyiqCardId), best-effort:
+    //      a retired row that no longer exists simply yields no signal
+    //      here, never an error) -> REFUSE, decidedBy=title. Bounded to
+    //      the one other registered identity this lane already has cheap
+    //      access to, never a full collision table.
+    //   3. Neither -- the title says nothing this lane can confirm either
+    //      way (blank, pure listing noise, or a bare team name -- a naive
+    //      token-count floor over the raw title was rejected on review for
+    //      misreading team/city vocabulary as name-shaped, an open set no
+    //      closed strip list safely covers) -> FALL BACK to the original
+    //      playerName comparison, decidedBy=playerName.
     const strip = stripVocabularyForDestination(catalogRow);
     const titleSource = String(sale.title ?? "").trim();
     const playerNameSource = String(sale.playerName ?? "").trim();
     const destName = String(catalogRow.playerName ?? "").trim();
-    const slugParts = cardId.split(":");
-    const titleContext = {
-      setKey: catalogRow.setKey ?? slugParts[3] ?? null,
-      sport: catalogRow.sport ?? slugParts[1] ?? null,
-      cardNumber: catalogRow.cardNumber ?? slugParts[4] ?? null,
-    };
-    const titleIsNameShaped = titleHasNameTokens(titleSource, strip.tokens, titleContext);
-    const decidedBy = titleIsNameShaped ? "title" : "playerName";
-    const saleName = titleIsNameShaped ? titleSource : playerNameSource;
-    if (!namesAgree(saleName, destName, { stripTrailingTokens: strip.tokens })) {
+    const opts = { stripTrailingTokens: strip.tokens };
+
+    let decidedBy, saleName, agrees;
+    if (titleNamesPlayer(titleSource, destName, opts)) {
+      decidedBy = "title";
+      saleName = titleSource;
+      agrees = true;
+    } else {
+      let staleName = "";
+      try {
+        const staleRow = await catalogRowAt(expectedStaleHobbyiqCardId);
+        staleName = String(staleRow?.playerName ?? "").trim();
+      } catch { /* best-effort only -- a retired/unreadable stale row is not a conflict signal, never a failure */ }
+      if (staleName && !namesAgree(staleName, destName, opts) && titleNamesPlayer(titleSource, staleName, opts)) {
+        decidedBy = "title";
+        saleName = titleSource;
+        agrees = false;
+      } else {
+        decidedBy = "playerName";
+        saleName = playerNameSource;
+        agrees = namesAgree(saleName, destName, opts);
+      }
+    }
+
+    if (!agrees) {
       refusedNameDisagreement++;
       console.error(`      REFUSED (name-disagreement): sale "${saleName.slice(0, 60)}" (decidedBy=${decidedBy}) vs destination "${destName.slice(0, 60)}"`);
       emitPlanRow({ action: "refused", reason: "name-disagreement", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId, saleName, destName, decidedBy });

@@ -151,7 +151,7 @@ const fs = require("node:fs");
 const backend = path.resolve(__dirname, "..");
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { salesAtId, drainSalesIdsAtId } = require(path.join(__dirname, "lib", "sales-at-id.cjs"));
-const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
+const { namesAgree, titleNamesPlayer } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
 const { withBackoff } = require(path.join(__dirname, "lib", "cosmos-backoff.cjs"));
 const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
 // checklistParallelNamesFor is a scripts/lib module (reads the checklist
@@ -159,11 +159,6 @@ const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
 // contract as name-agreement.cjs itself -- required at top level, not lazily
 // inside main(), for the same reason.
 const { checklistParallelNamesFor } = require(path.join(__dirname, "lib", "rematch-finish-vocab.cjs"));
-// GATE 6's own "is the title even name-shaped" test (this PR) -- see that
-// module's own header for why a bare "title is non-blank" check false-
-// refuses real CardHedge/eBay listing titles that carry no player name at
-// all ("2025 Topps Chrome Update Baseball #AC-NM Base").
-const { titleHasNameTokens } = require(path.join(__dirname, "lib", "title-has-name-tokens.cjs"));
 // The dist/ and Cosmos requires live inside main(), as every sibling list
 // lane does it: loading this module must not need a built tree, so a test
 // can require it and drive the list/gate logic without a compile step.
@@ -642,36 +637,78 @@ async function main() {
         continue;
       }
 
-      // ── GATE 6, TITLE-FIRST (this PR). "A checklist row proves the ROW,
-      // the player name proves the SALE" -- but a sale's STORED playerName
-      // field can itself be corrupt (mis-extracted at ingest) while its
-      // TITLE, the actual listing text, plainly names the destination
-      // player. The title is read FIRST, through the identical
-      // stripTrailingTokens vocabulary GATE 6 already builds for the
-      // destination; playerName is consulted ONLY when the title carries NO
-      // NAME TOKENS AT ALL -- never merely when the title simply disagrees.
-      // "No name tokens" is NOT "the title is blank": lib/title-has-name-
-      // tokens.cjs strips the destination's own setKey/sport/cardNumber
-      // vocabulary (plus year/grade/card-number-token shapes) before
-      // counting, because a large share of real sold_comps titles are
-      // CardHedge/eBay listing text with no player name in them at all
-      // ("2025 Topps Chrome Update Baseball #AC-NM Base") -- a bare
-      // non-blank check would have refused those on their own CORRECT
-      // playerName, the opposite of what title-first is for. On a real
-      // conflict (title carries a genuine name, and it is NOT the
-      // destination's) the TITLE WINS and the sale is refused, even though
-      // a playerName-only check would have passed it -- a corrupt stored
-      // field must never outrank the evidence a human listed the card
-      // under. `decidedBy` records which field actually produced the
-      // verdict, in both the pass and the refuse path.
+      // ── GATE 6, TITLE-FIRST (this PR, revised after review). "A checklist
+      // row proves the ROW, the player name proves the SALE" -- but a
+      // sale's STORED playerName field can itself be corrupt (mis-extracted
+      // at ingest) while its TITLE, the actual listing text, plainly names
+      // the destination player.
+      //
+      // REVIEW FINDING (first cut rejected): comparing the RAW title against
+      // the destination via plain `namesAgree` never fires on a real title
+      // shape -- namesAgree/stripMarkers only strip TRAILING vocabulary, and
+      // a real title's leading year/brand/card-number preamble
+      // ("2024 Bowman Chrome Yohandy Morales Prospect Auto #CPA-YM") sits
+      // BEFORE the name, so the whole-string fold never equals the bare
+      // destination name. `titleNamesPlayer` (lib/name-agreement.cjs,
+      // identical to PR #2500's own function, built for the same free-text-
+      // title-vs-bare-playerName shape) is the right tool: a CONTAINMENT
+      // check ("does the folded title contain the folded player name
+      // anywhere"), not a whole-string fold/compare -- so leading noise
+      // never matters.
+      //
+      // THE GATE, IN ORDER:
+      //   1. titleNamesPlayer(title, destination playerName) -- title
+      //      corroborates the destination -> PASS, decidedBy=title. This is
+      //      the PR #2485 fix itself: a corrupt playerName never blocks a
+      //      title that plainly names the right player.
+      //   2. titleNamesPlayer(title, SOURCE fromRow's own playerName), when
+      //      that source name disagrees with the destination -- the title
+      //      names a DIFFERENT, real, checklist-registered player (the
+      //      card's own current address, already read by GATE 1) rather
+      //      than the destination -> REFUSE, decidedBy=title. "Title wins
+      //      on conflict": even a playerName that happens to match the
+      //      destination must not override a title that plainly names
+      //      someone else. Bounded to the source row's OWN player (the one
+      //      other registered identity already on hand) rather than a full
+      //      cross-product collision table this lane has no cheap access
+      //      to -- a one-directional, conservative widening of what counts
+      //      as "known conflict", never a guess.
+      //   3. Neither -- the title says nothing this lane can confirm either
+      //      way (blank, pure listing noise like "2025 Topps Chrome Update
+      //      Baseball #AC-NM Base", or a bare team name like "Baltimore
+      //      Orioles"; REVIEW FINDING: a naive token-count floor over the
+      //      raw title mis-read team/city names as name-shaped, since team
+      //      vocabulary is itself an open set no closed strip list safely
+      //      covers) -> FALL BACK to the original playerName comparison,
+      //      decidedBy=playerName. This is exactly the gate's pre-title-
+      //      first behaviour, unchanged for the common case where the title
+      //      carries no player identity at all.
+      // `decidedBy` records which field actually produced the verdict, in
+      // both the pass and the refuse path.
       const titleSource = String(sale.title ?? "").trim();
       const playerNameSource = String(sale.playerName ?? "").trim();
       const destName = String(toRow.playerName ?? "").trim();
-      const titleContext = { setKey: toRow.setKey, sport: toRow.sport, cardNumber: cardNumber || toRow.cardNumber };
-      const titleIsNameShaped = titleHasNameTokens(titleSource, strip.tokens, titleContext);
-      const decidedBy = titleIsNameShaped ? "title" : "playerName";
-      const saleName = titleIsNameShaped ? titleSource : playerNameSource;
-      if (!namesAgree(saleName, destName, { stripTrailingTokens: strip.tokens })) {
+      const sourceName = String(fromRow.playerName ?? "").trim();
+      const opts = { stripTrailingTokens: strip.tokens };
+
+      let decidedBy, saleName, agrees;
+      if (titleNamesPlayer(titleSource, destName, opts)) {
+        decidedBy = "title";
+        saleName = titleSource;
+        agrees = true;
+      } else if (sourceName && !namesAgree(sourceName, destName, opts) && titleNamesPlayer(titleSource, sourceName, opts)) {
+        // The title names the SOURCE's own (different) registered player,
+        // not the destination -- a real conflict the title alone settles.
+        decidedBy = "title";
+        saleName = titleSource;
+        agrees = false;
+      } else {
+        decidedBy = "playerName";
+        saleName = playerNameSource;
+        agrees = namesAgree(saleName, destName, opts);
+      }
+
+      if (!agrees) {
         refusedNameDisagreement++;
         console.error(`      REFUSED (name-disagreement) ${sale.id}: sale "${saleName.slice(0, 60)}" (decidedBy=${decidedBy}) vs destination "${destName.slice(0, 60)}"`);
         emitPlanRow({ action: "refused", reason: "name-disagreement", fromId, toId, saleId: sale.id, saleName, destName, decidedBy });

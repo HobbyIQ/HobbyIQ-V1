@@ -255,11 +255,15 @@ describe("this lane reuses the shared namesAgree, never a bespoke compare", () =
   it("requires lib/name-agreement.cjs at module scope", () => {
     const src = readFileSync(lane, "utf8");
     expect(src).toContain('require(path.join(__dirname, "lib", "name-agreement.cjs"))');
-    // GATE 6 now passes the destination product's own checklist parallel
-    // vocabulary as opts.stripTrailingTokens (this PR, run 36346769892) --
-    // namesAgree(a, b) with no third argument is unchanged, but this call
-    // site always supplies one, built from the real corpus.
-    expect(src).toContain("namesAgree(saleName, destName, { stripTrailingTokens: strip.tokens })");
+    // GATE 6's own opts always carry the destination product's own checklist
+    // parallel vocabulary as stripTrailingTokens (run 36346769892) -- both
+    // namesAgree (the playerName fallback path) and titleNamesPlayer (the
+    // title-first path, this PR's review-fixed revision) are called with the
+    // SAME `opts`, built once from the real corpus, never two divergent
+    // vocabularies for one entry.
+    expect(src).toContain("const opts = { stripTrailingTokens: strip.tokens };");
+    expect(src).toContain("titleNamesPlayer(titleSource, destName, opts)");
+    expect(src).toContain("namesAgree(saleName, destName, opts)");
   });
 
   it("requires the dual sales-at-id check, never a bare cross-partition query", () => {
@@ -1116,14 +1120,22 @@ describe("regression: run 36353646453 -- a physical duplicate sharing an id must
 // is read FIRST; playerName is consulted ONLY when the title is blank. ──────
 
 describe("GATE 6 reads the sale's TITLE first, and playerName only when the title is blank", () => {
-  it("corrupt playerName + title naming the destination -> PASSES, decidedBy=title", () => {
+  it("corrupt playerName + a REAL-SHAPED title (leading year/brand/card-number noise before the name) naming the destination -> PASSES, decidedBy=title", () => {
+    // Review finding: every earlier fixture put the player's name at the
+    // FRONT of the title with nothing but strippable trailing vocabulary
+    // after it -- exactly the shape plain namesAgree(wholeTitle, name)
+    // happens to fold correctly, and exactly the shape the real
+    // sold_comps/CardHedge/eBay title never has. This fixture instead uses
+    // the PR's own headline incident shape: a leading year/brand/card-number
+    // PREAMBLE before the player's name, the actual PR #2485 title text.
     const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "title proves the sale", expectedSales: 1 }], "title-first-pass");
     const catalog = [FROM_ROW, TO_ROW];
     // playerName is corrupt (names neither Adael Amador nor anyone at the
-    // destination); the title plainly names "Adael Amador".
+    // destination); the title plainly names "Adael Amador", but buried
+    // after real listing-title preamble, not at the front.
     const sales = [{
       id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
-      title: "Adael Amador RayWave Refractor", playerName: "Yordanny Monegro", parallel: "RayWave Refractor",
+      title: "2025 Topps Chrome Update Baseball Adael Amador RayWave Refractor #USC143", playerName: "Yordanny Monegro", parallel: "RayWave Refractor",
     }];
 
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
@@ -1138,21 +1150,46 @@ describe("GATE 6 reads the sale's TITLE first, and playerName only when the titl
     expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
   });
 
-  it("title names a DIFFERENT player + playerName matches the destination -> REFUSED (title wins on conflict)", () => {
-    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "title wins on conflict", expectedSales: 1 }], "title-first-conflict");
-    const catalog = [FROM_ROW, TO_ROW];
-    // playerName agrees with the destination ("Adael Amador"), but the
-    // title plainly names a different player ("Yohandy Morales") -- the
-    // exact PR #2485 shape (Yordanny Monegro / Yohandy Morales #CPA-YM).
+  it("the PR's own literal headline incident title (year/brand/name/prospect/auto/card-number, in that order) -> PASSES, decidedBy=title", () => {
+    // Verbatim reviewer reproduction case: "2024 Bowman Chrome Yohandy
+    // Morales Prospect Auto #CPA-YM" -- run through the REAL destination
+    // gate, not a bare namesAgree() call, to prove GATE 6 itself (not just
+    // titleNamesPlayer in isolation) now passes this shape.
+    const destRow = { ...TO_ROW, playerName: "Yohandy Morales" };
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "reviewer headline case", expectedSales: 1 }], "title-first-headline");
+    const catalog = [FROM_ROW, destRow];
     const sales = [{
       id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
-      title: "Yohandy Morales RayWave Refractor", playerName: "Adael Amador", parallel: "RayWave Refractor",
+      title: "2024 Bowman Chrome Yohandy Morales Prospect Auto #CPA-YM", playerName: "Yordanny Monegro", parallel: "RayWave Refractor",
     }];
 
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
     assertNoUncaughtError(r);
     expect(r.code).toBe(0);
-    expect(r.out).toMatch(/REFUSED \(name-disagreement\) src::1: sale "Yohandy Morales RayWave Refractor" \(decidedBy=title\)/);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+  });
+
+  it("title names the SOURCE row's own (different) registered player + playerName wrongly matches the destination -> REFUSED (title wins on conflict)", () => {
+    // The conflict this gate can actually PROVE (bounded to the one other
+    // registered identity it has cheap access to -- the SOURCE row it
+    // already read at GATE 1, never an unbounded collision table): the
+    // sale's stored playerName has been corrupted to read the DESTINATION's
+    // own name (a false agreement waiting to happen), but the title plainly
+    // names the card's real, current, checklist-registered player at
+    // fromId -- a genuinely different person from the destination.
+    const conflictFromRow = { ...FROM_ROW, playerName: "Yohandy Morales" };
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "title wins on conflict", expectedSales: 1 }], "title-first-conflict");
+    const catalog = [conflictFromRow, TO_ROW];
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "2025 Topps Chrome Update Baseball Yohandy Morales RayWave Refractor #CPA-YM", playerName: "Adael Amador", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED \(name-disagreement\) src::1: sale "2025 Topps Chrome Update Baseball Yohandy Morales RayWave Re" \(decidedBy=title\)/);
     expect(r.out).toMatch(/REFUSED: name-disagreement\s+1/);
     expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+0/);
   });
@@ -1183,16 +1220,45 @@ describe("GATE 6 reads the sale's TITLE first, and playerName only when the titl
   // "2025 Topps Chrome Update Baseball #USC143 Base" is exactly this shape
   // for THIS fixture's own product. A bare "title is non-blank" check would
   // have refused this sale on its own CORRECT playerName the moment
-  // title-first shipped. lib/title-has-name-tokens.cjs strips the
-  // destination's own setKey/sport/cardNumber vocabulary before counting,
-  // so this title correctly reduces to zero name tokens and GATE 6 falls
-  // back to playerName instead of testing the title at all.
+  // title-first shipped. `titleNamesPlayer` (lib/name-agreement.cjs) finds
+  // no name in this title against either the destination or the source's
+  // own player, so GATE 6 falls all the way through to the original
+  // playerName comparison, exactly its pre-title-first behaviour.
   it("a non-blank but NAME-LESS title (real listing noise, no player) -> PASSES via playerName, decidedBy=playerName", () => {
     const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "name-less title falls back to playerName", expectedSales: 1 }], "title-nameless-fallback");
     const catalog = [FROM_ROW, TO_ROW];
     const sales = [{
       id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
       title: "2025 Topps Chrome Update Baseball #USC143 Base", playerName: "Adael Amador", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
+    expect(applyRun.code).toBe(0);
+    expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
+  });
+
+  // CF-A-TEAM-NAME-IS-NOT-A-PLAYER-NAME (review finding, defect #2). A bare
+  // team/city name in a title ("Baltimore Orioles") is real, human-readable
+  // text -- exactly the shape a naive token-count-over-the-raw-title floor
+  // misread as "name-shaped" (2 alphabetic tokens survive: "Baltimore",
+  // "Orioles"), producing a false REFUSED on an otherwise-correct
+  // playerName. `titleNamesPlayer`'s CONTAINMENT design has no such failure
+  // mode: "Baltimore Orioles" is not a substring match for any real
+  // player's name, so it is never mistaken for one -- no team/city
+  // stoplist needed at all.
+  it("a title naming only a TEAM (no player) -> PASSES via playerName, decidedBy=playerName", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "team-only title falls back to playerName", expectedSales: 1 }], "title-team-only-fallback");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "2024 Topps #150 Baltimore Orioles", playerName: "Adael Amador", parallel: "RayWave Refractor",
     }];
 
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });

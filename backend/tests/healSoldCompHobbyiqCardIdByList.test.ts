@@ -516,12 +516,18 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
   // ── GATE (e), TITLE-FIRST (follow-up PR). "The title proves the sale":
   // the same doctrine repoint-sales-by-list.cjs's GATE 6 carries. ─────────
 
-  it("PASSES, decidedBy=title, when playerName is corrupt but the title plainly names the checklist row's player", () => {
+  it("PASSES, decidedBy=title, when playerName is corrupt but a REAL-SHAPED title (leading year/brand/card-number noise) plainly names the checklist row's player", () => {
+    // Review finding: the original fixture put the name at the FRONT of the
+    // title with nothing but strippable trailing vocabulary after it --
+    // exactly the shape plain namesAgree(wholeTitle, name) happens to fold,
+    // and exactly the shape a real sold_comps title never has. This uses a
+    // real listing-title preamble before the name instead.
     const list = writeList([{ saleId: SALE_ID, cardId: CARD_ID, expectedStaleHobbyiqCardId: STALE, toHobbyiqCardId: CARD_ID }], "title-first-pass");
     const catalog = [CATALOG_ROW];
     // playerName is corrupt (names nobody real); the title plainly names
-    // "Allan Castro", the checklist row's own playerName.
-    const sales = [{ ...SALE, playerName: "Yordanny Monegro", title: "Allan Castro Blue Refractor Auto" }];
+    // "Allan Castro", the checklist row's own playerName, buried after real
+    // listing-title preamble.
+    const sales = [{ ...SALE, playerName: "Yordanny Monegro", title: "2024 Bowman Chrome Allan Castro Blue Refractor Auto #CPA-ACA" }];
 
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
     assertNoUncaughtError(r);
@@ -531,17 +537,37 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
     expect(r.led.patches.length).toBe(1);
   });
 
-  it("REFUSES (title wins on conflict) when the title names a DIFFERENT player even though playerName matches the checklist row", () => {
-    const list = writeList([{ saleId: SALE_ID, cardId: CARD_ID, expectedStaleHobbyiqCardId: STALE, toHobbyiqCardId: CARD_ID }], "title-first-conflict");
-    const catalog = [CATALOG_ROW];
-    // playerName agrees with the destination ("Allan Castro"), but the
-    // title plainly names a different player -- the title wins.
-    const sales = [{ ...SALE, playerName: "Allan Castro", title: "Someone Else Entirely Blue Refractor Auto" }];
+  it("the reviewer's own literal headline incident title (year/brand/name/prospect/auto/card-number) -> PASSES, decidedBy=title", () => {
+    const list = writeList([{ saleId: SALE_ID, cardId: CARD_ID, expectedStaleHobbyiqCardId: STALE, toHobbyiqCardId: CARD_ID }], "title-first-headline");
+    const catalog = [{ ...CATALOG_ROW, playerName: "Yohandy Morales" }];
+    const sales = [{ ...SALE, playerName: "Yordanny Monegro", title: "2024 Bowman Chrome Yohandy Morales Prospect Auto #CPA-YM" }];
 
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
     assertNoUncaughtError(r);
     expect(r.code).toBe(0);
-    expect(r.out).toMatch(/REFUSED \(name-disagreement\): sale "Someone Else Entirely Blue Refractor Auto" \(decidedBy=title\)/);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD PATCH\s+1/);
+  });
+
+  it("REFUSES (title wins on conflict) when the title names the STALE address's own (different) registered player, even though playerName matches the checklist row", () => {
+    // The conflict this gate can actually PROVE (bounded to the one other
+    // registered identity it has cheap access to -- the STALE address's own
+    // catalog row, read via catalogRowAt(expectedStaleHobbyiqCardId), never
+    // an unbounded collision table): playerName has been corrupted to read
+    // the DESTINATION's own name, but the title plainly names the sale's
+    // real, prior, checklist-registered player at the stale address.
+    const staleRow = { id: STALE, cardId: STALE, source: "checklistinsider-2026-08-27", playerName: "Someone Else Entirely", setKey: "bowman-chrome", year: 2024 };
+    const list = writeList([{ saleId: SALE_ID, cardId: CARD_ID, expectedStaleHobbyiqCardId: STALE, toHobbyiqCardId: CARD_ID }], "title-first-conflict");
+    const catalog = [CATALOG_ROW, staleRow];
+    // playerName agrees with the destination ("Allan Castro"), but the
+    // title plainly names the stale address's own registered player -- the
+    // title wins.
+    const sales = [{ ...SALE, playerName: "Allan Castro", title: "2024 Bowman Chrome Someone Else Entirely Blue Refractor Auto #CPA-ACA" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED \(name-disagreement\): sale "2024 Bowman Chrome Someone Else Entirely Blue Refractor Auto" \(decidedBy=title\)/);
     expect(r.led.patches.length).toBe(0);
   });
 
@@ -563,13 +589,32 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
   // with NO PLAYER AT ALL -- this lane's own real committed list (2,022
   // sales) is CardHedge/eBay/cardsight-sourced. A bare "title is non-blank"
   // check would have refused this sale on its own CORRECT playerName the
-  // moment title-first shipped; lib/title-has-name-tokens.cjs strips the
-  // destination's own setKey/sport/cardNumber (parsed off `cardId` here)
-  // before counting, so this title correctly reduces to zero name tokens.
+  // moment title-first shipped; `titleNamesPlayer` finds no name in this
+  // title against either the destination or the stale address's own
+  // player, so GATE (e) falls all the way through to the original
+  // playerName comparison.
   it("PASSES, decidedBy=playerName, when the title is non-blank but NAME-LESS (real listing noise, no player)", () => {
     const list = writeList([{ saleId: SALE_ID, cardId: CARD_ID, expectedStaleHobbyiqCardId: STALE, toHobbyiqCardId: CARD_ID }], "title-nameless-fallback");
     const catalog = [CATALOG_ROW];
     const sales = [{ ...SALE, playerName: "Allan Castro", title: "2024 Bowman Baseball #CPA-ACA Refractor Auto" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/PATCHED\s+1/);
+    expect(r.led.patches.length).toBe(1);
+  });
+
+  // CF-A-TEAM-NAME-IS-NOT-A-PLAYER-NAME (review finding, defect #2). See
+  // repointSalesByList.test.ts's own identical case for the full doctrine --
+  // `titleNamesPlayer`'s containment design has no team/city stoplist
+  // failure mode at all, because "Baltimore Orioles" is never a substring
+  // match for a real player's name.
+  it("PASSES, decidedBy=playerName, when the title names only a TEAM (no player)", () => {
+    const list = writeList([{ saleId: SALE_ID, cardId: CARD_ID, expectedStaleHobbyiqCardId: STALE, toHobbyiqCardId: CARD_ID }], "title-team-only-fallback");
+    const catalog = [CATALOG_ROW];
+    const sales = [{ ...SALE, playerName: "Allan Castro", title: "2024 Topps #150 Baltimore Orioles" }];
 
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
     assertNoUncaughtError(r);
