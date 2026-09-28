@@ -737,7 +737,7 @@ const AUTO_NEGATIVE_RE =
 
 /** CF-A-NAMED-PARALLEL-IS-A-DISTINCT-CARD, at the source (audit gate 2026-09-03).
  *
- *  Every pattern-family rule below -- Shimmer, Lava, Wave, Ray Wave, Grass --
+ *  Every pattern-family rule below -- Shimmer, Lava, Wave, RayWave, Grass --
  *  enumerated its own colour list, and every one of those lists was
  *
  *      (orange|red|green|gold|blue|purple|yellow|aqua)
@@ -1848,11 +1848,14 @@ function extractParallel(
   if (m) return capFirst(m[1]) + " Shimmer Refractor";
   m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+lava`, "i"));
   if (m) return capFirst(m[1]) + " Lava Refractor";
-  // Ray Wave — check BEFORE plain Wave so "Ray Wave" doesn't get
+  // RayWave — check BEFORE plain Wave so "RayWave" doesn't get
   // swallowed by the wave-only pattern. Accepts three spellings:
-  // "Ray Wave" (space), "Ray-Wave" (hyphen), "RayWave" (compound).
+  // "Ray Wave" (space), "Ray-Wave" (hyphen), "RayWave" (compound) — all
+  // emit the compound "RayWave", Topps' own printed spelling and the one
+  // every sampled sale title uses (variationVocabulary.ts's
+  // FINISH_SPELLING.raywave agrees).
   m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+ray[\s-]?wave`, "i"));
-  if (m) return capFirst(m[1]) + " Ray Wave Refractor";
+  if (m) return capFirst(m[1]) + " RayWave Refractor";
   m = T.match(new RegExp(PATTERN_COLOUR + String.raw`\s+wave`, "i"));
   if (m) return capFirst(m[1]) + " Wave Refractor";
   // VAPOR and EQUINOX are pattern families with no rule at all before now, so
@@ -1879,8 +1882,8 @@ function extractParallel(
   // Refractor fallback at the bottom did. Order: after color-prefixed
   // Wave rules so "Blue Wave" still returns "Blue Wave Refractor",
   // before the bare "Refractor" fallback so bare "Wave Refractor"
-  // beats bare "Refractor". Same for Ray Wave.
-  if (/ray[\s-]?wave\s+refractor/i.test(T)) return "Ray Wave Refractor";
+  // beats bare "Refractor". Same for RayWave.
+  if (/ray[\s-]?wave\s+refractor/i.test(T)) return "RayWave Refractor";
   if (/wave\s+refractor/i.test(T)) return "Wave Refractor";
   // BARE SHIMMER, for the same reason bare Wave exists. "2022 Bowman Chrome
   // Shimmer Refractors #BCP-1" carries no colour, so every colour-prefixed
@@ -4377,7 +4380,7 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   if (/bowman\s+chrome/.test(t)) return "Bowman Chrome";
   // CF-CHROME-IMPLIED (Drew, 2026-07-29). Some parallels are Chrome-
   // exclusive (they don't exist on Bowman Paper): Speckle, Shimmer,
-  // Lava, Wave, Ray Wave, Grass, X-Fractor, Mojo, Prism, Mini Diamond,
+  // Lava, Wave, RayWave, Grass, X-Fractor, Mojo, Prism, Mini Diamond,
   // and any bare "Refractor". When a title says "Bowman" but omits
   // "Chrome" AND carries one of these chrome-only signals, upgrade to
   // Bowman Chrome. Ordered AFTER bowman-draft/chrome/sapphire so
