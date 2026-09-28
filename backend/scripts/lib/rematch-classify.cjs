@@ -5932,6 +5932,281 @@ function titleCardNumberWinsEvidence({
 }
 
 /**
+ * R34-CPA-NAME-RESOLVE -- a Bowman/Bowman Chrome autograph sale whose title
+ * never states the alphanumeric card number, resolved from (product, year,
+ * insert prefix, player name) when exactly ONE checklist row of that
+ * insert set names that player (Drew, 2026-09-28, "Fix all of baseball now").
+ *
+ * THE POPULATION. `deriveIdentity` reads `parsed.cardNumber ?? row.cardNumber
+ * ?? ""`, and for a title like
+ *
+ *   "2024 Bowman 1st Prospect Travis Sykora Chrome Auto Refractor /499 - Raw"
+ *
+ * neither side has a number: the seller never printed "CPA-TSY" and the row
+ * itself carries `cardNumber: null`. `guardSlugInputs` then refuses the blank
+ * as `cardnumber-unparsed` (CF-UNPARSED-IS-NOT-UNNUMBERED -- this is a PARSE
+ * FAILURE, not an asserted absence), `deriveIdentity` returns `ok: false`, and
+ * `classifyRow` takes the `!derived` door straight to UNDERIVABLE. The card is
+ * not unknown -- Travis Sykora's 2024 Bowman Chrome Prospect Autograph is a
+ * single checklist row (CPA-TSY) -- the title simply never spells the address,
+ * and nothing before this rung ever asked the checklist "which row names this
+ * player, in this insert set, in this product-year".
+ *
+ * WHY THIS IS A NAME LOOKUP, NOT A PARSE. The title states three things a
+ * parser already reads reliably and this rung is handed as facts, never as
+ * inference of its own: WHICH insert set (the fixed autograph-prefix family --
+ * CPA/CRA/BPA/BSPA/BCPA/BCRA/... -- named by the title's own words, "Chrome
+ * Prospect Autograph[s]" / "Rookie Auto[graph]" / "1st Bowman ... Auto"), WHO
+ * (the player name, matched against the checklist's OWN spelling as a
+ * CONTIGUOUS PHRASE the same way G6's `titleWithoutPlayerName` matches a
+ * parallel -- never a fuzzy score), and WHICH PRINT RUN / rung (read the same
+ * way R31 reads them, never invented). The resolution itself is arithmetic:
+ * of every checklist row in this insert set for this product-year, how many
+ * name a player the title agrees with? Exactly one is an address; two or more
+ * is the CPA initials collision `cpaProductRule.ts` already documents (CPA-AN
+ * is both Angel Nunez and Alejandro Nunez) and MUST refuse, never guess
+ * between them; zero is refused too.
+ *
+ * THE GATES, IN THE ORDER THEY ARE CHECKED.
+ *
+ *   P1  THE ROW MUST ACTUALLY BE THIS DEFECT. The derivation's OWN refusal
+ *       reason must be exactly `guard:cardnumber-unparsed` (nothing else wrong
+ *       -- a bad sport or an unresolved setKey is a DIFFERENT derivation
+ *       defect and this rung has no evidence to fix it) -- otherwise this is
+ *       not the shape and there is nothing to resolve.
+ *   P2  THE TITLE MUST NAME A REGISTERED AUTOGRAPH INSERT PREFIX for this
+ *       PRODUCT. "Registered" means the curated, named prefix family
+ *       `isCardNumberAutoSubset` already carries (CPA/CDA/CRA/BPA/BSPA/BCPA/
+ *       BCRA/TCRA/...) -- never a guess at a new one. A title naming no such
+ *       family, or naming a family this product's own checklist never uses,
+ *       refuses. This is the "insert set is registered for that product/year"
+ *       leg: the caller answers it from the checklist's OWN card numbers for
+ *       (year, setKey), never from the title alone.
+ *   P3  EXACTLY ONE CANDIDATE. Among the checklist rows of that (year, setKey,
+ *       prefix), exactly one player's name is stated in the title as a
+ *       contiguous phrase (the caller's `nameAgreementFn`, defaulting to a
+ *       plain phrase test -- never fuzzy). Zero is UNRESOLVED; two or more is
+ *       AMBIGUOUS, and both refuse identically -- absent beats wrong, and a
+ *       collision is not a coin flip.
+ *   P4  PARALLEL AGREES, IF THE TITLE STATES ONE. Never invents a parallel
+ *       the checklist does not carry for this card; a stated parallel that
+ *       disagrees with the resolved candidate's own rung refuses.
+ *   P5  PRINT RUN AGREES, IF THE TITLE STATES ONE. Same discipline as R31's
+ *       T4 -- never invents a serial, and a stated serial that disagrees with
+ *       the candidate's own print run refuses.
+ *   P6  THE RESOLVED ROW IS CHECKLIST-BACKED. The destination gate every
+ *       other ruled subclass carries.
+ *
+ * WHAT THIS NEVER DOES. It never folds two players sharing an initials number
+ * onto one row (P3's ambiguous door). It never invents a prefix the product's
+ * own checklist does not carry (P2). It never widens the address beyond what
+ * the checklist and the title both independently state (P4/P5). Specific
+ * never folds to flagship: a resolved row is the INSERT's own address, never
+ * the base product's.
+ */
+const CPA_NAME_RESOLVE = "R34-CPA-NAME-RESOLVE";
+
+/**
+ * Which registered autograph-insert prefix does the title name, for THIS
+ * product? A closed, curated map from the title's own insert-set WORDS to the
+ * prefix family `isCardNumberAutoSubset` already recognises -- never a guess,
+ * never widened by this rung. `null` when the title names none of them.
+ *
+ * TOKEN SET, NOT A CONTIGUOUS PHRASE (measured against the real gap80 sample,
+ * 2026-09-28). Sellers reorder freely -- the same finding `titleNamesFinish`
+ * and `titleNamesStoredFinish` already state for parallel words applies here
+ * word for word:
+ *
+ *   "2024 Bowman 1st Prospect Travis Sykora Chrome Auto Refractor /499"
+ *       "Chrome" and "Prospect ... Auto" are split by the player's own name.
+ *   "LEO DE VRIES 2024 Bowman 1st Chrome Prospect Auto Blue Reptilian RC /150"
+ *       states the phrase contiguously, but the NEXT row down does not.
+ *
+ * A contiguous-phrase test measured 1/2 of the sampled Sykora/De Vries titles
+ * as "names no insert" -- exactly the under-delivery this rung exists to
+ * close. So each prefix is a REQUIRED TOKEN SET: every token must appear
+ * somewhere in the title, in any order, and CORPUS_STOPWORDS-style noise
+ * words are never part of a set (a bare "auto" or "prospect" alone would
+ * match almost every row in the population and stop deciding anything).
+ *
+ * THE BOUNDARY THIS DELIBERATELY DRAWS. A title stating ONLY "1st Bowman ...
+ * Auto" with no "Prospect"/"Rookie" anywhere -- 7 of the 20 sampled null-
+ * cardNumber rows -- names no registered insert by this test and refuses.
+ * That is the correct refusal: "1st Bowman Auto" is the FLAGSHIP autograph
+ * program's own generic description, not a named insert set, and resolving
+ * from it alone would be inventing a prefix from words that do not commit to
+ * one -- exactly the guess this rung must never make.
+ */
+const CPA_INSERT_TOKEN_SETS = [
+  // Bowman / Bowman Chrome Prospect Autographs.
+  [["chrome", "prospect", "auto"], "CPA"],
+  [["chrome", "prospect", "autograph"], "CPA"],
+  [["chrome", "prospect", "autographs"], "CPA"],
+  [["chrome", "prospects", "auto"], "CPA"],
+  [["chrome", "prospects", "autograph"], "CPA"],
+  // Chrome Rookie Autographs (Bowman Chrome / Topps Chrome families).
+  [["chrome", "rookie", "auto"], "CRA"],
+  [["chrome", "rookie", "autograph"], "CRA"],
+  [["chrome", "rookie", "autographs"], "CRA"],
+  // "Rookie Autograph[s]" alone (no "Chrome") -- Topps Chrome Rookie Autos
+  // also ship a paper-adjacent line the corpus spells without the word.
+  [["rookie", "autographs"], "CRA"],
+  [["rookie", "autograph"], "CRA"],
+];
+
+/** Kept for the mutation check and any caller that wants the token sets by
+ *  name rather than by prefix -- see `CPA_INSERT_TOKEN_SETS` above, which is
+ *  the one this function actually reads. */
+const CPA_INSERT_PHRASES = CPA_INSERT_TOKEN_SETS.map(([toks, prefix]) => [toks.join(" "), prefix]);
+
+function insertPrefixNamedInTitle(title) {
+  const toks = new Set(lower(str(title)).replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean));
+  if (!toks.size) return null;
+  let best = null, bestPrefix = null;
+  for (const [required, prefix] of CPA_INSERT_TOKEN_SETS) {
+    if (!required.every((w) => toks.has(w))) continue;
+    // Longest required set wins, so a title stating the fuller phrase never
+    // loses to a shorter set that also happens to be satisfied.
+    if (!best || required.length > best) { best = required.length; bestPrefix = prefix; }
+  }
+  return bestPrefix;
+}
+
+/**
+ * Does this checklist candidate's player name appear in the title as a
+ * CONTIGUOUS PHRASE? Mirrors G6's `titleWithoutPlayerName` exactly -- the same
+ * primitive that already decides whether a title states THIS card's player,
+ * never a fuzzy score. Re-derived here rather than imported so the module
+ * stays a single require, but it is the identical reduction
+ * (`playerNameWords` + the particle-tolerant phrase regex) applied to the
+ * CANDIDATE's name instead of the row's own stored one.
+ */
+function titleNamesCandidatePlayer(title, candidateName) {
+  const t = lower(str(title));
+  const stripped = titleWithoutPlayerName(t, candidateName);
+  return stripped !== t;
+}
+
+/**
+ * The R34 evidence for one row.
+ *
+ * `derivationReasons` -- the deriver's OWN refusal reasons (P1). Must be
+ *   exactly `["guard:cardnumber-unparsed"]` -- a row failing for any OTHER
+ *   reason (sport, setKey, year) is a different defect this rung cannot see.
+ * `titleInsertPrefix` -- `insertPrefixNamedInTitle(row.title)`, passed in so a
+ *   caller/test can drive it directly.
+ * `candidates` -- every checklist row of this (year, setKey, prefix), as
+ *   `{ cardNumber, playerName, printRun, parallel }`. A catalog read, so the
+ *   caller supplies it (`checklistNamesOnce`-shaped) and this module stays
+ *   pure. Empty means the prefix is not registered for this product/year --
+ *   P2's actual gate, answered from the checklist rather than guessed.
+ * `titleSerial` -- `VOCAB.serialFromTitle`, or null. Same discipline as R31's
+ *   T4: never invents a print run.
+ * `titleParallel` -- the parallel the title's own words name, if any (the
+ *   SAME reader R31 uses), or null. Never invents a parallel.
+ * `resolvedBacked` -- is the resolved (year, setKey, resolvedNumber)
+ *   checklist-backed? Caller-supplied, same discipline as every other ruled
+ *   subclass's destination gate.
+ */
+function cpaNameResolveEvidence({
+  row, stored, derivationReasons = [],
+  titleInsertPrefix = null,
+  candidates = [],
+  titleSerial = null,
+  titleParallel = null,
+  resolvedBacked = false,
+  titleNamesSiblingProduct = null,
+}) {
+  const failed = [];
+  const title = str(row?.title);
+
+  // P0 -- THE TITLE MUST NOT NAME A SIBLING OF THE PRODUCT BEING WRITTEN
+  // (review finding #1, 2026-09-28). Same guard, same reasoning, same
+  // helper R31's own T5a uses -- see that leg's header for the full
+  // reasoning. `stored.setKey` is a FIELD an earlier writer minted, never a
+  // title reading, and this codebase's own memory documents the exact
+  // hazard by name (Bowman-family setKey mis-filings). A title stating
+  // "Sapphire" / "Draft" / "Mega Box" over a row whose stored setKey is the
+  // plain flagship must refuse rather than resolve a specialty card's sale
+  // onto the flagship's own checklist row. Caller-supplied and NARROWING
+  // only, exactly like R31's own leg: `null` (unasked, or the title names no
+  // product at all) keeps today's behaviour rather than refusing every row.
+  if (titleNamesSiblingProduct === true) failed.push("title-names-sibling-product");
+
+  // P1 -- THE ROW MUST BE EXACTLY THIS DEFECT. Any other guard reason present
+  // means the derivation is broken on an axis this rung has no evidence for,
+  // and fixing cardNumber alone would not make the row derivable.
+  const reasons = Array.isArray(derivationReasons) ? derivationReasons : [];
+  if (!reasons.includes("guard:cardnumber-unparsed")) {
+    failed.push("not-the-cardnumber-unparsed-shape");
+  }
+  if (reasons.some((r) => r !== "guard:cardnumber-unparsed")) {
+    failed.push(`other-guard-reasons-present:${reasons.filter((r) => r !== "guard:cardnumber-unparsed").join(",")}`);
+  }
+
+  // P2 -- THE TITLE MUST NAME A REGISTERED AUTOGRAPH INSERT PREFIX, AND THE
+  // PRODUCT'S OWN CHECKLIST MUST CARRY IT. `titleInsertPrefix` is the closed
+  // vocabulary match; `candidates` being non-empty is the checklist's own
+  // confirmation that this prefix is real for this (year, setKey) -- a title
+  // naming "Chrome Prospect Autograph" on a product whose checklist has no
+  // CPA rows at all is not registered here, whatever the words say.
+  if (!titleInsertPrefix) failed.push("title-names-no-registered-autograph-insert");
+  if (titleInsertPrefix && (!Array.isArray(candidates) || candidates.length === 0)) {
+    failed.push(`insert-not-registered-for-product-year:${lower(titleInsertPrefix)}`);
+  }
+
+  // P3 -- EXACTLY ONE CANDIDATE'S NAME AGREES WITH THE TITLE.
+  const matches = (Array.isArray(candidates) ? candidates : [])
+    .filter((c) => c && c.playerName && titleNamesCandidatePlayer(title, c.playerName));
+  if (matches.length === 0) failed.push("no-candidate-name-agrees-with-title");
+  if (matches.length > 1) {
+    failed.push(`ambiguous-initials-collision:${matches.map((c) => `${c.cardNumber}/${c.playerName}`).join(" vs ")}`);
+  }
+  const resolved = matches.length === 1 ? matches[0] : null;
+
+  // P4 -- THE PARALLEL AGREES, IF THE TITLE STATES ONE. Never invents one; a
+  // stated parallel that disagrees with the resolved row's own rung refuses.
+  if (resolved && titleParallel && !GENERIC_PARALLELS.has(lower(titleParallel))) {
+    const candidateParallel = lower(resolved.parallel);
+    if (candidateParallel && candidateParallel !== lower(titleParallel)) {
+      failed.push(`parallel-disagrees-with-checklist-row:${lower(titleParallel)}!=${candidateParallel}`);
+    }
+  }
+
+  // P5 -- THE PRINT RUN AGREES, IF THE TITLE STATES ONE. Same discipline as
+  // R31's T4: never invents a serial.
+  if (resolved && titleSerial !== null && titleSerial !== undefined) {
+    const candidateRun = resolved.printRun === null || resolved.printRun === undefined
+      ? null : Number(resolved.printRun);
+    if (candidateRun !== null && Number(titleSerial) !== candidateRun) {
+      failed.push(`printrun-disagrees-with-checklist-row:${candidateRun}!=/${titleSerial}`);
+    }
+  }
+
+  // P6 -- THE RESOLVED DESTINATION MUST BE CHECKLIST-BACKED.
+  if (resolved && !resolvedBacked) failed.push("resolved-destination-not-checklist-backed");
+
+  return {
+    qualifies: failed.length === 0 && !!resolved,
+    failed,
+    evidence: resolved ? {
+      titleInsertPrefix,
+      resolvedCardNumber: resolved.cardNumber,
+      resolvedPlayerName: resolved.playerName,
+      candidateCount: candidates.length,
+      matchCount: matches.length,
+      pair: `(blank)->${resolved.cardNumber}`,
+      titleQuoted: title.slice(0, 160),
+    } : {
+      titleInsertPrefix,
+      candidateCount: Array.isArray(candidates) ? candidates.length : 0,
+      matchCount: matches.length,
+      titleQuoted: title.slice(0, 160),
+    },
+  };
+}
+
+/**
  * Classify ONE row.
  *
  * `stored`   the identity the row carries today (from its own fields).
@@ -6097,6 +6372,32 @@ function classifyRow({
   //                              is, not which printing. NARROWING only, so
   //                              null (unasked) keeps today's behaviour.
   titleNamesInsertSet = null,
+  // R34-CPA-NAME-RESOLVE (Drew, 2026-09-28). Runs on the UNDERIVABLE door --
+  // see the subclass header above `cpaNameResolveEvidence` -- so its facts are
+  // named separately from R31/R33's even where the shape rhymes (`titleSerial`
+  // above is reused as-is: "the print run the title states" is one question,
+  // not two).
+  //   titleInsertPrefix   `insertPrefixNamedInTitle(row.title)` -- the
+  //                       registered autograph-insert prefix (CPA/CRA/...) the
+  //                       title's own words name, or null.
+  //   cpaCandidates       every checklist row of this (year, setKey, prefix),
+  //                       as `{ cardNumber, playerName, printRun, parallel }`.
+  //                       A catalog read, caller-supplied. Empty means the
+  //                       prefix is not registered for this product/year.
+  //   cpaTitleParallel    the parallel the title's own words name (the SAME
+  //                       reader R31 uses), or null. Never invented.
+  //   cpaResolvedBacked   is the resolved (year, setKey, resolvedNumber)
+  //                       checklist-backed? Caller-supplied.
+  //   cpaTitleNamesSiblingProduct  R31's own T5a guard, reused (review
+  //                       finding #1, 2026-09-28): does the title name a
+  //                       SIBLING product of the stored setKey (Sapphire /
+  //                       Draft / Mega Box over a plain flagship row)? true
+  //                       refuses; null/false narrows nothing, same as R31.
+  titleInsertPrefix = null,
+  cpaCandidates = [],
+  cpaTitleParallel = null,
+  cpaResolvedBacked = false,
+  cpaTitleNamesSiblingProduct = null,
 }) {
   const prov = provenanceTier(row);
   // THE SLUG-SHAPE DEFECTS ARE COMPUTED FOR EVERY ROW AND CHANGE NOTHING.
@@ -6215,6 +6516,50 @@ function classifyRow({
   }
 
   if (!derived) {
+    // R34-CPA-NAME-RESOLVE (Drew, 2026-09-28, "Fix all of baseball now").
+    //
+    // Evaluated ON THE UNDERIVABLE DOOR, before the plain refusal below,
+    // because that is exactly the shape this population takes: `deriveIdentity`
+    // could not read a cardNumber at all, so `der.ok` is false and there is no
+    // `derived` identity for the ordinary axis diff to compare against. R34
+    // builds its OWN destination from the checklist name lookup rather than
+    // from today's title parser, so it has to run here rather than through
+    // `diffAxes` -- see the subclass header above `cpaNameResolveEvidence`.
+    const r34 = cpaNameResolveEvidence({
+      row, stored, derivationReasons,
+      titleInsertPrefix, candidates: cpaCandidates, titleSerial,
+      titleParallel: cpaTitleParallel, resolvedBacked: cpaResolvedBacked,
+      titleNamesSiblingProduct: cpaTitleNamesSiblingProduct,
+    });
+    if (r34.qualifies) {
+      const resolvedIdentity = { ...stored, cardNumber: r34.evidence.resolvedCardNumber };
+      const resolvedAxes = { same: [], filled: ["cardNumber"], dropped: [], changed: [] };
+      const refusals = allImproveRefusals({
+        row, stored, derived: resolvedIdentity, axes: resolvedAxes,
+        parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved, titleNamesInsertSet,
+      });
+      return {
+        ...base,
+        klass: IMPROVE, subclass: CPA_NAME_RESOLVE, axes: resolvedAxes,
+        derived: resolvedIdentity,
+        reasons: [
+          `subclass:${CPA_NAME_RESOLVE}`,
+          `cpa-name-resolve:${r34.evidence.pair}`,
+          `cpa-name-resolve-player:${r34.evidence.resolvedPlayerName}`,
+          ...refusals, ...splitReasons,
+        ],
+        improveRefusals: refusals,
+        cpaNameResolveEvidence: r34.evidence,
+        writable: prov.tier === AUTO && refusals.length === 0,
+      };
+    }
+    // Named only for real candidates: the row actually failed on the
+    // cardnumber-unparsed shape this rung exists for. Every OTHER UNDERIVABLE
+    // row (bad sport, unresolved setKey, no title at all) never asked this
+    // question, and tagging it would count the corpus rather than the defect.
+    if (!r34.failed.includes("not-the-cardnumber-unparsed-shape")) {
+      splitReasons.push(`not-cpa-name-resolve:${r34.failed.join(",")}`);
+    }
     return { ...base, klass: UNDERIVABLE, axes: { same: [], filled: [], dropped: [], changed: [] }, reasons: [...(derivationReasons.length ? derivationReasons : ["no-derived-identity"]), ...splitReasons], writable: false };
   }
 
@@ -6903,6 +7248,10 @@ const APPLY_CLASSES = {
   // again: `klass` is IMPROVE for all three, so each needs its OWN entry here
   // or `applyKindOf` could not name it apart from the ordinary IMPROVE.
   TITLE_FILLS_THE_BLANK, SPLIT_MOVES_TO_THE_NAMED_SIDE, TITLE_CARD_NUMBER_WINS,
+  // R34-CPA-NAME-RESOLVE (2026-09-28). Same discipline: `klass` is IMPROVE, so
+  // it needs its OWN entry here or `applyKindOf` could not name it apart from
+  // the ordinary IMPROVE.
+  CPA_NAME_RESOLVE,
 };
 
 /** Spellings of each class a dispatch may use. Deliberately generous on
@@ -6979,6 +7328,13 @@ const APPLY_SCOPE_ALIASES = new Map([
   ["title-card-number-wins", [TITLE_CARD_NUMBER_WINS]],
   ["titlecardnumberwins", [TITLE_CARD_NUMBER_WINS]],
   ["r33", [TITLE_CARD_NUMBER_WINS]],
+  // R34-CPA-NAME-RESOLVE (Drew, 2026-09-28, "Fix all of baseball now").
+  // DELIBERATELY ABSENT from "both" and "all" below, same discipline as every
+  // ruled scope above: a scope ruled today must not be armed by a dispatch
+  // written before the ruling existed. Asked for by name or it does not run.
+  ["cpa-name-resolve", [CPA_NAME_RESOLVE]],
+  ["cpanameresolve", [CPA_NAME_RESOLVE]],
+  ["r34", [CPA_NAME_RESOLVE]],
   // "both" and "all" keep meaning what they meant when the fleet dispatches
   // that use them were written: the two classes that existed then.
   ["both", [IMPROVE, BASE_EVICTION]],
@@ -7046,7 +7402,7 @@ function parseApplyScope(raw) {
     // to learn what the accepted scopes actually are -- including the revert,
     // which is otherwise undiscoverable.
     out.reason = `scope ${JSON.stringify(str(raw))} carries unrecognised token(s) ${unknown.join(",")} `
-      + `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product, flagship-swallowed-named-product, pokemon-set-code, finish-is-a-parallel, title-fills-the-blank, split-moves-to-the-named-side, title-card-number-wins)`;
+      + `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product, flagship-swallowed-named-product, pokemon-set-code, finish-is-a-parallel, title-fills-the-blank, split-moves-to-the-named-side, title-card-number-wins, cpa-name-resolve)`;
     return out;
   }
   if (out.revert) {
@@ -7056,7 +7412,7 @@ function parseApplyScope(raw) {
   }
   if (!out.classes.size) {
     out.reason = `scope ${JSON.stringify(str(raw))} names no apply class ` +
-      `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product, flagship-swallowed-named-product, pokemon-set-code, finish-is-a-parallel, title-fills-the-blank, split-moves-to-the-named-side, title-card-number-wins)`;
+      `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product, flagship-swallowed-named-product, pokemon-set-code, finish-is-a-parallel, title-fills-the-blank, split-moves-to-the-named-side, title-card-number-wins, cpa-name-resolve)`;
     return out;
   }
   out.ok = true;
@@ -7116,6 +7472,12 @@ function applyKindOf(result) {
   if (result.subclass === TITLE_FILLS_THE_BLANK) return TITLE_FILLS_THE_BLANK;
   if (result.subclass === SPLIT_MOVES_TO_THE_NAMED_SIDE) return SPLIT_MOVES_TO_THE_NAMED_SIDE;
   if (result.subclass === TITLE_CARD_NUMBER_WINS) return TITLE_CARD_NUMBER_WINS;
+  // R34-CPA-NAME-RESOLVE (2026-09-28), same discipline and the same measured
+  // failure mode R31/R33 named above: its `klass` is IMPROVE too, so without
+  // this branch a `scope=r34`/`scope=cpa-name-resolve` apply would arm the
+  // class by name, classify a genuine R34 row, read its kind back as plain
+  // IMPROVE, find IMPROVE disarmed, and silently write nothing.
+  if (result.subclass === CPA_NAME_RESOLVE) return CPA_NAME_RESOLVE;
   if (result.klass === IMPROVE) return IMPROVE;
   return null;
 }
@@ -7184,6 +7546,17 @@ const APPLY_PREFILTERS = {
     if (!(slugYear >= 2015)) return false;
     const titleYear = firstStatedYear(row?.title);
     return titleYear !== null && titleYear < 1990;
+  },
+
+  // R34-CPA-NAME-RESOLVE: the stored cardNumber must actually be blank (the
+  // shape this rung exists for), and the title must name one of the closed,
+  // registered autograph-insert phrases. Both are pure string/field work on
+  // the row, and both are legs `cpaNameResolveEvidence` itself re-checks --
+  // this can only ever remove rows that were never going to qualify.
+  [CPA_NAME_RESOLVE]: ({ row, stored }) => {
+    const cn = str(stored?.cardNumber).trim();
+    if (cn) return false;
+    return !!insertPrefixNamedInTitle(row?.title);
   },
 };
 
@@ -7352,5 +7725,13 @@ module.exports = {
   // `classifySplitScope` so a test can drive the ambiguity leg alone.
   parseHiqSlug: SPLIT_SCOPE.parseHiqSlug,
   titleNamesDestinationForAxes: SPLIT_SCOPE.titleNamesDestinationForAxes,
+  // R34-CPA-NAME-RESOLVE (2026-09-28), exported piece by piece for the same
+  // reason as R31/R32/R33 above -- the class name, its evidence function, and
+  // the two small readers (`insertPrefixNamedInTitle`,
+  // `titleNamesCandidatePlayer`) and the closed vocabulary table
+  // (`CPA_INSERT_PHRASES`), so a pin can drive one leg alone and the mutation
+  // check can revert one leg alone.
+  CPA_NAME_RESOLVE, cpaNameResolveEvidence, insertPrefixNamedInTitle, titleNamesCandidatePlayer,
+  CPA_INSERT_PHRASES,
   VOCAB,
 };

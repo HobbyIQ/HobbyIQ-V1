@@ -121,7 +121,7 @@ const FAMILY_COLLAPSES: Array<{ what: string; title: string; year: number; setKe
   { what: "Etched In Glass Variation -> Image Variation (both listed separately)", title: "2023 Topps Etched In Glass Variation #240 Judge", year: 2023, setKey: "topps", derived: "Image Variation", family: "etch" },
   { what: "Shimmer Refractors -> Refractor", title: "2022 Bowman Chrome Shimmer Refractors #BCP-1", year: 2022, setKey: "bowman-chrome", derived: "Refractor", family: "shimmer" },
   { what: "Fuchsia Wave -> Fuchsia Refractor", title: "2025 Topps Chrome Fuchsia Wave #7", year: 2025, setKey: "topps-chrome", derived: "Fuchsia Refractor", family: "wave" },
-  { what: "Black Ray Wave -> Black Refractor", title: "2025 Topps Chrome Black Ray Wave #7", year: 2025, setKey: "topps-chrome", derived: "Black Refractor", family: "ray" },
+  { what: "Black RayWave -> Black Refractor", title: "2025 Topps Chrome Black Ray Wave #7", year: 2025, setKey: "topps-chrome", derived: "Black Refractor", family: "ray" },
 ];
 
 describe("1 -- a derived parallel that drops a finish family the title names is REFUSED", () => {
@@ -190,7 +190,7 @@ describe("1 -- a derived parallel that drops a finish family the title names is 
       "2023 Topps Etched In Glass Variation #240 Judge": "Etched In Glass Variation",
       "2022 Bowman Chrome Shimmer Refractors #BCP-1": "Shimmer Refractor",
       "2025 Topps Chrome Fuchsia Wave #7": "Fuchsia Wave Refractor",
-      "2025 Topps Chrome Black Ray Wave #7": "Black Ray Wave Refractor",
+      "2025 Topps Chrome Black Ray Wave #7": "Black RayWave Refractor",
     };
     for (const [title, want] of Object.entries(expected)) {
       expect(P.parseListingIdentity(title)?.parallel, title).toBe(want);

@@ -1,0 +1,126 @@
+{
+ "generatedAt": "2026-09-28T09:00:00.000Z",
+ "forLane": "repoint-sales-by-list",
+ "ruling": "ROUND 2 of the residue follow-up, rebuilt from GROUND TRUTH after independent review REQUEST CHANGES (https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351) found round 1's 267-sale, 88-entry list would have re-refused every entry identically to List 1 (0/268 pass the real namesAgree + stripVocabularyForDestination gate). This list is built two ways differently from round 1: (1) a narrow, corpus-measured Au/Autographs trailing marker was added to name-agreement.cjs (see that file's own comment and backend/tests/nameAgreementClosesNameShapeRefusals.test.ts), recovering some sales; (2) EVERY entry below is verified against the REAL gate live against Cosmos -- not an offline heuristic -- AND filtered to sales genuinely resident at fromId (sale.cardId === fromId), excluding sales that merely share a stale hobbyiqCardId pointer while already living at a different (usually correct) address; moving those would be either a no-op or a wrong-address write, not a fix for the stale-hobbyiqCardId defect they actually need (see this list's own census.dataQualityNote and the sidecar).",
+ "rulings": [
+  "CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (unchanged from round 1 and the parent list).",
+  "Method (read-only, no writes performed by this investigation): drained live sales at all 153 List-2-refused fromIds (dual cross-partition + partition-scoped), computed each destination's REAL stripVocabularyForDestination() output, and ran namesAgree(sale.playerName ?? sale.title, toRow.playerName, {stripTrailingTokens}) against every one of 2,796 live sale docs found -- the EXACT comparison repoint-sales-by-list.cjs's gate 6 performs at APPLY time. 2,061 pass; of those, only 15 (across 10 fromIds) are genuinely resident at their bowman-chrome fromId (sale.cardId === fromId) rather than matched only through a stale hobbyiqCardId pointer while already living elsewhere.",
+  "The 1,969 (of 2,061) passing sales whose cardId already reads a DIFFERENT address (mostly the correct bowman toId) are the stale-hobbyiqCardId data-quality defect this task's original brief asked about directly (Allan Castro / Arjun Nimmala) -- confirmed here to affect roughly 2,000 sales, not 2. No lane in this repo patches hobbyiqCardId by list; this PR does not add one (out of scope), and none of those 1,969 sales are named in this repoint list."
+ ],
+ "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
+ "census": {
+  "parentRun": "36364997706 (List 1 APPLY, 2026-09-28T01:39:38Z)",
+  "round1Defect": "88-entry, 267-sale list built from an offline namesAgree approximation; 0/268 pass the real gate (independent review finding, comment 5863378351)",
+  "round2RealGateTotals": {
+   "saleDocsChecked": 2796,
+   "pass": 2061,
+   "fail": 735
+  },
+  "round2GenuinelyResidentPassing": 15,
+  "round2ListEntries": 10,
+  "dataQualityNote": "1,969 of the 2,061 real-gate-passing sales already carry the CORRECT (or at least a DIFFERENT, non-fromId) cardId and are matched into this drain only via a stale hobbyiqCardId field -- the same defect the task's own brief asked about for Allan Castro (cardsight::7f92af3bddc61b38fc6ab6df) and Arjun Nimmala (cardsight::6d03ef2658a5ab8828ad59d4). Confirmed at much larger scale than those 2 samples. None of these 1,969 sales are named in this list -- repointing a sale that already lives at its correct cardId, by (id, cardId) key, would not touch the record actually holding the stale field. See the PR body for a proposed (not written) list-scoped hobbyiqCardId-heal lane.",
+  "method": "Read-only. Reproduced repoint-sales-by-list.cjs's own stripVocabularyForDestination() and gate-6 namesAgree() comparison verbatim against live sold_comps docs at all 153 List-2-refused fromIds, then filtered to sale.cardId === fromId (genuine residency) before including any entry in this list. No Cosmos writes performed."
+ },
+ "entries": [
+  {
+   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ao:base:auto",
+   "toId": "hiq:baseball:2024:bowman:cpa-ao:base:auto",
+   "player": "Abimelec Ortiz",
+   "cardNumber": "CPA-AO",
+   "allowCrossProduct": true,
+   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
+   "expectedSales": 19,
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 4 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
+  },
+  {
+   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-bch:base:auto",
+   "toId": "hiq:baseball:2024:bowman:cpa-bch:base:auto",
+   "player": "Byron Chourio",
+   "cardNumber": "CPA-BCH",
+   "allowCrossProduct": true,
+   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
+   "expectedSales": 7,
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
+  },
+  {
+   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-cq:base:auto",
+   "toId": "hiq:baseball:2024:bowman:cpa-cq:base:auto",
+   "player": "Cesar Quintas",
+   "cardNumber": "CPA-CQ",
+   "allowCrossProduct": true,
+   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
+   "expectedSales": 1,
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
+  },
+  {
+   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-et:gold-refractor:auto:num-50",
+   "toId": "hiq:baseball:2024:bowman:cpa-et:gold-refractor:auto:num-50",
+   "player": "Erick Torres",
+   "cardNumber": "CPA-ET",
+   "allowCrossProduct": true,
+   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
+   "expectedSales": 5,
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
+  },
+  {
+   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-et:refractor:auto:num-499",
+   "toId": "hiq:baseball:2024:bowman:cpa-et:refractor:auto:num-499",
+   "player": "Erick Torres",
+   "cardNumber": "CPA-ET",
+   "allowCrossProduct": true,
+   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
+   "expectedSales": 50,
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
+  },
+  {
+   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-id:yellow-refractor:auto:num-75",
+   "toId": "hiq:baseball:2024:bowman:cpa-id:yellow-refractor:auto:num-75",
+   "player": "Isaiah Drake",
+   "cardNumber": "CPA-ID",
+   "allowCrossProduct": true,
+   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
+   "expectedSales": 1,
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
+  },
+  {
+   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-la:base:auto",
+   "toId": "hiq:baseball:2024:bowman:cpa-la:base:auto",
+   "player": "Luke Adams",
+   "cardNumber": "CPA-LA",
+   "allowCrossProduct": true,
+   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
+   "expectedSales": 7,
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
+  },
+  {
+   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ms:base:auto",
+   "toId": "hiq:baseball:2024:bowman:cpa-ms:base:auto",
+   "player": "Matt Shaw",
+   "cardNumber": "CPA-MS",
+   "allowCrossProduct": true,
+   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
+   "expectedSales": 4,
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 2 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
+  },
+  {
+   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-rbu:base:auto",
+   "toId": "hiq:baseball:2024:bowman:cpa-rbu:base:auto",
+   "player": "Ryan Burrowes",
+   "cardNumber": "CPA-RBU",
+   "allowCrossProduct": true,
+   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
+   "expectedSales": 2,
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
+  },
+  {
+   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-wj:base:auto",
+   "toId": "hiq:baseball:2024:bowman:cpa-wj:base:auto",
+   "player": "Walker Jenkins",
+   "cardNumber": "CPA-WJ",
+   "allowCrossProduct": true,
+   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
+   "expectedSales": 255,
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 2 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
+  }
+ ]
+}

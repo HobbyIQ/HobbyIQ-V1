@@ -1094,7 +1094,7 @@ async function main() {
   const { parseHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf, is412 } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
-  const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(backend, "scripts", "lib", "delete-ledger.cjs"));
+  const { isLedgerWriteFailure } = require(path.join(backend, "scripts", "lib", "delete-ledger.cjs"));
 
   // TITLE MACHINERY -- every one of these is an ALREADY-SHIPPED reader, called
   // read-only, in the SAME order repoint-sales-to-checklist-numbered.cjs's own
@@ -1377,6 +1377,7 @@ async function main() {
     cellsScanned: 0, otherShard: 0,
     salesScanned: 0, salesOutOfShape: 0,
     salesMoved: 0, salesPatched: 0, collapsedOntoResident: 0,
+    patchedInPlace: 0, collapseRefusedSelf: 0,
     refusedNumberExistsInFrom: 0, refusedDestinationRung: 0, refusedDifferentPlayer: 0,
     refusedTitleNamesFromProduct: 0, refusedSplitIdentity: 0, refusedPossibleTwin: 0,
     refusedPinnedOrVerified: 0, refusedFlaggedOrExcluded: 0, refusedAlreadyParked: 0,
@@ -1602,7 +1603,7 @@ async function main() {
 
     for (const sale of sales) {
       if (CLOCK.outOfClock()) { stoppedAtBudget = true; s.notReached++; continue; }
-      if (LIMIT && (s.salesMoved + s.salesPatched) >= LIMIT) { s.notReached++; continue; }
+      if (LIMIT && (s.salesMoved + s.salesPatched + s.patchedInPlace) >= LIMIT) { s.notReached++; continue; }
       if (SHARD_SCOPE.SHARDED && shardOf(String(sale.id)) !== SHARD_SCOPE.SLOT) { s.otherShard++; continue; }
 
       const fromSlug = String(sale.hobbyiqCardId ?? sale.cardId ?? "");
@@ -1648,31 +1649,116 @@ async function main() {
           };
           keep.contentHash = contentHashOf(keep);
 
+          // ── SAME-PARTITION PATCH, never a delete (2026-09-28 incident,
+          // isauto-flip lane: 174 sales lost the identical way). `plan.newCardId`
+          // is derived by rewriting `sale.cardId`'s OWN setKey segment
+          // (withProductSetKey), so when `sale.cardId` already equals
+          // `plan.newCardId` -- a stale dual-pk copy already sitting in the
+          // destination partition -- the row this sale describes and "the
+          // resident at the destination" are the SAME PHYSICAL DOCUMENT.
+          // `residentAt(sale.id, plan.newCardId)` below would then be a
+          // SELF-READ: content hash trivially matches itself, and a bare
+          // `pool.item(sale.id, sale.cardId).delete()` would delete the row's
+          // only physical copy with nothing ever upserted in its place. The
+          // correct action for this shape is an in-place patch, through the
+          // SAME relocateSoldComp order (upsert, verify, THEN delete) with an
+          // EMPTY drop list, so there is never a delete to lose the row to.
+          if (sale.cardId === plan.newCardId) {
+            const result = await relocateSoldComp(pool, {
+              keep, drop: [],
+              verifyFields: ["cardId", "hobbyiqCardId"],
+              dryRun: !APPLY,
+              retry,
+            });
+            if (result?.ok) {
+              s.patchedInPlace++;
+              bump(byPair, pairLabel);
+              bump(fromToPairs, `${fromSlug}${ROLLUP_DELIM}${plan.newCardId}`);
+              emitPlanRow(sale, "patch", "same-partition-in-place", { from, to, toId: plan.newCardId });
+            } else {
+              s.salesFailed++;
+              const stage = result?.stage ?? "unknown";
+              const errMsg = result?.error ?? "unknown";
+              failures.push(`  FAILED patch-in-place ${sale.id}@${sale.cardId}: [stage=${stage}] ${errMsg}`);
+              emitPlanRow(sale, "failed", "patch-in-place", { from, to, toId: plan.newCardId, error: `[stage=${stage}] ${errMsg}` });
+            }
+            continue;
+          }
+
           // TWIN AT THE DESTINATION, checked BEFORE the upsert: relocateSoldComp's
           // upsert is a blind write at (sale.id, newCardId) and replaces whatever
           // is there. An upsert that already happened cannot be un-overwritten.
           const resident = await residentAt(sale.id, plan.newCardId);
           if (resident) {
-            if (isSameSale(resident, keep)) {
-              // PROVEN same sale by content hash -> COLLAPSE: delete the
-              // FROM-side copy, keep the resident. Nothing about the kept
-              // document changes.
-              //
-              // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
-              // (2026-09-28): `sale` is the full pre-delete document. A
-              // ledger-write failure throws here and is caught by this
-              // block's own outer catch (s.salesFailed++, reported in
-              // `failures`), same as any other failure in this try.
-              if (APPLY) {
-                await recordDeleteOrThrow(sale, {
-                  lane: "repoint-sales-to-sibling-product", action: "collapse", reason: "same-sale-at-destination",
-                  toId: plan.newCardId, container: "sold_comps",
-                });
-                await retry(() => pool.item(sale.id, sale.cardId).delete());
+            // CF-A-COLLAPSE-NEEDS-A-DISTINCT-SURVIVOR: reaching here already
+            // proves `sale.cardId !== plan.newCardId` (the same-partition
+            // patch above would have returned), so `resident` -- read at
+            // (sale.id, plan.newCardId) -- is a PHYSICALLY DIFFERENT document
+            // from `sale` whenever the two addresses disagree. Asserted, not
+            // assumed, so a future edit to the guard above can never silently
+            // reopen the self-collapse shape without tripping this.
+            if (resident.cardId !== sale.cardId && isSameSale(resident, keep)) {
+              // PROVEN same sale by content hash, AND a distinct document --
+              // COLLAPSE. Routed through relocateSoldComp's own
+              // upsert-verify-delete order instead of a bare delete, plus a
+              // last-line re-read of the OLD address with `ifMatchEtag`: a
+              // source that changed between scan and write is refused as
+              // stale-since-plan, never force-deleted.
+              let freshAtOldAddress = null;
+              try { freshAtOldAddress = await residentAt(sale.id, sale.cardId); }
+              catch (e) {
+                s.salesFailed++;
+                const msg = `FAILED collapse ${sale.id}@${sale.cardId} -> ${plan.newCardId}: could not re-read the old address before write: ${String(e?.message ?? e)}`;
+                failures.push(`  ${msg}`);
+                emitPlanRow(sale, "failed", "collapse-reread-failed", { from, to, toId: plan.newCardId });
+                continue;
               }
-              s.collapsedOntoResident++;
-              if (collapsedExamples.length < 20) collapsedExamples.push(`  COLLAPSE ${sale.id}@${sale.cardId} -- same sale already resident at ${plan.newCardId}; from-side copy deleted`);
-              emitPlanRow(sale, "collapse", "same-sale-at-destination", { from, to, toId: plan.newCardId, twinId: resident.id, twinSource: resident.source ?? null });
+              if (!freshAtOldAddress || String(freshAtOldAddress._etag ?? "") !== String(sale._etag ?? "")) {
+                noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: stale since the planning read -- refused, not collapsed on stale data`);
+                emitPlanRow(sale, "refused", "stale-since-plan", { from, to, toId: plan.newCardId });
+                continue;
+              }
+              const result = await relocateSoldComp(pool, {
+                keep, drop: [{ id: sale.id, cardId: sale.cardId, ifMatchEtag: freshAtOldAddress._etag }],
+                verifyFields: ["cardId", "hobbyiqCardId"],
+                dryRun: !APPLY,
+                retry,
+                // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+                // (2026-09-28). relocateSoldComp's own drop loop re-reads the
+                // full document and ledgers it before this delete.
+                ledger: { lane: "repoint-sales-to-sibling-product", action: "collapse", reason: "same-sale-at-destination", toId: plan.newCardId, container: "sold_comps" },
+              });
+              if (result?.ok) {
+                s.collapsedOntoResident++;
+                if (collapsedExamples.length < 20) collapsedExamples.push(`  COLLAPSE ${sale.id}@${sale.cardId} -- same sale already resident at ${plan.newCardId}; from-side copy deleted`);
+                emitPlanRow(sale, "collapse", "same-sale-at-destination", { from, to, toId: plan.newCardId, twinId: resident.id, twinSource: resident.source ?? null });
+              } else if (result?.staleSincePlan?.length) {
+                noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: delete refused (412) -- source changed between the last-line re-read and the delete itself; the keeper is already at ${plan.newCardId}, the from-side copy is left for a later pass`);
+                emitPlanRow(sale, "refused", "stale-since-plan", { from, to, toId: plan.newCardId });
+              } else if (result?.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+                s.salesFailed++;
+                s.ledgerWriteFailed++;
+                failures.push(`  FAILED collapse ${sale.id}@${sale.cardId} -> ${plan.newCardId}: ledger write refused the delete`);
+                emitPlanRow(sale, "failed", "ledger-write-failed", { from, to, toId: plan.newCardId });
+              } else {
+                s.salesFailed++;
+                const stage = result?.stage ?? "unknown";
+                const errMsg = result?.error ?? "unknown";
+                failures.push(`  FAILED collapse ${sale.id}@${sale.cardId} -> ${plan.newCardId}: [stage=${stage}] ${errMsg}`);
+                emitPlanRow(sale, "failed", "collapse", { from, to, toId: plan.newCardId, error: `[stage=${stage}] ${errMsg}` });
+              }
+              continue;
+            }
+            if (resident.cardId === sale.cardId) {
+              // Belt-and-suspenders: unreachable in practice (the
+              // same-partition branch above already returns before this line
+              // whenever `sale.cardId === plan.newCardId`), but if a future
+              // edit ever lets a self-read reach here anyway, REFUSE rather
+              // than delete -- never trust a "distinct survivor" the read did
+              // not actually prove.
+              s.collapseRefusedSelf++;
+              refusals["possible-twin-at-destination"].push(`  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: residentAt read back the SAME document being processed -- refused, never treated as a distinct survivor`);
+              emitPlanRow(sale, "refused", "collapse-refused-self", { from, to, toId: plan.newCardId });
               continue;
             }
             // A DIFFERENT resident, with no stronger proof. Never deleted on
@@ -1714,6 +1800,10 @@ async function main() {
             keep,
             drop: [{ id: sale.id, cardId: sale.cardId, ifMatchEtag: fresh._etag }],
             retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY,
+            // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+            // (2026-09-28). relocateSoldComp's own drop loop re-reads the
+            // full document and ledgers it before this delete.
+            ledger: { lane: "repoint-sales-to-sibling-product", action: "relocate", reason: "checklist-attested-relocate", toId: plan.newCardId, container: "sold_comps" },
           });
           if (res.guard?.verdict === "park" && res.stage === "guard") {
             noteRefusal("guard-parked", `  ${sale.id}@${sale.cardId}: ${res.error ?? res.guard.reason}`);
@@ -1723,6 +1813,13 @@ async function main() {
           if (res.staleSincePlan?.length) {
             noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: delete refused (412) -- source changed between the last-line re-read and the delete itself; the keeper is already at ${plan.newCardId}, the from-side copy is left for a later pass`);
             emitPlanRow(sale, "refused", "stale-since-plan", { from, to, toId: plan.newCardId });
+            continue;
+          }
+          if (res.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+            s.salesFailed++;
+            s.ledgerWriteFailed++;
+            failures.push(`  FAILED relocate ${sale.id}@${sale.cardId} -> ${plan.newCardId}: ledger write refused the delete`);
+            emitPlanRow(sale, "failed", "ledger-write-failed", { from, to, toId: plan.newCardId });
             continue;
           }
           if (!res.ok && res.stage !== "dry-run") {
@@ -1819,6 +1916,7 @@ async function main() {
   console.log(`  rows whose slug did not parse to this cell+setKey  ${f(s.salesOutOfShape)}   <- never counted as scanned`);
   console.log(`  ${APPLY ? "RELOCATED" : "WOULD RELOCATE"}     ${f(s.salesMoved)}   <- cardId AND hobbyiqCardId move (shape 1/3/4)`);
   console.log(`  ${APPLY ? "PATCHED" : "WOULD PATCH"}       ${f(s.salesPatched)}   <- hobbyiqCardId only, vendor cardId untouched (shape 2)`);
+  console.log(`  ${APPLY ? "PATCHED in place (same partition)" : "WOULD PATCH in place (same partition)"}  ${f(s.patchedInPlace)}   <- sale.cardId already equals the destination; healed in place, never deleted`);
   console.log(`  COLLAPSED onto a resident (same sale, by hash)  ${f(s.collapsedOntoResident)}`);
   console.log("");
   console.log(`  REFUSED: number-exists-in-from-product   ${f(s.refusedNumberExistsInFrom)}   <- the FROM product's checklist DOES list this number; not this lane's row`);
@@ -1831,6 +1929,7 @@ async function main() {
   console.log(`  REFUSED: flagged-or-excluded             ${f(s.refusedFlaggedOrExcluded)}   <- flaggedWrong / excludedFromFmv`);
   console.log(`  REFUSED: already-parked                  ${f(s.refusedAlreadyParked)}   <- identityUnverified=true; unparking is a different lane`);
   console.log(`  REFUSED: guard-parked (malformed key)    ${f(s.refusedGuardParked)}`);
+  console.log(`  REFUSED: collapse-refused-self           ${f(s.collapseRefusedSelf)}   <- residentAt self-read reached the collapse branch; refused, never treated as a distinct survivor`);
   console.log(`  REFUSED: stale-since-plan                ${f(s.refusedEtagChanged)}   <- source doc changed or vanished between plan and write`);
   console.log(`  failed                                  ${f(s.salesFailed)}`);
   console.log(`  of which ledger-write-failed            ${f(s.ledgerWriteFailed)}`);
@@ -1889,16 +1988,16 @@ async function main() {
   // counts with `written`: the from-side copy is RESOLVED (deleted once the
   // resident is proven the same sale), even though the resident itself was
   // not created by this run.
-  const written = s.salesMoved + s.salesPatched + s.collapsedOntoResident;
+  const written = s.salesMoved + s.salesPatched + s.collapsedOntoResident + s.patchedInPlace;
   const refused = s.refusedNumberExistsInFrom + s.refusedDestinationRung + s.refusedDifferentPlayer
     + s.refusedTitleNamesFromProduct + s.refusedSplitIdentity + s.refusedPossibleTwin
     + s.refusedPinnedOrVerified + s.refusedFlaggedOrExcluded + s.refusedAlreadyParked
-    + s.refusedGuardParked + s.refusedEtagChanged;
+    + s.refusedGuardParked + s.refusedEtagChanged + s.collapseRefusedSelf;
   const left = s.salesScanned - written - refused - s.salesFailed;
   console.log("");
   console.log(`CF-A-SALE-IS-NEVER-LOST`);
   console.log(`  sales scanned              ${f(s.salesScanned)}`);
-  console.log(`  ${APPLY ? "=" : "would be ="} moved ${f(s.salesMoved)} + patched ${f(s.salesPatched)} + collapsed ${f(s.collapsedOntoResident)} + refused ${f(refused)} + failed ${f(s.salesFailed)} + left ${f(left)}`);
+  console.log(`  ${APPLY ? "=" : "would be ="} moved ${f(s.salesMoved)} + patched ${f(s.salesPatched)} + patched-in-place ${f(s.patchedInPlace)} + collapsed ${f(s.collapsedOntoResident)} + refused ${f(refused)} + failed ${f(s.salesFailed)} + left ${f(left)}`);
   const accountedFor = written + refused + s.salesFailed + left;
   if (accountedFor !== s.salesScanned) {
     console.error(`!! CF-A-SALE-IS-NEVER-LOST: accounted ${f(accountedFor)} != scanned ${f(s.salesScanned)}. A sale is unaccounted for. Exit 4.`);
@@ -1919,7 +2018,7 @@ async function main() {
   }
 
   console.log("");
-  console.log(`  ${APPLY ? "RELOCATED" : "WOULD RELOCATE"} ${f(s.salesMoved)}   ${APPLY ? "PATCHED" : "WOULD PATCH"} ${f(s.salesPatched)}`);
+  console.log(`  ${APPLY ? "RELOCATED" : "WOULD RELOCATE"} ${f(s.salesMoved)}   ${APPLY ? "PATCHED" : "WOULD PATCH"} ${f(s.salesPatched)}   ${APPLY ? "PATCHED in place" : "WOULD PATCH in place"} ${f(s.patchedInPlace)}`);
   if (stoppedAtBudget || CLOCK.outOfClock()) {
     console.log(`  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- the slot has more to do`);
   }
@@ -1953,7 +2052,7 @@ async function runByPlayerMode(io) {
   } = io;
   const deps = { catalogAuthorityOf, namesAgree, withProductSetKey, productParentOf, productSetKeys };
   const { relocateSoldComp, stripSystem, contentHashOf, is412 } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
-  const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(backend, "scripts", "lib", "delete-ledger.cjs"));
+  const { isLedgerWriteFailure } = require(path.join(backend, "scripts", "lib", "delete-ledger.cjs"));
 
   const client = new CosmosClient(conn);
   const db = client.database(process.env.COSMOS_DATABASE || "hobbyiq");
@@ -1977,6 +2076,7 @@ async function runByPlayerMode(io) {
   const s = {
     fromKeysScanned: 0, salesScanned: 0, salesQueries: 0,
     salesMoved: 0, salesPatched: 0, collapsedOntoResident: 0,
+    patchedInPlace: 0, collapseRefusedSelf: 0,
     refusedAlreadyChecklistBacked: 0, refusedStaleNoRow: 0, refusedFromRowAgrees: 0,
     refusedDestinationRungNotOnChecklist: 0, refusedAmbiguousSibling: 0, refusedAmbiguousRung: 0,
     refusedSplitIdentity: 0, refusedPossibleTwin: 0,
@@ -2112,7 +2212,7 @@ async function runByPlayerMode(io) {
 
     for (const sale of sales) {
       if (CLOCK.outOfClock()) { stoppedAtBudget = true; s.notReached++; continue; }
-      if (LIMIT && (s.salesMoved + s.salesPatched) >= LIMIT) { s.notReached++; continue; }
+      if (LIMIT && (s.salesMoved + s.salesPatched + s.patchedInPlace) >= LIMIT) { s.notReached++; continue; }
       if (SHARD_SCOPE.SHARDED && shardOf(String(sale.id)) !== SHARD_SCOPE.SLOT) { s.otherShard++; continue; }
 
       const fromSlug = String(sale.hobbyiqCardId ?? sale.cardId ?? "");
@@ -2197,23 +2297,98 @@ async function runByPlayerMode(io) {
           };
           keep.contentHash = contentHashOf(keep);
 
+          // ── SAME-PARTITION PATCH, never a delete (2026-09-28 incident,
+          // isauto-flip lane: 174 sales lost the identical way). `plan.newCardId`
+          // here is `newHiq` -- a checklist row's own id, independent of
+          // `sale.cardId` -- but the file's own comment elsewhere notes the
+          // idempotency shortcut "cannot run here", so a coincidental equality
+          // (a checklist row's slug already matching the sale's own vendor
+          // cardId) is not structurally excluded. When it happens, `sale` and
+          // "the resident at the destination" are the SAME PHYSICAL DOCUMENT,
+          // and a bare delete would destroy the row's only copy. Patch in
+          // place through relocateSoldComp with an empty drop instead.
+          if (sale.cardId === plan.newCardId) {
+            const result = await relocateSoldComp(pool, {
+              keep, drop: [],
+              verifyFields: ["cardId", "hobbyiqCardId"],
+              dryRun: !APPLY,
+              retry,
+            });
+            if (result?.ok) {
+              s.patchedInPlace++;
+              toBucket.moved++;
+              emitPlanRow(sale, "patch", "same-partition-in-place", { from: fromKey, to: toKey, toId: plan.newCardId });
+            } else {
+              s.salesFailed++;
+              const stage = result?.stage ?? "unknown";
+              const errMsg = result?.error ?? "unknown";
+              failures.push(`  FAILED patch-in-place ${sale.id}@${sale.cardId}: [stage=${stage}] ${errMsg}`);
+              emitPlanRow(sale, "failed", "patch-in-place", { from: fromKey, to: toKey, toId: plan.newCardId, error: `[stage=${stage}] ${errMsg}` });
+            }
+            continue;
+          }
+
           const resident = await residentAt(sale.id, plan.newCardId);
           if (resident) {
-            if (contentHashOf(resident) === contentHashOf(keep)) {
-              // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
-              // (2026-09-28): full pre-delete document, ledger before
-              // delete; a ledger-write failure throws into this block's
-              // own outer catch (s.salesFailed++).
-              if (APPLY) {
-                await recordDeleteOrThrow(sale, {
-                  lane: "repoint-sales-to-sibling-product", action: "collapse", reason: "same-sale-at-destination",
-                  toId: plan.newCardId, container: "sold_comps",
-                });
-                await retry(() => pool.item(sale.id, sale.cardId).delete());
+            // CF-A-COLLAPSE-NEEDS-A-DISTINCT-SURVIVOR: reaching here already
+            // proves `sale.cardId !== plan.newCardId` (the same-partition
+            // patch above would have returned), so `resident` -- read at
+            // (sale.id, plan.newCardId) -- is a PHYSICALLY DIFFERENT document
+            // from `sale` whenever the two addresses disagree. Asserted, not
+            // assumed.
+            if (resident.cardId !== sale.cardId && contentHashOf(resident) === contentHashOf(keep)) {
+              let freshAtOldAddress = null;
+              try { freshAtOldAddress = await residentAt(sale.id, sale.cardId); }
+              catch (e) {
+                s.salesFailed++;
+                failures.push(`  FAILED collapse ${sale.id}@${sale.cardId} -> ${plan.newCardId}: could not re-read the old address before write: ${String(e?.message ?? e)}`);
+                emitPlanRow(sale, "failed", "collapse-reread-failed", { from: fromKey, to: toKey, toId: plan.newCardId });
+                continue;
               }
-              s.collapsedOntoResident++;
-              toBucket.moved++;
-              emitPlanRow(sale, "collapse", "same-sale-at-destination", { from: fromKey, to: toKey, toId: plan.newCardId });
+              if (!freshAtOldAddress || String(freshAtOldAddress._etag ?? "") !== String(sale._etag ?? "")) {
+                noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: stale since the planning read -- refused, not collapsed on stale data`, fromKey, toKey);
+                emitPlanRow(sale, "refused", "stale-since-plan", { from: fromKey, to: toKey, toId: plan.newCardId });
+                continue;
+              }
+              const result = await relocateSoldComp(pool, {
+                keep, drop: [{ id: sale.id, cardId: sale.cardId, ifMatchEtag: freshAtOldAddress._etag }],
+                verifyFields: ["cardId", "hobbyiqCardId"],
+                dryRun: !APPLY,
+                retry,
+                // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+                // (2026-09-28). relocateSoldComp's own drop loop re-reads the
+                // full document and ledgers it before this delete.
+                ledger: { lane: "repoint-sales-to-sibling-product", action: "collapse", reason: "same-sale-at-destination", toId: plan.newCardId, container: "sold_comps" },
+              });
+              if (result?.ok) {
+                s.collapsedOntoResident++;
+                toBucket.moved++;
+                emitPlanRow(sale, "collapse", "same-sale-at-destination", { from: fromKey, to: toKey, toId: plan.newCardId });
+              } else if (result?.staleSincePlan?.length) {
+                noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: delete refused (412)`, fromKey, toKey);
+                emitPlanRow(sale, "refused", "stale-since-plan", { from: fromKey, to: toKey, toId: plan.newCardId });
+              } else if (result?.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+                s.salesFailed++;
+                s.ledgerWriteFailed++;
+                failures.push(`  FAILED collapse ${sale.id}@${sale.cardId} -> ${plan.newCardId}: ledger write refused the delete`);
+                emitPlanRow(sale, "failed", "ledger-write-failed", { from: fromKey, to: toKey, toId: plan.newCardId });
+              } else {
+                s.salesFailed++;
+                const stage = result?.stage ?? "unknown";
+                const errMsg = result?.error ?? "unknown";
+                failures.push(`  FAILED collapse ${sale.id}@${sale.cardId} -> ${plan.newCardId}: [stage=${stage}] ${errMsg}`);
+                emitPlanRow(sale, "failed", "collapse", { from: fromKey, to: toKey, toId: plan.newCardId, error: `[stage=${stage}] ${errMsg}` });
+              }
+              continue;
+            }
+            if (resident.cardId === sale.cardId) {
+              // Belt-and-suspenders: unreachable in practice (the
+              // same-partition branch above already returns before this line
+              // whenever `sale.cardId === plan.newCardId`), but refuse rather
+              // than delete if a self-read ever reaches here anyway.
+              s.collapseRefusedSelf++;
+              refusals["possible-twin-at-destination"].push(`  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: residentAt read back the SAME document being processed -- refused, never treated as a distinct survivor`);
+              emitPlanRow(sale, "refused", "collapse-refused-self", { from: fromKey, to: toKey, toId: plan.newCardId });
               continue;
             }
             noteRefusal("possible-twin-at-destination", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: a DIFFERENT sale already resides at the destination; NEITHER moved`, fromKey, toKey);
@@ -2240,10 +2415,21 @@ async function runByPlayerMode(io) {
           const res = await relocateSoldComp(pool, {
             keep, drop: [{ id: sale.id, cardId: sale.cardId, ifMatchEtag: fresh._etag }],
             retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY,
+            // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+            // (2026-09-28). relocateSoldComp's own drop loop re-reads the
+            // full document and ledgers it before this delete.
+            ledger: { lane: "repoint-sales-to-sibling-product", action: "relocate", reason: "checklist-attested-relocate", toId: plan.newCardId, container: "sold_comps" },
           });
           if (res.staleSincePlan?.length) {
             noteRefusal("stale-since-plan", `  ${sale.id}@${sale.cardId} -> ${plan.newCardId}: delete refused (412)`, fromKey, toKey);
             emitPlanRow(sale, "refused", "stale-since-plan", { from: fromKey, to: toKey, toId: plan.newCardId });
+            continue;
+          }
+          if (res.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+            s.salesFailed++;
+            s.ledgerWriteFailed++;
+            failures.push(`  FAILED relocate ${sale.id}@${sale.cardId} -> ${plan.newCardId}: ledger write refused the delete`);
+            emitPlanRow(sale, "failed", "ledger-write-failed", { from: fromKey, to: toKey, toId: plan.newCardId });
             continue;
           }
           if (!res.ok && res.stage !== "dry-run") {
@@ -2335,6 +2521,7 @@ async function runByPlayerMode(io) {
   console.log(`sales scanned (in shape, in scope)   ${f(s.salesScanned)}${SHARD_SCOPE.SHARDED ? `  (${f(s.otherShard)} in other shards)` : ""}`);
   console.log(`  ${APPLY ? "RELOCATED" : "WOULD RELOCATE"}    ${f(s.salesMoved)}`);
   console.log(`  ${APPLY ? "PATCHED" : "WOULD PATCH"}      ${f(s.salesPatched)}`);
+  console.log(`  ${APPLY ? "PATCHED in place (same partition)" : "WOULD PATCH in place (same partition)"}  ${f(s.patchedInPlace)}`);
   console.log(`  COLLAPSED onto a resident            ${f(s.collapsedOntoResident)}`);
   console.log(`  DERIVED-RESIDENT-AT-SOURCE            ${f(s.derivedResidentAtSource)}   <- source id carried a DERIVED/VENDOR row; logged for a later retire list, never a refusal`);
   console.log("");
@@ -2350,6 +2537,7 @@ async function runByPlayerMode(io) {
   console.log(`  REFUSED: flagged-or-excluded                ${f(s.refusedFlaggedOrExcluded)}`);
   console.log(`  REFUSED: already-parked                     ${f(s.refusedAlreadyParked)}`);
   console.log(`  REFUSED: guard-parked (malformed key)       ${f(s.refusedGuardParked)}`);
+  console.log(`  REFUSED: collapse-refused-self              ${f(s.collapseRefusedSelf)}   <- residentAt self-read reached the collapse branch; refused, never treated as a distinct survivor`);
   console.log(`  REFUSED: stale-since-plan                   ${f(s.refusedEtagChanged)}`);
   console.log(`  REFUSED: graded-parse-failed (not a candidate) ${f(s.refusedGradedParseFailed)}`);
   console.log(`  failed                                     ${f(s.salesFailed)}`);
@@ -2368,12 +2556,12 @@ async function runByPlayerMode(io) {
   }
 
   // CF-A-SALE-IS-NEVER-LOST reconciliation, same discipline as the base mode.
-  const written = s.salesMoved + s.salesPatched + s.collapsedOntoResident;
+  const written = s.salesMoved + s.salesPatched + s.collapsedOntoResident + s.patchedInPlace;
   const refused = s.refusedAlreadyChecklistBacked + s.refusedStaleNoRow + s.refusedFromRowAgrees
     + s.refusedDestinationRungNotOnChecklist + s.refusedAmbiguousSibling + s.refusedAmbiguousRung
     + s.refusedSplitIdentity + s.refusedPossibleTwin
     + s.refusedPinnedOrVerified + s.refusedFlaggedOrExcluded + s.refusedAlreadyParked
-    + s.refusedGuardParked + s.refusedEtagChanged;
+    + s.refusedGuardParked + s.refusedEtagChanged + s.collapseRefusedSelf;
   // refusedGradedParseFailed is excluded from `left`'s population exactly as
   // isauto-flip's own refusedGradedParse is: a row that never parsed never
   // became a candidate, so it is reported on its own line and excluded from
@@ -2382,7 +2570,7 @@ async function runByPlayerMode(io) {
   console.log("");
   console.log(`CF-A-SALE-IS-NEVER-LOST`);
   console.log(`  sales scanned              ${f(s.salesScanned)}`);
-  console.log(`  ${APPLY ? "=" : "would be ="} moved ${f(s.salesMoved)} + patched ${f(s.salesPatched)} + collapsed ${f(s.collapsedOntoResident)} + refused ${f(refused)} + failed ${f(s.salesFailed)} + graded-parse-failed ${f(s.refusedGradedParseFailed)} + left ${f(left)}`);
+  console.log(`  ${APPLY ? "=" : "would be ="} moved ${f(s.salesMoved)} + patched ${f(s.salesPatched)} + patched-in-place ${f(s.patchedInPlace)} + collapsed ${f(s.collapsedOntoResident)} + refused ${f(refused)} + failed ${f(s.salesFailed)} + graded-parse-failed ${f(s.refusedGradedParseFailed)} + left ${f(left)}`);
   const accountedFor = written + refused + s.salesFailed + s.refusedGradedParseFailed + left;
   if (accountedFor !== s.salesScanned) {
     console.error(`!! CF-A-SALE-IS-NEVER-LOST: accounted ${f(accountedFor)} != scanned ${f(s.salesScanned)}. Exit 4.`);
@@ -2404,7 +2592,7 @@ async function runByPlayerMode(io) {
   }
 
   console.log("");
-  console.log(`  ${APPLY ? "RELOCATED" : "WOULD RELOCATE"} ${f(s.salesMoved)}   ${APPLY ? "PATCHED" : "WOULD PATCH"} ${f(s.salesPatched)}`);
+  console.log(`  ${APPLY ? "RELOCATED" : "WOULD RELOCATE"} ${f(s.salesMoved)}   ${APPLY ? "PATCHED" : "WOULD PATCH"} ${f(s.salesPatched)}   ${APPLY ? "PATCHED in place" : "WOULD PATCH in place"} ${f(s.patchedInPlace)}`);
   if (stoppedAtBudget || CLOCK.outOfClock()) {
     console.log(`  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- the slot has more to do`);
   }

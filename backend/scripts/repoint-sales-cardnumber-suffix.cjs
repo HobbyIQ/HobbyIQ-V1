@@ -126,7 +126,6 @@ const backend = path.resolve(__dirname, "..");
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
-const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(__dirname, "lib", "delete-ledger.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const str = (v) => String(v ?? "").trim();
@@ -288,7 +287,7 @@ async function main() {
 
   const s = {
     scanned: 0, otherShard: 0, candidates: 0,
-    relocated: 0, collapsedOntoResident: 0,
+    relocated: 0, collapsedOntoResident: 0, patchedInPlace: 0, collapseRefusedSelf: 0,
     refusedNotSuffixRestore: 0, refusedUnparsed: 0, refusedEtagChanged: 0,
     refusedDestinationNotOnChecklist: 0, refusedDifferentPlayer: 0,
     refusedPinnedOrFlagged: 0, refusedPossibleTwinAtDestination: 0,
@@ -449,6 +448,51 @@ async function main() {
 
     planned++;
 
+    // ── SAME-PARTITION PATCH, never a delete (incident, 2026-09-28: see
+    // repoint-sales-isauto-flip.cjs's own header for the full trace; this
+    // lane shares its exact collapse shape). `currentId` is derived from
+    // `sale.hobbyiqCardId || sale.cardId`; the row's PHYSICAL address is
+    // `sale.cardId` alone. When `sale.cardId` already equals `newId` -- a
+    // stale dual-pk copy already sitting in the destination partition -- the
+    // row this sale describes and "the resident at the destination" are the
+    // SAME PHYSICAL DOCUMENT, and `residentAt(sale.id, newId)` below would be
+    // a SELF-READ whose contentHash trivially matches itself. Patch in place
+    // instead, through relocateSoldComp with an EMPTY drop, so there is never
+    // a delete to lose the row to.
+    if (sale.cardId === newId) {
+      try {
+        const keep = stripSystem({
+          ...sale, cardId: newId, hobbyiqCardId: newId, cardNumber: parsed.cardNumber,
+          parallel: resolved.parallel, isAuto: resolved.isAuto,
+        });
+        const result = await relocateSoldComp(pool, {
+          keep, drop: [],
+          verifyFields: ["cardId", "hobbyiqCardId", "cardNumber"],
+          dryRun: !APPLY,
+        });
+        if (result?.ok) {
+          s.patchedInPlace++;
+          emitPlanRow(sale, "patch", "same-partition-in-place", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
+        } else {
+          s.failed++;
+          const stage = result?.stage ?? "unknown";
+          const errMsg = result?.error ?? "unknown";
+          const msg = `FAILED patch-in-place ${sale.id}@${currentId} -> ${newId}: [stage=${stage}] ${errMsg}`;
+          failures.push(`  ${msg}`);
+          emitPlanRow(sale, "failed", "patch-in-place", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId, error: `[stage=${stage}] ${errMsg}` });
+          console.log(`\n::warning::${msg}`);
+        }
+      } catch (e) {
+        s.failed++;
+        const code = e?.code ?? e?.statusCode ?? "unknown";
+        const msg = `FAILED patch-in-place ${sale.id}@${currentId} -> ${newId}: [${code}] ${e?.message || e}`;
+        failures.push(`  ${msg}`);
+        emitPlanRow(sale, "failed", "patch-in-place-threw", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId, error: `[${code}] ${e?.message || String(e)}` });
+        console.log(`\n::warning::${msg}`);
+      }
+      return;
+    }
+
     // Collision / twin detection runs in BOTH modes -- a REPORT must show
     // what would happen, not stop short and claim a bare "would relocate"
     // for a move that would actually collide. Mirrors repoint-sales-
@@ -460,26 +504,64 @@ async function main() {
       // newId). Only a byte-identical twin (the SAME sale, already moved) is
       // safe to collapse onto; any other resident is a DIFFERENT document
       // that happens to share this sale's id, and moving over it would
-      // silently erase it -- refused, never overwritten.
+      // silently erase it -- refused, never overwritten. Reaching here
+      // already proves `sale.cardId !== newId` (the branch above returns
+      // otherwise), so a resident sharing `sale.cardId` would mean the read
+      // somehow answered with the row being processed -- refuse rather than
+      // trust a "distinct survivor" the read did not actually prove.
+      if (resident.cardId === sale.cardId) {
+        s.collapseRefusedSelf++;
+        refusals["possible-twin-at-destination"].push(`  ${sale.id}@${currentId} -> ${newId}: residentAt read back the SAME document being processed -- refused, never treated as a distinct survivor`);
+        emitPlanRow(sale, "refused", "collapse-refused-self", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
+        return;
+      }
       if (contentHashOf(resident) === contentHashOf({ ...sale, cardId: newId, hobbyiqCardId: newId })) {
-        s.collapsedOntoResident++;
-        if (APPLY) {
-          try {
+        // Routed through relocateSoldComp instead of a bare delete, so the
+        // delete only fires after the destination's own row re-verifies.
+        try {
+          const keep = stripSystem({
+            ...sale, cardId: newId, hobbyiqCardId: newId, cardNumber: parsed.cardNumber,
+            parallel: resolved.parallel, isAuto: resolved.isAuto,
+          });
+          const result = await relocateSoldComp(pool, {
+            keep, drop: [{ id: sale.id, cardId: sale.cardId }],
+            verifyFields: ["cardId", "hobbyiqCardId", "cardNumber"],
+            dryRun: !APPLY,
             // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
-            // (2026-09-28): `sale` is the full pre-delete document; a
-            // ledger-write failure refuses the delete, counted apart from
-            // the "best effort" delete-itself-threw case below.
-            await recordDeleteOrThrow(sale, {
-              lane: "repoint-sales-cardnumber-suffix", action: "collapse", reason: "same-sale-resident",
-              toId: newId, container: "sold_comps",
-            });
-            await pool.item(sale.id, sale.cardId).delete();
-          } catch (e) {
-            if (isLedgerWriteFailure(e)) { s.ledgerWriteFailed++; s.failed++; }
-            // else: best effort; the sale is a proven duplicate either way
+            // (2026-09-28). relocateSoldComp's own drop loop re-reads the
+            // full document and ledgers it before this delete.
+            ledger: { lane: "repoint-sales-cardnumber-suffix", action: "collapse", reason: "same-sale-resident", toId: newId, container: "sold_comps" },
+          });
+          if (result?.ok) {
+            s.collapsedOntoResident++;
+            emitPlanRow(sale, "collapse", "same-sale-resident", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
+          } else if (result?.staleSincePlan?.length) {
+            s.refusedEtagChanged++;
+            emitPlanRow(sale, "refused", "stale-since-plan", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
+          } else if (result?.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+            s.ledgerWriteFailed++;
+            s.failed++;
+            const msg = `FAILED collapse ${sale.id}@${currentId} -> ${newId}: ledger write refused the delete`;
+            failures.push(`  ${msg}`);
+            emitPlanRow(sale, "failed", "ledger-write-failed", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
+            console.log(`\n::warning::${msg}`);
+          } else {
+            s.failed++;
+            const stage = result?.stage ?? "unknown";
+            const errMsg = result?.error ?? "unknown";
+            const msg = `FAILED collapse ${sale.id}@${currentId} -> ${newId}: [stage=${stage}] ${errMsg}`;
+            failures.push(`  ${msg}`);
+            emitPlanRow(sale, "failed", "collapse", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId, error: `[stage=${stage}] ${errMsg}` });
+            console.log(`\n::warning::${msg}`);
           }
+        } catch (e) {
+          s.failed++;
+          const code = e?.code ?? e?.statusCode ?? "unknown";
+          const msg = `FAILED collapse ${sale.id}@${currentId} -> ${newId}: [${code}] ${e?.message || e}`;
+          failures.push(`  ${msg}`);
+          emitPlanRow(sale, "failed", "collapse-threw", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId, error: `[${code}] ${e?.message || String(e)}` });
+          console.log(`\n::warning::${msg}`);
         }
-        emitPlanRow(sale, "collapse", "same-sale-resident", { fromCardNumber: oldSeg, toCardNumber: newSeg, target: newId });
         return;
       }
       s.refusedPossibleTwinAtDestination++;
@@ -584,6 +666,7 @@ async function main() {
   console.log(`sales scanned                          ${f(s.scanned)}${SHARD_SCOPE.SHARDED ? `  (${f(s.otherShard)} in other shards)` : ""}`);
   console.log(`  candidates (bare year-coded shape)    ${f(s.candidates)}`);
   console.log(`  ${APPLY ? "RELOCATED" : "WOULD RELOCATE"}                     ${f(s.relocated)}`);
+  console.log(`  ${APPLY ? "PATCHED in place (same partition)" : "WOULD PATCH in place (same partition)"}  ${f(s.patchedInPlace)}`);
   console.log(`  COLLAPSED onto a resident (same sale)  ${f(s.collapsedOntoResident)}`);
   console.log(`  REFUSED: not a suffix restore           ${f(s.refusedNotSuffixRestore)}`);
   console.log(`  REFUSED: unparsed / no cardNumber       ${f(s.refusedUnparsed)}`);
@@ -591,6 +674,7 @@ async function main() {
   console.log(`  REFUSED: destination-not-on-checklist   ${f(s.refusedDestinationNotOnChecklist)}`);
   console.log(`  REFUSED: different-player               ${f(s.refusedDifferentPlayer)}`);
   console.log(`  REFUSED: possible-twin-at-destination   ${f(s.refusedPossibleTwinAtDestination)}`);
+  console.log(`  REFUSED: collapse-refused-self          ${f(s.collapseRefusedSelf)}`);
   console.log(`  REFUSED: parallel-or-auto-downgrade     ${f(s.refusedParallelOrAutoDowngrade)}`);
   console.log(`  REFUSED: stale since the read            ${f(s.refusedEtagChanged)}`);
   console.log(`  failed                                  ${f(s.failed)}`);
@@ -604,10 +688,10 @@ async function main() {
   // RECONCILE. Every candidate this lane's suffix-restore predicate found is
   // moved, collapsed onto a proven duplicate, refused (named), failed, or
   // not reached before the budget -- never silently dropped.
-  const candidateOutcomes = s.relocated + s.collapsedOntoResident
+  const candidateOutcomes = s.relocated + s.collapsedOntoResident + s.patchedInPlace
     + s.refusedDestinationNotOnChecklist + s.refusedDifferentPlayer
     + s.refusedPossibleTwinAtDestination + s.refusedParallelOrAutoDowngrade
-    + s.refusedEtagChanged
+    + s.refusedEtagChanged + s.collapseRefusedSelf
     + s.failed + s.notReached;
   console.log(`\n  reconciled: candidates ${f(s.candidates)} = accounted-for ${f(candidateOutcomes)}`);
   if (candidateOutcomes !== s.candidates) {
@@ -637,12 +721,13 @@ async function main() {
   // reportWrites()'s exit-4 gate is reserved for APPLY, where "written"
   // means a confirmed Cosmos write, not a "would write" prediction.
   const refusedTotal = s.refusedDestinationNotOnChecklist + s.refusedDifferentPlayer
-    + s.refusedPossibleTwinAtDestination + s.refusedParallelOrAutoDowngrade + s.refusedEtagChanged;
+    + s.refusedPossibleTwinAtDestination + s.refusedParallelOrAutoDowngrade + s.refusedEtagChanged
+    + s.collapseRefusedSelf;
   if (APPLY) {
     reportWrites({
       job: "repoint-sales-cardnumber-suffix",
       intended: s.candidates,
-      written: s.relocated + s.collapsedOntoResident,
+      written: s.relocated + s.collapsedOntoResident + s.patchedInPlace,
       refused: refusedTotal,
       skipped: s.notReached,
       failed: s.failed,
