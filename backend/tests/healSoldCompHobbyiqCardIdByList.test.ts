@@ -558,6 +558,27 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
     expect(r.led.patches.length).toBe(1);
   });
 
+  // CF-A-NAME-LESS-TITLE-IS-NOT-A-CONFLICT (review finding). Real
+  // CardHedge/eBay titles frequently name a year, product and card number
+  // with NO PLAYER AT ALL -- this lane's own real committed list (2,022
+  // sales) is CardHedge/eBay/cardsight-sourced. A bare "title is non-blank"
+  // check would have refused this sale on its own CORRECT playerName the
+  // moment title-first shipped; lib/title-has-name-tokens.cjs strips the
+  // destination's own setKey/sport/cardNumber (parsed off `cardId` here)
+  // before counting, so this title correctly reduces to zero name tokens.
+  it("PASSES, decidedBy=playerName, when the title is non-blank but NAME-LESS (real listing noise, no player)", () => {
+    const list = writeList([{ saleId: SALE_ID, cardId: CARD_ID, expectedStaleHobbyiqCardId: STALE, toHobbyiqCardId: CARD_ID }], "title-nameless-fallback");
+    const catalog = [CATALOG_ROW];
+    const sales = [{ ...SALE, playerName: "Allan Castro", title: "2024 Bowman Baseball #CPA-ACA Refractor Auto" }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/PATCHED\s+1/);
+    expect(r.led.patches.length).toBe(1);
+  });
+
   it("FAILS (etag-conflict, REFUSED) when the patch is rejected with a 412 -- never retried, never written", () => {
     const list = writeList([{ saleId: SALE_ID, cardId: CARD_ID, expectedStaleHobbyiqCardId: STALE, toHobbyiqCardId: CARD_ID }], "etag-conflict");
     const catalog = [CATALOG_ROW];

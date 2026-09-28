@@ -127,6 +127,11 @@ const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs")
 // bare name). Reads the checklist corpus directly, no dist/ and no Cosmos --
 // same load-without-a-build contract as name-agreement.cjs itself.
 const { stripVocabularyForDestination } = require(path.join(__dirname, "lib", "checklist-parallel-strip-vocab.cjs"));
+// GATE (e)'s own "is the title even name-shaped" test (this PR) -- see that
+// module's own header for why a bare "title is non-blank" check false-
+// refuses real CardHedge/eBay listing titles that carry no player name at
+// all.
+const { titleHasNameTokens } = require(path.join(__dirname, "lib", "title-has-name-tokens.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
@@ -372,19 +377,31 @@ async function main() {
     // -- without it, a real title like "Allan Castro Blue Refractor Auto"
     // would never fold onto the checklist's bare "Allan Castro", and this
     // lane's own committed list of 2,022 real sales carries exactly that
-    // shape). playerName is consulted ONLY when the title is blank (carries
-    // no name tokens at all). On a real conflict the TITLE WINS -- see
-    // repoint-sales-by-list.cjs's own GATE 6 for the identical doctrine and
-    // the PR #2485 incident (Yordanny Monegro / Yohandy Morales #CPA-YM)
-    // this mirrors. `decidedBy` records which field actually decided, in
-    // the plan-row evidence for both the pass and the refuse path.
+    // shape). playerName is consulted ONLY when the title carries NO NAME
+    // TOKENS AT ALL -- lib/title-has-name-tokens.cjs strips the destination
+    // card's own setKey/sport/cardNumber vocabulary (parsed off `cardId`'s
+    // own `hiq:sport:year:setKey:cardNumber:...` slug when the catalog row
+    // itself carries no separate setKey field) before counting, so a bare
+    // vendor listing title with no player name in it at all falls back to
+    // playerName rather than being refused on its own product noise. On a
+    // real conflict the TITLE WINS -- see repoint-sales-by-list.cjs's own
+    // GATE 6 for the identical doctrine and the PR #2485 incident (Yordanny
+    // Monegro / Yohandy Morales #CPA-YM) this mirrors. `decidedBy` records
+    // which field actually decided, in the plan-row evidence for both the
+    // pass and the refuse path.
     const strip = stripVocabularyForDestination(catalogRow);
     const titleSource = String(sale.title ?? "").trim();
     const playerNameSource = String(sale.playerName ?? "").trim();
     const destName = String(catalogRow.playerName ?? "").trim();
-    const titleHasNameTokens = titleSource.length > 0;
-    const decidedBy = titleHasNameTokens ? "title" : "playerName";
-    const saleName = titleHasNameTokens ? titleSource : playerNameSource;
+    const slugParts = cardId.split(":");
+    const titleContext = {
+      setKey: catalogRow.setKey ?? slugParts[3] ?? null,
+      sport: catalogRow.sport ?? slugParts[1] ?? null,
+      cardNumber: catalogRow.cardNumber ?? slugParts[4] ?? null,
+    };
+    const titleIsNameShaped = titleHasNameTokens(titleSource, strip.tokens, titleContext);
+    const decidedBy = titleIsNameShaped ? "title" : "playerName";
+    const saleName = titleIsNameShaped ? titleSource : playerNameSource;
     if (!namesAgree(saleName, destName, { stripTrailingTokens: strip.tokens })) {
       refusedNameDisagreement++;
       console.error(`      REFUSED (name-disagreement): sale "${saleName.slice(0, 60)}" (decidedBy=${decidedBy}) vs destination "${destName.slice(0, 60)}"`);

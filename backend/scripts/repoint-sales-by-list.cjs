@@ -159,6 +159,11 @@ const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
 // contract as name-agreement.cjs itself -- required at top level, not lazily
 // inside main(), for the same reason.
 const { checklistParallelNamesFor } = require(path.join(__dirname, "lib", "rematch-finish-vocab.cjs"));
+// GATE 6's own "is the title even name-shaped" test (this PR) -- see that
+// module's own header for why a bare "title is non-blank" check false-
+// refuses real CardHedge/eBay listing titles that carry no player name at
+// all ("2025 Topps Chrome Update Baseball #AC-NM Base").
+const { titleHasNameTokens } = require(path.join(__dirname, "lib", "title-has-name-tokens.cjs"));
 // The dist/ and Cosmos requires live inside main(), as every sibling list
 // lane does it: loading this module must not need a built tree, so a test
 // can require it and drive the list/gate logic without a compile step.
@@ -643,21 +648,29 @@ async function main() {
       // TITLE, the actual listing text, plainly names the destination
       // player. The title is read FIRST, through the identical
       // stripTrailingTokens vocabulary GATE 6 already builds for the
-      // destination; playerName is consulted ONLY when the title carries no
-      // name tokens at all (a blank/empty title after trim) -- never when
-      // the title simply disagrees. On a real conflict (title names one
-      // player, playerName says another) the TITLE WINS and the sale is
-      // refused, even though a playerName-only check would have passed it --
-      // a corrupt stored field must never outrank the evidence a human
-      // listed the card under. `decidedBy` records which field actually
-      // produced the verdict, in both the pass and the refuse path, so the
-      // per-sale reconcile evidence states which source decided every sale.
+      // destination; playerName is consulted ONLY when the title carries NO
+      // NAME TOKENS AT ALL -- never merely when the title simply disagrees.
+      // "No name tokens" is NOT "the title is blank": lib/title-has-name-
+      // tokens.cjs strips the destination's own setKey/sport/cardNumber
+      // vocabulary (plus year/grade/card-number-token shapes) before
+      // counting, because a large share of real sold_comps titles are
+      // CardHedge/eBay listing text with no player name in them at all
+      // ("2025 Topps Chrome Update Baseball #AC-NM Base") -- a bare
+      // non-blank check would have refused those on their own CORRECT
+      // playerName, the opposite of what title-first is for. On a real
+      // conflict (title carries a genuine name, and it is NOT the
+      // destination's) the TITLE WINS and the sale is refused, even though
+      // a playerName-only check would have passed it -- a corrupt stored
+      // field must never outrank the evidence a human listed the card
+      // under. `decidedBy` records which field actually produced the
+      // verdict, in both the pass and the refuse path.
       const titleSource = String(sale.title ?? "").trim();
       const playerNameSource = String(sale.playerName ?? "").trim();
       const destName = String(toRow.playerName ?? "").trim();
-      const titleHasNameTokens = titleSource.length > 0;
-      const decidedBy = titleHasNameTokens ? "title" : "playerName";
-      const saleName = titleHasNameTokens ? titleSource : playerNameSource;
+      const titleContext = { setKey: toRow.setKey, sport: toRow.sport, cardNumber: cardNumber || toRow.cardNumber };
+      const titleIsNameShaped = titleHasNameTokens(titleSource, strip.tokens, titleContext);
+      const decidedBy = titleIsNameShaped ? "title" : "playerName";
+      const saleName = titleIsNameShaped ? titleSource : playerNameSource;
       if (!namesAgree(saleName, destName, { stripTrailingTokens: strip.tokens })) {
         refusedNameDisagreement++;
         console.error(`      REFUSED (name-disagreement) ${sale.id}: sale "${saleName.slice(0, 60)}" (decidedBy=${decidedBy}) vs destination "${destName.slice(0, 60)}"`);

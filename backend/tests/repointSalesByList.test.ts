@@ -1176,6 +1176,36 @@ describe("GATE 6 reads the sale's TITLE first, and playerName only when the titl
     expect(applyRun.code).toBe(0);
     expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
   });
+
+  // CF-A-NAME-LESS-TITLE-IS-NOT-A-CONFLICT (review finding). A large share
+  // of real sold_comps titles are CardHedge/eBay-derived LISTING TEXT that
+  // names a year, product and card number and NO PLAYER AT ALL --
+  // "2025 Topps Chrome Update Baseball #USC143 Base" is exactly this shape
+  // for THIS fixture's own product. A bare "title is non-blank" check would
+  // have refused this sale on its own CORRECT playerName the moment
+  // title-first shipped. lib/title-has-name-tokens.cjs strips the
+  // destination's own setKey/sport/cardNumber vocabulary before counting,
+  // so this title correctly reduces to zero name tokens and GATE 6 falls
+  // back to playerName instead of testing the title at all.
+  it("a non-blank but NAME-LESS title (real listing noise, no player) -> PASSES via playerName, decidedBy=playerName", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "name-less title falls back to playerName", expectedSales: 1 }], "title-nameless-fallback");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "2025 Topps Chrome Update Baseball #USC143 Base", playerName: "Adael Amador", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
+    expect(applyRun.code).toBe(0);
+    expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
+  });
 });
 
 // ── CF-STALE-HOBBYIQCARDID-IS-NOT-RESIDENCY. A ref whose live cardId is not
