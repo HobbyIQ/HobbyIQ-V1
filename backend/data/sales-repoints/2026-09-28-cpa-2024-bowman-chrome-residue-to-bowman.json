@@ -1,127 +1,27 @@
 {
- "generatedAt": "2026-09-28T03:37:14.000Z",
+ "generatedAt": "2026-09-28T09:00:00.000Z",
  "forLane": "repoint-sales-by-list",
- "ruling": "Follow-up to Drew 2026-09-27 23:56Z CPA-760 fold ruling. List 1 (run 36364997706) refused 827 sales on namesAgree because the SALE's own title/playerName carried a name-shape artefact (trailing noise the lane's stripTrailingTokens vocabulary did not cover, or a single-character/diacritic transcription variant) rather than a genuinely different player. This list repoints the 267 of those 827 sales (88 fromId groups) that a manual title-by-title reread confirms are the SAME player as the destination checklist row -- verified against each sale's own scraped title, never against the extracted playerName field alone. The remaining 560 sales (99 groups) name a player the bowman cpa checklist simply has no row for under that CPA number (verified: the SALE's own title consistently and repeatedly names that exact player under that exact CPA number, e.g. cardsight::57ec670b0ccc056af0bf36c5 title \"2024 Bowman Chrome EDUARDO TAIT Auto Refractor /499 #CPA-ET\" -- the checklist row's playerName \"Erick Torres\" for CPA-ET appears to be the mistranscription, not the sale) -- those are left to census.needsRuling in this list, unresolved, since fixing a checklist row's playerName is out of scope for a sales-repoint list.",
+ "ruling": "ROUND 2 of the residue follow-up, rebuilt from GROUND TRUTH after independent review REQUEST CHANGES (https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351) found round 1's 267-sale, 88-entry list would have re-refused every entry identically to List 1 (0/268 pass the real namesAgree + stripVocabularyForDestination gate). This list is built two ways differently from round 1: (1) a narrow, corpus-measured Au/Autographs trailing marker was added to name-agreement.cjs (see that file's own comment and backend/tests/nameAgreementClosesNameShapeRefusals.test.ts), recovering some sales; (2) EVERY entry below is verified against the REAL gate live against Cosmos -- not an offline heuristic -- AND filtered to sales genuinely resident at fromId (sale.cardId === fromId), excluding sales that merely share a stale hobbyiqCardId pointer while already living at a different (usually correct) address; moving those would be either a no-op or a wrong-address write, not a fix for the stale-hobbyiqCardId defect they actually need (see this list's own census.dataQualityNote and the sidecar).",
  "rulings": [
-  "CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (precedent: 2026-09-28-cpa-2024-bowman-chrome-auto-to-bowman.json, backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json): same ruling chain as List 1 -- these are the same 339-row census population, refused only on namesAgree, not on product address.",
-  "Method (read-only, no writes performed by this investigation): (1) parsed run 36364997706's full APPLY log for every REFUSED (name-disagreement) line (827 total, 153 distinct fromId); (2) enumerated every hiq:baseball:2024:bowman:cpa-* checklist-grade :auto row (6,622 rows after catalogAuthorityOf + isAuto filtering, 1,385 at the bowman address, 87 distinct players) via a cross-partition SELECT; (3) re-ran namesAgree(saleName, destPlayer) plus a token-containment and small-edit-distance check per (saleName, destPlayer, toId) group (248 distinct groups); (4) point-read a sample of the sale docs behind the largest disagreeing groups to read their own scraped titles directly, not just the extracted playerName field.",
-  "Drew 2026-09-27 23:56Z ruling text (verbatim, restated from List 1): relocate the 760 2024 Bowman Chrome CPA- :auto rows to bowman ids -- this list only repoints sales the census already covers, no new catalog address decision is made here."
+  "CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (unchanged from round 1 and the parent list).",
+  "Method (read-only, no writes performed by this investigation): drained live sales at all 153 List-2-refused fromIds (dual cross-partition + partition-scoped), computed each destination's REAL stripVocabularyForDestination() output, and ran namesAgree(sale.playerName ?? sale.title, toRow.playerName, {stripTrailingTokens}) against every one of 2,796 live sale docs found -- the EXACT comparison repoint-sales-by-list.cjs's gate 6 performs at APPLY time. 2,061 pass; of those, only 15 (across 10 fromIds) are genuinely resident at their bowman-chrome fromId (sale.cardId === fromId) rather than matched only through a stale hobbyiqCardId pointer while already living elsewhere.",
+  "The 1,969 (of 2,061) passing sales whose cardId already reads a DIFFERENT address (mostly the correct bowman toId) are the stale-hobbyiqCardId data-quality defect this task's original brief asked about directly (Allan Castro / Arjun Nimmala) -- confirmed here to affect roughly 2,000 sales, not 2. No lane in this repo patches hobbyiqCardId by list; this PR does not add one (out of scope), and none of those 1,969 sales are named in this repoint list."
  ],
  "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
  "census": {
   "parentRun": "36364997706 (List 1 APPLY, 2026-09-28T01:39:38Z)",
-  "refusalsInParentRun": 827,
-  "distinctFromIdWithRefusals": 153,
-  "reclassification": {
-   "sameRowNameShapeNoise": {
-    "groups": 144,
-    "sales": 215,
-    "note": "trailing team/format/grading words (Au, Autographs, On, Mt, Ss, True, city/team names) namesAgree's stripTrailingTokens did not cover"
-   },
-   "likelyTranscriptionVariant": {
-    "groups": 5,
-    "sales": 52,
-    "note": "single-character or diacritic surname variant of the checklist playerName (edit distance <=2 on same-length token sets), e.g. Filippo Di Turi vs Filippo Di Turri, Aneudis Mord vs Aneudis Mordan"
-   },
-   "trueMismatchNeedsRuling": {
-    "groups": 99,
-    "sales": 560,
-    "note": "the sale titles' own scraped text repeatedly and consistently names a player the bowman cpa checklist has no row for under that CPA number; see needsRuling section / sidecar"
-   }
+  "round1Defect": "88-entry, 267-sale list built from an offline namesAgree approximation; 0/268 pass the real gate (independent review finding, comment 5863378351)",
+  "round2RealGateTotals": {
+   "saleDocsChecked": 2796,
+   "pass": 2061,
+   "fail": 735
   },
-  "method": "Read-only. namesAgree (backend/scripts/lib/name-agreement.cjs) + catalogAuthorityOf (backend/src/services/catalog/catalogAuthority.service.ts regex, replicated in a .cjs investigation script since dist/ was not built) + token-containment/edit-distance heuristics, cross-checked by point-reading sample sale docs' source titles for the largest groups. No Cosmos writes performed."
+  "round2GenuinelyResidentPassing": 15,
+  "round2ListEntries": 10,
+  "dataQualityNote": "1,969 of the 2,061 real-gate-passing sales already carry the CORRECT (or at least a DIFFERENT, non-fromId) cardId and are matched into this drain only via a stale hobbyiqCardId field -- the same defect the task's own brief asked about for Allan Castro (cardsight::7f92af3bddc61b38fc6ab6df) and Arjun Nimmala (cardsight::6d03ef2658a5ab8828ad59d4). Confirmed at much larger scale than those 2 samples. None of these 1,969 sales are named in this list -- repointing a sale that already lives at its correct cardId, by (id, cardId) key, would not touch the record actually holding the stale field. See the PR body for a proposed (not written) list-scoped hobbyiqCardId-heal lane.",
+  "method": "Read-only. Reproduced repoint-sales-by-list.cjs's own stripVocabularyForDestination() and gate-6 namesAgree() comparison verbatim against live sold_comps docs at all 153 List-2-refused fromIds, then filtered to sale.cardId === fromId (genuine residency) before including any entry in this list. No Cosmos writes performed."
  },
  "entries": [
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ab:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-ab:base:auto",
-   "player": "Anthony Baptist",
-   "cardNumber": "CPA-AB",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Anthony Baptist\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-AB at hiq:baseball:2024:bowman:cpa-ab:base:auto): same player, same #CPA-AB card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-aca:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-aca:base:auto",
-   "player": "Allan Castro",
-   "cardNumber": "CPA-ACA",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 2 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Allan Castro\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-ACA at hiq:baseball:2024:bowman:cpa-aca:base:auto): same player, same #CPA-ACA card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ahu:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-ahu:base:auto",
-   "player": "Anthony Huezo",
-   "cardNumber": "CPA-AHU",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 5,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 5 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Anthony Huezo\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-AHU at hiq:baseball:2024:bowman:cpa-ahu:base:auto): same player, same #CPA-AHU card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ahu:refractor:auto:num-499",
-   "toId": "hiq:baseball:2024:bowman:cpa-ahu:refractor:auto:num-499",
-   "player": "Anthony Huezo",
-   "cardNumber": "CPA-AHU",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Anthony Huezo\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-AHU at hiq:baseball:2024:bowman:cpa-ahu:refractor:auto:num-499): same player, same #CPA-AHU card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ami:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-ami:base:auto",
-   "player": "Aidan Miller",
-   "cardNumber": "CPA-AMI",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 5,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 5 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Aidan Miller\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-AMI at hiq:baseball:2024:bowman:cpa-ami:base:auto): same player, same #CPA-AMI card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ami:green-refractor:auto:num-99",
-   "toId": "hiq:baseball:2024:bowman:cpa-ami:green-refractor:auto:num-99",
-   "player": "Aidan Miller",
-   "cardNumber": "CPA-AMI",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Aidan Miller\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-AMI at hiq:baseball:2024:bowman:cpa-ami:green-refractor:auto:num-99): same player, same #CPA-AMI card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-amo:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-amo:base:auto",
-   "player": "Aneudis Mordán",
-   "cardNumber": "CPA-AMO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Aneudis Mordán\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-AMO at hiq:baseball:2024:bowman:cpa-amo:base:auto): same player, same #CPA-AMO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-amo:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-amo:blue-refractor:auto:num-150",
-   "player": "Aneudis Mordán",
-   "cardNumber": "CPA-AMO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 2 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Aneudis Mordán\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-AMO at hiq:baseball:2024:bowman:cpa-amo:blue-refractor:auto:num-150): same player, same #CPA-AMO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-an:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-an:base:auto",
-   "player": "Arjun Nimmala",
-   "cardNumber": "CPA-AN",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 183,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 6 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Arjun Nimmala\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-AN at hiq:baseball:2024:bowman:cpa-an:base:auto): same player, same #CPA-AN card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
   {
    "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ao:base:auto",
    "toId": "hiq:baseball:2024:bowman:cpa-ao:base:auto",
@@ -130,67 +30,7 @@
    "allowCrossProduct": true,
    "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
    "expectedSales": 19,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 19 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Abimelec Ortiz\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-AO at hiq:baseball:2024:bowman:cpa-ao:base:auto): same player, same #CPA-AO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ao:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-ao:blue-refractor:auto:num-150",
-   "player": "Abimelec Ortiz",
-   "cardNumber": "CPA-AO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 3,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 3 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Abimelec Ortiz\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-AO at hiq:baseball:2024:bowman:cpa-ao:blue-refractor:auto:num-150): same player, same #CPA-AO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ao:refractor:auto:num-499",
-   "toId": "hiq:baseball:2024:bowman:cpa-ao:refractor:auto:num-499",
-   "player": "Abimelec Ortiz",
-   "cardNumber": "CPA-AO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Abimelec Ortiz\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-AO at hiq:baseball:2024:bowman:cpa-ao:refractor:auto:num-499): same player, same #CPA-AO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-aro:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-aro:base:auto",
-   "player": "Alfonsin Rosario",
-   "cardNumber": "CPA-ARO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Alfonsin Rosario\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-ARO at hiq:baseball:2024:bowman:cpa-aro:base:auto): same player, same #CPA-ARO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-aro:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-aro:blue-refractor:auto:num-150",
-   "player": "Alfonsin Rosario",
-   "cardNumber": "CPA-ARO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Alfonsin Rosario\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-ARO at hiq:baseball:2024:bowman:cpa-aro:blue-refractor:auto:num-150): same player, same #CPA-ARO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-as:refractor:auto:num-499",
-   "toId": "hiq:baseball:2024:bowman:cpa-as:refractor:auto:num-499",
-   "player": "Anthony Scull",
-   "cardNumber": "CPA-AS",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 7,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Anthony Scull\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-AS at hiq:baseball:2024:bowman:cpa-as:refractor:auto:num-499): same player, same #CPA-AS card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-asm:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-asm:base:auto",
-   "player": "Aidan Smith",
-   "cardNumber": "CPA-ASM",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 3,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 3 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Aidan Smith\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-ASM at hiq:baseball:2024:bowman:cpa-asm:base:auto): same player, same #CPA-ASM card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 4 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
   },
   {
    "fromId": "hiq:baseball:2024:bowman-chrome:cpa-bch:base:auto",
@@ -199,78 +39,8 @@
    "cardNumber": "CPA-BCH",
    "allowCrossProduct": true,
    "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 6,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 6 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Byron Chourio\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-BCH at hiq:baseball:2024:bowman:cpa-bch:base:auto): same player, same #CPA-BCH card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-bch:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-bch:blue-refractor:auto:num-150",
-   "player": "Byron Chourio",
-   "cardNumber": "CPA-BCH",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Byron Chourio\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-BCH at hiq:baseball:2024:bowman:cpa-bch:blue-refractor:auto:num-150): same player, same #CPA-BCH card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-bk:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-bk:base:auto",
-   "player": "Barrett Kent",
-   "cardNumber": "CPA-BK",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Barrett Kent\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-BK at hiq:baseball:2024:bowman:cpa-bk:base:auto): same player, same #CPA-BK card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-bwi:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-bwi:base:auto",
-   "player": "Ben Williamson",
-   "cardNumber": "CPA-BWI",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Ben Williamson\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-BWI at hiq:baseball:2024:bowman:cpa-bwi:base:auto): same player, same #CPA-BWI card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-co:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-co:base:auto",
-   "player": "Capri Ortiz",
-   "cardNumber": "CPA-CO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Capri Ortiz\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-CO at hiq:baseball:2024:bowman:cpa-co:base:auto): same player, same #CPA-CO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-cp:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-cp:base:auto",
-   "player": "Chandler Pollard",
-   "cardNumber": "CPA-CP",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Chandler Pollard\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-CP at hiq:baseball:2024:bowman:cpa-cp:base:auto): same player, same #CPA-CP card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-cpr:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-cpr:base:auto",
-   "player": "Cooper Pratt",
-   "cardNumber": "CPA-CPR",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 86,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 7 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Cooper Pratt\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-CPR at hiq:baseball:2024:bowman:cpa-cpr:base:auto): same player, same #CPA-CPR card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-cpr:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-cpr:blue-refractor:auto:num-150",
-   "player": "Cooper Pratt",
-   "cardNumber": "CPA-CPR",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Cooper Pratt\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-CPR at hiq:baseball:2024:bowman:cpa-cpr:blue-refractor:auto:num-150): same player, same #CPA-CPR card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
+   "expectedSales": 7,
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
   },
   {
    "fromId": "hiq:baseball:2024:bowman-chrome:cpa-cq:base:auto",
@@ -280,77 +50,7 @@
    "allowCrossProduct": true,
    "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
    "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Cesar Quintas\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-CQ at hiq:baseball:2024:bowman:cpa-cq:base:auto): same player, same #CPA-CQ card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-cr:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-cr:base:auto",
-   "player": "Carson Rucker",
-   "cardNumber": "CPA-CR",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 2 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Carson Rucker\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-CR at hiq:baseball:2024:bowman:cpa-cr:base:auto): same player, same #CPA-CR card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-dg:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-dg:base:auto",
-   "player": "Douglas Glod",
-   "cardNumber": "CPA-DG",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Douglas Glod\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-DG at hiq:baseball:2024:bowman:cpa-dg:base:auto): same player, same #CPA-DG card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-dg:yellow-refractor:auto:num-75",
-   "toId": "hiq:baseball:2024:bowman:cpa-dg:yellow-refractor:auto:num-75",
-   "player": "Douglas Glod",
-   "cardNumber": "CPA-DG",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Douglas Glod\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-DG at hiq:baseball:2024:bowman:cpa-dg:yellow-refractor:auto:num-75): same player, same #CPA-DG card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-dgn:green-refractor:auto:num-99",
-   "toId": "hiq:baseball:2024:bowman:cpa-dgn:green-refractor:auto:num-99",
-   "player": "David Guzman",
-   "cardNumber": "CPA-DGN",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"David Guzman\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-DGN at hiq:baseball:2024:bowman:cpa-dgn:green-refractor:auto:num-99): same player, same #CPA-DGN card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ds:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-ds:base:auto",
-   "player": "Daniel Susac",
-   "cardNumber": "CPA-DS",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 4,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 4 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Daniel Susac\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-DS at hiq:baseball:2024:bowman:cpa-ds:base:auto): same player, same #CPA-DS card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ds:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-ds:blue-refractor:auto:num-150",
-   "player": "Daniel Susac",
-   "cardNumber": "CPA-DS",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 2 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Daniel Susac\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-DS at hiq:baseball:2024:bowman:cpa-ds:blue-refractor:auto:num-150): same player, same #CPA-DS card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-es:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-es:blue-refractor:auto:num-150",
-   "player": "Estuar Suero",
-   "cardNumber": "CPA-ES",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Estuar Suero\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-ES at hiq:baseball:2024:bowman:cpa-es:blue-refractor:auto:num-150): same player, same #CPA-ES card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
   },
   {
    "fromId": "hiq:baseball:2024:bowman-chrome:cpa-et:gold-refractor:auto:num-50",
@@ -360,7 +60,7 @@
    "allowCrossProduct": true,
    "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
    "expectedSales": 5,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Erick Torres\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-ET at hiq:baseball:2024:bowman:cpa-et:gold-refractor:auto:num-50): same player, same #CPA-ET card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
   },
   {
    "fromId": "hiq:baseball:2024:bowman-chrome:cpa-et:refractor:auto:num-499",
@@ -370,157 +70,7 @@
    "allowCrossProduct": true,
    "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
    "expectedSales": 50,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Erick Torres\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-ET at hiq:baseball:2024:bowman:cpa-et:refractor:auto:num-499): same player, same #CPA-ET card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ev:green-refractor:auto:num-99",
-   "toId": "hiq:baseball:2024:bowman:cpa-ev:green-refractor:auto:num-99",
-   "player": "Esmerlyn Valdez",
-   "cardNumber": "CPA-EV",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 5,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Esmerlyn Valdez\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-EV at hiq:baseball:2024:bowman:cpa-ev:green-refractor:auto:num-99): same player, same #CPA-EV card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ev:refractor:auto:num-499",
-   "toId": "hiq:baseball:2024:bowman:cpa-ev:refractor:auto:num-499",
-   "player": "Esmerlyn Valdez",
-   "cardNumber": "CPA-EV",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 86,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Esmerlyn Valdez\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-EV at hiq:baseball:2024:bowman:cpa-ev:refractor:auto:num-499): same player, same #CPA-EV card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-evi:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-evi:base:auto",
-   "player": "Esmil Valencia",
-   "cardNumber": "CPA-EVI",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Esmil Valencia\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-EVI at hiq:baseball:2024:bowman:cpa-evi:base:auto): same player, same #CPA-EVI card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-fdi:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-fdi:base:auto",
-   "player": "Filippo Di Turri",
-   "cardNumber": "CPA-FDI",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 44,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 44 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Filippo Di Turri\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-FDI at hiq:baseball:2024:bowman:cpa-fdi:base:auto): same player, same #CPA-FDI card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-fdi:refractor:auto:num-499",
-   "toId": "hiq:baseball:2024:bowman:cpa-fdi:refractor:auto:num-499",
-   "player": "Filippo Di Turri",
-   "cardNumber": "CPA-FDI",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 4,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 4 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Filippo Di Turri\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-FDI at hiq:baseball:2024:bowman:cpa-fdi:refractor:auto:num-499): same player, same #CPA-FDI card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-fm:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-fm:base:auto",
-   "player": "Felix Morrobel",
-   "cardNumber": "CPA-FM",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Felix Morrobel\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-FM at hiq:baseball:2024:bowman:cpa-fm:base:auto): same player, same #CPA-FM card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-gg:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-gg:base:auto",
-   "player": "Gino Groover",
-   "cardNumber": "CPA-GG",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Gino Groover\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-GG at hiq:baseball:2024:bowman:cpa-gg:base:auto): same player, same #CPA-GG card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-gg:green-refractor:auto:num-99",
-   "toId": "hiq:baseball:2024:bowman:cpa-gg:green-refractor:auto:num-99",
-   "player": "Gino Groover",
-   "cardNumber": "CPA-GG",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Gino Groover\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-GG at hiq:baseball:2024:bowman:cpa-gg:green-refractor:auto:num-99): same player, same #CPA-GG card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-gg:refractor:auto:num-499",
-   "toId": "hiq:baseball:2024:bowman:cpa-gg:refractor:auto:num-499",
-   "player": "Gino Groover",
-   "cardNumber": "CPA-GG",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Gino Groover\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-GG at hiq:baseball:2024:bowman:cpa-gg:refractor:auto:num-499): same player, same #CPA-GG card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-glo:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-glo:base:auto",
-   "player": "George Lombard Jr.",
-   "cardNumber": "CPA-GLO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 613,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 18 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"George Lombard Jr.\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-GLO at hiq:baseball:2024:bowman:cpa-glo:base:auto): same player, same #CPA-GLO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-glo:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-glo:blue-refractor:auto:num-150",
-   "player": "George Lombard Jr.",
-   "cardNumber": "CPA-GLO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 6,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 6 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"George Lombard Jr.\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-GLO at hiq:baseball:2024:bowman:cpa-glo:blue-refractor:auto:num-150): same player, same #CPA-GLO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-glo:refractor:auto:num-499",
-   "toId": "hiq:baseball:2024:bowman:cpa-glo:refractor:auto:num-499",
-   "player": "George Lombard Jr.",
-   "cardNumber": "CPA-GLO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 2 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"George Lombard Jr.\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-GLO at hiq:baseball:2024:bowman:cpa-glo:refractor:auto:num-499): same player, same #CPA-GLO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-glo:yellow-refractor:auto:num-75",
-   "toId": "hiq:baseball:2024:bowman:cpa-glo:yellow-refractor:auto:num-75",
-   "player": "George Lombard Jr.",
-   "cardNumber": "CPA-GLO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 2 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"George Lombard Jr.\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-GLO at hiq:baseball:2024:bowman:cpa-glo:yellow-refractor:auto:num-75): same player, same #CPA-GLO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-gwo:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-gwo:base:auto",
-   "player": "George Wolkow",
-   "cardNumber": "CPA-GWO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 4,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 4 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"George Wolkow\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-GWO at hiq:baseball:2024:bowman:cpa-gwo:base:auto): same player, same #CPA-GWO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-id:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-id:blue-refractor:auto:num-150",
-   "player": "Isaiah Drake",
-   "cardNumber": "CPA-ID",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Isaiah Drake\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-ID at hiq:baseball:2024:bowman:cpa-id:blue-refractor:auto:num-150): same player, same #CPA-ID card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
   },
   {
    "fromId": "hiq:baseball:2024:bowman-chrome:cpa-id:yellow-refractor:auto:num-75",
@@ -530,117 +80,7 @@
    "allowCrossProduct": true,
    "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
    "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Isaiah Drake\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-ID at hiq:baseball:2024:bowman:cpa-id:yellow-refractor:auto:num-75): same player, same #CPA-ID card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-jcz:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-jcz:blue-refractor:auto:num-150",
-   "player": "John Cruz",
-   "cardNumber": "CPA-JCZ",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"John Cruz\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-JCZ at hiq:baseball:2024:bowman:cpa-jcz:blue-refractor:auto:num-150): same player, same #CPA-JCZ card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-jmh:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-jmh:base:auto",
-   "player": "Jorge Marcheco",
-   "cardNumber": "CPA-JMH",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 3,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 3 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Jorge Marcheco\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-JMH at hiq:baseball:2024:bowman:cpa-jmh:base:auto): same player, same #CPA-JMH card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-jr:refractor:auto:num-499",
-   "toId": "hiq:baseball:2024:bowman:cpa-jr:refractor:auto:num-499",
-   "player": "Jesus Rodriguez",
-   "cardNumber": "CPA-JR",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 17,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Jesus Rodriguez\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-JR at hiq:baseball:2024:bowman:cpa-jr:refractor:auto:num-499): same player, same #CPA-JR card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-jro:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-jro:base:auto",
-   "player": "Jeffry Rosa",
-   "cardNumber": "CPA-JRO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 3,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 3 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Jeffry Rosa\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-JRO at hiq:baseball:2024:bowman:cpa-jro:base:auto): same player, same #CPA-JRO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-jro:green-refractor:auto:num-99",
-   "toId": "hiq:baseball:2024:bowman:cpa-jro:green-refractor:auto:num-99",
-   "player": "Jeffry Rosa",
-   "cardNumber": "CPA-JRO",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Jeffry Rosa\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-JRO at hiq:baseball:2024:bowman:cpa-jro:green-refractor:auto:num-99): same player, same #CPA-JRO card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-js:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-js:base:auto",
-   "player": "Jared Serna",
-   "cardNumber": "CPA-JS",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Jared Serna\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-JS at hiq:baseball:2024:bowman:cpa-js:base:auto): same player, same #CPA-JS card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-jw:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-jw:base:auto",
-   "player": "John Wimmer",
-   "cardNumber": "CPA-JW",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 6,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 6 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"John Wimmer\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-JW at hiq:baseball:2024:bowman:cpa-jw:base:auto): same player, same #CPA-JW card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-jw:green-refractor:auto:num-99",
-   "toId": "hiq:baseball:2024:bowman:cpa-jw:green-refractor:auto:num-99",
-   "player": "John Wimmer",
-   "cardNumber": "CPA-JW",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"John Wimmer\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-JW at hiq:baseball:2024:bowman:cpa-jw:green-refractor:auto:num-99): same player, same #CPA-JW card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-jwi:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-jwi:base:auto",
-   "player": "Jacob Wilson",
-   "cardNumber": "CPA-JWI",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 2 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Jacob Wilson\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-JWI at hiq:baseball:2024:bowman:cpa-jwi:base:auto): same player, same #CPA-JWI card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-khi:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-khi:base:auto",
-   "player": "Kelvin Hidalgo",
-   "cardNumber": "CPA-KHI",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Kelvin Hidalgo\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-KHI at hiq:baseball:2024:bowman:cpa-khi:base:auto): same player, same #CPA-KHI card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-kt:refractor:auto:num-499",
-   "toId": "hiq:baseball:2024:bowman:cpa-kt:refractor:auto:num-499",
-   "player": "Kyle Teel",
-   "cardNumber": "CPA-KT",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Kyle Teel\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-KT at hiq:baseball:2024:bowman:cpa-kt:refractor:auto:num-499): same player, same #CPA-KT card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
   },
   {
    "fromId": "hiq:baseball:2024:bowman-chrome:cpa-la:base:auto",
@@ -650,7 +90,7 @@
    "allowCrossProduct": true,
    "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
    "expectedSales": 7,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 6 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Luke Adams\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-LA at hiq:baseball:2024:bowman:cpa-la:base:auto): same player, same #CPA-LA card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
   },
   {
    "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ms:base:auto",
@@ -660,17 +100,7 @@
    "allowCrossProduct": true,
    "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
    "expectedSales": 4,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 2 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Matt Shaw\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-MS at hiq:baseball:2024:bowman:cpa-ms:base:auto): same player, same #CPA-MS card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-mw:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-mw:base:auto",
-   "player": "Max Wagner",
-   "cardNumber": "CPA-MW",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Max Wagner\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-MW at hiq:baseball:2024:bowman:cpa-mw:base:auto): same player, same #CPA-MW card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 2 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
   },
   {
    "fromId": "hiq:baseball:2024:bowman-chrome:cpa-rbu:base:auto",
@@ -680,167 +110,7 @@
    "allowCrossProduct": true,
    "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
    "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 2 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Ryan Burrowes\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-RBU at hiq:baseball:2024:bowman:cpa-rbu:base:auto): same player, same #CPA-RBU card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-rca:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-rca:base:auto",
-   "player": "Robert Calaz",
-   "cardNumber": "CPA-RCA",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 2 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Robert Calaz\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-RCA at hiq:baseball:2024:bowman:cpa-rca:base:auto): same player, same #CPA-RCA card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-rh:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-rh:base:auto",
-   "player": "Raylin Heredia",
-   "cardNumber": "CPA-RH",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 8,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 8 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Raylin Heredia\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-RH at hiq:baseball:2024:bowman:cpa-rh:base:auto): same player, same #CPA-RH card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-rh:gold-refractor:auto:num-50",
-   "toId": "hiq:baseball:2024:bowman:cpa-rh:gold-refractor:auto:num-50",
-   "player": "Raylin Heredia",
-   "cardNumber": "CPA-RH",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Raylin Heredia\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-RH at hiq:baseball:2024:bowman:cpa-rh:gold-refractor:auto:num-50): same player, same #CPA-RH card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-rhe:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-rhe:base:auto",
-   "player": "Ronny Hernandez",
-   "cardNumber": "CPA-RHE",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 2,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 2 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Ronny Hernandez\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-RHE at hiq:baseball:2024:bowman:cpa-rhe:base:auto): same player, same #CPA-RHE card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-rhe:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-rhe:blue-refractor:auto:num-150",
-   "player": "Ronny Hernandez",
-   "cardNumber": "CPA-RHE",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Ronny Hernandez\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-RHE at hiq:baseball:2024:bowman:cpa-rhe:blue-refractor:auto:num-150): same player, same #CPA-RHE card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-rlas:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-rlas:base:auto",
-   "player": "Ryan Lasko",
-   "cardNumber": "CPA-RLAS",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 6,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 6 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Ryan Lasko\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-RLAS at hiq:baseball:2024:bowman:cpa-rlas:base:auto): same player, same #CPA-RLAS card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-rn:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-rn:base:auto",
-   "player": "Rikuu Nishida",
-   "cardNumber": "CPA-RN",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 9,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 8 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Rikuu Nishida\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-RN at hiq:baseball:2024:bowman:cpa-rn:base:auto): same player, same #CPA-RN card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-rrz:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-rrz:base:auto",
-   "player": "Ramon Ramirez",
-   "cardNumber": "CPA-RRZ",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 7,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 7 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Ramon Ramirez\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-RRZ at hiq:baseball:2024:bowman:cpa-rrz:base:auto): same player, same #CPA-RRZ card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-sc:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-sc:base:auto",
-   "player": "Stanley Consuegra",
-   "cardNumber": "CPA-SC",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Stanley Consuegra\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-SC at hiq:baseball:2024:bowman:cpa-sc:base:auto): same player, same #CPA-SC card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ss:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-ss:base:auto",
-   "player": "Sam Shaw",
-   "cardNumber": "CPA-SS",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 4,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 4 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Sam Shaw\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-SS at hiq:baseball:2024:bowman:cpa-ss:base:auto): same player, same #CPA-SS card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ss:green-refractor:auto:num-99",
-   "toId": "hiq:baseball:2024:bowman:cpa-ss:green-refractor:auto:num-99",
-   "player": "Sam Shaw",
-   "cardNumber": "CPA-SS",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Sam Shaw\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-SS at hiq:baseball:2024:bowman:cpa-ss:green-refractor:auto:num-99): same player, same #CPA-SS card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-sw:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-sw:base:auto",
-   "player": "Sebastian Walcott",
-   "cardNumber": "CPA-SW",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Sebastian Walcott\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-SW at hiq:baseball:2024:bowman:cpa-sw:base:auto): same player, same #CPA-SW card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-sw:refractor:auto:num-499",
-   "toId": "hiq:baseball:2024:bowman:cpa-sw:refractor:auto:num-499",
-   "player": "Sebastian Walcott",
-   "cardNumber": "CPA-SW",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Sebastian Walcott\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-SW at hiq:baseball:2024:bowman:cpa-sw:refractor:auto:num-499): same player, same #CPA-SW card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-tj:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-tj:base:auto",
-   "player": "Tavian Josenberger",
-   "cardNumber": "CPA-TJ",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Tavian Josenberger\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-TJ at hiq:baseball:2024:bowman:cpa-tj:base:auto): same player, same #CPA-TJ card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-tsy:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-tsy:base:auto",
-   "player": "Travis Sykora",
-   "cardNumber": "CPA-TSY",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Travis Sykora\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-TSY at hiq:baseball:2024:bowman:cpa-tsy:base:auto): same player, same #CPA-TSY card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-tt:yellow-refractor:auto:num-75",
-   "toId": "hiq:baseball:2024:bowman:cpa-tt:yellow-refractor:auto:num-75",
-   "player": "Tommy Troy",
-   "cardNumber": "CPA-TT",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Tommy Troy\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-TT at hiq:baseball:2024:bowman:cpa-tt:yellow-refractor:auto:num-75): same player, same #CPA-TT card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 1 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
   },
   {
    "fromId": "hiq:baseball:2024:bowman-chrome:cpa-wj:base:auto",
@@ -849,68 +119,8 @@
    "cardNumber": "CPA-WJ",
    "allowCrossProduct": true,
    "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 7,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 7 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Walker Jenkins\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-WJ at hiq:baseball:2024:bowman:cpa-wj:base:auto): same player, same #CPA-WJ card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-wla:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-wla:blue-refractor:auto:num-150",
-   "player": "Wyatt Langford",
-   "cardNumber": "CPA-WLA",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 5,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Wyatt Langford\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-WLA at hiq:baseball:2024:bowman:cpa-wla:blue-refractor:auto:num-150): same player, same #CPA-WLA card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-wla:yellow-refractor:auto:num-75",
-   "toId": "hiq:baseball:2024:bowman:cpa-wla:yellow-refractor:auto:num-75",
-   "player": "Wyatt Langford",
-   "cardNumber": "CPA-WLA",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Wyatt Langford\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-WLA at hiq:baseball:2024:bowman:cpa-wla:yellow-refractor:auto:num-75): same player, same #CPA-WLA card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-wm:base:auto",
-   "toId": "hiq:baseball:2024:bowman:cpa-wm:base:auto",
-   "player": "Walker Martin",
-   "cardNumber": "CPA-WM",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Walker Martin\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-WM at hiq:baseball:2024:bowman:cpa-wm:base:auto): same player, same #CPA-WM card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-yce:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-yce:blue-refractor:auto:num-150",
-   "player": "Yoeilin Cespedes",
-   "cardNumber": "CPA-YCE",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 1,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Yoeilin Cespedes\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-YCE at hiq:baseball:2024:bowman:cpa-yce:blue-refractor:auto:num-150): same player, same #CPA-YCE card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ym:blue-refractor:auto:num-150",
-   "toId": "hiq:baseball:2024:bowman:cpa-ym:blue-refractor:auto:num-150",
-   "player": "Yohandy Morales",
-   "cardNumber": "CPA-YM",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 3,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Yohandy Morales\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-YM at hiq:baseball:2024:bowman:cpa-ym:blue-refractor:auto:num-150): same player, same #CPA-YM card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
-  },
-  {
-   "fromId": "hiq:baseball:2024:bowman-chrome:cpa-ym:refractor:auto:num-499",
-   "toId": "hiq:baseball:2024:bowman:cpa-ym:refractor:auto:num-499",
-   "player": "Yohandy Morales",
-   "cardNumber": "CPA-YM",
-   "allowCrossProduct": true,
-   "crossProductRuling": "Drew 2026-09-27 23:56Z: 2024 CPA- autos minted from the 2024 Bowman checklist belong under bowman; CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT; precedent 2026-09-12 cpa-mg (backend/data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json)",
-   "expectedSales": 17,
-   "reason": "Residue of the CPA-760 fold (List 1, run 36364997706): 1 of this row's sale(s) were refused by namesAgree against the destination's checklist playerName \"Yohandy Morales\" because the sale's own playerName/title carries a name-shape artefact (trailing team/format/grading noise -- e.g. \"Au\", \"Autographs\", a team/city name -- or a single-letter/diacritic transcription variant of the same surname) that the lane's stripTrailingTokens vocabulary did not cover. Re-verified against the sale's own title (cardsight/tca-ebay/cardhedge source docs) and the destination checklist row (CPA-YM at hiq:baseball:2024:bowman:cpa-ym:refractor:auto:num-499): same player, same #CPA-YM card number printed on the sale, no other bowman cpa checklist row names this player. expectedSales is the LIVE dual sales-at-id count at fromId as of 2026-09-28 (this entry's own name-shape sale(s) plus, for rows where other refused-again or already-elsewhere sales remain resident, those too -- namesAgree re-runs per sale and refuses them again unchanged, exactly as List 1 designed; no widening of scope happens here)."
+   "expectedSales": 255,
+   "reason": "Residue of the CPA-760 fold, ROUND 2 (independent review REQUEST CHANGES on PR #2485, https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351). 2 sale(s) genuinely resident at fromId (sale.cardId === fromId, not merely matched via a stale hobbyiqCardId) now PASS the lane's REAL gate -- namesAgree(sale.playerName, destination.playerName, {stripTrailingTokens: the real per-destination stripVocabularyForDestination output}) -- verified live against Cosmos, not an offline approximation, after the narrow Au/Autographs trailing-marker addition to backend/scripts/lib/name-agreement.cjs. expectedSales is the full live dual-count at fromId (this entry's own genuinely-resident sale(s) plus any sale matched only via a stale hobbyiqCardId field that already lives at a different, correct cardId -- those are NOT moved by this entry; namesAgree re-runs per sale and this lane's own per-sale loop will read them, but relocateSoldComp addresses each sale by its own (id, cardId) pair, so a sale already resident elsewhere is untouched by this entry regardless)."
   }
  ]
 }

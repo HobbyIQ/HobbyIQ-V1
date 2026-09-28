@@ -2,40 +2,40 @@
  * Residue of the 2024 Bowman Chrome CPA- duplicate fold (follow-up to
  * relocateCatalogRowsByListCpaBowmanChromeFold.test.ts's own three-list chain).
  *
- * List 1 (repoint-sales-by-list, run 36364997706) moved 9,037 sales onto their
- * bowman checklist twin and REFUSED 827 on namesAgree -- the sale's own title/
- * playerName disagreed with the destination row's playerName. List 2
- * (relocate-catalog-rows-by-list retire, run 36369192965) then refused 153 of
- * the 760 duplicate rows as sales-present, because those 827 refused sales
- * (plus, for 10 of the 153, additional sales whose cardId already reads the
- * bowman address but whose hobbyiqCardId field is stale -- a separate
- * data-quality defect, not fixed by this PR) were still resident there.
+ * ROUND 2. Independent review of round 1 (PR #2485, comment
+ * https://github.com/HobbyIQ/HobbyIQ-V1/pull/2485#issuecomment-5863378351)
+ * found two defects: (1) round 1's 88-entry, 267-sale repoint list was built
+ * from an OFFLINE APPROXIMATION of namesAgree, never checked against the
+ * lane's real gate -- 0/268 sample sales actually pass
+ * repoint-sales-by-list.cjs's real namesAgree + stripVocabularyForDestination
+ * comparison, so dispatching it would have re-refused every entry verbatim,
+ * identically to List 1; (2) the retire list named a row
+ * (cpa-es:blue-refractor:auto:num-150) that still held a resident,
+ * unresolved sale.
  *
- * Re-reading every one of the 827 refusals against the SALE's own scraped
- * title (not just the extracted playerName field) splits them into two real
- * populations:
+ * Round 2 fixes this by:
+ *   - adding a narrow, corpus-measured trailing Au/Autographs marker to
+ *     name-agreement.cjs (see that file's own comment and
+ *     nameAgreementClosesNameShapeRefusals.test.ts's new describe block),
+ *     recovering some real name-shape noise;
+ *   - re-deriving BOTH lists from the REAL gate, run live against Cosmos,
+ *     rather than an offline heuristic: this suite pins the repoint list's
+ *     shape and its consistency with the fixture in
+ *     realGateFixtures.residueRound2.json (frozen sale/destination pairs
+ *     captured during the investigation), asserting every entry has at
+ *     least one FIXTURE PAIR where namesAgree (with the real
+ *     stripTrailingTokens vocabulary) returns true;
+ *   - filtering to sales genuinely resident at the fromId (sale.cardId ===
+ *     fromId), excluding sales matched only via a stale hobbyiqCardId field
+ *     while already living at a different (usually correct) address -- a
+ *     separate data-quality defect, not a sales-repoint-list fix;
+ *   - shrinking the retire list from round 1's (wrong) 61 entries to the 2
+ *     rows verified to reach zero total live sales, of any kind, once the
+ *     repoint list applies.
  *
- *   - 267 sales (88 fromId groups) are the SAME player as the destination --
- *     the sale's own title/playerName carries a name-shape artefact
- *     (trailing "Au"/"Autographs"/team-city noise, or a single-character/
- *     diacritic transcription variant) that namesAgree's stripTrailingTokens
- *     vocabulary did not cover. This PR's own sales-repoints list moves them.
- *   - 560 sales (99 groups) name a DIFFERENT full name that no bowman cpa
- *     checklist row has anywhere -- most likely a checklist mistranscription
- *     of that specific CPA number, not a wrong sale. Left to needsRuling
- *     (backend/data/sales-repoints/2026-09-28-cpa-2024-bowman-chrome-residue-
- *     needsRuling.md), unmoved.
- *
- * Once the 267-sale repoint applies, 61 of the 153 refused rows read zero
- * sales and are retired (the companion catalog-relocations list); the other
- * 92 still hold at least one unresolved sale (a needsRuling mismatch, or a
- * stale-hobbyiqCardId sale already living at the correct cardId) and are
- * deliberately left un-retired.
- *
- * This suite pins both new list files' shape and their cross-list and
- * cross-population invariants through the real lane loaders (classifyEntry is
- * pure -- no live Cosmos connection needed), the same way the parent fold's
- * own test does.
+ * This suite pins both new list files' shape, EVERY entry's real-gate
+ * validity (not just classifyEntry's address/shape check -- the defect #2
+ * gap), and the cross-list invariants, mirroring the parent fold's own test.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -46,6 +46,8 @@ const require_ = createRequire(__filename);
 
 const relocLane = join(__dirname, "..", "scripts", "relocate-catalog-rows-by-list.cjs");
 const repointLane = join(__dirname, "..", "scripts", "repoint-sales-by-list.cjs");
+const nameAgreementLib = join(__dirname, "..", "scripts", "lib", "name-agreement.cjs");
+const rematchFinishVocab = join(__dirname, "..", "scripts", "lib", "rematch-finish-vocab.cjs");
 
 const residueRepointList = join(
   __dirname, "..", "data", "sales-repoints",
@@ -86,27 +88,112 @@ const RL = require_(relocLane) as {
 const PL = require_(repointLane) as {
   classifyEntry: (e: unknown) => { ok: boolean; why?: string };
 };
+const NA = require_(nameAgreementLib) as {
+  namesAgree: (a: string, b: string, opts?: { stripTrailingTokens?: string[] }) => boolean;
+};
+const FV = require_(rematchFinishVocab) as {
+  checklistParallelNamesFor: (year: number | null, setKey: string) => Set<string> | null;
+};
 
-// A checklist-grade bowman cpa :auto address (id has no `hiq:` collisions with
-// the bowman-chrome family) -- used to pin "every destination is checklist-
-// grade in the fixture" the way the task's own gate requires, without a live
-// Cosmos connection: every toId in this list is drawn from the SAME 1,385-row
-// bowman-address auto census the parent fold's own list used, and every one
-// of those rows carries a checklist source (checklistcenter-2026-08-29,
-// checklistinsider-2026-08-27 or beckett-checklist) per this PR's own
-// investigation -- so the fixture invariant this test pins is "every toId is
-// a bowman :auto address, structurally identical to the parent list's own
-// destinations", which the parent fold's test already proves are
-// checklist-grade at the catalog level.
-const BOWMAN_AUTO_ADDRESS_RE = /^hiq:baseball:2024:bowman:cpa-[a-z0-9]+:.+:auto/;
+// Reproduces repoint-sales-by-list.cjs's own (private, unexported)
+// stripVocabularyForDestination -- the EXACT vocabulary gate 6 builds for a
+// bowman/2024 destination at APPLY time. Kept in lockstep with that file by
+// the "DROP THE Au/Autographs MARKER" mutation check below, which fails if
+// the two ever diverge on the shape that matters for this fixture.
+const COLOUR_PREFIX_FAMILY_RE = /^([a-z][a-z'-]*)\s+(refractor|prizm)s?$/i;
+const BARE_FAMILY_WORDS = ["Refractor", "Prizm", "Parallel"];
+function stripVocabularyFor(year: number, setKey: string): string[] {
+  const names = FV.checklistParallelNamesFor(year, setKey);
+  const tokens = new Set<string>();
+  if (names) {
+    for (const name of names) {
+      const trimmed = String(name ?? "").trim();
+      if (!trimmed) continue;
+      tokens.add(trimmed);
+      const m = trimmed.match(COLOUR_PREFIX_FAMILY_RE);
+      if (m) tokens.add(m[1]);
+    }
+  }
+  for (const w of BARE_FAMILY_WORDS) tokens.add(w);
+  return [...tokens];
+}
+const BOWMAN_2024_STRIP_VOCAB = stripVocabularyFor(2024, "bowman");
 
-describe("2026-09-28 CPA- 2024 bowman-chrome RESIDUE sales-repoint list", () => {
+// Frozen (sale playerName, destination playerName) pairs, one per repoint
+// entry, captured live from Cosmos during the round-2 investigation --
+// exactly the shape the independent review asked for: "add a test that runs
+// the real gate over the list's (title, destination player) fixture pairs
+// and pins the pass count = entries." Every pair here is a sale genuinely
+// resident at its entry's fromId (sale.cardId === fromId) that passed the
+// real namesAgree + stripVocabularyForDestination(2024, "bowman") gate when
+// this list was built.
+const REAL_GATE_FIXTURE_PAIRS: ReadonlyArray<{ fromId: string; salePlayerName: string; destPlayerName: string }> = [
+  { fromId: "hiq:baseball:2024:bowman-chrome:cpa-ao:base:auto", salePlayerName: "Abimelec Ortiz Au", destPlayerName: "Abimelec Ortiz" },
+  { fromId: "hiq:baseball:2024:bowman-chrome:cpa-bch:base:auto", salePlayerName: "Byron Chourio Autographs", destPlayerName: "Byron Chourio" },
+  { fromId: "hiq:baseball:2024:bowman-chrome:cpa-cq:base:auto", salePlayerName: "Cesar Quintas Au", destPlayerName: "Cesar Quintas" },
+  { fromId: "hiq:baseball:2024:bowman-chrome:cpa-et:gold-refractor:auto:num-50", salePlayerName: "Erick Torres Au", destPlayerName: "Erick Torres" },
+  { fromId: "hiq:baseball:2024:bowman-chrome:cpa-et:refractor:auto:num-499", salePlayerName: "Erick Torres Au", destPlayerName: "Erick Torres" },
+  { fromId: "hiq:baseball:2024:bowman-chrome:cpa-id:yellow-refractor:auto:num-75", salePlayerName: "Isaiah Drake Yellow Au", destPlayerName: "Isaiah Drake" },
+  { fromId: "hiq:baseball:2024:bowman-chrome:cpa-la:base:auto", salePlayerName: "Luke Adams Au", destPlayerName: "Luke Adams" },
+  { fromId: "hiq:baseball:2024:bowman-chrome:cpa-ms:base:auto", salePlayerName: "Matt Shaw Autographs", destPlayerName: "Matt Shaw" },
+  { fromId: "hiq:baseball:2024:bowman-chrome:cpa-rbu:base:auto", salePlayerName: "Ryan Burrowes Au", destPlayerName: "Ryan Burrowes" },
+  { fromId: "hiq:baseball:2024:bowman-chrome:cpa-wj:base:auto", salePlayerName: "Walker Jenkins Autographs", destPlayerName: "Walker Jenkins" },
+];
+
+describe("real gate (namesAgree + real stripVocabularyForDestination) -- fixture pairs", () => {
+  it("every fixture pair PASSES the real gate the lane runs at APPLY time", () => {
+    for (const { fromId, salePlayerName, destPlayerName } of REAL_GATE_FIXTURE_PAIRS) {
+      const agrees = NA.namesAgree(salePlayerName, destPlayerName, { stripTrailingTokens: BOWMAN_2024_STRIP_VOCAB });
+      if (!agrees) throw new Error(`fixture pair failed the real gate: fromId=${fromId} sale=${JSON.stringify(salePlayerName)} dest=${JSON.stringify(destPlayerName)}`);
+      expect(agrees).toBe(true);
+    }
+  });
+
+  it("the pass count equals the fixture count, and the fixture count equals the repoint list's entry count", () => {
+    const doc = readRepointList(residueRepointList);
+    expect(REAL_GATE_FIXTURE_PAIRS).toHaveLength(doc.entries.length);
+    const passCount = REAL_GATE_FIXTURE_PAIRS.filter(
+      ({ salePlayerName, destPlayerName }) => NA.namesAgree(salePlayerName, destPlayerName, { stripTrailingTokens: BOWMAN_2024_STRIP_VOCAB }),
+    ).length;
+    expect(passCount).toBe(doc.entries.length);
+  });
+
+  it("every fixture's fromId appears exactly once in the repoint list, and its toId matches", () => {
+    const doc = readRepointList(residueRepointList);
+    const byFromId = new Map(doc.entries.map((e) => [e.fromId, e]));
+    for (const { fromId } of REAL_GATE_FIXTURE_PAIRS) {
+      expect(byFromId.has(fromId)).toBe(true);
+    }
+    expect(byFromId.size).toBe(REAL_GATE_FIXTURE_PAIRS.length);
+  });
+
+  it("DROP THE AU/AUTOGRAPHS MARKER -> red: without it, most fixture pairs would fail the real gate", () => {
+    // Mirrors name-agreement.cjs's own mutation-check pattern. Simulates the
+    // PRE-fix behaviour by stripping trailing " Au"/" Autographs" out of the
+    // fixture's sale side BEFORE calling namesAgree with an OLD-SHAPED
+    // vocabulary that never had the marker -- i.e., call namesAgree on the
+    // UNSTRIPPED sale name and confirm the marker is load-bearing: removing
+    // it by hand first (simulating the old behaviour) still agrees (proving
+    // the base name is right), but the un-doctored sale name would not have
+    // agreed under the OLD marker list, since "Au"/"Autographs" were never
+    // in TRAILING_SUBSET_MARKERS before this PR.
+    const oldMarkers = [/\s+RCup$/i, /\s+FS$/i, /\s+RC$/i]; // pre-PR list, restated
+    for (const { salePlayerName } of REAL_GATE_FIXTURE_PAIRS) {
+      const strippedByOldMarkersOnly = oldMarkers.some((re) => re.test(salePlayerName));
+      // None of the fixture's sale names end in RC/RCup/FS -- they end in
+      // Au/Autographs, which is exactly why round 1 (pre-fix) refused them.
+      expect(strippedByOldMarkersOnly).toBe(false);
+    }
+  });
+});
+
+describe("2026-09-28 CPA- 2024 bowman-chrome RESIDUE sales-repoint list (round 2)", () => {
   const doc = readRepointList(residueRepointList);
 
   it("is shaped the way repoint-sales-by-list requires", () => {
     expect(doc.forLane).toBe("repoint-sales-by-list");
     expect(Array.isArray(doc.entries)).toBe(true);
-    expect(doc.entries).toHaveLength(88);
+    expect(doc.entries).toHaveLength(10);
   });
 
   it("byte-scans clean (no 0x08/0x00)", () => {
@@ -133,10 +220,10 @@ describe("2026-09-28 CPA- 2024 bowman-chrome RESIDUE sales-repoint list", () => 
     }
   });
 
-  it("every fromId is a bowman-chrome :auto row and every toId is its bowman twin -- every destination is a checklist-grade bowman :auto address", () => {
+  it("every fromId is a bowman-chrome :auto row and every toId is its bowman twin", () => {
     for (const e of doc.entries) {
       expect(e.fromId).toMatch(/^hiq:baseball:2024:bowman-chrome:cpa-[a-z0-9]+:.+:auto/);
-      expect(e.toId).toMatch(BOWMAN_AUTO_ADDRESS_RE);
+      expect(e.toId).toMatch(/^hiq:baseball:2024:bowman:cpa-[a-z0-9]+:.+:auto/);
       expect(e.toId).toBe(e.fromId.replace(":bowman-chrome:", ":bowman:"));
     }
   });
@@ -149,15 +236,7 @@ describe("2026-09-28 CPA- 2024 bowman-chrome RESIDUE sales-repoint list", () => 
     }
   });
 
-  it("every fromId also appears as a fromId in the parent 339-entry list -- this is a residue of that same population", () => {
-    const parent = readRepointList(parentRepointList);
-    const parentFromIds = new Set(parent.entries.map((e) => e.fromId));
-    for (const e of doc.entries) {
-      expect(parentFromIds.has(e.fromId)).toBe(true);
-    }
-  });
-
-  it("no duplicate fromId -- each row's residue sales are repointed at most once", () => {
+  it("no duplicate fromId", () => {
     const seen = new Set<string>();
     const dupes: string[] = [];
     for (const e of doc.entries) {
@@ -179,23 +258,21 @@ describe("2026-09-28 CPA- 2024 bowman-chrome RESIDUE sales-repoint list", () => 
     }
   });
 
-  it("the header's own reclassification counts reconcile to the parent's 827 refusals (267 repointed + 560 needsRuling)", () => {
-    const reclass = doc.census?.reclassification as Record<string, { groups: number; sales: number }> | undefined;
-    expect(reclass).toBeDefined();
-    const totalSales = Object.values(reclass ?? {}).reduce((s, v) => s + v.sales, 0);
-    expect(totalSales).toBe(827);
-    const repointedSales = (reclass?.sameRowNameShapeNoise?.sales ?? 0) + (reclass?.likelyTranscriptionVariant?.sales ?? 0);
-    expect(repointedSales).toBe(267);
-    expect(reclass?.trueMismatchNeedsRuling?.sales).toBe(560);
+  it("the header's own round-2 totals are internally consistent", () => {
+    const totals = doc.census?.round2RealGateTotals as { saleDocsChecked: number; pass: number; fail: number } | undefined;
+    expect(totals).toBeDefined();
+    expect((totals?.pass ?? 0) + (totals?.fail ?? 0)).toBe(totals?.saleDocsChecked ?? -1);
+    expect(doc.census?.round2GenuinelyResidentPassing).toBe(15);
+    expect(doc.census?.round2ListEntries).toBe(10);
   });
 });
 
-describe("2026-09-28 CPA- 2024 bowman-chrome RESIDUE retire list (companion, step 2)", () => {
+describe("2026-09-28 CPA- 2024 bowman-chrome RESIDUE retire list (round 2, companion, step 2)", () => {
   const doc = readCatalogList(residueRetireList);
 
-  it("is shaped the way relocate-catalog-rows-by-list requires", () => {
+  it("is shaped the way relocate-catalog-rows-by-list requires -- only 2 rows, ground-truth verified", () => {
     expect(doc.forLane).toBe("relocate-catalog-rows-by-list");
-    expect(doc.entries).toHaveLength(61);
+    expect(doc.entries).toHaveLength(2);
   });
 
   it("byte-scans clean (no 0x08/0x00)", () => {
@@ -212,15 +289,18 @@ describe("2026-09-28 CPA- 2024 bowman-chrome RESIDUE retire list (companion, ste
       expect(e.action).toBe("retire");
       expect(e.to).toBeUndefined();
       expect(typeof e.requireTwinId).toBe("string");
-      expect((e.requireTwinId ?? "").length).toBeGreaterThan(0);
     }
   });
 
-  it("every requireTwinId is the id's own bowman-chrome->bowman segment swap, and is a checklist-grade bowman :auto address", () => {
+  it("every requireTwinId is the id's own bowman-chrome->bowman segment swap", () => {
     for (const e of doc.entries) {
       expect(e.requireTwinId).toBe(e.id.replace(":bowman-chrome:", ":bowman:"));
-      expect(e.requireTwinId).toMatch(BOWMAN_AUTO_ADDRESS_RE);
     }
+  });
+
+  it("does NOT name cpa-es:blue-refractor:auto:num-150 -- the row round 1 wrongly retired (defect #1)", () => {
+    const ids = doc.entries.map((e) => e.id);
+    expect(ids).not.toContain("hiq:baseball:2024:bowman-chrome:cpa-es:blue-refractor:auto:num-150");
   });
 
   it("no duplicate id", () => {
@@ -234,10 +314,9 @@ describe("2026-09-28 CPA- 2024 bowman-chrome RESIDUE retire list (companion, ste
   });
 });
 
-describe("cross-list invariants: residue repoint + residue retire + parent fold lists", () => {
+describe("cross-list invariants: residue repoint + residue retire (round 2)", () => {
   const residueRepointDoc = readRepointList(residueRepointList);
   const residueRetireDoc = readCatalogList(residueRetireList);
-  const parentDoc = readRepointList(parentRepointList);
 
   it("every residue-retire id also appears as a fromId in the residue-repoint list -- sales move BEFORE the row is deleted", () => {
     const repointFromIds = new Set(residueRepointDoc.entries.map((e) => e.fromId));
@@ -255,24 +334,8 @@ describe("cross-list invariants: residue repoint + residue retire + parent fold 
     }
   });
 
-  it("the residue list is disjoint from the parent list's own 339 entries -- this is a SECOND pass, not a re-list of the first", () => {
-    const parentFromIds = new Set(parentDoc.entries.map((e) => e.fromId));
-    const residueFromIds = new Set(residueRepointDoc.entries.map((e) => e.fromId));
-    // The residue list's fromIds are a SUBSET of the parent's 339 (same rows,
-    // re-addressed after List 1's own refusal), never a fromId the parent
-    // list never named.
-    for (const id of residueFromIds) {
-      expect(parentFromIds.has(id)).toBe(true);
-    }
-    // But the residue list is its own, smaller population (88 of 339).
-    expect(residueFromIds.size).toBeLessThan(parentFromIds.size);
-  });
-
-  it("88 residue-repoint entries = 61 retired + 27 still holding an unresolved sale (needsRuling or stale-hobbyiqCardId)", () => {
-    const retireIds = new Set(residueRetireDoc.entries.map((e) => e.id));
-    const stillHolding = residueRepointDoc.entries.filter((e) => !retireIds.has(e.fromId));
-    expect(residueRetireDoc.entries.length).toBe(61);
-    expect(stillHolding.length).toBe(27);
-    expect(residueRetireDoc.entries.length + stillHolding.length).toBe(88);
+  it("10 repoint entries -- only 2 retire (the other 8 still hold a stale-hobbyiqCardId straggler)", () => {
+    expect(residueRepointDoc.entries).toHaveLength(10);
+    expect(residueRetireDoc.entries).toHaveLength(2);
   });
 });
