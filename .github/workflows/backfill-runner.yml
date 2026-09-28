@@ -5188,15 +5188,24 @@ jobs:
           retention-days: 90
 
       - name: Self-relaunch census-sold-comp-copies until the cell is drained
-        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, modeled on the REPORT-only
-        # census lanes above (census-split-identity, census-duplicate-sale-
-        # ids): stops at its own budget, prints the marker, and its own
-        # CURSOR_OUT file (not this preamble) is what lets the continuation
-        # resume PASS 2 from an offset instead of re-draining PASS 1. `scope`
-        # (sport:year) and slot/slots are forwarded verbatim, matching
-        # repoint-sales-isauto-flip's own relaunch dispatch line -- there is
-        # no separate cursor input to carry; the script finds its own cursor
-        # file inside PLAN_OUT.
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, modeled EXACTLY on the
+        # REPORT-only census lanes above (census-split-identity,
+        # census-duplicate-sale-ids): stops at its own budget and prints the
+        # marker; NO CURSOR -- a relaunch re-reads the WHOLE shard from the
+        # top (both passes), same discipline those two lanes already carry,
+        # for the same reason (relaunch-on-marker dispatches a fresh runner
+        # with no artifact download between hops, so a cursor on one
+        # runner's disk could not reach the next anyway). `scope` (sport:
+        # year) and slot/slots are forwarded verbatim.
+        #
+        # `apply` is ALSO forwarded verbatim, matching every marker-gated
+        # relaunch except rematch-sold-comps's own canary-gated exception
+        # (tests/everyWriteJobReconciles.test.ts: "only the rematch deviates
+        # from forward-verbatim"). This lane's own APPLY-refusal gate above
+        # is what actually stops an apply=true dispatch from doing anything
+        # -- the relaunch step must not ALSO decide that by hardcoding
+        # apply=false, which the same pin separately forbids as a
+        # de-escalating relaunch.
         if: ${{ !cancelled() && inputs.script == 'census-sold-comp-copies' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -5212,7 +5221,7 @@ jobs:
           finished-notice: |
             echo "::notice::${{ inputs.scope }} slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (entries_emitted=${N:-0}) — done, no re-dispatch."
           dispatch: |
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=census-sold-comp-copies -f apply=false -f scope="${{ inputs.scope }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=census-sold-comp-copies -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}"
 
       - name: Self-relaunch a newly budgeted write lane until its scope is drained
         # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, for the lanes #1944's ratchet
