@@ -598,6 +598,11 @@ async function main() {
       // A destination that fails that guard (a malformed key) is therefore
       // REFUSED in both modes, with the same count, rather than REPORT
       // silently skipping a check APPLY would have hit.
+      // CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, the move-side half: relocateSoldComp
+      // itself heals a pre-2026-08-24 (commit 0000f60) doubled-year title
+      // before it upserts `keep` (lib/relocate-sold-comp.cjs, review follow-up
+      // to PR #2474: centralized there instead of per-caller so every mover
+      // inherits it, not just this one).
       const keep = stripSystem(sale);
       keep.cardId = toId;
       keep.hobbyiqCardId = toId;
