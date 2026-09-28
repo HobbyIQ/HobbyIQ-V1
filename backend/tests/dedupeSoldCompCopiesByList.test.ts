@@ -319,16 +319,23 @@ function writeList(entries: Entry[], tag: string): string {
 function shim(opts: {
   sales?: Array<Record<string, unknown>>;
   catalog?: Array<Record<string, unknown>>;
+  /** When true, the cross-partition verify query (GATE e, run AFTER the
+   *  delete) throws instead of answering -- simulating a network error on
+   *  the read-back, never "found nothing". The delete itself still
+   *  succeeds; only the verify that follows it fails. */
+  throwOnVerifyQuery?: boolean;
 } = {}): { requirePath: string; ledger: string } {
   const ledger = join(tmp, `ledger-${Math.random().toString(36).slice(2)}.json`);
   const p = join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
   const sales = opts.sales ?? [];
   const catalog = opts.catalog ?? [];
+  const throwOnVerifyQuery = opts.throwOnVerifyQuery ?? false;
 
   writeFileSync(p, `
 const Module = require("node:module");
 const fs = require("node:fs");
 const LEDGER = ${JSON.stringify(ledger)};
+const THROW_ON_VERIFY_QUERY = ${JSON.stringify(throwOnVerifyQuery)};
 
 const salesKey = (id, cardId) => id + "::" + cardId;
 
@@ -373,7 +380,16 @@ const salesContainer = {
       const resources = [...state.sales.values()]
         .filter((d) => d.id === id)
         .map((d) => ({ id: d.id, cardId: d.cardId }));
-      return { fetchAll: async () => ({ resources: resources.map((r) => structuredClone(r)) }) };
+      return {
+        fetchAll: async () => {
+          // This lane calls items.query ONLY for the post-delete
+          // cross-partition verify (GATE e) -- so a throw here is always
+          // that call, never some other query this shim would need to
+          // distinguish.
+          if (THROW_ON_VERIFY_QUERY) throw new Error("simulated network error on cross-partition verify");
+          return { resources: resources.map((r) => structuredClone(r)) };
+        },
+      };
     },
   },
 };
@@ -623,6 +639,33 @@ describe("end-to-end: every gate, driven against the real compiled dist/", () =>
     expect(r.led.deletes).toEqual([SALE_ID]);
     expect(r.led.finalSales.length).toBe(2);
     expect(r.out).not.toMatch(/^  DELETED\s+1/m);
+  });
+
+  it("FAILS (verify-threw) when the post-delete cross-partition verify query THROWS -- never reported as clean", () => {
+    // A thrown read-back is FAILED, never clean -- the same rule
+    // relocateSoldComp's own verify applies (lib/relocate-sold-comp.cjs).
+    // The delete itself already succeeded (deleteCardId's own document is
+    // gone), but this run does not know the true post-delete state of the
+    // pool, so it must not report success on a guess -- reviewer-requested
+    // regression coverage alongside the extra-copies-remain case above.
+    const list = writeList([{ saleId: SALE_ID, keepCardId: KEEP_ID, deleteCardId: DELETE_ID, reason: "why" }], "verify-threw");
+    const catalog = [KEEPER_CATALOG_ROW];
+    const sales = [
+      KEEPER_SALE,
+      { ...KEEPER_SALE, cardId: DELETE_ID, hobbyiqCardId: DELETE_ID },
+    ];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog, throwOnVerifyQuery: true });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/FAILED: post-delete verify threw/);
+    expect(r.out).toMatch(/FAILED\s+1/);
+    expect(r.out).not.toMatch(/^\s*DELETED\s+1/m);
+    expect(r.out).not.toMatch(/RECONCILE MISMATCH/);
+    // The delete call itself DID run and succeed -- the ledger shows the
+    // stray gone -- but the lane must count this as FAILED, not DELETED,
+    // because the verify that was supposed to confirm it never answered.
+    expect(r.led.deletes).toEqual([SALE_ID]);
   });
 
   it("reconciles cleanly across a mixed batch of outcomes -- deleted, skipped, refused, failed", () => {

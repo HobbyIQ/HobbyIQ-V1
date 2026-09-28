@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-27T23:56:00Z",
   "forLane": "dedupe-sold-comp-copies-by-list",
-  "finding": "fb2025-dupes.csv: 292 audited (saleId, docCount>=2) sales; docCount 0 rows are unmaterialized 'collapse' phantoms with no physical doc at all (needsRuling); docCount 1 sales are excluded from this list entirely (no duplicate). For every remaining row, toId is the surviving checklist-id copy per the isauto-twins census and every OTHER physical cardId the row's own docs list carries is a stray -- one entry per stray, so docCount>=3 rows mint more than one entry.",
+  "finding": "fb2025-dupes.csv: 292 audited (saleId, docCount>=2) sales, 34 of which are audited more than once in the CSV (a re-run under a different 'action' label); 11 of those repeated saleIds disagree ACROSS THEIR OWN ROWS on which copy is the keeper (a genuine census collision, never resolved by row order) and are routed to needsRuling untouched. docCount 0 rows are unmaterialized 'collapse' phantoms with no physical doc at all (also needsRuling); docCount 1 sales are excluded from this list entirely (no duplicate). For every remaining row, toId is the surviving checklist-id copy per the isauto-twins census and every OTHER physical cardId the row's own docs list carries is a stray -- one entry per stray, so docCount>=3 rows mint more than one entry.",
   "census": {
     "source": "fb2025-dupes.csv",
     "totalRowsInCsv": 7026,

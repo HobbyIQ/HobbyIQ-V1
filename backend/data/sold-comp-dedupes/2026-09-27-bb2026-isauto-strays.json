@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-09-27T23:56:00Z",
   "forLane": "dedupe-sold-comp-copies-by-list",
-  "finding": "bb2026-dupes.csv: 222 audited (saleId, docCount>=2) sales, same isauto-twins census shape as fb2025 (docs list per saleId, toId/fromId a logical pair). 145 of these rows have a toId that matches NEITHER physical doc in the row -- the census's own toId guess never resolved to a real address for this sport/set -- and are routed to needsRuling rather than guessed at.",
+  "finding": "bb2026-dupes.csv: 222 audited (saleId, docCount>=2) sales, same isauto-twins census shape as fb2025 (docs list per saleId, toId/fromId a logical pair), but with physical docs separated by a SINGLE ';' rather than fb2025's ';;' -- verified directly against both CSVs (bb2026 has zero ';;' occurrences, fb2025 has zero lone-';' occurrences) and handled by the list-builder's own delimiter-tolerant parse. Every toId resolves to a real physical cardId among its own row's docs (needsRuling is empty for this file) and every OTHER physical cardId in the row is a stray -- one entry per stray, so docCount>=3 rows mint more than one entry. 21 saleIds are audited more than once in the CSV and all 21 agree on toId across their repeated rows, so none of them collide.",
   "census": {
     "source": "bb2026-dupes.csv",
     "totalRowsInCsv": 5130,
