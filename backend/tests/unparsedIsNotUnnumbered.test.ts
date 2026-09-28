@@ -75,11 +75,32 @@ describe("computeHobbyIqCardId refuses to mint an identity out of a parse failur
   it("a genuinely unnumbered card STILL gets its player pseudo-number", () => {
     // CF-PLAYER-IS-THE-NUMBER is not retracted -- this is the population it
     // was written for, and it must be untouched.
+    //
+    // AMENDED by CF-T206-NAME-TO-POSITION (2026-09-28): Honus Wagner has
+    // exactly one row on the t206 checklist (#496), so THROUGH
+    // computeHobbyIqCardId (which resolves setKey "T206" to the canonical
+    // "t206" and passes it as setKeyForScope) this now resolves to that
+    // row's numeric position rather than the pseudo-number -- the intended
+    // effect of this later fix, not a retraction of CF-PLAYER-IS-THE-NUMBER.
+    // A player this checklist has never heard of (used here as "Nap Wagner",
+    // a name absent from the fixture) still falls through to the
+    // pseudo-number exactly as before, which is the population this pin
+    // actually needs to protect.
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 1909, setKey: "T206", cardNumber: "NNO",
       parallel: "Base", isAuto: false, playerName: "Honus Wagner",
     });
-    expect(slug).toContain(":player-honus-wagner:");
+    expect(slug).toBe("hiq:baseball:1909:t206:496:base:no-auto");
+
+    const unresolvedSlug = computeHobbyIqCardId({
+      sport: "baseball", year: 1909, setKey: "T206", cardNumber: "NNO",
+      parallel: "Base", isAuto: false, playerName: "Nap Wagner",
+    });
+    expect(unresolvedSlug).toContain(":player-nap-wagner:");
+    // unnumberedCardSegment called bare (no ctx) never activates the t206
+    // scope at all -- scopeKey is undefined, not "t206" -- so it keeps
+    // minting the pseudo-number regardless of checklist residency. This is
+    // the low-level function's own documented default, exercised directly.
     expect(unnumberedCardSegment("Honus Wagner")).toBe("player-honus-wagner");
   });
 
@@ -209,11 +230,26 @@ describe("deriveHobbyIqSlug: the Worrell/Maddux row end to end", () => {
   });
 
   it("a genuinely unnumbered vintage card still derives its player identity", () => {
+    // AMENDED by CF-T206-NAME-TO-POSITION (2026-09-28). Honus Wagner has
+    // exactly one row on the t206 checklist (#496), so end to end through
+    // deriveHobbyIqSlug this now resolves to that row's own numeric
+    // position instead of the pseudo-number -- see the same amendment in
+    // tests/playerIsTheNumber.test.ts and tests/cardCatalog.test.ts. The
+    // actual population this pin protects (a genuinely unnumbered card
+    // still gets AN identity, never UNDERIVABLE) is exercised below with a
+    // name absent from the checklist, which still lands on player-<slug>.
     const d = deriveHobbyIqSlug({
       sport: "baseball", setName: "T206", title: "1909-11 T206 Honus Wagner",
       cardYear: 1909, cardNumber: "NNO", parallel: "Base", isAuto: false,
       playerName: "Honus Wagner", printRun: null,
     } as never);
-    expect(d.slug).toContain("player-honus-wagner");
+    expect(d.slug).toBe("hiq:baseball:1909:t206:496:base:no-auto");
+
+    const dUnresolved = deriveHobbyIqSlug({
+      sport: "baseball", setName: "T206", title: "1909-11 T206 Nap Wagner",
+      cardYear: 1909, cardNumber: "NNO", parallel: "Base", isAuto: false,
+      playerName: "Nap Wagner", printRun: null,
+    } as never);
+    expect(dUnresolved.slug).toContain("player-nap-wagner");
   });
 });

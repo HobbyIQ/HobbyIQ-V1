@@ -163,11 +163,17 @@ describe("cardCatalog — deriveCatalogEntry", () => {
       confidence: 0.9,
     });
     expect(e).not.toBeNull();
-    // Same `player-<slug>` shape the already-correct soldCompsStore.service.ts
-    // caller mints (pinned in tests/playerIsTheNumber.test.ts as
-    // "hiq:baseball:1909:t206:player-honus-wagner:base:no-auto") — the fix
-    // must never invent a new id shape, only reach the existing one.
-    expect(e!.id).toBe("hiq:baseball:1909:t206:player-honus-wagner:base:no-auto");
+    // AMENDED by CF-T206-NAME-TO-POSITION (2026-09-28). Honus Wagner has
+    // exactly one row on the 550-row t206 checklist (#496, "Honus Wagner
+    // Portrait"), so computeHobbyIqCardId now resolves this to that row's
+    // own numeric position instead of the player-<slug> shape this test
+    // originally pinned (tests/playerIsTheNumber.test.ts's own Honus Wagner
+    // assertion carries the same amendment) — the id this fix reaches is the
+    // catalog's real, checklist-backed address, which is the entire point.
+    // playerName/playerSlug are derived independently of the id segment
+    // (playerSlugify(playerName) in cardCatalog.service.ts) and are
+    // therefore unaffected.
+    expect(e!.id).toBe("hiq:baseball:1909:t206:496:base:no-auto");
     expect(e!.cardId).toBe(e!.id);
     expect(e!.playerName).toBe("Honus Wagner");
     expect(e!.playerSlug).toBe("honus-wagner");
