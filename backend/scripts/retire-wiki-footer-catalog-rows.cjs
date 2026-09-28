@@ -64,7 +64,8 @@ const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"
 // through a hand-rolled container.item().delete(). The hand-rolled version
 // this replaces also left any GRADED CHILDREN of the deleted row pointing at
 // a parent that no longer existed; retireCatalogRow retires them first.
-const { retireCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { retireCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const LEDGER_LANE = "retire-wiki-footer-catalog-rows";
 // CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW. The reconciliation is the shared helper,
 // not a local print of the same equation — a hand-rolled one is invisible to
 // the net that asserts every writer reconciles.
@@ -227,7 +228,7 @@ async function main() {
         const res = await retireCatalogRow(
           cat, r.id, r.cardId,
           "wiki page footer scraped as a card (zero comps, re-checked at delete)",
-          { dryRun: true },
+          { dryRun: true, ledgerLane: LEDGER_LANE },
         );
         children += res.gradedChildrenRetired;
       }
@@ -249,7 +250,7 @@ async function main() {
   // RECONCILED COUNTERS: intended is counted here, where the writes run, so
   // intended == deleted + failed + skipped always holds.
   const intended = deletable.length;
-  let ok = 0, failed = 0, children = 0, skipped = 0;
+  let ok = 0, failed = 0, ledgerWriteFailed = 0, children = 0, skipped = 0;
   for (let i = 0; i < deletable.length; i++) {
     if (CLOCK.outOfClock()) {
       stoppedAtBudget = true;
@@ -258,15 +259,16 @@ async function main() {
     }
     const r = deletable[i];
     try {
-      const res = await retireCatalogRow(cat, r.id, r.cardId, "wiki page footer scraped as a card (zero comps, re-checked at delete)");
+      const res = await retireCatalogRow(cat, r.id, r.cardId, "wiki page footer scraped as a card (zero comps, re-checked at delete)", { ledgerLane: LEDGER_LANE });
       if (res.rowDeleted) ok++; else failed++;
       children += res.gradedChildrenRetired;
     } catch (e) {
       failed++;
+      if (isLedgerWriteFailure(e)) ledgerWriteFailed++;
       if (failed <= 5) console.error(`  FAILED ${r.id}: ${String(e.message).slice(0, 130)}`);
     }
   }
-  console.log(`\n[done] deleted=${f(ok)} gradedChildrenRetired=${f(children)} failed=${f(failed)} skipped=${f(skipped)}`);
+  console.log(`\n[done] deleted=${f(ok)} gradedChildrenRetired=${f(children)} failed=${f(failed)} ledgerWriteFailed=${f(ledgerWriteFailed)} skipped=${f(skipped)}`);
 
   // VERIFY BY READ, under the shared cap. A count that cannot be confirmed is
   // printed UNCONFIRMED, never as a zero.

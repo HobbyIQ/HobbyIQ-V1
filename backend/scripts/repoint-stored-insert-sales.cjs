@@ -710,6 +710,7 @@ async function main() {
   const { withProductSetKey, guardSoldCompDoc } = require(path.join(backend, "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+  const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(backend, "scripts", "lib", "delete-ledger.cjs"));
 
   const deps = { insertSetNamedInTitle, cardNumberVariants, playerIdentityKey, withProductSetKey };
   const isChecklist = (source) => catalogAuthorityOf(source) === "checklist";
@@ -768,7 +769,7 @@ async function main() {
     leftNoChecklistMatch: 0, leftTitleDoesNotNameInsert: 0, leftTwoInsertsNamed: 0,
     leftTitleNamesDifferentInsert: 0, leftNeitherFieldNamesBase: 0, leftPreExistingSplitIdentity: 0,
     leftDestinationRungNotOnChecklist: 0,
-    refusedDestinationCollision: 0, refusedChangedSincePlanned: 0, failed: 0,
+    refusedDestinationCollision: 0, refusedChangedSincePlanned: 0, failed: 0, ledgerWriteFailed: 0,
     holdingsRepointed: 0, holdingsWalked: 0, holdingDocsWalked: 0,
     unitsProcessed: 0,
   };
@@ -1001,7 +1002,18 @@ async function main() {
               const resident = await residentAt(sale.id, plan.newCardId);
               const wouldBeKeep = { ...stripSystem(sale), cardId: plan.newCardId, hobbyiqCardId: plan.newHiq };
               if (resident && isSameSale(resident, wouldBeKeep)) {
-                if (APPLY) await retry(() => pool.item(sale.id, oldCardId).delete());
+                if (APPLY) {
+                  // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+                  // (2026-09-28, review finding on this PR): `sale` is the
+                  // full pre-delete document. A ledger-write failure throws
+                  // and is caught by this block's own outer catch below
+                  // (s.failed++).
+                  await recordDeleteOrThrow(sale, {
+                    lane: "repoint-stored-insert-sales", action: "collapse", reason: "same-sale-resident-already-handled",
+                    toId: plan.newCardId, container: "sold_comps",
+                  });
+                  await retry(() => pool.item(sale.id, oldCardId).delete());
+                }
                 s.collapsedOntoResident++;
               } else if (resident) {
                 s.refusedDestinationCollision++;
@@ -1025,7 +1037,17 @@ async function main() {
             const resident = await residentAt(sale.id, plan.newCardId);
             if (resident) {
               if (isSameSale(resident, keep)) {
-                if (APPLY) await retry(() => pool.item(sale.id, oldCardId).delete());
+                if (APPLY) {
+                  // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+                  // (2026-09-28, review finding on this PR): `sale` is the
+                  // full pre-delete document; a ledger-write failure throws
+                  // into this block's own outer catch (s.failed++).
+                  await recordDeleteOrThrow(sale, {
+                    lane: "repoint-stored-insert-sales", action: "collapse", reason: "same-sale-resident",
+                    toId: plan.newCardId, container: "sold_comps",
+                  });
+                  await retry(() => pool.item(sale.id, oldCardId).delete());
+                }
                 s.collapsedOntoResident++;
                 alreadyHandled = true;
                 if (bySetKey.has(plan.insertSetKey)) bump(bySetKey, plan.insertSetKey);
@@ -1058,7 +1080,17 @@ async function main() {
             const res = await relocateSoldComp(pool, {
               keep, drop: [{ id: sale.id, cardId: oldCardId }], retry,
               verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY,
+              // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+              // (2026-09-28). relocateSoldComp's own drop loop re-reads the
+              // full document and ledgers it before this delete.
+              ledger: { lane: "repoint-stored-insert-sales", action: "relocate", reason: "insert-rekey", toId: plan.newCardId, container: "sold_comps" },
             });
+            if (res.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+              s.failed++;
+              s.ledgerWriteFailed = (s.ledgerWriteFailed ?? 0) + 1;
+              failures.push(`  FAILED relocate ${sale.id}@${oldCardId} -> ${plan.newCardId}: ledger write refused the delete`);
+              continue;
+            }
             if (!res.ok && res.stage !== "dry-run") {
               s.failed++;
               failures.push(`  FAILED relocate ${sale.id}@${oldCardId} -> ${plan.newCardId}: ${res.error ?? "unknown"}`);
@@ -1124,6 +1156,7 @@ async function main() {
           }
         } catch (e) {
           s.failed++;
+          if (isLedgerWriteFailure(e)) s.ledgerWriteFailed = (s.ledgerWriteFailed ?? 0) + 1;
           failures.push(`  FAILED write ${sale.id}@${sale.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
         }
       }
@@ -1161,6 +1194,7 @@ async function main() {
   console.log(`  REFUSED: destination collision            ${f(s.refusedDestinationCollision)}`);
   console.log(`  REFUSED: changed-since-planned            ${f(s.refusedChangedSincePlanned)}   <- another process wrote this row between plan and write`);
   console.log(`  failed                                    ${f(s.failed)}`);
+  console.log(`  of which ledger-write-failed              ${f(s.ledgerWriteFailed)}`);
   console.log("");
   console.log(`  LEFT: title does not name this insert     ${f(s.leftTitleDoesNotNameInsert)}`);
   console.log(`  LEFT: title names a DIFFERENT insert       ${f(s.leftTitleNamesDifferentInsert)}`);

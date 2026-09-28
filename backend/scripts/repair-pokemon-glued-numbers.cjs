@@ -32,7 +32,8 @@ const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
-const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const LEDGER_LANE = "repair-pokemon-glued-numbers";
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
@@ -109,7 +110,7 @@ async function main() {
   console.log(`slot ${SLOT}/${SLOTS}  ${mine.length} sets  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
 
-  let scanned = 0, repaired = 0, folded = 0, replaced = 0, salesRepointed = 0, gradedRetired = 0, noSuffix = 0, nonNumeric = 0, secretRare = 0, failed = 0, notReached = 0;
+  let scanned = 0, repaired = 0, folded = 0, replaced = 0, salesRepointed = 0, gradedRetired = 0, noSuffix = 0, nonNumeric = 0, secretRare = 0, failed = 0, ledgerWriteFailed = 0, notReached = 0;
   const noSuffixEx = [];
   let stopReason = null;
 
@@ -153,6 +154,7 @@ async function main() {
           if (!full) return;
           const r = await moveCatalogRow(cat, full, newSlug, { cardNumber: bare, printedTotal: Number(total) }, {
             reason: "pokemon number unglued from printed total", dryRun: !APPLY, salesContainer: comps, retry,
+            ledgerLane: LEDGER_LANE,
           });
           salesRepointed += r.salesRepointed; gradedRetired += r.gradedChildrenRetired;
           // a row already sat at the clean number: folded onto it, or replaced it -- slices of UNGLUED
@@ -161,6 +163,7 @@ async function main() {
           repaired++;
         } catch (e) {
           failed++;
+          if (isLedgerWriteFailure(e)) ledgerWriteFailed++;
           if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 58)}: ${String(e.message || e).slice(0, 58)}`);
         }
       }));
@@ -186,6 +189,7 @@ async function main() {
   console.log(`  secret rares (kept)     ${f(secretRare)}   <- run past the total; real cards`);
   console.log(`  sets with no suffix     ${f(noSuffix)}   <- reported, never guessed`);
   console.log(`  failed                  ${f(failed)}`);
+  console.log(`  of which ledger-write-failed ${f(ledgerWriteFailed)}`);
   for (const e of noSuffixEx) console.log(`      ${e}`);
   if (APPLY) {
     reportWrites({

@@ -224,8 +224,9 @@ async function main() {
 
   const { CosmosClient } = require("@azure/cosmos");
   const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
-  const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+  const LEDGER_LANE = "repair-cpa-draft-refile";
 
   const db = new CosmosClient({
     connectionString: process.env.COSMOS_CONNECTION_STRING,
@@ -236,7 +237,7 @@ async function main() {
 
   const report = {
     pool: { scanned: 0, move: 0, moved: 0, orphan: 0, skip: {} },
-    catalog: { scanned: 0, move: 0, moved: 0, failed: 0, skip: {} },
+    catalog: { scanned: 0, move: 0, moved: 0, failed: 0, ledgerWriteFailed: 0, skip: {} },
     refusals: [],
     parks: [],
     moves: [],
@@ -462,10 +463,12 @@ async function main() {
             dryRun: false,
             salesContainer: pool,
             retry,
+            ledgerLane: LEDGER_LANE,
           });
           report.catalog.moved++;
         } catch (e) {
           report.catalog.failed++;
+          if (isLedgerWriteFailure(e)) report.catalog.ledgerWriteFailed++;
           bump(report.catalog.skip, `move-failed:${String(e?.message ?? e).slice(0, 60)}`);
         }
       }
@@ -484,7 +487,7 @@ async function main() {
   console.log("");
   console.log("═══ CATALOG ═══");
   console.log(`  scanned            ${f(report.catalog.scanned)}`);
-  console.log(`  would move         ${f(report.catalog.move)}${APPLY ? `   moved ${f(report.catalog.moved)}   failed ${f(report.catalog.failed)}` : ""}`);
+  console.log(`  would move         ${f(report.catalog.move)}${APPLY ? `   moved ${f(report.catalog.moved)}   failed ${f(report.catalog.failed)}   of which ledger-write-failed ${f(report.catalog.ledgerWriteFailed)}` : ""}`);
   for (const [k, v] of Object.entries(report.catalog.skip).sort((a, b) => b[1] - a[1])) {
     console.log(`    ${String(k).padEnd(44)} ${f(v).padStart(9)}`);
   }

@@ -51,7 +51,13 @@ const { productParentOf } = require(path.join(backend, "dist/services/catalog/pr
 // CF-VACATE-THE-PLAIN-ID-OR-REFUSE: the incumbent is MOVED, never re-upserted
 // at a second address, so the ambiguous plain id genuinely stops existing and
 // the sales hanging off it follow the card.
-const { moveCatalogRow, rebuildSearchFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { moveCatalogRow, rebuildSearchFields, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+// CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28). The
+// subset-vacate move above can delete the incumbent's plain-id row, so
+// LEDGER_LANE names this script for catalogRowOps.service.js's opt-in ledger
+// (see MoveCatalogRowOptions.ledgerLane), the same way relocate-catalog-rows-
+// by-list does.
+const LEDGER_LANE = "ingest-checklist-csv-to-catalog";
 const { CosmosClient } = require("@azure/cosmos");
 
 /**
@@ -542,7 +548,7 @@ async function main() {
   // guard's own verdict.
   if (!APPLY) console.log(`REPORT mode: the sibling-rung-twin guard is evaluated in APPLY only -- this run never queried Cosmos and cannot see a sibling twin.\n`);
 
-  let rows = 0, written = 0, skippedRow = 0, noProduct = 0, failed = 0, files_ok = 0;
+  let rows = 0, written = 0, skippedRow = 0, noProduct = 0, failed = 0, ledgerWriteFailed = 0, files_ok = 0;
   // CF-A-FAILED-ROW-IS-NOT-A-SKIPPED-ROW (2026-09-13). The summary printed
   // `rows skipped 0` on a run that ALSO printed `failed 3` for the three NNO
   // rows a slugger throw on -- an operator reading "0 skipped, 3 failed" has
@@ -1173,6 +1179,7 @@ async function main() {
                   dryRun: !APPLY,
                   salesContainer: poolContainer(),
                   known: await lookup(incumbentSlug),
+                  ledgerLane: LEDGER_LANE,
                 },
               );
               // "noop" means the row was already where it belongs. Any other
@@ -1287,6 +1294,7 @@ async function main() {
           if (landed.source !== SOURCE) keptExisting++;
         } catch (e) {
           failed++;
+          if (isLedgerWriteFailure(e)) ledgerWriteFailed++;
           failedRows.push({ file: name, cardNumber: r.cardNumber, player: r.player, reason: String(e.message || e).slice(0, 120) });
           if (failed <= 5) console.error(`  failed ${String(r.cardNumber)}: ${String(e.message || e).slice(0, 70)}`);
         }
@@ -1380,6 +1388,7 @@ async function main() {
   console.log(`  numbered, parallel blank ${f(unnamedParallel)}   <- NOT written as Base; the name is unknown`);
   console.log(`  rows not reached       ${f(notReached)}   <- the budget stopped before these`);
   console.log(`  failed                 ${f(failed)}`);
+  console.log(`  of which ledger-write-failed ${f(ledgerWriteFailed)}`);
   // CF-A-FAILED-ROW-IS-NOT-A-SKIPPED-ROW. `rows skipped` above and `failed`
   // here were printed as two counters an operator has no way to cross-check:
   // a run that printed "rows skipped 0" alongside "failed 3" for three NNO

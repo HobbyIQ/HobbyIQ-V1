@@ -479,6 +479,7 @@ async function main() {
   const { parseListingIdentity, inferSetKeyFromTitle } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf, is412 } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+  const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(backend, "scripts", "lib", "delete-ledger.cjs"));
   const { extractCardNumberFromTitle } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js"));
   const { sameCardNumber, slugify, foldCardNumber } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { isRegisteredProduct } = require(path.join(backend, "dist/services/catalog/resolveProductByChecklist.js"));
@@ -548,7 +549,7 @@ async function main() {
     // under the candidate slug -- refused rather than landed on a DIFFERENT
     // print-run variant that merely shares the slug.
     refusedDestinationPrintRunVariantAbsent: 0,
-    salesFailed: 0, salesLeftAlone: 0,
+    salesFailed: 0, salesLeftAlone: 0, ledgerWriteFailed: 0,
     notReached: 0,
     hobbyiqCardIdQueries: 0,
     throttled: 0,
@@ -1054,7 +1055,17 @@ async function main() {
             const resident = await residentAt(sale.id, newId);
             if (resident) {
               if (isSameSale(resident, keep)) {
-                if (APPLY) await retry(() => pool.item(sale.id, oldId).delete());
+                if (APPLY) {
+                  // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+                  // (2026-09-28, review finding on this PR): `sale` is the
+                  // full pre-delete document. A ledger-write failure
+                  // throws into this row's own outer catch (s.salesFailed++).
+                  await recordDeleteOrThrow(sale, {
+                    lane: "repoint-sales-parallel-suffix", action: "collapse", reason: "same-sale-resident",
+                    toId: newId, container: "sold_comps",
+                  });
+                  await retry(() => pool.item(sale.id, oldId).delete());
+                }
                 s.collapsedOntoResident++;
                 bump(pairTable, pairLabel);
                 emitPlanRow(sale, "collapse", "same-sale-resident", { fromSlug: saleSlug, toSlug: candidateSlug, target: newId });
@@ -1078,7 +1089,13 @@ async function main() {
               return;
             }
 
-            const res = await relocateSoldComp(pool, { keep, drop: [{ id: sale.id, cardId: oldId, ifMatchEtag: freshBeforeWrite._etag }], retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY });
+            const res = await relocateSoldComp(pool, {
+              keep, drop: [{ id: sale.id, cardId: oldId, ifMatchEtag: freshBeforeWrite._etag }], retry, verifyFields: ["cardId", "hobbyiqCardId"], dryRun: !APPLY,
+              // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+              // (2026-09-28). relocateSoldComp's own drop loop re-reads the
+              // full document and ledgers it before this delete.
+              ledger: { lane: "repoint-sales-parallel-suffix", action: "relocate", reason: "parallel-suffix", toId: newId, container: "sold_comps" },
+            });
             if (res.guard?.verdict === "park") {
               s.refusedGuardParked++;
               refusals["guard-parked"].push(`  ${sale.id}@${oldId}: ${res.error ?? res.guard.reason}`);
@@ -1090,6 +1107,12 @@ async function main() {
               s.salesLeftAlone++;
               refusals["stale-since-plan"].push(`  ${sale.id}@${oldId} -> ${newId}: delete refused (412) -- source changed between the last-line re-read and the delete itself`);
               emitPlanRow(sale, "refused", "stale-since-plan", { fromSlug: saleSlug, toSlug: candidateSlug, target: newId });
+              return;
+            }
+            if (res.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+              s.salesFailed++;
+              s.ledgerWriteFailed = (s.ledgerWriteFailed ?? 0) + 1;
+              failures.push(`  FAILED relocate ${sale.id}@${oldId} -> ${newId}: ledger write refused the delete`);
               return;
             }
             if (!res.ok && res.stage !== "dry-run") {
@@ -1140,6 +1163,7 @@ async function main() {
           }
         } catch (e) {
           s.salesFailed++;
+          if (isLedgerWriteFailure(e)) s.ledgerWriteFailed = (s.ledgerWriteFailed ?? 0) + 1;
           failures.push(`  FAILED ${sale.id}@${currentId}: ${String(e?.stack ?? e?.message ?? e)}`);
         }
       }
@@ -1243,6 +1267,7 @@ async function main() {
   console.log(`  REFUSED: player mismatch                    ${f(s.refusedPlayerMismatch)}`);
   console.log(`  REFUSED: both-slugs-are-real-rungs (pairs)  ${f(s.refusedBothSlugsRealRungs)}`);
   console.log(`  failed                                      ${f(s.salesFailed)}`);
+  console.log(`  of which ledger-write-failed                ${f(s.ledgerWriteFailed)}`);
   console.log(`  not reached                                 ${f(s.notReached)}`);
   console.log("");
   console.log(`  hobbyiqCardId cross-partition queries issued  ${f(s.hobbyiqCardIdQueries)}`);

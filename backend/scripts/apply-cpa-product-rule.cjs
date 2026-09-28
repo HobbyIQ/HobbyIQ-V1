@@ -139,7 +139,10 @@ const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 
 const { CosmosClient } = require("@azure/cosmos");
 const backend = path.resolve(__dirname, "..");
-const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+// CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST: names this script
+// for every ledgered delete moveCatalogRow performs below.
+const LEDGER_LANE = "apply-cpa-product-rule";
 const { decideCpaProduct, groupKey } = require(path.join(backend, "dist/services/catalog/cpaProductRule.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
@@ -224,7 +227,7 @@ async function main() {
     keptBoth: 0, foldGroups: 0,
     moved: 0, folded: 0, replaced: 0, noop: 0,
     salesRepointed: 0, gradedRetired: 0,
-    refusedSetKeySplit: 0, failed: 0, notReached: 0,
+    refusedSetKeySplit: 0, failed: 0, ledgerWriteFailed: 0, notReached: 0,
   };
   const keepBothPairs = new Map(), foldPairs = new Map(), examples = [], keepBothExamples = [], collisionExamples = [], printRunExamples = [], spellingExamples = [];
   const bump = (m, k) => m.set(k, (m.get(k) ?? 0) + 1);
@@ -323,6 +326,7 @@ async function main() {
         salesContainer: pool,
         known: incumbent,
         retry,
+        ledgerLane: LEDGER_LANE,
       });
       s.salesRepointed += res.salesRepointed;
       s.gradedRetired += res.gradedChildrenRetired;
@@ -353,6 +357,7 @@ async function main() {
           if (s.refusedSetKeySplit <= 3) console.log(`  refused (setKey id/field split, D23's population) ${k}`);
           return;
         }
+        if (isLedgerWriteFailure(e)) s.ledgerWriteFailed++;
         s.failed++; if (s.failed <= 8) console.error(`  failed ${k}: ${msg.slice(0, 120)}`);
       }
     }));
@@ -384,6 +389,7 @@ async function main() {
   console.log(`  KEPT BOTH                       ${f(s.keptBoth)}   <- two dedicated products, same player; sales split by title words is a SEPARATE pass`);
   console.log(`  refused (setKey id/field split)  ${f(s.refusedSetKeySplit)}   <- D23's rename population`);
   console.log(`  failed                          ${f(s.failed)}`);
+  console.log(`    of which ledger-write-failed   ${f(s.ledgerWriteFailed)}`);
   console.log(`  not reached                     ${f(s.notReached)}`);
 
   if (foldPairs.size) {

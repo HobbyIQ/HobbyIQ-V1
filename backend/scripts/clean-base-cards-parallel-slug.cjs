@@ -51,7 +51,8 @@ const path = require("path");
 const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
 const backend = path.resolve(__dirname, "..");
-const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const LEDGER_LANE = "clean-base-cards-parallel-slug";
 const { decideTwinFold } = require(path.join(backend, "dist/services/catalog/foldTwinRule.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
@@ -153,7 +154,7 @@ async function main() {
   const s = {
     scanned: 0, otherSlot: 0, notChecklist: 0, noEvidence: 0, nothingToStrip: 0, noSlug: 0,
     moved: 0, folded: 0, replaced: 0, noop: 0, salesRepointed: 0, gradedRetired: 0, twinFolds: 0,
-    failed: 0, notReached: 0, refusedSetKeySplit: 0,
+    failed: 0, notReached: 0, refusedSetKeySplit: 0, ledgerWriteFailed: 0,
   };
   const bySource = new Map(), byNewName = new Map(), examples = [];
   const bump = (m, k) => m.set(k, (m.get(k) ?? 0) + 1);
@@ -200,6 +201,7 @@ async function main() {
       salesContainer: pool,
       known: incumbent,
       retry,
+      ledgerLane: LEDGER_LANE,
     });
     s.salesRepointed += r.salesRepointed;
     s.gradedRetired += r.gradedChildrenRetired;
@@ -247,7 +249,7 @@ async function main() {
               if (s.refusedSetKeySplit <= 3) console.log(`  refused (setKey id/field split, D23's population) ${String(d.id).slice(0, 80)}`);
               return;
             }
-            s.failed++; if (s.failed <= 8) console.error(`  failed ${String(d.id).slice(0, 80)}: ${msg.slice(0, 100)}`);
+            s.failed++; if (isLedgerWriteFailure(e)) s.ledgerWriteFailed++; if (s.failed <= 8) console.error(`  failed ${String(d.id).slice(0, 80)}: ${msg.slice(0, 100)}`);
           }
         }));
         const done = s.moved + s.folded + s.replaced;
@@ -279,6 +281,7 @@ async function main() {
   console.log(`  nothing to strip / no-op      ${f(s.nothingToStrip + s.noSlug + s.noop)}`);
   console.log(`  refused (setKey id/field split) ${f(s.refusedSetKeySplit)}   <- D23's rename population; a key needs both halves`);
   console.log(`  failed                        ${f(s.failed)}`);
+  console.log(`    of which ledger-write-failed   ${f(s.ledgerWriteFailed)}`);
   console.log(`  not reached                   ${f(s.notReached)}`);
   console.log(`\n  by source:`);
   for (const [k, n] of [...bySource.entries()].sort((a, b) => b[1] - a[1])) console.log(`    ${String(k).padEnd(40)} ${f(n).padStart(8)}`);

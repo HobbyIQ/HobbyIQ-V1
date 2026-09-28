@@ -63,7 +63,13 @@ const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
-const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+// CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28). The
+// rehome deletes the foreign-partition original once the copy lands, so
+// LEDGER_LANE names this script for catalogRowOps.service.js's opt-in ledger
+// (see MoveCatalogRowOptions.ledgerLane), the same way relocate-catalog-rows-
+// by-list does.
+const LEDGER_LANE = "rehome-catalog-rows-to-own-partition";
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Number(process.env.CONCURRENCY || 16);
@@ -152,7 +158,7 @@ const retry = async (fn) => {
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
   }).database("hobbyiq").container("card_catalog");
 
-  let scanned = 0, candidates = 0, rehomed = 0, alreadyThere = 0, failed = 0;
+  let scanned = 0, candidates = 0, rehomed = 0, alreadyThere = 0, failed = 0, ledgerWriteFailed = 0;
   // CF-COUNT-WHAT-THE-LOOP-TOUCHES. `candidates` counts rows the SCAN found;
   // `attempted` counts rows the work loop actually took up. They differ the
   // moment LIMIT stops the run mid-page: the remainder of that page was seen
@@ -204,11 +210,13 @@ const retry = async (fn) => {
             const res = await moveCatalogRow(cat, r, r.id, {}, {
               reason: "re-homed from a foreign partition (CF-A-ROW-IN-THE-WRONG-PARTITION-IS-AN-INVISIBLE-ROW)",
               retry,
+              ledgerLane: LEDGER_LANE,
             });
             if (res.action !== "move") alreadyThere++;
             rehomed++;
           } catch (e) {
             failed++;
+            if (isLedgerWriteFailure(e)) ledgerWriteFailed++;
             if (failed <= 5) console.error("  rehome failed " + String(r.id).slice(0, 60) + ": " + String(e.message || e).slice(0, 80));
           }
         }));
@@ -237,6 +245,7 @@ const retry = async (fn) => {
   console.log(`  re-homed to their own slug    ${rehomed.toLocaleString()}`);
   console.log(`  ...of those, leftover twins    ${alreadyThere.toLocaleString()}   (canonical already present; decided by authority, redundant copy removed)`);
   console.log(`  failed                        ${failed.toLocaleString()}`);
+  console.log(`  of which ledger-write-failed   ${ledgerWriteFailed.toLocaleString()}`);
   if (APPLY && candidates > attempted) {
     console.log(`  not attempted                 ${(candidates - attempted).toLocaleString()}   (${stopReason === "budget" ? "budget" : "LIMIT"} reached; seen, not tried)`);
   }

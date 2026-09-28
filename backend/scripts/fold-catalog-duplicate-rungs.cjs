@@ -164,7 +164,8 @@ const backend = path.resolve(__dirname, "..");
 // patch, so patchCatalogRowFields has no call site here. If a future change
 // needs one, it MUST go through patchCatalogRowFields, never a raw
 // container.item().patch() on card_catalog.
-const { moveCatalogRow } = require(path.join(backend, "dist", "services", "catalog", "catalogRowOps.service.js"));
+const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist", "services", "catalog", "catalogRowOps.service.js"));
+const LEDGER_LANE = "fold-catalog-duplicate-rungs";
 const { catalogAuthorityOf, authorityRank } = require(path.join(backend, "dist", "services", "catalog", "catalogAuthority.service.js"));
 const { playerIdentityKey } = require(path.join(backend, "dist", "services", "catalog", "playerIdentityKey.js"));
 const { computeHobbyIqCardId, normalizeParallel } = require(path.join(backend, "dist", "services", "portfolioiq", "hobbyIqCardId.service.js"));
@@ -441,7 +442,7 @@ async function runLane({ cat, pool, portfolio }) {
     gradedRetired: 0, holdingsRepointed: 0, holdingsWalked: 0, holdingDocsWalked: 0,
     refusedDifferentPlayer: 0, refusedUserVerifiedNotSurvivor: 0, refusedCanonicalUnderivable: 0,
     refusedNonePartitionKeyRow: 0,
-    failed: 0, notReached: 0,
+    failed: 0, notReached: 0, ledgerWriteFailed: 0,
   };
   const pairCounts = new Map(); // "loserSlug -> canonicalSlug" -> count
   const bumpPair = (loser, canon) => {
@@ -589,7 +590,7 @@ async function runLane({ cat, pool, portfolio }) {
       if (survivorRule === "rekey-highest-authority") {
         const moveRes = await moveCatalogRow(
           cat, survivor, canonicalId, {},
-          { reason: "fold-catalog-duplicate-rungs: re-key the highest-authority row onto the canonical respelling (PR #2377)", dryRun: !APPLY, salesContainer: pool, retry },
+          { reason: "fold-catalog-duplicate-rungs: re-key the highest-authority row onto the canonical respelling (PR #2377)", dryRun: !APPLY, salesContainer: pool, retry, ledgerLane: LEDGER_LANE },
         );
         if (moveRes.action === "refused") {
           // The canonical address is occupied by something chooseSurvivor
@@ -626,7 +627,7 @@ async function runLane({ cat, pool, portfolio }) {
 
         const res = await moveCatalogRow(
           cat, loser, canonicalId, {},
-          { reason: `fold-catalog-duplicate-rungs: respelling of the same rung folds onto the canonical parallel slug (PR #2377); loser was ${loser.id}`, dryRun: !APPLY, salesContainer: pool, retry },
+          { reason: `fold-catalog-duplicate-rungs: respelling of the same rung folds onto the canonical parallel slug (PR #2377); loser was ${loser.id}`, dryRun: !APPLY, salesContainer: pool, retry, ledgerLane: LEDGER_LANE },
         );
         if (res.action === "refused") {
           stats.refusedDifferentPlayer++;
@@ -646,6 +647,7 @@ async function runLane({ cat, pool, portfolio }) {
       if (foldedHere) stats.groupsFolded++;
     } catch (e) {
       stats.failed++;
+      if (isLedgerWriteFailure(e)) stats.ledgerWriteFailed++;
       const line = `  failed group=${key} survivor=${survivor.id}: ${String(e?.stack ?? e?.message ?? e)}`;
       failures.push(line);
       console.log(line.split("\n")[0]);
@@ -869,6 +871,7 @@ async function runLane({ cat, pool, portfolio }) {
   console.log(`    canonical-underivable            ${f(stats.refusedCanonicalUnderivable)}`);
   console.log(`    none-partition-key-row           ${f(stats.refusedNonePartitionKeyRow)}   <- a row with no cardId lives at Cosmos's own None partition; never deleted or re-keyed by this lane`);
   console.log(`  failed                      ${f(stats.failed)}`);
+  console.log(`    of which ledger-write-failed ${f(stats.ledgerWriteFailed)}`);
   console.log(`  not reached                 ${f(stats.notReached)}`);
 
   const topPairs = [...pairCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40);

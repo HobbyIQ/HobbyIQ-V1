@@ -37,7 +37,12 @@ const backend = path.resolve(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
-const { moveCatalogRow, rebuildSearchFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { moveCatalogRow, rebuildSearchFields, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+// CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28). This
+// move can retire/replace the derived row, so LEDGER_LANE names this script
+// for catalogRowOps.service.js's opt-in ledger (see MoveCatalogRowOptions.
+// ledgerLane), the same way relocate-catalog-rows-by-list does.
+const LEDGER_LANE = "map-pokemon-setkeys-to-checklist";
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || 48));
@@ -147,7 +152,7 @@ async function main() {
   console.log(`  ${SHARD_SCOPE.banner()}`);
   console.log(`  ambiguous ${f(ambiguous)}   no-match ${f(noMatch)} keys / ${f(noMatchRows)} rows (acquisition)\n`);
 
-  let scanned = 0, moved = 0, folded = 0, replaced = 0, redundant = 0, salesRepointed = 0, gradedRetired = 0, failed = 0, notReached = 0, malformed = 0, drifted = 0;
+  let scanned = 0, moved = 0, folded = 0, replaced = 0, redundant = 0, salesRepointed = 0, gradedRetired = 0, failed = 0, ledgerWriteFailed = 0, notReached = 0, malformed = 0, drifted = 0;
   let stopReason = null;
 
   for (const p of mine) {
@@ -198,6 +203,7 @@ async function main() {
             // (OVER by 2,138).
             const r = await moveCatalogRow(cat, d, parts.join(":"), { setKey: to }, {
               reason: "pokemon setKey unified to checklist vocabulary", repointNormalizedSetKey: true, dryRun: !APPLY, salesContainer: comps, retry,
+              ledgerLane: LEDGER_LANE,
             });
             salesRepointed += r.salesRepointed; gradedRetired += r.gradedChildrenRetired;
             if (r.action === "fold") folded++;
@@ -205,6 +211,7 @@ async function main() {
             moved++;
           } catch (e) {
             failed++;
+            if (isLedgerWriteFailure(e)) ledgerWriteFailed++;
             if (failed <= 5) console.error(`  failed ${String(d.id).slice(0, 58)}: ${String(e.message || e).slice(0, 58)}`);
           }
         }));
@@ -232,6 +239,7 @@ async function main() {
   console.log(`  malformed id (left)     ${f(malformed)}`);
   console.log(`  drifted, unmappable     ${f(drifted)}`);
   console.log(`  failed                  ${f(failed)}`);
+  console.log(`  of which ledger-write-failed ${f(ledgerWriteFailed)}`);
   if (ambiguousEx.length) {
     console.log(`\n  ambiguous keys, for a ruling:`);
     for (const e of ambiguousEx) console.log(`    ${e.slice(0, 96)}`);

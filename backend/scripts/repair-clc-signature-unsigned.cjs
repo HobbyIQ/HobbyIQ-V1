@@ -116,6 +116,7 @@ const { cardShardIndex } = require(path.join(__dirname, "lib", "card-shard-axis.
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
+const LEDGER_LANE = "repair-clc-signature-unsigned";
 const str = (v) => String(v ?? "").trim();
 const lower = (v) => str(v).toLowerCase();
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
@@ -295,7 +296,7 @@ async function main() {
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING required"); process.exit(1); }
 
   const { CosmosClient } = require("@azure/cosmos");
-  const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 
   const client = new CosmosClient(conn);
@@ -317,7 +318,7 @@ async function main() {
   console.log("");
 
   const s = {
-    scanned: 0, moved: 0, healed: 0, folded: 0, replaced: 0, failed: 0,
+    scanned: 0, moved: 0, healed: 0, folded: 0, replaced: 0, failed: 0, ledgerWriteFailed: 0,
     salesRepointed: 0, gradedRetired: 0, otherSlot: 0,
     skipNegation: 0, skipNoEvidence: 0, skipAlready: 0, notReached: 0,
     poolScanned: 0, poolMoved: 0, poolParked: 0,
@@ -395,6 +396,7 @@ async function main() {
               salesContainer: pool,
               dryRun: !APPLY,
               retry,
+              ledgerLane: LEDGER_LANE,
             }));
             s.salesRepointed += res.salesRepointed || 0;
             s.gradedRetired += res.gradedChildrenRetired || 0;
@@ -405,6 +407,7 @@ async function main() {
             // FAIL CLOSED, PER ROW. One refused row is a `failed` row in the
             // reconciliation, not a crash that loses the rest of the slice.
             s.failed++;
+            if (isLedgerWriteFailure(e)) s.ledgerWriteFailed++;
             if (moveFailures.length < 50) moveFailures.push({ id: row.id, error: String(e?.message ?? e).slice(0, 200) });
             if (s.failed <= 5) console.error(`  FAILED ${row.id}: ${String(e.message || e).slice(0, 90)}`);
           }
@@ -471,6 +474,7 @@ async function main() {
     + `refused ${f(s.skipNegation + s.skipNoEvidence)} (${f(s.skipNegation)} deny the signature, ${f(s.skipNoEvidence)} name no auto)`);
   console.log(`  folded onto an existing signed twin ${f(s.folded)}   replaced an incumbent ${f(s.replaced)}   `
     + `sales re-pointed ${f(s.salesRepointed)}   graded children retired ${f(s.gradedRetired)}   failed ${f(s.failed)}`);
+  console.log(`  of which ledger-write-failed ${f(s.ledgerWriteFailed)}`);
   if (MODE !== "catalog") {
     console.log(`  POOL scanned ${f(s.poolScanned)} - would ride (title states an auto) ${f(s.poolMoved)} - PARKED ${f(s.poolParked)}`);
     if (parkReasons.size) for (const [k, n] of [...parkReasons.entries()].sort((a, b) => b[1] - a[1])) console.log(`      ${String(n).padStart(6)}  ${k}`);

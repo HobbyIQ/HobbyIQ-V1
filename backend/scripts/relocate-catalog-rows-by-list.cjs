@@ -1780,6 +1780,13 @@ async function main() {
         ...(keepSales ? {} : { salesContainer: pool }),
         known: incumbent,
         retry,
+        // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28,
+        // review finding on this PR). This reslug/replace/fold path can
+        // delete TWO card_catalog documents -- a replaced incumbent's
+        // foreign-pk copy, and the old row once its move is complete -- and
+        // this call had no ledgerLane at all, so both were unledgered. Same
+        // lane name the retire path above already uses.
+        ledgerLane: LEDGER_LANE,
       });
       if (res?.action === "refused") {
         failed++;
@@ -1825,6 +1832,7 @@ async function main() {
       }
     } catch (err) {
       failed++;
+      if (isLedgerWriteFailure(err)) ledgerWriteFailed++;
       console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
     }
   }

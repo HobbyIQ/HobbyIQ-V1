@@ -1110,6 +1110,7 @@ async function main() {
   const { guardSoldCompDoc } = require(path.join(backend, "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+  const { recordDeleteOrThrow, isLedgerWriteFailure } = require(path.join(backend, "scripts", "lib", "delete-ledger.cjs"));
   const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
   const { playerIdentityKey } = require(path.join(backend, "dist/services/catalog/playerIdentityKey.js"));
   const { inferSetKeyFromTitle } = require(path.join(backend, "dist/services/portfolioiq/parseTitleIdentity.service.js"));
@@ -1156,7 +1157,7 @@ async function main() {
     scanned: 0, otherShard: 0, otherCell: 0, otherTitleFilter: 0,
     resolveToHByPatch: 0, resolveToHByRelocate: 0, resolveToCByPatch: 0,
     alreadyAtTarget: 0, collapsedOntoResident: 0,
-    leave: {}, refused: {}, failed: 0,
+    leave: {}, refused: {}, failed: 0, ledgerWriteFailed: 0,
   };
   const byCell = new Map();
   const leaveExamples = {};
@@ -1657,7 +1658,17 @@ async function main() {
       const resident = await residentAt(doc.id, destCardId);
       if (resident) {
         if (isSameSale(resident, { ...keep, cardId: destCardId })) {
-          if (APPLY) await retry(() => pool.item(doc.id, doc.cardId).delete());
+          if (APPLY) {
+            // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+            // (2026-09-28, review finding on this PR): `doc` is the full
+            // pre-delete document. A ledger-write failure throws and is
+            // caught by this row's own outer try/catch (s.failed++).
+            await recordDeleteOrThrow(doc, {
+              lane: "resolve-split-identity-parks", action: "collapse", reason: "same-id-resident",
+              toId: destCardId, container: "sold_comps",
+            });
+            await retry(() => pool.item(doc.id, doc.cardId).delete());
+          }
           s.collapsedOntoResident++;
           bump(byCell, cellKey);
           if (resolveExamples.length < 60) resolveExamples.push(`  COLLAPSE ${str(doc.title).slice(0, 70)} -- same sale already resident at ${destCardId}; wrong-partition copy deleted`);
@@ -1699,7 +1710,17 @@ async function main() {
       if (physicalTwin) {
         if (isSameSale(physicalTwin, { ...keep, cardId: destCardId })) {
           if (sameListingIdentity(doc, physicalTwin)) {
-            if (APPLY) await retry(() => pool.item(doc.id, doc.cardId).delete());
+            if (APPLY) {
+              // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+              // (2026-09-28, review finding on this PR): `doc` is the full
+              // pre-delete document. A ledger-write failure throws into
+              // this row's own outer try/catch (s.failed++).
+              await recordDeleteOrThrow(doc, {
+                lane: "resolve-split-identity-parks", action: "collapse", reason: "physical-sale-twin-proven",
+                toId: destCardId, container: "sold_comps",
+              });
+              await retry(() => pool.item(doc.id, doc.cardId).delete());
+            }
             s.collapsedOntoResident++;
             bump(byCell, cellKey);
             if (resolveExamples.length < 60) resolveExamples.push(`  COLLAPSE ${str(doc.title).slice(0, 70)} -- a physical-sale twin (${physicalTwin.id}) already resides at ${destCardId}, both share listing id "${listingIdOf(doc)}"; this copy (${doc.id}) deleted, one survivor remains`);
@@ -1745,6 +1766,10 @@ async function main() {
       const res = await relocateSoldComp(pool, {
         keep, drop: [{ id: doc.id, cardId: doc.cardId, ifMatchEtag: planEtagForDrop }],
         retry, verifyFields: ["cardId", "hobbyiqCardId", "sport", "splitResolved"], dryRun: !APPLY,
+        // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST
+        // (2026-09-28). relocateSoldComp's own drop loop re-reads the full
+        // document and ledgers it before this delete.
+        ledger: { lane: "resolve-split-identity-parks", action: "relocate", reason: "split-resolve", toId: destCardId, container: "sold_comps" },
       });
       if (res.guard?.verdict === "park") {
         bumpReason(s.refused, "guard-parked");
@@ -1756,6 +1781,13 @@ async function main() {
         bumpReason(s.refused, "stale-since-plan");
         pushExample(refuseExamples, "stale-since-plan", `  ${doc.id}@${doc.cardId}: relocate's source delete refused (412) -- the document changed since this run's own planning read; the new copy at ${destCardId} was written, the OLD copy at ${doc.cardId} was NOT deleted (a duplicate this lane does not retry past)`);
         emitPlanRow(doc, "refused", "stale-since-plan", planExtra);
+        return;
+      }
+      if (res.duplicatesLeft?.some((d) => d.ledgerWriteFailed)) {
+        s.failed++;
+        s.ledgerWriteFailed++;
+        failures.push(`  FAILED relocate ${doc.id}@${doc.cardId} -> ${destCardId}: ledger write refused the delete`);
+        emitPlanRow(doc, "failed", "ledger-write-failed", planExtra);
         return;
       }
       if (!res.ok && res.stage !== "dry-run") {
@@ -1772,6 +1804,7 @@ async function main() {
       emitPlanRow(doc, "resolve-to-h-relocate", verdict.reason, planExtra);
     } catch (e) {
       s.failed++;
+      if (isLedgerWriteFailure(e)) s.ledgerWriteFailed++;
       failures.push(`  FAILED resolve ${doc.id}@${doc.cardId}: ${String(e?.stack ?? e?.message ?? e)}`);
       emitPlanRow(doc, "failed", "unexpected-error", planExtra);
     }
@@ -1820,6 +1853,7 @@ async function main() {
   for (const [reason, n] of Object.entries(s.leave)) console.log(`  LEAVE: ${reason.padEnd(28)} ${f(n)}`);
   for (const [reason, n] of Object.entries(s.refused)) console.log(`  REFUSED: ${reason.padEnd(26)} ${f(n)}`);
   console.log(`  failed                          ${f(s.failed)}`);
+  console.log(`  of which ledger-write-failed    ${f(s.ledgerWriteFailed)}`);
 
   if (byCell.size) {
     console.log(`\n  by sport:year cell (top 25):`);

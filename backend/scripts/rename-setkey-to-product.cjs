@@ -68,6 +68,7 @@ const crypto = require("node:crypto");
 const path = require("node:path");
 
 const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "true";
+const LEDGER_LANE = "rename-setkey-to-product";
 const MODE = String(process.env.MODE || "product").trim().toLowerCase() || "product";
 // CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
 // The runner exports `slots` for EVERY script with a workflow-wide DEFAULT of
@@ -300,7 +301,7 @@ async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const table = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
   const gen = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
-  const { moveCatalogRow, rebuildSearchFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  const { moveCatalogRow, rebuildSearchFields, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { canAdjudicate } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
   const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
@@ -327,8 +328,8 @@ async function main() {
   console.log(`  ${SHARD_SCOPE.banner()}`);
 
   if (MODE === "estimate") return estimate(cat, products, table, filters);
-  if (MODE === "product") return renameProducts(cat, pool, products, table, deps, filters, { moveCatalogRow, rebuildSearchFields, reportWrites, deriveParentSetKey: gen.deriveParentSetKey, deriveBrand: gen.deriveBrand });
-  if (MODE === "hyphen") return foldHyphens(cat, pool, deps, filters, { moveCatalogRow, reportWrites, canAdjudicate });
+  if (MODE === "product") return renameProducts(cat, pool, products, table, deps, filters, { moveCatalogRow, rebuildSearchFields, reportWrites, isLedgerWriteFailure, deriveParentSetKey: gen.deriveParentSetKey, deriveBrand: gen.deriveBrand });
+  if (MODE === "hyphen") return foldHyphens(cat, pool, deps, filters, { moveCatalogRow, reportWrites, canAdjudicate, isLedgerWriteFailure });
   if (MODE === "holdings") return repointHoldings(cat, portfolio, deps, { reportWrites });
   console.error(`FATAL: unknown MODE=${MODE} (product | hyphen | holdings | estimate)`);
   process.exit(1);
@@ -351,7 +352,7 @@ async function estimate(cat, products, table, filters) {
 }
 
 async function renameProducts(cat, pool, products, table, deps, filters, lib) {
-  const stats = { scanned: 0, otherShard: 0, actionable: 0, moved: 0, folded: 0, replaced: 0, healed: 0, canonical: 0, refused: 0, nameOverField: 0, gone: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, notReached: 0 };
+  const stats = { scanned: 0, otherShard: 0, actionable: 0, moved: 0, folded: 0, replaced: 0, healed: 0, canonical: 0, refused: 0, nameOverField: 0, gone: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, notReached: 0, ledgerWriteFailed: 0 };
   const refusals = new Map();
   const perProduct = new Map();
   const examples = [];
@@ -405,7 +406,7 @@ async function renameProducts(cat, pool, products, table, deps, filters, lib) {
             }
             const changed = { setKey: d.setKey };
             if (d.cardNumber) changed.cardNumber = d.cardNumber;
-            const res = await lib.moveCatalogRow(cat, full, d.newId, changed, { reason: REASON, repointNormalizedSetKey: true, dryRun: !APPLY, salesContainer: pool, retry });
+            const res = await lib.moveCatalogRow(cat, full, d.newId, changed, { reason: REASON, repointNormalizedSetKey: true, dryRun: !APPLY, salesContainer: pool, retry, ledgerLane: LEDGER_LANE });
             if (res.action === "move") { stats.moved++; pp.moved++; }
             else if (res.action === "fold") { stats.folded++; pp.folded++; }
             else if (res.action === "replace") { stats.replaced++; pp.replaced++; }
@@ -415,6 +416,7 @@ async function renameProducts(cat, pool, products, table, deps, filters, lib) {
             if (examples.length < 24) examples.push(`  ${res.action.padEnd(7)} ${row.id} -> ${d.newId}  [${row.source}]  (${res.decision})`);
           } catch (e) {
             stats.failed++;
+            if (lib.isLedgerWriteFailure(e)) stats.ledgerWriteFailed++;
             if (stats.failed <= 5) console.log(`  failed ${row.id}: ${String(e?.message ?? e).slice(0, 140)}`);
           }
         }));
@@ -435,6 +437,7 @@ async function renameProducts(cat, pool, products, table, deps, filters, lib) {
   console.log(`  refused                  ${f(stats.refused)}${refusals.size ? "   <- " + [...refusals].map(([k, n]) => `${k} ${f(n)}`).join(", ") : ""}`);
   console.log(`  gone before the move     ${f(stats.gone)}`);
   console.log(`  failed                   ${f(stats.failed)}`);
+  console.log(`  of which ledger-write-failed ${f(stats.ledgerWriteFailed)}`);
   console.log(`  not reached              ${f(stats.notReached)}`);
   console.log(`  by product:`);
   for (const [k, v] of perProduct) if (v.scanned) console.log(`    ${k.padEnd(44)} scanned ${f(v.scanned).padStart(8)}  moved ${f(v.moved).padStart(7)}  folded ${f(v.folded).padStart(6)}  replaced ${f(v.replaced).padStart(6)}  healed ${f(v.healed).padStart(7)}  canonical ${f(v.canonical).padStart(6)}  refused ${f(v.refused).padStart(6)}`);
@@ -446,7 +449,7 @@ async function renameProducts(cat, pool, products, table, deps, filters, lib) {
 
 async function foldHyphens(cat, pool, deps, filters, lib) {
   if (!SOURCES.length) { console.error("FATAL: MODE=hyphen needs SOURCES (comma list) -- a whole-scope write names its scope"); process.exit(1); }
-  const stats = { scanned: 0, otherShard: 0, actionable: 0, folded: 0, replaced: 0, moved: 0, canonical: 0, noTwin: 0, twinNotChecklist: 0, refused: 0, gone: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, notReached: 0 };
+  const stats = { scanned: 0, otherShard: 0, actionable: 0, folded: 0, replaced: 0, moved: 0, canonical: 0, noTwin: 0, twinNotChecklist: 0, refused: 0, gone: 0, salesRepointed: 0, gradedRetired: 0, failed: 0, notReached: 0, ledgerWriteFailed: 0 };
   const examples = [];
   let stopReason = null;
   const spec = {
@@ -475,7 +478,7 @@ async function foldHyphens(cat, pool, deps, filters, lib) {
           stats.actionable++;
           const full = await pointRead(cat, row.id, row.cardId ?? row.id);
           if (!full) { stats.gone++; return; }
-          const res = await lib.moveCatalogRow(cat, full, d.twinId, { cardNumber: d.cardNumber }, { reason: HYPHEN_REASON, dryRun: !APPLY, salesContainer: pool, known: twin, retry });
+          const res = await lib.moveCatalogRow(cat, full, d.twinId, { cardNumber: d.cardNumber }, { reason: HYPHEN_REASON, dryRun: !APPLY, salesContainer: pool, known: twin, retry, ledgerLane: LEDGER_LANE });
           if (res.action === "fold") stats.folded++;
           else if (res.action === "replace") stats.replaced++;
           else if (res.action === "move") stats.moved++;
@@ -485,6 +488,7 @@ async function foldHyphens(cat, pool, deps, filters, lib) {
           if (examples.length < 24) examples.push(`  ${res.action.padEnd(7)} ${row.id} -> ${d.twinId}  [${row.source}]  (${res.decision})`);
         } catch (e) {
           stats.failed++;
+          if (lib.isLedgerWriteFailure(e)) stats.ledgerWriteFailed++;
           if (stats.failed <= 5) console.log(`  failed ${row.id}: ${String(e?.message ?? e).slice(0, 140)}`);
         }
       }));
@@ -503,6 +507,7 @@ async function foldHyphens(cat, pool, deps, filters, lib) {
   console.log(`  refused                  ${f(stats.refused)}   <- not an identity row / not letters-then-digits`);
   console.log(`  gone before the move     ${f(stats.gone)}`);
   console.log(`  failed                   ${f(stats.failed)}`);
+  console.log(`  of which ledger-write-failed ${f(stats.ledgerWriteFailed)}`);
   console.log(`  not reached              ${f(stats.notReached)}`);
   if (examples.length) { console.log(`  examples:`); for (const e of examples) console.log(e); }
   if (APPLY) lib.reportWrites({ job: "rename-setkey-to-product", intended: stats.actionable, written: stats.folded + stats.replaced + stats.moved, skipped: stats.gone, failed: stats.failed });

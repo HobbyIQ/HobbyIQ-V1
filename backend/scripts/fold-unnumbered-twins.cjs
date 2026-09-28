@@ -45,7 +45,13 @@ const path = require("path");
 const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
 const backend = path.resolve(__dirname, "..");
-const { moveCatalogRow } = require(path.join(backend, "dist", "services", "catalog", "catalogRowOps.service.js"));
+const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist", "services", "catalog", "catalogRowOps.service.js"));
+// CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28).
+// A fold's move can retire the twin's own row, so LEDGER_LANE names this
+// script for catalogRowOps.service.js's opt-in ledger (see
+// MoveCatalogRowOptions.ledgerLane) the same way relocate-catalog-rows-by-list
+// does.
+const LEDGER_LANE = "fold-unnumbered-twins";
 const { catalogAuthorityOf, isDedicatedChecklist } = require(path.join(backend, "dist", "services", "catalog", "catalogAuthority.service.js"));
 const { decideTwinFold } = require(path.join(backend, "dist", "services", "catalog", "foldTwinRule.js"));
 const { reportWrites } = require(path.join(backend, "dist", "services", "ops", "writeReconciliation.js"));
@@ -127,7 +133,7 @@ async function main() {
 
   // Pass 2: for each candidate, does an un-numbered twin exist, and is it
   // NOT itself a checklist row? Point reads on the twin id (partition = id).
-  const stats = { candidates: 0, otherShard: 0, noTwin: 0, ambiguous: 0, twinIsChecklist: 0, sameSourceListsBoth: 0, folded: 0, foldedVendor: 0, foldedOneOfOne: 0, foldedCrossSource: 0, salesRepointed: 0, gradedRetired: 0, refusedDifferentPlayer: 0, contendedPairs: 0, failed: 0, notReached: 0 };
+  const stats = { candidates: 0, otherShard: 0, noTwin: 0, ambiguous: 0, twinIsChecklist: 0, sameSourceListsBoth: 0, folded: 0, foldedVendor: 0, foldedOneOfOne: 0, foldedCrossSource: 0, salesRepointed: 0, gradedRetired: 0, refusedDifferentPlayer: 0, contendedPairs: 0, failed: 0, ledgerWriteFailed: 0, notReached: 0 };
   /** CF-A-FOLD-NEVER-CHANGES-THE-PLAYER: every refused pair, in full. */
   const refusals = [];
   /** Every contended pair with what the arms saw and which decided. */
@@ -168,7 +174,7 @@ async function main() {
           incomingSlug: twin.id, incumbentSlug: numbered.id, rivals, retry,
         });
       }
-      const res = await moveCatalogRow(cat, twin, numbered.id, { printRun: numbered.printRun }, { reason: decision.reason, dryRun: !APPLY, salesContainer: pool, retry, ...(evidence ? { playerEvidence: evidence } : {}) });
+      const res = await moveCatalogRow(cat, twin, numbered.id, { printRun: numbered.printRun }, { reason: decision.reason, dryRun: !APPLY, salesContainer: pool, retry, ledgerLane: LEDGER_LANE, ...(evidence ? { playerEvidence: evidence } : {}) });
       if (contended) {
         stats.contendedPairs++;
         contendedLines.push(
@@ -190,7 +196,7 @@ async function main() {
       if (decision.kind === "vendor") stats.foldedVendor++; else if (decision.kind === "one-of-one") stats.foldedOneOfOne++; else stats.foldedCrossSource++;
       stats.salesRepointed += res?.salesRepointed ?? 0;
       stats.gradedRetired += res?.gradedChildrenRetired ?? 0;
-    } catch (e) { stats.failed++; if (stats.failed <= 5) console.log(`  failed ${base}: ${String(e.message).slice(0, 100)}`); }
+    } catch (e) { stats.failed++; if (isLedgerWriteFailure(e)) stats.ledgerWriteFailed++; if (stats.failed <= 5) console.log(`  failed ${base}: ${String(e.message).slice(0, 100)}`); }
   }
 
   console.log(`\n${APPLY ? "APPLIED" : "REPORT ONLY -- nothing written"}`);
@@ -202,6 +208,7 @@ async function main() {
   console.log(`  ${APPLY ? "FOLDED" : "WOULD FOLD"}                   ${f(stats.folded)}   <- sales re-pointed ${f(stats.salesRepointed)}, graded children retired ${f(stats.gradedRetired)}`);
   console.log(`    vendor/user twins      ${f(stats.foldedVendor)}   | 1/1 by definition ${f(stats.foldedOneOfOne)}   | cross-source ${f(stats.foldedCrossSource)}`);
   console.log(`  failed                   ${f(stats.failed)}`);
+  console.log(`  of which ledger-write-failed ${f(stats.ledgerWriteFailed)}`);
   console.log(`  not reached              ${f(stats.notReached)}`);
   console.log(`  REFUSED: different player ${f(stats.refusedDifferentPlayer)}   <- twin and numbered row name different people, neither corroborated; NOTHING written`);
   if (examples.length) { console.log(`  examples:`); for (const e of examples) console.log(e); }

@@ -476,6 +476,14 @@ const deps = {
   patchCatalogRowFields: realDeps.patchCatalogRowFields,
   rebuildSearchFields: realDeps.rebuildSearchFields,
   retireCatalogRow: realDeps.retireCatalogRow,
+  // CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28,
+  // review finding on PR #2498): rewrite-parallel-names.cjs's runLane now
+  // destructures isLedgerWriteFailure from `deps` (it checks a thrown
+  // moveCatalogRow/retireCatalogRow error to count a ledger-write refusal
+  // apart from an ordinary failure) -- this fixture must supply it or every
+  // throwing-write test below throws "isLedgerWriteFailure is not a
+  // function" instead of exercising the catch block it means to test.
+  isLedgerWriteFailure: realDeps.isLedgerWriteFailure,
   computeHobbyIqCardId,
   parseHobbyIqCardId,
 };

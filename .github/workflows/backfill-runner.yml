@@ -2504,7 +2504,12 @@ jobs:
           # directory to write into, uploaded by the SAME step below that
           # already uploads this lane's backfill.log (no new PLAN_OUT-shaped
           # convention needed for a lane that never had one).
-          LEDGER_OUT: ${{ inputs.script == 'relocate-catalog-rows-by-list' && '/tmp/relocate-catalog-rows-by-list-ledger' || '' }}
+          # revert-set-sport-repair / repoint-stored-insert-sales
+          # (2026-09-28, review finding on this PR): same reasoning -- both
+          # delete sold_comps rows via bare deletes / relocateSoldComp's own
+          # ledger option, and neither has a PLAN_OUT of its own. Uploaded by
+          # the SAME step below that already uploads each lane's backfill.log.
+          LEDGER_OUT: ${{ inputs.script == 'relocate-catalog-rows-by-list' && '/tmp/relocate-catalog-rows-by-list-ledger' || inputs.script == 'revert-set-sport-repair' && '/tmp/revert-set-sport-repair-ledger' || inputs.script == 'repoint-stored-insert-sales' && '/tmp/repoint-stored-insert-sales-ledger' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -4197,11 +4202,17 @@ jobs:
       # never a truncated sample -- same reason every sibling repoint/rekey
       # log above is kept.
       - name: Upload the repoint-stored-insert-sales log
+        # CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28,
+        # review finding on this PR): this lane's two bare deletes now write
+        # a pre-delete ledger to LEDGER_OUT before each delete; swept by this
+        # same step, no new upload step needed.
         if: ${{ always() && inputs.script == 'repoint-stored-insert-sales' }}
         uses: actions/upload-artifact@v4
         with:
           name: repoint-stored-insert-sales-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
-          path: /tmp/backfill.log
+          path: |
+            /tmp/backfill.log
+            /tmp/repoint-stored-insert-sales-ledger/
           if-no-files-found: warn
           retention-days: 90
 
@@ -4328,11 +4339,17 @@ jobs:
       # truncated sample -- same reason the checklist-numbered fold log and
       # the id-follows-setkey-field rekey log above are both kept.
       - name: Upload the revert-set-sport-repair log
+        # CF-NO-DELETE-WITHOUT-A-FULL-DOCUMENT-LEDGER-LINE-FIRST (2026-09-28,
+        # review finding on this PR): this lane's collapse delete and its
+        # everyday relocate (both via relocateSoldComp's own drop loop) now
+        # write a pre-delete ledger to LEDGER_OUT; swept by this same step.
         if: ${{ always() && inputs.script == 'revert-set-sport-repair' }}
         uses: actions/upload-artifact@v4
         with:
           name: revert-set-sport-repair-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
-          path: /tmp/backfill.log
+          path: |
+            /tmp/backfill.log
+            /tmp/revert-set-sport-repair-ledger/
           if-no-files-found: warn
           retention-days: 90
 

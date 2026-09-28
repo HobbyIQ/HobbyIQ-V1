@@ -146,7 +146,8 @@ if (MODE !== "all" && !MODES.includes(MODE)) {
 const { CosmosClient } = require("@azure/cosmos");
 const backend = path.resolve(__dirname, "..");
 const D = (...p) => require(path.join(backend, "dist", ...p));
-const { moveCatalogRow, retireCatalogRow, isGradedChildOf } = D("services", "catalog", "catalogRowOps.service.js");
+const { moveCatalogRow, retireCatalogRow, isGradedChildOf, isLedgerWriteFailure } = D("services", "catalog", "catalogRowOps.service.js");
+const LEDGER_LANE = "consolidate-catalog-duplicates";
 const { catalogAuthorityOf } = D("services", "catalog", "catalogAuthority.service.js");
 
 const {
@@ -330,6 +331,7 @@ async function main() {
     holdingsRepointed: 0, holdingDocsWalked: 0, holdingsWalked: 0,
     skippedRenameOwned: 0, hashCollisionRisk: 0,
     r1Reached: 0, r1Skipped: 0, cpaFold: 0, cpaKeepBoth: 0, cpaAbstain: 0,
+    ledgerWriteFailed: 0,
   };
   const byKind = new Map();
   const byWinnerBy = new Map();
@@ -569,6 +571,7 @@ FATAL: ${f(preflight.collisions)} BLOCKING contentHash collisions across ${f(pre
       if (movedSales > 0) { e.salesSplit++; e.salesMoved += movedSales; }
     } catch (e) {
       stats.failed++;
+      if (isLedgerWriteFailure(e)) stats.ledgerWriteFailed++;
       if (stats.failed <= 5) console.log(`  failed ${key}: ${String(e.message).slice(0, 160)}`);
     }
   }
@@ -582,6 +585,7 @@ FATAL: ${f(preflight.collisions)} BLOCKING contentHash collisions across ${f(pre
   console.log(`  not a group (never folded) ${f(stats.notAGroup)}`);
   console.log(`  skipped: D23 rename owns   ${f(stats.skippedRenameOwned)}   <- a 'spelled' product; the rename is still moving it`);
   console.log(`  failed                     ${f(stats.failed)}`);
+  console.log(`    of which ledger-write-failed ${f(stats.ledgerWriteFailed)}`);
   console.log(`  not reached                ${f(stats.notReached)}`);
   // groups scanned = consolidated + ambiguous + not-a-group + failed + not-reached
   // (+ out-of-mode + rename-skipped, which are disjoint from all of the above).
@@ -915,7 +919,7 @@ async function moveSalesAndRow(cat, pool, { winner, loser, rows, reason, stats }
   // exists in which a sale references a row that is gone. `salesContainer` is
   // deliberately omitted: this function has already moved the full width, and
   // passing it would re-scan the exact-match subset a second time.
-  const res = await moveCatalogRow(cat, loser, winnerId, { printRun: printRunOf(winner) }, { reason, dryRun: !APPLY, retry });
+  const res = await moveCatalogRow(cat, loser, winnerId, { printRun: printRunOf(winner) }, { reason, dryRun: !APPLY, retry, ledgerLane: LEDGER_LANE });
   stats.gradedRetired += res?.gradedChildrenRetired ?? 0;
   return { moved };
 }

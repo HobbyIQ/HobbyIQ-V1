@@ -177,6 +177,7 @@ const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-s
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
+const LEDGER_LANE = "rekey-catalog-id-to-setkey";
 const str = (v) => String(v ?? "").trim();
 const lower = (v) => str(v).toLowerCase();
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
@@ -434,7 +435,7 @@ async function main() {
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING required"); process.exit(1); }
 
   const { CosmosClient } = require("@azure/cosmos");
-  const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  const { moveCatalogRow, isLedgerWriteFailure } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
   const { productParentOf, productSetKeys } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
@@ -497,7 +498,7 @@ async function main() {
     notOneLevelDrift: 0, unnumberedNoPlayer: 0,
     salesRepointed: 0, salesRelocated: 0, salesRelocateFailed: 0,
     gradedChildrenRetired: 0, holdingsRepointed: 0, holdingsWalked: 0, holdingDocsWalked: 0,
-    failed: 0, notReached: 0,
+    failed: 0, notReached: 0, ledgerWriteFailed: 0,
   };
   const bySetKey = new Map();
   const byYear = new Map();
@@ -740,6 +741,7 @@ async function main() {
               // invoked it.
               relocateSales: (oldId, movedToId, ctx) => relocatePartitionKeyedSales(oldId, movedToId, ctx),
               retry,
+              ledgerLane: LEDGER_LANE,
             });
             if (res.action === "refused") {
               s.targetExists++;
@@ -778,6 +780,7 @@ async function main() {
             await repointHoldings(String(row.id), newId);
           } catch (e) {
             s.failed++;
+            if (isLedgerWriteFailure(e)) s.ledgerWriteFailed++;
             failures.push(`  FAILED ${row.id} -> ${newId}: ${String(e?.stack ?? e?.message ?? e)}`);
             if (s.failed <= 5) console.error(`  FAILED ${row.id}: ${String(e?.message ?? e).slice(0, 160)}`);
           }
@@ -797,6 +800,7 @@ async function main() {
   console.log(`  REFUSED: not a one-level drift                ${f(s.notOneLevelDrift)}   <- id segment names neither the target nor its registered parent`);
   console.log(`  REFUSED: unnumbered, no player to identify it ${f(s.unnumberedNoPlayer)}   <- CF-PLAYER-IS-THE-NUMBER: id would be UNDERIVABLE; not a lane failure`);
   console.log(`  failed                                       ${f(s.failed)}`);
+  console.log(`  of which ledger-write-failed                 ${f(s.ledgerWriteFailed)}`);
   if (s.notReached) console.log(`  not reached                                   ${f(s.notReached)}   <- budget or LIMIT stopped this cell before its batch reached these rows`);
   console.log("");
   console.log(`  sales ${APPLY ? "re-pointed" : "would re-point"} (patch, moveCatalogRow)   ${f(s.salesRepointed)}`);
