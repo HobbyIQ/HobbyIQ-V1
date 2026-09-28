@@ -91,11 +91,10 @@ const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VE
 const slugify = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 // The doubled-year producer is fixed (0000f60) but stored titles still carry
-// it; strip so the parser sees what the seller actually wrote.
-function dedupeYear(title, year) {
-  const t = String(title ?? ""), y = String(year ?? "");
-  return y && t.startsWith(y + " " + y + " ") ? t.slice(y.length + 1) : t;
-}
+// it; strip so the parser sees what the seller actually wrote. Shared with
+// lib/relocate-sold-comp.cjs's dedupeYearPrefix (2026-09-28) -- see that
+// file's comment for why three copies of this had drifted into existence.
+const dedupeYear = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs")).dedupeYearPrefix;
 
 /**
  * Rebuild a slug with a new parallel and print run, preserving everything else.

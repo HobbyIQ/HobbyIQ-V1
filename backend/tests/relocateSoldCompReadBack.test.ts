@@ -5,7 +5,7 @@ import path from "node:path";
 
 const require_ = createRequire(import.meta.url);
 const LIB = path.join(process.cwd(), "scripts/lib");
-const { relocateSoldComp, readBackKeptRow, readBackShowsWrite } = require_(
+const { relocateSoldComp, readBackKeptRow, readBackShowsWrite, dedupeYearPrefix } = require_(
   path.join(LIB, "relocate-sold-comp.cjs"),
 );
 
@@ -491,5 +491,169 @@ describe("verifyNoDuplicatesAcrossPartitions -- OPTIONAL cross-partition backsto
     expect(res.ok).toBe(false);
     expect(res.stage).toBe("verify");
     expect(res.error).toMatch(/cross-partition duplicate verify threw/);
+  });
+});
+
+/**
+ * CF-CH-CARD-SET-ALREADY-HAS-THE-YEAR, THE MOVE-SIDE HALF (2026-09-28).
+ *
+ * The 2026-09-28 dedupe census (content-differs.csv) found 154/155 refused
+ * "duplicate" pairs differing ONLY in a doubled leading product year --
+ * "2025 2025 Topps Chrome Update Baseball #AC-AB Base" vs the healthy form
+ * -- with the newer (repointed) copy carrying the bug in 71 of them. The
+ * producer (backfill-sold-comps-from-ch.cjs) was fixed 2026-08-24 (commit
+ * 0000f60); this is the healer for rows written before that fix, wired into
+ * every mover that builds a `keep` object (rekey-product-setkey,
+ * repoint-sales-by-list, repoint-sales-isauto-flip).
+ */
+describe("dedupeYearPrefix: idempotent leading-year de-duplication", () => {
+  it("strips a doubled leading year down to one copy", () => {
+    expect(dedupeYearPrefix("2025 2025 Topps Chrome Update Baseball #AC-AB Base", 2025)).toBe(
+      "2025 Topps Chrome Update Baseball #AC-AB Base",
+    );
+  });
+
+  it("leaves an already-singly-prefixed title unchanged", () => {
+    const t = "2025 Topps Chrome Update Baseball #AC-AB Base";
+    expect(dedupeYearPrefix(t, 2025)).toBe(t);
+  });
+
+  it("running it twice is a no-op (idempotent)", () => {
+    const once = dedupeYearPrefix("2025 2025 Topps Chrome Update Baseball #AC-AB Base", 2025);
+    const twice = dedupeYearPrefix(once, 2025);
+    expect(twice).toBe(once);
+  });
+
+  it("leaves a title with no year prefix at all unchanged", () => {
+    const t = "Cy Young 2025 2025 Topps Chrome Platinum Blue Vibrations Refractor /150 #251";
+    // The doubled year here is NOT leading -- "Cy Young" comes first -- so
+    // this is a different (unaddressed) shape, not the leading-prefix bug.
+    expect(dedupeYearPrefix(t, 2025)).toBe(t);
+  });
+
+  it("does nothing without a year to compare against", () => {
+    const t = "2025 2025 Topps Chrome Update Baseball #AC-AB Base";
+    expect(dedupeYearPrefix(t, null)).toBe(t);
+    expect(dedupeYearPrefix(t, undefined)).toBe(t);
+  });
+
+  it("handles a null/empty title without throwing", () => {
+    expect(dedupeYearPrefix(null, 2025)).toBe("");
+    expect(dedupeYearPrefix(undefined, 2025)).toBe("");
+    expect(dedupeYearPrefix("", 2025)).toBe("");
+  });
+
+  it("also collapses a hyphen-joined doubled year", () => {
+    expect(dedupeYearPrefix("1954-1954 Topps Baseball #133 Base", 1954)).toBe(
+      "1954 Topps Baseball #133 Base",
+    );
+  });
+
+  it("also collapses a hyphen BETWEEN the two years (review follow-up, PR #2474)", () => {
+    // The gap fixed by this review round: dedupeYearPrefix's own regex used
+    // to require its TWO year-tokens to be joined by [\s-]+ once, but the
+    // FIRST fix's regex only matched a hyphen after the second year
+    // ("<year> <year>-"), not between the two ("<year>-<year> "). Both gaps
+    // now accept space OR hyphen.
+    expect(dedupeYearPrefix("2025-2025 Topps Chrome Update Baseball #AC-AB Base", 2025)).toBe(
+      "2025 Topps Chrome Update Baseball #AC-AB Base",
+    );
+  });
+});
+
+/**
+ * CENTRALIZATION (review follow-up, 2026-09-28: PR #2474 review). The first
+ * cut wired dedupeYearPrefix into three individual movers' own `keep`
+ * builds -- but relocateSoldComp has ~30 callers that all build `keep` via
+ * `stripSystem(row)` the same way, and the reviewer's count (~15+ found by
+ * grepping `stripSystem(` near a relocateSoldComp call) is why it moved
+ * INSIDE relocateSoldComp itself: every caller inherits the heal for free,
+ * with no per-caller edit and no future mover starting unhealed by default.
+ * These tests pin the heal at the ONE place it now lives, proving the
+ * healed title is what actually gets upserted -- not merely what a helper
+ * function returns in isolation.
+ */
+describe("relocateSoldComp heals a doubled-year title centrally, for every caller", () => {
+  function poolFake(written: Array<Record<string, unknown>>) {
+    return {
+      item: (id: string, pk: string) => ({
+        read: async () => ({ resource: written.find((w) => w.id === id && w.cardId === pk) ?? null }),
+        delete: async () => {},
+      }),
+      items: {
+        upsert: async (d: Record<string, unknown>) => { written.push({ ...d }); },
+        query: () => ({ fetchAll: async () => ({ resources: [] }) }),
+      },
+    };
+  }
+
+  it("heals keep.title before the upsert, with no caller having to call dedupeYearPrefix itself", async () => {
+    const written: Array<Record<string, unknown>> = [];
+    const keep = {
+      id: "ch-daily::1",
+      cardId: "hiq:baseball:2025:topps-chrome-update-series:ac-ab:base:auto",
+      hobbyiqCardId: "hiq:baseball:2025:topps-chrome-update-series:ac-ab:base:auto",
+      cardYear: 2025,
+      title: "2025 2025 Topps Chrome Update Baseball #AC-AB Base",
+    };
+    const res = await relocateSoldComp(poolFake(written) as never, {
+      keep, drop: [], verifyFields: [], guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(true);
+    expect(written[0]!.title).toBe("2025 Topps Chrome Update Baseball #AC-AB Base");
+    // The caller's own `keep` object is mutated in place too (same contract
+    // the guard already has), so a caller reading `keep.title` afterward
+    // (an example/plan-row log line, say) sees the healed form as well.
+    expect(keep.title).toBe("2025 Topps Chrome Update Baseball #AC-AB Base");
+  });
+
+  it("representative mover: rekey-product-setkey's own keep shape (stripSystem + address rewrite) persists the healed title", async () => {
+    // Mirrors rekey-product-setkey.cjs's own keep build: stripSystem(row)
+    // then cardId/hobbyiqCardId/setKey overwritten -- title is carried
+    // through UNTOUCHED by the caller, same as production code, and must
+    // still come out healed because relocateSoldComp heals it centrally.
+    const written: Array<Record<string, unknown>> = [];
+    const row = {
+      id: "tca-ebay::42", cardId: "1765857132073x655930228459218600",
+      cardYear: 2025, title: "2025 2025 Topps Chrome Update Baseball #AC-AB Base",
+    };
+    const keep = { ...row };
+    keep.cardId = "hiq:baseball:2025:topps-chrome-update-series:ac-ab:base:auto";
+    (keep as Record<string, unknown>).hobbyiqCardId = keep.cardId;
+    const res = await relocateSoldComp(poolFake(written) as never, {
+      keep, drop: [{ id: row.id, cardId: row.cardId }], verifyFields: [], guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(true);
+    expect(written[0]!.title).toBe("2025 Topps Chrome Update Baseball #AC-AB Base");
+  });
+
+  it("representative mover: repoint-sales-isauto-flip's own keep shape (spread + address rewrite) persists the healed title", async () => {
+    // Mirrors repoint-sales-isauto-flip.cjs's own
+    // stripSystem({ ...sale, cardId: toId, hobbyiqCardId: toId }) shape.
+    const written: Array<Record<string, unknown>> = [];
+    const sale = {
+      id: "tca-ebay::43", cardId: "hiq:baseball:2025:topps-chrome-update:ac-jv:base:no-auto",
+      cardYear: 2025, title: "2025 2025 Topps Chrome Update Baseball #AC-JV Base",
+    };
+    const toId = "hiq:baseball:2025:topps-chrome-update-series:ac-jv:base:auto";
+    const keep = { ...sale, cardId: toId, hobbyiqCardId: toId };
+    const res = await relocateSoldComp(poolFake(written) as never, {
+      keep, drop: [{ id: sale.id, cardId: sale.cardId }], verifyFields: [], guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(true);
+    expect(written[0]!.title).toBe("2025 Topps Chrome Update Baseball #AC-JV Base");
+  });
+
+  it("a title with no doubled year passes through unchanged -- centralization is a no-op for healthy rows", async () => {
+    const written: Array<Record<string, unknown>> = [];
+    const keep = {
+      id: "tca-ebay::44", cardId: "hiq:baseball:2024:bowman-chrome:cpa-vh:gold-refractor:auto:num-50",
+      cardYear: 2024, title: "2024 Bowman Chrome Victor Hurtado Gold Refractor Auto #CPA-VH",
+    };
+    const res = await relocateSoldComp(poolFake(written) as never, {
+      keep, drop: [], verifyFields: [], guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(true);
+    expect(written[0]!.title).toBe("2024 Bowman Chrome Victor Hurtado Gold Refractor Auto #CPA-VH");
   });
 });
