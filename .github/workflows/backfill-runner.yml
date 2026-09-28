@@ -823,6 +823,26 @@ on:
           # the 2026-09-27 twins-lane + isauto-twins audits (usc143, fb2025,
           # bb2026 CSVs).
           - dedupe-sold-comp-copies-by-list
+          # CF-THE-LIST-IS-THE-SCOPE, for a sale whose cardId is already the
+          # CORRECT checklist partition address but whose hobbyiqCardId is
+          # STALE, still pointing at a retired address (PR #2485 finding,
+          # 2026-09-28: 952+ of 1,779 live sales at the 153 List-2-refused
+          # bowman-chrome:cpa-* rows read cardId=bowman:cpa-* already, plus
+          # two named docs). A PATCH only, never a move/delete: the sale's
+          # partition never changes, `hobbyiqCardIdBefore` (add) then
+          # `hobbyiqCardId` (set) at the SAME (id, cardId) address, mirroring
+          # every hobbyiqCardId-touching repair script's own `<field>Before`
+          # reversible-patch convention. Gated per entry on the LIVE
+          # hobbyiqCardId matching the list's own expectedStaleHobbyiqCardId,
+          # toHobbyiqCardId equaling cardId (aligns identity to the
+          # partition address only, never a general re-key), the cardId's
+          # own card_catalog row being checklist-grade, and namesAgree
+          # against that row's playerName. `scope` carries the list path and
+          # is REQUIRED -- this lane writes, so it has no default list, same
+          # convention as repoint-sales-by-list and dedupe-sold-comp-copies-
+          # by-list. First use: 2026-09-28-cpa-2024-bowman-chrome-stale-
+          # hobbyiqcardid.json.
+          - heal-sold-comp-hobbyiqcardid-by-list
           # CF-ONE-SALE-ONE-DOCUMENT, the GENERATOR (Drew, 2026-09-28 ~00:50Z:
           # "Build it; start with hockey 2025 REPORT"). Per sport:year, drains
           # the in-scope hobbyiqCardId prefix (PASS 1), then re-queries every
@@ -2469,7 +2489,11 @@ jobs:
           # plus its resume cursor -- same fixed-path-guarded-on-script
           # convention, no new input (Drew, 2026-09-28 ~00:50Z: "Build it;
           # start with hockey 2025 REPORT").
-          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'repoint-sales-isauto-flip' && '/tmp/repoint-sales-isauto-flip-plan' || inputs.script == 'reconcile-split-identity' && '/tmp/reconcile-split-identity-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || inputs.script == 'repoint-sales-by-list' && '/tmp/repoint-sales-by-list-plan' || inputs.script == 'dedupe-sold-comp-copies-by-list' && '/tmp/dedupe-sold-comp-copies-by-list-plan' || inputs.script == 'census-sold-comp-copies' && '/tmp/census-sold-comp-copies-plan' || '' }}
+          # heal-sold-comp-hobbyiqcardid-by-list (2026-09-28): one NDJSON
+          # record per entry (patched/would-patch/refused/failed) -- same
+          # fixed-path-guarded-on-script convention, no new input (PR #2485
+          # follow-up finding).
+          PLAN_OUT: ${{ inputs.script == 'resolve-split-identity-parks' && '/tmp/resolve-split-identity-parks-plan' || inputs.script == 'collapse-ch-synthetic-twins' && '/tmp/collapse-ch-synthetic-twins-plan' || inputs.script == 'resolve-disagreeing-sale-twins' && '/tmp/resolve-disagreeing-sale-twins-plan' || inputs.script == 'repoint-sales-to-sibling-product' && '/tmp/repoint-sales-to-sibling-product-plan' || inputs.script == 'repoint-sales-parallel-suffix' && '/tmp/repoint-sales-parallel-suffix-plan' || inputs.script == 'repoint-sales-cardnumber-suffix' && '/tmp/repoint-sales-cardnumber-suffix-plan' || inputs.script == 'repoint-sales-tiffany-title-gated' && '/tmp/repoint-sales-tiffany-title-gated-plan' || inputs.script == 'repoint-sales-isauto-flip' && '/tmp/repoint-sales-isauto-flip-plan' || inputs.script == 'reconcile-split-identity' && '/tmp/reconcile-split-identity-plan' || inputs.script == 'route-backing-gaps' && '/tmp/route-backing-gaps-plan' || inputs.script == 'fold-catalog-duplicate-rungs' && '/tmp/fold-catalog-duplicate-rungs-plan' || inputs.script == 'repoint-sales-by-list' && '/tmp/repoint-sales-by-list-plan' || inputs.script == 'dedupe-sold-comp-copies-by-list' && '/tmp/dedupe-sold-comp-copies-by-list-plan' || inputs.script == 'census-sold-comp-copies' && '/tmp/census-sold-comp-copies-plan' || inputs.script == 'heal-sold-comp-hobbyiqcardid-by-list' && '/tmp/heal-sold-comp-hobbyiqcardid-by-list-plan' || '' }}
           NODE_OPTIONS: "--max-old-space-size=8192"
         # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
         # ONLY, so a lane that refuses on stderr — before its first stdout write
@@ -5159,6 +5183,52 @@ jobs:
             echo "::notice::${{ inputs.scope }} finished within budget (considered=${N:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=dedupe-sold-comp-copies-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
+
+      - name: Upload the heal-sold-comp-hobbyiqcardid-by-list plan
+        if: ${{ always() && inputs.script == 'heal-sold-comp-hobbyiqcardid-by-list' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: heal-sold-comp-hobbyiqcardid-by-list-${{ inputs.apply == true && 'apply' || 'report' }}-${{ github.run_id }}
+          path: |
+            /tmp/backfill.log
+            /tmp/heal-sold-comp-hobbyiqcardid-by-list-plan/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the hobbyiqCardId heal until the list is drained
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, modeled EXACTLY on the
+        # dedupe-sold-comp-copies-by-list block immediately above -- this
+        # lane's own sibling on the sold_comps side (PR #2485 follow-up
+        # finding, 2026-09-28). A unit here is one ENTRY (one sale patched),
+        # but the shape is the same: budget, stop, print the marker, exit;
+        # this step continues it.
+        #
+        # THE SCOPE IS RE-DISPATCHED VERBATIM, and it must be: `scope` names
+        # the committed list file, the lane has no default, and a relaunch
+        # that dropped it would be fatal at entry 0 rather than merely
+        # wrong. There is no cursor input and none is wanted -- the
+        # continuation re-reads the same file from the top.
+        #
+        # THAT RE-READ IS SAFE BECAUSE THE LIST IS IDEMPOTENT. A patch whose
+        # sale's hobbyiqCardId already reads the healed value fails GATE (c)
+        # (stale-mismatch) on the re-read, never re-patched and never
+        # counted as written twice.
+        if: ${{ !cancelled() && inputs.script == 'heal-sold-comp-hobbyiqcardid-by-list' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: heal-sold-comp-hobbyiqcardid-by-list
+          preamble: |
+            N=$(grep -aoE "^  entries considered +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "entries_considered=${N:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (considered=${N:-0}) — re-dispatching ${{ inputs.scope }} to continue"
+          finished-notice: |
+            echo "::notice::${{ inputs.scope }} finished within budget (considered=${N:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=heal-sold-comp-hobbyiqcardid-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
 
       # GATE for census-sold-comp-copies: the GENERATOR is READ ONLY, in
       # every mode, with no write path in the script at all (Drew, 2026-09-28
