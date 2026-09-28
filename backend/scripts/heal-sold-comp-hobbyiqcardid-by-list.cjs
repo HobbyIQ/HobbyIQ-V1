@@ -63,13 +63,19 @@
  *       must be a real, checklist-attested card, exactly the same
  *       standard repoint-sales-by-list.cjs's own GATE 2 holds its
  *       destination to.
- *   (e) namesAgree(sale title/playerName, catalog row playerName) must
- *       pass (lib/name-agreement.cjs) -- REFUSED (name-disagreement)
- *       otherwise. "A checklist row proves the ROW, the player name
- *       proves the SALE": gate (d) establishes cardId is a real card;
- *       this establishes THIS sale is that card's sale, not some other
+ *   (e) namesAgree(sale TITLE first, catalog row playerName) must pass
+ *       (lib/name-agreement.cjs) -- REFUSED (name-disagreement) otherwise.
+ *       "A checklist row proves the ROW, the player name proves the
+ *       SALE": gate (d) establishes cardId is a real card; this
+ *       establishes THIS sale is that card's sale, not some other
  *       player's listing that happened to already carry the right
- *       partition key.
+ *       partition key. TITLE FIRST (this PR, mirrors
+ *       repoint-sales-by-list.cjs's own GATE 6): the sale's stored
+ *       playerName can itself be corrupt while its title plainly names the
+ *       destination player -- the title is read first, playerName only
+ *       when the title is blank, and the title WINS on a real conflict
+ *       even when playerName would have agreed. `decidedBy` records which
+ *       field decided, in both the pass and refuse evidence.
  *
  * On pass: PATCH `{ hobbyiqCardIdBefore: <the stale value>, hobbyiqCardId:
  * toHobbyiqCardId }` at (saleId, cardId), with an `IfMatch` access
@@ -113,7 +119,14 @@ const backend = path.resolve(__dirname, "..");
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { withBackoff } = require(path.join(__dirname, "lib", "cosmos-backoff.cjs"));
 const { pkOf } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
-const { namesAgree } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
+const { namesAgree, titleNamesPlayer } = require(path.join(__dirname, "lib", "name-agreement.cjs"));
+// GATE (e)'s own stripTrailingTokens vocabulary (this PR's title-first fix)
+// -- see that lib module's own header for why this lane needs it (its real
+// committed list's titles carry print-attribute words like "Auto" that a
+// bare namesAgree(title, playerName) would never fold onto the checklist's
+// bare name). Reads the checklist corpus directly, no dist/ and no Cosmos --
+// same load-without-a-build contract as name-agreement.cjs itself.
+const { stripVocabularyForDestination } = require(path.join(__dirname, "lib", "checklist-parallel-strip-vocab.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
@@ -350,13 +363,71 @@ async function main() {
       continue;
     }
 
-    // ── GATE (e): namesAgree(sale title/playerName, catalog playerName) ──
-    const saleName = String(sale.playerName ?? sale.title ?? "");
-    const destName = String(catalogRow.playerName ?? "");
-    if (!namesAgree(saleName, destName)) {
+    // ── GATE (e), TITLE-FIRST (this PR, revised after review). "A
+    // checklist row proves the ROW, the player name proves the SALE" -- but
+    // the sale's own stored playerName field can itself be corrupt while
+    // its TITLE plainly names the destination player.
+    //
+    // REVIEW FINDING (first cut rejected): comparing the RAW title against
+    // the destination via plain `namesAgree` never fires on a real title
+    // shape -- namesAgree/stripMarkers strip only TRAILING vocabulary, and
+    // a real title's leading year/brand/card-number preamble sits BEFORE
+    // the name. `titleNamesPlayer` (lib/name-agreement.cjs, identical to PR
+    // #2500's own function) asks the CONTAINMENT question instead ("does
+    // the folded title contain the folded player name anywhere"), so
+    // leading noise never matters -- see repoint-sales-by-list.cjs's own
+    // GATE 6 for the identical doctrine and its own longer comment.
+    //
+    // THE GATE, IN ORDER:
+    //   1. titleNamesPlayer(title, destination playerName) -- title
+    //      corroborates the destination -> PASS, decidedBy=title.
+    //   2. titleNamesPlayer(title, the STALE address's own registered
+    //      player), when that stale-address name disagrees with the
+    //      destination -- the title names a DIFFERENT, real,
+    //      checklist-registered player (the sale's own PRIOR address,
+    //      read via catalogRowAt(expectedStaleHobbyiqCardId), best-effort:
+    //      a retired row that no longer exists simply yields no signal
+    //      here, never an error) -> REFUSE, decidedBy=title. Bounded to
+    //      the one other registered identity this lane already has cheap
+    //      access to, never a full collision table.
+    //   3. Neither -- the title says nothing this lane can confirm either
+    //      way (blank, pure listing noise, or a bare team name -- a naive
+    //      token-count floor over the raw title was rejected on review for
+    //      misreading team/city vocabulary as name-shaped, an open set no
+    //      closed strip list safely covers) -> FALL BACK to the original
+    //      playerName comparison, decidedBy=playerName.
+    const strip = stripVocabularyForDestination(catalogRow);
+    const titleSource = String(sale.title ?? "").trim();
+    const playerNameSource = String(sale.playerName ?? "").trim();
+    const destName = String(catalogRow.playerName ?? "").trim();
+    const opts = { stripTrailingTokens: strip.tokens };
+
+    let decidedBy, saleName, agrees;
+    if (titleNamesPlayer(titleSource, destName, opts)) {
+      decidedBy = "title";
+      saleName = titleSource;
+      agrees = true;
+    } else {
+      let staleName = "";
+      try {
+        const staleRow = await catalogRowAt(expectedStaleHobbyiqCardId);
+        staleName = String(staleRow?.playerName ?? "").trim();
+      } catch { /* best-effort only -- a retired/unreadable stale row is not a conflict signal, never a failure */ }
+      if (staleName && !namesAgree(staleName, destName, opts) && titleNamesPlayer(titleSource, staleName, opts)) {
+        decidedBy = "title";
+        saleName = titleSource;
+        agrees = false;
+      } else {
+        decidedBy = "playerName";
+        saleName = playerNameSource;
+        agrees = namesAgree(saleName, destName, opts);
+      }
+    }
+
+    if (!agrees) {
       refusedNameDisagreement++;
-      console.error(`      REFUSED (name-disagreement): sale "${saleName.slice(0, 60)}" vs destination "${destName.slice(0, 60)}"`);
-      emitPlanRow({ action: "refused", reason: "name-disagreement", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId, saleName, destName });
+      console.error(`      REFUSED (name-disagreement): sale "${saleName.slice(0, 60)}" (decidedBy=${decidedBy}) vs destination "${destName.slice(0, 60)}"`);
+      emitPlanRow({ action: "refused", reason: "name-disagreement", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId, saleName, destName, decidedBy });
       continue;
     }
 
@@ -370,7 +441,7 @@ async function main() {
     if (!APPLY) {
       patched++;
       console.log("      WOULD PATCH hobbyiqCardId — every gate passed, sale's cardId is already the checklist address");
-      emitPlanRow({ action: "would-patch", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId });
+      emitPlanRow({ action: "would-patch", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId, decidedBy });
       continue;
     }
 
@@ -406,7 +477,7 @@ async function main() {
 
     patched++;
     console.log("      PATCHED — hobbyiqCardId aligned to the sale's own checklist partition address");
-    emitPlanRow({ action: "patched", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId });
+    emitPlanRow({ action: "patched", saleId, cardId, expectedStaleHobbyiqCardId, toHobbyiqCardId, decidedBy });
   }
 
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);

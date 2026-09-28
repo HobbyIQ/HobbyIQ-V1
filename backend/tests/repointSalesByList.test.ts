@@ -24,6 +24,9 @@ import { spawnSync } from "node:child_process";
 import * as os from "node:os";
 
 const require_ = createRequire(__filename);
+const { titleNamesPlayer } = require_(join(__dirname, "..", "scripts", "lib", "name-agreement.cjs")) as {
+  titleNamesPlayer: (title: unknown, playerName: unknown, opts?: { stripTrailingTokens?: string[] }) => boolean;
+};
 
 const lane = join(__dirname, "..", "scripts", "repoint-sales-by-list.cjs");
 const backend = join(__dirname, "..");
@@ -255,11 +258,15 @@ describe("this lane reuses the shared namesAgree, never a bespoke compare", () =
   it("requires lib/name-agreement.cjs at module scope", () => {
     const src = readFileSync(lane, "utf8");
     expect(src).toContain('require(path.join(__dirname, "lib", "name-agreement.cjs"))');
-    // GATE 6 now passes the destination product's own checklist parallel
-    // vocabulary as opts.stripTrailingTokens (this PR, run 36346769892) --
-    // namesAgree(a, b) with no third argument is unchanged, but this call
-    // site always supplies one, built from the real corpus.
-    expect(src).toContain("namesAgree(saleName, destName, { stripTrailingTokens: strip.tokens })");
+    // GATE 6's own opts always carry the destination product's own checklist
+    // parallel vocabulary as stripTrailingTokens (run 36346769892) -- both
+    // namesAgree (the playerName fallback path) and titleNamesPlayer (the
+    // title-first path, this PR's review-fixed revision) are called with the
+    // SAME `opts`, built once from the real corpus, never two divergent
+    // vocabularies for one entry.
+    expect(src).toContain("const opts = { stripTrailingTokens: strip.tokens };");
+    expect(src).toContain("titleNamesPlayer(titleSource, destName, opts)");
+    expect(src).toContain("namesAgree(saleName, destName, opts)");
   });
 
   it("requires the dual sales-at-id check, never a bare cross-partition query", () => {
@@ -848,7 +855,7 @@ describe("end-to-end: GATE 6 strips the destination product's own parallel vocab
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
     assertNoUncaughtError(r);
     expect(r.code).toBe(0);
-    expect(r.out).toMatch(/REFUSED \(name-disagreement\) src::1: sale "Adael Amador Teal" vs destination "Julio Rodriguez RC"/);
+    expect(r.out).toMatch(/REFUSED \(name-disagreement\) src::1: sale "Adael Amador Teal" \(decidedBy=playerName\) vs destination "Julio Rodriguez RC"/);
     expect(r.out).toMatch(/REFUSED: name-disagreement\s+1/);
     expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+0/);
     expect(r.led.salesUpserts.length).toBe(0);
@@ -1046,42 +1053,49 @@ describe("regression: run 36353646453 -- a physical duplicate sharing an id must
   // banner clean, failed 0, no "DUPLICATE LEFT IN POOL" line, and the
   // leftover stood in the pool forever after.
   //
-  // Fixed at two layers: (1) lib/sales-at-id.cjs now dedupes on the REAL
-  // Cosmos identity (id, cardId), so BOTH documents are handed to the
-  // per-sale loop; (2) relocateSoldComp's optional
-  // verifyNoDuplicatesAcrossPartitions (which this lane now passes) is the
-  // backstop -- a cross-partition `WHERE c.id = @id` after the delete loop
-  // that catches anything still standing regardless of layer (1).
-  it("APPLY deletes BOTH old-address copies and leaves exactly one document, at toId", () => {
+  // sales-at-id.cjs's own fix (dedupe on the REAL Cosmos identity, (id,
+  // cardId)) still stands -- BOTH documents are handed to the per-sale loop.
+  // But CF-STALE-HOBBYIQCARDID-IS-NOT-RESIDENCY (this PR, #2454 follow-up)
+  // supersedes what this lane is allowed to DO with the second one: a ref
+  // whose live cardId is not fromId was never resident at fromId's
+  // partition, whatever its hobbyiqCardId says, and moving/deleting it here
+  // is exactly the false-positive class this PR closes (2,046 sales matched
+  // a fromId only via a stale hobbyiqCardId while their cardId already
+  // named a different address). This lane now REFUSES that second document
+  // as not-resident-at-from rather than sweeping it into the move --
+  // cleaning up a stray physical copy under a raw vendor cardId is
+  // dedupe-sold-comp-copies-by-list.cjs's own, narrower, content-identity-
+  // gated job, never this lane's.
+  it("APPLY moves the resident copy and REFUSES the raw-vendor-cardId leftover as not-resident-at-from, never deleting it", () => {
     const RAW_VENDOR_CARD_ID = "1765857544536x502800993546556500";
-    // expectedSales: 2, not 1 -- this IS the fix showing up one gate early.
-    // Before the sales-at-id.cjs fix, the drain's id-only dedup would have
-    // reported total=1 for this fixture (the second document silently
-    // folded away), so a census taken against the UNFIXED code would have
-    // written expectedSales:1 into a list like this one and GATE 5 would
-    // have waved it through -- exactly how the incident's own list passed
-    // review. Post-fix, the drain correctly reports both, so the true count
-    // the list must carry is 2.
+    // expectedSales: 2 -- sales-at-id.cjs's own dedup-by-(id,cardId) fix
+    // still reports both documents to GATE 5; this lane's own residency
+    // check is what decides what happens to each of them afterward.
     const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "duplicate-left regression", expectedSales: 2 }], "dupleft-regression");
     const catalog = [FROM_ROW, TO_ROW];
     // Two PHYSICALLY DISTINCT documents, same id, different cardId partitions,
     // both pointing at fromId via hobbyiqCardId -- exactly the incident shape.
-    const properlyAddressed = { id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" };
-    const leftoverAtRawVendorId = { id: "src::1", cardId: RAW_VENDOR_CARD_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", playerName: "Adael Amador", parallel: "RayWave Refractor" };
+    const properlyAddressed = { id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", title: "Adael Amador RayWave Refractor", playerName: "Adael Amador", parallel: "RayWave Refractor" };
+    const leftoverAtRawVendorId = { id: "src::1", cardId: RAW_VENDOR_CARD_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01", title: "Adael Amador RayWave Refractor", playerName: "Adael Amador", parallel: "RayWave Refractor" };
     const sales = [properlyAddressed, leftoverAtRawVendorId];
 
     const r = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
     assertNoUncaughtError(r);
     expect(r.code, r.out).toBe(0);
     expect(r.out).not.toMatch(/DUPLICATE LEFT IN POOL/);
+    expect(r.out).toMatch(/REFUSED \(not-resident-at-from\) src::1/);
+    expect(r.out).toMatch(/REFUSED: not-resident-at-from\s+1/);
+    expect(r.out).toMatch(/MOVED \(sales\)\s+1/);
 
     const finalSales = r.led.finalSales as Array<{ id: string; cardId: string }>;
     const atThisId = finalSales.filter((d) => d.id === "src::1");
-    // The whole point: exactly ONE document survives for this id, across
-    // every partition, and it sits at toId -- neither old address (fromId
-    // nor the raw vendor cardId) still holds a copy.
-    expect(atThisId.length, JSON.stringify(atThisId)).toBe(1);
-    expect(atThisId[0].cardId).toBe(TO_ID);
+    // The resident copy moved to toId; the raw-vendor-cardId leftover was
+    // NEVER TOUCHED -- refused, not deleted -- so it still stands at its
+    // own address. Two documents survive, deliberately: this lane's job is
+    // moving a resident sale, not deduping a stray copy under a different
+    // lane's own doctrine.
+    expect(atThisId.length, JSON.stringify(atThisId)).toBe(2);
+    expect(atThisId.map((d) => d.cardId).sort()).toEqual([RAW_VENDOR_CARD_ID, TO_ID].sort());
   });
 
   it("MUTATION CHECK: with only the properly-addressed copy present (no leftover), the same list still moves cleanly", () => {
@@ -1100,5 +1114,287 @@ describe("regression: run 36353646453 -- a physical duplicate sharing an id must
     const atThisId = finalSales.filter((d) => d.id === "src::1");
     expect(atThisId.length).toBe(1);
     expect(atThisId[0].cardId).toBe(TO_ID);
+  });
+});
+
+// ── GATE 6, TITLE-FIRST (this PR). "The title proves the sale": a sale's
+// stored playerName field can itself be corrupt while its title -- the
+// actual listing text -- plainly names the destination player. The title
+// is read FIRST; playerName is consulted ONLY when the title is blank. ──────
+
+describe("GATE 6 reads the sale's TITLE first, and playerName only when the title is blank", () => {
+  it("corrupt playerName + a REAL-SHAPED title (leading year/brand/card-number noise before the name) naming the destination -> PASSES, decidedBy=title", () => {
+    // Review finding: every earlier fixture put the player's name at the
+    // FRONT of the title with nothing but strippable trailing vocabulary
+    // after it -- exactly the shape plain namesAgree(wholeTitle, name)
+    // happens to fold correctly, and exactly the shape the real
+    // sold_comps/CardHedge/eBay title never has. This fixture instead uses
+    // the PR's own headline incident shape: a leading year/brand/card-number
+    // PREAMBLE before the player's name, the actual PR #2485 title text.
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "title proves the sale", expectedSales: 1 }], "title-first-pass");
+    const catalog = [FROM_ROW, TO_ROW];
+    // playerName is corrupt (names neither Adael Amador nor anyone at the
+    // destination); the title plainly names "Adael Amador", but buried
+    // after real listing-title preamble, not at the front.
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "2025 Topps Chrome Update Baseball Adael Amador RayWave Refractor #USC143", playerName: "Yordanny Monegro", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
+    expect(applyRun.code).toBe(0);
+    expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
+  });
+
+  it("the PR's own literal headline incident title (year/brand/name/prospect/auto/card-number, in that order) -> PASSES, decidedBy=title", () => {
+    // Verbatim reviewer reproduction case: "2024 Bowman Chrome Yohandy
+    // Morales Prospect Auto #CPA-YM" -- run through the REAL destination
+    // gate, not a bare namesAgree() call, to prove GATE 6 itself (not just
+    // titleNamesPlayer in isolation) now passes this shape.
+    const destRow = { ...TO_ROW, playerName: "Yohandy Morales" };
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "reviewer headline case", expectedSales: 1 }], "title-first-headline");
+    const catalog = [FROM_ROW, destRow];
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "2024 Bowman Chrome Yohandy Morales Prospect Auto #CPA-YM", playerName: "Yordanny Monegro", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+  });
+
+  it("title names the SOURCE row's own (different) registered player + playerName wrongly matches the destination -> REFUSED (title wins on conflict)", () => {
+    // The conflict this gate can actually PROVE (bounded to the one other
+    // registered identity it has cheap access to -- the SOURCE row it
+    // already read at GATE 1, never an unbounded collision table): the
+    // sale's stored playerName has been corrupted to read the DESTINATION's
+    // own name (a false agreement waiting to happen), but the title plainly
+    // names the card's real, current, checklist-registered player at
+    // fromId -- a genuinely different person from the destination.
+    const conflictFromRow = { ...FROM_ROW, playerName: "Yohandy Morales" };
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "title wins on conflict", expectedSales: 1 }], "title-first-conflict");
+    const catalog = [conflictFromRow, TO_ROW];
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "2025 Topps Chrome Update Baseball Yohandy Morales RayWave Refractor #CPA-YM", playerName: "Adael Amador", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED \(name-disagreement\) src::1: sale "2025 Topps Chrome Update Baseball Yohandy Morales RayWave Re" \(decidedBy=title\)/);
+    expect(r.out).toMatch(/REFUSED: name-disagreement\s+1/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+0/);
+  });
+
+  it("blank title + playerName matches the destination -> PASSES, decidedBy=playerName (the fallback)", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "no title, fall back", expectedSales: 1 }], "title-first-fallback");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "", playerName: "Adael Amador", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
+    expect(applyRun.code).toBe(0);
+    expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
+  });
+
+  // CF-A-NAME-LESS-TITLE-IS-NOT-A-CONFLICT (review finding). A large share
+  // of real sold_comps titles are CardHedge/eBay-derived LISTING TEXT that
+  // names a year, product and card number and NO PLAYER AT ALL --
+  // "2025 Topps Chrome Update Baseball #USC143 Base" is exactly this shape
+  // for THIS fixture's own product. A bare "title is non-blank" check would
+  // have refused this sale on its own CORRECT playerName the moment
+  // title-first shipped. `titleNamesPlayer` (lib/name-agreement.cjs) finds
+  // no name in this title against either the destination or the source's
+  // own player, so GATE 6 falls all the way through to the original
+  // playerName comparison, exactly its pre-title-first behaviour.
+  it("a non-blank but NAME-LESS title (real listing noise, no player) -> PASSES via playerName, decidedBy=playerName", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "name-less title falls back to playerName", expectedSales: 1 }], "title-nameless-fallback");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "2025 Topps Chrome Update Baseball #USC143 Base", playerName: "Adael Amador", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
+    expect(applyRun.code).toBe(0);
+    expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
+  });
+
+  // CF-A-TEAM-NAME-IS-NOT-A-PLAYER-NAME (review finding, defect #2). A bare
+  // team/city name in a title ("Baltimore Orioles") is real, human-readable
+  // text -- exactly the shape a naive token-count-over-the-raw-title floor
+  // misread as "name-shaped" (2 alphabetic tokens survive: "Baltimore",
+  // "Orioles"), producing a false REFUSED on an otherwise-correct
+  // playerName. `titleNamesPlayer`'s CONTAINMENT design has no such failure
+  // mode: "Baltimore Orioles" is not a substring match for any real
+  // player's name, so it is never mistaken for one -- no team/city
+  // stoplist needed at all.
+  it("a title naming only a TEAM (no player) -> PASSES via playerName, decidedBy=playerName", () => {
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "team-only title falls back to playerName", expectedSales: 1 }], "title-team-only-fallback");
+    const catalog = [FROM_ROW, TO_ROW];
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "2024 Topps #150 Baltimore Orioles", playerName: "Adael Amador", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+1/);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
+    expect(applyRun.code).toBe(0);
+    expect(applyRun.out).toMatch(/MOVED \(sales\)\s+1/);
+  });
+});
+
+// ── REGRESSION COVERAGE FOR #2500's OWN FIX (fix/dedupe-keeper-must-agree
+// -with-the-sale-title-0928-1514, merged as 5434df85). titleNamesPlayer is
+// imported from that PR's own lib/name-agreement.cjs (not a local copy --
+// this branch was rebased onto main after #2500 landed). An independent
+// adversarial review of #2500
+// (https://github.com/HobbyIQ/HobbyIQ-V1/pull/2500#issuecomment-5873357117)
+// found four defects in an EARLIER version of the SAME function this PR
+// depends on -- two of which reached this branch's own (now-deleted)
+// verbatim copy and were confirmed here directly before the rebase:
+//
+//   1. (unsafe direction) Unbounded substring match, no token boundary --
+//      foldForCompare stripped all whitespace before containment, so a
+//      SHORTER name that is a raw substring of a LONGER token false-
+//      matched ("Ryan Reynolds" inside "Bryan Reynolds"). A false PASS on
+//      GATE 6/GATE (e) -- exactly the unsafe direction this whole PR exists
+//      to close. Fixed upstream via `containsTokenSubsequence` (word-
+//      boundary-safe token matching, not a raw folded-substring check).
+//   4. (over-refusal) No firstListedName() fallback for a multi-name
+//      league-leader/insert catalog row ("Shohei Ohtani / Marcell Ozuna /
+//      Kyle Schwarber LL NL HR") -- the containment fallback tried the
+//      WHOLE multi-name string rather than reducing to the first-listed
+//      player the way namesAgree's own rule (a) does internally. Fixed
+//      upstream by calling `firstListedName()` on the player side before
+//      suffix extraction and containment.
+//
+// These tests now assert the CORRECT, fixed behaviour and must stay green.
+describe("regression coverage for #2500's titleNamesPlayer fix (word-boundary matching, multi-name reduction)", () => {
+  it("DEFECT 1 (fixed): a shorter name must NOT match as a raw substring of a longer one (Bryan Reynolds / Ryan Reynolds)", () => {
+    expect(titleNamesPlayer("2025 Topps Chrome Bryan Reynolds Auto", "Ryan Reynolds")).toBe(false);
+  });
+
+  it("DEFECT 1 (unsafe): same collision, shortest reproduction (Bryan / Ryan)", () => {
+    expect(titleNamesPlayer("2025 Topps Chrome Bryan", "Ryan")).toBe(false);
+  });
+
+  it("DEFECT 1 (fixed), through the actual GATE 6 end-to-end: a title naming a genuinely different player (Bryan Reynolds) must REFUSE against a destination named Ryan Reynolds, never silently pass", () => {
+    const bryanRow = { ...FROM_ROW, playerName: "Bryan Reynolds" };
+    const ryanRow = { ...TO_ROW, playerName: "Ryan Reynolds" };
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "defect-1 regression", expectedSales: 1 }], "defect1-bryan-ryan");
+    const catalog = [bryanRow, ryanRow];
+    const sales = [{
+      id: "src::1", cardId: FROM_ID, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "2025 Topps Chrome Bryan Reynolds Auto", playerName: "Bryan Reynolds", parallel: "RayWave Refractor",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    // A sale genuinely about Bryan Reynolds must be REFUSED against a
+    // destination that is actually Ryan Reynolds -- the title's own
+    // (correct) "Bryan Reynolds" must not be misread as containing
+    // "Ryan Reynolds" merely because the letters are a raw substring.
+    expect(r.out).toMatch(/REFUSED \(name-disagreement\)/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+0/);
+  });
+
+  it("DEFECT 4 (fixed): a title naming the FIRST-LISTED player of a multi-name league-leader catalog row must PASS, not refuse", () => {
+    expect(titleNamesPlayer(
+      "2024 Topps Shohei Ohtani League Leaders NL HR",
+      "Shohei Ohtani / Marcell Ozuna / Kyle Schwarber LL NL HR",
+    )).toBe(true);
+  });
+
+  it("SURNAME FLOOR (#2463) holds through titleNamesPlayer too: a bare 'Nick' in the title never proves 'Nick Green'", () => {
+    // The same floor namesAgree's own header states for itself ("a first
+    // name alone proves nothing about which player a card is") -- a title
+    // containing only "Nick" must not be read as containing "Nick Green"
+    // just because "Nick" is a prefix-shaped token match.
+    expect(titleNamesPlayer("2024 Topps Chrome Nick Auto", "Nick Green")).toBe(false);
+  });
+
+  it("a blank title never claims to name anyone, even a player whose real name would otherwise agree", () => {
+    // Confirms this branch's own GATE 6 never needed #2500's firstNonBlank
+    // fix at all: titleNamesPlayer("", playerName) already returns false on
+    // its own explicit `if (!t || !p) return false` guard, and GATE 6's own
+    // fallback logic (not a bare `??`) is what routes a blank title to the
+    // playerName comparison -- see the end-to-end "blank title + playerName
+    // matches the destination" test elsewhere in this file for the full
+    // gate-level proof.
+    expect(titleNamesPlayer("", "Adael Amador")).toBe(false);
+  });
+});
+
+// ── CF-STALE-HOBBYIQCARDID-IS-NOT-RESIDENCY. A ref whose live cardId is not
+// fromId was never resident at fromId's partition -- refused, never moved. ──
+
+describe("a sale whose live cardId is not fromId is refused as not-resident-at-from, never moved", () => {
+  it("a sale drained only via a stale hobbyiqCardId (its own cardId is a different, unrelated address) is REFUSED, never rewritten", () => {
+    const STALE_OTHER_ADDRESS = "hiq:baseball:2025:topps-chrome-update-series:usc199:some-other-card:no-auto";
+    const list = writeList([{ fromId: FROM_ID, toId: TO_ID, reason: "stale hobbyiqCardId false positive", expectedSales: 1 }], "not-resident-at-from");
+    const catalog = [FROM_ROW, TO_ROW];
+    // This sale's REAL, live partition is STALE_OTHER_ADDRESS -- a wholly
+    // different card's address -- but its hobbyiqCardId still carries the
+    // stale FROM_ID value from a prior repoint, which is exactly what pulls
+    // it into this entry's drain via the `OR hobbyiqCardId = @id` half of
+    // the dual predicate.
+    const sales = [{
+      id: "src::1", cardId: STALE_OTHER_ADDRESS, hobbyiqCardId: FROM_ID, price: 10, soldAt: "2026-01-01",
+      title: "Some Other Player", playerName: "Some Other Player", parallel: "Base",
+    }];
+
+    const r = drive({ SCOPE: list, BACKFILL_APPLY: "false" }, { sales, catalog });
+    assertNoUncaughtError(r);
+    expect(r.code).toBe(0);
+    expect(r.out).toMatch(/REFUSED \(not-resident-at-from\) src::1: live cardId "hiq:baseball:2025:topps-chrome-update-series:usc199:some-other-card:no-auto" != fromId/);
+    expect(r.out).toMatch(/REFUSED: not-resident-at-from\s+1/);
+    expect(r.out).toMatch(/WOULD MOVE \(sales\)\s+0/);
+    // Never reached the name gate at all -- residency is checked first.
+    expect(r.out).not.toMatch(/REFUSED \(name-disagreement\)/);
+
+    const applyRun = drive({ SCOPE: list, BACKFILL_APPLY: "true" }, { sales, catalog });
+    assertNoUncaughtError(applyRun);
+    expect(applyRun.code).toBe(0);
+    expect(applyRun.out).toMatch(/REFUSED: not-resident-at-from\s+1/);
+    expect(applyRun.led.salesUpserts.length).toBe(0);
+    expect(applyRun.led.salesDeletes.length).toBe(0);
+    // The sale is UNTOUCHED, still at its own real address.
+    const finalSales = applyRun.led.finalSales as Array<{ id: string; cardId: string }>;
+    expect(finalSales).toEqual([expect.objectContaining({ id: "src::1", cardId: STALE_OTHER_ADDRESS })]);
   });
 });
