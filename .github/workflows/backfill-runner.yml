@@ -5176,11 +5176,29 @@ jobs:
           echo "::error::census-sold-comp-copies is READ ONLY — it has no write path. Re-dispatch with apply=false; review its candidate list into a committed dedupe-sold-comp-copies-by-list scope."
           exit 1
 
+      - name: Sanitize the scope for the census-sold-comp-copies artifact name
+        # CF-ARTIFACT-NAME-CANNOT-CARRY-THE-SCOPE-COLON (run 36370366955,
+        # 2026-09-28): every legitimate scope for this lane is `sport:year`
+        # (e.g. hockey:2025), and upload-artifact@v4 rejects a name containing
+        # `:` ("The artifact name is not valid... Colon :"). The census
+        # completed cleanly -- banner reconciled, exit 0 -- and still LOST
+        # PLAN_OUT because the upload step after it failed on the name alone.
+        # This runs unconditionally for the lane (not gated on outcome) so the
+        # `always()` upload below still gets a valid name even when the
+        # backfill step itself failed. Only the ARTIFACT NAME is sanitized;
+        # `inputs.scope` itself is forwarded verbatim everywhere else (the
+        # relaunch dispatch, the runtime env), per
+        # CF-A-RELAUNCH-THAT-DROPS-AN-INPUT-INHERITS-A-DEFAULT.
+        if: ${{ always() && inputs.script == 'census-sold-comp-copies' }}
+        shell: bash
+        run: |
+          echo "SCOPE_SLUG=$(echo "${{ inputs.scope }}" | tr -c 'A-Za-z0-9._-' '-')" >> "$GITHUB_ENV"
+
       - name: Upload the census-sold-comp-copies candidate list
         if: ${{ always() && inputs.script == 'census-sold-comp-copies' }}
         uses: actions/upload-artifact@v4
         with:
-          name: census-sold-comp-copies-${{ inputs.scope }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          name: census-sold-comp-copies-${{ env.SCOPE_SLUG }}-slot-${{ inputs.slot }}-${{ github.run_id }}
           path: |
             /tmp/backfill.log
             /tmp/census-sold-comp-copies-plan/

@@ -176,6 +176,55 @@ describe("the lane is dispatchable and carries no new input", () => {
   });
 });
 
+// ── the artifact-name colon defect (run 36370366955) ─────────────────────
+
+describe("the upload-artifact NAME never carries the scope's raw colon", () => {
+  // Run 36370366955 (scope=hockey:2025) completed the census cleanly --
+  // banner reconciled, exit 0 -- and still lost PLAN_OUT: the upload step's
+  // `name:` interpolated `${{ inputs.scope }}` directly, and every legitimate
+  // scope for this lane is `sport:year`, so upload-artifact@v4 rejected the
+  // name ("The artifact name is not valid... Colon :") on every dispatch.
+  it("the upload step's name: does not interpolate inputs.scope directly", () => {
+    const yml = fs.readFileSync(runner, "utf8");
+    const nameLine = yml.match(/name: census-sold-comp-copies-.*$/m)?.[0];
+    expect(nameLine, "could not find the census-sold-comp-copies upload artifact name: line").toBeTruthy();
+    expect(nameLine).not.toContain("${{ inputs.scope }}");
+    expect(nameLine).not.toMatch(/\$SCOPE\b/);
+  });
+
+  it("the upload step's name: is built from a sanitized scope variable instead", () => {
+    const yml = fs.readFileSync(runner, "utf8");
+    const nameLine = yml.match(/name: census-sold-comp-copies-.*$/m)?.[0];
+    expect(nameLine).toMatch(/\$\{\{\s*env\.SCOPE_SLUG\s*\}\}|\$SCOPE_SLUG\b/);
+  });
+
+  it("a step ahead of the upload exports SCOPE_SLUG with every artifact-invalid character replaced", () => {
+    const yml = fs.readFileSync(runner, "utf8");
+    const idx = yml.indexOf("Upload the census-sold-comp-copies candidate list");
+    expect(idx).toBeGreaterThan(-1);
+    const before = yml.slice(Math.max(0, idx - 2000), idx);
+    expect(before).toMatch(/SCOPE_SLUG/);
+    // the sanitizer step must run for this lane specifically, not a blanket rule
+    expect(before).toContain("inputs.script == 'census-sold-comp-copies'");
+  });
+
+  it("the runtime SCOPE passthrough to the script itself is still forwarded verbatim (unsanitized)", () => {
+    // The FIX is scoped to the artifact NAME only -- the running script must
+    // still see the real sport:year cell with its colon intact.
+    const yml = fs.readFileSync(runner, "utf8");
+    expect(yml).toMatch(/SCOPE:\s*\$\{\{\s*inputs\.scope\s*\}\}/);
+  });
+
+  it("the relaunch dispatch still forwards scope verbatim (no download/name coupling in the relaunch path)", () => {
+    const yml = fs.readFileSync(runner, "utf8");
+    expect(yml).toContain(`-f scope="${"${{ inputs.scope }}"}"`);
+    // relaunch-on-marker re-dispatches a fresh workflow run; it never
+    // downloads this lane's artifact by name, so no mismatch is possible there.
+    expect(fs.readFileSync(path.join(backend, "..", ".github", "actions", "relaunch-on-marker", "action.yml"), "utf8"))
+      .not.toContain("download-artifact");
+  });
+});
+
 // ── the scope refusal ────────────────────────────────────────────────────
 
 describe("SCOPE must name one sport:year cell", () => {
