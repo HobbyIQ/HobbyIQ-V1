@@ -1,5 +1,5 @@
 // rewrite-parallel-names.cjs -- SuperFractor singular/plural fold
-// (backend/data/parallel-name-rules/2026-09-27-panini-2023-2026-and-superfractor.DRAFT.json).
+// (backend/data/parallel-name-rules/2026-09-28-superfractor-singular-fold.json).
 //
 // PR #2457 "NEEDS RULING: rename rules -- Panini 2023-2026 + SuperFractor".
 // Drew's 2026-09-28 11:55Z ruling: canonical rung name is the SINGULAR
@@ -13,10 +13,17 @@
 // "topps-chrome") is split into one topps-chrome-prefixed group rule (for
 // the 5 setKeys that DO share that prefix) plus one setKey-scoped rule per
 // remaining literal setKey -- 8 scan groups x 2 spellings = 16 ruled rules.
-// This test pins that split, confirms every rule loads and applies
-// correctly, confirms the casing decision against variationVocabulary.ts's
-// FINISH_SPELLING and the committed checklist corpus's majority spelling,
-// and confirms every OTHER census finding is untouched in `pending`.
+//
+// Per Drew's 2026-09-28 PR review (approval comment), the 16 ruled rules
+// were split out of the original census DRAFT file into their own non-draft
+// file (this file's RULED_FILE), matching #2479's shipped schema. The DRAFT
+// file (DRAFT_FILE) now carries ONLY the 9 still-unruled `pending` findings
+// and has no `rules` key at all -- loadRules refuses a file whose `rules`
+// array is empty or absent ("names no rules -- nothing is in scope"), so an
+// all-pending file cannot carry a `rules: []` key and still be a valid
+// (if inert) input; omitting the key entirely is the only option, and this
+// test pins that loadRules still refuses it (by design -- it is not meant
+// to be dispatched).
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,7 +38,10 @@ const lib = require_(scriptPath) as {
   applyRule: (rule: any, raw: string) => { name: string; strippedNote: string | null; empty?: boolean } | null;
 };
 
-const RULES_FILE = path.join(
+const RULED_FILE = path.join(
+  backend, "data", "parallel-name-rules", "2026-09-28-superfractor-singular-fold.json",
+);
+const DRAFT_FILE = path.join(
   backend, "data", "parallel-name-rules", "2026-09-27-panini-2023-2026-and-superfractor.DRAFT.json",
 );
 const SHIPPED_0926_FILE = path.join(
@@ -60,21 +70,21 @@ const SUPERFRACTOR_RULE_IDS = SCAN_GROUP_SUFFIXES.flatMap((suffix) => [
   `alias-superfractors-plural-lowf-to-singular-${suffix}`,
 ]);
 
-describe("SuperFractor fold (2026-09-28 ruling) -- file exists and loads", () => {
-  it("the rules file exists and loads without throwing", () => {
-    expect(fs.existsSync(RULES_FILE)).toBe(true);
-    const rules = lib.loadRules(RULES_FILE, []);
+describe("SuperFractor fold (2026-09-28 ruling) -- ruled file exists and loads", () => {
+  it("the ruled file exists and loads without throwing", () => {
+    expect(fs.existsSync(RULED_FILE)).toBe(true);
+    const rules = lib.loadRules(RULED_FILE, []);
     expect(rules.length).toBeGreaterThan(0);
   });
 
   it("carries exactly 16 SuperFractor rules -- 8 scan groups x 2 raw plural spellings", () => {
-    const rules = lib.loadRules(RULES_FILE, []);
+    const rules = lib.loadRules(RULED_FILE, []);
     expect(rules).toHaveLength(16);
     expect(rules.map((r: any) => r.id).sort()).toEqual([...SUPERFRACTOR_RULE_IDS].sort());
   });
 
   it("the topps-chrome-prefixed group rule scopes setKeyPrefix to exactly the 5 setKeys that share it", () => {
-    const rules = lib.loadRules(RULES_FILE, []);
+    const rules = lib.loadRules(RULED_FILE, []);
     for (const suffix of ["capf", "lowf"]) {
       const r = rules.find((x: any) => x.id === `alias-superfractors-plural-${suffix}-to-singular-topps-chrome-family`);
       expect(r).toBeDefined();
@@ -85,7 +95,7 @@ describe("SuperFractor fold (2026-09-28 ruling) -- file exists and loads", () =>
   });
 
   it("every individual-setKey rule scopes to exactly one literal setKey outside the topps-chrome prefix", () => {
-    const rules = lib.loadRules(RULES_FILE, []);
+    const rules = lib.loadRules(RULED_FILE, []);
     for (const sk of INDIVIDUAL_SETKEYS) {
       for (const suffix of ["capf", "lowf"]) {
         const r = rules.find((x: any) => x.id === `alias-superfractors-plural-${suffix}-to-singular-${sk}`);
@@ -98,7 +108,7 @@ describe("SuperFractor fold (2026-09-28 ruling) -- file exists and loads", () =>
   });
 
   it("no ruling is PENDING or rulingDate null for any of the 16 SuperFractor rules", () => {
-    const doc = readJson(RULES_FILE);
+    const doc = readJson(RULED_FILE);
     for (const id of SUPERFRACTOR_RULE_IDS) {
       const r = doc.rules.find((x: any) => x.id === id);
       expect(r, `rule ${id} must exist in doc.rules`).toBeDefined();
@@ -109,11 +119,18 @@ describe("SuperFractor fold (2026-09-28 ruling) -- file exists and loads", () =>
       expect(r.sources.length).toBeGreaterThan(0);
     }
   });
+
+  it("the ruled file's `rules` array contains ONLY the 16 SuperFractor rules -- no leftover Panini findings", () => {
+    const doc = readJson(RULED_FILE);
+    const ids = doc.rules.map((r: any) => r.id).sort();
+    expect(ids).toEqual([...SUPERFRACTOR_RULE_IDS].sort());
+    expect(doc.pending).toBeUndefined();
+  });
 });
 
 describe("SuperFractor fold -- both plural raw spellings fold to the singular canonical, in every scan group", () => {
   it("every 'capf' rule folds 'SuperFractors' (cap F plural) to 'SuperFractor'", () => {
-    const rules = lib.loadRules(RULES_FILE, []);
+    const rules = lib.loadRules(RULED_FILE, []);
     for (const suffix of SCAN_GROUP_SUFFIXES) {
       const r = rules.find((x: any) => x.id === `alias-superfractors-plural-capf-to-singular-${suffix}`)!;
       expect(lib.applyRule(r, "SuperFractors")).toEqual({ name: "SuperFractor", strippedNote: null });
@@ -123,7 +140,7 @@ describe("SuperFractor fold -- both plural raw spellings fold to the singular ca
   });
 
   it("every 'lowf' rule folds 'Superfractors' (low f plural) to 'SuperFractor'", () => {
-    const rules = lib.loadRules(RULES_FILE, []);
+    const rules = lib.loadRules(RULED_FILE, []);
     for (const suffix of SCAN_GROUP_SUFFIXES) {
       const r = rules.find((x: any) => x.id === `alias-superfractors-plural-lowf-to-singular-${suffix}`)!;
       expect(lib.applyRule(r, "Superfractors")).toEqual({ name: "SuperFractor", strippedNote: null });
@@ -133,7 +150,7 @@ describe("SuperFractor fold -- both plural raw spellings fold to the singular ca
   });
 
   it("no SuperFractor rule matches text that is already canonical, or an unrelated string", () => {
-    const rules = lib.loadRules(RULES_FILE, []);
+    const rules = lib.loadRules(RULED_FILE, []);
     for (const id of SUPERFRACTOR_RULE_IDS) {
       const r = rules.find((x: any) => x.id === id)!;
       expect(lib.applyRule(r, "SuperFractor")).toBeNull();
@@ -142,8 +159,8 @@ describe("SuperFractor fold -- both plural raw spellings fold to the singular ca
     }
   });
 
-  it("every alias rule in this file has from !== to", () => {
-    const doc = readJson(RULES_FILE);
+  it("every alias rule in the ruled file has from !== to", () => {
+    const doc = readJson(RULED_FILE);
     for (const r of doc.rules) {
       if (r.kind === "alias") expect(r.from).not.toBe(r.to);
     }
@@ -174,7 +191,7 @@ describe("SuperFractor fold -- casing decided by majority, matches the rest of t
   });
 
   it("every rule's 'to' target is ASCII only (no smart quotes or other non-ASCII glyphs) and equals 'SuperFractor'", () => {
-    const doc = readJson(RULES_FILE);
+    const doc = readJson(RULED_FILE);
     for (const id of SUPERFRACTOR_RULE_IDS) {
       const r = doc.rules.find((x: any) => x.id === id);
       // eslint-disable-next-line no-control-regex
@@ -193,22 +210,21 @@ describe("SuperFractor fold -- casing decided by majority, matches the rest of t
   });
 });
 
-describe("SuperFractor fold -- every other finding is untouched, in `pending`, never fed to loadRules", () => {
-  it("`rules` contains only the 16 ruled SuperFractor aliases -- everything else moved to `pending`", () => {
-    const doc = readJson(RULES_FILE);
-    const ids = doc.rules.map((r: any) => r.id).sort();
-    expect(ids).toEqual([...SUPERFRACTOR_RULE_IDS].sort());
+describe("SuperFractor fold -- the DRAFT file carries only the 9 still-unruled findings, never the ruled rules", () => {
+  it("the DRAFT file exists and has NO `rules` key (empty/absent both refused by loadRules)", () => {
+    expect(fs.existsSync(DRAFT_FILE)).toBe(true);
+    const doc = readJson(DRAFT_FILE);
+    expect(doc.rules).toBeUndefined();
   });
 
-  it("loadRules only ever reads `rules` -- the pending block is invisible to it", () => {
-    const rules = lib.loadRules(RULES_FILE, []);
-    expect(rules.map((r: any) => r.id).sort()).toEqual([...SUPERFRACTOR_RULE_IDS].sort());
+  it("loadRules refuses the DRAFT file by design -- it names no rules, nothing is in scope", () => {
+    expect(() => lib.loadRules(DRAFT_FILE, [])).toThrow(/names no rules/);
   });
 
-  it("every pending entry documents its own status, evidence and sampled-sales count (never a silent placeholder)", () => {
-    const doc = readJson(RULES_FILE);
+  it("the DRAFT file's `pending` array holds exactly the 9 still-unruled census findings", () => {
+    const doc = readJson(DRAFT_FILE);
     expect(Array.isArray(doc.pending)).toBe(true);
-    expect(doc.pending.length).toBeGreaterThan(0);
+    expect(doc.pending).toHaveLength(9);
     for (const p of doc.pending) {
       expect(String(p.status ?? "").trim().length).toBeGreaterThan(0);
       expect(String(p.evidence ?? "").trim().length).toBeGreaterThan(0);
@@ -217,25 +233,30 @@ describe("SuperFractor fold -- every other finding is untouched, in `pending`, n
     }
   });
 
-  it("the documentation-only compound-rung exclusion finding is still present in pending and unresolved", () => {
-    const doc = readJson(RULES_FILE);
+  it("none of the 16 ruled SuperFractor rule ids appear in the DRAFT file's pending block", () => {
+    const draftDoc = readJson(DRAFT_FILE);
+    const pendingIds = new Set(draftDoc.pending.map((p: any) => p.id));
+    for (const id of SUPERFRACTOR_RULE_IDS) {
+      expect(pendingIds.has(id)).toBe(false);
+    }
+  });
+
+  it("the documentation-only compound-rung exclusion finding is still present in the DRAFT's pending block and unresolved", () => {
+    const doc = readJson(DRAFT_FILE);
     const flag = doc.pending.find((p: any) => p.id === "pending-flag-superfractor-compound-rung-family-not-a-fold-target");
     expect(flag).toBeDefined();
     expect(flag.status).toContain("DOCUMENTATION");
   });
 
-  it("no pending id collides with a ruled rule id", () => {
-    const doc = readJson(RULES_FILE);
-    const ruledIds = new Set(doc.rules.map((r: any) => r.id));
-    for (const p of doc.pending) {
-      expect(ruledIds.has(p.id)).toBe(false);
-    }
+  it("the DRAFT's own comment points at the ruled file by name", () => {
+    const doc = readJson(DRAFT_FILE);
+    expect(String(doc._comment)).toContain("2026-09-28-superfractor-singular-fold.json");
   });
 });
 
 describe("SuperFractor fold -- no overlap with already-shipped rules", () => {
   it("no rule id collides with the 2026-09-26 shipped rules file", () => {
-    const newDoc = readJson(RULES_FILE);
+    const newDoc = readJson(RULED_FILE);
     const existingDoc = readJson(SHIPPED_0926_FILE);
     const existingIds = new Set(existingDoc.rules.map((r: any) => r.id));
     for (const r of newDoc.rules) {
@@ -244,7 +265,7 @@ describe("SuperFractor fold -- no overlap with already-shipped rules", () => {
   });
 
   it("no (scope, kind, from, to) triple collides with the 2026-09-26 shipped rules file", () => {
-    const newDoc = readJson(RULES_FILE);
+    const newDoc = readJson(RULED_FILE);
     const existingDoc = readJson(SHIPPED_0926_FILE);
     const keyOf = (r: any) => JSON.stringify([r.scope, r.kind, r.from ?? r.pattern, r.to ?? null]);
     const existingKeys = new Set(existingDoc.rules.map(keyOf));
@@ -259,14 +280,14 @@ describe("SuperFractor fold -- no overlap with already-shipped rules", () => {
   });
 
   it("no rule id collides with the 2026-09-28 baseball S-class aliases file (#2479, merged), and its scope stays disjoint", () => {
-    const newDoc = readJson(RULES_FILE);
+    const newDoc = readJson(RULED_FILE);
     const sClassDoc = readJson(SHIPPED_0928_SCLASS_FILE);
     const sClassIds = new Set(sClassDoc.rules.map((r: any) => r.id));
     for (const r of newDoc.rules) {
       expect(sClassIds.has(r.id), `rule id ${r.id} collides with the S-class aliases file`).toBe(false);
     }
     // #2479's S-class batch scoped only to baseball|2023|topps (Mother's/
-    // Father's Day) -- disjoint by construction from this file's Panini +
+    // Father's Day) -- disjoint by construction from this file's
     // topps-chrome-family scope, but pin it so a future rebase surfaces any
     // accidental widening immediately rather than silently colliding.
     for (const r of sClassDoc.rules) {
@@ -276,8 +297,20 @@ describe("SuperFractor fold -- no overlap with already-shipped rules", () => {
 });
 
 describe("SuperFractor fold -- no control-byte corruption", () => {
-  it("carries no 0x08/0x00 bytes in the rules file", () => {
-    const buf = fs.readFileSync(RULES_FILE);
+  it("carries no 0x08/0x00 bytes in the ruled file", () => {
+    const buf = fs.readFileSync(RULED_FILE);
+    let has08 = false;
+    let has00 = false;
+    for (let i = 0; i < buf.length; i++) {
+      if (buf[i] === 0x08) has08 = true;
+      if (buf[i] === 0x00) has00 = true;
+    }
+    expect(has08).toBe(false);
+    expect(has00).toBe(false);
+  });
+
+  it("carries no 0x08/0x00 bytes in the DRAFT file", () => {
+    const buf = fs.readFileSync(DRAFT_FILE);
     let has08 = false;
     let has00 = false;
     for (let i = 0; i < buf.length; i++) {
