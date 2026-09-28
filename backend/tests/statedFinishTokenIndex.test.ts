@@ -181,11 +181,26 @@ describe("parseListingIdentity is byte-identical to unmodified main", () => {
     // Both are the token index working AS INTENDED against a corpus that
     // grew -- a fuller, more specific answer, never a regression -- so they
     // are named here rather than silently dropped from the snapshot.
+    //
+    // CF-RAYWAVE-IS-THE-SPELLING (Drew ruling, 2026-09-28 12:30Z). The five
+    // "RayWave" titles below all moved from "<Colour> Ray Wave Refractor"
+    // to "<Colour> RayWave Refractor" -- a deliberate spelling fix in
+    // parseTitleIdentity.service.ts (extractParallel), not a token-index
+    // side effect: the compound "RayWave" is Topps' own printed spelling,
+    // variationVocabulary.ts's FINISH_SPELLING.raywave already said so, and
+    // every sampled sale title agrees (see C:/tmp/raywave_1430/REPORT.md).
+    // The slug is unaffected either way -- normalizeParallel() already
+    // folds both spellings to the one `ray-wave` slug.
     const KNOWN_CORPUS_GROWTH_EXCEPTIONS = new Set([
       '"2026 Topps Baseball #315 Sandglitter Gold" [parallel]',
       '"2026 Bowman Baseball #BP-132 Yellow Pattern" [parallel]',
       '"2026 Topps Baseball #263 Sandglitter Gold" [parallel]',
       '"2026 Bowman Baseball #69 Yellow Pattern" [parallel]',
+      '"2026 Bowman Baseball #BCP-122 Purple RayWave Refractor" [parallel]',
+      '"2026 Bowman Baseball #BCP-92 Purple RayWave Refractor" [parallel]',
+      '"2026 Bowman Baseball #BCP-111 Blue RayWave Refractor" [parallel]',
+      '"2026 Bowman Baseball #BCP-98 Purple RayWave Refractor" [parallel]',
+      '"2026 Bowman Baseball #BCP-139 Blue RayWave Refractor" [parallel]',
     ]);
 
     const moved: string[] = [];

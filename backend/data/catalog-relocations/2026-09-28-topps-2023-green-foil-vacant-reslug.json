@@ -1,0 +1,43 @@
+{
+ "generatedAt": "2026-09-28T00:00:00.000Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew review -- no apply is authorized by this PR",
+ "finding": "Drew's ruling (09-28 12:10Z): the canonical name for the 2023 Topps baseball /499 green parallel is plain \"Green Foil\" (Topps' own printed name, both Series 1 and Series 2 -- see 2026-09-28-topps-2023-green-foil-duplicate-retire.json's own header for the full census). card_catalog held THREE spellings for this rung, not two: \"Green Foil Board\" (330, #1-330, source beckett-s3-2026-09-20), \"Green Rainbow Foil\" (330, #331-660, same source), and the correct \"Green Foil\" (660, source baseballcardpedia-ladders-2026-08-28/29) -- the third spelling was never in the original findings and is why 657 of the 660 Beckett rows are DUPLICATES, not reslug candidates. These 3 are the only card numbers where NO baseballcardpedia-ladders \"Green Foil\" row exists yet, so the canonical address is genuinely vacant and this is an ordinary fold reslug, never a merge.",
+ "rulings": [
+  "OWNER RULING (Drew, 2026-09-28 12:10Z): canonical rung name is \"Green Foil\" for 2023 Topps baseball setKey `topps`, both series.",
+  "APPLY ORDER: this list runs FIRST, before 2026-09-28-topps-2023-green-foil-duplicate-retire.json -- it vacates nothing the retire list needs, but keeping the vacant fold ahead of the duplicate cleanup keeps the two lists independent and the smaller one is safe to land alone.",
+  "DESTINATION COMPUTED BY THE REAL computeHobbyIqCardId, NEVER STRING-HACKED. Every destination id was produced by the built dist/services/portfolioiq/hobbyIqCardId.service.js, changing ONLY parallel to \"Green Foil\" -- one axis (CF-A-RESLUG-THAT-CHANGES-THE-RUNG-CARRIES-THE-RUNG'S-TEXT, #2431 precedent). Point-read confirmed FREE at census time for all 3 targets.",
+  "ZERO SALES AT ANY OF THE 3 OLD IDS (dual cross-partition + partition-scoped check, read-only, 2026-09-28) -- this is a pure catalog-row fold, no sale is repointed by this list."
+ ],
+ "census": {
+  "totalCandidates": 660,
+  "vacantTargets": 3,
+  "method": "See 2026-09-28-topps-2023-green-foil-duplicate-retire.json's own census block for the full occupancy method and the 657/3 split."
+ },
+ "entries": [
+  {
+   "id": "hiq:baseball:2023:topps:113:green-foil-board:no-auto:num-499",
+   "action": "reslug",
+   "to": "hiq:baseball:2023:topps:113:green-foil:no-auto:num-499",
+   "parallel": "Green Foil",
+   "reason": "Drew 09-28: canonical 'Green Foil' (Topps' printed name); Green Foil Board / Green Rainbow Foil were one Beckett scrape split at the series boundary. No baseballcardpedia-ladders twin exists at #113 -- destination free, unlike the other 657 rows.",
+   "evidence": "parallel=\"Green Foil Board\", playerName=\"Mookie Betts\", source=beckett-s3-2026-09-20. Destination hiq:baseball:2023:topps:113:green-foil:no-auto:num-499 point-read 404 on 2026-09-28 -- free. Zero sales at old id (dual check). One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:248:green-foil-board:no-auto:num-499",
+   "action": "reslug",
+   "to": "hiq:baseball:2023:topps:248:green-foil:no-auto:num-499",
+   "parallel": "Green Foil",
+   "reason": "Drew 09-28: canonical 'Green Foil' (Topps' printed name); Green Foil Board / Green Rainbow Foil were one Beckett scrape split at the series boundary. No baseballcardpedia-ladders twin exists at #248 -- destination free, unlike the other 657 rows.",
+   "evidence": "parallel=\"Green Foil Board\", playerName=\"Rhys Hoskins\", source=beckett-s3-2026-09-20. Destination hiq:baseball:2023:topps:248:green-foil:no-auto:num-499 point-read 404 on 2026-09-28 -- free. Zero sales at old id (dual check). One axis changed: parallel only."
+  },
+  {
+   "id": "hiq:baseball:2023:topps:310:green-foil-board:no-auto:num-499",
+   "action": "reslug",
+   "to": "hiq:baseball:2023:topps:310:green-foil:no-auto:num-499",
+   "parallel": "Green Foil",
+   "reason": "Drew 09-28: canonical 'Green Foil' (Topps' printed name); Green Foil Board / Green Rainbow Foil were one Beckett scrape split at the series boundary. No baseballcardpedia-ladders twin exists at #310 -- destination free, unlike the other 657 rows.",
+   "evidence": "parallel=\"Green Foil Board\", playerName=\"Josh Naylor\", source=beckett-s3-2026-09-20. Destination hiq:baseball:2023:topps:310:green-foil:no-auto:num-499 point-read 404 on 2026-09-28 -- free. Zero sales at old id (dual check). One axis changed: parallel only."
+  }
+ ]
+}
